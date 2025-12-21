@@ -23,7 +23,7 @@ export default function VisitorIdentity() {
       setCompany(JSON.parse(rawCompany));
     } catch {
       localStorage.clear();
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 
