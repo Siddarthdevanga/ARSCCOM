@@ -1,9 +1,21 @@
 import { NextResponse } from "next/server";
 
+const ALLOWED = [
+  "/",
+  "/login",
+  "/forgot-password",
+  "/home",
+  "/visitor/dashboard",
+  "/visitor/primary_details",
+  "/visitor/secondary_details",
+  "/visitor/identity",
+  "/visitor/pass",
+  "/conference/dashboard"
+];
+
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow Next.js internals
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -12,12 +24,10 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // Allow root (entry point)
-  if (pathname === "/") {
+  if (ALLOWED.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // Block direct access to all other routes
   return NextResponse.redirect(new URL("/", request.url));
 }
 
