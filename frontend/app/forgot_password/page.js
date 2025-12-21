@@ -53,7 +53,7 @@ export default function ForgotPassword() {
       setSuccess("If the email exists, a reset code has been sent.");
 
       setTimeout(() => {
-        router.push(`/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
+        router.push(`/reset_password?email=${encodeURIComponent(normalizedEmail)}`);
       }, 1500);
 
     } catch (err) {
