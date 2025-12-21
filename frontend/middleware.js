@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const ALLOWED = [
+const ALLOWED_PATHS = [
   "/",
   "/login",
   "/forgot-password",
@@ -16,6 +16,7 @@ const ALLOWED = [
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
+  // Allow Next.js internals
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -24,10 +25,12 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  if (ALLOWED.includes(pathname)) {
+  // Allow only known pages
+  if (ALLOWED_PATHS.includes(pathname)) {
     return NextResponse.next();
   }
 
+  // Everything else → root
   return NextResponse.redirect(new URL("/", request.url));
 }
 
