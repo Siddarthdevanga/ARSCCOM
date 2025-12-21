@@ -1,13 +1,15 @@
-# frontend dependencies & build
+# frontend
 frontend/node_modules/
 frontend/.next/
 frontend/out/
-
-# frontend env
 frontend/.env*
-.env*
 
-# junk
+# backend
+backend/node_modules/
+backend/.env*
+backend/dist/
+
+# common
+.env*
 **/.ipynb_checkpoints/
 .DS_Store
-backend/
