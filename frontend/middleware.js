@@ -1,40 +1,32 @@
 import { NextResponse } from "next/server";
 
-const PUBLIC_PATHS = [
-  "/login",
-  "/register",
-  "/forgot_password",
-  "/reset_password"
-];
+export function middleware(req) {
+  const { pathname } = req.nextUrl;
 
-export function middleware(request) {
-  const { pathname } = request.nextUrl;
-
-  // Allow Next internals & API
+  // Public pages
   if (
-    pathname.startsWith("/_next") ||
-    pathname.startsWith("/api") ||
-    pathname === "/favicon.ico"
+    pathname === "/login" ||
+    pathname === "/forgot_password" ||
+    pathname === "/register" ||
+    pathname === "/reset_password"
   ) {
     return NextResponse.next();
   }
 
-  // Public pages
-  if (PUBLIC_PATHS.includes(pathname)) {
+  // Allow Next internals
+  if (pathname.startsWith("/_next") || pathname.startsWith("/api")) {
     return NextResponse.next();
   }
 
-  // Check auth cookie
-  const token = request.cookies.get("token")?.value;
-
-  // Not logged in → force login
+  // Protect everything else
+  const token = req.cookies.get("token");
   if (!token) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(new URL("/login", req.url));
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!_next|api|favicon.ico).*)"]
+  matcher: ["/((?!_next|api).*)"],
 };
