@@ -132,7 +132,7 @@ function ResetPasswordContent() {
         {/* BACK */}
         <div
           className={styles.back}
-          onClick={() => router.push("/auth/login")}
+          onClick={() => router.push("/login")}
         >
           ← Back to Login
         </div>
