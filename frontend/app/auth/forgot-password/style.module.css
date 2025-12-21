@@ -1,0 +1,153 @@
+/* ================= PAGE ================= */
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  font-family: Arial, sans-serif;
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* ================= HEADER ================= */
+.header {
+  position: absolute;
+  top: 20px;
+  left: 40px;
+}
+
+.brand {
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+/* ================= CENTER WRAPPER ================= */
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ================= CARD ================= */
+.card {
+  width: 620px;
+  background: #ffffff;
+  padding: 28px 36px;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+}
+
+/* ================= TEXT ================= */
+.title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #3c007a;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 18px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3c007a;
+  margin-bottom: 6px;
+  display: block;
+}
+
+/* ================= INPUT ================= */
+.input {
+  width: 100%;
+  height: 42px;
+  padding: 0 12px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 14px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #7a00ff;
+  box-shadow: 0 0 0 2px rgba(122,0,255,0.15);
+}
+
+/* ================= PASSWORD ROW ================= */
+.row {
+  display: flex;
+  gap: 16px;
+}
+
+.col {
+  flex: 1;
+}
+
+/* ================= BUTTON ================= */
+.button {
+  margin-top: 10px;
+  width: 100%;
+  height: 46px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #7a00ff, #5a00c2);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(122,0,255,0.35);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ================= ERROR ================= */
+.error {
+  background: #fdecea;
+  color: #b71c1c;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* ================= BACK LINK ================= */
+.back {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: #5a00c2;
+  cursor: pointer;
+}
+
+.back:hover {
+  text-decoration: underline;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 720px) {
+  .card {
+    width: 90%;
+  }
+
+  .row {
+    flex-direction: column;
+  }
+
+  .header {
+    left: 20px;
+  }
+}

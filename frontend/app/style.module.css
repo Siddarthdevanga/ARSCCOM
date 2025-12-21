@@ -1,0 +1,172 @@
+/* MAIN BACKGROUND */
+.container {
+  height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  font-family: Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+
+/*************** HEADER ***************/
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 60px;
+}
+
+.logo {
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+.nav a {
+  margin-left: 40px;
+  cursor: pointer;
+  font-size: 16px;
+  text-decoration: none;
+  color: white;
+  transition: 0.2s ease;
+}
+
+.nav a:hover {
+  opacity: 0.75;
+}
+
+/*************** DROPDOWN BOX ***************/
+.dropdownBox {
+  position: absolute;
+  top: 85px;
+  right: 70px;
+  background: white;
+  color: #222;
+  padding: 18px 20px;
+  width: 280px;
+  border-radius: 12px;
+  box-shadow: 0px 4px 20px rgba(0,0,0,0.28);
+  animation: fadeIn 0.25s ease;
+  z-index: 20;
+}
+
+.dropdownBox p {
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.dropdownBox button {
+  padding: 6px 16px;
+  background: #7a00ff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.dropdownBox button:hover {
+  background: #6000cc;
+}
+
+/*************** CENTER LOGIN ***************/
+.centerWrapper {
+  height: calc(100vh - 140px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loginCard {
+  width: 460px;
+  background: white;
+  color: #333;
+  padding: 50px 45px;
+  border-radius: 22px;
+  box-shadow: 0px 8px 30px rgba(0,0,0,0.30);
+  text-align: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.loginCard h4 {
+  font-size: 26px;
+  margin-bottom: 28px;
+  color: #4b008f;
+  text-transform: uppercase;
+}
+
+/*************** INPUTS ***************/
+.inputGroup {
+  text-align: left;
+  margin-bottom: 22px;
+}
+
+.inputGroup label {
+  font-size: 12px;
+  color: #555;
+  font-weight: 600;
+}
+
+.inputGroup input {
+  width: 100%;
+  padding: 13px;
+  border-radius: 8px;
+  border: 1px solid #b7b7b7;
+  margin-top: 5px;
+  font-size: 15px;
+  transition: 0.2s ease;
+}
+
+.inputGroup input:focus {
+  border-color: #7a00ff;
+  box-shadow: 0px 0px 4px rgba(122, 0, 255, 0.4);
+}
+
+/*************** LOGIN BUTTON ***************/
+.loginBtn {
+  width: 100%;
+  padding: 15px;
+  background: #7a00ff;
+  color: white;
+  border-radius: 10px;
+  font-size: 18px;
+  border: none;
+  cursor: pointer;
+  margin-top: 5px;
+  transition: 0.2s ease;
+}
+
+.loginBtn:hover {
+  background: #5c00c7;
+}
+
+/*************** SIDE-BY-SIDE LINKS ***************/
+.extraOptionsRow {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+
+.extraOptionsRow a {
+  color: #5c00c7;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.extraOptionsRow a:hover {
+  text-decoration: underline;
+}
+
+.extraOptionsRow span {
+  color: #777;
+  font-size: 14px;
+}
+
+/*************** ANIMATION ***************/
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
