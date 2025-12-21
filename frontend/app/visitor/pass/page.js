@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -21,7 +21,8 @@ const formatIST = (value) => {
   });
 };
 
-export default function VisitorPass() {
+/* ================= CONTENT ================= */
+function VisitorPassContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const visitorCode = searchParams.get("visitorCode");
@@ -71,7 +72,6 @@ export default function VisitorPass() {
     };
 
     loadPass();
-
     return () => controller.abort();
   }, [visitorCode]);
 
@@ -181,3 +181,13 @@ export default function VisitorPass() {
     </div>
   );
 }
+
+/* ================= PAGE ================= */
+export default function VisitorPassPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VisitorPassContent />
+    </Suspense>
+  );
+}
+
