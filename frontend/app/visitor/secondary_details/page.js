@@ -32,7 +32,7 @@ export default function SecondaryDetails() {
       const storedCompany = localStorage.getItem("company");
 
       if (!token || !storedCompany) {
-        router.replace("/auth/login");
+        router.replace("/login");
         return;
       }
 
@@ -46,7 +46,7 @@ export default function SecondaryDetails() {
     } catch (error) {
       console.error("Company context error:", error);
       localStorage.clear();
-      router.replace("/auth/login");
+      router.replace("/login");
     } finally {
       setIsLoading(false);
     }
