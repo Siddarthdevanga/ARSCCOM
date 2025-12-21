@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
         destination: "/auth/login"
       },
       {
-        source: "/forgot-password",
+        source: "/forgot_password",
         destination: "/auth/forgot-password"
       }
     ];
