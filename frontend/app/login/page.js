@@ -136,9 +136,9 @@ export default function LoginPage() {
             </button>
 
             <div className={styles.extraLinks}>
-              <Link href="/auth/forgot-password">Forgot Password?</Link>
+              <Link href="/forgot-password">Forgot Password?</Link>
               <span>|</span>
-              <Link href="/auth/register">New Registration</Link>
+              <Link href="/register">New Registration</Link>
             </div>
           </div>
         </div>
