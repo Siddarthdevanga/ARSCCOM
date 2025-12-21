@@ -13,10 +13,15 @@ const app = express();
 // CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "http://13.205.13.110",
+      "http://13.205.13.110:3000"
+    ],
     credentials: true
   })
 );
+
 
 // Body parsers (REQUIRED for req.body)
 app.use(express.json({ limit: "10mb" }));
