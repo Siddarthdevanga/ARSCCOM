@@ -3,22 +3,15 @@ import { NextResponse } from "next/server";
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Only protect auth routes
-  if (!pathname.startsWith("/auth")) {
+  // Allow ONLY root path
+  if (pathname === "/") {
     return NextResponse.next();
   }
 
-  // Check token cookie (only for middleware)
-  const token = request.cookies.get("token")?.value;
-
-  // If logged in, block auth pages
-  if (token) {
-    return NextResponse.redirect(new URL("/home", request.url));
-  }
-
-  return NextResponse.next();
+  // Block everything else
+  return NextResponse.redirect(new URL("/", request.url));
 }
 
 export const config = {
-  matcher: ["/auth/:path*"]
+  matcher: ["/((?!_next|favicon.ico).*)"]
 };
