@@ -87,7 +87,7 @@ export default function VisitorDashboard() {
   /* ================= LOGOUT ================= */
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/auth/login");
+    router.push("/login");
   };
 
   if (loading || !company) return null;
