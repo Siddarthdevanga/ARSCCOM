@@ -32,7 +32,7 @@ export default function VisitorDashboard() {
   const loadDashboard = async (token) => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/visitors/dashboard`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
