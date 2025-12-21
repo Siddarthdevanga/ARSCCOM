@@ -64,7 +64,7 @@ export default function VisitorDashboard() {
       setCheckingOut(visitorCode);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/checkout`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/visitors/${visitorCode}/checkout`,
         {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` }
