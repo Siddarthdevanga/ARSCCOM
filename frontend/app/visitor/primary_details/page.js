@@ -21,7 +21,7 @@ export default function VisitorPrimaryDetails() {
     const storedCompany = localStorage.getItem("company");
 
     if (!token || !storedCompany) {
-      router.replace("/auth/login");
+      router.replace("/login");
       return;
     }
 
