@@ -27,7 +27,7 @@ export default function ConferenceDashboard() {
           {/* LOGOUT ICON */}
           <button
             className={styles.logoutBtn}
-            onClick={() => router.push("/auth/login")}
+            onClick={() => router.push("/login")}
             title="Logout"
           >
             ⏻
