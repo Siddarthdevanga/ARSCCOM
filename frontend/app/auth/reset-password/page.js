@@ -60,7 +60,7 @@ function ResetPasswordContent() {
         throw new Error(data.message || "Failed to reset password");
       }
 
-      router.push("/auth/login");
+      router.push("/login");
 
     } catch (err) {
       setError(err.message || "Something went wrong");
