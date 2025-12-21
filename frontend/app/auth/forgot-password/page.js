@@ -53,7 +53,7 @@ export default function ForgotPassword() {
       setSuccess("If the email exists, a reset code has been sent.");
 
       setTimeout(() => {
-        router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
+        router.push(`/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
       }, 1500);
 
     } catch (err) {
@@ -101,7 +101,7 @@ export default function ForgotPassword() {
 
           <div
             className={styles.back}
-            onClick={() => router.push("/auth/login")}
+            onClick={() => router.push("/login")}
           >
             ← Back to Login
           </div>
