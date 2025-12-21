@@ -44,7 +44,7 @@ export default function VisitorPass() {
     const loadPass = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/public/code/${visitorCode}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/visitors/public/code/${visitorCode}`,
           { signal: controller.signal }
         );
 
