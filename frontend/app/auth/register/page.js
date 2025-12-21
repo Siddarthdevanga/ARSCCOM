@@ -64,7 +64,7 @@ export default function RegisterPage() {
         return;
       }
 
-      router.push("/auth/subscription");
+      router.push("/subscription");
     } catch {
       setError("Unable to connect to server");
     } finally {
@@ -80,7 +80,7 @@ export default function RegisterPage() {
 
         <div
           className={styles.backHeader}
-          onClick={() => router.push("/auth/login")}
+          onClick={() => router.push("/login")}
         >
           ← Back to Login
         </div>
