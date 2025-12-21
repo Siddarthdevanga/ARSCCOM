@@ -18,7 +18,9 @@ export default function LoginPage() {
   const handleLogin = async () => {
     if (loading) return;
 
-    if (!email.trim() || !password) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
       setError("Email and password are required");
       return;
     }
@@ -33,13 +35,18 @@ export default function LoginPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: email.trim().toLowerCase(),
+            email: normalizedEmail,
             password
           })
         }
       );
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Server returned invalid response");
+      }
 
       if (!res.ok) {
         setError(data?.message || "Invalid credentials");
@@ -48,6 +55,7 @@ export default function LoginPage() {
 
       /* ================= SAVE AUTH ================= */
       localStorage.setItem("token", data.token);
+      document.cookie = `token=${data.token}; path=/`;
 
       if (data.company) {
         localStorage.setItem("company", JSON.stringify(data.company));
@@ -57,7 +65,7 @@ export default function LoginPage() {
       router.replace("/home");
 
     } catch (err) {
-      setError("Unable to connect to server");
+      setError(err.message || "Unable to connect to server");
     } finally {
       setLoading(false);
     }
@@ -65,7 +73,6 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
@@ -96,7 +103,6 @@ export default function LoginPage() {
 
         <div className={styles.loginWrapper}>
           <div className={styles.loginCard}>
-
             <h4 className={styles.title}>LOGIN TO YOUR ACCOUNT</h4>
 
             <div className={styles.inputGroup}>
@@ -105,6 +111,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={loading}
               />
             </div>
 
@@ -114,6 +121,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={loading}
               />
             </div>
 
@@ -132,7 +140,6 @@ export default function LoginPage() {
               <span>|</span>
               <Link href="/auth/register">New Registration</Link>
             </div>
-
           </div>
         </div>
       </main>
