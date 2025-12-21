@@ -1,0 +1,117 @@
+/* FULL PAGE */
+.container {
+  height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #8a2be2);
+  color: white;
+  font-family: Arial, sans-serif;
+  overflow: hidden;              /* ⬅️ prevent scroll */
+}
+
+/* HEADER */
+.header {
+  padding: 18px 40px;
+  display: flex;
+  align-items: center;
+}
+
+.logo {
+  font-size: 26px;               /* ⬇️ smaller */
+  font-weight: bold;
+  letter-spacing: 1.5px;
+}
+
+/* TITLE */
+.title {
+  text-align: center;
+  font-size: 28px;               /* ⬇️ smaller */
+  margin: 6px 0 22px;
+  font-weight: bold;
+}
+
+/* PLAN GRID */
+.planGrid {
+  display: flex;
+  justify-content: center;
+  gap: 26px;                     /* ⬇️ reduced gap */
+  max-width: 1200px;
+  margin: auto;
+}
+
+/* PLAN CARD */
+.card {
+  background: white;
+  width: 300px;                  /* ⬇️ reduced */
+  padding: 22px 20px;            /* ⬇️ compact */
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.22);
+  color: #333;
+  border: 2px solid transparent;
+  transition: 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-4px);
+}
+
+/* CENTER HIGHLIGHTED PLAN */
+.cardHighlight {
+  border: 2px solid #7a00ff;
+  transform: scale(1.03);        /* ⬇️ subtle */
+}
+
+/* PLAN NAME */
+.planName {
+  font-size: 20px;               /* ⬇️ smaller */
+  font-weight: bold;
+  color: #4b008f;
+  margin-bottom: 6px;
+}
+
+/* PRICE */
+.price {
+  font-size: 28px;               /* ⬇️ smaller */
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.price span {
+  font-size: 13px;
+  color: #777;
+}
+
+/* SUBTEXT */
+.subText {
+  font-size: 13px;
+  margin-bottom: 14px;
+  color: #666;
+}
+
+/* FEATURES LIST */
+.features {
+  list-style: none;
+  padding-left: 0;
+  margin-bottom: 18px;
+  text-align: left;
+}
+
+.features li {
+  margin-bottom: 7px;
+  font-size: 14px;               /* ⬇️ smaller */
+}
+
+/* BUTTON */
+.btn {
+  width: 100%;
+  padding: 12px;                 /* ⬇️ smaller */
+  background: #7a00ff;
+  color: white;
+  border: none;
+  border-radius: 9px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #5c00c7;
+}
