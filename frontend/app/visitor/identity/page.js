@@ -15,7 +15,7 @@ export default function VisitorIdentity() {
     const token = localStorage.getItem("token");
 
     if (!rawCompany || !token) {
-      router.replace("/auth/login");
+      router.replace("/login");
       return;
     }
 
