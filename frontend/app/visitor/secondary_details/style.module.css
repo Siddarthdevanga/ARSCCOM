@@ -1,0 +1,172 @@
+/* ================= DISABLE PAGE SCROLL ================= */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ================= BACKGROUND ================= */
+.container {
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  height: 100vh;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+
+/* ================= HEADER ================= */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 26px 60px;
+}
+
+.logoText {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.companyLogo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  object-fit: cover;
+  padding: 3px;
+}
+
+/* ================= MAIN FORM CARD ================= */
+.formCard {
+  width: 88%;
+  height: calc(100vh - 150px); /* header + spacing */
+  background: white;
+  color: #3c007a;
+  margin: 10px auto 0;
+  padding: 42px 52px;
+  border-radius: 22px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+/* ================= TITLE ================= */
+.title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 30px;
+}
+
+/* ================= FORM ROWS ================= */
+.row3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  margin-bottom: 24px;
+}
+
+.row3 input,
+.fullRow input {
+  width: 100%;
+  padding: 14px 16px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: 1px solid #d0d0d0;
+  background: #fafafa;
+  font-size: 15px;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.row3 input:focus,
+.fullRow input:focus {
+  outline: none;
+  border-color: #7a00ff;
+  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.18);
+}
+
+.fullRow {
+  margin-bottom: 24px;
+}
+
+/* ================= CHECKBOX GROUP ================= */
+.checkboxGroup {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-top: 10px;
+  color: #3c007a;
+  font-size: 15px;
+}
+
+.checkboxGroup label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+/* ================= BUTTONS ================= */
+.buttonRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  margin-top: 34px;
+}
+
+.prevBtn,
+.nextBtn {
+  background: linear-gradient(135deg, #7a00ff, #5c00c8);
+  color: white;
+  padding: 18px 0;
+  border-radius: 14px;
+  border: none;
+  font-size: 18px;
+  font-weight: 600;
+  width: 50%;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prevBtn:hover,
+.nextBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(122, 0, 255, 0.35);
+}
+
+.prevBtn:active,
+.nextBtn:active {
+  transform: translateY(0);
+  box-shadow: 0 6px 14px rgba(122, 0, 255, 0.25);
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+  .formCard {
+    width: 94%;
+    padding: 36px 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header {
+    padding: 20px 28px;
+  }
+
+  .row3 {
+    grid-template-columns: 1fr;
+  }
+
+  .checkboxGroup {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .buttonRow {
+    flex-direction: column;
+  }
+
+  .prevBtn,
+  .nextBtn {
+    width: 100%;
+  }
+}

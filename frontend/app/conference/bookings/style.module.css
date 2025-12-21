@@ -1,0 +1,187 @@
+/****************************************
+  MAIN CONTAINER
+*****************************************/
+.container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  padding: 25px 40px;
+  font-family: Arial, sans-serif;
+  color: white;
+}
+
+/****************************************
+  HEADER
+*****************************************/
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.companyRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.companyName {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.companyLogo {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.logoutBtn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.logoutIcon {
+  width: 26px;
+  height: 26px;
+  filter: brightness(0) invert(1); /* makes icon white */
+}
+
+/****************************************
+  PAGE TITLE
+*****************************************/
+.pageTitle {
+  font-size: 30px;
+  font-weight: bold;
+  margin-top: 10px;
+  margin-bottom: 18px;
+}
+
+/****************************************
+  LAYOUT SPLIT
+*****************************************/
+.layoutBox {
+  display: flex;
+  gap: 25px;
+}
+
+/****************************************
+  LEFT SIDE — CALENDAR + TIMELINE
+*****************************************/
+.calendarBox {
+  width: 60%;
+  background: white;
+  padding: 22px;
+  border-radius: 16px;
+  color: #3c007a;
+}
+
+.sectionTitle {
+  font-size: 18px;
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.calendarArea {
+  border: 1px solid #ddd;
+  padding: 15px;
+  border-radius: 12px;
+  background: #fafafa;
+  height: 420px; /* placeholder height */
+}
+
+/****************************************
+  RIGHT SIDE — BOOKING FORM
+*****************************************/
+.formBox {
+  width: 40%;
+  background: white;
+  padding: 22px;
+  border-radius: 16px;
+  color: #3c007a;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #aaa;
+  margin-bottom: 14px;
+  font-size: 14px;
+}
+
+.row2 {
+  display: flex;
+  gap: 14px;
+}
+
+.row2 div {
+  flex: 1;
+}
+
+/****************************************
+  TIMESLOTS — AM/PM BUTTONS
+*****************************************/
+.slotGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.slotBtn {
+  padding: 14px;
+  border-radius: 10px;
+  background: #f2e5ff;
+  color: #3c007a;
+  border: 2px solid transparent;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: center;
+  transition: 0.2s ease;
+}
+
+.slotBtn:hover {
+  background: #e4d1ff;
+}
+
+.activeSlot {
+  background: #7a00ff;
+  color: white;
+  border-color: #5200c7;
+}
+
+/****************************************
+  CONFIRM BUTTON
+*****************************************/
+.submitBtn {
+  width: 100%;
+  padding: 16px;
+  background: #ffcc00;
+  color: #3c007a;
+  border: none;
+  border-radius: 12px;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.submitBtn:hover {
+  background: #e6b800;
+}

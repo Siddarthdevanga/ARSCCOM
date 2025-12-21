@@ -1,0 +1,197 @@
+.container {
+  height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  font-family: Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+
+.header {
+  position: relative;
+  padding: 24px 60px;
+}
+
+.brandSection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.logoText {
+  font-size: 26px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 18px;
+}
+
+.brandLogo {
+  width: 480px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.nav {
+  position: absolute;
+  top: 30px;
+  right: 60px;
+  display: flex;
+  gap: 35px;
+}
+
+.nav button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.nav button:hover {
+  opacity: 0.7;
+}
+
+.dropdownBox {
+  position: absolute;
+  top: 100px;
+  right: 120px;
+  background: white;
+  color: #222;
+  padding: 28px 26px 24px;
+  width: 700px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  z-index: 20;
+}
+
+.planContainer {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.planCard {
+  background: #f5f5f5;
+  padding: 18px 14px;
+  border-radius: 10px;
+  width: 180px;
+  text-align: center;
+  color: #3c007a;
+}
+
+.planCard h3 {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.planCard h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.planCard ul {
+  list-style: none;
+  padding: 0;
+}
+
+.planCard ul li {
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.closeBtn {
+  display: block;
+  margin: 22px auto 0;
+  padding: 8px 22px;
+  background: #7a00ff;
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.closeBtn:hover {
+  background: #5c00c7;
+}
+
+.loginWrapper {
+  position: absolute;
+  top: 100px;
+  right: 120px;
+}
+
+.loginCard {
+  width: 420px;
+  background: white;
+  color: #333;
+  padding: 36px 38px;
+  border-radius: 20px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.28);
+}
+
+.loginCard h4 {
+  text-align: center;
+  font-size: 20px;
+  margin-bottom: 22px;
+  color: #4b008f;
+}
+
+.inputGroup {
+  margin-bottom: 16px;
+}
+
+.inputGroup label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+}
+
+.inputGroup input {
+  width: 100%;
+  padding: 11px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  margin-top: 6px;
+  font-size: 14px;
+}
+
+.inputGroup input:focus {
+  border-color: #7a00ff;
+  outline: none;
+}
+
+.loginBtn {
+  width: 100%;
+  padding: 13px;
+  background: #7a00ff;
+  color: white;
+  border-radius: 10px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  margin-top: 8px;
+}
+
+.loginBtn:hover {
+  background: #5c00c7;
+}
+
+.extraLinks {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.extraLinks a {
+  color: #5c00c7;
+  text-decoration: none;
+  margin: 0 8px;
+}
+
+.extraLinks a:hover {
+  text-decoration: underline;
+}
