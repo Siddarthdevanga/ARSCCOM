@@ -21,13 +21,13 @@ export default function Home() {
       setCompany(JSON.parse(storedCompany));
     } catch {
       localStorage.clear();
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 
   const handleLogout = () => {
     localStorage.clear();
-    router.replace("/auth/login");
+    router.replace("/login");
   };
 
   const startVisitorFlow = () => {
