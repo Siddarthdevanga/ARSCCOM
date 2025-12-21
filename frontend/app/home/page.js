@@ -9,38 +9,50 @@ export default function Home() {
   const [company, setCompany] = useState(null);
 
   useEffect(() => {
-    const storedCompany = localStorage.getItem("company");
     const token = localStorage.getItem("token");
+    const storedCompany = localStorage.getItem("company");
 
     if (!token || !storedCompany) {
-      router.push("/auth/login");
+      router.replace("/auth/login");
       return;
     }
 
-    setCompany(JSON.parse(storedCompany));
+    try {
+      setCompany(JSON.parse(storedCompany));
+    } catch {
+      localStorage.clear();
+      router.replace("/auth/login");
+    }
   }, [router]);
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/auth/login");
+    router.replace("/auth/login");
   };
 
-  if (!company) return null; // or loader
+  const startVisitorFlow = () => {
+    // Reset any previous visitor flow data
+    localStorage.removeItem("visitor_primary");
+    localStorage.removeItem("visitor_secondary");
+    localStorage.removeItem("visitor_identity");
+    localStorage.removeItem("visitor_code");
+
+    router.push("/visitor/dashboard");
+  };
+
+  if (!company) return null; // optional loader
 
   return (
     <div className={styles.container}>
-
       {/* HEADER */}
       <header className={styles.header}>
-
-        {/* LEFT: COMPANY NAME */}
+        {/* COMPANY NAME */}
         <div className={styles.logoText}>
           {company.name}
         </div>
 
-        {/* RIGHT: LOGO + LOGOUT */}
+        {/* LOGO + LOGOUT */}
         <div className={styles.rightSection}>
-
           {company.logo && (
             <img
               src={company.logo}
@@ -56,17 +68,14 @@ export default function Home() {
           >
             ⏻
           </button>
-
         </div>
-
       </header>
 
-      {/* MAIN CARDS */}
+      {/* MAIN ACTIONS */}
       <div className={styles.cardWrapper}>
-
         <div
           className={styles.card}
-          onClick={() => router.push("/visitor/dashboard")}
+          onClick={startVisitorFlow}
         >
           <h2>Visitor Management</h2>
           <p>Manage visitor entries, ID verification & passes.</p>
@@ -79,7 +88,6 @@ export default function Home() {
           <h2>Conference Booking</h2>
           <p>Manage conference rooms & meetings.</p>
         </div>
-
       </div>
     </div>
   );
