@@ -1,26 +1,16 @@
 import { NextResponse } from "next/server";
 
-// Public entry routes (clean URLs)
 const PUBLIC_PATHS = [
-  "/",
   "/login",
-  "/forgot_password"
-];
-
-// Auth flow (internal but required)
-const AUTH_PREFIX = "/auth";
-
-// App sections
-const APP_PREFIXES = [
-  "/home",
-  "/visitor",
-  "/conference"
+  "/register",
+  "/forgot_password",
+  "/reset_password"
 ];
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Always allow Next.js internals & API
+  // Allow Next internals & API
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -29,23 +19,20 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // Allow public pages
+  // Public pages
   if (PUBLIC_PATHS.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // Allow internal auth routes (register, reset-password)
-  if (pathname.startsWith(AUTH_PREFIX)) {
-    return NextResponse.next();
+  // Check auth cookie
+  const token = request.cookies.get("token")?.value;
+
+  // Not logged in → force login
+  if (!token) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Allow app pages
-  if (APP_PREFIXES.some(prefix => pathname.startsWith(prefix))) {
-    return NextResponse.next();
-  }
-
-  // Block everything else
-  return NextResponse.redirect(new URL("/", request.url));
+  return NextResponse.next();
 }
 
 export const config = {
