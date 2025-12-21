@@ -163,7 +163,7 @@ export default function VisitorIdentity() {
       formData.append("photo", file);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/visitors`,
         {
           method: "POST",
           headers: {
