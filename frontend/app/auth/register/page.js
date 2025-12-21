@@ -50,7 +50,7 @@ export default function RegisterPage() {
       setLoading(true);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/register`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/register`,
         {
           method: "POST",
           body: formData
