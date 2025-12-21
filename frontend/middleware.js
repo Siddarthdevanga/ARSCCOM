@@ -3,20 +3,24 @@ import { NextResponse } from "next/server";
 const ALLOWED_PATHS = [
   "/",
   "/login",
-  "/forgot-password",
+  "/forgot_password",   // ✅ underscore (matches rewrite)
   "/home",
+
+  // Visitor flow
   "/visitor/dashboard",
   "/visitor/primary_details",
   "/visitor/secondary_details",
   "/visitor/identity",
   "/visitor/pass",
+
+  // Conference
   "/conference/dashboard"
 ];
 
 export function middleware(request) {
   const { pathname } = request.nextUrl;
 
-  // Allow Next.js internals
+  // ✅ Always allow Next internals & API
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
@@ -25,15 +29,16 @@ export function middleware(request) {
     return NextResponse.next();
   }
 
-  // Allow only known pages
+  // ✅ Allow exact allowed paths
   if (ALLOWED_PATHS.includes(pathname)) {
     return NextResponse.next();
   }
 
-  // Everything else → root
+  // ❌ Block everything else
   return NextResponse.redirect(new URL("/", request.url));
 }
 
 export const config = {
   matcher: ["/((?!_next|api|favicon.ico).*)"]
 };
+
