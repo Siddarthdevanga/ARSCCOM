@@ -163,7 +163,7 @@ function VisitorPassContent() {
             className={styles.secondaryBtn}
             onClick={() => {
               localStorage.clear();
-              router.push("/auth/login");
+              router.push("/login");
             }}
           >
             Logout
