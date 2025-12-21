@@ -13,7 +13,7 @@ export default function Home() {
     const storedCompany = localStorage.getItem("company");
 
     if (!token || !storedCompany) {
-      router.replace("/auth/login");
+      router.replace("/login");
       return;
     }
 
