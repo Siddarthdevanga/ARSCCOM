@@ -1,143 +1,139 @@
+/* ================= ROOT ================= */
 .container {
-  padding: 30px;
-  font-family: "Segoe UI", sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  padding: 32px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #fff;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 28px;
 }
 
 .companyName {
   font-size: 26px;
   font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 .logo {
-  height: 42px;
+  height: 46px;
   object-fit: contain;
 }
 
-/* PUBLIC URL */
+/* ================= PUBLIC LINK ================= */
 .publicBox {
-  margin-top: 20px;
-  padding: 14px 18px;
-  background: #f4f6ff;
-  border-radius: 10px;
-  display: flex;
-  gap: 14px;
-  align-items: center;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 30px;
+  backdrop-filter: blur(6px);
 }
 
-.publicBox a {
-  color: #5b2be0;
+.publicTitle {
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 6px;
+}
+
+.publicLink {
+  display: inline-block;
+  color: #ffffff;
   font-weight: 600;
-  text-decoration: none;
+  text-decoration: underline;
+  word-break: break-all;
 }
 
-.publicBox button {
-  padding: 6px 14px;
+.copyBtn {
+  margin-top: 10px;
+  background: #ffffff;
+  color: #5b00c9;
   border: none;
-  background: #5b2be0;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-/* TABS */
-.tabs {
-  margin-top: 25px;
-  display: flex;
-  gap: 16px;
-}
-
-.tabs button {
-  padding: 10px 20px;
+  padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid #ddd;
-  background: white;
+  font-weight: 600;
   cursor: pointer;
 }
 
-.activeTab {
-  background: #5b2be0;
-  color: white;
-  border-color: #5b2be0;
+.copyBtn:hover {
+  opacity: 0.9;
 }
 
-/* DASHBOARD */
+/* ================= STATS ================= */
 .statsGrid {
-  margin-top: 25px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 18px;
+  margin-bottom: 34px;
 }
 
 .statCard {
   background: #ffffff;
-  padding: 20px;
-  border-radius: 14px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  color: #333;
+  border-radius: 18px;
+  padding: 22px;
+  text-align: center;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
 }
 
 .statCard span {
-  color: #666;
+  display: block;
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 6px;
 }
 
 .statCard b {
-  display: block;
-  font-size: 26px;
-  margin-top: 6px;
+  font-size: 28px;
+  color: #5b00c9;
 }
 
-/* BOOKINGS */
-.bookingsBox {
-  margin-top: 25px;
-}
-
-.filterRow {
-  display: flex;
-  gap: 12px;
-}
-
-.filterRow select,
-.filterRow input {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
-}
-
-.filterRow button {
-  padding: 10px 18px;
-  background: #5b2be0;
-  color: white;
+/* ================= PRIMARY BUTTON ================= */
+.primaryBtn {
+  width: 260px;
+  max-width: 100%;
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
   border: none;
-  border-radius: 8px;
+  padding: 14px;
+  border-radius: 30px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
+  color: #3c007a;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
 }
 
-.bookingList {
-  margin-top: 20px;
+.primaryBtn:hover {
+  transform: translateY(-1px);
 }
 
-.bookingCard {
-  background: #fff;
-  padding: 16px;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+/* ================= ERROR ================= */
+.error {
+  color: #ffb4b4;
+  font-weight: 600;
+  margin-top: 14px;
 }
 
-.bookingCard button {
-  background: #ff4d4d;
-  border: none;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .container {
+    padding: 20px;
+  }
+
+  .companyName {
+    font-size: 22px;
+  }
+
+  .logo {
+    height: 36px;
+  }
+
+  .primaryBtn {
+    width: 100%;
+  }
 }
