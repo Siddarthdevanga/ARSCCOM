@@ -1,0 +1,143 @@
+.container {
+  padding: 30px;
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* HEADER */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.companyName {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.logo {
+  height: 42px;
+  object-fit: contain;
+}
+
+/* PUBLIC URL */
+.publicBox {
+  margin-top: 20px;
+  padding: 14px 18px;
+  background: #f4f6ff;
+  border-radius: 10px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.publicBox a {
+  color: #5b2be0;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.publicBox button {
+  padding: 6px 14px;
+  border: none;
+  background: #5b2be0;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* TABS */
+.tabs {
+  margin-top: 25px;
+  display: flex;
+  gap: 16px;
+}
+
+.tabs button {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+}
+
+.activeTab {
+  background: #5b2be0;
+  color: white;
+  border-color: #5b2be0;
+}
+
+/* DASHBOARD */
+.statsGrid {
+  margin-top: 25px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.statCard {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+
+.statCard span {
+  color: #666;
+}
+
+.statCard b {
+  display: block;
+  font-size: 26px;
+  margin-top: 6px;
+}
+
+/* BOOKINGS */
+.bookingsBox {
+  margin-top: 25px;
+}
+
+.filterRow {
+  display: flex;
+  gap: 12px;
+}
+
+.filterRow select,
+.filterRow input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.filterRow button {
+  padding: 10px 18px;
+  background: #5b2be0;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.bookingList {
+  margin-top: 20px;
+}
+
+.bookingCard {
+  background: #fff;
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+}
+
+.bookingCard button {
+  background: #ff4d4d;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
