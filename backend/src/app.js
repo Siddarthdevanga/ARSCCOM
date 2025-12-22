@@ -12,13 +12,14 @@ const app = express();
    GLOBAL MIDDLEWARE
 ====================================================== */
 
-/* ---------- CORS ---------- */
+/* ---------- CORS (CRITICAL FIX) ---------- */
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
       "http://13.205.13.110",
-      "http://13.205.13.110:3000"
+      "http://13.205.13.110:3000",
+      "https://www.wheelbrand.in"   // ✅ REQUIRED FOR PUBLIC OTP
     ],
     credentials: true
   })
@@ -38,22 +39,24 @@ app.get("/health", (req, res) => {
 /* ======================================================
    ROUTES
 ====================================================== */
+
+/* AUTH */
 app.use("/api/auth", authRoutes);
+
+/* VISITOR */
 app.use("/api/visitors", visitorRoutes);
 
-/* ----- CONFERENCE (ADMIN) ----- */
+/* CONFERENCE (ADMIN – AUTH REQUIRED) */
 app.use("/api/conference", conferenceRoutes);
 
-/* ----- CONFERENCE (PUBLIC) ----- */
+/* CONFERENCE (PUBLIC – OTP + BOOKING) */
 app.use("/api/public/conference", conferencePublicRoutes);
 
 /* ======================================================
    404 HANDLER
 ====================================================== */
 app.use((req, res) => {
-  res.status(404).json({
-    message: "Route not found"
-  });
+  res.status(404).json({ message: "Route not found" });
 });
 
 /* ======================================================
@@ -61,9 +64,7 @@ app.use((req, res) => {
 ====================================================== */
 app.use((err, req, res, next) => {
   console.error("❌ GLOBAL ERROR:", err);
-  res.status(500).json({
-    message: "Internal Server Error"
-  });
+  res.status(500).json({ message: "Internal Server Error" });
 });
 
 export default app;
