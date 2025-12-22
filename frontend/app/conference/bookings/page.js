@@ -31,7 +31,7 @@ export default function ConferenceBookings() {
 
   return (
     <div className={styles.container}>
-      <h1>Conference Bookings</h1>
+      <h1 className={styles.title}>Conference Bookings</h1>
 
       <div className={styles.filterRow}>
         <select onChange={(e) => setRoomId(e.target.value)}>
