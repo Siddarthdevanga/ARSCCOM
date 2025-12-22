@@ -73,19 +73,21 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
           <div className={styles.logoText}>
             VISITOR MANAGEMENT PLATFORM
           </div>
 
+          {/* ✅ LOGO WITH ANIMATION CLASS APPLIED */}
           <Image
             src="/logo.png"
-            alt="Logo"
+            alt="ARSCCOM Logo"
             width={420}
             height={140}
             priority
+            className={styles.brandLogo}
             style={{ objectFit: "contain" }}
           />
         </div>
@@ -97,7 +99,7 @@ export default function LoginPage() {
         </nav>
       </header>
 
-      {/* MAIN */}
+      {/* ================= MAIN ================= */}
       <main className={styles.mainRow}>
         <div className={styles.leftSpacer} />
 
@@ -137,7 +139,7 @@ export default function LoginPage() {
 
             <div className={styles.extraLinks}>
               <Link href="/auth/forgot-password">Forgot Password?</Link>
-              <span>|</span>
+              <span> | </span>
               <Link href="/auth/register">New Registration</Link>
             </div>
           </div>
