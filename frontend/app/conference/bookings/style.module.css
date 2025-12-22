@@ -6,11 +6,13 @@
 }
 
 /* ================= TITLE ================= */
-h1 {
+.title {
   font-size: 28px;
   color: #3c007a;
   margin-bottom: 30px;
+  font-weight: 700;
 }
+
 
 /* ================= FILTER ================= */
 .filterRow {
