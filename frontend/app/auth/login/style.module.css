@@ -25,11 +25,12 @@
 }
 
 .brandLogo {
-  width: 480px;
-  max-width: 100%;
+  width: 600px;          /* ⬅ increase size */
+  max-width: none;       /* ⬅ remove restriction */
   height: auto;
   object-fit: contain;
 }
+
 
 .nav {
   position: absolute;
