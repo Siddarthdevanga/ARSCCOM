@@ -7,7 +7,11 @@ const router = express.Router();
 /* ======================================================
    HELPERS
 ====================================================== */
-const normalizeSlug = (slug) => slug?.trim().toLowerCase();
+const normalizeSlug = (slug) =>
+  typeof slug === "string" ? slug.trim().toLowerCase() : "";
+
+const normalizeEmail = (email) =>
+  typeof email === "string" ? email.trim().toLowerCase() : "";
 
 /* ======================================================
    GET COMPANY BY SLUG (PUBLIC)
@@ -15,15 +19,18 @@ const normalizeSlug = (slug) => slug?.trim().toLowerCase();
 router.get("/company/:slug", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
+
     if (!slug) {
       return res.status(400).json({ message: "Invalid booking link" });
     }
 
     const [[company]] = await db.query(
-      `SELECT id, name, logo_url
-       FROM companies
-       WHERE slug = ?
-       LIMIT 1`,
+      `
+      SELECT id, name, logo_url
+      FROM companies
+      WHERE slug = ?
+      LIMIT 1
+      `,
       [slug]
     );
 
@@ -55,11 +62,13 @@ router.get("/company/:slug/rooms", async (req, res) => {
     }
 
     const [rooms] = await db.query(
-      `SELECT id, name
-       FROM conference_rooms
-       WHERE company_id = ?
-         AND is_active = 1
-       ORDER BY name`,
+      `
+      SELECT id, name
+      FROM conference_rooms
+      WHERE company_id = ?
+        AND is_active = 1
+      ORDER BY name ASC
+      `,
       [company.id]
     );
 
@@ -79,7 +88,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
     const roomId = Number(req.query.roomId);
     const date = req.query.date?.trim();
 
-    if (!roomId || !date) {
+    if (!slug || !roomId || !date) {
       return res.status(400).json({
         message: "roomId and date are required"
       });
@@ -95,13 +104,19 @@ router.get("/company/:slug/bookings", async (req, res) => {
     }
 
     const [bookings] = await db.query(
-      `SELECT start_time, end_time, booked_by, purpose
-       FROM conference_bookings
-       WHERE company_id = ?
-         AND room_id = ?
-         AND booking_date = ?
-         AND status = 'BOOKED'
-       ORDER BY start_time`,
+      `
+      SELECT
+        start_time,
+        end_time,
+        booked_by,
+        purpose
+      FROM conference_bookings
+      WHERE company_id = ?
+        AND room_id = ?
+        AND booking_date = ?
+        AND status = 'BOOKED'
+      ORDER BY start_time ASC
+      `,
       [company.id, roomId, date]
     );
 
@@ -127,14 +142,17 @@ router.post("/company/:slug/book", async (req, res) => {
       endTime
     } = req.body;
 
-    /* ================= VALIDATION ================= */
-    if (!roomId || !bookedBy || !date || !startTime || !endTime) {
+    if (!slug || !roomId || !bookedBy || !date || !startTime || !endTime) {
       return res.status(400).json({
         message: "All required fields must be provided"
       });
     }
 
-    const email = bookedBy.trim().toLowerCase();
+    const email = normalizeEmail(bookedBy);
+
+    if (!email.includes("@")) {
+      return res.status(400).json({ message: "Invalid email address" });
+    }
 
     const [[company]] = await db.query(
       `SELECT id, name FROM companies WHERE slug = ? LIMIT 1`,
@@ -147,21 +165,23 @@ router.post("/company/:slug/book", async (req, res) => {
 
     /* ================= OVERLAP CHECK ================= */
     const [conflicts] = await db.query(
-      `SELECT id
-       FROM conference_bookings
-       WHERE company_id = ?
-         AND room_id = ?
-         AND booking_date = ?
-         AND status = 'BOOKED'
-         AND NOT (
-           end_time <= ?
-           OR start_time >= ?
-         )
-       LIMIT 1`,
+      `
+      SELECT id
+      FROM conference_bookings
+      WHERE company_id = ?
+        AND room_id = ?
+        AND booking_date = ?
+        AND status = 'BOOKED'
+        AND NOT (
+          end_time <= ?
+          OR start_time >= ?
+        )
+      LIMIT 1
+      `,
       [company.id, roomId, date, startTime, endTime]
     );
 
-    if (conflicts.length) {
+    if (conflicts.length > 0) {
       return res.status(409).json({
         message: "Selected time slot is already booked"
       });
@@ -169,9 +189,19 @@ router.post("/company/:slug/book", async (req, res) => {
 
     /* ================= CREATE BOOKING ================= */
     await db.query(
-      `INSERT INTO conference_bookings
-       (company_id, room_id, booked_by, purpose, booking_date, start_time, end_time)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `
+      INSERT INTO conference_bookings
+      (
+        company_id,
+        room_id,
+        booked_by,
+        purpose,
+        booking_date,
+        start_time,
+        end_time
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
       [
         company.id,
         roomId,
@@ -184,23 +214,20 @@ router.post("/company/:slug/book", async (req, res) => {
     );
 
     /* ================= CONFIRMATION EMAIL ================= */
-    try {
-      await sendEmail({
-        to: email,
-        subject: "Conference Room Booking Confirmed",
-        html: `
-          <h3>Booking Confirmed</h3>
-          <p><b>Company:</b> ${company.name}</p>
-          <p><b>Date:</b> ${date}</p>
-          <p><b>Time:</b> ${startTime} – ${endTime}</p>
-          <p><b>Purpose:</b> ${purpose || "-"}</p>
-        `
-      });
-    } catch (mailErr) {
-      console.error("⚠️ Booking email failed:", mailErr.message);
-    }
+    await sendEmail({
+      to: email,
+      subject: "Conference Room Booking Confirmed",
+      html: `
+        <h3>Booking Confirmed</h3>
+        <p><b>Company:</b> ${company.name}</p>
+        <p><b>Date:</b> ${date}</p>
+        <p><b>Time:</b> ${startTime} – ${endTime}</p>
+        <p><b>Purpose:</b> ${purpose || "-"}</p>
+      `
+    });
 
     res.json({ message: "Booking confirmed successfully" });
+
   } catch (err) {
     console.error("❌ Public booking create error:", err);
     res.status(500).json({
