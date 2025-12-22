@@ -39,13 +39,11 @@ const validatePassword = (password) => {
    REGISTER COMPANY
 ====================================================== */
 export const registerCompany = async (data, file) => {
-  const {
-    companyName,
-    email,
-    phone,
-    conferenceRooms = 0,
-    password
-  } = data;
+  const companyName = data.companyName?.trim();
+  const email = data.email?.trim().toLowerCase();
+  const phone = data.phone || null;
+  const conferenceRooms = Number(data.conferenceRooms || 0);
+  const password = data.password;
 
   if (!companyName || !email || !password || !file) {
     throw new Error("Company name, email, password and logo are required");
@@ -56,66 +54,103 @@ export const registerCompany = async (data, file) => {
   /* ---------- Check existing user ---------- */
   const [existing] = await db.execute(
     "SELECT id FROM users WHERE email = ?",
-    [email.trim().toLowerCase()]
+    [email]
   );
 
   if (existing.length) {
     throw new Error("Email already registered");
   }
 
-  /* ---------- Generate slug ---------- */
-  const slug = generateSlug(companyName);
+  /* ---------- Generate UNIQUE slug ---------- */
+  let slug = generateSlug(companyName);
+  let suffix = 1;
+
+  while (true) {
+    const [[exists]] = await db.query(
+      "SELECT id FROM companies WHERE slug = ? LIMIT 1",
+      [slug]
+    );
+    if (!exists) break;
+    slug = `${generateSlug(companyName)}-${suffix++}`;
+  }
 
   /* ---------- Upload logo ---------- */
   const ext = path.extname(file.originalname).toLowerCase() || ".png";
   const logoKey = `companies/${slug}/logo${ext}`;
   const logoUrl = await uploadToS3(file, logoKey);
 
-  /* ---------- Create company ---------- */
-  const [companyResult] = await db.execute(
-    `INSERT INTO companies (name, slug, logo_url, rooms)
-     VALUES (?, ?, ?, ?)`,
-    [companyName, slug, logoUrl, conferenceRooms]
-  );
+  /* ---------- DB TRANSACTION ---------- */
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
 
-  /* ---------- Create admin user ---------- */
-  const passwordHash = await bcrypt.hash(password, 10);
+    /* ---------- Create company ---------- */
+    const [companyResult] = await conn.execute(
+      `
+      INSERT INTO companies (name, slug, logo_url, rooms)
+      VALUES (?, ?, ?, ?)
+      `,
+      [companyName, slug, logoUrl, conferenceRooms]
+    );
 
-  await db.execute(
-    `INSERT INTO users (company_id, email, phone, password_hash)
-     VALUES (?, ?, ?, ?)`,
-    [
-      companyResult.insertId,
-      email.trim().toLowerCase(),
-      phone || null,
-      passwordHash
-    ]
-  );
+    const companyId = companyResult.insertId;
 
-  /* ---------- Welcome email ---------- */
-  sendEmail({
-    to: email,
-    subject: "Welcome to ARSCCOM 🎉",
-    html: `
-      <h3>Welcome to ARSCCOM</h3>
-      <p>Your company <b>${companyName}</b> has been registered.</p>
-      <p>You can now manage visitors and conference room bookings.</p>
-    `
-  }).catch(() => {});
+    /* ---------- Create admin user ---------- */
+    const passwordHash = await bcrypt.hash(password, 10);
 
-  return {
-    companyId: companyResult.insertId,
-    companyName,
-    slug,
-    logoUrl
-  };
+    await conn.execute(
+      `
+      INSERT INTO users (company_id, email, phone, password_hash)
+      VALUES (?, ?, ?, ?)
+      `,
+      [companyId, email, phone, passwordHash]
+    );
+
+    /* ---------- AUTO CREATE CONFERENCE ROOMS ---------- */
+    for (let i = 1; i <= conferenceRooms; i++) {
+      await conn.execute(
+        `
+        INSERT INTO conference_rooms (company_id, name)
+        VALUES (?, ?)
+        `,
+        [companyId, `Conference Room ${i}`]
+      );
+    }
+
+    await conn.commit();
+
+    /* ---------- Welcome email (NON-BLOCKING) ---------- */
+    sendEmail({
+      to: email,
+      subject: "Welcome to ARSCCOM 🎉",
+      html: `
+        <h3>Welcome to ARSCCOM</h3>
+        <p>Your company <b>${companyName}</b> has been registered.</p>
+        <p>You can now manage visitors and conference room bookings.</p>
+      `
+    }).catch(() => {});
+
+    return {
+      companyId,
+      companyName,
+      slug,
+      logoUrl
+    };
+
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 };
 
 /* ======================================================
    LOGIN
 ====================================================== */
 export const login = async ({ email, password }) => {
-  if (!email || !password) {
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail || !password) {
     throw new Error("Email and password are required");
   }
 
@@ -124,15 +159,15 @@ export const login = async ({ email, password }) => {
     SELECT
       u.id,
       u.password_hash,
-      c.id            AS companyId,
-      c.name          AS companyName,
-      c.slug          AS companySlug,
-      c.logo_url      AS companyLogo
+      c.id       AS companyId,
+      c.name     AS companyName,
+      c.slug     AS companySlug,
+      c.logo_url AS companyLogo
     FROM users u
     JOIN companies c ON c.id = u.company_id
     WHERE u.email = ?
     `,
-    [email.trim().toLowerCase()]
+    [cleanEmail]
   );
 
   if (!rows.length) {
@@ -158,9 +193,9 @@ export const login = async ({ email, password }) => {
     company: {
       id: rows[0].companyId,
       name: rows[0].companyName,
-      slug: rows[0].companySlug,     // 🔥 REQUIRED
-      logo: rows[0].companyLogo,     // backward compatibility
-      logo_url: rows[0].companyLogo  // future-safe
+      slug: rows[0].companySlug,
+      logo: rows[0].companyLogo,
+      logo_url: rows[0].companyLogo
     }
   };
 };
@@ -177,7 +212,6 @@ export const forgotPassword = async (email) => {
     [cleanEmail]
   );
 
-  // silent exit
   if (!rows.length) return;
 
   const resetCode = generateResetCode();
@@ -207,7 +241,8 @@ export const forgotPassword = async (email) => {
    RESET PASSWORD
 ====================================================== */
 export const resetPassword = async ({ email, code, password }) => {
-  if (!email || !code || !password) {
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail || !code || !password) {
     throw new Error("Email, code and password are required");
   }
 
@@ -220,7 +255,7 @@ export const resetPassword = async ({ email, code, password }) => {
     WHERE email = ?
       AND reset_expires > NOW()
     `,
-    [email.trim().toLowerCase()]
+    [cleanEmail]
   );
 
   if (!rows.length || rows[0].reset_code !== code) {
