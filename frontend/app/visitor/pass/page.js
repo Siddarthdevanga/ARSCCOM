@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -17,14 +17,21 @@ const formatIST = (value) => {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: true,
+    hour12: true
   });
 };
 
-export default function VisitorPass() {
+/* ======================================================
+   INNER COMPONENT (SAFE to useSearchParams)
+====================================================== */
+function VisitorPassContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const visitorCode = searchParams.get("visitorCode");
+
+  const visitorCode = useMemo(
+    () => searchParams.get("visitorCode"),
+    [searchParams]
+  );
 
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState(null);
@@ -48,12 +55,7 @@ export default function VisitorPass() {
           { signal: controller.signal }
         );
 
-        let data;
-        try {
-          data = await res.json();
-        } catch {
-          throw new Error("Invalid server response");
-        }
+        const data = await res.json();
 
         if (!res.ok) {
           throw new Error(data?.message || "Visitor not found");
@@ -71,7 +73,6 @@ export default function VisitorPass() {
     };
 
     loadPass();
-
     return () => controller.abort();
   }, [visitorCode]);
 
@@ -106,7 +107,6 @@ export default function VisitorPass() {
   return (
     <div className={styles.page}>
       <div className={styles.passCard}>
-
         {/* HEADER */}
         <header className={styles.header}>
           <div className={styles.companyName}>{company.name}</div>
@@ -121,8 +121,6 @@ export default function VisitorPass() {
 
         {/* BODY */}
         <div className={styles.body}>
-
-          {/* DETAILS */}
           <div className={styles.details}>
             <div className={styles.passTitle}>VISITOR PASS</div>
             <div className={styles.passCode}>{visitor.visitorCode}</div>
@@ -143,12 +141,11 @@ export default function VisitorPass() {
             </div>
           </div>
 
-          {/* PHOTO */}
           <div className={styles.photoBox}>
             {visitor.photoUrl ? (
               <img
                 src={visitor.photoUrl}
-                alt="Visitor photo"
+                alt="Visitor"
                 className={styles.photo}
               />
             ) : (
@@ -176,8 +173,22 @@ export default function VisitorPass() {
             Dashboard
           </button>
         </div>
-
       </div>
     </div>
+  );
+}
+
+/* ======================================================
+   PAGE EXPORT (Suspense boundary)
+====================================================== */
+export default function VisitorPassPage() {
+  return (
+    <Suspense fallback={
+      <div className={styles.page}>
+        <div className={styles.stateCard}>Loading…</div>
+      </div>
+    }>
+      <VisitorPassContent />
+    </Suspense>
   );
 }
