@@ -20,9 +20,9 @@ export default function PublicBookingPage() {
   const [bookings, setBookings] = useState([]);
 
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-  const [otp, setOtp] = useState("");
 
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState("");
@@ -36,7 +36,7 @@ export default function PublicBookingPage() {
     if (!slug) return;
 
     fetch(`${API}/api/public/conference/company/${slug}`)
-      .then(r => r.ok ? r.json() : Promise.reject())
+      .then(res => res.ok ? res.json() : Promise.reject())
       .then(setCompany)
       .catch(() => setError("Invalid booking link"));
   }, [slug]);
@@ -61,43 +61,52 @@ export default function PublicBookingPage() {
       .then(setBookings);
   }, [roomId, date, slug]);
 
-  /* ================= SLOT AVAILABILITY ================= */
-  const isBooked = (slot) => {
-    return bookings.some(
-      b => slot >= b.start_time && slot < b.end_time
-    );
-  };
+  /* ================= SLOT CHECK ================= */
+  const isBooked = (slot) =>
+    bookings.some(b => slot >= b.start_time && slot < b.end_time);
 
-  /* ================= OTP HANDLERS ================= */
+  /* ================= SEND OTP (✅ FIXED) ================= */
   const sendOtp = async () => {
     if (!email) return setError("Enter email");
 
     setLoading(true);
     setError("");
 
-    await fetch(`${API}/api/public/otp/send`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email })
-    });
+    const res = await fetch(
+      `${API}/api/public/conference/company/${slug}/send-otp`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      }
+    );
+
+    if (!res.ok) {
+      setLoading(false);
+      return setError("Failed to send OTP");
+    }
 
     setOtpSent(true);
     setLoading(false);
   };
 
+  /* ================= VERIFY OTP (✅ FIXED) ================= */
   const verifyOtp = async () => {
-    const res = await fetch(`${API}/api/public/otp/verify`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, otp })
-    });
+    const res = await fetch(
+      `${API}/api/public/conference/company/${slug}/verify-otp`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp })
+      }
+    );
 
     if (!res.ok) return setError("Invalid OTP");
 
     setOtpVerified(true);
   };
 
-  /* ================= CREATE BOOKING ================= */
+  /* ================= CONFIRM BOOKING ================= */
   const confirmBooking = async () => {
     if (!roomId || !date || !selectedSlot) {
       return setError("Select room, date & slot");
@@ -130,10 +139,7 @@ export default function PublicBookingPage() {
   };
 
   /* ================= UI ================= */
-  if (error) {
-    return <div className={styles.error}>{error}</div>;
-  }
-
+  if (error) return <div className={styles.error}>{error}</div>;
   if (!company) return null;
 
   return (
@@ -189,7 +195,6 @@ export default function PublicBookingPage() {
             />
           </div>
 
-          {/* SLOT PICKER */}
           <div className={styles.slotGrid}>
             {TIME_SLOTS.map(slot => (
               <button
