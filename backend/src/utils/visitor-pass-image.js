@@ -1,11 +1,19 @@
 import { createCanvas, loadImage, registerFont } from "canvas";
+import fs from "fs";
 
 /* ======================================================
-   REGISTER FONT (UNICODE SAFE)
+   REGISTER FONT (ENGLISH SAFE)
 ====================================================== */
-registerFont("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", {
-  family: "NotoSans"
-});
+const FONT_PATH = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
+const FONT_FAMILY = "AppFont";
+
+if (!fs.existsSync(FONT_PATH)) {
+  console.error("❌ Font not found:", FONT_PATH);
+  throw new Error("Required font missing");
+}
+
+registerFont(FONT_PATH, { family: FONT_FAMILY });
+console.log("✅ Font registered:", FONT_FAMILY);
 
 /* ======================================================
    CONSTANTS
@@ -71,6 +79,10 @@ export const generateVisitorPassImage = async ({
   const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   const ctx = canvas.getContext("2d");
 
+  /* ================= CANVAS DEFAULTS ================= */
+  ctx.textBaseline = "middle";
+  ctx.textAlign = "left";
+
   /* ================= BACKGROUND ================= */
   ctx.fillStyle = BRAND_COLOR;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
@@ -96,21 +108,15 @@ export const generateVisitorPassImage = async ({
   ctx.fillRect(cardX, cardY, cardW, 64);
 
   ctx.fillStyle = "#fff";
-  ctx.font = "bold 22px NotoSans";
-  drawEllipsisText(
-    ctx,
-    companyName,
-    cardX + 20,
-    cardY + 40,
-    cardW - 40
-  );
+  ctx.font = `bold 22px ${FONT_FAMILY}`;
+  drawEllipsisText(ctx, companyName, cardX + 20, cardY + 32, cardW - 40);
 
   /* ================= VISITOR DETAILS ================= */
   ctx.fillStyle = BRAND_COLOR;
-  ctx.font = "bold 16px NotoSans";
+  ctx.font = `bold 16px ${FONT_FAMILY}`;
   ctx.fillText("Visitor Pass", cardX + 20, cardY + 100);
 
-  ctx.font = "15px NotoSans";
+  ctx.font = `15px ${FONT_FAMILY}`;
   ctx.fillText(`Visitor ID : ${visitor.visitorCode || "-"}`, cardX + 20, cardY + 135);
   ctx.fillText(`Name       : ${visitor.name || "-"}`, cardX + 20, cardY + 165);
   ctx.fillText(`Phone      : ${visitor.phone || "-"}`, cardX + 20, cardY + 195);
@@ -143,25 +149,20 @@ export const generateVisitorPassImage = async ({
 
       ctx.drawImage(img, imgX, imgY, imgW, imgH);
     } catch {
-      ctx.font = "12px NotoSans";
+      ctx.font = `12px ${FONT_FAMILY}`;
       ctx.fillStyle = "#999";
-      ctx.fillText(
-        "Photo unavailable",
-        photoX + 20,
-        photoY + photoH / 2
-      );
+      ctx.fillText("Photo unavailable", photoX + 20, photoY + photoH / 2);
     }
   }
 
   /* ================= FOOTER ================= */
-  ctx.font = "12px NotoSans";
+  ctx.font = `12px ${FONT_FAMILY}`;
   ctx.fillStyle = TEXT_GRAY;
   ctx.fillText(
     "Please carry this pass during your visit",
     cardX + 20,
-    cardY + cardH - 20
+    cardY + cardH - 18
   );
 
   return canvas.toBuffer("image/png");
 };
-
