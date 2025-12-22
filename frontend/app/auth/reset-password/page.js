@@ -131,7 +131,7 @@ function ResetPasswordForm() {
 
         <div
           className={styles.back}
-          onClick={() => router.replace("auth/login")}
+          onClick={() => router.replace("/auth/login")}
         >
           ← Back to Login
         </div>
