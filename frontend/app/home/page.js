@@ -76,7 +76,7 @@ export default function Home() {
 
         <div
           className={styles.card}
-          onClick={() => router.push("/conference/dashboard")}
+          onClick={() => router.push("/conference")}
         >
           <h2>Conference Booking</h2>
           <p>Manage conference rooms & meetings.</p>
