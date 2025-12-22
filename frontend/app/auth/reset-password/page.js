@@ -4,11 +4,10 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
-export default function ResetPassword() {
+export default function ResetPasswordClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Email comes from forgot-password redirect
   const email = (searchParams.get("email") || "").trim();
 
   const [code, setCode] = useState("");
@@ -20,7 +19,6 @@ export default function ResetPassword() {
   const handleSubmit = async () => {
     setError("");
 
-    /* ================= VALIDATION ================= */
     if (!email) {
       setError("Invalid reset link. Please request a new one.");
       return;
@@ -38,7 +36,6 @@ export default function ResetPassword() {
 
     setLoading(true);
 
-    /* ================= API ================= */
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/reset-password`,
@@ -59,7 +56,7 @@ export default function ResetPassword() {
         throw new Error(data.message || "Failed to reset password");
       }
 
-      router.push("/auth/login");
+      router.replace("/login");
 
     } catch (err) {
       setError(err.message || "Something went wrong");
@@ -70,10 +67,8 @@ export default function ResetPassword() {
 
   return (
     <div className={styles.page}>
-      {/* BRAND */}
       <div className={styles.brand}>ARSCCOM</div>
 
-      {/* CARD */}
       <div className={styles.card}>
         <h2 className={styles.title}>Reset Password</h2>
         <p className={styles.subtitle}>
@@ -82,7 +77,6 @@ export default function ResetPassword() {
 
         {error && <div className={styles.error}>{error}</div>}
 
-        {/* RESET CODE */}
         <label className={styles.label}>Reset Code</label>
         <input
           className={styles.input}
@@ -92,14 +86,12 @@ export default function ResetPassword() {
           disabled={loading}
         />
 
-        {/* PASSWORD ROW */}
         <div className={styles.row}>
           <div className={styles.col}>
             <label className={styles.label}>New Password</label>
             <input
               type="password"
               className={styles.input}
-              placeholder="New password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -111,7 +103,6 @@ export default function ResetPassword() {
             <input
               type="password"
               className={styles.input}
-              placeholder="Confirm password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
               disabled={loading}
@@ -119,7 +110,6 @@ export default function ResetPassword() {
           </div>
         </div>
 
-        {/* SUBMIT */}
         <button
           className={styles.button}
           onClick={handleSubmit}
@@ -128,10 +118,9 @@ export default function ResetPassword() {
           {loading ? "Updating..." : "Update Password"}
         </button>
 
-        {/* BACK */}
         <div
           className={styles.back}
-          onClick={() => router.push("/auth/login")}
+          onClick={() => router.replace("/login")}
         >
           ← Back to Login
         </div>
