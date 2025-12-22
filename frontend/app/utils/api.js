@@ -1,24 +1,17 @@
+const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+
 export const apiFetch = async (url, options = {}) => {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}${url}`,
-    {
-      ...options,
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...(options.headers || {})
-      }
+  const res = await fetch(`${API}${url}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+      ...(options.headers || {})
     }
-  );
+  });
 
-  const data = await res.json();
-
-  if (!res.ok) {
-    throw new Error(data.message || "API error");
-  }
-
-  return data;
+  if (!res.ok) throw new Error("API Error");
+  return res.json();
 };
-
