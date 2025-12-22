@@ -8,42 +8,47 @@ export default function Home() {
   const router = useRouter();
   const [company, setCompany] = useState(null);
 
+  /* ================= AUTH CHECK ================= */
   useEffect(() => {
-    const storedCompany = localStorage.getItem("company");
+    if (typeof window === "undefined") return;
+
     const token = localStorage.getItem("token");
+    const storedCompany = localStorage.getItem("company");
 
     if (!token || !storedCompany) {
-      router.push("/auth/login");
+      router.replace("/auth/login");
       return;
     }
 
-    setCompany(JSON.parse(storedCompany));
+    try {
+      setCompany(JSON.parse(storedCompany));
+    } catch {
+      localStorage.clear();
+      router.replace("/auth/login");
+    }
   }, [router]);
 
   const handleLogout = () => {
     localStorage.clear();
-    router.push("/auth/login");
+    router.replace("/auth/login");
   };
 
-  if (!company) return null; // or loader
+  if (!company) return null;
 
   return (
     <div className={styles.container}>
-
       {/* HEADER */}
       <header className={styles.header}>
-
-        {/* LEFT: COMPANY NAME */}
+        {/* LEFT */}
         <div className={styles.logoText}>
           {company.name}
         </div>
 
-        {/* RIGHT: LOGO + LOGOUT */}
+        {/* RIGHT */}
         <div className={styles.rightSection}>
-
-          {company.logo && (
+          {company.logo_url && (
             <img
-              src={company.logo}
+              src={company.logo_url}
               alt="Company Logo"
               className={styles.companyLogo}
             />
@@ -56,14 +61,11 @@ export default function Home() {
           >
             ⏻
           </button>
-
         </div>
-
       </header>
 
-      {/* MAIN CARDS */}
+      {/* MODULE CARDS */}
       <div className={styles.cardWrapper}>
-
         <div
           className={styles.card}
           onClick={() => router.push("/visitor/dashboard")}
@@ -79,7 +81,6 @@ export default function Home() {
           <h2>Conference Booking</h2>
           <p>Manage conference rooms & meetings.</p>
         </div>
-
       </div>
     </div>
   );
