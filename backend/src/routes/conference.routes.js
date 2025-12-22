@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
-   GET DASHBOARD STATS
+   DASHBOARD STATS
    GET /api/conference/dashboard
 ====================================================== */
 router.get("/dashboard", async (req, res) => {
@@ -20,17 +20,31 @@ router.get("/dashboard", async (req, res) => {
     const [[stats]] = await db.query(
       `
       SELECT
-        (SELECT COUNT(*) FROM conference_rooms WHERE company_id = ?) AS rooms,
-        (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ?) AS totalBookings,
+        (SELECT COUNT(*) FROM conference_rooms
+         WHERE company_id = ?) AS rooms,
+
         (SELECT COUNT(*) FROM conference_bookings
-         WHERE company_id = ? AND DATE(date) = CURDATE()) AS todayBookings,
+         WHERE company_id = ?) AS totalBookings,
+
         (SELECT COUNT(*) FROM conference_bookings
-         WHERE company_id = ? AND status = 'CANCELLED') AS cancelled
+         WHERE company_id = ?
+           AND booking_date = CURDATE()
+           AND status = 'BOOKED') AS todayBookings,
+
+        (SELECT COUNT(*) FROM conference_bookings
+         WHERE company_id = ?
+           AND status = 'CANCELLED') AS cancelled
       `,
       [companyId, companyId, companyId, companyId]
     );
 
-    res.json(stats);
+    res.json(stats || {
+      rooms: 0,
+      totalBookings: 0,
+      todayBookings: 0,
+      cancelled: 0
+    });
+
   } catch (err) {
     console.error("Dashboard error:", err);
     res.status(500).json({ message: "Failed to load dashboard" });
@@ -49,12 +63,19 @@ router.get("/rooms", async (req, res) => {
     const { companyId } = req.user;
 
     const [rooms] = await db.query(
-      `SELECT id, name FROM conference_rooms WHERE company_id = ?`,
+      `
+      SELECT id, name
+      FROM conference_rooms
+      WHERE company_id = ?
+        AND is_active = 1
+      ORDER BY name
+      `,
       [companyId]
     );
 
-    res.json(rooms);
+    res.json(rooms || []);
   } catch (err) {
+    console.error("Rooms error:", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
   }
 });
@@ -67,18 +88,21 @@ router.post("/rooms", async (req, res) => {
     const { companyId } = req.user;
     const { name } = req.body;
 
-    if (!name) {
+    if (!name?.trim()) {
       return res.status(400).json({ message: "Room name required" });
     }
 
     await db.query(
-      `INSERT INTO conference_rooms (company_id, name)
-       VALUES (?, ?)`,
-      [companyId, name]
+      `
+      INSERT INTO conference_rooms (company_id, name)
+      VALUES (?, ?)
+      `,
+      [companyId, name.trim()]
     );
 
     res.json({ message: "Conference room added" });
   } catch (err) {
+    console.error("Create room error:", err);
     res.status(500).json({ message: "Unable to create room" });
   }
 });
@@ -97,18 +121,26 @@ router.get("/bookings", async (req, res) => {
 
     const [bookings] = await db.query(
       `
-      SELECT id, room_id, date, start_time, end_time, purpose, status
+      SELECT
+        id,
+        room_id,
+        booking_date,
+        start_time,
+        end_time,
+        purpose,
+        status
       FROM conference_bookings
       WHERE company_id = ?
         AND (? IS NULL OR room_id = ?)
-        AND (? IS NULL OR date = ?)
-      ORDER BY start_time
+        AND (? IS NULL OR booking_date = ?)
+      ORDER BY booking_date, start_time
       `,
-      [companyId, roomId, roomId, date, date]
+      [companyId, roomId || null, roomId || null, date || null, date || null]
     );
 
-    res.json(bookings);
+    res.json(bookings || []);
   } catch (err) {
+    console.error("Bookings error:", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
   }
 });
@@ -121,17 +153,24 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     const { companyId } = req.user;
     const { id } = req.params;
 
-    await db.query(
+    const [result] = await db.query(
       `
       UPDATE conference_bookings
       SET status = 'CANCELLED'
-      WHERE id = ? AND company_id = ?
+      WHERE id = ?
+        AND company_id = ?
+        AND status = 'BOOKED'
       `,
       [id, companyId]
     );
 
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
     res.json({ message: "Booking cancelled" });
   } catch (err) {
+    console.error("Cancel booking error:", err);
     res.status(500).json({ message: "Unable to cancel booking" });
   }
 });
