@@ -41,6 +41,8 @@ router.get("/company/:slug", async (req, res) => {
 ====================================================== */
 router.post("/company/:slug/send-otp", async (req, res) => {
   try {
+    console.log("🔥 SEND OTP HIT:", req.body);
+
     const slug = normalizeSlug(req.params.slug);
     const email = normalizeEmail(req.body.email);
 
@@ -58,16 +60,15 @@ router.post("/company/:slug/send-otp", async (req, res) => {
     }
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log("🔐 OTP GENERATED:", otp, "FOR:", email);
 
-    /* ❗ Properly invalidate old OTPs */
+    /* Invalidate previous OTPs */
     await db.query(
-      `
-      DELETE FROM public_booking_otp
-      WHERE company_id = ? AND email = ?
-      `,
+      `DELETE FROM public_booking_otp WHERE company_id = ? AND email = ?`,
       [company.id, email]
     );
 
+    /* Insert new OTP */
     await db.query(
       `
       INSERT INTO public_booking_otp
@@ -77,30 +78,28 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       [company.id, email, otp]
     );
 
-    /* ✅ SEND OTP EMAIL */
-    try {
-      await sendEmail({
-        to: email,
-        subject: `OTP for Conference Booking – ${company.name}`,
-        html: `
-          <h3>OTP Verification</h3>
-          <p>Your OTP for booking at <b>${company.name}</b>:</p>
-          <h2>${otp}</h2>
-          <p>This OTP is valid for <b>10 minutes</b>.</p>
-        `
-      });
+    console.log("📨 OTP SAVED IN DB");
 
-      console.log("📧 OTP email sent to", email);
-    } catch (mailErr) {
-      console.error("❌ OTP email failed:", mailErr.message);
-      return res.status(500).json({ message: "Failed to send OTP email" });
-    }
+    /* SEND EMAIL */
+    console.log("📤 SENDING OTP EMAIL...");
+    await sendEmail({
+      to: email,
+      subject: `OTP for Conference Booking – ${company.name}`,
+      html: `
+        <h3>OTP Verification</h3>
+        <p>Your OTP for booking at <b>${company.name}</b>:</p>
+        <h2>${otp}</h2>
+        <p>This OTP is valid for <b>10 minutes</b>.</p>
+      `
+    });
+
+    console.log("✅ OTP EMAIL SENT SUCCESSFULLY");
 
     res.json({ message: "OTP sent successfully" });
 
   } catch (err) {
-    console.error("❌ Send OTP error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ SEND OTP ERROR (FULL):", err);
+    res.status(500).json({ message: "Failed to send OTP" });
   }
 });
 
@@ -121,6 +120,10 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
       `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
+
+    if (!company) {
+      return res.status(404).json({ message: "Invalid booking link" });
+    }
 
     const [[row]] = await db.query(
       `
@@ -172,7 +175,11 @@ router.post("/company/:slug/book", async (req, res) => {
       [slug]
     );
 
-    /* 🔐 OTP CHECK */
+    if (!company) {
+      return res.status(404).json({ message: "Invalid booking link" });
+    }
+
+    /* OTP VERIFIED CHECK */
     const [[verified]] = await db.query(
       `
       SELECT id FROM public_booking_otp
@@ -192,7 +199,7 @@ router.post("/company/:slug/book", async (req, res) => {
       });
     }
 
-    /* ⛔ OVERLAP CHECK */
+    /* OVERLAP CHECK */
     const [conflicts] = await db.query(
       `
       SELECT id FROM conference_bookings
@@ -210,7 +217,7 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(409).json({ message: "Slot already booked" });
     }
 
-    /* ✅ CREATE BOOKING */
+    /* CREATE BOOKING */
     await db.query(
       `
       INSERT INTO conference_bookings
