@@ -1,22 +1,34 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiFetch } from "../../utils/api"; // ✅ FIXED (NO alias)
+import { apiFetch } from "../../utils/api"; // ✅ relative import
 import styles from "./style.module.css";
 
 export default function ConferenceBookings() {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
+
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState("");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   /* ================= LOAD ROOMS ================= */
   useEffect(() => {
+    let mounted = true;
+
     apiFetch("/api/conference/rooms")
-      .then(setRooms)
-      .catch(() => setError("Failed to load rooms"));
+      .then((data) => {
+        if (mounted) setRooms(data || []);
+      })
+      .catch(() => {
+        if (mounted) setError("Failed to load rooms");
+      });
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   /* ================= LOAD BOOKINGS ================= */
@@ -33,38 +45,49 @@ export default function ConferenceBookings() {
       const data = await apiFetch(
         `/api/conference/bookings?roomId=${roomId}&date=${date}`
       );
-      setBookings(data);
 
+      setBookings(Array.isArray(data) ? data : []);
     } catch (err) {
-      setError(err.message || "Failed to load bookings");
+      setError(err?.message || "Failed to load bookings");
     } finally {
       setLoading(false);
     }
   };
 
   /* ================= CANCEL BOOKING ================= */
-  const cancelBooking = async (id) => {
+  const cancelBooking = async (bookingId) => {
+    if (!bookingId) return;
+
     try {
-      await apiFetch(`/api/conference/bookings/${id}/cancel`, {
-        method: "PATCH"
-      });
-      loadBookings();
+      setLoading(true);
+      await apiFetch(
+        `/api/conference/bookings/${bookingId}/cancel`,
+        { method: "PATCH" }
+      );
+      await loadBookings();
     } catch {
       setError("Unable to cancel booking");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className={styles.container}>
+      {/* ================= TITLE ================= */}
       <h1 className={styles.title}>Conference Bookings</h1>
 
-      {/* FILTERS */}
+      {/* ================= FILTERS ================= */}
       <div className={styles.filterRow}>
-        <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+        <select
+          value={roomId}
+          onChange={(e) => setRoomId(e.target.value)}
+          className={styles.select}
+        >
           <option value="">Select Room</option>
-          {rooms.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.name}
+          {rooms.map((room) => (
+            <option key={room.id} value={room.id}>
+              {room.name}
             </option>
           ))}
         </select>
@@ -72,33 +95,42 @@ export default function ConferenceBookings() {
         <input
           type="date"
           value={date}
+          className={styles.input}
           onChange={(e) => setDate(e.target.value)}
         />
 
-        <button onClick={loadBookings} disabled={loading}>
+        <button
+          className={styles.loadBtn}
+          onClick={loadBookings}
+          disabled={loading}
+        >
           {loading ? "Loading..." : "Load"}
         </button>
       </div>
 
-      {/* ERROR */}
+      {/* ================= ERROR ================= */}
       {error && <p className={styles.error}>{error}</p>}
 
-      {/* BOOKINGS LIST */}
+      {/* ================= BOOKINGS ================= */}
       <div className={styles.list}>
-        {bookings.length === 0 && !loading && (
+        {!loading && bookings.length === 0 && (
           <p className={styles.empty}>No bookings found</p>
         )}
 
         {bookings.map((b) => (
           <div key={b.id} className={styles.bookingCard}>
-            <div>
+            <div className={styles.bookingInfo}>
               <b>
                 {b.start_time} – {b.end_time}
               </b>
               <p>{b.purpose || "—"}</p>
             </div>
 
-            <button onClick={() => cancelBooking(b.id)}>
+            <button
+              className={styles.cancelBtn}
+              onClick={() => cancelBooking(b.id)}
+              disabled={loading}
+            >
               Cancel
             </button>
           </div>
