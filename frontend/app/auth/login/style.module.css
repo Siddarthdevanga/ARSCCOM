@@ -1,20 +1,29 @@
+/* ================= PAGE ================= */
 .container {
   height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: Arial, sans-serif;
   color: white;
-  overflow: hidden;
+
+  /* IMPORTANT: allow logo animation without clipping */
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
+/* ================= HEADER ================= */
 .header {
   position: relative;
   padding: 24px 60px;
 }
 
+/* ================= BRAND ================= */
 .brandSection {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+
+  /* give logo space to grow */
+  width: 800px;
 }
 
 .logoText {
@@ -24,14 +33,30 @@
   margin-bottom: 18px;
 }
 
-.brandLogo {
-  width: 600px;          /* ⬅ increase size */
-  max-width: none;       /* ⬅ remove restriction */
-  height: auto;
-  object-fit: contain;
+/* ================= LOGO ANIMATION ================= */
+@keyframes logoFadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(25px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
+.brandLogo {
+  width: 720px;          /* BIG & visible */
+  max-width: none;       /* remove constraint */
+  height: auto;
+  object-fit: contain;
+  display: block;
 
+  /* animation */
+  animation: logoFadeSlide 1.2s ease-out forwards;
+}
+
+/* ================= NAV ================= */
 .nav {
   position: absolute;
   top: 30px;
@@ -53,6 +78,7 @@
   opacity: 0.7;
 }
 
+/* ================= DROPDOWN ================= */
 .dropdownBox {
   position: absolute;
   top: 100px;
@@ -119,6 +145,7 @@
   background: #5c00c7;
 }
 
+/* ================= LOGIN ================= */
 .loginWrapper {
   position: absolute;
   top: 100px;
