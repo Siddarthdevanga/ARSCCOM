@@ -16,7 +16,10 @@ export default function ForgotPassword() {
     setError("");
     setSuccess("");
 
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    /* ================= VALIDATION ================= */
+    if (!normalizedEmail) {
       setError("Registered email is required");
       return;
     }
@@ -29,21 +32,34 @@ export default function ForgotPassword() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim().toLowerCase() })
+          body: JSON.stringify({ email: normalizedEmail })
         }
       );
 
-      const data = await res.json();
+      /* ================= SAFE RESPONSE HANDLING ================= */
+      const contentType = res.headers.get("content-type");
+      let data = {};
+
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(
+          text || "Server returned an invalid response"
+        );
+      }
 
       if (!res.ok) {
         throw new Error(data.message || "Unable to process request");
       }
 
-      // Security-safe success
+      /* ================= SUCCESS ================= */
       setSuccess("If the email exists, a reset code has been sent.");
 
       setTimeout(() => {
-        router.push(`/auth/reset-password?email=${email.trim()}`);
+        router.push(
+          `/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}`
+        );
       }, 1500);
 
     } catch (err) {
@@ -55,17 +71,16 @@ export default function ForgotPassword() {
 
   return (
     <div className={styles.page}>
-
-      {/* BRAND */}
+      {/* HEADER */}
       <div className={styles.header}>
         <div className={styles.brand}>ARSCCOM</div>
       </div>
 
-      {/* CENTER */}
+      {/* CONTENT */}
       <div className={styles.center}>
         <div className={styles.card}>
-
           <h2 className={styles.title}>Forgot Password</h2>
+
           <p className={styles.subtitle}>
             Enter your registered email to receive a reset code
           </p>
@@ -97,10 +112,8 @@ export default function ForgotPassword() {
           >
             ← Back to Login
           </div>
-
         </div>
       </div>
-
     </div>
   );
 }
