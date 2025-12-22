@@ -11,22 +11,27 @@ router.get("/company/:slug", async (req, res) => {
   try {
     const { slug } = req.params;
 
+    if (!slug) {
+      return res.status(400).json({ message: "Invalid company slug" });
+    }
+
     const [[company]] = await db.query(
-      `SELECT id, name, logo_url
-       FROM companies
-       WHERE slug = ?`,
+      `
+      SELECT id, name, logo_url
+      FROM companies
+      WHERE slug = ?
+      `,
       [slug]
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ message: "Invalid booking link" });
     }
 
     res.json(company);
-
   } catch (err) {
-    console.error("Public company fetch error:", err);
-    res.status(500).json({ message: "Failed to fetch company" });
+    console.error("❌ Public company fetch error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
@@ -44,28 +49,29 @@ router.get("/company/:slug/rooms", async (req, res) => {
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ message: "Invalid booking link" });
     }
 
     const [rooms] = await db.query(
-      `SELECT id, name
-       FROM conference_rooms
-       WHERE company_id = ?
-         AND is_active = 1
-       ORDER BY name`,
+      `
+      SELECT id, name
+      FROM conference_rooms
+      WHERE company_id = ?
+        AND is_active = 1
+      ORDER BY name
+      `,
       [company.id]
     );
 
     res.json(rooms);
-
   } catch (err) {
-    console.error("Public rooms fetch error:", err);
+    console.error("❌ Public rooms fetch error:", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
   }
 });
 
 /* ======================================================
-   GET BOOKINGS FOR A ROOM & DATE (PUBLIC)
+   GET BOOKINGS FOR ROOM + DATE (PUBLIC)
    GET /api/public/conference/company/:slug/bookings
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
@@ -85,7 +91,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ message: "Invalid booking link" });
     }
 
     const [bookings] = await db.query(
@@ -106,9 +112,8 @@ router.get("/company/:slug/bookings", async (req, res) => {
     );
 
     res.json(bookings);
-
   } catch (err) {
-    console.error("Public bookings fetch error:", err);
+    console.error("❌ Public bookings fetch error:", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
   }
 });
@@ -132,7 +137,7 @@ router.post("/company/:slug/book", async (req, res) => {
     /* ================= VALIDATION ================= */
     if (!roomId || !bookedBy || !date || !startTime || !endTime) {
       return res.status(400).json({
-        message: "Missing required fields"
+        message: "All required fields must be provided"
       });
     }
 
@@ -142,7 +147,7 @@ router.post("/company/:slug/book", async (req, res) => {
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ message: "Invalid booking link" });
     }
 
     /* ================= OVERLAP CHECK ================= */
@@ -164,7 +169,7 @@ router.post("/company/:slug/book", async (req, res) => {
 
     if (conflicts.length > 0) {
       return res.status(409).json({
-        message: "Selected slot is already booked"
+        message: "Selected time slot is already booked"
       });
     }
 
@@ -178,20 +183,17 @@ router.post("/company/:slug/book", async (req, res) => {
       [
         company.id,
         roomId,
-        bookedBy,
-        purpose || "",
+        bookedBy.trim(),
+        purpose?.trim() || "",
         date,
         startTime,
         endTime
       ]
     );
 
-    res.json({
-      message: "Booking confirmed"
-    });
-
+    res.json({ message: "Booking confirmed successfully" });
   } catch (err) {
-    console.error("Public booking error:", err);
+    console.error("❌ Public booking create error:", err);
     res.status(500).json({
       message: "Unable to create booking"
     });
@@ -199,4 +201,3 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 export default router;
-
