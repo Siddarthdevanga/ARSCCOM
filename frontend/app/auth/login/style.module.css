@@ -5,7 +5,7 @@
   font-family: Arial, sans-serif;
   color: white;
 
-  /* IMPORTANT: allow logo animation without clipping */
+  /* Allow animation to be visible */
   overflow-x: hidden;
   overflow-y: visible;
 }
@@ -22,7 +22,6 @@
   flex-direction: column;
   align-items: flex-start;
 
-  /* give logo space to grow */
   width: 800px;
 }
 
@@ -35,25 +34,27 @@
 
 /* ================= LOGO ANIMATION ================= */
 @keyframes logoFadeSlide {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(25px);
+    transform: translateY(50px) scale(0.95);
   }
-  to {
+  100% {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .brandLogo {
-  width: 720px;          /* BIG & visible */
-  max-width: none;       /* remove constraint */
+  width: 720px;
+  max-width: none;
   height: auto;
   object-fit: contain;
   display: block;
 
-  /* animation */
-  animation: logoFadeSlide 1.2s ease-out forwards;
+  /* ensure animation is noticeable */
+  opacity: 0;
+  animation: logoFadeSlide 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: 0.2s;
 }
 
 /* ================= NAV ================= */
@@ -75,7 +76,7 @@
 }
 
 .nav button:hover {
-  opacity: 0.7;
+  opacity: 0.75;
 }
 
 /* ================= DROPDOWN ================= */
