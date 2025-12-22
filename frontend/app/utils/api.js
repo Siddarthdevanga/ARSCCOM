@@ -21,3 +21,4 @@ export const apiFetch = async (url, options = {}) => {
 
   return data;
 };
+
