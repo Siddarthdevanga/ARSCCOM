@@ -23,7 +23,7 @@ export const register = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("REGISTER ERROR:", err.message);
+    console.error("REGISTER ERROR:", err);
 
     return res.status(400).json({
       message: err.message || "Registration failed"
@@ -37,7 +37,31 @@ export const register = async (req, res) => {
 ====================================================== */
 export const login = async (req, res) => {
   try {
-    const result = await service.login(req.body);
+    const email = req.body?.email?.trim().toLowerCase();
+    const password = req.body?.password;
+
+    if (!email || !password) {
+      return res.status(400).json({
+        message: "Email and password are required"
+      });
+    }
+
+    const result = await service.login({
+      email,
+      password
+    });
+
+    /**
+     * IMPORTANT:
+     * result.company MUST contain:
+     * { id, name, slug, logo_url }
+     */
+    if (!result?.company?.slug) {
+      console.warn(
+        "LOGIN WARNING: Company slug missing for",
+        result?.company?.name
+      );
+    }
 
     return res.status(200).json(result);
 
@@ -64,7 +88,10 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // 🔐 Security: do NOT reveal whether email exists
+    /**
+     * Security:
+     * Never reveal whether email exists
+     */
     await service.forgotPassword(email);
 
     return res.status(200).json({
