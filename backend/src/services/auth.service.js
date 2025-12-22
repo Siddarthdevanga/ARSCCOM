@@ -18,8 +18,13 @@ if (!process.env.JWT_SECRET) {
    HELPERS
 ====================================================== */
 
-const sanitizeCompany = (name) =>
-  name.toLowerCase().trim().replace(/[^a-z0-9]/g, "_");
+// slug-safe (URL friendly)
+const generateSlug = (name) =>
+  name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 
 const generateResetCode = () =>
   crypto.randomBytes(3).toString("hex").toUpperCase();
@@ -48,48 +53,60 @@ export const registerCompany = async (data, file) => {
 
   validatePassword(password);
 
+  /* ---------- Check existing user ---------- */
   const [existing] = await db.execute(
     "SELECT id FROM users WHERE email = ?",
-    [email]
+    [email.trim().toLowerCase()]
   );
 
   if (existing.length) {
     throw new Error("Email already registered");
   }
 
-  const safeCompany = sanitizeCompany(companyName);
-  const ext = path.extname(file.originalname).toLowerCase() || ".png";
-  const logoKey = `companies/${safeCompany}/logo${ext}`;
+  /* ---------- Generate slug ---------- */
+  const slug = generateSlug(companyName);
 
+  /* ---------- Upload logo ---------- */
+  const ext = path.extname(file.originalname).toLowerCase() || ".png";
+  const logoKey = `companies/${slug}/logo${ext}`;
   const logoUrl = await uploadToS3(file, logoKey);
 
+  /* ---------- Create company ---------- */
   const [companyResult] = await db.execute(
-    `INSERT INTO companies (name, logo_url, rooms)
-     VALUES (?, ?, ?)` ,
-    [companyName, logoUrl, conferenceRooms]
+    `INSERT INTO companies (name, slug, logo_url, rooms)
+     VALUES (?, ?, ?, ?)`,
+    [companyName, slug, logoUrl, conferenceRooms]
   );
 
+  /* ---------- Create admin user ---------- */
   const passwordHash = await bcrypt.hash(password, 10);
 
   await db.execute(
     `INSERT INTO users (company_id, email, phone, password_hash)
      VALUES (?, ?, ?, ?)`,
-    [companyResult.insertId, email, phone || null, passwordHash]
+    [
+      companyResult.insertId,
+      email.trim().toLowerCase(),
+      phone || null,
+      passwordHash
+    ]
   );
 
+  /* ---------- Welcome email ---------- */
   sendEmail({
     to: email,
     subject: "Welcome to ARSCCOM 🎉",
     html: `
       <h3>Welcome to ARSCCOM</h3>
       <p>Your company <b>${companyName}</b> has been registered.</p>
-      <p>You can now select the plan of your choice and log in and manage your visitors and manage bookings of conferece rooms.</p>
+      <p>You can now manage visitors and conference room bookings.</p>
     `
   }).catch(() => {});
 
   return {
     companyId: companyResult.insertId,
     companyName,
+    slug,
     logoUrl
   };
 };
@@ -103,16 +120,19 @@ export const login = async ({ email, password }) => {
   }
 
   const [rows] = await db.execute(
-    `SELECT
-        u.id,
-        u.password_hash,
-        c.id AS companyId,
-        c.name AS companyName,
-        c.logo_url AS companyLogo
-     FROM users u
-     JOIN companies c ON c.id = u.company_id
-     WHERE u.email = ?`,
-    [email]
+    `
+    SELECT
+      u.id,
+      u.password_hash,
+      c.id            AS companyId,
+      c.name          AS companyName,
+      c.slug          AS companySlug,
+      c.logo_url      AS companyLogo
+    FROM users u
+    JOIN companies c ON c.id = u.company_id
+    WHERE u.email = ?
+    `,
+    [email.trim().toLowerCase()]
   );
 
   if (!rows.length) {
@@ -138,60 +158,49 @@ export const login = async ({ email, password }) => {
     company: {
       id: rows[0].companyId,
       name: rows[0].companyName,
-      logo: rows[0].companyLogo
+      slug: rows[0].companySlug,     // 🔥 REQUIRED
+      logo: rows[0].companyLogo,     // backward compatibility
+      logo_url: rows[0].companyLogo  // future-safe
     }
   };
 };
 
 /* ======================================================
-   FORGOT PASSWORD ✅ REFINED (ONLY THIS PART)
+   FORGOT PASSWORD
 ====================================================== */
 export const forgotPassword = async (email) => {
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail) return;
-
-  console.log("🔐 FORGOT PASSWORD REQUEST:", cleanEmail);
 
   const [rows] = await db.execute(
     "SELECT id FROM users WHERE email = ?",
     [cleanEmail]
   );
 
-  // Silent exit (security)
-  if (!rows.length) {
-    console.log("⚠️ FORGOT PASSWORD: email not found (silent)");
-    return;
-  }
+  // silent exit
+  if (!rows.length) return;
 
   const resetCode = generateResetCode();
 
   await db.execute(
-    `UPDATE users
-     SET reset_code = ?,
-         reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
-     WHERE id = ?`,
+    `
+    UPDATE users
+    SET reset_code = ?,
+        reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
+    WHERE id = ?
+    `,
     [resetCode, rows[0].id]
   );
 
-  console.log("🔑 RESET CODE GENERATED:", resetCode);
-
-  try {
-    await sendEmail({
-      to: cleanEmail,
-      subject: "ARSCCOM Password Reset Code",
-      html: `
-        <p>Your password reset code:</p>
-        <h2>${resetCode}</h2>
-        <p>This code is valid for <b>10 minutes</b>.</p>
-      `
-    });
-
-    console.log("📧 FORGOT PASSWORD MAIL SENT:", cleanEmail);
-
-  } catch (err) {
-    console.error("❌ FORGOT PASSWORD MAIL FAILED:", err.message);
-    throw err;
-  }
+  await sendEmail({
+    to: cleanEmail,
+    subject: "ARSCCOM Password Reset Code",
+    html: `
+      <p>Your password reset code:</p>
+      <h2>${resetCode}</h2>
+      <p>This code is valid for <b>10 minutes</b>.</p>
+    `
+  });
 };
 
 /* ======================================================
@@ -205,11 +214,13 @@ export const resetPassword = async ({ email, code, password }) => {
   validatePassword(password);
 
   const [rows] = await db.execute(
-    `SELECT id, reset_code
-     FROM users
-     WHERE email = ?
-       AND reset_expires > NOW()`,
-    [email]
+    `
+    SELECT id, reset_code
+    FROM users
+    WHERE email = ?
+      AND reset_expires > NOW()
+    `,
+    [email.trim().toLowerCase()]
   );
 
   if (!rows.length || rows[0].reset_code !== code) {
@@ -219,11 +230,13 @@ export const resetPassword = async ({ email, code, password }) => {
   const newHash = await bcrypt.hash(password, 10);
 
   await db.execute(
-    `UPDATE users
-     SET password_hash = ?,
-         reset_code = NULL,
-         reset_expires = NULL
-     WHERE id = ?`,
+    `
+    UPDATE users
+    SET password_hash = ?,
+        reset_code = NULL,
+        reset_expires = NULL
+    WHERE id = ?
+    `,
     [newHash, rows[0].id]
   );
 
