@@ -1,4 +1,11 @@
-import { createCanvas, loadImage } from "canvas";
+import { createCanvas, loadImage, registerFont } from "canvas";
+
+/* ======================================================
+   REGISTER FONT (UNICODE SAFE)
+====================================================== */
+registerFont("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf", {
+  family: "NotoSans"
+});
 
 /* ======================================================
    CONSTANTS
@@ -89,7 +96,7 @@ export const generateVisitorPassImage = async ({
   ctx.fillRect(cardX, cardY, cardW, 64);
 
   ctx.fillStyle = "#fff";
-  ctx.font = "bold 22px Arial";
+  ctx.font = "bold 22px NotoSans";
   drawEllipsisText(
     ctx,
     companyName,
@@ -100,10 +107,10 @@ export const generateVisitorPassImage = async ({
 
   /* ================= VISITOR DETAILS ================= */
   ctx.fillStyle = BRAND_COLOR;
-  ctx.font = "bold 16px Arial";
+  ctx.font = "bold 16px NotoSans";
   ctx.fillText("Visitor Pass", cardX + 20, cardY + 100);
 
-  ctx.font = "15px Arial";
+  ctx.font = "15px NotoSans";
   ctx.fillText(`Visitor ID : ${visitor.visitorCode || "-"}`, cardX + 20, cardY + 135);
   ctx.fillText(`Name       : ${visitor.name || "-"}`, cardX + 20, cardY + 165);
   ctx.fillText(`Phone      : ${visitor.phone || "-"}`, cardX + 20, cardY + 195);
@@ -127,7 +134,6 @@ export const generateVisitorPassImage = async ({
     try {
       const img = await loadImage(visitor.photoUrl);
 
-      // Maintain aspect ratio
       const ratio = Math.min(photoW / img.width, photoH / img.height);
       const imgW = img.width * ratio;
       const imgH = img.height * ratio;
@@ -137,7 +143,7 @@ export const generateVisitorPassImage = async ({
 
       ctx.drawImage(img, imgX, imgY, imgW, imgH);
     } catch {
-      ctx.font = "12px Arial";
+      ctx.font = "12px NotoSans";
       ctx.fillStyle = "#999";
       ctx.fillText(
         "Photo unavailable",
@@ -148,7 +154,7 @@ export const generateVisitorPassImage = async ({
   }
 
   /* ================= FOOTER ================= */
-  ctx.font = "12px Arial";
+  ctx.font = "12px NotoSans";
   ctx.fillStyle = TEXT_GRAY;
   ctx.fillText(
     "Please carry this pass during your visit",
@@ -158,3 +164,4 @@ export const generateVisitorPassImage = async ({
 
   return canvas.toBuffer("image/png");
 };
+
