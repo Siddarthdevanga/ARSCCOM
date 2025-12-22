@@ -12,10 +12,15 @@ const router = express.Router();
 
 /* ======================================================
    AUTH ROUTES
+   (Shared by Visitor + Conference Modules)
 ====================================================== */
 
 /**
- * Register company (multipart/form-data with logo)
+ * Company Registration
+ * - Creates company
+ * - Creates admin user
+ * - Accepts multipart/form-data
+ * - Logo field name: "logo"
  */
 router.post(
   "/register",
@@ -24,17 +29,24 @@ router.post(
 );
 
 /**
- * Login
+ * Login (Admin / Company User)
+ * - Returns JWT with companyId
+ * - Returns company object (id, name, slug, logo_url)
+ * - Used by Conference Dashboard
  */
 router.post("/login", login);
 
 /**
- * Forgot password – send reset code
+ * Forgot Password
+ * - Sends reset code
+ * - Used by all modules
  */
 router.post("/forgot-password", forgotPassword);
 
 /**
- * Reset password – verify code & update password
+ * Reset Password
+ * - Verifies reset code
+ * - Updates password
  */
 router.post("/reset-password", resetPassword);
 
