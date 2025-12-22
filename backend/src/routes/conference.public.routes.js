@@ -9,7 +9,7 @@ const router = express.Router();
 ====================================================== */
 router.get("/company/:slug", async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = req.params.slug?.trim();
 
     if (!slug) {
       return res.status(400).json({ message: "Invalid company slug" });
@@ -20,6 +20,7 @@ router.get("/company/:slug", async (req, res) => {
       SELECT id, name, logo_url
       FROM companies
       WHERE slug = ?
+      LIMIT 1
       `,
       [slug]
     );
@@ -29,6 +30,7 @@ router.get("/company/:slug", async (req, res) => {
     }
 
     res.json(company);
+
   } catch (err) {
     console.error("❌ Public company fetch error:", err);
     res.status(500).json({ message: "Server error" });
@@ -41,10 +43,10 @@ router.get("/company/:slug", async (req, res) => {
 ====================================================== */
 router.get("/company/:slug/rooms", async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = req.params.slug?.trim();
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug = ?`,
+      `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -58,12 +60,13 @@ router.get("/company/:slug/rooms", async (req, res) => {
       FROM conference_rooms
       WHERE company_id = ?
         AND is_active = 1
-      ORDER BY name
+      ORDER BY name ASC
       `,
       [company.id]
     );
 
     res.json(rooms);
+
   } catch (err) {
     console.error("❌ Public rooms fetch error:", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
@@ -76,8 +79,9 @@ router.get("/company/:slug/rooms", async (req, res) => {
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
-    const { slug } = req.params;
-    const { roomId, date } = req.query;
+    const slug = req.params.slug?.trim();
+    const roomId = Number(req.query.roomId);
+    const date = req.query.date?.trim();
 
     if (!roomId || !date) {
       return res.status(400).json({
@@ -86,7 +90,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
     }
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug = ?`,
+      `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -106,12 +110,13 @@ router.get("/company/:slug/bookings", async (req, res) => {
         AND room_id = ?
         AND booking_date = ?
         AND status = 'BOOKED'
-      ORDER BY start_time
+      ORDER BY start_time ASC
       `,
       [company.id, roomId, date]
     );
 
     res.json(bookings);
+
   } catch (err) {
     console.error("❌ Public bookings fetch error:", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
@@ -124,7 +129,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = req.params.slug?.trim();
     const {
       roomId,
       bookedBy,
@@ -135,14 +140,20 @@ router.post("/company/:slug/book", async (req, res) => {
     } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (!roomId || !bookedBy || !date || !startTime || !endTime) {
+    if (
+      !roomId ||
+      !bookedBy ||
+      !date ||
+      !startTime ||
+      !endTime
+    ) {
       return res.status(400).json({
         message: "All required fields must be provided"
       });
     }
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug = ?`,
+      `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -163,6 +174,7 @@ router.post("/company/:slug/book", async (req, res) => {
           end_time <= ?
           OR start_time >= ?
         )
+      LIMIT 1
       `,
       [company.id, roomId, date, startTime, endTime]
     );
@@ -177,13 +189,21 @@ router.post("/company/:slug/book", async (req, res) => {
     await db.query(
       `
       INSERT INTO conference_bookings
-      (company_id, room_id, booked_by, purpose, booking_date, start_time, end_time)
+      (
+        company_id,
+        room_id,
+        booked_by,
+        purpose,
+        booking_date,
+        start_time,
+        end_time
+      )
       VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       [
         company.id,
         roomId,
-        bookedBy.trim(),
+        bookedBy.trim().toLowerCase(),
         purpose?.trim() || "",
         date,
         startTime,
@@ -191,7 +211,10 @@ router.post("/company/:slug/book", async (req, res) => {
       ]
     );
 
-    res.json({ message: "Booking confirmed successfully" });
+    res.json({
+      message: "Booking confirmed successfully"
+    });
+
   } catch (err) {
     console.error("❌ Public booking create error:", err);
     res.status(500).json({
