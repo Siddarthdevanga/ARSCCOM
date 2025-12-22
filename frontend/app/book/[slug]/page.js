@@ -13,7 +13,8 @@ const TIME_SLOTS = [
 ];
 
 export default function PublicBookingPage() {
-  const { slug } = useParams();
+  const params = useParams();
+  const slug = params?.slug?.toLowerCase();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -33,7 +34,9 @@ export default function PublicBookingPage() {
 
   /* ================= LOAD COMPANY ================= */
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || !API) return;
+
+    setError("");
 
     fetch(`${API}/api/public/conference/company/${slug}`)
       .then(res => res.ok ? res.json() : Promise.reject())
@@ -46,8 +49,9 @@ export default function PublicBookingPage() {
     if (!company) return;
 
     fetch(`${API}/api/public/conference/company/${slug}/rooms`)
-      .then(res => res.json())
-      .then(setRooms);
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setRooms(Array.isArray(data) ? data : []))
+      .catch(() => setRooms([]));
   }, [company, slug]);
 
   /* ================= LOAD BOOKINGS ================= */
@@ -57,53 +61,66 @@ export default function PublicBookingPage() {
     fetch(
       `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
     )
-      .then(res => res.json())
-      .then(setBookings);
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setBookings(Array.isArray(data) ? data : []))
+      .catch(() => setBookings([]));
   }, [roomId, date, slug]);
 
   /* ================= SLOT CHECK ================= */
   const isBooked = (slot) =>
+    Array.isArray(bookings) &&
     bookings.some(b => slot >= b.start_time && slot < b.end_time);
 
-  /* ================= SEND OTP (✅ FIXED) ================= */
+  /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-    if (!email) return setError("Enter email");
+    if (!email.includes("@")) {
+      return setError("Enter a valid email");
+    }
 
     setLoading(true);
     setError("");
 
-    const res = await fetch(
-      `${API}/api/public/conference/company/${slug}/send-otp`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
-      }
-    );
+    try {
+      const res = await fetch(
+        `${API}/api/public/conference/company/${slug}/send-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        }
+      );
 
-    if (!res.ok) {
+      if (!res.ok) throw new Error();
+
+      setOtpSent(true);
+    } catch {
+      setError("Failed to send OTP");
+    } finally {
       setLoading(false);
-      return setError("Failed to send OTP");
     }
-
-    setOtpSent(true);
-    setLoading(false);
   };
 
-  /* ================= VERIFY OTP (✅ FIXED) ================= */
+  /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
-    const res = await fetch(
-      `${API}/api/public/conference/company/${slug}/verify-otp`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp })
-      }
-    );
+    if (!otp) return setError("Enter OTP");
 
-    if (!res.ok) return setError("Invalid OTP");
+    try {
+      const res = await fetch(
+        `${API}/api/public/conference/company/${slug}/verify-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, otp })
+        }
+      );
 
-    setOtpVerified(true);
+      if (!res.ok) throw new Error();
+
+      setOtpVerified(true);
+      setError("");
+    } catch {
+      setError("Invalid or expired OTP");
+    }
   };
 
   /* ================= CONFIRM BOOKING ================= */
@@ -112,30 +129,37 @@ export default function PublicBookingPage() {
       return setError("Select room, date & slot");
     }
 
-    const endTime =
-      TIME_SLOTS[TIME_SLOTS.indexOf(selectedSlot) + 1];
+    const idx = TIME_SLOTS.indexOf(selectedSlot);
+    const endTime = TIME_SLOTS[idx + 1];
 
-    const res = await fetch(
-      `${API}/api/public/conference/company/${slug}/book`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomId,
-          bookedBy: email,
-          date,
-          startTime: selectedSlot,
-          endTime,
-          purpose: "Meeting"
-        })
-      }
-    );
-
-    if (!res.ok) {
-      return setError("Slot already booked");
+    if (!endTime) {
+      return setError("Invalid time slot");
     }
 
-    alert("Booking confirmed! Confirmation sent to email.");
+    try {
+      const res = await fetch(
+        `${API}/api/public/conference/company/${slug}/book`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roomId,
+            bookedBy: email,
+            date,
+            startTime: selectedSlot,
+            endTime,
+            purpose: "Meeting"
+          })
+        }
+      );
+
+      if (!res.ok) throw new Error();
+
+      alert("✅ Booking confirmed! Email sent.");
+      setSelectedSlot("");
+    } catch {
+      setError("Slot already booked");
+    }
   };
 
   /* ================= UI ================= */
@@ -146,7 +170,9 @@ export default function PublicBookingPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <h1>{company.name}</h1>
-        <img src={company.logo_url} className={styles.logo} />
+        {company.logo_url && (
+          <img src={company.logo_url} className={styles.logo} />
+        )}
       </header>
 
       {/* EMAIL + OTP */}
@@ -157,12 +183,17 @@ export default function PublicBookingPage() {
           <input
             placeholder="Enter email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setOtpSent(false);
+              setOtpVerified(false);
+              setOtp("");
+            }}
           />
 
           {!otpSent ? (
             <button onClick={sendOtp} disabled={loading}>
-              Send OTP
+              {loading ? "Sending..." : "Send OTP"}
             </button>
           ) : (
             <>
@@ -181,15 +212,17 @@ export default function PublicBookingPage() {
       {otpVerified && (
         <>
           <div className={styles.card}>
-            <select onChange={(e) => setRoomId(e.target.value)}>
+            <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
               <option value="">Select Room</option>
-              {rooms.map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
+              {Array.isArray(rooms) &&
+                rooms.map(r => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
             </select>
 
             <input
               type="date"
+              min={new Date().toISOString().split("T")[0]}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
