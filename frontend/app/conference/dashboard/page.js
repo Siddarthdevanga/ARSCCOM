@@ -2,20 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "../utils/api";
+import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-import ConferenceDashboard from "./dashboard";
-import ConferenceBookings from "./bookings";
-
-export default function ConferenceAdmin() {
+export default function ConferenceDashboard() {
   const router = useRouter();
-
-  const [company, setCompany] = useState(null);
   const [stats, setStats] = useState(null);
-  const [tab, setTab] = useState("dashboard");
+  const [company, setCompany] = useState(null);
 
-  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -25,70 +19,41 @@ export default function ConferenceAdmin() {
       return;
     }
 
-    const c = JSON.parse(storedCompany);
-    setCompany(c);
+    setCompany(JSON.parse(storedCompany));
 
     apiFetch("/api/conference/dashboard")
       .then(setStats)
-      .catch(() => {
-        localStorage.clear();
-        router.replace("/auth/login");
-      });
+      .catch(() => router.replace("/auth/login"));
   }, [router]);
 
-  if (!company || !stats) return null;
+  if (!stats || !company) return null;
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
   return (
     <div className={styles.container}>
-
-      {/* HEADER */}
       <header className={styles.header}>
-        <h2 className={styles.companyName}>{company.name}</h2>
-        {company.logo_url && (
-          <img
-            src={company.logo_url}
-            alt="Company Logo"
-            className={styles.logo}
-          />
-        )}
+        <h2>{company.name}</h2>
+        <img src={company.logo_url} className={styles.logo} />
       </header>
 
-      {/* PUBLIC BOOKING URL */}
       <div className={styles.publicBox}>
-        <span>Public Booking URL</span>
+        <p>Public Booking URL</p>
         <a href={publicURL} target="_blank">{publicURL}</a>
-        <button onClick={() => navigator.clipboard.writeText(publicURL)}>
-          Copy
-        </button>
       </div>
 
-      {/* TABS */}
-      <div className={styles.tabs}>
-        <button
-          className={tab === "dashboard" ? styles.activeTab : ""}
-          onClick={() => setTab("dashboard")}
-        >
-          Dashboard
-        </button>
-
-        <button
-          className={tab === "bookings" ? styles.activeTab : ""}
-          onClick={() => setTab("bookings")}
-        >
-          Bookings
-        </button>
+      <div className={styles.statsGrid}>
+        <div><span>Rooms</span><b>{stats.rooms}</b></div>
+        <div><span>Today</span><b>{stats.todayBookings}</b></div>
+        <div><span>Total</span><b>{stats.totalBookings}</b></div>
       </div>
 
-      {/* CONTENT */}
-      {tab === "dashboard" && (
-        <ConferenceDashboard stats={stats} />
-      )}
-
-      {tab === "bookings" && (
-        <ConferenceBookings />
-      )}
+      <button
+        className={styles.primaryBtn}
+        onClick={() => router.push("/conference/bookings")}
+      >
+        Manage Bookings
+      </button>
     </div>
   );
 }
