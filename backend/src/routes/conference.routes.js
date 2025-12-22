@@ -11,7 +11,6 @@ router.use(authenticate);
 
 /* ======================================================
    DASHBOARD STATS
-   GET /api/conference/dashboard
 ====================================================== */
 router.get("/dashboard", async (req, res) => {
   try {
@@ -21,7 +20,7 @@ router.get("/dashboard", async (req, res) => {
       `
       SELECT
         (SELECT COUNT(*) FROM conference_rooms
-         WHERE company_id = ?) AS rooms,
+         WHERE company_id = ? AND is_active = 1) AS rooms,
 
         (SELECT COUNT(*) FROM conference_bookings
          WHERE company_id = ?) AS totalBookings,
@@ -52,11 +51,11 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   CONFERENCE ROOMS
+   CONFERENCE ROOMS (ADMIN)
 ====================================================== */
 
 /**
- * GET all rooms (company specific)
+ * GET all active rooms
  */
 router.get("/rooms", async (req, res) => {
   try {
@@ -68,12 +67,12 @@ router.get("/rooms", async (req, res) => {
       FROM conference_rooms
       WHERE company_id = ?
         AND is_active = 1
-      ORDER BY name
+      ORDER BY name ASC
       `,
       [companyId]
     );
 
-    res.json(rooms || []);
+    res.json(rooms);
   } catch (err) {
     console.error("Rooms error:", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
@@ -86,9 +85,9 @@ router.get("/rooms", async (req, res) => {
 router.post("/rooms", async (req, res) => {
   try {
     const { companyId } = req.user;
-    const { name } = req.body;
+    const name = req.body?.name?.trim();
 
-    if (!name?.trim()) {
+    if (!name) {
       return res.status(400).json({ message: "Room name required" });
     }
 
@@ -97,7 +96,7 @@ router.post("/rooms", async (req, res) => {
       INSERT INTO conference_rooms (company_id, name)
       VALUES (?, ?)
       `,
-      [companyId, name.trim()]
+      [companyId, name]
     );
 
     res.json({ message: "Conference room added" });
@@ -112,33 +111,46 @@ router.post("/rooms", async (req, res) => {
 ====================================================== */
 
 /**
- * GET bookings for a room/date
+ * GET bookings (filterable)
  */
 router.get("/bookings", async (req, res) => {
   try {
     const { companyId } = req.user;
-    const { roomId, date } = req.query;
+    const roomId = req.query.roomId ? Number(req.query.roomId) : null;
+    const date = req.query.date || null;
 
-    const [bookings] = await db.query(
-      `
+    let sql = `
       SELECT
-        id,
-        room_id,
-        booking_date,
-        start_time,
-        end_time,
-        purpose,
-        status
-      FROM conference_bookings
-      WHERE company_id = ?
-        AND (? IS NULL OR room_id = ?)
-        AND (? IS NULL OR booking_date = ?)
-      ORDER BY booking_date, start_time
-      `,
-      [companyId, roomId || null, roomId || null, date || null, date || null]
-    );
+        b.id,
+        b.booking_date,
+        b.start_time,
+        b.end_time,
+        b.purpose,
+        b.status,
+        r.name AS room_name,
+        b.booked_by
+      FROM conference_bookings b
+      JOIN conference_rooms r ON r.id = b.room_id
+      WHERE b.company_id = ?
+    `;
 
-    res.json(bookings || []);
+    const params = [companyId];
+
+    if (roomId) {
+      sql += " AND b.room_id = ?";
+      params.push(roomId);
+    }
+
+    if (date) {
+      sql += " AND b.booking_date = ?";
+      params.push(date);
+    }
+
+    sql += " ORDER BY b.booking_date DESC, b.start_time ASC";
+
+    const [bookings] = await db.query(sql, params);
+
+    res.json(bookings);
   } catch (err) {
     console.error("Bookings error:", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
@@ -151,7 +163,7 @@ router.get("/bookings", async (req, res) => {
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const { companyId } = req.user;
-    const { id } = req.params;
+    const bookingId = Number(req.params.id);
 
     const [result] = await db.query(
       `
@@ -161,11 +173,11 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
         AND company_id = ?
         AND status = 'BOOKED'
       `,
-      [id, companyId]
+      [bookingId, companyId]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({ message: "Booking not found or already cancelled" });
     }
 
     res.json({ message: "Booking cancelled" });
