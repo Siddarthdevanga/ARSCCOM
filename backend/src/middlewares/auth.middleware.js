@@ -9,41 +9,48 @@ export const authenticate = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
-    // 1️⃣ Validate header format
+    /* ================= HEADER VALIDATION ================= */
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({
         message: "Authorization header missing or malformed"
       });
     }
 
-    // 2️⃣ Extract token
+    /* ================= TOKEN EXTRACTION ================= */
     const token = authHeader.split(" ")[1];
     if (!token) {
-      return res.status(401).json({ message: "Token not provided" });
+      return res.status(401).json({
+        message: "Token not provided"
+      });
     }
 
-    // 3️⃣ Verify token
+    /* ================= TOKEN VERIFICATION ================= */
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 4️⃣ Validate required claims
+    /* ================= PAYLOAD VALIDATION ================= */
     if (!decoded?.userId || !decoded?.companyId) {
-      return res.status(401).json({ message: "Invalid token payload" });
+      return res.status(401).json({
+        message: "Invalid token payload"
+      });
     }
 
-    // 5️⃣ Attach user context
+    /* ================= ATTACH USER CONTEXT ================= */
     req.user = {
       userId: decoded.userId,
       companyId: decoded.companyId,
-      role: decoded.role || "user" // optional, future-ready
+      role: decoded.role || "user"
     };
 
     next();
-  } catch (err) {
-    console.error("Auth error:", err.message);
+
+  } catch (error) {
+    console.error("❌ Auth middleware error:", error.message);
+
     return res.status(401).json({
-      message: err.name === "TokenExpiredError"
-        ? "Token expired"
-        : "Invalid or expired token"
+      message:
+        error.name === "TokenExpiredError"
+          ? "Token expired"
+          : "Invalid or expired token"
     });
   }
 };
