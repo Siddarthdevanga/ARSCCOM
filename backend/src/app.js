@@ -3,6 +3,8 @@ import cors from "cors";
 
 import authRoutes from "./routes/auth.routes.js";
 import visitorRoutes from "./routes/visitor.routes.js";
+import conferenceRoutes from "./routes/conference.routes.js";
+import conferencePublicRoutes from "./routes/conference.public.routes.js";
 
 const app = express();
 
@@ -10,7 +12,7 @@ const app = express();
    GLOBAL MIDDLEWARE
 ====================================================== */
 
-// CORS configuration
+/* ---------- CORS ---------- */
 app.use(
   cors({
     origin: [
@@ -22,8 +24,7 @@ app.use(
   })
 );
 
-
-// Body parsers (REQUIRED for req.body)
+/* ---------- BODY PARSERS ---------- */
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -31,7 +32,7 @@ app.use(express.urlencoded({ extended: true }));
    HEALTH CHECK
 ====================================================== */
 app.get("/health", (req, res) => {
-  return res.status(200).json({ status: "OK" });
+  res.status(200).json({ status: "OK" });
 });
 
 /* ======================================================
@@ -40,11 +41,17 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/visitors", visitorRoutes);
 
+/* ----- CONFERENCE (ADMIN) ----- */
+app.use("/api/conference", conferenceRoutes);
+
+/* ----- CONFERENCE (PUBLIC) ----- */
+app.use("/api/public/conference", conferencePublicRoutes);
+
 /* ======================================================
    404 HANDLER
 ====================================================== */
 app.use((req, res) => {
-  return res.status(404).json({
+  res.status(404).json({
     message: "Route not found"
   });
 });
@@ -53,8 +60,8 @@ app.use((req, res) => {
    GLOBAL ERROR HANDLER
 ====================================================== */
 app.use((err, req, res, next) => {
-  console.error("GLOBAL ERROR:", err);
-  return res.status(500).json({
+  console.error("❌ GLOBAL ERROR:", err);
+  res.status(500).json({
     message: "Internal Server Error"
   });
 });
