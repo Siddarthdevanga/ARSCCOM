@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-/* ===== TIME SLOTS (ADMIN MATCHING) ===== */
-const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
+/* ===== TIME OPTIONS (09:30 – 19:00, 30 min) ===== */
+const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const total = 9 * 60 + 30 + i * 30;
   const h = Math.floor(total / 60);
   const m = total % 60;
@@ -16,7 +16,6 @@ const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
 
 export default function PublicConferenceBooking() {
   const { slug } = useParams();
-  const router = useRouter();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -24,7 +23,10 @@ export default function PublicConferenceBooking() {
 
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState("");
-  const [slot, setSlot] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [department, setDepartment] = useState("");
+  const [purpose, setPurpose] = useState("");
 
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
@@ -69,22 +71,11 @@ export default function PublicConferenceBooking() {
       .catch(() => setBookings([]));
   }, [roomId, date, slug]);
 
-  /* ================= BOOKED SLOTS ================= */
-  const bookedSlots = useMemo(() => {
-    const s = new Set();
-    bookings.forEach(b => {
-      TIME_SLOTS.forEach(t => {
-        if (t >= b.start_time && t < b.end_time) {
-          s.add(t);
-        }
-      });
-    });
-    return s;
-  }, [bookings]);
-
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-    if (!email.includes("@")) return setError("Enter valid email");
+    if (!email.includes("@")) {
+      return setError("Enter a valid email");
+    }
 
     setLoading(true);
     setError("");
@@ -128,13 +119,19 @@ export default function PublicConferenceBooking() {
 
   /* ================= CONFIRM BOOKING ================= */
   const confirmBooking = async () => {
-    if (!roomId || !date || !slot) {
-      return setError("Select room, date and time");
+    if (
+      !roomId ||
+      !date ||
+      !startTime ||
+      !endTime ||
+      !department
+    ) {
+      return setError("All fields except purpose are required");
     }
 
-    const idx = TIME_SLOTS.indexOf(slot);
-    const end = TIME_SLOTS[idx + 1];
-    if (!end) return;
+    if (endTime <= startTime) {
+      return setError("End time must be after start time");
+    }
 
     setLoading(true);
     setError("");
@@ -148,18 +145,31 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({
             room_id: roomId,
             booked_by: email,
-            purpose: "Conference Meeting",
+            department,
+            purpose,
             booking_date: date,
-            start_time: slot,
-            end_time: end
+            start_time: startTime,
+            end_time: endTime
           })
         }
       );
+
       if (!r.ok) throw new Error();
 
       alert("✅ Booking confirmed");
-      setSlot("");
-      setBookings([]);
+
+      setStartTime("");
+      setEndTime("");
+      setDepartment("");
+      setPurpose("");
+
+      /* reload bookings */
+      fetch(
+        `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
+      )
+        .then(r => r.ok ? r.json() : [])
+        .then(d => setBookings(Array.isArray(d) ? d : []));
+
     } catch {
       setError("Slot already booked");
     } finally {
@@ -173,12 +183,13 @@ export default function PublicConferenceBooking() {
     <div className={styles.page}>
       {/* HEADER */}
       <header className={styles.header}>
-        <button onClick={() => router.back()} className={styles.back}>←</button>
         <h1>{company.name}</h1>
-        {company.logo_url && <img src={company.logo_url} alt="logo" />}
+        {company.logo_url && (
+          <img src={company.logo_url} alt="logo" />
+        )}
       </header>
 
-      {/* OTP */}
+      {/* OTP STEP */}
       {!otpVerified && (
         <div className={styles.card}>
           <h2>Email Verification</h2>
@@ -205,13 +216,21 @@ export default function PublicConferenceBooking() {
         </div>
       )}
 
-      {/* BOOKING */}
+      {/* MAIN BOOKING LAYOUT */}
       {otpVerified && (
         <div className={styles.layout}>
           {/* LEFT */}
           <div className={styles.card}>
             <h2>Book Conference Room</h2>
             {error && <p className={styles.error}>{error}</p>}
+
+            <label>Date</label>
+            <input
+              type="date"
+              min={new Date().toISOString().split("T")[0]}
+              value={date}
+              onChange={e => setDate(e.target.value)}
+            />
 
             <label>Room</label>
             <select value={roomId} onChange={e => setRoomId(e.target.value)}>
@@ -223,27 +242,33 @@ export default function PublicConferenceBooking() {
               ))}
             </select>
 
-            <label>Date</label>
+            <label>Start Time</label>
+            <select value={startTime} onChange={e => setStartTime(e.target.value)}>
+              <option value="">Select</option>
+              {TIME_OPTIONS.map(t => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+
+            <label>End Time</label>
+            <select value={endTime} onChange={e => setEndTime(e.target.value)}>
+              <option value="">Select</option>
+              {TIME_OPTIONS.map(t => (
+                <option key={t}>{t}</option>
+              ))}
+            </select>
+
+            <label>Department</label>
             <input
-              type="date"
-              value={date}
-              min={new Date().toISOString().split("T")[0]}
-              onChange={e => setDate(e.target.value)}
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
             />
 
-            <label>Time Slot</label>
-            <div className={styles.slots}>
-              {TIME_SLOTS.map(t => (
-                <button
-                  key={t}
-                  disabled={bookedSlots.has(t)}
-                  className={slot === t ? styles.active : ""}
-                  onClick={() => setSlot(t)}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+            <label>Purpose</label>
+            <input
+              value={purpose}
+              onChange={e => setPurpose(e.target.value)}
+            />
 
             <button onClick={confirmBooking} disabled={loading}>
               Confirm Booking
@@ -257,7 +282,8 @@ export default function PublicConferenceBooking() {
             {bookings.map(b => (
               <div key={b.id} className={styles.booking}>
                 <b>{b.start_time} – {b.end_time}</b>
-                <p>{b.booked_by}</p>
+                <p>{b.department}</p>
+                <span>{b.booked_by}</span>
               </div>
             ))}
           </div>
