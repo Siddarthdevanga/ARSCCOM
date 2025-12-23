@@ -68,14 +68,15 @@
   color: #3c007a;
 }
 
-label {
+/* 🔑 Scoped elements (IMPORTANT) */
+.formPane label {
   display: block;
   margin-top: 14px;
   font-weight: 600;
 }
 
-select,
-input {
+.formPane select,
+.formPane input {
   width: 100%;
   padding: 10px;
   border-radius: 10px;
@@ -90,7 +91,7 @@ input {
   border-radius: 12px;
 }
 
-button {
+.formPane button {
   width: 100%;
   padding: 14px;
   background: linear-gradient(135deg, #ffb703, #ff8c00);
@@ -100,13 +101,16 @@ button {
   font-weight: 700;
   cursor: pointer;
   color: #3c007a;
+  margin-top: 20px;
 }
 
-button:disabled {
+.formPane button:disabled {
   opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .error {
   color: #d32f2f;
   font-weight: 600;
+  margin-bottom: 10px;
 }
