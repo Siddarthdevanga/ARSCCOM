@@ -45,7 +45,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
       [slug]
     );
 
-    if (!company) return res.json([]); // ⚠️ NEVER 404 for frontend map()
+    if (!company) return res.json([]);
 
     const [rooms] = await db.query(
       `
@@ -60,12 +60,12 @@ router.get("/company/:slug/rooms", async (req, res) => {
     res.json(rooms || []);
   } catch (err) {
     console.error("[PUBLIC][ROOMS]", err);
-    res.json([]); // always array
+    res.json([]);
   }
 });
 
 /* ======================================================
-   GET BOOKINGS (PUBLIC CALENDAR)
+   GET BOOKINGS (PUBLIC – CALENDAR)
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
@@ -89,6 +89,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
         booking_date,
         start_time,
         end_time,
+        department,
         booked_by,
         purpose
       FROM conference_bookings
@@ -104,7 +105,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
     res.json(bookings || []);
   } catch (err) {
     console.error("[PUBLIC][BOOKINGS]", err);
-    res.json([]); // frontend-safe
+    res.json([]);
   }
 });
 
@@ -131,7 +132,6 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    /* invalidate previous OTPs */
     await db.query(
       `DELETE FROM public_booking_otp WHERE company_id = ? AND email = ?`,
       [company.id, email]
@@ -182,10 +182,6 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
       [slug]
     );
 
-    if (!company) {
-      return res.status(404).json({ message: "Invalid booking link" });
-    }
-
     const [[row]] = await db.query(
       `
       SELECT id
@@ -217,7 +213,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING (PUBLIC)
+   CREATE BOOKING (PUBLIC – WITH DEPARTMENT)
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -225,14 +221,31 @@ router.post("/company/:slug/book", async (req, res) => {
     const {
       room_id,
       booked_by,
+      department,
       purpose = "",
       booking_date,
       start_time,
       end_time
     } = req.body;
 
-    if (!room_id || !booked_by || !booking_date || !start_time || !end_time) {
-      return res.status(400).json({ message: "All fields required" });
+    /* ================= VALIDATION ================= */
+    if (
+      !room_id ||
+      !booked_by ||
+      !department ||
+      !booking_date ||
+      !start_time ||
+      !end_time
+    ) {
+      return res.status(400).json({
+        message: "Room, department, date and time are required"
+      });
+    }
+
+    if (end_time <= start_time) {
+      return res.status(400).json({
+        message: "End time must be greater than start time"
+      });
     }
 
     const email = normalizeEmail(booked_by);
@@ -266,7 +279,7 @@ router.post("/company/:slug/book", async (req, res) => {
       });
     }
 
-    /* OVERLAP CHECK (ADMIN MATCH) */
+    /* OVERLAP CHECK */
     const [conflict] = await db.query(
       `
       SELECT id FROM conference_bookings
@@ -285,16 +298,27 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(409).json({ message: "Slot already booked" });
     }
 
+    /* INSERT BOOKING */
     await db.query(
       `
       INSERT INTO conference_bookings
-      (company_id, room_id, booked_by, purpose, booking_date, start_time, end_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (
+        company_id,
+        room_id,
+        booked_by,
+        department,
+        purpose,
+        booking_date,
+        start_time,
+        end_time
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         company.id,
         room_id,
         email,
+        department.trim(),
         purpose.trim(),
         booking_date,
         start_time,
@@ -308,6 +332,7 @@ router.post("/company/:slug/book", async (req, res) => {
       html: `
         <h3>Booking Confirmed</h3>
         <p><b>Company:</b> ${company.name}</p>
+        <p><b>Department:</b> ${department}</p>
         <p><b>Date:</b> ${booking_date}</p>
         <p><b>Time:</b> ${start_time} – ${end_time}</p>
         <p><b>Purpose:</b> ${purpose || "-"}</p>
