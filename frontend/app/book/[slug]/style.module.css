@@ -10,14 +10,31 @@
 /* ================= HEADER ================= */
 .header {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   margin-bottom: 28px;
   color: #fff;
 }
 
+/* Logout button (booking page only) */
+.logout {
+  background: rgba(255, 255, 255, 0.18);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.logout:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateY(-1px);
+}
+
 .header h1 {
-  grid-column: 2;
   text-align: center;
   font-size: 26px;
   font-weight: 800;
@@ -25,8 +42,6 @@
 }
 
 .header img {
-  grid-column: 3;
-  justify-self: end;
   height: 42px;
   object-fit: contain;
 }
@@ -45,7 +60,7 @@
   background: #ffffff;
   border-radius: 22px;
   padding: 32px 34px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
 }
 
 .card h2 {
@@ -73,6 +88,7 @@
   border: 1px solid #d0d0d0;
   font-size: 14px;
   outline: none;
+  background: #fff;
   transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -124,10 +140,11 @@
 
 /* ================= BOOKING ITEM ================= */
 .booking {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 12px;
+  backdrop-filter: blur(4px);
 }
 
 .booking b {
@@ -151,13 +168,13 @@
 .success {
   color: #2e7d32;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .error {
   color: #d32f2f;
   font-weight: 700;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -172,11 +189,12 @@
   }
 
   .header {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr;
+    row-gap: 12px;
   }
 
   .header h1 {
     grid-column: 1 / -1;
-    margin-bottom: 12px;
+    text-align: center;
   }
 }
