@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ===== TIME OPTIONS (AM/PM) ===== */
+/* ===== TIME OPTIONS ===== */
 const TIMES = [];
 for (let h = 9; h <= 19; h++) {
   TIMES.push(`${h === 12 ? 12 : h % 12}:00 ${h < 12 ? "AM" : "PM"}`);
@@ -37,11 +37,11 @@ export default function ConferenceBookings() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  /* ===== LOAD DATA ===== */
+  /* ===== LOAD ===== */
   const loadAll = async () => {
     try {
-      const storedCompany = localStorage.getItem("company");
-      if (storedCompany) setCompany(JSON.parse(storedCompany));
+      const stored = localStorage.getItem("company");
+      if (stored) setCompany(JSON.parse(stored));
 
       const [r, b] = await Promise.all([
         apiFetch("/api/conference/rooms"),
@@ -50,11 +50,8 @@ export default function ConferenceBookings() {
 
       setRooms(r);
       setBookings(b);
-    } catch (err) {
-      if (err.code === 401) {
-        localStorage.clear();
-        router.replace("/auth/login");
-      }
+    } catch (e) {
+      if (e.code === 401) router.replace("/auth/login");
     }
   };
 
@@ -62,21 +59,33 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
-  /* ===== BOOKINGS FOR DAY ===== */
+  /* ===== DAY BOOKINGS ===== */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
-      (b) => b.room_id == roomId && b.booking_date === date
+      b => b.booking_date === date && b.room_id == roomId
     );
   }, [bookings, date, roomId]);
 
+  /* ===== AVAILABLE SLOTS ===== */
+  const unavailable = useMemo(() => {
+    const set = new Set();
+    dayBookings.forEach(b => {
+      TIMES.forEach(t => {
+        if (to24(t) >= b.start_time && to24(t) < b.end_time) {
+          set.add(t);
+        }
+      });
+    });
+    return set;
+  }, [dayBookings]);
+
   /* ===== CREATE BOOKING ===== */
   const createBooking = async () => {
-    setError("");
-    setSuccess("");
+    setError(""); setSuccess("");
 
     if (!date || !roomId || !start || !end || !department) {
-      return setError("All fields except purpose are required");
+      return setError("All required fields must be filled");
     }
 
     try {
@@ -93,14 +102,11 @@ export default function ConferenceBookings() {
         })
       });
 
-      setSuccess("✅ Booking created successfully");
-      setStart("");
-      setEnd("");
-      setDepartment("");
-      setPurpose("");
+      setSuccess("Booking created successfully");
+      setStart(""); setEnd(""); setDepartment(""); setPurpose("");
       loadAll();
-    } catch (err) {
-      setError(err.message);
+    } catch (e) {
+      setError(e.message);
     }
   };
 
@@ -108,80 +114,70 @@ export default function ConferenceBookings() {
 
   return (
     <div className={styles.page}>
-      {/* ===== HEADER ===== */}
+      {/* HEADER */}
       <header className={styles.header}>
+        <button className={styles.backBtn} onClick={() => router.back()}>←</button>
         <h1>{company.name}</h1>
         <img src={company.logo_url} alt="logo" />
       </header>
 
-      {/* ===== BOOKING CARD ===== */}
-      <div className={styles.card}>
-        <h2>Book Conference Room</h2>
+      <div className={styles.content}>
+        {/* LEFT FORM */}
+        <div className={styles.card}>
+          <h2>Book Conference Room</h2>
+          {error && <p className={styles.error}>{error}</p>}
+          {success && <p className={styles.success}>✔ {success}</p>}
 
-        {error && <p className={styles.error}>{error}</p>}
-        {success && <p className={styles.success}>{success}</p>}
+          <label>Date</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
 
-        <div className={styles.formGrid}>
-          <div>
-            <label>Date</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
-          </div>
+          <label>Room</label>
+          <select value={roomId} onChange={e => setRoomId(e.target.value)}>
+            <option value="">Select</option>
+            {rooms.map(r => (
+              <option key={r.id} value={r.id}>{r.room_name}</option>
+            ))}
+          </select>
 
-          <div>
-            <label>Room</label>
-            <select value={roomId} onChange={e => setRoomId(e.target.value)}>
-              <option value="">Select</option>
-              {rooms.map(r => (
-                <option key={r.id} value={r.id}>
-                  {r.room_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <label>Start Time</label>
+          <select value={start} onChange={e => setStart(e.target.value)}>
+            <option value="">Select</option>
+            {TIMES.filter(t => !unavailable.has(t)).map(t => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
 
-          <div>
-            <label>Start Time</label>
-            <select value={start} onChange={e => setStart(e.target.value)}>
-              <option value="">Select</option>
-              {TIMES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
+          <label>End Time</label>
+          <select value={end} onChange={e => setEnd(e.target.value)}>
+            <option value="">Select</option>
+            {TIMES.filter(t => t > start && !unavailable.has(t)).map(t => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
 
-          <div>
-            <label>End Time</label>
-            <select value={end} onChange={e => setEnd(e.target.value)}>
-              <option value="">Select</option>
-              {TIMES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
+          <label>Department</label>
+          <input value={department} onChange={e => setDepartment(e.target.value)} />
 
-          <div>
-            <label>Department</label>
-            <input value={department} onChange={e => setDepartment(e.target.value)} />
-          </div>
+          <label>Purpose</label>
+          <input value={purpose} onChange={e => setPurpose(e.target.value)} />
 
-          <div>
-            <label>Purpose</label>
-            <input value={purpose} onChange={e => setPurpose(e.target.value)} />
-          </div>
+          <button className={styles.primaryBtn} onClick={createBooking}>
+            Confirm Booking
+          </button>
         </div>
 
-        <button className={styles.primaryBtn} onClick={createBooking}>
-          Confirm Booking
-        </button>
-      </div>
+        {/* RIGHT PANEL */}
+        <div className={styles.side}>
+          <h3>Bookings</h3>
+          {dayBookings.length === 0 && <p>No bookings</p>}
 
-      {/* ===== BOOKINGS LIST ===== */}
-      <div className={styles.list}>
-        <h3>Bookings</h3>
-        {dayBookings.length === 0 && <p>No bookings</p>}
-
-        {dayBookings.map(b => (
-          <div key={b.id} className={styles.bookingItem}>
-            <b>{b.start_time} – {b.end_time}</b>
-            <span>{b.department}</span>
-          </div>
-        ))}
+          {dayBookings.map(b => (
+            <div key={b.id} className={styles.slotBooked}>
+              {b.start_time} – {b.end_time}
+              <span>{b.department}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
