@@ -57,7 +57,7 @@ router.get("/rooms", async (req, res) => {
       SELECT
         id,
         room_number,
-        name AS room_name
+        room_name
       FROM conference_rooms
       WHERE company_id = ?
       ORDER BY room_number ASC
@@ -88,7 +88,7 @@ router.post("/rooms", async (req, res) => {
 
     await db.query(
       `
-      INSERT INTO conference_rooms (company_id, room_number, name)
+      INSERT INTO conference_rooms (company_id, room_number, room_name)
       VALUES (?, ?, ?)
       `,
       [companyId, room_number, room_name.trim()]
@@ -128,7 +128,7 @@ router.get("/bookings", async (req, res) => {
         b.purpose,
         b.status,
         b.booked_by,
-        r.name AS room_name,
+        r.room_name,
         r.room_number
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
@@ -180,7 +180,7 @@ router.post("/bookings", async (req, res) => {
 
     await conn.beginTransaction();
 
-    /* ---- Validate room ownership ---- */
+    /* ---- Validate room belongs to company ---- */
     const [[room]] = await conn.query(
       `
       SELECT id
