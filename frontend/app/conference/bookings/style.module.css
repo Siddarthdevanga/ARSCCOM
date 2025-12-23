@@ -15,25 +15,29 @@
   color: #fff;
 }
 
+/* COMPANY NAME */
 .header h1 {
   text-align: center;
   font-size: 26px;
   font-weight: 800;
+  letter-spacing: 0.5px;
+  margin: 0;
 }
 
+/* LOGO */
 .header img {
-  height: 42px;
+  height: 38px;
   object-fit: contain;
 }
 
 /* BACK BUTTON */
 .backBtn {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.18);
   border: none;
   color: #fff;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: 12px;
   font-size: 18px;
   font-weight: 700;
   cursor: pointer;
@@ -44,7 +48,7 @@
 }
 
 .backBtn:hover {
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.3);
   transform: translateX(-2px);
 }
 
@@ -53,6 +57,7 @@
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 28px;
+  align-items: start;
 }
 
 /* ================= CARD ================= */
@@ -76,6 +81,7 @@
   margin-top: 16px;
   font-weight: 600;
   font-size: 14px;
+  color: #333;
 }
 
 .card input,
@@ -85,6 +91,13 @@
   margin-top: 6px;
   border-radius: 12px;
   border: 1px solid #d0d0d0;
+  font-size: 14px;
+}
+
+.card input:focus,
+.card select:focus {
+  outline: none;
+  border-color: #7a00ff;
 }
 
 .card button {
@@ -94,15 +107,26 @@
   border-radius: 999px;
   border: none;
   font-weight: 800;
+  font-size: 15px;
+  color: #000;
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* ================= BOOKINGS ================= */
+.card button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(255, 140, 0, 0.35);
+}
+
+/* ================= BOOKINGS PANEL ================= */
+/* supports both `.side` and `.bookings` safely */
+.side,
 .bookings {
   background: rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  padding: 22px;
   color: #fff;
-  box-shadow: none;
 }
 
 .booking {
@@ -115,16 +139,20 @@
 .booking b {
   display: block;
   font-weight: 700;
+  margin-bottom: 4px;
 }
 
+/* ================= MESSAGES ================= */
 .success {
   color: #2e7d32;
   font-weight: 700;
+  margin-bottom: 10px;
 }
 
 .error {
   color: #d32f2f;
   font-weight: 700;
+  margin-bottom: 10px;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -135,5 +163,9 @@
 
   .header h1 {
     font-size: 22px;
+  }
+
+  .header img {
+    height: 32px;
   }
 }
