@@ -5,212 +5,147 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= TIME SLOTS (09:30 → 19:00) ================= */
-const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
-  const mins = 9 * 60 + 30 + i * 30;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-});
+/* ================= TIME RANGE ================= */
+const START_MIN = 9 * 60 + 30;
+const END_MIN = 19 * 60;
+
+const toMin = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
 
 export default function ConferenceBookings() {
   const router = useRouter();
 
+  const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [company, setCompany] = useState(null);
 
-  const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState("");
-  const [slot, setSlot] = useState("");
-
+  const [roomId, setRoomId] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
-
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  /* ================= LOAD INITIAL DATA ================= */
-  const loadAll = async () => {
-    try {
-      const storedCompany = localStorage.getItem("company");
-      if (storedCompany) setCompany(JSON.parse(storedCompany));
-
-      const [b, r] = await Promise.all([
-        apiFetch("/api/conference/bookings"),
-        apiFetch("/api/conference/rooms")
-      ]);
-
-      setBookings(b);
-      setRooms(r);
-    } catch {
-      router.replace("/auth/login");
-    }
-  };
-
   useEffect(() => {
-    loadAll();
+    (async () => {
+      try {
+        setCompany(JSON.parse(localStorage.getItem("company")));
+        const [b, r] = await Promise.all([
+          apiFetch("/api/conference/bookings"),
+          apiFetch("/api/conference/rooms")
+        ]);
+        setBookings(b);
+        setRooms(r);
+      } catch {
+        router.replace("/auth/login");
+      }
+    })();
   }, []);
 
-  /* ================= BOOKINGS FOR SELECTED DAY ================= */
   const dayBookings = useMemo(() => {
-    if (!roomId || !date) return [];
+    if (!date || !roomId) return [];
     return bookings.filter(
-      (b) => b.room_id == roomId && b.booking_date === date
+      (b) => b.booking_date === date && b.room_id == roomId
     );
-  }, [bookings, roomId, date]);
+  }, [bookings, date, roomId]);
 
-  /* ================= BOOKED SLOT MAP ================= */
-  const bookedSlots = useMemo(() => {
-    const set = new Set();
-    dayBookings.forEach((b) => {
-      TIME_SLOTS.forEach((t) => {
-        if (t >= b.start_time && t < b.end_time) set.add(t);
-      });
-    });
-    return set;
-  }, [dayBookings]);
-
-  /* ================= CREATE BOOKING ================= */
   const createBooking = async () => {
-    if (!roomId || !date || !slot || !department) {
-      return setError("Room, department, date and time are required");
+    if (!date || !roomId || !startTime || !endTime || !department) {
+      return setError("All required fields must be filled");
     }
 
-    const idx = TIME_SLOTS.indexOf(slot);
-    const endTime = TIME_SLOTS[idx + 1];
-    if (!endTime) return setError("Invalid time slot");
+    await apiFetch("/api/conference/bookings", {
+      method: "POST",
+      body: JSON.stringify({
+        room_id: roomId,
+        booked_by: "ADMIN",
+        department,
+        purpose,
+        booking_date: date,
+        start_time: startTime,
+        end_time: endTime
+      })
+    });
 
-    setLoading(true);
-    setError("");
-
-    try {
-      await apiFetch("/api/conference/bookings", {
-        method: "POST",
-        body: JSON.stringify({
-          room_id: roomId,
-          booked_by: "ADMIN",
-          department,
-          purpose: purpose || null,
-          booking_date: date,
-          start_time: slot,
-          end_time: endTime
-        })
-      });
-
-      setSlot("");
-      setPurpose("");
-      setDepartment("");
-      await loadAll();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setStartTime("");
+    setEndTime("");
+    setDepartment("");
+    setPurpose("");
   };
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER ================= */}
-      <header className={styles.header}>
-        <div>
-          <h2 className={styles.title}>Book Conference Room</h2>
-          <span className={styles.subtitle}>
-            {company?.name || "Conference Management"}
-          </span>
-        </div>
-
+      {/* ================= COMPANY HEADER ================= */}
+      <div className={styles.companyHeader}>
+        <h2 className={styles.companyName}>{company?.name}</h2>
         {company?.logo_url && (
-          <img
-            src={company.logo_url}
-            alt="Company Logo"
-            className={styles.logo}
-          />
+          <img src={company.logo_url} className={styles.companyLogo} />
         )}
-      </header>
+      </div>
 
-      <div className={styles.content}>
-        {/* ================= LEFT : CALENDAR ================= */}
-        <div className={styles.calendarPane}>
-          <label className={styles.label}>Select Date</label>
-
-          <input
-            type="date"
-            className={styles.dateInput}
-            min={new Date().toISOString().split("T")[0]}
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-
-          <h4 className={styles.subTitle}>Available Slots</h4>
-
-          <div className={styles.slotGrid}>
-            {TIME_SLOTS.map((t) => (
-              <button
-                key={t}
-                className={`${styles.slot} ${
-                  slot === t ? styles.selected : ""
-                }`}
-                disabled={bookedSlots.has(t)}
-                onClick={() => setSlot(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ================= RIGHT : BOOKING FORM ================= */}
+      <div className={styles.layout}>
+        {/* ================= LEFT ================= */}
         <div className={styles.formPane}>
+          <h3 className={styles.formTitle}>Book Conference Room</h3>
+
           {error && <p className={styles.error}>{error}</p>}
 
-          <label className={styles.label}>Conference Room</label>
-          <select
-            className={styles.select}
-            value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
-          >
+          <label>Date</label>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+
+          <label>Room</label>
+          <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
             <option value="">Select Room</option>
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.room_name} (#{r.room_number})
+                {r.room_name}
               </option>
             ))}
           </select>
 
-          <label className={styles.label}>Department</label>
-          <input
-            className={styles.input}
-            placeholder="Eg: HR, Engineering"
-            value={department}
-            onChange={(e) => setDepartment(e.target.value)}
-          />
+          <label>Start Time</label>
+          <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
 
-          <label className={styles.label}>Purpose</label>
-          <input
-            className={styles.input}
-            placeholder="Optional"
-            value={purpose}
-            onChange={(e) => setPurpose(e.target.value)}
-          />
+          <label>End Time</label>
+          <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
 
-          <div className={styles.summary}>
-            <p><b>Date:</b> {date || "-"}</p>
-            <p>
-              <b>Time:</b>{" "}
-              {slot
-                ? `${slot} → ${TIME_SLOTS[TIME_SLOTS.indexOf(slot) + 1]}`
-                : "-"}
-            </p>
+          <label>Department</label>
+          <input value={department} onChange={(e) => setDepartment(e.target.value)} />
+
+          <label>Purpose</label>
+          <input value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+
+          <button onClick={createBooking}>Confirm Booking</button>
+        </div>
+
+        {/* ================= RIGHT ================= */}
+        <div className={styles.calendarPane}>
+          <h4>Day Timeline</h4>
+
+          <div className={styles.timeline}>
+            {dayBookings.map((b) => {
+              const top =
+                ((toMin(b.start_time) - START_MIN) / (END_MIN - START_MIN)) * 100;
+              const height =
+                ((toMin(b.end_time) - toMin(b.start_time)) /
+                  (END_MIN - START_MIN)) *
+                100;
+
+              return (
+                <div
+                  key={b.id}
+                  className={styles.bookingBlock}
+                  style={{ top: `${top}%`, height: `${height}%` }}
+                >
+                  <b>{b.start_time} – {b.end_time}</b>
+                  <span>{b.department}</span>
+                </div>
+              );
+            })}
           </div>
-
-          <button
-            className={styles.confirmBtn}
-            onClick={createBooking}
-            disabled={loading}
-          >
-            {loading ? "Booking..." : "Confirm Booking"}
-          </button>
         </div>
       </div>
     </div>
