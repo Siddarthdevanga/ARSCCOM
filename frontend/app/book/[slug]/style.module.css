@@ -1,119 +1,80 @@
-/* ================= PAGE ================= */
-.container {
+.page {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  padding: 40px 24px;
-  color: #ffffff;
-  font-family: "Segoe UI", Arial, sans-serif;
-  display: flex;
-  flex-direction: column;
+  padding: 24px;
+  font-family: Segoe UI, Arial, sans-serif;
 }
 
-/* ================= HEADER ================= */
 .header {
   display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 28px;
+  justify-content: space-between;
+  color: #fff;
+  margin-bottom: 24px;
 }
 
-.logo {
-  height: 46px;
-  width: auto;
-  object-fit: contain;
+.header img { height: 36px; }
+
+.centerCard {
+  max-width: 420px;
+  margin: 80px auto;
+  background: #fff;
+  padding: 28px;
+  border-radius: 18px;
 }
 
-.header h1 {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-/* ================= TITLE ================= */
-.title {
-  margin-top: 12px;
-  font-size: 24px;
-  font-weight: 700;
-}
-
-/* ================= ROOMS GRID ================= */
-.rooms {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 22px;
-  margin-top: 28px;
-}
-
-/* ================= ROOM CARD ================= */
-.roomCard {
-  background: #ffffff;
-  color: #333333;
-  padding: 22px 20px;
-  border-radius: 16px;
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.15);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.roomCard:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
-}
-
-.roomCard h3 {
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.roomCard p {
-  font-size: 14px;
-  opacity: 0.85;
-}
-
-/* ================= BUTTON ================= */
-.roomCard button {
-  margin-top: 16px;
+.centerCard input {
   width: 100%;
-  padding: 12px;
-  background: linear-gradient(135deg, #6a00e6, #8f3bff);
-  color: #ffffff;
+  margin-bottom: 12px;
+  padding: 10px;
+}
+
+.content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+.card {
+  background: #fff;
+  padding: 28px;
+  border-radius: 18px;
+}
+
+.card label {
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
+}
+
+.card input,
+.card select {
+  width: 100%;
+  padding: 10px;
+  margin-top: 6px;
+}
+
+.card button {
+  margin-top: 18px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 30px;
   border: none;
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
+  font-weight: 700;
+}
+
+.side {
+  background: rgba(255,255,255,0.15);
+  border-radius: 18px;
+  padding: 20px;
+  color: #fff;
+}
+
+.slot {
+  background: rgba(255,255,255,0.3);
+  padding: 10px;
   border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
+  margin-bottom: 8px;
 }
 
-.roomCard button:hover {
-  background: linear-gradient(135deg, #5a00cc, #7a2bff);
-  transform: scale(1.02);
-}
-
-.roomCard button:active {
-  transform: scale(0.98);
-}
-
-/* ================= ERROR ================= */
-.error {
-  padding: 40px 20px;
-  color: #ffb3b3;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-/* ================= RESPONSIVE ================= */
-@media (max-width: 600px) {
-  .header h1 {
-    font-size: 22px;
-  }
-
-  .title {
-    font-size: 20px;
-  }
-
-  .rooms {
-    gap: 16px;
-  }
-}
+.error { color: #d32f2f; }
