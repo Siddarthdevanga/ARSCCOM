@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ===== TIME OPTIONS (AM/PM) ===== */
+/* ================= TIME OPTIONS (AM / PM) ================= */
 const TIMES = [];
 for (let h = 9; h <= 19; h++) {
   const hour = h % 12 === 0 ? 12 : h % 12;
-  const ap = h < 12 ? "AM" : "PM";
-  TIMES.push(`${hour}:00 ${ap}`);
-  TIMES.push(`${hour}:30 ${ap}`);
+  const period = h < 12 ? "AM" : "PM";
+  TIMES.push(`${hour}:00 ${period}`);
+  TIMES.push(`${hour}:30 ${period}`);
 }
 
 const to24 = (t) => {
@@ -22,6 +23,8 @@ const to24 = (t) => {
 };
 
 export default function ConferenceBookings() {
+  const router = useRouter();
+
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -33,26 +36,37 @@ export default function ConferenceBookings() {
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
 
-  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  /* ===== LOAD DATA ===== */
+  /* ================= LOAD DATA (OPTION A) ================= */
   const loadAll = async () => {
-    const [c, r, b] = await Promise.all([
-      apiFetch("/api/company/me"),
-      apiFetch("/api/conference/rooms"),
-      apiFetch("/api/conference/bookings")
-    ]);
-    setCompany(c);
-    setRooms(r);
-    setBookings(b);
+    try {
+      const storedCompany = localStorage.getItem("company");
+      if (!storedCompany) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      setCompany(JSON.parse(storedCompany));
+
+      const [r, b] = await Promise.all([
+        apiFetch("/api/conference/rooms"),
+        apiFetch("/api/conference/bookings")
+      ]);
+
+      setRooms(r);
+      setBookings(b);
+    } catch {
+      router.replace("/auth/login");
+    }
   };
 
   useEffect(() => {
     loadAll();
   }, []);
 
-  /* ===== BOOKINGS FOR DAY ===== */
+  /* ================= DAY BOOKINGS ================= */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
@@ -60,7 +74,7 @@ export default function ConferenceBookings() {
     );
   }, [bookings, date, roomId]);
 
-  /* ===== CREATE BOOKING ===== */
+  /* ================= CREATE BOOKING ================= */
   const createBooking = async () => {
     setError("");
     setSuccess("");
@@ -69,53 +83,59 @@ export default function ConferenceBookings() {
       return setError("All fields except purpose are required");
     }
 
-    if (to24(start) >= to24(end)) {
-      return setError("End time must be after start time");
+    try {
+      await apiFetch("/api/conference/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          room_id: roomId,
+          booked_by: "ADMIN",
+          department,
+          purpose,
+          booking_date: date,
+          start_time: to24(start),
+          end_time: to24(end)
+        })
+      });
+
+      setSuccess("✅ Booking created successfully");
+      setStart("");
+      setEnd("");
+      setDepartment("");
+      setPurpose("");
+      loadAll();
+    } catch (err) {
+      setError(err.message);
     }
-
-    await apiFetch("/api/conference/bookings", {
-      method: "POST",
-      body: JSON.stringify({
-        room_id: roomId,
-        booked_by: "ADMIN",
-        department,
-        purpose,
-        booking_date: date,
-        start_time: to24(start),
-        end_time: to24(end)
-      })
-    });
-
-    setSuccess("✅ Booking successful");
-    setStart("");
-    setEnd("");
-    setDepartment("");
-    setPurpose("");
-    loadAll();
   };
 
-  if (!company) return null;
+  if (!company) {
+    return <div className={styles.loading}>Loading...</div>;
+  }
 
   return (
     <div className={styles.page}>
-      {/* ===== HEADER ===== */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <h1 className={styles.companyName}>{company.name}</h1>
-        <img src={company.logo_url} alt="logo" className={styles.logo} />
+        <img
+          src={company.logo_url || "/logo.png"}
+          className={styles.logo}
+          alt="Logo"
+        />
       </header>
 
       <div className={styles.main}>
-        {/* ===== LEFT : BOOKING FORM ===== */}
-        <div className={styles.form}>
-          <h2 className={styles.formTitle}>Book Conference Room</h2>
+        {/* ================= LEFT : FORM ================= */}
+        <div className={styles.formCard}>
+          <h2 className={styles.title}>Book Conference Room</h2>
 
           {error && <p className={styles.error}>{error}</p>}
           {success && <p className={styles.success}>{success}</p>}
 
           <label className={styles.label}>Date</label>
           <input
-            type="date"
             className={styles.input}
+            type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
           />
@@ -126,10 +146,10 @@ export default function ConferenceBookings() {
             value={roomId}
             onChange={(e) => setRoomId(e.target.value)}
           >
-            <option value="">Select room</option>
+            <option value="">Select Room</option>
             {rooms.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.room_name}
+                {r.room_name} (#{r.room_number})
               </option>
             ))}
           </select>
@@ -163,6 +183,7 @@ export default function ConferenceBookings() {
             className={styles.input}
             value={department}
             onChange={(e) => setDepartment(e.target.value)}
+            placeholder="HR / Engineering / Finance"
           />
 
           <label className={styles.label}>Purpose</label>
@@ -170,29 +191,29 @@ export default function ConferenceBookings() {
             className={styles.input}
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
+            placeholder="Optional"
           />
 
-          <button className={styles.button} onClick={createBooking}>
+          <button className={styles.primaryBtn} onClick={createBooking}>
             Confirm Booking
           </button>
         </div>
 
-        {/* ===== RIGHT : CALENDAR ===== */}
+        {/* ================= RIGHT : CALENDAR ================= */}
         <div className={styles.calendar}>
-          <h3 className={styles.calendarTitle}>Bookings</h3>
+          <h3 className={styles.calendarTitle}>Bookings Timeline</h3>
 
           {dayBookings.length === 0 && (
             <p className={styles.empty}>No bookings for selected date</p>
           )}
 
           {dayBookings.map((b) => (
-            <div key={b.id} className={styles.block}>
-              <div className={styles.blockTime}>
+            <div key={b.id} className={styles.bookingBlock}>
+              <b>{b.room_name}</b>
+              <span>
                 {b.start_time} → {b.end_time}
-              </div>
-              <div className={styles.blockMeta}>
-                {b.department} · {b.purpose || "Meeting"}
-              </div>
+              </span>
+              <small>{b.department}</small>
             </div>
           ))}
         </div>
