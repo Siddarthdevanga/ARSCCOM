@@ -1,4 +1,3 @@
-/* ================= PAGE ================= */
 .page {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
@@ -12,51 +11,48 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  margin-bottom: 32px;
+  margin-bottom: 30px;
   color: #fff;
 }
 
-/* COMPANY NAME */
 .header h1 {
   text-align: center;
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: 0.6px;
-  margin: 0;
 }
 
-/* LOGO */
 .header img {
   height: 42px;
   object-fit: contain;
 }
 
-/* LOGOUT */
-.logout {
-  background: rgba(255, 255, 255, 0.14);
+/* BACK BUTTON */
+.backBtn {
+  background: rgba(255, 255, 255, 0.15);
   border: none;
   color: #fff;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
   cursor: pointer;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
-.logout:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: translateX(-2px);
 }
 
-/* ================= MAIN LAYOUT ================= */
-.layout,
+/* ================= LAYOUT ================= */
 .content {
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 28px;
-  align-items: flex-start;
 }
 
 /* ================= CARD ================= */
@@ -80,7 +76,6 @@
   margin-top: 16px;
   font-weight: 600;
   font-size: 14px;
-  color: #333;
 }
 
 .card input,
@@ -90,130 +85,55 @@
   margin-top: 6px;
   border-radius: 12px;
   border: 1px solid #d0d0d0;
-  font-size: 14px;
-  outline: none;
-  background: #fff;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
-.card input:focus,
-.card select:focus {
-  border-color: #7a00ff;
-  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.15);
-}
-
-/* ================= BUTTON ================= */
 .card button {
   margin-top: 26px;
   width: 100%;
   padding: 15px;
   border-radius: 999px;
   border: none;
-  font-size: 15px;
   font-weight: 800;
   background: linear-gradient(135deg, #ffb703, #ff8c00);
-  color: #3c007a;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
 }
 
-.card button:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(255, 167, 0, 0.35);
-}
-
-.card button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-/* ================= RIGHT SIDE (BOOKINGS) ================= */
-.card.bookings {
+/* ================= BOOKINGS ================= */
+.bookings {
   background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  color: #fff;
   box-shadow: none;
 }
 
-.card.bookings h2 {
-  color: #ffffff;
-}
-
-/* ================= BOOKING ITEM ================= */
 .booking {
   background: rgba(255, 255, 255, 0.18);
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 14px;
   margin-bottom: 12px;
-}
-
-.booking:last-child {
-  margin-bottom: 0;
 }
 
 .booking b {
   display: block;
-  font-size: 15px;
   font-weight: 700;
 }
 
-.booking p {
-  margin: 4px 0;
-  font-size: 13px;
-  opacity: 0.95;
-}
-
-.booking span {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-/* ================= FEEDBACK ================= */
 .success {
   color: #2e7d32;
   font-weight: 700;
-  margin-bottom: 12px;
 }
 
 .error {
   color: #d32f2f;
   font-weight: 700;
-  margin-bottom: 12px;
 }
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 1024px) {
-  .layout,
   .content {
     grid-template-columns: 1fr;
   }
 
-  .header {
-    grid-template-columns: auto 1fr;
-    gap: 12px;
-  }
-
   .header h1 {
-    grid-column: 1 / -1;
-    text-align: center;
-  }
-
-  .card {
-    padding: 26px;
-  }
-}
-
-@media (max-width: 520px) {
-  .page {
-    padding: 20px;
-  }
-
-  .header img {
-    height: 36px;
-  }
-
-  .logout {
-    padding: 7px 14px;
-    font-size: 12px;
+    font-size: 22px;
   }
 }
