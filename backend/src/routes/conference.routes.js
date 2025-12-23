@@ -19,36 +19,27 @@ router.get("/dashboard", async (req, res) => {
     const [[stats]] = await db.query(
       `
       SELECT
+        (SELECT COUNT(*) FROM conference_rooms WHERE company_id = ?) AS rooms,
+        (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ?) AS totalBookings,
         (SELECT COUNT(*) 
-         FROM conference_rooms 
-         WHERE company_id = ?) AS rooms,
-
+           FROM conference_bookings 
+          WHERE company_id = ?
+            AND booking_date = CURDATE()
+            AND status = 'BOOKED') AS todayBookings,
         (SELECT COUNT(*) 
-         FROM conference_bookings 
-         WHERE company_id = ?) AS totalBookings,
-
-        (SELECT COUNT(*) 
-         FROM conference_bookings 
-         WHERE company_id = ?
-           AND booking_date = CURDATE()
-           AND status = 'BOOKED') AS todayBookings,
-
-        (SELECT COUNT(*) 
-         FROM conference_bookings 
-         WHERE company_id = ?
-           AND status = 'CANCELLED') AS cancelled
+           FROM conference_bookings 
+          WHERE company_id = ?
+            AND status = 'CANCELLED') AS cancelled
       `,
       [companyId, companyId, companyId, companyId]
     );
 
     res.json(stats);
   } catch (err) {
-    console.error("Dashboard error:", err);
+    console.error("[DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard" });
   }
 });
-
-
 
 /* ======================================================
    CONFERENCE ROOMS
@@ -73,7 +64,7 @@ router.get("/rooms", async (req, res) => {
 
     res.json(rooms);
   } catch (err) {
-    console.error("Rooms error:", err);
+    console.error("[GET ROOMS]", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
   }
 });
@@ -86,9 +77,9 @@ router.post("/rooms", async (req, res) => {
     const { companyId } = req.user;
     const { room_name, room_number } = req.body;
 
-    if (!room_name || !room_number) {
+    if (!room_name || !room_number || room_number <= 0) {
       return res.status(400).json({
-        message: "Room name and room number are required"
+        message: "Valid room name and room number are required"
       });
     }
 
@@ -108,12 +99,10 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
-    console.error("Create room error:", err);
+    console.error("[CREATE ROOM]", err);
     res.status(500).json({ message: "Unable to create room" });
   }
 });
-
-
 
 /* ======================================================
    BOOKINGS
@@ -135,9 +124,9 @@ router.get("/bookings", async (req, res) => {
         b.end_time,
         b.purpose,
         b.status,
+        b.booked_by,
         r.room_name,
-        r.room_number,
-        b.booked_by
+        r.room_number
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
       WHERE b.company_id = ?
@@ -157,11 +146,10 @@ router.get("/bookings", async (req, res) => {
 
     sql += " ORDER BY b.booking_date DESC, b.start_time ASC";
 
-    const [bookings] = await db.query(sql, params);
-
-    res.json(bookings);
+    const [rows] = await db.query(sql, params);
+    res.json(rows);
   } catch (err) {
-    console.error("Bookings error:", err);
+    console.error("[GET BOOKINGS]", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
   }
 });
@@ -170,6 +158,8 @@ router.get("/bookings", async (req, res) => {
  * CREATE booking (ADMIN)
  */
 router.post("/bookings", async (req, res) => {
+  const conn = await db.getConnection();
+
   try {
     const { companyId } = req.user;
     const {
@@ -185,8 +175,24 @@ router.post("/bookings", async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    await conn.beginTransaction();
+
+    /* ---- Ensure room belongs to company ---- */
+    const [[room]] = await conn.query(
+      `
+      SELECT id FROM conference_rooms
+      WHERE id = ? AND company_id = ?
+      `,
+      [room_id, companyId]
+    );
+
+    if (!room) {
+      await conn.rollback();
+      return res.status(403).json({ message: "Invalid room selection" });
+    }
+
     /* ---- Conflict check ---- */
-    const [[conflict]] = await db.query(
+    const [[conflict]] = await conn.query(
       `
       SELECT COUNT(*) AS cnt
       FROM conference_bookings
@@ -200,13 +206,14 @@ router.post("/bookings", async (req, res) => {
     );
 
     if (conflict.cnt > 0) {
+      await conn.rollback();
       return res.status(409).json({
         message: "Room already booked for this time slot"
       });
     }
 
-    /* ---- Insert ---- */
-    await db.query(
+    /* ---- Insert booking ---- */
+    await conn.query(
       `
       INSERT INTO conference_bookings
       (company_id, room_id, booked_by, purpose, booking_date, start_time, end_time)
@@ -223,10 +230,14 @@ router.post("/bookings", async (req, res) => {
       ]
     );
 
+    await conn.commit();
     res.status(201).json({ message: "Booking created successfully" });
   } catch (err) {
-    console.error("Create booking error:", err);
+    await conn.rollback();
+    console.error("[CREATE BOOKING]", err);
     res.status(500).json({ message: "Unable to create booking" });
+  } finally {
+    conn.release();
   }
 });
 
@@ -257,7 +268,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 
     res.json({ message: "Booking cancelled successfully" });
   } catch (err) {
-    console.error("Cancel booking error:", err);
+    console.error("[CANCEL BOOKING]", err);
     res.status(500).json({ message: "Unable to cancel booking" });
   }
 });
