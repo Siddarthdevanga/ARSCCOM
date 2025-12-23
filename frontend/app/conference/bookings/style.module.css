@@ -1,177 +1,103 @@
-/* ================= ROOT ================= */
 .page {
-  display: flex;
   min-height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  background: #f4f2f9;
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* ================= HEADER ================= */
-.header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 70px;
-  padding: 0 32px;
+/* ================= COMPANY HEADER ================= */
+.companyHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: transparent;
-  z-index: 10;
+  padding: 20px 32px;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  color: #fff;
 }
 
-.title {
-  color: #ffffff;
+.companyName {
   font-size: 24px;
   font-weight: 800;
 }
 
-.subtitle {
-  font-size: 13px;
-  opacity: 0.85;
-  color: #e0d6ff;
-}
-
-.logo {
-  height: 40px;
+.companyLogo {
+  height: 42px;
   object-fit: contain;
 }
 
-/* ================= CONTENT ================= */
-.content {
+/* ================= LAYOUT ================= */
+.layout {
   display: flex;
-  width: 100%;
-  margin-top: 70px;
+  height: calc(100vh - 80px);
 }
 
-/* ================= LEFT PANE ================= */
-.calendarPane {
+/* ================= LEFT FORM ================= */
+.formPane {
   width: 40%;
-  background: rgba(255, 255, 255, 0.12);
+  background: #ffffff;
   padding: 32px;
-  color: #fff;
 }
 
-.label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-.dateInput {
-  width: 100%;
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
+.formTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: #3c007a;
   margin-bottom: 20px;
 }
 
-.subTitle {
-  margin-top: 24px;
-  margin-bottom: 12px;
-  font-weight: 700;
-}
-
-/* ================= SLOT GRID ================= */
-.slotGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-}
-
-.slot {
-  padding: 10px;
-  border-radius: 10px;
-  border: none;
+.formPane label {
+  display: block;
+  margin-top: 14px;
   font-weight: 600;
-  cursor: pointer;
-  background: #ffffff;
-  color: #5b00c9;
-  transition: transform 0.1s ease, background 0.2s ease;
 }
 
-.slot:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.slot:disabled {
-  background: #cfcfcf;
-  cursor: not-allowed;
-}
-
-.selected {
-  background: #ffb703;
-  color: #3c007a;
-}
-
-/* ================= RIGHT PANE ================= */
-.formPane {
-  width: 60%;
-  background: #ffffff;
-  padding: 40px;
-}
-
-.formPaneInner {
-  max-width: 520px;
-}
-
-.select,
-.input {
+.formPane input,
+.formPane select {
   width: 100%;
   padding: 10px;
+  margin-top: 6px;
   border-radius: 10px;
   border: 1px solid #ddd;
-  margin-top: 6px;
 }
 
-/* ================= SUMMARY ================= */
-.summary {
-  margin: 20px 0;
-  padding: 14px;
-  background: #f5f5f5;
-  border-radius: 12px;
-  font-size: 14px;
-}
-
-/* ================= BUTTON ================= */
-.confirmBtn {
+.formPane button {
+  margin-top: 24px;
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #ffb703, #ff8c00);
+  border-radius: 28px;
   border: none;
-  border-radius: 30px;
-  font-size: 15px;
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
   font-weight: 700;
   cursor: pointer;
-  color: #3c007a;
-  margin-top: 20px;
 }
 
-.confirmBtn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ================= ERROR ================= */
 .error {
   color: #d32f2f;
+  margin-bottom: 12px;
   font-weight: 600;
-  margin-bottom: 10px;
 }
 
-/* ================= RESPONSIVE ================= */
-@media (max-width: 900px) {
-  .content {
-    flex-direction: column;
-  }
+/* ================= RIGHT CALENDAR ================= */
+.calendarPane {
+  width: 60%;
+  background: #111;
+  color: #fff;
+  padding: 32px;
+}
 
-  .calendarPane,
-  .formPane {
-    width: 100%;
-  }
+.timeline {
+  position: relative;
+  height: 100%;
+  margin-top: 16px;
+  border-left: 1px solid #333;
+}
 
-  .header {
-    padding: 0 20px;
-  }
+.bookingBlock {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  background: #ffb703;
+  color: #000;
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 13px;
 }
