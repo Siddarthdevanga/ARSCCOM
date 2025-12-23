@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= TIME OPTIONS (09:30 – 19:00, AM/PM) ================= */
+/* ================= TIME OPTIONS (09:30 – 19:00, 30 MIN) ================= */
 const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const total = 9 * 60 + 30 + i * 30;
   const h = Math.floor(total / 60);
@@ -17,6 +17,17 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
     value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
   };
 });
+
+/* ================= HELPERS ================= */
+const normalizeDate = (d) =>
+  typeof d === "string" ? d.split("T")[0] : "";
+
+const toAmPm = (time24) => {
+  const [h, m] = time24.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+};
 
 export default function ConferenceBookings() {
   const router = useRouter();
@@ -61,14 +72,18 @@ export default function ConferenceBookings() {
   /* ================= DAY BOOKINGS ================= */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
-    return bookings.filter(
-      b => b.booking_date === date && b.room_id == roomId && b.status === "BOOKED"
+
+    return bookings.filter(b =>
+      normalizeDate(b.booking_date) === date &&
+      Number(b.room_id) === Number(roomId) &&
+      b.status === "BOOKED"
     );
   }, [bookings, date, roomId]);
 
-  /* ================= BLOCKED TIME SLOTS ================= */
+  /* ================= BLOCKED SLOTS ================= */
   const blockedSlots = useMemo(() => {
     const set = new Set();
+
     dayBookings.forEach(b => {
       TIME_OPTIONS.forEach(t => {
         if (t.value >= b.start_time && t.value < b.end_time) {
@@ -76,6 +91,7 @@ export default function ConferenceBookings() {
         }
       });
     });
+
     return set;
   }, [dayBookings]);
 
@@ -84,9 +100,10 @@ export default function ConferenceBookings() {
 
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter(t => {
-      if (date !== today) return !blockedSlots.has(t.value);
+      if (blockedSlots.has(t.value)) return false;
+      if (date !== today) return true;
       const [h, m] = t.value.split(":").map(Number);
-      return h * 60 + m > nowMinutes && !blockedSlots.has(t.value);
+      return h * 60 + m > nowMinutes;
     });
   }, [date, today, blockedSlots, nowMinutes]);
 
@@ -142,8 +159,22 @@ export default function ConferenceBookings() {
     <div className={styles.page}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
+        <div className={styles.headerLeft} />
+
         <h1>{company.name}</h1>
-        {company.logo_url && <img src={company.logo_url} alt="logo" />}
+
+        <div className={styles.headerRight}>
+          {company.logo_url && (
+            <img src={company.logo_url} alt="logo" />
+          )}
+          <button
+            className={styles.backBtn}
+            onClick={() => router.back()}
+            title="Back"
+          >
+            ←
+          </button>
+        </div>
       </header>
 
       <div className={styles.content}>
@@ -173,7 +204,10 @@ export default function ConferenceBookings() {
           </select>
 
           <label>Start Time</label>
-          <select value={startTime} onChange={e => setStartTime(e.target.value)}>
+          <select
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
+          >
             <option value="">Select</option>
             {availableStartTimes.map(t => (
               <option key={t.value} value={t.value}>
@@ -183,7 +217,10 @@ export default function ConferenceBookings() {
           </select>
 
           <label>End Time</label>
-          <select value={endTime} onChange={e => setEndTime(e.target.value)}>
+          <select
+            value={endTime}
+            onChange={e => setEndTime(e.target.value)}
+          >
             <option value="">Select</option>
             {availableEndTimes.map(t => (
               <option key={t.value} value={t.value}>
@@ -212,11 +249,16 @@ export default function ConferenceBookings() {
         {/* ================= RIGHT PANEL ================= */}
         <div className={styles.side}>
           <h2>Bookings</h2>
-          {dayBookings.length === 0 && <p>No bookings</p>}
+
+          {dayBookings.length === 0 && (
+            <p style={{ opacity: 0.8 }}>No bookings</p>
+          )}
 
           {dayBookings.map(b => (
             <div key={b.id} className={styles.booking}>
-              <b>{b.start_time} – {b.end_time}</b>
+              <b>
+                {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
+              </b>
               <p>{b.department}</p>
               <span>{b.booked_by}</span>
             </div>
