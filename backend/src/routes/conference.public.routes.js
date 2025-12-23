@@ -7,8 +7,8 @@ const router = express.Router();
 /* ======================================================
    HELPERS
 ====================================================== */
-const normalizeSlug = (v = "") => v.trim().toLowerCase();
-const normalizeEmail = (v = "") => v.trim().toLowerCase();
+const normalizeSlug = (v = "") => String(v).trim().toLowerCase();
+const normalizeEmail = (v = "") => String(v).trim().toLowerCase();
 
 /* ======================================================
    GET COMPANY (PUBLIC)
@@ -41,7 +41,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
     const slug = normalizeSlug(req.params.slug);
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug = ?`,
+      `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -57,10 +57,10 @@ router.get("/company/:slug/rooms", async (req, res) => {
       [company.id]
     );
 
-    res.json(rooms || []);
+    res.json(Array.isArray(rooms) ? rooms : []);
   } catch (err) {
     console.error("[PUBLIC][ROOMS]", err);
-    res.json([]);
+    res.json([]); // frontend-safe
   }
 });
 
@@ -75,7 +75,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
     if (!roomId || !date) return res.json([]);
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug = ?`,
+      `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -102,7 +102,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
       [company.id, roomId, date]
     );
 
-    res.json(bookings || []);
+    res.json(Array.isArray(bookings) ? bookings : []);
   } catch (err) {
     console.error("[PUBLIC][BOOKINGS]", err);
     res.json([]);
@@ -122,7 +122,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
     }
 
     const [[company]] = await db.query(
-      `SELECT id, name FROM companies WHERE slug = ?`,
+      `SELECT id, name FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -165,22 +165,26 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 });
 
 /* ======================================================
-   VERIFY OTP
+   VERIFY OTP (PUBLIC)
 ====================================================== */
 router.post("/company/:slug/verify-otp", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
     const email = normalizeEmail(req.body.email);
-    const otp = req.body.otp?.trim();
+    const otp = String(req.body.otp || "").trim();
 
     if (!email || !otp) {
       return res.status(400).json({ message: "Email and OTP required" });
     }
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug = ?`,
+      `SELECT id FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
+
+    if (!company) {
+      return res.status(404).json({ message: "Invalid booking link" });
+    }
 
     const [[row]] = await db.query(
       `
@@ -213,7 +217,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING (PUBLIC – WITH DEPARTMENT)
+   CREATE BOOKING (PUBLIC – FINAL FIXED)
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -251,7 +255,7 @@ router.post("/company/:slug/book", async (req, res) => {
     const email = normalizeEmail(booked_by);
 
     const [[company]] = await db.query(
-      `SELECT id, name FROM companies WHERE slug = ?`,
+      `SELECT id, name FROM companies WHERE slug = ? LIMIT 1`,
       [slug]
     );
 
@@ -259,7 +263,7 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(404).json({ message: "Invalid booking link" });
     }
 
-    /* OTP VERIFIED */
+    /* ================= OTP VERIFIED ================= */
     const [[verified]] = await db.query(
       `
       SELECT id FROM public_booking_otp
@@ -279,7 +283,7 @@ router.post("/company/:slug/book", async (req, res) => {
       });
     }
 
-    /* OVERLAP CHECK */
+    /* ================= OVERLAP CHECK ================= */
     const [conflict] = await db.query(
       `
       SELECT id FROM conference_bookings
@@ -298,7 +302,7 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(409).json({ message: "Slot already booked" });
     }
 
-    /* INSERT BOOKING */
+    /* ================= INSERT BOOKING ================= */
     await db.query(
       `
       INSERT INTO conference_bookings
