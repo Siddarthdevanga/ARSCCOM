@@ -1,282 +1,184 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
+/* ===== TIME OPTIONS ===== */
+const TIMES = [];
+for (let h = 9; h <= 19; h++) {
+  TIMES.push(`${h === 12 ? 12 : h % 12}:00 ${h < 12 ? "AM" : "PM"}`);
+  TIMES.push(`${h === 12 ? 12 : h % 12}:30 ${h < 12 ? "AM" : "PM"}`);
+}
 
-/* ================= TIME SLOTS: 09:30 → 19:00 ================= */
-const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
-  const total = 9 * 60 + 30 + i * 30;
-  const h = Math.floor(total / 60);
-  const m = total % 60;
+const to24 = (t) => {
+  const [time, ap] = t.split(" ");
+  let [h, m] = time.split(":").map(Number);
+  if (ap === "PM" && h !== 12) h += 12;
+  if (ap === "AM" && h === 12) h = 0;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-});
+};
 
-export default function PublicBookingPage() {
-  const { slug } = useParams();
+export default function ConferenceBookings() {
+  const router = useRouter();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
-
-  const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState("");
-  const [slot, setSlot] = useState("");
+  const [roomId, setRoomId] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
+  const [department, setDepartment] = useState("");
+  const [purpose, setPurpose] = useState("");
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  /* ================= LOAD COMPANY ================= */
-  useEffect(() => {
-    if (!slug) return;
+  /* ===== LOAD ===== */
+  const loadAll = async () => {
+    try {
+      const stored = localStorage.getItem("company");
+      if (stored) setCompany(JSON.parse(stored));
 
-    setError("");
+      const [r, b] = await Promise.all([
+        apiFetch("/api/conference/rooms"),
+        apiFetch("/api/conference/bookings")
+      ]);
 
-    fetch(`${API}/api/public/conference/company/${slug}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then(setCompany)
-      .catch(() => setError("Invalid or expired booking link"));
-  }, [slug]);
-
-  /* ================= LOAD ROOMS ================= */
-  useEffect(() => {
-    if (!company) return;
-
-    fetch(`${API}/api/public/conference/company/${slug}/rooms`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setRooms(Array.isArray(data) ? data : []))
-      .catch(() => setRooms([]));
-  }, [company, slug]);
-
-  /* ================= LOAD BOOKINGS ================= */
-  useEffect(() => {
-    if (!roomId || !date) {
-      setBookings([]);
-      setSlot("");
-      return;
+      setRooms(r);
+      setBookings(b);
+    } catch (e) {
+      if (e.code === 401) router.replace("/auth/login");
     }
+  };
 
-    fetch(
-      `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
-    )
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setBookings(Array.isArray(data) ? data : []))
-      .catch(() => setBookings([]));
-  }, [roomId, date, slug]);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
-  /* ================= BOOKED SLOT MAP ================= */
-  const bookedSlots = useMemo(() => {
+  /* ===== DAY BOOKINGS ===== */
+  const dayBookings = useMemo(() => {
+    if (!date || !roomId) return [];
+    return bookings.filter(
+      b => b.booking_date === date && b.room_id == roomId
+    );
+  }, [bookings, date, roomId]);
+
+  /* ===== AVAILABLE SLOTS ===== */
+  const unavailable = useMemo(() => {
     const set = new Set();
-    bookings.forEach((b) => {
-      TIME_SLOTS.forEach((t) => {
-        if (t >= b.start_time && t < b.end_time) {
+    dayBookings.forEach(b => {
+      TIMES.forEach(t => {
+        if (to24(t) >= b.start_time && to24(t) < b.end_time) {
           set.add(t);
         }
       });
     });
     return set;
-  }, [bookings]);
+  }, [dayBookings]);
 
-  /* ================= SEND OTP ================= */
-  const sendOtp = async () => {
-    if (!email || !email.includes("@")) {
-      return setError("Enter a valid email address");
+  /* ===== CREATE BOOKING ===== */
+  const createBooking = async () => {
+    setError(""); setSuccess("");
+
+    if (!date || !roomId || !start || !end || !department) {
+      return setError("All required fields must be filled");
     }
-
-    setLoading(true);
-    setError("");
 
     try {
-      const res = await fetch(
-        `${API}/api/public/conference/company/${slug}/send-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
+      await apiFetch("/api/conference/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          room_id: roomId,
+          booked_by: "ADMIN",
+          department,
+          purpose,
+          booking_date: date,
+          start_time: to24(start),
+          end_time: to24(end)
+        })
+      });
 
-      if (!res.ok) throw new Error();
-      setOtpSent(true);
-    } catch {
-      setError("Failed to send OTP. Please try again.");
-    } finally {
-      setLoading(false);
+      setSuccess("Booking created successfully");
+      setStart(""); setEnd(""); setDepartment(""); setPurpose("");
+      loadAll();
+    } catch (e) {
+      setError(e.message);
     }
   };
-
-  /* ================= VERIFY OTP ================= */
-  const verifyOtp = async () => {
-    if (!otp) return setError("Enter OTP");
-
-    setError("");
-
-    try {
-      const res = await fetch(
-        `${API}/api/public/conference/company/${slug}/verify-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, otp })
-        }
-      );
-
-      if (!res.ok) throw new Error();
-      setOtpVerified(true);
-    } catch {
-      setError("Invalid or expired OTP");
-    }
-  };
-
-  /* ================= CONFIRM BOOKING ================= */
-  const confirmBooking = async () => {
-    if (!roomId || !date || !slot) {
-      return setError("Select room, date and time");
-    }
-
-    const idx = TIME_SLOTS.indexOf(slot);
-    const endTime = TIME_SLOTS[idx + 1];
-    if (!endTime) return setError("Invalid time slot");
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch(
-        `${API}/api/public/conference/company/${slug}/book`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            room_id: roomId,
-            booked_by: email,
-            purpose: "Conference Meeting",
-            booking_date: date,
-            start_time: slot,
-            end_time: endTime
-          })
-        }
-      );
-
-      if (!res.ok) throw new Error();
-
-      alert("✅ Booking confirmed successfully!");
-      setSlot("");
-      setBookings([]);
-    } catch {
-      setError("This slot was just booked. Please choose another.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ================= RENDER ================= */
-  if (error && !company) {
-    return <div className={styles.error}>{error}</div>;
-  }
 
   if (!company) return null;
 
   return (
-    <div className={styles.container}>
-      {/* ================= HEADER ================= */}
+    <div className={styles.page}>
+      {/* HEADER */}
       <header className={styles.header}>
+        <button className={styles.backBtn} onClick={() => router.back()}>←</button>
         <h1>{company.name}</h1>
-        {company.logo_url && (
-          <img src={company.logo_url} className={styles.logo} alt="Logo" />
-        )}
+        <img src={company.logo_url} alt="logo" />
       </header>
 
-      {/* ================= OTP ================= */}
-      {!otpVerified && (
+      <div className={styles.content}>
+        {/* LEFT FORM */}
         <div className={styles.card}>
-          <h3>Email Verification</h3>
-
+          <h2>Book Conference Room</h2>
           {error && <p className={styles.error}>{error}</p>}
+          {success && <p className={styles.success}>✔ {success}</p>}
 
-          <input
-            placeholder="Enter email"
-            value={email}
-            onChange={(e) => {
-              setEmail(e.target.value);
-              setOtp("");
-              setOtpSent(false);
-              setError("");
-            }}
-          />
+          <label>Date</label>
+          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
 
-          {!otpSent ? (
-            <button onClick={sendOtp} disabled={loading}>
-              {loading ? "Sending..." : "Send OTP"}
-            </button>
-          ) : (
-            <>
-              <input
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-              />
-              <button onClick={verifyOtp}>Verify</button>
-            </>
-          )}
-        </div>
-      )}
+          <label>Room</label>
+          <select value={roomId} onChange={e => setRoomId(e.target.value)}>
+            <option value="">Select</option>
+            {rooms.map(r => (
+              <option key={r.id} value={r.id}>{r.room_name}</option>
+            ))}
+          </select>
 
-      {/* ================= BOOKING ================= */}
-      {otpVerified && (
-        <>
-          <div className={styles.card}>
-            {error && <p className={styles.error}>{error}</p>}
+          <label>Start Time</label>
+          <select value={start} onChange={e => setStart(e.target.value)}>
+            <option value="">Select</option>
+            {TIMES.filter(t => !unavailable.has(t)).map(t => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
 
-            <label>Conference Room</label>
-            <select
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-            >
-              <option value="">Select Room</option>
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.room_name}
-                </option>
-              ))}
-            </select>
+          <label>End Time</label>
+          <select value={end} onChange={e => setEnd(e.target.value)}>
+            <option value="">Select</option>
+            {TIMES.filter(t => t > start && !unavailable.has(t)).map(t => (
+              <option key={t}>{t}</option>
+            ))}
+          </select>
 
-            <label>Date</label>
-            <input
-              type="date"
-              min={new Date().toISOString().split("T")[0]}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
+          <label>Department</label>
+          <input value={department} onChange={e => setDepartment(e.target.value)} />
 
-            <label>Time Slot</label>
-            <select value={slot} onChange={(e) => setSlot(e.target.value)}>
-              <option value="">Select time</option>
-              {TIME_SLOTS.map((t) => (
-                <option key={t} value={t} disabled={bookedSlots.has(t)}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
+          <label>Purpose</label>
+          <input value={purpose} onChange={e => setPurpose(e.target.value)} />
 
-          <button
-            className={styles.confirmBtn}
-            onClick={confirmBooking}
-            disabled={loading || !roomId || !date || !slot}
-          >
-            {loading ? "Booking..." : "Confirm Booking"}
+          <button className={styles.primaryBtn} onClick={createBooking}>
+            Confirm Booking
           </button>
-        </>
-      )}
+        </div>
+
+        {/* RIGHT PANEL */}
+        <div className={styles.side}>
+          <h3>Bookings</h3>
+          {dayBookings.length === 0 && <p>No bookings</p>}
+
+          {dayBookings.map(b => (
+            <div key={b.id} className={styles.slotBooked}>
+              {b.start_time} – {b.end_time}
+              <span>{b.department}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
-
