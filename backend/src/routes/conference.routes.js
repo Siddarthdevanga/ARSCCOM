@@ -21,13 +21,13 @@ router.get("/dashboard", async (req, res) => {
       SELECT
         (SELECT COUNT(*) FROM conference_rooms WHERE company_id = ?) AS rooms,
         (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ?) AS totalBookings,
-        (SELECT COUNT(*) 
-           FROM conference_bookings 
+        (SELECT COUNT(*)
+           FROM conference_bookings
           WHERE company_id = ?
             AND booking_date = CURDATE()
             AND status = 'BOOKED') AS todayBookings,
-        (SELECT COUNT(*) 
-           FROM conference_bookings 
+        (SELECT COUNT(*)
+           FROM conference_bookings
           WHERE company_id = ?
             AND status = 'CANCELLED') AS cancelled
       `,
@@ -54,7 +54,10 @@ router.get("/rooms", async (req, res) => {
 
     const [rooms] = await db.query(
       `
-      SELECT id, room_number, room_name
+      SELECT
+        id,
+        room_number,
+        name AS room_name
       FROM conference_rooms
       WHERE company_id = ?
       ORDER BY room_number ASC
@@ -85,7 +88,7 @@ router.post("/rooms", async (req, res) => {
 
     await db.query(
       `
-      INSERT INTO conference_rooms (company_id, room_number, room_name)
+      INSERT INTO conference_rooms (company_id, room_number, name)
       VALUES (?, ?, ?)
       `,
       [companyId, room_number, room_name.trim()]
@@ -125,7 +128,7 @@ router.get("/bookings", async (req, res) => {
         b.purpose,
         b.status,
         b.booked_by,
-        r.room_name,
+        r.name AS room_name,
         r.room_number
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
@@ -177,10 +180,11 @@ router.post("/bookings", async (req, res) => {
 
     await conn.beginTransaction();
 
-    /* ---- Ensure room belongs to company ---- */
+    /* ---- Validate room ownership ---- */
     const [[room]] = await conn.query(
       `
-      SELECT id FROM conference_rooms
+      SELECT id
+      FROM conference_rooms
       WHERE id = ? AND company_id = ?
       `,
       [room_id, companyId]
