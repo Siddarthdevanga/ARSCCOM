@@ -5,6 +5,7 @@
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
+  box-sizing: border-box;
 }
 
 /* ================= HEADER ================= */
@@ -15,10 +16,12 @@
   margin-bottom: 28px;
 }
 
+/* LEFT TITLE */
 .companyName {
   font-size: 26px;
   font-weight: 800;
   letter-spacing: 0.5px;
+  margin: 0;
 }
 
 .subText {
@@ -26,9 +29,38 @@
   opacity: 0.85;
 }
 
+/* RIGHT SIDE (LOGO + BUTTON SAFE SUPPORT) */
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
 .logo {
   height: 46px;
   object-fit: contain;
+}
+
+/* LOGO BUTTON (if present) */
+.logoBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: none;
+  background: #ffffff;
+  color: #000;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.logoBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* ================= PUBLIC LINK ================= */
@@ -54,6 +86,7 @@
   word-break: break-all;
 }
 
+/* COPY BUTTON */
 .copyBtn {
   margin-top: 12px;
   background: #ffffff;
@@ -63,6 +96,7 @@
   border-radius: 10px;
   font-weight: 700;
   cursor: pointer;
+  transition: opacity 0.15s ease;
 }
 
 .copyBtn:hover {
@@ -131,6 +165,10 @@
   font-size: 14px;
 }
 
+.roomForm input:focus {
+  outline: 2px solid rgba(255, 255, 255, 0.35);
+}
+
 .roomForm button {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
@@ -139,10 +177,11 @@
   border-radius: 24px;
   font-weight: 700;
   cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
 .roomForm button:hover {
-  opacity: 0.9;
+  transform: translateY(-1px);
 }
 
 /* ================= ROOM LIST ================= */
@@ -202,6 +241,7 @@
   cursor: pointer;
   color: #3c007a;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease;
 }
 
 .primaryBtn:hover {
