@@ -6,11 +6,13 @@ import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-const TIME_SLOTS = [
-  "09:00","09:30","10:00","10:30","11:00","11:30",
-  "12:00","12:30","13:00","13:30","14:00","14:30",
-  "15:00","15:30","16:00","16:30","17:00","17:30"
-];
+/* ================= TIME SLOTS: 09:30 → 19:00 ================= */
+const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
+  const totalMinutes = 9 * 60 + 30 + i * 30;
+  const hour = Math.floor(totalMinutes / 60);
+  const minute = totalMinutes % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+});
 
 export default function PublicBookingPage() {
   const params = useParams();
@@ -35,8 +37,6 @@ export default function PublicBookingPage() {
   /* ================= LOAD COMPANY ================= */
   useEffect(() => {
     if (!slug || !API) return;
-
-    setError("");
 
     fetch(`${API}/api/public/conference/company/${slug}`)
       .then(res => res.ok ? res.json() : Promise.reject())
@@ -66,10 +66,11 @@ export default function PublicBookingPage() {
       .catch(() => setBookings([]));
   }, [roomId, date, slug]);
 
-  /* ================= SLOT CHECK ================= */
+  /* ================= SLOT BOOKED CHECK ================= */
   const isBooked = (slot) =>
-    Array.isArray(bookings) &&
-    bookings.some(b => slot >= b.start_time && slot < b.end_time);
+    bookings.some(
+      b => slot >= b.start_time && slot < b.end_time
+    );
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
@@ -91,7 +92,6 @@ export default function PublicBookingPage() {
       );
 
       if (!res.ok) throw new Error();
-
       setOtpSent(true);
     } catch {
       setError("Failed to send OTP");
@@ -115,7 +115,6 @@ export default function PublicBookingPage() {
       );
 
       if (!res.ok) throw new Error();
-
       setOtpVerified(true);
       setError("");
     } catch {
@@ -126,7 +125,7 @@ export default function PublicBookingPage() {
   /* ================= CONFIRM BOOKING ================= */
   const confirmBooking = async () => {
     if (!roomId || !date || !selectedSlot) {
-      return setError("Select room, date & slot");
+      return setError("Select room, date and time");
     }
 
     const idx = TIME_SLOTS.indexOf(selectedSlot);
@@ -143,26 +142,26 @@ export default function PublicBookingPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            companyId: company.id,
             roomId,
             bookedBy: email,
-            date,
-            startTime: selectedSlot,
-            endTime,
-            purpose: "Meeting"
+            purpose: "Conference Meeting",
+            booking_date: date,
+            start_time: selectedSlot,
+            end_time: endTime
           })
         }
       );
 
       if (!res.ok) throw new Error();
 
-      alert("✅ Booking confirmed! Email sent.");
+      alert("✅ Booking confirmed! Confirmation email sent.");
       setSelectedSlot("");
     } catch {
       setError("Slot already booked");
     }
   };
 
-  /* ================= UI ================= */
   if (error) return <div className={styles.error}>{error}</div>;
   if (!company) return null;
 
@@ -171,11 +170,11 @@ export default function PublicBookingPage() {
       <header className={styles.header}>
         <h1>{company.name}</h1>
         {company.logo_url && (
-          <img src={company.logo_url} className={styles.logo} />
+          <img src={company.logo_url} className={styles.logo} alt="Logo" />
         )}
       </header>
 
-      {/* EMAIL + OTP */}
+      {/* ================= EMAIL OTP ================= */}
       {!otpVerified && (
         <div className={styles.card}>
           <h3>Email Verification</h3>
@@ -185,9 +184,8 @@ export default function PublicBookingPage() {
             value={email}
             onChange={(e) => {
               setEmail(e.target.value);
-              setOtpSent(false);
-              setOtpVerified(false);
               setOtp("");
+              setOtpSent(false);
             }}
           />
 
@@ -208,47 +206,44 @@ export default function PublicBookingPage() {
         </div>
       )}
 
-      {/* BOOKING UI */}
+      {/* ================= BOOKING ================= */}
       {otpVerified && (
         <>
           <div className={styles.card}>
+            <label>Conference Room</label>
             <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
               <option value="">Select Room</option>
-              {Array.isArray(rooms) &&
-                rooms.map(r => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
+              {rooms.map(r => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
             </select>
 
+            <label>Date</label>
             <input
               type="date"
               min={new Date().toISOString().split("T")[0]}
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
+
+            <label>Time Slot</label>
+            <select
+              className={styles.timeSelect}
+              value={selectedSlot}
+              onChange={(e) => setSelectedSlot(e.target.value)}
+            >
+              <option value="">Select time</option>
+              {TIME_SLOTS.map(slot => (
+                <option key={slot} value={slot} disabled={isBooked(slot)}>
+                  {slot}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className={styles.slotGrid}>
-            {TIME_SLOTS.map(slot => (
-              <button
-                key={slot}
-                disabled={isBooked(slot)}
-                className={
-                  selectedSlot === slot
-                    ? styles.activeSlot
-                    : styles.slot
-                }
-                onClick={() => setSelectedSlot(slot)}
-              >
-                {slot}
-              </button>
-            ))}
-          </div>
-
-          <button
-            className={styles.confirmBtn}
-            onClick={confirmBooking}
-          >
+          <button className={styles.confirmBtn} onClick={confirmBooking}>
             Confirm Booking
           </button>
         </>
@@ -256,3 +251,4 @@ export default function PublicBookingPage() {
     </div>
   );
 }
+
