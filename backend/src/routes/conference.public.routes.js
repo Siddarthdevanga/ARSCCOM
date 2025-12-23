@@ -60,7 +60,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
     res.json(Array.isArray(rooms) ? rooms : []);
   } catch (err) {
     console.error("[PUBLIC][ROOMS]", err);
-    res.json([]); // frontend-safe
+    res.json([]);
   }
 });
 
@@ -130,7 +130,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       return res.status(404).json({ message: "Invalid booking link" });
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otp = String(Math.floor(100000 + Math.random() * 900000));
 
     await db.query(
       `DELETE FROM public_booking_otp WHERE company_id = ? AND email = ?`,
@@ -217,12 +217,13 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING (PUBLIC – FINAL FIXED)
+   CREATE BOOKING (PUBLIC – BULLETPROOF)
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
-    const {
+
+    let {
       room_id,
       booked_by,
       department,
@@ -232,7 +233,9 @@ router.post("/company/:slug/book", async (req, res) => {
       end_time
     } = req.body;
 
-    /* ================= VALIDATION ================= */
+    /* 🔒 HARD SAFETY */
+    department = String(department || "").trim();
+
     if (
       !room_id ||
       !booked_by ||
@@ -263,7 +266,7 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(404).json({ message: "Invalid booking link" });
     }
 
-    /* ================= OTP VERIFIED ================= */
+    /* OTP VERIFIED */
     const [[verified]] = await db.query(
       `
       SELECT id FROM public_booking_otp
@@ -283,10 +286,11 @@ router.post("/company/:slug/book", async (req, res) => {
       });
     }
 
-    /* ================= OVERLAP CHECK ================= */
+    /* OVERLAP CHECK */
     const [conflict] = await db.query(
       `
-      SELECT id FROM conference_bookings
+      SELECT id
+      FROM conference_bookings
       WHERE company_id = ?
         AND room_id = ?
         AND booking_date = ?
@@ -302,7 +306,7 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(409).json({ message: "Slot already booked" });
     }
 
-    /* ================= INSERT BOOKING ================= */
+    /* INSERT */
     await db.query(
       `
       INSERT INTO conference_bookings
@@ -314,15 +318,16 @@ router.post("/company/:slug/book", async (req, res) => {
         purpose,
         booking_date,
         start_time,
-        end_time
+        end_time,
+        status
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED')
       `,
       [
         company.id,
         room_id,
         email,
-        department.trim(),
+        department,
         purpose.trim(),
         booking_date,
         start_time,
@@ -351,3 +356,4 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 export default router;
+
