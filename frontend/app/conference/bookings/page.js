@@ -1,27 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
 /* ================= TIME SLOTS ================= */
 const TIME_SLOTS = Array.from({ length: 20 }, (_, i) => {
-  const total = 9 * 60 + 30 + i * 30;
-  const h = Math.floor(total / 60);
-  const m = total % 60;
+  const mins = 9 * 60 + 30 + i * 30;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 });
 
 export default function ConferenceBookings() {
   const router = useRouter();
 
-  const [bookings, setBookings] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
 
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState("");
   const [slot, setSlot] = useState("");
+
+  const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
 
   const [loading, setLoading] = useState(false);
@@ -45,15 +47,34 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
+  /* ================= BOOKINGS FOR SELECTED DAY ================= */
+  const dayBookings = useMemo(() => {
+    if (!roomId || !date) return [];
+    return bookings.filter(
+      (b) => b.room_id == roomId && b.booking_date === date
+    );
+  }, [bookings, roomId, date]);
+
+  /* ================= BOOKED SLOT MAP ================= */
+  const bookedSlots = useMemo(() => {
+    const set = new Set();
+    dayBookings.forEach((b) => {
+      TIME_SLOTS.forEach((t) => {
+        if (t >= b.start_time && t < b.end_time) set.add(t);
+      });
+    });
+    return set;
+  }, [dayBookings]);
+
   /* ================= CREATE BOOKING ================= */
   const createBooking = async () => {
-    if (!roomId || !date || !slot) {
-      return setError("Select room, date and time");
+    if (!roomId || !date || !slot || !department) {
+      return setError("All fields are required");
     }
 
     const idx = TIME_SLOTS.indexOf(slot);
     const endTime = TIME_SLOTS[idx + 1];
-    if (!endTime) return setError("Invalid slot");
+    if (!endTime) return setError("Invalid time slot");
 
     setLoading(true);
     setError("");
@@ -64,17 +85,16 @@ export default function ConferenceBookings() {
         body: JSON.stringify({
           room_id: roomId,
           booked_by: "ADMIN",
-          purpose: purpose || "Admin Booking",
+          purpose: `${department} - ${purpose || "Meeting"}`,
           booking_date: date,
           start_time: slot,
           end_time: endTime
         })
       });
 
-      setRoomId("");
-      setDate("");
       setSlot("");
       setPurpose("");
+      setDepartment("");
       await loadAll();
     } catch (err) {
       setError(err.message);
@@ -83,30 +103,44 @@ export default function ConferenceBookings() {
     }
   };
 
-  /* ================= CANCEL BOOKING ================= */
-  const cancelBooking = async (id) => {
-    if (!confirm("Cancel this booking?")) return;
-
-    try {
-      await apiFetch(`/api/conference/bookings/${id}/cancel`, {
-        method: "PATCH"
-      });
-      loadAll();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
   return (
-    <div className={styles.container}>
-      <h2>Conference Bookings (Admin)</h2>
+    <div className={styles.page}>
+      {/* ================= LEFT : CALENDAR ================= */}
+      <div className={styles.calendarPane}>
+        <h3>Select Date</h3>
 
-      {/* ================= ADMIN BOOK FORM ================= */}
-      <div className={styles.formCard}>
-        <h3>Create Booking</h3>
+        <input
+          type="date"
+          min={new Date().toISOString().split("T")[0]}
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+
+        <h3 className={styles.sub}>Available Slots</h3>
+
+        <div className={styles.slotGrid}>
+          {TIME_SLOTS.map((t) => (
+            <button
+              key={t}
+              className={`${styles.slot} ${
+                slot === t ? styles.selected : ""
+              }`}
+              disabled={bookedSlots.has(t)}
+              onClick={() => setSlot(t)}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ================= RIGHT : BOOKING FORM ================= */}
+      <div className={styles.formPane}>
+        <h2>Book Conference Room</h2>
 
         {error && <p className={styles.error}>{error}</p>}
 
+        <label>Conference Room</label>
         <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
           <option value="">Select Room</option>
           {rooms.map((r) => (
@@ -116,61 +150,29 @@ export default function ConferenceBookings() {
           ))}
         </select>
 
+        <label>Department</label>
         <input
-          type="date"
-          min={new Date().toISOString().split("T")[0]}
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          placeholder="Eg: HR, Engineering, Finance"
+          value={department}
+          onChange={(e) => setDepartment(e.target.value)}
         />
 
-        <select value={slot} onChange={(e) => setSlot(e.target.value)}>
-          <option value="">Select Time</option>
-          {TIME_SLOTS.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-
+        <label>Purpose</label>
         <input
-          placeholder="Purpose (optional)"
+          placeholder="Optional"
           value={purpose}
           onChange={(e) => setPurpose(e.target.value)}
         />
 
+        <div className={styles.summary}>
+          <p><b>Date:</b> {date || "-"}</p>
+          <p><b>Time:</b> {slot || "-"} {slot && " → " + TIME_SLOTS[TIME_SLOTS.indexOf(slot) + 1]}</p>
+        </div>
+
         <button onClick={createBooking} disabled={loading}>
-          {loading ? "Booking..." : "Book Room"}
+          {loading ? "Booking..." : "Confirm Booking"}
         </button>
-      </div>
-
-      {/* ================= BOOKINGS LIST ================= */}
-      <div className={styles.list}>
-        {bookings.map((b) => (
-          <div key={b.id} className={styles.card}>
-            <div>
-              <b>{b.booking_date}</b>
-              <p>
-                {b.start_time} – {b.end_time}
-              </p>
-              <p>
-                {b.room_name} (#{b.room_number})
-              </p>
-              <p>{b.purpose || "-"}</p>
-              <p className={styles.status}>{b.status}</p>
-            </div>
-
-            {b.status === "BOOKED" && (
-              <button
-                className={styles.cancelBtn}
-                onClick={() => cancelBooking(b.id)}
-              >
-                Cancel
-              </button>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   );
 }
-
