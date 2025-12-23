@@ -12,37 +12,42 @@
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
   color: #fff;
 }
 
-/* LOGOUT */
-.logout {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.logout:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
+/* COMPANY NAME */
 .header h1 {
   text-align: center;
   font-size: 26px;
   font-weight: 800;
   letter-spacing: 0.6px;
+  margin: 0;
 }
 
+/* LOGO */
 .header img {
   height: 42px;
   object-fit: contain;
+}
+
+/* LOGOUT */
+.logout {
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.logout:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
 }
 
 /* ================= MAIN LAYOUT ================= */
@@ -87,6 +92,7 @@
   border: 1px solid #d0d0d0;
   font-size: 14px;
   outline: none;
+  background: #fff;
   transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -125,12 +131,12 @@
 /* ================= RIGHT SIDE (BOOKINGS) ================= */
 .card.bookings {
   background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  color: #ffffff;
   box-shadow: none;
 }
 
 .card.bookings h2 {
-  color: #fff;
+  color: #ffffff;
 }
 
 /* ================= BOOKING ITEM ================= */
@@ -139,6 +145,10 @@
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 12px;
+}
+
+.booking:last-child {
+  margin-bottom: 0;
 }
 
 .booking b {
@@ -179,7 +189,7 @@
   }
 
   .header {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto 1fr;
     gap: 12px;
   }
 
@@ -190,5 +200,20 @@
 
   .card {
     padding: 26px;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 20px;
+  }
+
+  .header img {
+    height: 36px;
+  }
+
+  .logout {
+    padding: 7px 14px;
+    font-size: 12px;
   }
 }
