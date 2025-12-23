@@ -24,7 +24,6 @@ const toAmPm = (time24) => {
 
 export default function PublicConferenceBooking() {
   const { slug } = useParams();
-
   const today = new Date().toISOString().split("T")[0];
 
   const [company, setCompany] = useState(null);
@@ -43,6 +42,7 @@ export default function PublicConferenceBooking() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -92,6 +92,18 @@ export default function PublicConferenceBooking() {
     if (!startTime) return [];
     return TIME_OPTIONS.filter(t => t > startTime);
   }, [startTime]);
+
+  /* ================= LOGOUT ================= */
+  const logout = () => {
+    setOtpVerified(false);
+    setOtpSent(false);
+    setOtp("");
+    setEmail("");
+    setRoomId("");
+    setBookings([]);
+    setSuccess("");
+    setError("");
+  };
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
@@ -144,6 +156,7 @@ export default function PublicConferenceBooking() {
 
     setLoading(true);
     setError("");
+    setSuccess("");
 
     try {
       const r = await fetch(
@@ -165,7 +178,9 @@ export default function PublicConferenceBooking() {
 
       if (!r.ok) throw new Error();
 
-      alert("✅ Booking confirmed");
+      setSuccess(
+        `✅ Booking confirmed for ${toAmPm(startTime)} – ${toAmPm(endTime)}`
+      );
 
       setStartTime("");
       setEndTime("");
@@ -186,7 +201,9 @@ export default function PublicConferenceBooking() {
 
   return (
     <div className={styles.page}>
+      {/* HEADER */}
       <header className={styles.header}>
+        <button className={styles.logout} onClick={logout}>Logout</button>
         <h1>{company.name}</h1>
         {company.logo_url && <img src={company.logo_url} alt="logo" />}
       </header>
@@ -194,16 +211,23 @@ export default function PublicConferenceBooking() {
       {!otpVerified ? (
         <div className={styles.card}>
           <h2>Email Verification</h2>
-          {error && <p className={styles.error}>{error}</p>
+          {error && <p className={styles.error}>{error}</p>}
 
-          }
-          <input placeholder="Enter email" value={email} onChange={e => setEmail(e.target.value)} />
+          <input
+            placeholder="Enter email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+          />
 
           {!otpSent ? (
             <button onClick={sendOtp}>Send OTP</button>
           ) : (
             <>
-              <input placeholder="Enter OTP" value={otp} onChange={e => setOtp(e.target.value)} />
+              <input
+                placeholder="Enter OTP"
+                value={otp}
+                onChange={e => setOtp(e.target.value)}
+              />
               <button onClick={verifyOtp}>Verify</button>
             </>
           )}
@@ -213,6 +237,7 @@ export default function PublicConferenceBooking() {
           <div className={styles.card}>
             <h2>Book Conference Room</h2>
             {error && <p className={styles.error}>{error}</p>}
+            {success && <p className={styles.success}>{success}</p>}
 
             <label>Date</label>
             <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)} />
