@@ -8,46 +8,49 @@
 /* HEADER */
 .header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   color: #fff;
   margin-bottom: 24px;
 }
 
+.backBtn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+
 .header img {
-  height: 40px;
+  height: 36px;
+}
+
+/* CONTENT */
+.content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
 }
 
 /* CARD */
 .card {
-  background: #ffffff;
+  background: #fff;
   border-radius: 18px;
   padding: 28px;
-  max-width: 1100px;
-  margin: auto;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
 }
 
-.card h2 {
-  margin-bottom: 16px;
-  color: #3c007a;
-}
-
-/* FORM GRID */
-.formGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-}
-
-.formGrid label {
-  font-weight: 600;
+.card label {
   display: block;
-  margin-bottom: 6px;
+  font-weight: 600;
+  margin-top: 14px;
 }
 
-.formGrid input,
-.formGrid select {
+.card input,
+.card select {
   width: 100%;
   padding: 10px;
   border-radius: 10px;
@@ -62,32 +65,30 @@
   border-radius: 30px;
   border: none;
   font-weight: 700;
-  cursor: pointer;
   background: linear-gradient(135deg, #ffb703, #ff8c00);
-  color: #3c007a;
+  cursor: pointer;
 }
 
-/* LIST */
-.list {
-  max-width: 1100px;
-  margin: 28px auto 0;
+/* RIGHT */
+.side {
+  background: rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 20px;
   color: #fff;
 }
 
-.bookingItem {
-  background: rgba(255,255,255,0.15);
-  padding: 12px 16px;
-  border-radius: 12px;
-  margin-bottom: 10px;
+.slotBooked {
+  background: rgba(255,255,255,0.25);
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.slotBooked span {
+  display: block;
+  font-size: 12px;
 }
 
 /* MESSAGES */
-.error {
-  color: #d32f2f;
-  font-weight: 600;
-}
-
-.success {
-  color: #2e7d32;
-  font-weight: 600;
-}
+.error { color: #d32f2f; font-weight: 600; }
+.success { color: #2e7d32; font-weight: 600; }
