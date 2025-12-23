@@ -30,10 +30,9 @@ export default function ConferenceDashboard() {
 
       setStats(statsRes);
       setRooms(roomsRes);
-      setBookings(bookingsRes.slice(0, 5)); // show latest 5
+      setBookings(bookingsRes.slice(0, 5));
       setLoading(false);
-    } catch (err) {
-      console.error(err);
+    } catch {
       router.replace("/auth/login");
     }
   };
@@ -84,11 +83,10 @@ export default function ConferenceDashboard() {
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div>
-          <h2>{company.name}</h2>
+          <h2 className={styles.companyName}>{company.name}</h2>
           <span className={styles.subText}>Conference Dashboard</span>
         </div>
 
-        {/* LOGO + ACTION BUTTON */}
         <div className={styles.headerRight}>
           <img
             src={company.logo_url || "/logo.png"}
@@ -96,7 +94,6 @@ export default function ConferenceDashboard() {
             alt="Logo"
           />
 
-          {/* 🔘 LOGO BUTTON (like screenshot) */}
           <button
             className={styles.logoBtn}
             title="Logout"
@@ -110,12 +107,27 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC LINK ================= */}
+      {/* ================= PUBLIC LINK + BOOK BUTTON ================= */}
       <div className={styles.publicBox}>
-        <p>Public Booking URL</p>
-        <a href={publicURL} target="_blank">
-          {publicURL}
-        </a>
+        <div className={styles.publicRow}>
+          <div>
+            <p className={styles.publicTitle}>Public Booking URL</p>
+            <a
+              href={publicURL}
+              target="_blank"
+              className={styles.publicLink}
+            >
+              {publicURL}
+            </a>
+          </div>
+
+          <button
+            className={styles.bookBtn}
+            onClick={() => router.push("/conference/bookings")}
+          >
+            Book
+          </button>
+        </div>
       </div>
 
       {/* ================= STATS ================= */}
@@ -183,14 +195,6 @@ export default function ConferenceDashboard() {
           </div>
         ))}
       </div>
-
-      {/* ================= ACTION ================= */}
-      <button
-        className={styles.primaryBtn}
-        onClick={() => router.push("/conference/bookings")}
-      >
-        Manage All Bookings
-      </button>
     </div>
   );
 }
