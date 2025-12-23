@@ -1,21 +1,45 @@
+/* ================= PAGE ================= */
 .page {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
+/* ================= LOADING ================= */
 .loading {
   padding: 40px;
+  font-size: 16px;
   color: #555;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 40px;
+  padding: 22px 40px;
+  color: #ffffff;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.backBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
   color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .companyName {
@@ -25,86 +49,147 @@
 
 .logo {
   height: 44px;
+  object-fit: contain;
 }
 
-/* MAIN */
+/* ================= MAIN ================= */
 .main {
   display: flex;
   gap: 28px;
   padding: 30px 40px;
 }
 
-/* LEFT */
+/* ================= LEFT : FORM ================= */
 .formCard {
   width: 45%;
-  background: #fff;
+  background: #ffffff;
   padding: 28px;
-  border-radius: 18px;
+  border-radius: 20px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.25);
 }
 
 .title {
   color: #3c007a;
+  font-size: 22px;
+  font-weight: 700;
   margin-bottom: 16px;
 }
 
 .label {
   display: block;
   margin-top: 14px;
+  font-size: 14px;
   font-weight: 600;
+  color: #333;
 }
 
-.input,
+.input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+}
+
 .select {
   width: 100%;
   margin-top: 6px;
-  padding: 10px;
+  padding: 10px 12px;
   border-radius: 10px;
   border: 1px solid #ddd;
+  font-size: 14px;
+  background: #fff;
 }
 
 .primaryBtn {
   width: 100%;
   margin-top: 22px;
   padding: 14px;
-  background: linear-gradient(135deg, #ffb703, #ff8c00);
-  border: none;
   border-radius: 30px;
+  border: none;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  color: #3c007a;
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
 }
 
-/* RIGHT */
+.primaryBtn:hover {
+  opacity: 0.92;
+}
+
+/* ================= RIGHT : CALENDAR ================= */
 .calendar {
   width: 55%;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 20px;
   padding: 26px;
-  color: #fff;
+  color: #ffffff;
+  backdrop-filter: blur(6px);
 }
 
 .calendarTitle {
+  font-size: 18px;
+  font-weight: 700;
   margin-bottom: 14px;
 }
 
 .bookingBlock {
-  background: #fff;
+  background: #ffffff;
   color: #333;
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 14px;
+  padding: 14px;
   margin-bottom: 10px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
 }
 
-.empty {
-  opacity: 0.8;
+.bookingBlock b {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 4px;
 }
 
-/* STATUS */
+.bookingBlock span {
+  font-size: 14px;
+  display: block;
+}
+
+.bookingBlock small {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+/* ================= STATUS ================= */
 .error {
   color: #d32f2f;
   font-weight: 600;
+  margin-bottom: 10px;
 }
 
 .success {
   color: #2e7d32;
   font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.empty {
+  opacity: 0.85;
+  font-size: 14px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1024px) {
+  .main {
+    flex-direction: column;
+  }
+
+  .formCard,
+  .calendar {
+    width: 100%;
+  }
+
+  .header {
+    padding: 18px 24px;
+  }
 }
