@@ -54,7 +54,10 @@ router.get("/rooms", async (req, res) => {
 
     const [rooms] = await db.query(
       `
-      SELECT id, room_number, room_name
+      SELECT
+        id,
+        room_number,
+        room_name
       FROM conference_rooms
       WHERE company_id = ?
       ORDER BY room_number ASC
@@ -108,13 +111,16 @@ router.post("/rooms", async (req, res) => {
     /* ---- Insert room ---- */
     await db.query(
       `
-      INSERT INTO conference_rooms (company_id, room_number, room_name)
+      INSERT INTO conference_rooms
+      (company_id, room_number, room_name)
       VALUES (?, ?, ?)
       `,
       [companyId, room_number, room_name.trim()]
     );
 
-    res.status(201).json({ message: "Conference room created successfully" });
+    res.status(201).json({
+      message: "Conference room created successfully"
+    });
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -132,7 +138,7 @@ router.post("/rooms", async (req, res) => {
 ====================================================== */
 
 /**
- * GET bookings
+ * GET bookings (Calendar ready)
  */
 router.get("/bookings", async (req, res) => {
   try {
@@ -146,6 +152,7 @@ router.get("/bookings", async (req, res) => {
         b.booking_date,
         b.start_time,
         b.end_time,
+        b.department,
         b.purpose,
         b.status,
         b.booked_by,
@@ -168,7 +175,7 @@ router.get("/bookings", async (req, res) => {
       params.push(date);
     }
 
-    sql += " ORDER BY b.booking_date DESC, b.start_time ASC";
+    sql += " ORDER BY b.booking_date ASC, b.start_time ASC";
 
     const [rows] = await db.query(sql, params);
     res.json(rows);
@@ -189,21 +196,30 @@ router.post("/bookings", async (req, res) => {
     const {
       room_id,
       booked_by,
+      department,
       purpose,
       booking_date,
       start_time,
       end_time
     } = req.body;
 
-    if (!room_id || !booked_by || !booking_date || !start_time || !end_time) {
+    /* ================= VALIDATION ================= */
+    if (
+      !room_id ||
+      !booked_by ||
+      !department ||
+      !booking_date ||
+      !start_time ||
+      !end_time
+    ) {
       return res.status(400).json({
-        message: "Room, date and time are required"
+        message: "Room, department, date and time are required"
       });
     }
 
     await conn.beginTransaction();
 
-    /* ---- Validate room ---- */
+    /* ================= VALIDATE ROOM ================= */
     const [[room]] = await conn.query(
       `
       SELECT id
@@ -215,10 +231,12 @@ router.post("/bookings", async (req, res) => {
 
     if (!room) {
       await conn.rollback();
-      return res.status(403).json({ message: "Invalid room selection" });
+      return res.status(403).json({
+        message: "Invalid room selection"
+      });
     }
 
-    /* ---- Conflict check ---- */
+    /* ================= TIME CONFLICT CHECK ================= */
     const [[conflict]] = await conn.query(
       `
       SELECT COUNT(*) AS cnt
@@ -239,17 +257,27 @@ router.post("/bookings", async (req, res) => {
       });
     }
 
-    /* ---- Insert booking ---- */
+    /* ================= INSERT BOOKING ================= */
     await conn.query(
       `
       INSERT INTO conference_bookings
-      (company_id, room_id, booked_by, purpose, booking_date, start_time, end_time)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      (
+        company_id,
+        room_id,
+        booked_by,
+        department,
+        purpose,
+        booking_date,
+        start_time,
+        end_time
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
       [
         companyId,
         room_id,
         booked_by,
+        department,
         purpose || null,
         booking_date,
         start_time,
@@ -258,11 +286,16 @@ router.post("/bookings", async (req, res) => {
     );
 
     await conn.commit();
-    res.status(201).json({ message: "Booking created successfully" });
+
+    res.status(201).json({
+      message: "Booking created successfully"
+    });
   } catch (err) {
     await conn.rollback();
     console.error("[CREATE BOOKING]", err);
-    res.status(500).json({ message: "Unable to create booking" });
+    res.status(500).json({
+      message: "Unable to create booking"
+    });
   } finally {
     conn.release();
   }
