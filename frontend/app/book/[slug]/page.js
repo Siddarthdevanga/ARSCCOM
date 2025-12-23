@@ -14,7 +14,7 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 });
 
-/* ================= AM/PM FORMATTER ================= */
+/* ================= AM/PM FORMAT ================= */
 const toAmPm = (time24) => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -24,7 +24,9 @@ const toAmPm = (time24) => {
 
 export default function PublicConferenceBooking() {
   const { slug } = useParams();
+
   const today = new Date().toISOString().split("T")[0];
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -42,9 +44,9 @@ export default function PublicConferenceBooking() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
-  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   /* ================= LOAD COMPANY ================= */
   useEffect(() => {
@@ -77,9 +79,7 @@ export default function PublicConferenceBooking() {
       .catch(() => setBookings([]));
   }, [roomId, date, slug]);
 
-  /* ================= CURRENT TIME FILTER ================= */
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-
+  /* ================= FILTER TIMES ================= */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter(t => {
       if (date !== today) return true;
@@ -94,33 +94,29 @@ export default function PublicConferenceBooking() {
   }, [startTime]);
 
   /* ================= LOGOUT ================= */
-  const logout = () => {
+  const handleLogout = () => {
     setOtpVerified(false);
     setOtpSent(false);
     setOtp("");
     setEmail("");
-    setRoomId("");
-    setBookings([]);
-    setSuccess("");
     setError("");
+    setSuccess("");
   };
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-    if (!email.includes("@")) return setError("Enter valid email");
+    if (!email.includes("@")) return setError("Enter a valid email");
 
     setLoading(true);
     setError("");
 
     try {
-      const r = await fetch(
-        `${API}/api/public/conference/company/${slug}/send-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
+      const r = await fetch(`${API}/api/public/conference/company/${slug}/send-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
       if (!r.ok) throw new Error();
       setOtpSent(true);
     } catch {
@@ -133,14 +129,12 @@ export default function PublicConferenceBooking() {
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
     try {
-      const r = await fetch(
-        `${API}/api/public/conference/company/${slug}/verify-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, otp })
-        }
-      );
+      const r = await fetch(`${API}/api/public/conference/company/${slug}/verify-otp`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp })
+      });
+
       if (!r.ok) throw new Error();
       setOtpVerified(true);
     } catch {
@@ -159,28 +153,23 @@ export default function PublicConferenceBooking() {
     setSuccess("");
 
     try {
-      const r = await fetch(
-        `${API}/api/public/conference/company/${slug}/book`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            room_id: roomId,
-            booked_by: email,
-            department,
-            purpose,
-            booking_date: date,
-            start_time: startTime,
-            end_time: endTime
-          })
-        }
-      );
+      const r = await fetch(`${API}/api/public/conference/company/${slug}/book`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_id: roomId,
+          booked_by: email,
+          department,
+          purpose,
+          booking_date: date,
+          start_time: startTime,
+          end_time: endTime
+        })
+      });
 
       if (!r.ok) throw new Error();
 
-      setSuccess(
-        `✅ Booking confirmed for ${toAmPm(startTime)} – ${toAmPm(endTime)}`
-      );
+      setSuccess("✅ Booking confirmed successfully");
 
       setStartTime("");
       setEndTime("");
@@ -201,9 +190,15 @@ export default function PublicConferenceBooking() {
 
   return (
     <div className={styles.page}>
-      {/* HEADER */}
       <header className={styles.header}>
-        <button className={styles.logout} onClick={logout}>Logout</button>
+        {otpVerified ? (
+          <button className={styles.logout} onClick={handleLogout} title="Logout">
+            ⎋
+          </button>
+        ) : (
+          <span />
+        )}
+
         <h1>{company.name}</h1>
         {company.logo_url && <img src={company.logo_url} alt="logo" />}
       </header>
@@ -213,21 +208,13 @@ export default function PublicConferenceBooking() {
           <h2>Email Verification</h2>
           {error && <p className={styles.error}>{error}</p>}
 
-          <input
-            placeholder="Enter email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
+          <input placeholder="Enter email" value={email} onChange={e => setEmail(e.target.value)} />
 
           {!otpSent ? (
             <button onClick={sendOtp}>Send OTP</button>
           ) : (
             <>
-              <input
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={e => setOtp(e.target.value)}
-              />
+              <input placeholder="Enter OTP" value={otp} onChange={e => setOtp(e.target.value)} />
               <button onClick={verifyOtp}>Verify</button>
             </>
           )}
@@ -236,6 +223,7 @@ export default function PublicConferenceBooking() {
         <div className={styles.layout}>
           <div className={styles.card}>
             <h2>Book Conference Room</h2>
+
             {error && <p className={styles.error}>{error}</p>}
             {success && <p className={styles.success}>{success}</p>}
 
