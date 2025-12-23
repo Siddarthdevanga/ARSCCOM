@@ -1,11 +1,10 @@
-
 /* ================= ROOT ================= */
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
-  color: #fff;
+  color: #ffffff;
 }
 
 /* ================= HEADER ================= */
@@ -22,6 +21,11 @@
   letter-spacing: 0.5px;
 }
 
+.subText {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 .logo {
   height: 46px;
   object-fit: contain;
@@ -30,15 +34,15 @@
 /* ================= PUBLIC LINK ================= */
 .publicBox {
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 20px 24px;
-  margin-bottom: 30px;
-  backdrop-filter: blur(6px);
+  margin-bottom: 34px;
+  backdrop-filter: blur(8px);
 }
 
 .publicTitle {
-  font-size: 14px;
-  opacity: 0.9;
+  font-size: 13px;
+  opacity: 0.85;
   margin-bottom: 6px;
 }
 
@@ -51,13 +55,13 @@
 }
 
 .copyBtn {
-  margin-top: 10px;
+  margin-top: 12px;
   background: #ffffff;
   color: #5b00c9;
   border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -70,28 +74,119 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 18px;
-  margin-bottom: 34px;
+  margin-bottom: 38px;
 }
 
 .statCard {
   background: #ffffff;
   color: #333;
-  border-radius: 18px;
+  border-radius: 20px;
   padding: 22px;
   text-align: center;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
 }
 
 .statCard span {
   display: block;
-  font-size: 14px;
+  font-size: 13px;
   color: #777;
   margin-bottom: 6px;
 }
 
 .statCard b {
-  font-size: 28px;
+  font-size: 30px;
   color: #5b00c9;
+}
+
+/* ================= SECTIONS ================= */
+.section {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 26px;
+  margin-bottom: 36px;
+  backdrop-filter: blur(6px);
+}
+
+.section h3 {
+  margin-bottom: 18px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* ================= ROOM FORM ================= */
+.roomForm {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.roomForm input {
+  flex: 1;
+  min-width: 160px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+.roomForm button {
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
+  color: #3c007a;
+  border: none;
+  padding: 12px 22px;
+  border-radius: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.roomForm button:hover {
+  opacity: 0.9;
+}
+
+/* ================= ROOM LIST ================= */
+.roomList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.roomList li {
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+/* ================= BOOKINGS ================= */
+.bookingRow {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 0.8fr;
+  gap: 14px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.bookingRow b {
+  font-size: 14px;
+}
+
+.bookingRow p {
+  margin: 4px 0 0;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.status {
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffdf9a;
 }
 
 /* ================= PRIMARY BUTTON ================= */
@@ -103,10 +198,10 @@
   padding: 14px;
   border-radius: 30px;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
   cursor: pointer;
   color: #3c007a;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
 }
 
 .primaryBtn:hover {
@@ -132,6 +227,15 @@
 
   .logo {
     height: 36px;
+  }
+
+  .bookingRow {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .status {
+    text-align: left;
   }
 
   .primaryBtn {
