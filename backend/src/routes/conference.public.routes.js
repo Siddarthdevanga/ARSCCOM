@@ -11,7 +11,7 @@ const normalizeSlug = (v = "") => v.trim().toLowerCase();
 const normalizeEmail = (v = "") => v.trim().toLowerCase();
 
 /* ======================================================
-   GET COMPANY BY SLUG (PUBLIC)
+   GET COMPANY (PUBLIC)
 ====================================================== */
 router.get("/company/:slug", async (req, res) => {
   try {
@@ -28,13 +28,13 @@ router.get("/company/:slug", async (req, res) => {
 
     res.json(company);
   } catch (err) {
-    console.error("[PUBLIC][GET COMPANY]", err);
+    console.error("[PUBLIC][COMPANY]", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 /* ======================================================
-   GET CONFERENCE ROOMS (PUBLIC)
+   GET ROOMS (PUBLIC)
 ====================================================== */
 router.get("/company/:slug/rooms", async (req, res) => {
   try {
@@ -45,9 +45,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
       [slug]
     );
 
-    if (!company) {
-      return res.status(404).json({ message: "Invalid booking link" });
-    }
+    if (!company) return res.json([]); // ⚠️ NEVER 404 for frontend map()
 
     const [rooms] = await db.query(
       `
@@ -59,33 +57,29 @@ router.get("/company/:slug/rooms", async (req, res) => {
       [company.id]
     );
 
-    res.json(rooms);
+    res.json(rooms || []);
   } catch (err) {
-    console.error("[PUBLIC][GET ROOMS]", err);
-    res.status(500).json({ message: "Unable to fetch rooms" });
+    console.error("[PUBLIC][ROOMS]", err);
+    res.json([]); // always array
   }
 });
 
 /* ======================================================
-   GET BOOKINGS (PUBLIC – FOR CALENDAR)
+   GET BOOKINGS (PUBLIC CALENDAR)
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
     const { roomId, date } = req.query;
 
-    if (!roomId || !date) {
-      return res.json([]);
-    }
+    if (!roomId || !date) return res.json([]);
 
     const [[company]] = await db.query(
       `SELECT id FROM companies WHERE slug = ?`,
       [slug]
     );
 
-    if (!company) {
-      return res.status(404).json({ message: "Invalid booking link" });
-    }
+    if (!company) return res.json([]);
 
     const [bookings] = await db.query(
       `
@@ -107,10 +101,10 @@ router.get("/company/:slug/bookings", async (req, res) => {
       [company.id, roomId, date]
     );
 
-    res.json(bookings);
+    res.json(bookings || []);
   } catch (err) {
-    console.error("[PUBLIC][GET BOOKINGS]", err);
-    res.status(500).json({ message: "Unable to fetch bookings" });
+    console.error("[PUBLIC][BOOKINGS]", err);
+    res.json([]); // frontend-safe
   }
 });
 
@@ -137,6 +131,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
+    /* invalidate previous OTPs */
     await db.query(
       `DELETE FROM public_booking_otp WHERE company_id = ? AND email = ?`,
       [company.id, email]
@@ -153,10 +148,10 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 
     await sendEmail({
       to: email,
-      subject: `OTP for Conference Room Booking – ${company.name}`,
+      subject: `OTP for Conference Booking – ${company.name}`,
       html: `
         <h3>OTP Verification</h3>
-        <p>Your OTP for booking at <b>${company.name}</b>:</p>
+        <p>Your OTP for <b>${company.name}</b>:</p>
         <h2>${otp}</h2>
         <p>Valid for 10 minutes.</p>
       `
@@ -170,7 +165,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 });
 
 /* ======================================================
-   VERIFY OTP (PUBLIC)
+   VERIFY OTP
 ====================================================== */
 router.post("/company/:slug/verify-otp", async (req, res) => {
   try {
@@ -187,6 +182,10 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
       [slug]
     );
 
+    if (!company) {
+      return res.status(404).json({ message: "Invalid booking link" });
+    }
+
     const [[row]] = await db.query(
       `
       SELECT id
@@ -196,6 +195,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
         AND otp = ?
         AND verified = 0
         AND expires_at > NOW()
+      LIMIT 1
       `,
       [company.id, email, otp]
     );
@@ -217,7 +217,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE CONFERENCE BOOKING (PUBLIC)
+   CREATE BOOKING (PUBLIC)
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -232,7 +232,7 @@ router.post("/company/:slug/book", async (req, res) => {
     } = req.body;
 
     if (!room_id || !booked_by || !booking_date || !start_time || !end_time) {
-      return res.status(400).json({ message: "All fields are required" });
+      return res.status(400).json({ message: "All fields required" });
     }
 
     const email = normalizeEmail(booked_by);
@@ -242,7 +242,11 @@ router.post("/company/:slug/book", async (req, res) => {
       [slug]
     );
 
-    /* OTP CHECK */
+    if (!company) {
+      return res.status(404).json({ message: "Invalid booking link" });
+    }
+
+    /* OTP VERIFIED */
     const [[verified]] = await db.query(
       `
       SELECT id FROM public_booking_otp
@@ -262,7 +266,7 @@ router.post("/company/:slug/book", async (req, res) => {
       });
     }
 
-    /* OVERLAP CHECK */
+    /* OVERLAP CHECK (ADMIN MATCH) */
     const [conflict] = await db.query(
       `
       SELECT id FROM conference_bookings
@@ -270,10 +274,11 @@ router.post("/company/:slug/book", async (req, res) => {
         AND room_id = ?
         AND booking_date = ?
         AND status = 'BOOKED'
-        AND NOT (end_time <= ? OR start_time >= ?)
+        AND start_time < ?
+        AND end_time > ?
       LIMIT 1
       `,
-      [company.id, room_id, booking_date, start_time, end_time]
+      [company.id, room_id, booking_date, end_time, start_time]
     );
 
     if (conflict.length) {
@@ -311,7 +316,7 @@ router.post("/company/:slug/book", async (req, res) => {
 
     res.json({ message: "Booking confirmed successfully" });
   } catch (err) {
-    console.error("[PUBLIC][CREATE BOOKING]", err);
+    console.error("[PUBLIC][BOOKING]", err);
     res.status(500).json({ message: "Server error" });
   }
 });
