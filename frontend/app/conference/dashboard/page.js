@@ -87,17 +87,35 @@ export default function ConferenceDashboard() {
           <h2>{company.name}</h2>
           <span className={styles.subText}>Conference Dashboard</span>
         </div>
-        <img
-          src={company.logo_url || "/logo.png"}
-          className={styles.logo}
-          alt="Logo"
-        />
+
+        {/* LOGO + ACTION BUTTON */}
+        <div className={styles.headerRight}>
+          <img
+            src={company.logo_url || "/logo.png"}
+            className={styles.logo}
+            alt="Logo"
+          />
+
+          {/* 🔘 LOGO BUTTON (like screenshot) */}
+          <button
+            className={styles.logoBtn}
+            title="Logout"
+            onClick={() => {
+              localStorage.clear();
+              router.replace("/auth/login");
+            }}
+          >
+            ⏻
+          </button>
+        </div>
       </header>
 
       {/* ================= PUBLIC LINK ================= */}
       <div className={styles.publicBox}>
         <p>Public Booking URL</p>
-        <a href={publicURL} target="_blank">{publicURL}</a>
+        <a href={publicURL} target="_blank">
+          {publicURL}
+        </a>
       </div>
 
       {/* ================= STATS ================= */}
