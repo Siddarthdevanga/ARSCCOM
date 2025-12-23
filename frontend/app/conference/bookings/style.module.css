@@ -1,103 +1,75 @@
 .page {
   min-height: 100vh;
-  background: #f4f2f9;
-  font-family: "Segoe UI", Arial, sans-serif;
+  background: #f5f6fb;
 }
 
-/* ================= COMPANY HEADER ================= */
-.companyHeader {
+.header {
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  color: white;
+  padding: 20px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 32px;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
-  color: #fff;
 }
 
-.companyName {
-  font-size: 24px;
-  font-weight: 800;
+.header img {
+  height: 40px;
 }
 
-.companyLogo {
-  height: 42px;
-  object-fit: contain;
+.main {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 30px;
 }
 
-/* ================= LAYOUT ================= */
-.layout {
-  display: flex;
-  height: calc(100vh - 80px);
+.form {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
 }
 
-/* ================= LEFT FORM ================= */
-.formPane {
-  width: 40%;
-  background: #ffffff;
-  padding: 32px;
+.calendar {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
 }
 
-.formTitle {
-  font-size: 22px;
-  font-weight: 700;
-  color: #3c007a;
-  margin-bottom: 20px;
-}
-
-.formPane label {
+label {
   display: block;
   margin-top: 14px;
   font-weight: 600;
 }
 
-.formPane input,
-.formPane select {
+input, select {
   width: 100%;
   padding: 10px;
-  margin-top: 6px;
   border-radius: 10px;
   border: 1px solid #ddd;
 }
 
-.formPane button {
+button {
   margin-top: 24px;
   width: 100%;
   padding: 14px;
-  border-radius: 28px;
-  border: none;
   background: linear-gradient(135deg, #ffb703, #ff8c00);
+  border: none;
+  border-radius: 30px;
   font-weight: 700;
-  cursor: pointer;
 }
 
-.error {
-  color: #d32f2f;
+.block {
+  padding: 12px;
+  border-left: 4px solid #7a00ff;
   margin-bottom: 12px;
+}
+
+.success {
+  color: green;
   font-weight: 600;
 }
 
-/* ================= RIGHT CALENDAR ================= */
-.calendarPane {
-  width: 60%;
-  background: #111;
-  color: #fff;
-  padding: 32px;
-}
-
-.timeline {
-  position: relative;
-  height: 100%;
-  margin-top: 16px;
-  border-left: 1px solid #333;
-}
-
-.bookingBlock {
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  background: #ffb703;
-  color: #000;
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 13px;
+.error {
+  color: red;
+  font-weight: 600;
 }
