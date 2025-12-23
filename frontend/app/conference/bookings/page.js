@@ -19,6 +19,15 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   };
 });
 
+/* ================= TIME FORMATTER ================= */
+const toAmPm = (time24) => {
+  if (!time24) return "";
+  const [h, m] = time24.split(":").map(Number);
+  const ap = h >= 12 ? "PM" : "AM";
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${ap}`;
+};
+
 export default function ConferenceBookings() {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
@@ -59,20 +68,23 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
-  /* ================= DAY BOOKINGS ================= */
+  /* ================= FILTER BOOKINGS (🔥 FIXED) ================= */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
-    return bookings.filter(
-      b =>
-        b.booking_date === date &&
-        String(b.room_id) === String(roomId) &&
-        b.status === "BOOKED"
-    );
+
+    return bookings.filter(b => {
+      const sameDate = b.booking_date === date;
+      const sameRoom = Number(b.room_id) === Number(roomId);
+      const isBooked = !b.status || b.status === "BOOKED";
+
+      return sameDate && sameRoom && isBooked;
+    });
   }, [bookings, date, roomId]);
 
   /* ================= BLOCKED SLOTS ================= */
   const blockedSlots = useMemo(() => {
     const set = new Set();
+
     dayBookings.forEach(b => {
       TIME_OPTIONS.forEach(t => {
         if (t.value >= b.start_time && t.value < b.end_time) {
@@ -80,6 +92,7 @@ export default function ConferenceBookings() {
         }
       });
     });
+
     return set;
   }, [dayBookings]);
 
@@ -146,11 +159,7 @@ export default function ConferenceBookings() {
     <div className={styles.page}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <button
-          className={styles.backBtn}
-          onClick={() => router.back()}
-          aria-label="Go back"
-        >
+        <button className={styles.logout} onClick={() => router.back()}>
           ←
         </button>
 
@@ -232,7 +241,7 @@ export default function ConferenceBookings() {
 
           {dayBookings.map(b => (
             <div key={b.id} className={styles.booking}>
-              <b>{b.start_time} – {b.end_time}</b>
+              <b>{toAmPm(b.start_time)} – {toAmPm(b.end_time)}</b>
               <p>{b.department}</p>
               <span>{b.booked_by}</span>
             </div>
