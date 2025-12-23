@@ -73,10 +73,11 @@ export default function ConferenceBookings() {
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
 
-    return bookings.filter(b =>
-      normalizeDate(b.booking_date) === date &&
-      Number(b.room_id) === Number(roomId) &&
-      b.status === "BOOKED"
+    return bookings.filter(
+      b =>
+        normalizeDate(b.booking_date) === date &&
+        Number(b.room_id) === Number(roomId) &&
+        b.status === "BOOKED"
     );
   }, [bookings, date, roomId]);
 
@@ -159,21 +160,23 @@ export default function ConferenceBookings() {
     <div className={styles.page}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div className={styles.headerLeft} />
+        {/* ⬅️ BACK ARROW – LEFT */}
+        <button
+          className={styles.backBtn}
+          onClick={() => router.back()}
+          title="Back"
+        >
+          ←
+        </button>
 
-        <h1>{company.name}</h1>
+        {/* COMPANY NAME – CENTER */}
+        <h1 className={styles.companyName}>{company.name}</h1>
 
+        {/* LOGO – RIGHT */}
         <div className={styles.headerRight}>
           {company.logo_url && (
             <img src={company.logo_url} alt="logo" />
           )}
-          <button
-            className={styles.backBtn}
-            onClick={() => router.back()}
-            title="Back"
-          >
-            ←
-          </button>
         </div>
       </header>
 
