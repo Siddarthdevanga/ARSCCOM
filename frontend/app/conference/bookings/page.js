@@ -1,60 +1,70 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= TIME RANGE ================= */
-const START_MIN = 9 * 60 + 30;
-const END_MIN = 19 * 60;
+/* ===== TIME OPTIONS (AM/PM) ===== */
+const TIMES = [];
+for (let h = 9; h <= 19; h++) {
+  TIMES.push(`${h === 12 ? 12 : h % 12}:00 ${h < 12 ? "AM" : "PM"}`);
+  TIMES.push(`${h === 12 ? 12 : h % 12}:30 ${h < 12 ? "AM" : "PM"}`);
+}
 
-const toMin = (t) => {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
+const to24 = (t) => {
+  const [time, ap] = t.split(" ");
+  let [h, m] = time.split(":").map(Number);
+  if (ap === "PM" && h !== 12) h += 12;
+  if (ap === "AM" && h === 12) h = 0;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 };
 
 export default function ConferenceBookings() {
-  const router = useRouter();
-
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
   const [date, setDate] = useState("");
   const [roomId, setRoomId] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [start, setStart] = useState("");
+  const [end, setEnd] = useState("");
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
+
+  const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
+  /* ===== LOAD DATA ===== */
+  const loadAll = async () => {
+    const [c, r, b] = await Promise.all([
+      apiFetch("/api/company/me"),
+      apiFetch("/api/conference/rooms"),
+      apiFetch("/api/conference/bookings")
+    ]);
+    setCompany(c);
+    setRooms(r);
+    setBookings(b);
+  };
+
   useEffect(() => {
-    (async () => {
-      try {
-        setCompany(JSON.parse(localStorage.getItem("company")));
-        const [b, r] = await Promise.all([
-          apiFetch("/api/conference/bookings"),
-          apiFetch("/api/conference/rooms")
-        ]);
-        setBookings(b);
-        setRooms(r);
-      } catch {
-        router.replace("/auth/login");
-      }
-    })();
+    loadAll();
   }, []);
 
+  /* ===== DAY BOOKINGS ===== */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
-      (b) => b.booking_date === date && b.room_id == roomId
+      (b) => b.room_id == roomId && b.booking_date === date
     );
   }, [bookings, date, roomId]);
 
+  /* ===== CREATE BOOKING ===== */
   const createBooking = async () => {
-    if (!date || !roomId || !startTime || !endTime || !department) {
-      return setError("All required fields must be filled");
+    setError("");
+    setSuccess("");
+
+    if (!date || !roomId || !start || !end || !department) {
+      return setError("All fields except purpose are required");
     }
 
     await apiFetch("/api/conference/bookings", {
@@ -65,41 +75,44 @@ export default function ConferenceBookings() {
         department,
         purpose,
         booking_date: date,
-        start_time: startTime,
-        end_time: endTime
+        start_time: to24(start),
+        end_time: to24(end)
       })
     });
 
-    setStartTime("");
-    setEndTime("");
+    setSuccess("✅ Booking successful");
+    setStart("");
+    setEnd("");
     setDepartment("");
     setPurpose("");
+    loadAll();
   };
+
+  if (!company) return null;
 
   return (
     <div className={styles.page}>
-      {/* ================= COMPANY HEADER ================= */}
-      <div className={styles.companyHeader}>
-        <h2 className={styles.companyName}>{company?.name}</h2>
-        {company?.logo_url && (
-          <img src={company.logo_url} className={styles.companyLogo} />
-        )}
-      </div>
+      {/* ===== HEADER ===== */}
+      <header className={styles.header}>
+        <h1>{company.name}</h1>
+        <img src={company.logo_url} alt="logo" />
+      </header>
 
-      <div className={styles.layout}>
-        {/* ================= LEFT ================= */}
-        <div className={styles.formPane}>
-          <h3 className={styles.formTitle}>Book Conference Room</h3>
+      <div className={styles.main}>
+        {/* ===== LEFT FORM ===== */}
+        <div className={styles.form}>
+          <h2>Book Conference Room</h2>
 
           {error && <p className={styles.error}>{error}</p>}
+          {success && <p className={styles.success}>{success}</p>}
 
           <label>Date</label>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
 
           <label>Room</label>
           <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-            <option value="">Select Room</option>
-            {rooms.map((r) => (
+            <option value="">Select</option>
+            {rooms.map(r => (
               <option key={r.id} value={r.id}>
                 {r.room_name}
               </option>
@@ -107,10 +120,16 @@ export default function ConferenceBookings() {
           </select>
 
           <label>Start Time</label>
-          <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
+          <select value={start} onChange={(e) => setStart(e.target.value)}>
+            <option value="">Select</option>
+            {TIMES.map(t => <option key={t}>{t}</option>)}
+          </select>
 
           <label>End Time</label>
-          <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+          <select value={end} onChange={(e) => setEnd(e.target.value)}>
+            <option value="">Select</option>
+            {TIMES.map(t => <option key={t}>{t}</option>)}
+          </select>
 
           <label>Department</label>
           <input value={department} onChange={(e) => setDepartment(e.target.value)} />
@@ -121,31 +140,16 @@ export default function ConferenceBookings() {
           <button onClick={createBooking}>Confirm Booking</button>
         </div>
 
-        {/* ================= RIGHT ================= */}
-        <div className={styles.calendarPane}>
-          <h4>Day Timeline</h4>
-
-          <div className={styles.timeline}>
-            {dayBookings.map((b) => {
-              const top =
-                ((toMin(b.start_time) - START_MIN) / (END_MIN - START_MIN)) * 100;
-              const height =
-                ((toMin(b.end_time) - toMin(b.start_time)) /
-                  (END_MIN - START_MIN)) *
-                100;
-
-              return (
-                <div
-                  key={b.id}
-                  className={styles.bookingBlock}
-                  style={{ top: `${top}%`, height: `${height}%` }}
-                >
-                  <b>{b.start_time} – {b.end_time}</b>
-                  <span>{b.department}</span>
-                </div>
-              );
-            })}
-          </div>
+        {/* ===== RIGHT CALENDAR ===== */}
+        <div className={styles.calendar}>
+          <h3>Bookings</h3>
+          {dayBookings.map(b => (
+            <div key={b.id} className={styles.block}>
+              <b>{b.room_name}</b>
+              <p>{b.start_time} → {b.end_time}</p>
+              <span>{b.department}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
