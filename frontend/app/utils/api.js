@@ -1,7 +1,7 @@
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 /**
- * Centralized API fetch helper
+ * Centralized API fetch helper (SAFE VERSION)
  */
 export const apiFetch = async (url, options = {}) => {
   const token =
@@ -13,7 +13,7 @@ export const apiFetch = async (url, options = {}) => {
     method: options.method || "GET",
     headers: {
       "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     },
     body: options.body,
@@ -21,27 +21,28 @@ export const apiFetch = async (url, options = {}) => {
   });
 
   /* ===============================
-     HANDLE AUTH ERRORS
+     AUTH ERROR (DO NOT REDIRECT HERE)
   =============================== */
   if (res.status === 401) {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("token");
-      localStorage.removeItem("company");
-      window.location.href = "/auth/login";
-    }
-    throw new Error("Unauthorized");
+    const error = new Error("UNAUTHORIZED");
+    error.code = 401;
+    throw error;
   }
 
   /* ===============================
-     HANDLE API ERRORS
+     OTHER API ERRORS
   =============================== */
   if (!res.ok) {
     let message = "API request failed";
+
     try {
       const err = await res.json();
       message = err.message || message;
     } catch (_) {}
-    throw new Error(message);
+
+    const error = new Error(message);
+    error.code = res.status;
+    throw error;
   }
 
   /* ===============================
@@ -51,4 +52,3 @@ export const apiFetch = async (url, options = {}) => {
 
   return res.json();
 };
-
