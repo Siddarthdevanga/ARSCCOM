@@ -14,12 +14,25 @@ for (let h = 9; h <= 19; h++) {
   TIMES.push(`${hour}:30 ${period}`);
 }
 
-const to24 = (t) => {
+/* ================= TIME HELPERS ================= */
+const timeToMinutes = (t) => {
   const [time, ap] = t.split(" ");
   let [h, m] = time.split(":").map(Number);
   if (ap === "PM" && h !== 12) h += 12;
   if (ap === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+};
+
+const to24 = (t) => {
+  const mins = timeToMinutes(t);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+};
+
+const nowMinutes = () => {
+  const d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
 };
 
 export default function ConferenceBookings() {
@@ -39,7 +52,7 @@ export default function ConferenceBookings() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  /* ================= LOAD DATA (OPTION A) ================= */
+  /* ================= LOAD DATA (Option A) ================= */
   const loadAll = async () => {
     try {
       const storedCompany = localStorage.getItem("company");
@@ -66,13 +79,51 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
-  /* ================= DAY BOOKINGS ================= */
+  /* ================= BOOKINGS FOR SELECTED DAY ================= */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
       (b) => b.room_id == roomId && b.booking_date === date
     );
   }, [bookings, date, roomId]);
+
+  /* ================= VALID START TIMES ================= */
+  const validStartTimes = useMemo(() => {
+    if (!date || !roomId) return [];
+
+    const isToday = date === new Date().toISOString().split("T")[0];
+    const now = nowMinutes();
+
+    return TIMES.filter((t) => {
+      const mins = timeToMinutes(t);
+
+      if (isToday && mins <= now) return false;
+
+      return !dayBookings.some(
+        (b) =>
+          mins >= timeToMinutes(b.start_time) &&
+          mins < timeToMinutes(b.end_time)
+      );
+    });
+  }, [date, roomId, dayBookings]);
+
+  /* ================= VALID END TIMES ================= */
+  const validEndTimes = useMemo(() => {
+    if (!start) return [];
+
+    const startMin = timeToMinutes(start);
+
+    return TIMES.filter((t) => {
+      const endMin = timeToMinutes(t);
+      if (endMin <= startMin) return false;
+
+      return !dayBookings.some(
+        (b) =>
+          startMin < timeToMinutes(b.end_time) &&
+          endMin > timeToMinutes(b.start_time)
+      );
+    });
+  }, [start, dayBookings]);
 
   /* ================= CREATE BOOKING ================= */
   const createBooking = async () => {
@@ -102,7 +153,7 @@ export default function ConferenceBookings() {
       setEnd("");
       setDepartment("");
       setPurpose("");
-      loadAll();
+      loadAll(); // 🔥 instant calendar refresh
     } catch (err) {
       setError(err.message);
     }
@@ -116,11 +167,21 @@ export default function ConferenceBookings() {
     <div className={styles.page}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <h1 className={styles.companyName}>{company.name}</h1>
+        <div className={styles.headerLeft}>
+          <button
+            className={styles.backBtn}
+            onClick={() => router.back()}
+            aria-label="Go back"
+          >
+            ←
+          </button>
+          <h1 className={styles.companyName}>{company.name}</h1>
+        </div>
+
         <img
           src={company.logo_url || "/logo.png"}
           className={styles.logo}
-          alt="Logo"
+          alt="Company Logo"
         />
       </header>
 
@@ -136,15 +197,24 @@ export default function ConferenceBookings() {
           <input
             className={styles.input}
             type="date"
+            min={new Date().toISOString().split("T")[0]}
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setStart("");
+              setEnd("");
+            }}
           />
 
           <label className={styles.label}>Room</label>
           <select
             className={styles.select}
             value={roomId}
-            onChange={(e) => setRoomId(e.target.value)}
+            onChange={(e) => {
+              setRoomId(e.target.value);
+              setStart("");
+              setEnd("");
+            }}
           >
             <option value="">Select Room</option>
             {rooms.map((r) => (
@@ -158,10 +228,13 @@ export default function ConferenceBookings() {
           <select
             className={styles.select}
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={(e) => {
+              setStart(e.target.value);
+              setEnd("");
+            }}
           >
             <option value="">Select</option>
-            {TIMES.map((t) => (
+            {validStartTimes.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
@@ -170,10 +243,11 @@ export default function ConferenceBookings() {
           <select
             className={styles.select}
             value={end}
+            disabled={!start}
             onChange={(e) => setEnd(e.target.value)}
           >
             <option value="">Select</option>
-            {TIMES.map((t) => (
+            {validEndTimes.map((t) => (
               <option key={t}>{t}</option>
             ))}
           </select>
@@ -201,7 +275,7 @@ export default function ConferenceBookings() {
 
         {/* ================= RIGHT : CALENDAR ================= */}
         <div className={styles.calendar}>
-          <h3 className={styles.calendarTitle}>Bookings Timeline</h3>
+          <h3 className={styles.calendarTitle}>Bookings</h3>
 
           {dayBookings.length === 0 && (
             <p className={styles.empty}>No bookings for selected date</p>
