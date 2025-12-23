@@ -54,10 +54,7 @@ router.get("/rooms", async (req, res) => {
 
     const [rooms] = await db.query(
       `
-      SELECT
-        id,
-        room_number,
-        room_name
+      SELECT id, room_number, room_name
       FROM conference_rooms
       WHERE company_id = ?
       ORDER BY room_number ASC
@@ -73,7 +70,7 @@ router.get("/rooms", async (req, res) => {
 });
 
 /**
- * CREATE room
+ * CREATE room (PLAN LIMITED)
  */
 router.post("/rooms", async (req, res) => {
   try {
@@ -86,6 +83,25 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
+    /* ---- Get allowed rooms from plan ---- */
+    const [[company]] = await db.query(
+      `SELECT rooms FROM companies WHERE id = ?`,
+      [companyId]
+    );
+
+    /* ---- Count existing rooms ---- */
+    const [[count]] = await db.query(
+      `SELECT COUNT(*) AS cnt FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
+
+    if (count.cnt >= company.rooms) {
+      return res.status(403).json({
+        message: `Your plan allows only ${company.rooms} conference rooms`
+      });
+    }
+
+    /* ---- Insert room ---- */
     await db.query(
       `
       INSERT INTO conference_rooms (company_id, room_number, room_name)
