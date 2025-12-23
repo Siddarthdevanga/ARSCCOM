@@ -7,8 +7,10 @@ import styles from "./style.module.css";
 /* ===== TIME OPTIONS (AM/PM) ===== */
 const TIMES = [];
 for (let h = 9; h <= 19; h++) {
-  TIMES.push(`${h === 12 ? 12 : h % 12}:00 ${h < 12 ? "AM" : "PM"}`);
-  TIMES.push(`${h === 12 ? 12 : h % 12}:30 ${h < 12 ? "AM" : "PM"}`);
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  const ap = h < 12 ? "AM" : "PM";
+  TIMES.push(`${hour}:00 ${ap}`);
+  TIMES.push(`${hour}:30 ${ap}`);
 }
 
 const to24 = (t) => {
@@ -50,7 +52,7 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
-  /* ===== DAY BOOKINGS ===== */
+  /* ===== BOOKINGS FOR DAY ===== */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
@@ -65,6 +67,10 @@ export default function ConferenceBookings() {
 
     if (!date || !roomId || !start || !end || !department) {
       return setError("All fields except purpose are required");
+    }
+
+    if (to24(start) >= to24(end)) {
+      return setError("End time must be after start time");
     }
 
     await apiFetch("/api/conference/bookings", {
@@ -94,60 +100,99 @@ export default function ConferenceBookings() {
     <div className={styles.page}>
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
-        <h1>{company.name}</h1>
-        <img src={company.logo_url} alt="logo" />
+        <h1 className={styles.companyName}>{company.name}</h1>
+        <img src={company.logo_url} alt="logo" className={styles.logo} />
       </header>
 
       <div className={styles.main}>
-        {/* ===== LEFT FORM ===== */}
+        {/* ===== LEFT : BOOKING FORM ===== */}
         <div className={styles.form}>
-          <h2>Book Conference Room</h2>
+          <h2 className={styles.formTitle}>Book Conference Room</h2>
 
           {error && <p className={styles.error}>{error}</p>}
           {success && <p className={styles.success}>{success}</p>}
 
-          <label>Date</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <label className={styles.label}>Date</label>
+          <input
+            type="date"
+            className={styles.input}
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
 
-          <label>Room</label>
-          <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-            <option value="">Select</option>
-            {rooms.map(r => (
+          <label className={styles.label}>Room</label>
+          <select
+            className={styles.select}
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+          >
+            <option value="">Select room</option>
+            {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.room_name}
               </option>
             ))}
           </select>
 
-          <label>Start Time</label>
-          <select value={start} onChange={(e) => setStart(e.target.value)}>
+          <label className={styles.label}>Start Time</label>
+          <select
+            className={styles.select}
+            value={start}
+            onChange={(e) => setStart(e.target.value)}
+          >
             <option value="">Select</option>
-            {TIMES.map(t => <option key={t}>{t}</option>)}
+            {TIMES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
           </select>
 
-          <label>End Time</label>
-          <select value={end} onChange={(e) => setEnd(e.target.value)}>
+          <label className={styles.label}>End Time</label>
+          <select
+            className={styles.select}
+            value={end}
+            onChange={(e) => setEnd(e.target.value)}
+          >
             <option value="">Select</option>
-            {TIMES.map(t => <option key={t}>{t}</option>)}
+            {TIMES.map((t) => (
+              <option key={t}>{t}</option>
+            ))}
           </select>
 
-          <label>Department</label>
-          <input value={department} onChange={(e) => setDepartment(e.target.value)} />
+          <label className={styles.label}>Department</label>
+          <input
+            className={styles.input}
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+          />
 
-          <label>Purpose</label>
-          <input value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+          <label className={styles.label}>Purpose</label>
+          <input
+            className={styles.input}
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+          />
 
-          <button onClick={createBooking}>Confirm Booking</button>
+          <button className={styles.button} onClick={createBooking}>
+            Confirm Booking
+          </button>
         </div>
 
-        {/* ===== RIGHT CALENDAR ===== */}
+        {/* ===== RIGHT : CALENDAR ===== */}
         <div className={styles.calendar}>
-          <h3>Bookings</h3>
-          {dayBookings.map(b => (
+          <h3 className={styles.calendarTitle}>Bookings</h3>
+
+          {dayBookings.length === 0 && (
+            <p className={styles.empty}>No bookings for selected date</p>
+          )}
+
+          {dayBookings.map((b) => (
             <div key={b.id} className={styles.block}>
-              <b>{b.room_name}</b>
-              <p>{b.start_time} → {b.end_time}</p>
-              <span>{b.department}</span>
+              <div className={styles.blockTime}>
+                {b.start_time} → {b.end_time}
+              </div>
+              <div className={styles.blockMeta}>
+                {b.department} · {b.purpose || "Meeting"}
+              </div>
             </div>
           ))}
         </div>
