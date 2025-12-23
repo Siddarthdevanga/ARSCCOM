@@ -37,7 +37,7 @@ router.get("/dashboard", async (req, res) => {
     res.json(stats);
   } catch (err) {
     console.error("[DASHBOARD]", err);
-    res.status(500).json({ message: "Failed to load dashboard" });
+    res.status(500).json({ message: "Failed to load dashboard stats" });
   }
 });
 
@@ -77,17 +77,21 @@ router.post("/rooms", async (req, res) => {
     const { companyId } = req.user;
     const { room_name, room_number } = req.body;
 
-    if (!room_name || !room_number || room_number <= 0) {
+    if (!room_name || !room_number || Number(room_number) <= 0) {
       return res.status(400).json({
-        message: "Valid room name and room number are required"
+        message: "Room name and valid room number are required"
       });
     }
 
-    /* ---- Get allowed rooms from plan ---- */
+    /* ---- Get plan limit ---- */
     const [[company]] = await db.query(
       `SELECT rooms FROM companies WHERE id = ?`,
       [companyId]
     );
+
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
 
     /* ---- Count existing rooms ---- */
     const [[count]] = await db.query(
@@ -110,7 +114,7 @@ router.post("/rooms", async (req, res) => {
       [companyId, room_number, room_name.trim()]
     );
 
-    res.status(201).json({ message: "Conference room created" });
+    res.status(201).json({ message: "Conference room created successfully" });
   } catch (err) {
     if (err.code === "ER_DUP_ENTRY") {
       return res.status(409).json({
@@ -138,6 +142,7 @@ router.get("/bookings", async (req, res) => {
     let sql = `
       SELECT
         b.id,
+        b.room_id,
         b.booking_date,
         b.start_time,
         b.end_time,
@@ -191,12 +196,14 @@ router.post("/bookings", async (req, res) => {
     } = req.body;
 
     if (!room_id || !booked_by || !booking_date || !start_time || !end_time) {
-      return res.status(400).json({ message: "Missing required fields" });
+      return res.status(400).json({
+        message: "Room, date and time are required"
+      });
     }
 
     await conn.beginTransaction();
 
-    /* ---- Validate room belongs to company ---- */
+    /* ---- Validate room ---- */
     const [[room]] = await conn.query(
       `
       SELECT id
