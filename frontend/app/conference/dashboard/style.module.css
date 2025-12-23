@@ -5,7 +5,6 @@
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
-  box-sizing: border-box;
 }
 
 /* ================= HEADER ================= */
@@ -16,12 +15,9 @@
   margin-bottom: 28px;
 }
 
-/* LEFT TITLE */
 .companyName {
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: 0.5px;
-  margin: 0;
 }
 
 .subText {
@@ -29,7 +25,6 @@
   opacity: 0.85;
 }
 
-/* RIGHT SIDE (LOGO + BUTTON SAFE SUPPORT) */
 .headerRight {
   display: flex;
   align-items: center;
@@ -41,7 +36,6 @@
   object-fit: contain;
 }
 
-/* LOGO BUTTON (if present) */
 .logoBtn {
   width: 44px;
   height: 44px;
@@ -52,15 +46,6 @@
   font-size: 20px;
   font-weight: 700;
   cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.logoBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* ================= PUBLIC LINK ================= */
@@ -69,7 +54,14 @@
   border-radius: 16px;
   padding: 20px 24px;
   margin-bottom: 34px;
-  backdrop-filter: blur(8px);
+}
+
+.publicRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
 }
 
 .publicTitle {
@@ -79,28 +71,23 @@
 }
 
 .publicLink {
-  display: inline-block;
   color: #ffffff;
   font-weight: 600;
   text-decoration: underline;
   word-break: break-all;
 }
 
-/* COPY BUTTON */
-.copyBtn {
-  margin-top: 12px;
-  background: #ffffff;
-  color: #5b00c9;
+/* BOOK BUTTON */
+.bookBtn {
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
+  color: #3c007a;
   border: none;
-  padding: 8px 16px;
-  border-radius: 10px;
-  font-weight: 700;
+  padding: 12px 26px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
-  transition: opacity 0.15s ease;
-}
-
-.copyBtn:hover {
-  opacity: 0.9;
+  white-space: nowrap;
 }
 
 /* ================= STATS ================= */
@@ -117,14 +104,11 @@
   border-radius: 20px;
   padding: 22px;
   text-align: center;
-  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
 }
 
 .statCard span {
-  display: block;
   font-size: 13px;
   color: #777;
-  margin-bottom: 6px;
 }
 
 .statCard b {
@@ -138,13 +122,10 @@
   border-radius: 20px;
   padding: 26px;
   margin-bottom: 36px;
-  backdrop-filter: blur(6px);
 }
 
 .section h3 {
   margin-bottom: 18px;
-  font-size: 18px;
-  font-weight: 700;
 }
 
 /* ================= ROOM FORM ================= */
@@ -158,45 +139,30 @@
 .roomForm input {
   flex: 1;
   min-width: 160px;
-  padding: 12px 14px;
+  padding: 12px;
   border-radius: 12px;
   border: none;
-  outline: none;
-  font-size: 14px;
-}
-
-.roomForm input:focus {
-  outline: 2px solid rgba(255, 255, 255, 0.35);
 }
 
 .roomForm button {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
-  color: #3c007a;
   border: none;
   padding: 12px 22px;
   border-radius: 24px;
   font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.15s ease;
-}
-
-.roomForm button:hover {
-  transform: translateY(-1px);
 }
 
 /* ================= ROOM LIST ================= */
 .roomList {
   list-style: none;
   padding: 0;
-  margin: 0;
 }
 
 .roomList li {
-  padding: 12px 14px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.14);
   border-radius: 12px;
   margin-bottom: 10px;
-  font-weight: 600;
 }
 
 /* ================= BOOKINGS ================= */
@@ -204,55 +170,21 @@
   display: grid;
   grid-template-columns: 1.5fr 1fr 0.8fr;
   gap: 14px;
-  align-items: center;
   background: rgba(255, 255, 255, 0.14);
-  padding: 14px 18px;
+  padding: 14px;
   border-radius: 14px;
-  margin-bottom: 12px;
-}
-
-.bookingRow b {
-  font-size: 14px;
-}
-
-.bookingRow p {
-  margin: 4px 0 0;
-  font-size: 12px;
-  opacity: 0.9;
 }
 
 .status {
   text-align: right;
-  font-size: 13px;
   font-weight: 700;
   color: #ffdf9a;
-}
-
-/* ================= PRIMARY BUTTON ================= */
-.primaryBtn {
-  width: 260px;
-  max-width: 100%;
-  background: linear-gradient(135deg, #ffb703, #ff8c00);
-  border: none;
-  padding: 14px;
-  border-radius: 30px;
-  font-size: 15px;
-  font-weight: 800;
-  cursor: pointer;
-  color: #3c007a;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s ease;
-}
-
-.primaryBtn:hover {
-  transform: translateY(-1px);
 }
 
 /* ================= ERROR ================= */
 .error {
   color: #ffb4b4;
   font-weight: 600;
-  margin-top: 14px;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -261,24 +193,11 @@
     padding: 20px;
   }
 
-  .companyName {
-    font-size: 22px;
-  }
-
-  .logo {
-    height: 36px;
-  }
-
   .bookingRow {
     grid-template-columns: 1fr;
-    text-align: left;
   }
 
   .status {
     text-align: left;
-  }
-
-  .primaryBtn {
-    width: 100%;
   }
 }
