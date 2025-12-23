@@ -7,37 +7,75 @@ import styles from "./style.module.css";
 
 export default function ConferenceDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState(null);
+
   const [company, setCompany] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
+
+  const [roomName, setRoomName] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
+
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  useEffect(() => {
+  /* ================= LOAD DASHBOARD ================= */
+  const loadDashboard = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const storedCompany = localStorage.getItem("company");
+      const [statsRes, roomsRes, bookingsRes] = await Promise.all([
+        apiFetch("/api/conference/dashboard"),
+        apiFetch("/api/conference/rooms"),
+        apiFetch("/api/conference/bookings")
+      ]);
 
-      if (!token || !storedCompany) {
-        router.replace("/auth/login");
-        return;
-      }
-
-      setCompany(JSON.parse(storedCompany));
-
-      apiFetch("/api/conference/dashboard")
-        .then((data) => {
-          setStats(data);
-          setLoading(false);
-        })
-        .catch(() => {
-          router.replace("/auth/login");
-        });
-    } catch {
+      setStats(statsRes);
+      setRooms(roomsRes);
+      setBookings(bookingsRes.slice(0, 5)); // show latest 5
+      setLoading(false);
+    } catch (err) {
+      console.error(err);
       router.replace("/auth/login");
     }
-  }, [router]);
+  };
 
-  if (loading) return null;
-  if (!stats || !company) return null;
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const storedCompany = localStorage.getItem("company");
+
+    if (!token || !storedCompany) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    setCompany(JSON.parse(storedCompany));
+    loadDashboard();
+  }, []);
+
+  /* ================= CREATE ROOM ================= */
+  const createRoom = async () => {
+    if (!roomName || !roomNumber) {
+      return setError("Room name and number required");
+    }
+
+    try {
+      await apiFetch("/api/conference/rooms", {
+        method: "POST",
+        body: JSON.stringify({
+          room_name: roomName,
+          room_number: roomNumber
+        })
+      });
+
+      setRoomName("");
+      setRoomNumber("");
+      setError("");
+      loadDashboard();
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  if (loading || !company || !stats) return null;
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
@@ -45,58 +83,95 @@ export default function ConferenceDashboard() {
     <div className={styles.container}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div className={styles.companyInfo}>
-          <h2 className={styles.companyName}>{company.name}</h2>
+        <div>
+          <h2>{company.name}</h2>
           <span className={styles.subText}>Conference Dashboard</span>
         </div>
-
         <img
           src={company.logo_url || "/logo.png"}
-          alt="Company Logo"
           className={styles.logo}
+          alt="Logo"
         />
       </header>
 
-      {/* ================= PUBLIC BOOKING LINK ================= */}
-      <section className={styles.publicBox}>
-        <p className={styles.publicLabel}>Public Booking Link</p>
-        <a
-          href={publicURL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={styles.publicLink}
-        >
-          {publicURL}
-        </a>
-        <span className={styles.publicHint}>
-          Share this link with employees to book rooms
-        </span>
-      </section>
+      {/* ================= PUBLIC LINK ================= */}
+      <div className={styles.publicBox}>
+        <p>Public Booking URL</p>
+        <a href={publicURL} target="_blank">{publicURL}</a>
+      </div>
 
       {/* ================= STATS ================= */}
-      <section className={styles.statsGrid}>
+      <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <span>Rooms</span>
+          <span>Conference Rooms</span>
           <b>{stats.rooms}</b>
         </div>
-
         <div className={styles.statCard}>
           <span>Today’s Bookings</span>
           <b>{stats.todayBookings}</b>
         </div>
-
         <div className={styles.statCard}>
           <span>Total Bookings</span>
           <b>{stats.totalBookings}</b>
         </div>
-      </section>
+      </div>
+
+      {/* ================= ROOMS ================= */}
+      <div className={styles.section}>
+        <h3>Conference Rooms</h3>
+
+        <div className={styles.roomForm}>
+          <input
+            placeholder="Room Name"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
+          />
+          <input
+            type="number"
+            placeholder="Room Number"
+            value={roomNumber}
+            onChange={(e) => setRoomNumber(e.target.value)}
+          />
+          <button onClick={createRoom}>Add Room</button>
+        </div>
+
+        {error && <p className={styles.error}>{error}</p>}
+
+        <ul className={styles.roomList}>
+          {rooms.map((r) => (
+            <li key={r.id}>
+              #{r.room_number} – {r.room_name}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* ================= RECENT BOOKINGS ================= */}
+      <div className={styles.section}>
+        <h3>Recent Bookings</h3>
+
+        {bookings.length === 0 && <p>No bookings yet</p>}
+
+        {bookings.map((b) => (
+          <div key={b.id} className={styles.bookingRow}>
+            <div>
+              <b>{b.room_name}</b> (#{b.room_number})
+              <p>{b.booking_date}</p>
+            </div>
+            <div>
+              {b.start_time} – {b.end_time}
+            </div>
+            <div className={styles.status}>{b.status}</div>
+          </div>
+        ))}
+      </div>
 
       {/* ================= ACTION ================= */}
       <button
         className={styles.primaryBtn}
         onClick={() => router.push("/conference/bookings")}
       >
-        Manage Bookings
+        Manage All Bookings
       </button>
     </div>
   );
