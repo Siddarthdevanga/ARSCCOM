@@ -1,30 +1,30 @@
 .page {
   min-height: 100vh;
-  background: #f5f6fb;
+  background: #f4f6fb;
   font-family: "Segoe UI", Arial, sans-serif;
 }
 
-/* ================= HEADER ================= */
+/* ===== HEADER ===== */
 .header {
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  color: #ffffff;
-  padding: 20px 36px;
+  padding: 20px 32px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
 .companyName {
+  color: #ffffff;
   font-size: 24px;
   font-weight: 800;
 }
 
 .logo {
-  height: 40px;
+  height: 42px;
   object-fit: contain;
 }
 
-/* ================= LAYOUT ================= */
+/* ===== MAIN ===== */
 .main {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -32,10 +32,10 @@
   padding: 32px;
 }
 
-/* ================= FORM ================= */
+/* ===== FORM ===== */
 .form {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 32px;
 }
 
@@ -43,17 +43,17 @@
   font-size: 22px;
   font-weight: 700;
   color: #3c007a;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
-.formLabel {
+.label {
   display: block;
   margin-top: 14px;
   font-weight: 600;
 }
 
-.formInput,
-.formSelect {
+.input,
+.select {
   width: 100%;
   padding: 10px;
   border-radius: 10px;
@@ -61,7 +61,7 @@
   margin-top: 6px;
 }
 
-.formButton {
+.button {
   margin-top: 24px;
   width: 100%;
   padding: 14px;
@@ -70,29 +70,23 @@
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   font-weight: 700;
   cursor: pointer;
-}
-
-.formButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.success {
-  color: #2e7d32;
-  font-weight: 600;
-  margin-bottom: 10px;
+  color: #3c007a;
 }
 
 .error {
   color: #d32f2f;
   font-weight: 600;
-  margin-bottom: 10px;
 }
 
-/* ================= CALENDAR ================= */
+.success {
+  color: #2e7d32;
+  font-weight: 600;
+}
+
+/* ===== CALENDAR ===== */
 .calendar {
   background: #ffffff;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 32px;
 }
 
@@ -102,19 +96,23 @@
   margin-bottom: 16px;
 }
 
-.bookingBlock {
-  padding: 12px;
-  border-left: 4px solid #7a00ff;
+.block {
   background: #f3f0ff;
-  border-radius: 10px;
+  border-left: 4px solid #7a00ff;
+  border-radius: 12px;
+  padding: 12px;
   margin-bottom: 12px;
 }
 
-.bookingTime {
+.blockTime {
   font-weight: 700;
 }
 
-.bookingDept {
+.blockMeta {
   font-size: 13px;
   opacity: 0.85;
+}
+
+.empty {
+  opacity: 0.6;
 }
