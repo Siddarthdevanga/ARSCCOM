@@ -5,39 +5,38 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ===== TIME OPTIONS ===== */
-const TIMES = [];
-for (let h = 9; h <= 19; h++) {
-  TIMES.push(`${h === 12 ? 12 : h % 12}:00 ${h < 12 ? "AM" : "PM"}`);
-  TIMES.push(`${h === 12 ? 12 : h % 12}:30 ${h < 12 ? "AM" : "PM"}`);
-}
-
-const to24 = (t) => {
-  const [time, ap] = t.split(" ");
-  let [h, m] = time.split(":").map(Number);
-  if (ap === "PM" && h !== 12) h += 12;
-  if (ap === "AM" && h === 12) h = 0;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-};
+/* ================= TIME OPTIONS (09:30 – 19:00, AM/PM) ================= */
+const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
+  const total = 9 * 60 + 30 + i * 30;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return {
+    label: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
+    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  };
+});
 
 export default function ConferenceBookings() {
   const router = useRouter();
+  const today = new Date().toISOString().split("T")[0];
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(today);
   const [roomId, setRoomId] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  /* ===== LOAD ===== */
+  /* ================= LOAD DATA ================= */
   const loadAll = async () => {
     try {
       const stored = localStorage.getItem("company");
@@ -48,10 +47,10 @@ export default function ConferenceBookings() {
         apiFetch("/api/conference/bookings")
       ]);
 
-      setRooms(r);
-      setBookings(b);
-    } catch (e) {
-      if (e.code === 401) router.replace("/auth/login");
+      setRooms(Array.isArray(r) ? r : []);
+      setBookings(Array.isArray(b) ? b : []);
+    } catch {
+      router.replace("/auth/login");
     }
   };
 
@@ -59,33 +58,56 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
-  /* ===== DAY BOOKINGS ===== */
+  /* ================= DAY BOOKINGS ================= */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
-      b => b.booking_date === date && b.room_id == roomId
+      b => b.booking_date === date && b.room_id == roomId && b.status === "BOOKED"
     );
   }, [bookings, date, roomId]);
 
-  /* ===== AVAILABLE SLOTS ===== */
-  const unavailable = useMemo(() => {
+  /* ================= BLOCKED TIME SLOTS ================= */
+  const blockedSlots = useMemo(() => {
     const set = new Set();
     dayBookings.forEach(b => {
-      TIMES.forEach(t => {
-        if (to24(t) >= b.start_time && to24(t) < b.end_time) {
-          set.add(t);
+      TIME_OPTIONS.forEach(t => {
+        if (t.value >= b.start_time && t.value < b.end_time) {
+          set.add(t.value);
         }
       });
     });
     return set;
   }, [dayBookings]);
 
-  /* ===== CREATE BOOKING ===== */
-  const createBooking = async () => {
-    setError(""); setSuccess("");
+  /* ================= CURRENT TIME FILTER ================= */
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
-    if (!date || !roomId || !start || !end || !department) {
+  const availableStartTimes = useMemo(() => {
+    return TIME_OPTIONS.filter(t => {
+      if (date !== today) return !blockedSlots.has(t.value);
+      const [h, m] = t.value.split(":").map(Number);
+      return h * 60 + m > nowMinutes && !blockedSlots.has(t.value);
+    });
+  }, [date, today, blockedSlots, nowMinutes]);
+
+  const availableEndTimes = useMemo(() => {
+    if (!startTime) return [];
+    return TIME_OPTIONS.filter(
+      t => t.value > startTime && !blockedSlots.has(t.value)
+    );
+  }, [startTime, blockedSlots]);
+
+  /* ================= CREATE BOOKING ================= */
+  const createBooking = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!date || !roomId || !startTime || !endTime || !department) {
       return setError("All required fields must be filled");
+    }
+
+    if (endTime <= startTime) {
+      return setError("End time must be after start time");
     }
 
     try {
@@ -97,16 +119,20 @@ export default function ConferenceBookings() {
           department,
           purpose,
           booking_date: date,
-          start_time: to24(start),
-          end_time: to24(end)
+          start_time: startTime,
+          end_time: endTime
         })
       });
 
-      setSuccess("Booking created successfully");
-      setStart(""); setEnd(""); setDepartment(""); setPurpose("");
+      setSuccess("✅ Booking created successfully");
+      setStartTime("");
+      setEndTime("");
+      setDepartment("");
+      setPurpose("");
+
       loadAll();
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Unable to create booking");
     }
   };
 
@@ -114,67 +140,85 @@ export default function ConferenceBookings() {
 
   return (
     <div className={styles.page}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={() => router.back()}>←</button>
         <h1>{company.name}</h1>
-        <img src={company.logo_url} alt="logo" />
+        {company.logo_url && <img src={company.logo_url} alt="logo" />}
       </header>
 
       <div className={styles.content}>
-        {/* LEFT FORM */}
+        {/* ================= LEFT FORM ================= */}
         <div className={styles.card}>
           <h2>Book Conference Room</h2>
+
           {error && <p className={styles.error}>{error}</p>}
-          {success && <p className={styles.success}>✔ {success}</p>}
+          {success && <p className={styles.success}>{success}</p>}
 
           <label>Date</label>
-          <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          <input
+            type="date"
+            value={date}
+            min={today}
+            onChange={e => setDate(e.target.value)}
+          />
 
           <label>Room</label>
           <select value={roomId} onChange={e => setRoomId(e.target.value)}>
             <option value="">Select</option>
             {rooms.map(r => (
-              <option key={r.id} value={r.id}>{r.room_name}</option>
+              <option key={r.id} value={r.id}>
+                {r.room_name}
+              </option>
             ))}
           </select>
 
           <label>Start Time</label>
-          <select value={start} onChange={e => setStart(e.target.value)}>
+          <select value={startTime} onChange={e => setStartTime(e.target.value)}>
             <option value="">Select</option>
-            {TIMES.filter(t => !unavailable.has(t)).map(t => (
-              <option key={t}>{t}</option>
+            {availableStartTimes.map(t => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
             ))}
           </select>
 
           <label>End Time</label>
-          <select value={end} onChange={e => setEnd(e.target.value)}>
+          <select value={endTime} onChange={e => setEndTime(e.target.value)}>
             <option value="">Select</option>
-            {TIMES.filter(t => t > start && !unavailable.has(t)).map(t => (
-              <option key={t}>{t}</option>
+            {availableEndTimes.map(t => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
             ))}
           </select>
 
           <label>Department</label>
-          <input value={department} onChange={e => setDepartment(e.target.value)} />
+          <input
+            value={department}
+            onChange={e => setDepartment(e.target.value)}
+          />
 
           <label>Purpose</label>
-          <input value={purpose} onChange={e => setPurpose(e.target.value)} />
+          <input
+            value={purpose}
+            onChange={e => setPurpose(e.target.value)}
+          />
 
-          <button className={styles.primaryBtn} onClick={createBooking}>
+          <button onClick={createBooking}>
             Confirm Booking
           </button>
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* ================= RIGHT PANEL ================= */}
         <div className={styles.side}>
-          <h3>Bookings</h3>
+          <h2>Bookings</h2>
           {dayBookings.length === 0 && <p>No bookings</p>}
 
           {dayBookings.map(b => (
-            <div key={b.id} className={styles.slotBooked}>
-              {b.start_time} – {b.end_time}
-              <span>{b.department}</span>
+            <div key={b.id} className={styles.booking}>
+              <b>{b.start_time} – {b.end_time}</b>
+              <p>{b.department}</p>
+              <span>{b.booked_by}</span>
             </div>
           ))}
         </div>
