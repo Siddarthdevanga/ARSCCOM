@@ -37,8 +37,10 @@ export default function PublicBookingPage() {
   useEffect(() => {
     if (!slug) return;
 
+    setError("");
+
     fetch(`${API}/api/public/conference/company/${slug}`)
-      .then(r => r.ok ? r.json() : Promise.reject())
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then(setCompany)
       .catch(() => setError("Invalid or expired booking link"));
   }, [slug]);
@@ -48,29 +50,35 @@ export default function PublicBookingPage() {
     if (!company) return;
 
     fetch(`${API}/api/public/conference/company/${slug}/rooms`)
-      .then(r => r.ok ? r.json() : [])
-      .then(setRooms)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setRooms(Array.isArray(data) ? data : []))
       .catch(() => setRooms([]));
   }, [company, slug]);
 
   /* ================= LOAD BOOKINGS ================= */
   useEffect(() => {
-    if (!roomId || !date) return;
+    if (!roomId || !date) {
+      setBookings([]);
+      setSlot("");
+      return;
+    }
 
     fetch(
       `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
     )
-      .then(r => r.ok ? r.json() : [])
-      .then(setBookings)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setBookings(Array.isArray(data) ? data : []))
       .catch(() => setBookings([]));
   }, [roomId, date, slug]);
 
   /* ================= BOOKED SLOT MAP ================= */
   const bookedSlots = useMemo(() => {
     const set = new Set();
-    bookings.forEach(b => {
-      TIME_SLOTS.forEach(t => {
-        if (t >= b.start_time && t < b.end_time) set.add(t);
+    bookings.forEach((b) => {
+      TIME_SLOTS.forEach((t) => {
+        if (t >= b.start_time && t < b.end_time) {
+          set.add(t);
+        }
       });
     });
     return set;
@@ -78,7 +86,9 @@ export default function PublicBookingPage() {
 
   /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-    if (!email.includes("@")) return setError("Enter valid email");
+    if (!email || !email.includes("@")) {
+      return setError("Enter a valid email address");
+    }
 
     setLoading(true);
     setError("");
@@ -96,7 +106,7 @@ export default function PublicBookingPage() {
       if (!res.ok) throw new Error();
       setOtpSent(true);
     } catch {
-      setError("Failed to send OTP");
+      setError("Failed to send OTP. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -105,6 +115,8 @@ export default function PublicBookingPage() {
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
     if (!otp) return setError("Enter OTP");
+
+    setError("");
 
     try {
       const res = await fetch(
@@ -118,7 +130,6 @@ export default function PublicBookingPage() {
 
       if (!res.ok) throw new Error();
       setOtpVerified(true);
-      setError("");
     } catch {
       setError("Invalid or expired OTP");
     }
@@ -132,7 +143,7 @@ export default function PublicBookingPage() {
 
     const idx = TIME_SLOTS.indexOf(slot);
     const endTime = TIME_SLOTS[idx + 1];
-    if (!endTime) return setError("Invalid slot");
+    if (!endTime) return setError("Invalid time slot");
 
     setLoading(true);
     setError("");
@@ -155,16 +166,22 @@ export default function PublicBookingPage() {
       );
 
       if (!res.ok) throw new Error();
-      alert("✅ Booking confirmed!");
+
+      alert("✅ Booking confirmed successfully!");
       setSlot("");
+      setBookings([]);
     } catch {
-      setError("Slot already booked");
+      setError("This slot was just booked. Please choose another.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (error) return <div className={styles.error}>{error}</div>;
+  /* ================= RENDER ================= */
+  if (error && !company) {
+    return <div className={styles.error}>{error}</div>;
+  }
+
   if (!company) return null;
 
   return (
@@ -182,6 +199,8 @@ export default function PublicBookingPage() {
         <div className={styles.card}>
           <h3>Email Verification</h3>
 
+          {error && <p className={styles.error}>{error}</p>}
+
           <input
             placeholder="Enter email"
             value={email}
@@ -189,6 +208,7 @@ export default function PublicBookingPage() {
               setEmail(e.target.value);
               setOtp("");
               setOtpSent(false);
+              setError("");
             }}
           />
 
@@ -213,10 +233,15 @@ export default function PublicBookingPage() {
       {otpVerified && (
         <>
           <div className={styles.card}>
+            {error && <p className={styles.error}>{error}</p>}
+
             <label>Conference Room</label>
-            <select value={roomId} onChange={(e) => setRoomId(e.target.value)}>
+            <select
+              value={roomId}
+              onChange={(e) => setRoomId(e.target.value)}
+            >
               <option value="">Select Room</option>
-              {rooms.map(r => (
+              {rooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.room_name}
                 </option>
@@ -234,7 +259,7 @@ export default function PublicBookingPage() {
             <label>Time Slot</label>
             <select value={slot} onChange={(e) => setSlot(e.target.value)}>
               <option value="">Select time</option>
-              {TIME_SLOTS.map(t => (
+              {TIME_SLOTS.map((t) => (
                 <option key={t} value={t} disabled={bookedSlots.has(t)}>
                   {t}
                 </option>
@@ -245,7 +270,7 @@ export default function PublicBookingPage() {
           <button
             className={styles.confirmBtn}
             onClick={confirmBooking}
-            disabled={loading}
+            disabled={loading || !roomId || !date || !slot}
           >
             {loading ? "Booking..." : "Confirm Booking"}
           </button>
@@ -254,3 +279,4 @@ export default function PublicBookingPage() {
     </div>
   );
 }
+
