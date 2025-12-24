@@ -54,13 +54,12 @@ export default function VisitorPrimaryDetails() {
       <header className={styles.header}>
         <div className={styles.companyName}>{company.name}</div>
 
-        {company.logo && (
-          <img
-            src={company.logo_url}
-            alt="Company Logo"
-            className={styles.logo}
-          />
-        )}
+        {/* ✅ FIXED: use logo_url directly with fallback */}
+        <img
+          src={company.logo_url || "/logo.png"}
+          alt="Company Logo"
+          className={styles.logo}
+        />
       </header>
 
       {/* ================= CENTER ================= */}
