@@ -18,6 +18,7 @@ if (!process.env.JWT_SECRET) {
    HELPERS
 ====================================================== */
 
+// URL-safe slug
 const generateSlug = (name) =>
   name
     .toLowerCase()
@@ -109,10 +110,10 @@ export const registerCompany = async (data, file) => {
     for (let i = 1; i <= conferenceRooms; i++) {
       await conn.execute(
         `
-        INSERT INTO conference_rooms (company_id, room_name)
-        VALUES (?, ?)
+        INSERT INTO conference_rooms (company_id, room_name, room_number)
+        VALUES (?, ?, ?)
         `,
-        [companyId, `Conference Room ${i}`]
+        [companyId, `Conference Room ${i}`, i]
       );
     }
 
@@ -275,4 +276,3 @@ export const resetPassword = async ({ email, code, password }) => {
 
   return { message: "Password reset successful" };
 };
-
