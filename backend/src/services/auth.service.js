@@ -18,7 +18,6 @@ if (!process.env.JWT_SECRET) {
    HELPERS
 ====================================================== */
 
-// slug-safe (URL friendly)
 const generateSlug = (name) =>
   name
     .toLowerCase()
@@ -79,8 +78,8 @@ export const registerCompany = async (data, file) => {
   const logoKey = `companies/${slug}/logo${ext}`;
   const logoUrl = await uploadToS3(file, logoKey);
 
-  /* ---------- DB TRANSACTION ---------- */
   const conn = await db.getConnection();
+
   try {
     await conn.beginTransaction();
 
@@ -110,7 +109,7 @@ export const registerCompany = async (data, file) => {
     for (let i = 1; i <= conferenceRooms; i++) {
       await conn.execute(
         `
-        INSERT INTO conference_rooms (company_id, name)
+        INSERT INTO conference_rooms (company_id, room_name)
         VALUES (?, ?)
         `,
         [companyId, `Conference Room ${i}`]
@@ -194,7 +193,6 @@ export const login = async ({ email, password }) => {
       id: rows[0].companyId,
       name: rows[0].companyName,
       slug: rows[0].companySlug,
-      logo: rows[0].companyLogo,
       logo_url: rows[0].companyLogo
     }
   };
@@ -277,3 +275,4 @@ export const resetPassword = async ({ email, code, password }) => {
 
   return { message: "Password reset successful" };
 };
+
