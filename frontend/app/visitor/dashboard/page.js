@@ -100,13 +100,13 @@ export default function VisitorDashboard() {
         <div className={styles.logoText}>{company.name}</div>
 
         <div className={styles.rightHeader}>
-          {company.logo && (
-            <img
-              src={company.logo}
-              alt="Company Logo"
-              className={styles.companyLogo}
-            />
-          )}
+          {/* ✅ FIXED: use logo_url with fallback */}
+          <img
+            src={company.logo_url || "/logo.png"}
+            alt="Company Logo"
+            className={styles.companyLogo}
+          />
+
           <button className={styles.logoutBtn} onClick={handleLogout}>
             ⏻
           </button>
