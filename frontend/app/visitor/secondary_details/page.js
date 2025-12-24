@@ -38,7 +38,6 @@ export default function SecondaryDetails() {
 
       setCompany(JSON.parse(storedCompany));
 
-      // ✅ Restore saved secondary details
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {
         setForm(JSON.parse(saved));
@@ -71,7 +70,6 @@ export default function SecondaryDetails() {
   const goBack = () => router.back();
 
   const goNext = () => {
-    // ✅ Save secondary details
     localStorage.setItem(
       "visitor_secondary",
       JSON.stringify(form)
@@ -87,13 +85,12 @@ export default function SecondaryDetails() {
       <header className={styles.header}>
         <div className={styles.logoText}>{company.name}</div>
 
-        {company.logo && (
-          <img
-            src={company.logo}
-            alt={`${company.name} logo`}
-            className={styles.companyLogo}
-          />
-        )}
+        {/* ✅ FIXED: use logo_url with fallback */}
+        <img
+          src={company.logo_url || "/logo.png"}
+          alt={`${company.name} logo`}
+          className={styles.companyLogo}
+        />
       </header>
 
       {/* ================= FORM CARD ================= */}
