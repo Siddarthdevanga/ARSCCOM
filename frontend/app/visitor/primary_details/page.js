@@ -56,7 +56,7 @@ export default function VisitorPrimaryDetails() {
 
         {company.logo && (
           <img
-            src={company.logo}
+            src={company.logo_url}
             alt="Company Logo"
             className={styles.logo}
           />
