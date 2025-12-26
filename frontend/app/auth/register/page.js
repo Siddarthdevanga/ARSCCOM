@@ -76,7 +76,7 @@ export default function RegisterPage() {
     <div className={styles.page}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div className={styles.brand}>ARSCCOM</div>
+        <div className={styles.brand}>PROMEET</div>
 
         <div
           className={styles.backHeader}
