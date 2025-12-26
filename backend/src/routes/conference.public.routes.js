@@ -24,7 +24,7 @@ If you did not perform this action, please contact your administrator immediatel
 `;
 
 /* ======================================================
-   COMPANY DETAILS
+   GET COMPANY
 ====================================================== */
 router.get("/company/:slug", async (req, res) => {
   try {
@@ -46,7 +46,7 @@ router.get("/company/:slug", async (req, res) => {
 });
 
 /* ======================================================
-   ROOMS
+   GET ROOMS
 ====================================================== */
 router.get("/company/:slug/rooms", async (req, res) => {
   try {
@@ -59,9 +59,9 @@ router.get("/company/:slug/rooms", async (req, res) => {
     if (!company) return res.json([]);
 
     const [rooms] = await db.query(
-      `SELECT id,room_name,room_number 
-       FROM conference_rooms 
-       WHERE company_id=? 
+      `SELECT id,room_name,room_number
+       FROM conference_rooms
+       WHERE company_id=?
        ORDER BY room_number ASC`,
       [company.id]
     );
@@ -74,7 +74,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   BOOKINGS — PUBLIC VIEW
+   GET BOOKINGS (DAY WISE FOR ROOM)
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
@@ -90,12 +90,12 @@ router.get("/company/:slug/bookings", async (req, res) => {
     if (!company) return res.json([]);
 
     const [bookings] = await db.query(
-      `SELECT id,room_id,booking_date,start_time,end_time,
-              department,booked_by,purpose
+      `SELECT id, room_id, booking_date, start_time, end_time,
+              department, booked_by, purpose
        FROM conference_bookings
-       WHERE company_id=? 
-         AND room_id=? 
-         AND booking_date=? 
+       WHERE company_id=?
+         AND room_id=?
+         AND booking_date=?
          AND status='BOOKED'
        ORDER BY start_time ASC`,
       [company.id, roomId, date]
@@ -136,17 +136,17 @@ router.post("/company/:slug/send-otp", async (req, res) => {
     await db.query(
       `INSERT INTO public_booking_otp
        (company_id,email,otp,expires_at,verified)
-       VALUES (?,?,?,DATE_ADD(NOW(), INTERVAL 10 MINUTE),0)`,
+       VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE), 0)`,
       [company.id, email, otp]
     );
 
     await sendEmail({
       to: email,
-      subject: `OTP Verification – ${company.name}`,
+      subject: `OTP for Conference Booking – ${company.name}`,
       html: `
         <h3>Your OTP</h3>
         <h1>${otp}</h1>
-        <p>Valid for 10 minutes</p>
+        <p>Valid for 10 minutes.</p>
         ${emailFooter}
       `
     });
@@ -180,7 +180,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
     const [[row]] = await db.query(
       `SELECT id FROM public_booking_otp
        WHERE company_id=? AND email=? AND otp=? 
-         AND verified=0 AND expires_at>NOW()
+       AND verified=0 AND expires_at>NOW()
        LIMIT 1`,
       [company.id, email, otp]
     );
@@ -232,7 +232,6 @@ router.post("/company/:slug/book", async (req, res) => {
     );
     if (!company) return res.status(404).json({ message: "Invalid booking link" });
 
-    /* OTP Verified */
     const [[verified]] = await db.query(
       `SELECT id FROM public_booking_otp
        WHERE company_id=? AND email=? AND verified=1 AND expires_at>NOW()
@@ -242,7 +241,6 @@ router.post("/company/:slug/book", async (req, res) => {
     if (!verified)
       return res.status(401).json({ message: "OTP verification required" });
 
-    /* Slot Conflict */
     const [conflict] = await db.query(
       `SELECT id FROM conference_bookings
        WHERE company_id=? AND room_id=? AND booking_date=?
@@ -280,8 +278,10 @@ router.post("/company/:slug/book", async (req, res) => {
       to: email,
       subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
       html: `
-        <h2>${company.name}</h2>
-        <h3>Booking Confirmed</h3>
+        <h2 style="color:#3c007a">${company.name}</h2>
+        ${company.logo_url ? `<img src="${company.logo_url}" height="60"/>` : ""}
+        <h3>Conference Room Booking Confirmed</h3>
+
         <table style="padding:10px;font-size:15px">
           <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
           <tr><td><b>Date</b></td><td>: ${booking_date}</td></tr>
@@ -319,27 +319,31 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     const userEmail = normalizeEmail(email);
 
     const [[company]] = await db.query(
-      `SELECT id,name FROM companies WHERE slug=? LIMIT 1`,
+      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+    if (!company) return res.status(404).json({ message: "Invalid link" });
 
     const [[booking]] = await db.query(
       `SELECT * FROM conference_bookings
        WHERE id=? AND company_id=? AND status='BOOKED' LIMIT 1`,
       [bookingId, company.id]
     );
-
-    if (!booking)
-      return res.status(404).json({ message: "Booking not found" });
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
     if (booking.booked_by !== userEmail)
       return res.status(403).json({ message: "Unauthorized" });
 
+    if (new Date(booking.booking_date) < new Date())
+      return res.status(400).json({ message: "Cannot modify past bookings" });
+
     const [conflict] = await db.query(
       `SELECT id FROM conference_bookings
-       WHERE company_id=? AND room_id=? AND booking_date=? 
-         AND id<>? AND status='BOOKED'
-         AND start_time < ? AND end_time > ?
+       WHERE company_id=? AND room_id=? AND booking_date=?
+         AND id<>?
+         AND status='BOOKED'
+         AND start_time < ?
+         AND end_time > ?
        LIMIT 1`,
       [
         company.id,
@@ -357,6 +361,32 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
       `UPDATE conference_bookings SET start_time=?, end_time=? WHERE id=?`,
       [start_time, end_time, bookingId]
     );
+
+    const [[room]] = await db.query(
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      [booking.room_id]
+    );
+
+    await sendEmail({
+      to: userEmail,
+      subject: `Booking Updated – ${room.room_name} | ${company.name}`,
+      html: `
+        <h2 style="color:#3c007a">${company.name}</h2>
+        <h3>Conference Booking Rescheduled</h3>
+
+        <table style="padding:10px;font-size:15px">
+          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+          <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+          <tr><td><b>Old Time</b></td>
+            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+          <tr><td><b>New Time</b></td>
+            <td style="color:#007bff">
+              : ${prettyTime(start_time)} – ${prettyTime(end_time)}
+            </td></tr>
+        </table>
+        ${emailFooter}
+      `
+    });
 
     res.json({ message: "Booking updated successfully" });
 
@@ -379,9 +409,11 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       return res.status(400).json({ message: "Email required" });
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug=? LIMIT 1`,
+      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+    if (!company)
+      return res.status(404).json({ message: "Invalid link" });
 
     const [[booking]] = await db.query(
       `SELECT * FROM conference_bookings
@@ -390,7 +422,7 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     );
 
     if (!booking)
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({ message: "Booking not found or already cancelled" });
 
     if (booking.booked_by !== email)
       return res.status(403).json({ message: "Unauthorized" });
@@ -399,6 +431,32 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       `UPDATE conference_bookings SET status='CANCELLED' WHERE id=?`,
       [bookingId]
     );
+
+    const [[room]] = await db.query(
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      [booking.room_id]
+    );
+
+    await sendEmail({
+      to: email,
+      subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
+      html: `
+        <h2 style="color:#3c007a">${company.name}</h2>
+        <h3>Conference Booking Cancelled</h3>
+
+        <table style="padding:10px;font-size:15px">
+          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+          <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+          <tr><td><b>Time</b></td>
+            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+        </table>
+
+        <p style="color:red;font-weight:bold">
+          ❌ The slot is now released and available for booking.
+        </p>
+        ${emailFooter}
+      `
+    });
 
     res.json({ message: "Booking cancelled successfully" });
 
