@@ -73,7 +73,7 @@ export default function ForgotPassword() {
     <div className={styles.page}>
       {/* HEADER */}
       <div className={styles.header}>
-        <div className={styles.brand}>ARSCCOM</div>
+        <div className={styles.brand}>PROMEET</div>
       </div>
 
       {/* CONTENT */}
