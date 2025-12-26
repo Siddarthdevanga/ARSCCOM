@@ -2,7 +2,8 @@
 html,
 body {
   height: 100%;
-  overflow: hidden;
+  margin: 0;
+  overflow: hidden;  /* ⛔ stop page scroll */
 }
 
 /* ================= BACKGROUND ================= */
@@ -40,14 +41,23 @@ body {
 /* ================= MAIN FORM CARD ================= */
 .formCard {
   width: 88%;
-  height: calc(100vh - 150px); /* header + spacing */
+  height: calc(100vh - 150px);   /* header + spacing */
   background: white;
   color: #3c007a;
   margin: 10px auto 0;
   padding: 42px 52px;
   border-radius: 22px;
-  overflow-y: auto;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+
+  overflow-y: auto;                 /* ✅ scroll here */
+  -webkit-overflow-scrolling: touch;
+
+  scrollbar-width: none;            /* Firefox hide */
+}
+
+.formCard::-webkit-scrollbar {
+  width: 0;
+  height: 0;                        /* Chrome / Safari / Edge hide */
 }
 
 /* ================= TITLE ================= */
