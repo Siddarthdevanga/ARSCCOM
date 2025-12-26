@@ -2,14 +2,14 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;                  /* scrolling allowed */
-  -webkit-overflow-scrolling: touch; /* smooth touch scroll */
-  scrollbar-width: none;             /* Firefox hide scrollbar */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
 body::-webkit-scrollbar {
   width: 0;
-  height: 0;                         /* Chrome / Safari / Edge */
+  height: 0;
 }
 
 /* ================= PAGE ================= */
@@ -20,7 +20,7 @@ body::-webkit-scrollbar {
   font-family: "Segoe UI", Arial, sans-serif;
   box-sizing: border-box;
 
-  overflow-y: auto;                  /* ensure scroll stays allowed */
+  overflow-y: auto;
   scrollbar-width: none;
 }
 
@@ -38,7 +38,6 @@ body::-webkit-scrollbar {
   color: #fff;
 }
 
-/* Logout */
 .logout {
   background: rgba(255, 255, 255, 0.18);
   border: none;
@@ -68,7 +67,7 @@ body::-webkit-scrollbar {
   object-fit: contain;
 }
 
-/* ================= MAIN LAYOUT ================= */
+/* ================= LAYOUT ================= */
 .layout,
 .content {
   display: grid;
@@ -146,7 +145,7 @@ body::-webkit-scrollbar {
   box-shadow: none;
 }
 
-/* ================= RIGHT SIDE (BOOKINGS) ================= */
+/* ================= RIGHT SIDE ================= */
 .side {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 22px;
@@ -167,6 +166,13 @@ body::-webkit-scrollbar {
   padding: 14px 16px;
   margin-bottom: 12px;
   backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.35);
+}
+
+.bookingHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .booking b {
@@ -186,6 +192,47 @@ body::-webkit-scrollbar {
   opacity: 0.8;
 }
 
+/* ================= ACTION BUTTONS ================= */
+.bookingActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.bookingActions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+/* Edit Button */
+.editBtn {
+  background: rgba(3, 155, 229, 0.25);
+  color: #ffffff;
+  border: 1px solid rgba(3,155,229,0.6);
+}
+
+.editBtn:hover {
+  background: rgba(3, 155, 229, 0.35);
+  transform: translateY(-1px);
+}
+
+/* Cancel Button */
+.cancelBtn {
+  background: rgba(244, 67, 54, 0.22);
+  color: #ffffff;
+  border: 1px solid rgba(244,67,54,0.6);
+}
+
+.cancelBtn:hover {
+  background: rgba(244, 67, 54, 0.32);
+  transform: translateY(-1px);
+}
+
 /* ================= FEEDBACK ================= */
 .success {
   color: #2e7d32;
@@ -194,7 +241,10 @@ body::-webkit-scrollbar {
 }
 
 .error {
-  color: #d32f2f;
+  color: #ffebee;
+  background: rgba(244, 67, 54, 0.35);
+  padding: 10px;
+  border-radius: 8px;
   font-weight: 700;
   margin-bottom: 12px;
 }
