@@ -64,6 +64,7 @@ export default function PublicConferenceBooking() {
   /* ================= LOAD ROOMS ================= */
   useEffect(() => {
     if (!company) return;
+
     fetch(`${API}/api/public/conference/company/${slug}/rooms`)
       .then(r => r.ok ? r.json() : [])
       .then(d => setRooms(Array.isArray(d) ? d : []));
@@ -85,7 +86,7 @@ export default function PublicConferenceBooking() {
 
   useEffect(() => loadBookings(), [roomId, date, slug]);
 
-  /* ================= START TIME FILTER ================= */
+  /* ================= AVAILABLE TIMES ================= */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter(t => {
       if (date !== today) return true;
@@ -181,6 +182,7 @@ export default function PublicConferenceBooking() {
       );
 
       if (!r.ok) throw new Error();
+
       setSuccess("Booking confirmed successfully");
       setStartTime("");
       setEndTime("");
@@ -194,7 +196,7 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= SAVE EDIT ================= */
+  /* ================= SAVE EDIT (with email) ================= */
   const saveEdit = async (id) => {
     if (!editStart || !editEnd) return;
 
@@ -210,7 +212,8 @@ export default function PublicConferenceBooking() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             start_time: editStart,
-            end_time: editEnd
+            end_time: editEnd,
+            email
           })
         }
       );
@@ -221,20 +224,24 @@ export default function PublicConferenceBooking() {
       setEditingId(null);
       loadBookings();
     } catch {
-      setError("Unable to update — slot may be already booked");
+      setError("Unable to update — slot may already be booked");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= CANCEL BOOKING ================= */
+  /* ================= CANCEL BOOKING (with email) ================= */
   const cancelBooking = async (id) => {
     if (!confirm("Cancel this booking?")) return;
 
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/bookings/${id}/cancel`,
-        { method: "PATCH" }
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        }
       );
 
       if (!r.ok) throw new Error();
