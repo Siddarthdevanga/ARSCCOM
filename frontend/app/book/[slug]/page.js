@@ -6,7 +6,7 @@ import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-/* ================= TIME OPTIONS (09:30 – 19:00, 30m) ================= */
+/* ================= TIME OPTIONS (09:30 – 19:00) ================= */
 const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const total = 9 * 60 + 30 + i * 30;
   const h = Math.floor(total / 60);
@@ -15,7 +15,7 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
 });
 
 /* ================= AM/PM FORMAT ================= */
-const toAmPm = (time24 = "") => {
+const toAmPm = (time24) => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
@@ -44,6 +44,7 @@ export default function PublicConferenceBooking() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
+  /* ===== Edit states ===== */
   const [editingId, setEditingId] = useState(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
@@ -76,19 +77,31 @@ export default function PublicConferenceBooking() {
       return;
     }
 
-    fetch(`${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`)
+    fetch(
+      `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
+    )
       .then(r => r.ok ? r.json() : [])
       .then(d => setBookings(Array.isArray(d) ? d : []));
   };
 
   useEffect(() => loadBookings(), [roomId, date, slug]);
 
-  /* ================= AVAILABLE TIMES ================= */
+  /* ================= SLOT VALIDATION ================= */
+  const isSlotFree = (start, end, ignoreId = null) => {
+    return !bookings.some(b => {
+      if (b.id === ignoreId) return false;
+      return b.start_time < end && b.end_time > start;
+    });
+  };
+
+  /* ================= AVAILABLE START TIMES ================= */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter(t => {
-      if (date !== today) return true;
-      const [h, m] = t.split(":").map(Number);
-      return h * 60 + m > nowMinutes;
+      if (date === today) {
+        const [h, m] = t.split(":").map(Number);
+        if (h * 60 + m <= nowMinutes) return false;
+      }
+      return true;
     });
   }, [date, today, nowMinutes]);
 
@@ -125,7 +138,6 @@ export default function PublicConferenceBooking() {
 
       if (!r.ok) throw new Error();
       setOtpSent(true);
-      setSuccess("OTP sent successfully");
     } catch {
       setError("Failed to send OTP");
     } finally {
@@ -147,13 +159,12 @@ export default function PublicConferenceBooking() {
 
       if (!r.ok) throw new Error();
       setOtpVerified(true);
-      setSuccess("OTP verified successfully");
     } catch {
       setError("Invalid OTP");
     }
   };
 
-  /* ================= CONFIRM BOOKING ================= */
+  /* ================= CREATE BOOKING ================= */
   const confirmBooking = async () => {
     if (!roomId || !date || !startTime || !endTime || !department)
       return setError("All fields except purpose are required");
@@ -195,9 +206,13 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= SAVE EDIT (email included) ================= */
+  /* ================= SAVE EDIT ================= */
   const saveEdit = async (id) => {
-    if (!editStart || !editEnd) return;
+    if (!editStart || !editEnd)
+      return setError("Select both start and end time");
+
+    if (!isSlotFree(editStart, editEnd, id))
+      return setError("Selected slot unavailable");
 
     setLoading(true);
     setError("");
@@ -229,7 +244,7 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= CANCEL BOOKING (email included) ================= */
+  /* ================= CANCEL BOOKING ================= */
   const cancelBooking = async (id) => {
     if (!confirm("Cancel this booking?")) return;
 
@@ -244,7 +259,6 @@ export default function PublicConferenceBooking() {
       );
 
       if (!r.ok) throw new Error();
-      setSuccess("Booking cancelled successfully");
       loadBookings();
     } catch {
       alert("Failed to cancel");
@@ -273,9 +287,7 @@ export default function PublicConferenceBooking() {
       {!otpVerified ? (
         <div className={styles.card}>
           <h2>Email Verification</h2>
-
           {error && <p className={styles.error}>{error}</p>}
-          {success && <p className={styles.success}>{success}</p>}
 
           <input
             placeholder="Enter email"
@@ -342,7 +354,7 @@ export default function PublicConferenceBooking() {
               onChange={e => setEndTime(e.target.value)}
             >
               <option value="">Select</option>
-              {availableEndTimes.map(t => (
+              {TIME_OPTIONS.filter(t => t > startTime).map(t => (
                 <option key={t} value={t}>
                   {toAmPm(t)}
                 </option>
@@ -378,22 +390,32 @@ export default function PublicConferenceBooking() {
                   <>
                     <b>{b.department}</b>
 
+                    {/* EDIT START */}
                     <select
                       value={editStart}
                       onChange={e => setEditStart(e.target.value)}
                     >
-                      {TIME_OPTIONS.map(t => (
+                      {TIME_OPTIONS.filter(t => {
+                        if (date === today) {
+                          const [h, m] = t.split(":").map(Number);
+                          if (h * 60 + m <= nowMinutes) return false;
+                        }
+                        return isSlotFree(t, editEnd || t, b.id);
+                      }).map(t => (
                         <option key={t} value={t}>
                           {toAmPm(t)}
                         </option>
                       ))}
                     </select>
 
+                    {/* EDIT END */}
                     <select
                       value={editEnd}
                       onChange={e => setEditEnd(e.target.value)}
                     >
-                      {TIME_OPTIONS.filter(t => t > editStart).map(t => (
+                      {TIME_OPTIONS.filter(t =>
+                        t > editStart && isSlotFree(editStart, t, b.id)
+                      ).map(t => (
                         <option key={t} value={t}>
                           {toAmPm(t)}
                         </option>
