@@ -5,7 +5,8 @@
   font-family: "Segoe UI", Arial, sans-serif;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+
+  overflow: hidden;          /* ⛔ stop page scroll */
 }
 
 /* ================= HEADER ================= */
@@ -25,7 +26,7 @@
   white-space: nowrap;
 }
 
-/* LOGO (NO CONTAINER) */
+/* LOGO */
 .logo {
   height: 36px;
   width: auto;
@@ -39,6 +40,9 @@
   justify-content: center;
   align-items: center;
   padding: 32px 20px;
+
+  overflow-y: auto;              /* ✅ scroll here */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ================= CARD ================= */
@@ -48,6 +52,10 @@
   padding: 48px 56px;
   border-radius: 28px;
   box-shadow: 0 30px 64px rgba(0, 0, 0, 0.35);
+
+  max-height: calc(100vh - 160px); /* keeps inside screen */
+  overflow-y: auto;                 /* ✅ card scroll if needed */
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ================= TEXT ================= */
@@ -110,7 +118,7 @@
 
 .col {
   flex: 1;
-  min-width: 0; /* prevents overflow */
+  min-width: 0;
 }
 
 /* ================= BUTTON ================= */
