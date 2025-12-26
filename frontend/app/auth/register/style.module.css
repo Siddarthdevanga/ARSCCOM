@@ -1,3 +1,9 @@
+/* ================= GLOBAL (STOP PAGE SCROLL) ================= */
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 /* ================= PAGE ================= */
 .page {
   min-height: 100vh;
@@ -48,6 +54,22 @@
   padding: 32px 44px;
   border-radius: 26px;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
+
+  max-height: 78vh;               /* Allow only card to scroll */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Hide scrollbar Chrome / Edge / Safari */
+.card::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Hide scrollbar Firefox */
+.card {
+  scrollbar-width: none;
 }
 
 /* ================= TEXT ================= */
@@ -147,6 +169,7 @@
 @media (max-width: 960px) {
   .card {
     width: 92%;
+    max-height: 80vh;
   }
 
   .row3,
