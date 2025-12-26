@@ -14,13 +14,13 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [activeSection, setActiveSection] = useState(""); 
-  // about | plans | contact | ""
+  const [activeTab, setActiveTab] = useState(null);
 
   const handleLogin = async () => {
     if (loading) return;
 
-    if (!email.trim() || !password.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password) {
       setError("Email and password are required");
       return;
     }
@@ -34,15 +34,16 @@ export default function LoginPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: email.trim().toLowerCase(),
-            password
-          })
+          body: JSON.stringify({ email: normalizedEmail, password })
         }
       );
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Invalid credentials");
+
+      if (!res.ok) {
+        setError(data?.message || "Invalid credentials");
+        return;
+      }
 
       localStorage.setItem("token", data.token);
       document.cookie = `token=${data.token}; path=/`;
@@ -52,8 +53,8 @@ export default function LoginPage() {
       }
 
       router.replace("/home");
-    } catch (err) {
-      setError(err.message || "Unable to connect to server");
+    } catch {
+      setError("Unable to connect to server");
     } finally {
       setLoading(false);
     }
@@ -61,97 +62,100 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
           <div className={styles.logoText}>VISITOR MANAGEMENT PLATFORM</div>
 
           <Image
             src="/logo.png"
-            alt="ARSCCOM LOGO"
+            alt="ARSCCOM Logo"
             width={420}
-            height={160}
+            height={140}
+            priority
             className={styles.brandLogo}
           />
         </div>
 
-        {/* ❤️ NAV MUST BE INSIDE HEADER */}
-        <nav className={styles.nav}>
-          <button onClick={() => setActiveSection("about")}>ABOUT</button>
-          <button onClick={() => setActiveSection("plans")}>PLANS</button>
-          <button onClick={() => setActiveSection("contact")}>CONTACT</button>
-
-          {/* DROPDOWN */}
-          {activeSection && (
-            <div className={styles.dropdownBox}>
-              {activeSection === "about" && (
-                <>
-                  <h2>About Our Platform</h2>
-                  <p>
-                    A secure, smart and scalable Visitor & Conference
-                    Management Platform designed to digitalize visitor flow
-                    and organization operations.
-                  </p>
-                </>
-              )}
-
-              {activeSection === "plans" && (
-                <>
-                  <h2>Subscription Plans</h2>
-
-                  <div className={styles.planContainer}>
-                    <div className={styles.planCard}>
-                      <h3>FREE</h3>
-                      <h2>Free Trial</h2>
-                      <ul>
-                        <li>✔ 100 Visitor Bookings</li>
-                        <li>✔ 100 Room Bookings</li>
-                      </ul>
-                    </div>
-
-                    <div className={styles.planCard}>
-                      <h3>BUSINESS</h3>
-                      <h2>₹500 / month</h2>
-                      <ul>
-                        <li>✔ Unlimited Visitors</li>
-                        <li>✔ 1000 Room Bookings</li>
-                      </ul>
-                    </div>
-
-                    <div className={styles.planCard}>
-                      <h3>ENTERPRISE</h3>
-                      <h2>Custom Pricing</h2>
-                      <ul>
-                        <li>✔ Tailored Solutions</li>
-                        <li>✔ Dedicated Support</li>
-                      </ul>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {activeSection === "contact" && (
-                <>
-                  <h2>Contact Us</h2>
-                  <p>Email: <b>admin@wheelbrand.in</b></p>
-                  <p>Phone: +91 98765 43210</p>
-                  <p>We respond within 24 hours.</p>
-                </>
-              )}
-
-              <button
-                className={styles.closeBtn}
-                onClick={() => setActiveSection("")}
-              >
-                Close
-              </button>
-            </div>
-          )}
-        </nav>
+        {/* TOP RIGHT NAV */}
+        <div className={styles.nav}>
+          <button onClick={() => setActiveTab("about")}>ABOUT</button>
+          <button onClick={() => setActiveTab("plans")}>PLANS</button>
+          <button onClick={() => setActiveTab("contact")}>CONTACT</button>
+        </div>
       </header>
 
-      {/* ================= LOGIN ================= */}
-      <div className={styles.loginWrapper}>
+      {/* DROPDOWNS */}
+      {activeTab === "about" && (
+        <div className={styles.dropdownBox}>
+          <h2>About Our Platform</h2>
+          <p>
+            A secure, scalable Visitor & Conference Management platform
+            designed to digitalize visitor flow and organization operations.
+          </p>
+
+          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+            Close
+          </button>
+        </div>
+      )}
+
+      {activeTab === "plans" && (
+        <div className={styles.dropdownBox}>
+          <h2>Subscription Plans</h2>
+
+          <div className={styles.planContainer}>
+            <div className={styles.planCard}>
+              <h3>FREE</h3>
+              <h2>Free Trial</h2>
+              <ul>
+                <li>✔ Valid 15 Days</li>
+                <li>✔ 100 Visitor Bookings</li>
+                <li>✔ 100 Conference Rooms</li>
+              </ul>
+            </div>
+
+            <div className={styles.planCard}>
+              <h3>BUSINESS</h3>
+              <h2>₹500 / Month</h2>
+              <ul>
+                <li>✔ Unlimited Visitors</li>
+                <li>✔ 1000 Room Bookings</li>
+                <li>✔ Ideal for Companies</li>
+              </ul>
+            </div>
+
+            <div className={styles.planCard}>
+              <h3>ENTERPRISE</h3>
+              <h2>Custom Pricing</h2>
+              <ul>
+                <li>✔ Tailored Solutions</li>
+                <li>✔ Advanced Security</li>
+                <li>✔ Dedicated Support</li>
+              </ul>
+            </div>
+          </div>
+
+          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+            Close
+          </button>
+        </div>
+      )}
+
+      {activeTab === "contact" && (
+        <div className={styles.dropdownBox}>
+          <h2>Contact Us</h2>
+          <p>Email: admin@wheelbrand.in</p>
+          <p>We are happy to support you.</p>
+
+          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+            Close
+          </button>
+        </div>
+      )}
+
+      {/* LOGIN CARD */}
+      <main className={styles.loginWrapper}>
         <div className={styles.loginCard}>
           <h4>LOGIN TO YOUR ACCOUNT</h4>
 
@@ -177,11 +181,7 @@ export default function LoginPage() {
 
           {error && <p style={{ color: "red" }}>{error}</p>}
 
-          <button
-            className={styles.loginBtn}
-            onClick={handleLogin}
-            disabled={loading}
-          >
+          <button className={styles.loginBtn} onClick={handleLogin} disabled={loading}>
             {loading ? "Logging in..." : "LOGIN"}
           </button>
 
@@ -191,7 +191,7 @@ export default function LoginPage() {
             <Link href="/auth/register">New Registration</Link>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
