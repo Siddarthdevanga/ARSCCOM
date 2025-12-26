@@ -4,7 +4,6 @@ import styles from "./style.module.css";
 
 export default function SubscriptionPage() {
   const choosePlan = (plan) => {
-    // Redirect to next step
     window.location.href = `/payment?plan=${plan}`;
   };
 
@@ -22,63 +21,63 @@ export default function SubscriptionPage() {
       {/* PLAN GRID */}
       <div className={styles.planGrid}>
 
-        {/* BRONZE PLAN */}
+        {/* FREE PLAN */}
         <div className={styles.card}>
-          <h3 className={styles.planName}>Bronze</h3>
-          <p className={styles.price}>Free</p>
-          <p className={styles.subText}>Best for testing & small trial use.</p>
+          <h3 className={styles.planName}>Free</h3>
+          <p className={styles.price}>Free Trial</p>
+          <p className={styles.subText}>Valid for 15 days</p>
 
           <ul className={styles.features}>
-            <li>✔ 100 Visitors / month</li>
-            <li>✔ 100 Conference Bookings</li>
-            <li>✔ Max 2 Conference Rooms</li>
+            <li>✔ 100 Visitor Bookings</li>
+            <li>✔ 100 Conference Room Bookings</li>
           </ul>
 
-          <button 
+          <button
             className={styles.btn}
-            onClick={() => choosePlan("bronze")}
+            onClick={() => choosePlan("free")}
           >
             Get Started
           </button>
         </div>
 
-        {/* SILVER PLAN */}
+        {/* BUSINESS PLAN */}
         <div className={`${styles.card} ${styles.cardHighlight}`}>
-          <h3 className={styles.planName}>Silver</h3>
-          <p className={styles.price}>₹1000 <span>/ month</span></p>
-          <p className={styles.subText}>Perfect for medium-sized offices.</p>
+          <h3 className={styles.planName}>Business</h3>
+          <p className={styles.price}>₹500 <span>/ month</span></p>
+          <p className={styles.subText}>Best for growing businesses</p>
 
           <ul className={styles.features}>
-            <li>✔ 1000 Visitors / month</li>
-            <li>✔ 1000 Conference Bookings</li>
-            <li>✔ Max 4 Conference Rooms</li>
+            <li>✔ Unlimited Visitors</li>
+            <li>✔ 1000 Conference Room Bookings</li>
           </ul>
 
-          <button 
+          <button
             className={styles.btn}
-            onClick={() => choosePlan("silver")}
+            onClick={() => choosePlan("business")}
           >
             Get Started
           </button>
         </div>
 
-        {/* GOLD PLAN */}
+        {/* ENTERPRISE PLAN */}
         <div className={styles.card}>
-          <h3 className={styles.planName}>Gold</h3>
-          <p className={styles.price}>₹2000 <span>/ month</span></p>
-          <p className={styles.subText}>For high-volume visitor traffic.</p>
+          <h3 className={styles.planName}>Enterprise</h3>
+          <p className={styles.price}>Custom Pricing</p>
+          <p className={styles.subText}>
+            Fully customizable to meet your business requirements.
+          </p>
 
           <ul className={styles.features}>
-            <li>✔ 5000 Visitors / month</li>
-            <li>✔ 10,000 Conference Bookings</li>
-            <li>✔ Max 6 Conference Rooms</li>
+            <li>✔ Tailored Solutions</li>
+            <li>✔ Advanced Capabilities</li>
+            <li>✔ Dedicated Support</li>
           </ul>
 
-          <button 
+          <button
             className={styles.btn}
-            onClick={() => choosePlan("gold")}
+            onClick={() => choosePlan("enterprise")}
           >
-            Get Started
+            Contact Us
           </button>
         </div>
 
