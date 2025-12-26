@@ -146,6 +146,7 @@ export default function LoginPage() {
         <div className={styles.dropdownBox}>
           <h2>Contact Us</h2>
           <p>Email: admin@wheelbrand.in</p>
+          <p>Phone : 8647878785</p>
           <p>We are happy to support you.</p>
 
           <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
