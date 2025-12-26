@@ -3,10 +3,9 @@ html,
 body {
   height: 100%;
   margin: 0;
-  overflow: hidden;                 /* 🚫 No scrolling anywhere */
-  overscroll-behavior: none;        /* 🚫 Prevent bounce scroll on mobile */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
-
 
 /* ================= MAIN CONTAINER ================= */
 .container {
@@ -14,10 +13,9 @@ body {
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: Arial, sans-serif;
   color: white;
-  overflow: hidden;                 /* extra safety */
+  overflow: hidden;
   position: relative;
 }
-
 
 /* ================= HEADER ================= */
 .header {
@@ -25,6 +23,7 @@ body {
   padding: 24px 60px;
 }
 
+/* LEFT BRAND SECTION */
 .brandSection {
   display: flex;
   flex-direction: column;
@@ -45,14 +44,16 @@ body {
   object-fit: contain;
 }
 
-
-/* ================= NAV ================= */
+/* ================= NAV (RIGHT) ================= */
 .nav {
   position: absolute;
   top: 30px;
   right: 60px;
+
   display: flex;
   gap: 35px;
+
+  position: relative; /* IMPORTANT ➜ anchors dropdown */
 }
 
 .nav button {
@@ -68,13 +69,13 @@ body {
   opacity: 0.7;
 }
 
-
-/* ================= DROPDOWN (Plans / About / Contact) ================= */
+/* ================= DROPDOWN ================= */
 .dropdownBox {
   position: absolute;
-  top: 100px;
-  right: 120px;
-  background: rgba(255,255,255,0.95);   /* Slight transparency */
+  top: 45px;     /* ❤️ Appears RIGHT BELOW nav buttons */
+  right: 0;
+
+  background: rgba(255,255,255,0.95);
   color: #222;
   padding: 28px 26px 24px;
   width: 700px;
@@ -82,13 +83,12 @@ body {
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   z-index: 20;
 
-  max-height: 60vh;                   /* in case content grows */
-  overflow-y: auto;                   /* scroll only inside box if needed */
+  max-height: 60vh;
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-
-/* ================= PLAN CARDS ================= */
+/* PLAN CARDS */
 .planContainer {
   display: flex;
   justify-content: center;
@@ -126,8 +126,7 @@ body {
   margin-bottom: 6px;
 }
 
-
-/* ================= CLOSE BUTTON ================= */
+/* CLOSE BUTTON */
 .closeBtn {
   display: block;
   margin: 22px auto 0;
@@ -143,7 +142,6 @@ body {
 .closeBtn:hover {
   background: #5c00c7;
 }
-
 
 /* ================= LOGIN CARD ================= */
 .loginWrapper {
@@ -168,8 +166,7 @@ body {
   color: #4b008f;
 }
 
-
-/* ================= INPUT ================= */
+/* INPUTS */
 .inputGroup {
   margin-bottom: 16px;
 }
@@ -194,8 +191,7 @@ body {
   outline: none;
 }
 
-
-/* ================= LOGIN BUTTON ================= */
+/* LOGIN BUTTON */
 .loginBtn {
   width: 100%;
   padding: 13px;
@@ -212,8 +208,7 @@ body {
   background: #5c00c7;
 }
 
-
-/* ================= LINKS ================= */
+/* LINKS */
 .extraLinks {
   margin-top: 14px;
   text-align: center;
