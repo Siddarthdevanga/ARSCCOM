@@ -79,7 +79,7 @@ export default function ConferenceDashboard() {
       map[dep]++;
     });
 
-    return Object.entries(map); // [ ["HR",5], ["IT",2] ]
+    return Object.entries(map); 
   }, [bookings]);
 
   if (loading || !company || !stats) return null;
@@ -88,6 +88,7 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
+      
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div>
@@ -140,13 +141,15 @@ export default function ConferenceDashboard() {
           <span>Conference Rooms</span>
           <b>{stats.rooms}</b>
         </div>
+
         <div className={styles.statCard}>
           <span>Today’s Bookings</span>
           <b>{stats.todayBookings}</b>
         </div>
+
         <div className={styles.statCard}>
-          <span>Total Bookings</span>
-          <b>{stats.totalBookings}</b>
+          <span>Departments Using Rooms</span>
+          <b>{departmentStats.length}</b>
         </div>
       </div>
 
