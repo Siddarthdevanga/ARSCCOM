@@ -66,7 +66,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
       [company.id]
     );
 
-    res.json(Array.isArray(rooms) ? rooms : []);
+    res.json(rooms || []);
   } catch (err) {
     console.error("[PUBLIC][ROOMS]", err);
     res.json([]);
@@ -74,7 +74,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   GET BOOKINGS (DAY WISE FOR ROOM)
+   GET BOOKINGS
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
@@ -101,7 +101,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
       [company.id, roomId, date]
     );
 
-    res.json(Array.isArray(bookings) ? bookings : []);
+    res.json(bookings || []);
   } catch (err) {
     console.error("[PUBLIC][BOOKINGS]", err);
     res.json([]);
@@ -140,16 +140,15 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       [company.id, email, otp]
     );
 
-    await sendEmail({
-      to: email,
-      subject: `OTP for Conference Booking – ${company.name}`,
-      html: `
-        <h3>Your OTP</h3>
-        <h1>${otp}</h1>
-        <p>Valid for 10 minutes.</p>
-        ${emailFooter}
-      `
-    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: `OTP for Conference Booking – ${company.name}`,
+        html: `<h3>Your OTP</h3><h1>${otp}</h1><p>Valid for 10 minutes.</p>${emailFooter}`
+      });
+    } catch (mailErr) {
+      console.error("EMAIL SEND FAILED:", mailErr);
+    }
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
@@ -188,10 +187,9 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
     if (!row)
       return res.status(401).json({ message: "Invalid or expired OTP" });
 
-    await db.query(
-      `UPDATE public_booking_otp SET verified=1 WHERE id=?`,
-      [row.id]
-    );
+    await db.query(`UPDATE public_booking_otp SET verified=1 WHERE id=?`, [
+      row.id
+    ]);
 
     res.json({ message: "OTP verified successfully" });
   } catch (err) {
@@ -230,7 +228,8 @@ router.post("/company/:slug/book", async (req, res) => {
       `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
-    if (!company) return res.status(404).json({ message: "Invalid booking link" });
+    if (!company)
+      return res.status(404).json({ message: "Invalid booking link" });
 
     const [[verified]] = await db.query(
       `SELECT id FROM public_booking_otp
@@ -259,8 +258,7 @@ router.post("/company/:slug/book", async (req, res) => {
 
     await db.query(
       `INSERT INTO conference_bookings
-       (company_id,room_id,booked_by,department,purpose,
-        booking_date,start_time,end_time,status)
+       (company_id,room_id,booked_by,department,purpose,booking_date,start_time,end_time,status)
        VALUES (?,?,?,?,?,?,?,?, 'BOOKED')`,
       [
         company.id,
@@ -274,27 +272,28 @@ router.post("/company/:slug/book", async (req, res) => {
       ]
     );
 
-    await sendEmail({
-      to: email,
-      subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
-      html: `
-        <h2 style="color:#3c007a">${company.name}</h2>
-        ${company.logo_url ? `<img src="${company.logo_url}" height="60"/>` : ""}
-        <h3>Conference Room Booking Confirmed</h3>
-
-        <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
-          <tr><td><b>Date</b></td><td>: ${booking_date}</td></tr>
-          <tr><td><b>Time</b></td><td>: ${prettyTime(start_time)} – ${prettyTime(end_time)}</td></tr>
-          <tr><td><b>Department</b></td><td>: ${department}</td></tr>
-          <tr><td><b>Purpose</b></td><td>: ${purpose || "-"}</td></tr>
-        </table>
-        ${emailFooter}
-      `
-    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
+        html: `
+          <h2 style="color:#3c007a">${company.name}</h2>
+          <h3>Conference Room Booking Confirmed</h3>
+          <table style="padding:10px;font-size:15px">
+            <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+            <tr><td><b>Date</b></td><td>: ${booking_date}</td></tr>
+            <tr><td><b>Time</b></td><td>: ${prettyTime(start_time)} – ${prettyTime(end_time)}</td></tr>
+            <tr><td><b>Department</b></td><td>: ${department}</td></tr>
+            <tr><td><b>Purpose</b></td><td>: ${purpose || "-"}</td></tr>
+          </table>
+          ${emailFooter}
+        `
+      });
+    } catch (mailErr) {
+      console.error("BOOKING EMAIL FAILED:", mailErr);
+    }
 
     res.json({ message: "Booking confirmed successfully" });
-
   } catch (err) {
     console.error("[PUBLIC][BOOK]", err);
     res.status(500).json({ message: "Server error" });
@@ -367,29 +366,31 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
       [booking.room_id]
     );
 
-    await sendEmail({
-      to: userEmail,
-      subject: `Booking Updated – ${room.room_name} | ${company.name}`,
-      html: `
-        <h2 style="color:#3c007a">${company.name}</h2>
-        <h3>Conference Booking Rescheduled</h3>
-
-        <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
-          <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
-          <tr><td><b>Old Time</b></td>
-            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
-          <tr><td><b>New Time</b></td>
-            <td style="color:#007bff">
-              : ${prettyTime(start_time)} – ${prettyTime(end_time)}
-            </td></tr>
-        </table>
-        ${emailFooter}
-      `
-    });
+    try {
+      await sendEmail({
+        to: userEmail,
+        subject: `Booking Updated – ${room.room_name} | ${company.name}`,
+        html: `
+          <h2 style="color:#3c007a">${company.name}</h2>
+          <h3>Conference Booking Rescheduled</h3>
+          <table style="padding:10px;font-size:15px">
+            <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+            <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+            <tr><td><b>Old Time</b></td>
+              <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+            <tr><td><b>New Time</b></td>
+              <td style="color:#007bff">
+                : ${prettyTime(start_time)} – ${prettyTime(end_time)}
+              </td></tr>
+          </table>
+          ${emailFooter}
+        `
+      });
+    } catch (mailErr) {
+      console.error("EDIT EMAIL FAILED:", mailErr);
+    }
 
     res.json({ message: "Booking updated successfully" });
-
   } catch (err) {
     console.error("[PUBLIC][UPDATE BOOKING]", err);
     res.status(500).json({ message: "Server Error" });
@@ -437,29 +438,30 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       [booking.room_id]
     );
 
-    await sendEmail({
-      to: email,
-      subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
-      html: `
-        <h2 style="color:#3c007a">${company.name}</h2>
-        <h3>Conference Booking Cancelled</h3>
-
-        <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
-          <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
-          <tr><td><b>Time</b></td>
-            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
-        </table>
-
-        <p style="color:red;font-weight:bold">
-          ❌ The slot is now released and available for booking.
-        </p>
-        ${emailFooter}
-      `
-    });
+    try {
+      await sendEmail({
+        to: email,
+        subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
+        html: `
+          <h2 style="color:#3c007a">${company.name}</h2>
+          <h3>Conference Booking Cancelled</h3>
+          <table style="padding:10px;font-size:15px">
+            <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+            <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+            <tr><td><b>Time</b></td>
+              <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+          </table>
+          <p style="color:red;font-weight:bold">
+            ❌ The slot is now released and available for booking.
+          </p>
+          ${emailFooter}
+        `
+      });
+    } catch (mailErr) {
+      console.error("CANCEL EMAIL FAILED:", mailErr);
+    }
 
     res.json({ message: "Booking cancelled successfully" });
-
   } catch (err) {
     console.error("[PUBLIC][CANCEL BOOKING]", err);
     res.status(500).json({ message: "Server Error" });
