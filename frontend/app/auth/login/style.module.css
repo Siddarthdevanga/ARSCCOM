@@ -1,168 +1,112 @@
-html,
-body {
-  height: 100%;
-  overflow: hidden;
-}
-
-/* ================= CONTAINER ================= */
-.container {
-  height: 100vh;
+/* ===================== PAGE ===================== */
+.page {
+  min-height: 100vh;
+  width: 100%;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* ===================== MAIN CONTAINER ===================== */
+.mainContainer {
+  width: 90%;
+  max-width: 1250px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 40px;
+}
+
+/* ===================== LEFT PANEL ===================== */
+.leftSection {
   color: white;
+  text-align: center;
 }
 
-/* ================= HEADER ================= */
-.header {
-  position: relative;
-  padding: 24px 60px;
-}
-
-.brandSection {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.logoText {
-  font-size: 26px;
-  font-weight: bold;
+.leftSection h1 {
   letter-spacing: 2px;
-  margin-bottom: 18px;
+  font-size: 34px;
+  margin-bottom: 10px;
 }
 
-.brandLogo {
+/* ===================== LOGIN CARD ===================== */
+.loginCard {
   width: 480px;
-  max-width: 100%;
-  height: auto;
+  background: rgba(255, 255, 255, 0.98);   /* WHITE + subtle transparency */
+  border-radius: 25px;
+  padding: 35px;
+  box-shadow: 0px 25px 70px rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
 }
 
-/* ================= NAV ================= */
-.nav {
-  position: absolute;
-  top: 30px;
-  right: 60px;
-  display: flex;
-  gap: 35px;
+/* ===================== HEADING ===================== */
+.loginCard h2 {
+  text-align: center;
+  margin-bottom: 25px;
+  color: #1c1c1c;
+  letter-spacing: 0.5px;
+  font-weight: 800;
 }
 
-.nav button {
-  background: none;
+/* ===================== LABELS ===================== */
+.loginCard label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #222;
+}
+
+/* ===================== INPUT BOX ===================== */
+.loginCard input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #cfcfcf;
+  outline: none;
+  font-size: 14px;
+  background: #ffffff;
+  color: #000;
+}
+
+.loginCard input:focus {
+  border: 1.5px solid #7b00ff;
+}
+
+/* ===================== BUTTON ===================== */
+.loginButton {
+  width: 100%;
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 10px;
   border: none;
+  background: linear-gradient(135deg, #5500ff, #9a00ff);
   color: white;
   font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
 }
 
-.nav button:hover {
-  opacity: 0.7;
+.loginButton:hover {
+  transform: scale(1.02);
+  transition: 0.2s ease-in-out;
 }
 
-/* ================= DROPDOWN ================= */
-.dropdownBox {
-  position: absolute;
-  top: 78px;
-  right: 60px;
-
-  width: 50vw;
-  min-width: 520px;
-  max-width: 780px;
-  min-height: 220px;
-
-  background: rgba(255,255,255,0.18);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  border-radius: 18px;
-  padding: 26px;
-  border: 1px solid rgba(255,255,255,.35);
-  box-shadow: 0 25px 60px rgba(0,0,0,.35);
-  z-index: 100;
-}
-
-.dropdownBox h2 {
-  margin-bottom: 10px;
-  color: white;
-}
-
-/* PLAN CONTAINER */
-.planContainer {
-  display: flex;
-  gap: 18px;
-}
-
-.planCard {
-  flex: 1;
-  background: rgba(255,255,255,0.25);
-  padding: 12px;
-  border-radius: 14px;
-  text-align: center;
-  color: white;
-  border: 1px solid rgba(255,255,255,.4);
-}
-
-.planCard ul {
-  list-style: none;
-  padding: 0;
-}
-
-.planCard li {
-  font-size: 13px;
-}
-
-/* CLOSE BUTTON */
-.closeBtn {
-  margin-top: 14px;
-  padding: 10px 26px;
-  border-radius: 999px;
-  border: none;
-  background: linear-gradient(135deg,#7a00ff,#5c00c8);
-  color: white;
-  cursor: pointer;
-}
-
-/* ================= LOGIN CARD ================= */
-.loginWrapper {
-  position: absolute;
-  top: 110px;
-  right: 100px;
-}
-
-.loginCard {
-  width: 420px;
-  background: white;
-  color: #333;
-  padding: 36px 38px;
-  border-radius: 20px;
-  box-shadow: 0 16px 36px rgba(0,0,0,0.28);
-}
-
-.loginCard h4 {
-  text-align: center;
-  color: #4b008f;
-}
-
-.inputGroup {
-  margin-bottom: 16px;
-}
-
-.inputGroup input {
-  width: 100%;
-  padding: 11px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-}
-
-.loginBtn {
-  width: 100%;
-  padding: 13px;
-  border-radius: 10px;
-  border: none;
-  background: #7a00ff;
-  color: white;
-}
-
+/* ===================== EXTRA LINKS ===================== */
 .extraLinks {
   text-align: center;
-  margin-top: 14px;
+  margin-top: 12px;
+}
+
+.extraLinks a {
+  color: #6b00ff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.extraLinks a:hover {
+  text-decoration: underline;
 }
