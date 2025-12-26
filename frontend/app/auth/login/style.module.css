@@ -1,11 +1,25 @@
+/* ================= DISABLE PAGE SCROLL ================= */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;                 /* 🚫 No scrolling anywhere */
+  overscroll-behavior: none;        /* 🚫 Prevent bounce scroll on mobile */
+}
+
+
+/* ================= MAIN CONTAINER ================= */
 .container {
   height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: Arial, sans-serif;
   color: white;
-  overflow: hidden;
+  overflow: hidden;                 /* extra safety */
+  position: relative;
 }
 
+
+/* ================= HEADER ================= */
 .header {
   position: relative;
   padding: 24px 60px;
@@ -31,6 +45,8 @@
   object-fit: contain;
 }
 
+
+/* ================= NAV ================= */
 .nav {
   position: absolute;
   top: 30px;
@@ -52,19 +68,27 @@
   opacity: 0.7;
 }
 
+
+/* ================= DROPDOWN (Plans / About / Contact) ================= */
 .dropdownBox {
   position: absolute;
   top: 100px;
   right: 120px;
-  background: white;
+  background: rgba(255,255,255,0.95);   /* Slight transparency */
   color: #222;
   padding: 28px 26px 24px;
   width: 700px;
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   z-index: 20;
+
+  max-height: 60vh;                   /* in case content grows */
+  overflow-y: auto;                   /* scroll only inside box if needed */
+  -webkit-overflow-scrolling: touch;
 }
 
+
+/* ================= PLAN CARDS ================= */
 .planContainer {
   display: flex;
   justify-content: center;
@@ -102,6 +126,8 @@
   margin-bottom: 6px;
 }
 
+
+/* ================= CLOSE BUTTON ================= */
 .closeBtn {
   display: block;
   margin: 22px auto 0;
@@ -118,6 +144,8 @@
   background: #5c00c7;
 }
 
+
+/* ================= LOGIN CARD ================= */
 .loginWrapper {
   position: absolute;
   top: 100px;
@@ -140,6 +168,8 @@
   color: #4b008f;
 }
 
+
+/* ================= INPUT ================= */
 .inputGroup {
   margin-bottom: 16px;
 }
@@ -164,6 +194,8 @@
   outline: none;
 }
 
+
+/* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
   padding: 13px;
@@ -180,6 +212,8 @@
   background: #5c00c7;
 }
 
+
+/* ================= LINKS ================= */
 .extraLinks {
   margin-top: 14px;
   text-align: center;
