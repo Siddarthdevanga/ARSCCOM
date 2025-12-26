@@ -10,7 +10,7 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
-   DASHBOARD STATS
+   DASHBOARD STATS + DEPARTMENT STATS
 ====================================================== */
 router.get("/dashboard", async (req, res) => {
   try {
@@ -25,16 +25,30 @@ router.get("/dashboard", async (req, res) => {
            FROM conference_bookings
           WHERE company_id = ?
             AND booking_date = CURDATE()
-            AND status = 'BOOKED') AS todayBookings,
-        (SELECT COUNT(*)
-           FROM conference_bookings
-          WHERE company_id = ?
-            AND status = 'CANCELLED') AS cancelled
+            AND status = 'BOOKED') AS todayBookings
       `,
-      [companyId, companyId, companyId, companyId]
+      [companyId, companyId, companyId]
     );
 
-    res.json(stats);
+    /* ================= DEPARTMENT WISE BOOKINGS ================= */
+    const [departments] = await db.query(
+      `
+      SELECT 
+        department,
+        COUNT(*) AS total
+      FROM conference_bookings
+      WHERE company_id = ?
+      GROUP BY department
+      ORDER BY total DESC
+      `,
+      [companyId]
+    );
+
+    res.json({
+      ...stats,
+      departments
+    });
+
   } catch (err) {
     console.error("[ADMIN][DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard stats" });
@@ -70,7 +84,7 @@ router.get("/rooms", async (req, res) => {
 });
 
 /**
- * 🚫 DISABLE ROOM CREATION COMPLETELY
+ * 🚫 DISABLE ROOM CREATION
  */
 router.post("/rooms", async (req, res) => {
   return res.status(403).json({
@@ -87,9 +101,7 @@ router.put("/rooms/:id", async (req, res) => {
     const roomId = Number(req.params.id);
     const { room_name, room_number } = req.body;
 
-    if (!roomId) {
-      return res.status(400).json({ message: "Invalid room ID" });
-    }
+    if (!roomId) return res.status(400).json({ message: "Invalid room ID" });
 
     if (!room_name && !room_number) {
       return res.status(400).json({
@@ -154,9 +166,6 @@ router.put("/rooms/:id", async (req, res) => {
    BOOKINGS
 ====================================================== */
 
-/**
- * GET bookings
- */
 router.get("/bookings", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -202,9 +211,6 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-/**
- * CREATE booking
- */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
@@ -322,9 +328,6 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
-/**
- * CANCEL booking
- */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const { companyId } = req.user;
