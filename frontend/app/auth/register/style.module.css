@@ -10,9 +10,10 @@ html, body {
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 110px;
+  align-items: center;     /* Center card nicely */
+  padding-top: 90px;       /* Space for header */
   font-family: "Segoe UI", Arial, sans-serif;
+  box-sizing: border-box;
 }
 
 /* ================= HEADER ================= */
@@ -55,7 +56,7 @@ html, body {
   border-radius: 26px;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
 
-  max-height: 78vh;               /* Allow only card to scroll */
+  max-height: calc(100vh - 160px);  /* Keeps card inside screen */
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -169,7 +170,7 @@ html, body {
 @media (max-width: 960px) {
   .card {
     width: 92%;
-    max-height: 80vh;
+    max-height: calc(100vh - 120px);
   }
 
   .row3,
