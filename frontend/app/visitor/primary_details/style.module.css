@@ -6,7 +6,7 @@
   display: flex;
   flex-direction: column;
 
-  overflow: hidden;          /* ⛔ stop page scroll */
+  overflow: hidden;          /* ⛔ Stop page scroll */
 }
 
 /* ================= HEADER ================= */
@@ -26,7 +26,6 @@
   white-space: nowrap;
 }
 
-/* LOGO */
 .logo {
   height: 36px;
   width: auto;
@@ -41,8 +40,7 @@
   align-items: center;
   padding: 32px 20px;
 
-  overflow-y: auto;              /* ✅ scroll here */
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden; /* nothing scrolls here */
 }
 
 /* ================= CARD ================= */
@@ -53,9 +51,17 @@
   border-radius: 28px;
   box-shadow: 0 30px 64px rgba(0, 0, 0, 0.35);
 
-  max-height: calc(100vh - 160px); /* keeps inside screen */
-  overflow-y: auto;                 /* ✅ card scroll if needed */
+  max-height: calc(100vh - 160px); /* stays inside screen */
+
+  overflow-y: auto;                 /* ✅ scroll ONLY IF needed */
   -webkit-overflow-scrolling: touch;
+
+  scrollbar-width: none;            /* Firefox hide scrollbar */
+}
+
+.card::-webkit-scrollbar {
+  width: 0;
+  height: 0;                        /* Chrome / Safari / Edge hide scrollbar */
 }
 
 /* ================= TEXT ================= */
@@ -110,7 +116,7 @@
   box-shadow: 0 0 0 2px rgba(122, 0, 255, 0.15);
 }
 
-/* ================= PHONE + EMAIL ROW ================= */
+/* ================= ROW ================= */
 .row {
   display: flex;
   gap: 18px;
