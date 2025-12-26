@@ -1,3 +1,18 @@
+/* ================= GLOBAL – ALLOW SCROLL BUT HIDE SCROLLBAR ================= */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;                /* scrolling works */
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;           /* Firefox hide scrollbar */
+}
+
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;                       /* Chrome / Safari / Edge hide scrollbar */
+}
+
 /* ================= PAGE ================= */
 .page {
   min-height: 100vh;
