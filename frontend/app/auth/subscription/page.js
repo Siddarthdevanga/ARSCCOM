@@ -12,7 +12,7 @@ export default function SubscriptionPage() {
 
       {/* HEADER */}
       <header className={styles.header}>
-        <div className={styles.logo}>ARSCCOM</div>
+        <div className={styles.logo}>PROMEET</div>
       </header>
 
       {/* TITLE */}
