@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
@@ -15,7 +15,6 @@ export default function ConferenceDashboard() {
 
   const [loading, setLoading] = useState(true);
 
-  // edit state
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
@@ -30,8 +29,7 @@ export default function ConferenceDashboard() {
 
       setStats(statsRes);
       setRooms(roomsRes);
-      setBookings(bookingsRes.slice(0, 5));
-
+      setBookings(bookingsRes);
       setLoading(false);
     } catch {
       router.replace("/auth/login");
@@ -70,6 +68,19 @@ export default function ConferenceDashboard() {
       alert(err.message || "Failed to rename room");
     }
   };
+
+  /* ================= DEPARTMENT WISE BOOKINGS ================= */
+  const departmentStats = useMemo(() => {
+    const map = {};
+
+    bookings.forEach((b) => {
+      const dep = b.department || "Unknown";
+      if (!map[dep]) map[dep] = 0;
+      map[dep]++;
+    });
+
+    return Object.entries(map); // [ ["HR",5], ["IT",2] ]
+  }, [bookings]);
 
   if (loading || !company || !stats) return null;
 
@@ -139,6 +150,23 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
+      {/* ================= DEPARTMENT WISE BOOKINGS ================= */}
+      <div className={styles.section}>
+        <h3>Department Wise Bookings</h3>
+
+        {departmentStats.length === 0 ? (
+          <p>No bookings yet</p>
+        ) : (
+          <ul className={styles.roomList}>
+            {departmentStats.map(([dep, count]) => (
+              <li key={dep}>
+                <b>{dep}</b> — {count} bookings
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* ================= ROOMS ================= */}
       <div className={styles.section}>
         <h3>Conference Rooms</h3>
@@ -146,7 +174,7 @@ export default function ConferenceDashboard() {
         <ul className={styles.roomList}>
           {rooms.map((r) => (
             <li key={r.id}>
-              #{r.room_number} —{" "}
+              #{r.room_number} —
               {editingRoomId === r.id ? (
                 <>
                   <input
@@ -187,7 +215,7 @@ export default function ConferenceDashboard() {
 
         {bookings.length === 0 && <p>No bookings yet</p>}
 
-        {bookings.map((b) => (
+        {bookings.slice(0, 5).map((b) => (
           <div key={b.id} className={styles.bookingRow}>
             <div>
               <b>{b.room_name}</b> (#{b.room_number})
