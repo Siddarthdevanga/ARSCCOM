@@ -1,11 +1,18 @@
+/* ===== STOP PAGE SCROLL COMPLETELY ===== */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;           /* 🚫 disables scrolling */
+  font-family: Arial, sans-serif;
+}
+
 /* BACKGROUND */
 .container {
   height: 100vh;
   width: 100%;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  font-family: Arial, sans-serif;
   color: white;
-  overflow: hidden;
+  overflow: hidden;           /* ensures no internal scroll */
 }
 
 /* HEADER */
@@ -18,7 +25,7 @@
 
 /* LEFT: COMPANY NAME */
 .logoText {
-  font-size: 34px;          /* ⬆ Increased */
+  font-size: 34px;
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -39,8 +46,6 @@
   border-radius: 0;
   background: none;
 }
-
-
 
 /* LOGOUT BUTTON */
 .logoutBtn {
