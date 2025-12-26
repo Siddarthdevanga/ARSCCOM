@@ -15,7 +15,7 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
 });
 
 /* ================= AM/PM FORMAT ================= */
-const toAmPm = (time24) => {
+const toAmPm = (time24 = "") => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
@@ -44,7 +44,6 @@ export default function PublicConferenceBooking() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
-  /* ===== Edit states ===== */
   const [editingId, setEditingId] = useState(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
@@ -77,9 +76,7 @@ export default function PublicConferenceBooking() {
       return;
     }
 
-    fetch(
-      `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
-    )
+    fetch(`${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`)
       .then(r => r.ok ? r.json() : [])
       .then(d => setBookings(Array.isArray(d) ? d : []));
   };
@@ -128,6 +125,7 @@ export default function PublicConferenceBooking() {
 
       if (!r.ok) throw new Error();
       setOtpSent(true);
+      setSuccess("OTP sent successfully");
     } catch {
       setError("Failed to send OTP");
     } finally {
@@ -149,6 +147,7 @@ export default function PublicConferenceBooking() {
 
       if (!r.ok) throw new Error();
       setOtpVerified(true);
+      setSuccess("OTP verified successfully");
     } catch {
       setError("Invalid OTP");
     }
@@ -196,7 +195,7 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= SAVE EDIT (with email) ================= */
+  /* ================= SAVE EDIT (email included) ================= */
   const saveEdit = async (id) => {
     if (!editStart || !editEnd) return;
 
@@ -230,7 +229,7 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= CANCEL BOOKING (with email) ================= */
+  /* ================= CANCEL BOOKING (email included) ================= */
   const cancelBooking = async (id) => {
     if (!confirm("Cancel this booking?")) return;
 
@@ -245,6 +244,7 @@ export default function PublicConferenceBooking() {
       );
 
       if (!r.ok) throw new Error();
+      setSuccess("Booking cancelled successfully");
       loadBookings();
     } catch {
       alert("Failed to cancel");
@@ -273,7 +273,9 @@ export default function PublicConferenceBooking() {
       {!otpVerified ? (
         <div className={styles.card}>
           <h2>Email Verification</h2>
+
           {error && <p className={styles.error}>{error}</p>}
+          {success && <p className={styles.success}>{success}</p>}
 
           <input
             placeholder="Enter email"
@@ -340,7 +342,7 @@ export default function PublicConferenceBooking() {
               onChange={e => setEndTime(e.target.value)}
             >
               <option value="">Select</option>
-              {TIME_OPTIONS.filter(t => t > startTime).map(t => (
+              {availableEndTimes.map(t => (
                 <option key={t} value={t}>
                   {toAmPm(t)}
                 </option>
