@@ -13,10 +13,6 @@ export default function ConferenceDashboard() {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  const [roomName, setRoomName] = useState("");
-  const [roomNumber, setRoomNumber] = useState("");
-  const [error, setError] = useState("");
-
   const [loading, setLoading] = useState(true);
 
   // edit state
@@ -54,30 +50,6 @@ export default function ConferenceDashboard() {
     setCompany(JSON.parse(storedCompany));
     loadDashboard();
   }, []);
-
-  /* ================= CREATE ROOM ================= */
-  const createRoom = async () => {
-    if (!roomName || !roomNumber) {
-      return setError("Room name and number required");
-    }
-
-    try {
-      await apiFetch("/api/conference/rooms", {
-        method: "POST",
-        body: JSON.stringify({
-          room_name: roomName,
-          room_number: roomNumber
-        })
-      });
-
-      setRoomName("");
-      setRoomNumber("");
-      setError("");
-      loadDashboard();
-    } catch (err) {
-      setError(err.message);
-    }
-  };
 
   /* ================= SAVE RENAMED ROOM ================= */
   const saveRoomName = async (roomId) => {
@@ -170,25 +142,6 @@ export default function ConferenceDashboard() {
       {/* ================= ROOMS ================= */}
       <div className={styles.section}>
         <h3>Conference Rooms</h3>
-
-        <div className={styles.roomForm}>
-          <input
-            placeholder="Room Name"
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-          />
-
-          <input
-            type="number"
-            placeholder="Room Number"
-            value={roomNumber}
-            onChange={(e) => setRoomNumber(e.target.value)}
-          />
-
-          <button onClick={createRoom}>Add Room</button>
-        </div>
-
-        {error && <p className={styles.error}>{error}</p>}
 
         <ul className={styles.roomList}>
           {rooms.map((r) => (
