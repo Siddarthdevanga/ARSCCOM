@@ -1,3 +1,13 @@
+/* ================= DISABLE PAGE SCROLL ================= */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden; /* ⛔ No scrolling */
+  font-family: "Inter", sans-serif;
+}
+
+/* ================= PAGE ================= */
 .page {
   height: 100vh;
   background: linear-gradient(135deg, #4c1d95, #6d28d9);
@@ -5,12 +15,12 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  font-family: "Inter", sans-serif;
 }
 
-/* WHITE PASS CONTAINER */
+/* ================= PASS CARD ================= */
 .passCard {
   width: 720px;
+  max-width: calc(100% - 24px);
   background: #ffffff;
   border-radius: 16px;
   padding: 24px 28px;
@@ -18,9 +28,13 @@
   flex-direction: column;
   gap: 20px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+
+  /* ensure card never overflows viewport */
+  max-height: calc(100vh - 40px);
+  overflow: hidden;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
 .header {
   display: flex;
   justify-content: space-between;
@@ -35,10 +49,11 @@
 
 .logo {
   height: 34px;
+  max-width: 140px;
   object-fit: contain;
 }
 
-/* BODY */
+/* ================= BODY ================= */
 .body {
   display: flex;
   justify-content: space-between;
@@ -75,7 +90,7 @@
   color: #6b7280;
 }
 
-/* PHOTO */
+/* ================= PHOTO ================= */
 .photoBox {
   width: 150px;
   height: 180px;
@@ -98,14 +113,13 @@
   color: #9ca3af;
 }
 
-/* FOOTER → RIGHT BUTTONS */
+/* ================= FOOTER BUTTONS ================= */
 .footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
 }
 
-/* BUTTONS */
 .primaryBtn {
   padding: 10px 24px;
   background: linear-gradient(135deg, #6d28d9, #4c1d95);
@@ -126,10 +140,22 @@
   cursor: pointer;
 }
 
-/* STATES */
+/* ================= STATE CARD ================= */
 .stateCard {
   background: white;
   padding: 30px;
   border-radius: 14px;
   font-weight: 500;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .body {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .photoBox {
+    margin: 0 auto;
+  }
 }
