@@ -30,6 +30,7 @@ export default function SubscriptionPage() {
           <ul className={styles.features}>
             <li>✔ 100 Visitor Bookings</li>
             <li>✔ 100 Conference Room Bookings</li>
+            <li>✔ Dedicated Support</li>
           </ul>
 
           <button
@@ -49,6 +50,7 @@ export default function SubscriptionPage() {
           <ul className={styles.features}>
             <li>✔ Unlimited Visitors</li>
             <li>✔ 1000 Conference Room Bookings</li>
+            <li>✔ Dedicated Support</li>
           </ul>
 
           <button
