@@ -45,15 +45,15 @@ body {
 }
 
 /* ================= NAV (RIGHT) ================= */
+/* DO NOT MOVE — BUTTONS STAY EXACTLY SAME */
 .nav {
   position: absolute;
   top: 30px;
   right: 60px;
-
   display: flex;
   gap: 35px;
 
-  position: relative; /* IMPORTANT ➜ anchors dropdown */
+  position: relative; /* still needed for dropdown anchor */
 }
 
 .nav button {
@@ -70,20 +70,25 @@ body {
 }
 
 /* ================= DROPDOWN ================= */
+/* Transparent white, half screen width, can overlap login */
 .dropdownBox {
   position: absolute;
-  top: 45px;     /* ❤️ Appears RIGHT BELOW nav buttons */
+  top: 55px;                 /* exactly below nav */
   right: 0;
 
-  background: rgba(255,255,255,0.95);
+  width: 50vw;               /* ⬅ half screen width */
+  min-width: 560px;
+
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(8px);
+
   color: #222;
   padding: 28px 26px 24px;
-  width: 700px;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-  z-index: 20;
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.35);
+  z-index: 30;
 
-  max-height: 60vh;
+  max-height: 65vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -94,15 +99,17 @@ body {
   justify-content: center;
   gap: 18px;
   margin-top: 10px;
+  flex-wrap: wrap;
 }
 
 .planCard {
-  background: #f5f5f5;
+  background: rgba(255,255,255,0.9);
   padding: 18px 14px;
-  border-radius: 10px;
-  width: 180px;
+  border-radius: 12px;
+  width: 190px;
   text-align: center;
   color: #3c007a;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
 }
 
 .planCard h3 {
@@ -134,7 +141,7 @@ body {
   background: #7a00ff;
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: 22px;
   font-size: 14px;
   cursor: pointer;
 }
