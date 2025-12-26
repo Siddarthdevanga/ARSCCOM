@@ -44,16 +44,16 @@ body {
   object-fit: contain;
 }
 
-/* ================= NAV (RIGHT) ================= */
-/* DO NOT MOVE — BUTTONS STAY EXACTLY SAME */
+/* ================= NAV (TOP RIGHT) ================= */
 .nav {
   position: absolute;
   top: 30px;
   right: 60px;
+
   display: flex;
   gap: 35px;
 
-  position: relative; /* still needed for dropdown anchor */
+  position: relative;         /* ❤️ anchors dropdown below buttons */
 }
 
 .nav button {
@@ -69,31 +69,30 @@ body {
   opacity: 0.7;
 }
 
-/* ================= DROPDOWN ================= */
-/* Transparent white, half screen width, can overlap login */
+/* ================= DROPDOWN PANEL ================= */
 .dropdownBox {
   position: absolute;
-  top: 55px;                 /* exactly below nav */
+  top: 55px;                  /* ❤️ appears RIGHT BELOW nav buttons */
   right: 0;
 
-  width: 50vw;               /* ⬅ half screen width */
+  width: 50vw;                /* Half screen width */
   min-width: 560px;
 
   background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 
   color: #222;
   padding: 28px 26px 24px;
   border-radius: 18px;
   box-shadow: 0 18px 40px rgba(0,0,0,0.35);
-  z-index: 30;
+  z-index: 50;
 
   max-height: 65vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* PLAN CARDS */
+/* ================= PLANS GRID ================= */
 .planContainer {
   display: flex;
   justify-content: center;
@@ -133,7 +132,7 @@ body {
   margin-bottom: 6px;
 }
 
-/* CLOSE BUTTON */
+/* ================= CLOSE BUTTON ================= */
 .closeBtn {
   display: block;
   margin: 22px auto 0;
@@ -173,7 +172,7 @@ body {
   color: #4b008f;
 }
 
-/* INPUTS */
+/* ================= INPUTS ================= */
 .inputGroup {
   margin-bottom: 16px;
 }
@@ -198,7 +197,7 @@ body {
   outline: none;
 }
 
-/* LOGIN BUTTON */
+/* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
   padding: 13px;
@@ -215,7 +214,7 @@ body {
   background: #5c00c7;
 }
 
-/* LINKS */
+/* ================= LINKS ================= */
 .extraLinks {
   margin-top: 14px;
   text-align: center;
