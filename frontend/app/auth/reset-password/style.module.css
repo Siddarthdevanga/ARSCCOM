@@ -1,13 +1,22 @@
+/* ======= STOP PAGE SCROLL COMPLETELY ======= */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;           /* 🚫 No scroll */
+  font-family: Arial, sans-serif;
+}
+
+/* ================= PAGE ================= */
 .page {
-  min-height: 100vh;
+  height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  font-family: Arial, sans-serif;
 }
 
+/* ================= BRAND ================= */
 .brand {
   position: absolute;
   top: 20px;
@@ -17,14 +26,19 @@
   font-weight: 900;
 }
 
+/* ================= CARD ================= */
 .card {
-  width: 620px;              /* ⬅ wider */
+  width: 620px;
   background: white;
-  padding: 28px 36px;        /* ⬅ shorter */
+  padding: 28px 36px;
   border-radius: 20px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+
+  max-height: calc(100vh - 140px);  /* stays inside screen always */
+  overflow: hidden;                  /* no internal scroll either */
 }
 
+/* ================= TEXT ================= */
 .title {
   font-size: 26px;
   font-weight: 800;
@@ -46,6 +60,7 @@
   display: block;
 }
 
+/* ================= INPUT ================= */
 .input {
   width: 100%;
   height: 42px;
@@ -61,7 +76,7 @@
   border-color: #7a00ff;
 }
 
-/* PASSWORD ROW */
+/* ================= PASSWORD ROW ================= */
 .row {
   display: flex;
   gap: 16px;
@@ -71,6 +86,7 @@
   flex: 1;
 }
 
+/* ================= BUTTON ================= */
 .button {
   margin-top: 10px;
   width: 100%;
@@ -88,6 +104,7 @@
   opacity: 0.6;
 }
 
+/* ================= ERROR ================= */
 .error {
   background: #fdecea;
   color: #b71c1c;
@@ -97,6 +114,7 @@
   margin-bottom: 12px;
 }
 
+/* ================= BACK ================= */
 .back {
   margin-top: 16px;
   text-align: center;
