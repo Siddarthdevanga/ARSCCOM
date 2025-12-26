@@ -125,12 +125,84 @@ router.post("/rooms", async (req, res) => {
   }
 });
 
+/**
+ * UPDATE (Rename / Renumber) ROOM
+ */
+router.put("/rooms/:id", async (req, res) => {
+  try {
+    const { companyId } = req.user;
+    const roomId = Number(req.params.id);
+    const { room_name, room_number } = req.body;
+
+    if (!roomId) {
+      return res.status(400).json({ message: "Invalid room ID" });
+    }
+
+    if (!room_name && !room_number) {
+      return res.status(400).json({
+        message: "Provide room_name or room_number to update"
+      });
+    }
+
+    const [[room]] = await db.query(
+      `
+      SELECT id
+      FROM conference_rooms
+      WHERE id = ? AND company_id = ?
+      LIMIT 1
+      `,
+      [roomId, companyId]
+    );
+
+    if (!room) {
+      return res
+        .status(404)
+        .json({ message: "Room not found or unauthorized" });
+    }
+
+    if (room_number) {
+      const [[exists]] = await db.query(
+        `
+        SELECT id FROM conference_rooms
+        WHERE company_id = ?
+        AND room_number = ?
+        AND id <> ?
+        LIMIT 1
+        `,
+        [companyId, room_number, roomId]
+      );
+
+      if (exists) {
+        return res.status(409).json({
+          message: "Room number already exists for your company"
+        });
+      }
+    }
+
+    await db.query(
+      `
+      UPDATE conference_rooms
+      SET 
+        room_name = COALESCE(?, room_name),
+        room_number = COALESCE(?, room_number)
+      WHERE id = ? AND company_id = ?
+      `,
+      [room_name?.trim() || null, room_number || null, roomId, companyId]
+    );
+
+    res.json({ message: "Room updated successfully" });
+  } catch (err) {
+    console.error("[ADMIN][UPDATE ROOM]", err);
+    res.status(500).json({ message: "Unable to update room" });
+  }
+});
+
 /* ======================================================
    BOOKINGS
 ====================================================== */
 
 /**
- * GET bookings (calendar-ready)
+ * GET bookings
  */
 router.get("/bookings", async (req, res) => {
   try {
@@ -178,7 +250,7 @@ router.get("/bookings", async (req, res) => {
 });
 
 /**
- * CREATE booking (ADMIN)
+ * CREATE booking
  */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
@@ -195,7 +267,6 @@ router.post("/bookings", async (req, res) => {
       end_time
     } = req.body;
 
-    /* ================= VALIDATION ================= */
     if (
       !room_id ||
       !booked_by ||
@@ -217,7 +288,6 @@ router.post("/bookings", async (req, res) => {
 
     await conn.beginTransaction();
 
-    /* ================= ROOM OWNERSHIP CHECK ================= */
     const [[room]] = await conn.query(
       `
       SELECT id
@@ -235,7 +305,6 @@ router.post("/bookings", async (req, res) => {
       });
     }
 
-    /* ================= TIME CONFLICT CHECK ================= */
     const [[conflict]] = await conn.query(
       `
       SELECT COUNT(*) AS cnt
@@ -257,7 +326,6 @@ router.post("/bookings", async (req, res) => {
       });
     }
 
-    /* ================= INSERT BOOKING ================= */
     await conn.query(
       `
       INSERT INTO conference_bookings
