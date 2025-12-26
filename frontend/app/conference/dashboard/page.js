@@ -18,6 +18,26 @@ export default function ConferenceDashboard() {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
+  /* ================= DATE FILTER ================= */
+  const [filterDay, setFilterDay] = useState("today");
+
+  const getDate = (offset) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toISOString().split("T")[0];
+  };
+
+  const today = getDate(0);
+  const yesterday = getDate(-1);
+  const tomorrow = getDate(1);
+
+  const selectedDate =
+    filterDay === "yesterday"
+      ? yesterday
+      : filterDay === "tomorrow"
+      ? tomorrow
+      : today;
+
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
@@ -69,18 +89,25 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= DEPARTMENT WISE BOOKINGS ================= */
+  /* ================= FILTERED BOOKINGS ================= */
+  const filteredBookings = useMemo(() => {
+    return bookings.filter(
+      (b) =>
+        b.booking_date?.split("T")[0] === selectedDate &&
+        b.status === "BOOKED"
+    );
+  }, [bookings, selectedDate]);
+
+  /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
-
-    bookings.forEach((b) => {
+    filteredBookings.forEach((b) => {
       const dep = b.department || "Unknown";
       if (!map[dep]) map[dep] = 0;
       map[dep]++;
     });
-
     return Object.entries(map);
-  }, [bookings]);
+  }, [filteredBookings]);
 
   if (loading || !company || !stats) return null;
 
@@ -115,7 +142,7 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC BOOK URL ================= */}
+      {/* ================= PUBLIC URL ================= */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -134,49 +161,14 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= STATS ================= */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span>Conference Rooms</span>
-          <b>{stats.rooms}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Today’s Bookings</span>
-          <b>{stats.todayBookings}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Departments Using Rooms</span>
-          <b>{departmentStats.length}</b>
-        </div>
-      </div>
-
-      {/* ================= DEPARTMENT WISE BOOKINGS ================= */}
-      <div className={styles.section}>
-        <h3>Department Wise Bookings</h3>
-
-        {departmentStats.length === 0 ? (
-          <p>No bookings yet</p>
-        ) : (
-          <ul className={styles.roomList}>
-            {departmentStats.map(([dep, count]) => (
-              <li key={dep}>
-                <b>{dep}</b> — {count} bookings
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* ================= ROOMS ================= */}
+      {/* ================= ROOM NAMES STRIP ================= */}
       <div className={styles.section}>
         <h3>Conference Rooms</h3>
 
         <ul className={styles.roomList}>
           {rooms.map((r) => (
             <li key={r.id}>
-              #{r.room_number} —
+              #{r.room_number} —{" "}
               {editingRoomId === r.id ? (
                 <>
                   <input
@@ -211,13 +203,96 @@ export default function ConferenceDashboard() {
         </ul>
       </div>
 
+      {/* ================= DATE NAVIGATION ================= */}
+      <div className={styles.section}>
+        <h3>Bookings View</h3>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={() => setFilterDay("yesterday")}
+            style={{
+              background:
+                filterDay === "yesterday" ? "yellow" : "#ffffff",
+              color: "#000",
+              padding: "8px 18px",
+              borderRadius: 30,
+              border: "none"
+            }}
+          >
+            Yesterday
+          </button>
+
+          <button
+            onClick={() => setFilterDay("today")}
+            style={{
+              background: filterDay === "today" ? "yellow" : "#ffffff",
+              color: "#000",
+              padding: "8px 18px",
+              borderRadius: 30,
+              border: "none"
+            }}
+          >
+            Today
+          </button>
+
+          <button
+            onClick={() => setFilterDay("tomorrow")}
+            style={{
+              background:
+                filterDay === "tomorrow" ? "yellow" : "#ffffff",
+              color: "#000",
+              padding: "8px 18px",
+              borderRadius: 30,
+              border: "none"
+            }}
+          >
+            Tomorrow
+          </button>
+        </div>
+      </div>
+
+      {/* ================= STATS ================= */}
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <span>Conference Rooms</span>
+          <b>{stats.rooms}</b>
+        </div>
+
+        <div className={styles.statCard}>
+          <span>Bookings ({filterDay.toUpperCase()})</span>
+          <b>{filteredBookings.length}</b>
+        </div>
+
+        <div className={styles.statCard}>
+          <span>Departments Using Rooms</span>
+          <b>{departmentStats.length}</b>
+        </div>
+      </div>
+
+      {/* ================= DEPARTMENT WISE ================= */}
+      <div className={styles.section}>
+        <h3>Department Wise Bookings</h3>
+
+        {departmentStats.length === 0 ? (
+          <p>No bookings</p>
+        ) : (
+          <ul className={styles.roomList}>
+            {departmentStats.map(([dep, count]) => (
+              <li key={dep}>
+                <b>{dep}</b> — {count} bookings
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* ================= RECENT BOOKINGS ================= */}
       <div className={styles.section}>
-        <h3>Recent Bookings</h3>
+        <h3>Bookings List</h3>
 
-        {bookings.length === 0 && <p>No bookings yet</p>}
+        {filteredBookings.length === 0 && <p>No bookings</p>}
 
-        {bookings.slice(0, 5).map((b) => (
+        {filteredBookings.slice(0, 6).map((b) => (
           <div key={b.id} className={styles.bookingRow}>
             <div>
               <b>{b.room_name}</b> (#{b.room_number})
