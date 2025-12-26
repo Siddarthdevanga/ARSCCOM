@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [activeTab, setActiveTab] = useState(null);
 
   const handleLogin = async () => {
@@ -62,6 +61,7 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
+
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
@@ -85,7 +85,7 @@ export default function LoginPage() {
         </div>
       </header>
 
-      {/* DROPDOWNS */}
+      {/* ABOUT DROPDOWN */}
       {activeTab === "about" && (
         <div className={styles.dropdownBox}>
           <h2>About Our Platform</h2>
@@ -100,11 +100,14 @@ export default function LoginPage() {
         </div>
       )}
 
+      {/* PLANS DROPDOWN */}
       {activeTab === "plans" && (
         <div className={styles.dropdownBox}>
           <h2>Subscription Plans</h2>
 
           <div className={styles.planContainer}>
+
+            {/* FREE PLAN */}
             <div className={styles.planCard}>
               <h3>FREE</h3>
               <h2>Free Trial</h2>
@@ -113,8 +116,13 @@ export default function LoginPage() {
                 <li>✔ 100 Visitor Bookings</li>
                 <li>✔ 100 Conference Rooms</li>
               </ul>
+
+              <Link href="/auth/register">
+                <button className={styles.planBtn}>Enroll Now</button>
+              </Link>
             </div>
 
+            {/* BUSINESS PLAN */}
             <div className={styles.planCard}>
               <h3>BUSINESS</h3>
               <h2>₹500 / Month</h2>
@@ -123,8 +131,13 @@ export default function LoginPage() {
                 <li>✔ 1000 Room Bookings</li>
                 <li>✔ Dedicated Support</li>
               </ul>
+
+              <Link href="/auth/register">
+                <button className={styles.planBtn}>Enroll Now</button>
+              </Link>
             </div>
 
+            {/* ENTERPRISE PLAN */}
             <div className={styles.planCard}>
               <h3>ENTERPRISE</h3>
               <h2>Custom Pricing</h2>
@@ -133,6 +146,10 @@ export default function LoginPage() {
                 <li>✔ Advanced Security</li>
                 <li>✔ Dedicated Support</li>
               </ul>
+
+              <Link href="/auth/contact-us">
+                <button className={styles.planBtn}>Contact Us</button>
+              </Link>
             </div>
           </div>
 
@@ -142,6 +159,7 @@ export default function LoginPage() {
         </div>
       )}
 
+      {/* CONTACT DROPDOWN */}
       {activeTab === "contact" && (
         <div className={styles.dropdownBox}>
           <h2>Contact Us</h2>
