@@ -79,7 +79,7 @@ export default function ConferenceDashboard() {
       map[dep]++;
     });
 
-    return Object.entries(map); 
+    return Object.entries(map);
   }, [bookings]);
 
   if (loading || !company || !stats) return null;
@@ -88,7 +88,6 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
-      
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div>
