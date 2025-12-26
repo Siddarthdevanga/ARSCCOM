@@ -1,20 +1,15 @@
-/* ================= DISABLE PAGE SCROLL ================= */
 html,
 body {
   height: 100%;
-  margin: 0;
   overflow: hidden;
-  overscroll-behavior: none;
 }
 
-/* ================= MAIN CONTAINER ================= */
+/* ================= CONTAINER ================= */
 .container {
   height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: Arial, sans-serif;
   color: white;
-  overflow: hidden;
-  position: relative;
 }
 
 /* ================= HEADER ================= */
@@ -23,7 +18,6 @@ body {
   padding: 24px 60px;
 }
 
-/* LEFT BRAND SECTION */
 .brandSection {
   display: flex;
   flex-direction: column;
@@ -41,19 +35,15 @@ body {
   width: 480px;
   max-width: 100%;
   height: auto;
-  object-fit: contain;
 }
 
-/* ================= NAV (TOP RIGHT) ================= */
+/* ================= NAV ================= */
 .nav {
   position: absolute;
   top: 30px;
   right: 60px;
-
   display: flex;
   gap: 35px;
-
-  position: relative;         /* ❤️ anchors dropdown below buttons */
 }
 
 .nav button {
@@ -61,7 +51,6 @@ body {
   border: none;
   color: white;
   font-size: 15px;
-  font-weight: 500;
   cursor: pointer;
 }
 
@@ -69,57 +58,47 @@ body {
   opacity: 0.7;
 }
 
-/* ================= DROPDOWN PANEL ================= */
+/* ================= DROPDOWN ================= */
 .dropdownBox {
   position: absolute;
-  top: 55px;                  /* ❤️ appears RIGHT BELOW nav buttons */
-  right: 0;
+  top: 78px;
+  right: 60px;
 
-  width: 50vw;                /* Half screen width */
-  min-width: 560px;
+  width: 50vw;
+  min-width: 520px;
+  max-width: 780px;
+  min-height: 220px;
 
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(10px);
+  background: rgba(255,255,255,0.18);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 
-  color: #222;
-  padding: 28px 26px 24px;
   border-radius: 18px;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.35);
-  z-index: 50;
-
-  max-height: 65vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  padding: 26px;
+  border: 1px solid rgba(255,255,255,.35);
+  box-shadow: 0 25px 60px rgba(0,0,0,.35);
+  z-index: 100;
 }
 
-/* ================= PLANS GRID ================= */
+.dropdownBox h2 {
+  margin-bottom: 10px;
+  color: white;
+}
+
+/* PLAN CONTAINER */
 .planContainer {
   display: flex;
-  justify-content: center;
   gap: 18px;
-  margin-top: 10px;
-  flex-wrap: wrap;
 }
 
 .planCard {
-  background: rgba(255,255,255,0.9);
-  padding: 18px 14px;
-  border-radius: 12px;
-  width: 190px;
+  flex: 1;
+  background: rgba(255,255,255,0.25);
+  padding: 12px;
+  border-radius: 14px;
   text-align: center;
-  color: #3c007a;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
-}
-
-.planCard h3 {
-  font-size: 15px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.planCard h2 {
-  font-size: 18px;
-  margin-bottom: 10px;
+  color: white;
+  border: 1px solid rgba(255,255,255,.4);
 }
 
 .planCard ul {
@@ -127,33 +106,26 @@ body {
   padding: 0;
 }
 
-.planCard ul li {
+.planCard li {
   font-size: 13px;
-  margin-bottom: 6px;
 }
 
-/* ================= CLOSE BUTTON ================= */
+/* CLOSE BUTTON */
 .closeBtn {
-  display: block;
-  margin: 22px auto 0;
-  padding: 8px 22px;
-  background: #7a00ff;
-  color: white;
+  margin-top: 14px;
+  padding: 10px 26px;
+  border-radius: 999px;
   border: none;
-  border-radius: 22px;
-  font-size: 14px;
+  background: linear-gradient(135deg,#7a00ff,#5c00c8);
+  color: white;
   cursor: pointer;
-}
-
-.closeBtn:hover {
-  background: #5c00c7;
 }
 
 /* ================= LOGIN CARD ================= */
 .loginWrapper {
   position: absolute;
-  top: 100px;
-  right: 120px;
+  top: 110px;
+  right: 100px;
 }
 
 .loginCard {
@@ -167,20 +139,11 @@ body {
 
 .loginCard h4 {
   text-align: center;
-  font-size: 20px;
-  margin-bottom: 22px;
   color: #4b008f;
 }
 
-/* ================= INPUTS ================= */
 .inputGroup {
   margin-bottom: 16px;
-}
-
-.inputGroup label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #555;
 }
 
 .inputGroup input {
@@ -188,45 +151,18 @@ body {
   padding: 11px;
   border-radius: 10px;
   border: 1px solid #ccc;
-  margin-top: 6px;
-  font-size: 14px;
 }
 
-.inputGroup input:focus {
-  border-color: #7a00ff;
-  outline: none;
-}
-
-/* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
   padding: 13px;
+  border-radius: 10px;
+  border: none;
   background: #7a00ff;
   color: white;
-  border-radius: 10px;
-  font-size: 16px;
-  border: none;
-  cursor: pointer;
-  margin-top: 8px;
 }
 
-.loginBtn:hover {
-  background: #5c00c7;
-}
-
-/* ================= LINKS ================= */
 .extraLinks {
-  margin-top: 14px;
   text-align: center;
-  font-size: 14px;
-}
-
-.extraLinks a {
-  color: #5c00c7;
-  text-decoration: none;
-  margin: 0 8px;
-}
-
-.extraLinks a:hover {
-  text-decoration: underline;
+  margin-top: 14px;
 }
