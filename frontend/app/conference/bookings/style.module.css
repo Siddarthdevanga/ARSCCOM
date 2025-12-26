@@ -1,15 +1,18 @@
 /* ===== GLOBAL: Allow Scroll but Hide Scrollbars ===== */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   overflow-y: auto;                  /* scrolling enabled */
-  -webkit-overflow-scrolling: touch; /* smooth touch scroll */
-  scrollbar-width: none;             /* Firefox hide scrollbar */
+  -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
+  scrollbar-width: none !important;  /* Firefox hide scrollbar */
 }
 
-body::-webkit-scrollbar {
-  width: 0;
-  height: 0;                         /* Chrome / Safari / Edge hide scrollbar */
+/* Hide scrollbar (Chrome / Safari / Edge) */
+body::-webkit-scrollbar,
+html::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ================= PAGE ================= */
@@ -20,13 +23,14 @@ body::-webkit-scrollbar {
   font-family: "Segoe UI", Arial, sans-serif;
   box-sizing: border-box;
 
-  overflow-y: auto;                  /* ensure scrolling within page */
-  scrollbar-width: none;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
 }
 
 .page::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ================= HEADER ================= */
@@ -78,7 +82,7 @@ body::-webkit-scrollbar {
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 28px;
-  align-items: start;
+  align-items: flex-start;
 }
 
 /* ================= CARD ================= */
