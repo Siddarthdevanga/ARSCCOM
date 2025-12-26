@@ -4,36 +4,27 @@ import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
-/* ======================================================
-   HELPERS
-====================================================== */
-const normalizeSlug = (v = "") => String(v).trim().toLowerCase();
-const normalizeEmail = (v = "") => String(v).trim().toLowerCase();
+/* ================= HELPERS ================= */
+const normalizeSlug = v => String(v || "").trim().toLowerCase();
+const normalizeEmail = v => String(v || "").trim().toLowerCase();
 
-const prettyTime = (t) => {
+const prettyTime = (t = "") => {
   const [h, m] = t.split(":").map(Number);
   const period = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
   return `${hour}:${String(m).padStart(2, "0")} ${period}`;
 };
 
-/* TEMPLATE FOOTER */
 const emailFooter = `
-<hr/>
+<hr />
 <p style="font-size:13px;color:#666">
-This email was sent automatically from the Conference Room Booking System.  
-If you have any queries, please contact your organization administrator.
+This email was automatically sent from the Conference Room Booking Platform.
+If you did not perform this action, please contact your administrator immediately.
 </p>
 `;
 
 /* ======================================================
-   ALL EXISTING ROUTES ABOVE REMAIN SAME AS YOUR CODE
-   Only below 3 routes updated
-====================================================== */
-
-
-/* ======================================================
-   CREATE BOOKING — Detailed Email
+   CREATE BOOKING
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -49,8 +40,8 @@ router.post("/company/:slug/book", async (req, res) => {
       end_time
     } = req.body;
 
-    department = String(department || "").trim();
     const email = normalizeEmail(booked_by);
+    department = String(department || "").trim();
 
     if (!room_id || !email || !department || !booking_date || !start_time || !end_time)
       return res.status(400).json({ message: "Missing required fields" });
@@ -59,12 +50,10 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(400).json({ message: "End time must be after start time" });
 
     const [[company]] = await db.query(
-      `SELECT id, name, logo_url FROM companies WHERE slug = ? LIMIT 1`,
+      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
-
-    if (!company)
-      return res.status(404).json({ message: "Invalid booking link" });
+    if (!company) return res.status(404).json({ message: "Invalid booking link" });
 
     /* OTP VERIFIED */
     const [[verified]] = await db.query(
@@ -73,36 +62,43 @@ router.post("/company/:slug/book", async (req, res) => {
        ORDER BY id DESC LIMIT 1`,
       [company.id, email]
     );
-
     if (!verified)
       return res.status(401).json({ message: "OTP verification required" });
 
-    /* CONFLICT CHECK */
+    /* SLOT CONFLICT CHECK */
     const [conflict] = await db.query(
       `SELECT id FROM conference_bookings
        WHERE company_id=? AND room_id=? AND booking_date=? 
-       AND status='BOOKED' 
+       AND status='BOOKED'
        AND start_time < ? AND end_time > ?
        LIMIT 1`,
       [company.id, room_id, booking_date, end_time, start_time]
     );
-
     if (conflict.length)
       return res.status(409).json({ message: "Slot already booked" });
 
-    /* GET ROOM INFO */
+    /* ROOM INFO */
     const [[room]] = await db.query(
-      `SELECT room_name, room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
       [room_id]
     );
 
-    /* INSERT */
+    /* INSERT BOOKING */
     await db.query(
       `INSERT INTO conference_bookings
-       (company_id, room_id, booked_by, department, purpose,
-        booking_date, start_time, end_time, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED')`,
-      [company.id, room_id, email, department, purpose.trim(), booking_date, start_time, end_time]
+       (company_id,room_id,booked_by,department,purpose,
+        booking_date,start_time,end_time,status)
+       VALUES (?,?,?,?,?,?,?,?, 'BOOKED')`,
+      [
+        company.id,
+        room_id,
+        email,
+        department,
+        purpose.trim(),
+        booking_date,
+        start_time,
+        end_time
+      ]
     );
 
     /* EMAIL */
@@ -111,22 +107,19 @@ router.post("/company/:slug/book", async (req, res) => {
       subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
       html: `
         <h2 style="color:#3c007a">${company.name}</h2>
-        ${company.logo_url ? `<img src="${company.logo_url}" height="60" />` : ""}
+        ${company.logo_url ? `<img src="${company.logo_url}" height="60"/>` : ""}
         <h3>Conference Room Booking Confirmed</h3>
 
-        <p>Your conference room has been successfully booked.</p>
-
         <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} ( #${room.room_number} )</td></tr>
+          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
           <tr><td><b>Date</b></td><td>: ${booking_date}</td></tr>
-          <tr><td><b>Time</b></td>
-              <td>: ${prettyTime(start_time)} – ${prettyTime(end_time)}</td></tr>
+          <tr><td><b>Time</b></td><td>: ${prettyTime(start_time)} – ${prettyTime(end_time)}</td></tr>
           <tr><td><b>Department</b></td><td>: ${department}</td></tr>
           <tr><td><b>Purpose</b></td><td>: ${purpose || "-"}</td></tr>
         </table>
 
         <p style="color:green;font-weight:bold">
-          ✔ Please arrive on time and vacate the room after your session.
+          ✔ Please arrive on time and ensure the room is left ready for the next booking.
         </p>
 
         ${emailFooter}
@@ -143,7 +136,7 @@ router.post("/company/:slug/book", async (req, res) => {
 
 
 /* ======================================================
-   UPDATE BOOKING — Detailed Email
+   UPDATE BOOKING
 ====================================================== */
 router.patch("/company/:slug/bookings/:id", async (req, res) => {
   try {
@@ -151,35 +144,35 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     const bookingId = Number(req.params.id);
     const { start_time, end_time, email } = req.body;
 
-    if (!start_time || !end_time || !email)
+    if (!email || !start_time || !end_time)
       return res.status(400).json({ message: "Missing fields" });
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start" });
 
-    const normalizedEmail = normalizeEmail(email);
+    const userEmail = normalizeEmail(email);
 
     const [[company]] = await db.query(
       `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
-
-    if (!company)
-      return res.status(404).json({ message: "Invalid link" });
+    if (!company) return res.status(404).json({ message: "Invalid link" });
 
     const [[booking]] = await db.query(
-      `SELECT * FROM conference_bookings 
+      `SELECT * FROM conference_bookings
        WHERE id=? AND company_id=? AND status='BOOKED' LIMIT 1`,
       [bookingId, company.id]
     );
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    if (!booking)
-      return res.status(404).json({ message: "Booking not found" });
-
-    if (booking.booked_by !== normalizedEmail)
+    if (booking.booked_by !== userEmail)
       return res.status(403).json({ message: "Unauthorized" });
 
-    /* CONFLICT CHECK */
+    /* Prevent editing past bookings */
+    if (new Date(booking.booking_date) < new Date())
+      return res.status(400).json({ message: "Cannot modify past bookings" });
+
+    /* SLOT CONFLICT */
     const [conflict] = await db.query(
       `SELECT id FROM conference_bookings
        WHERE company_id=? AND room_id=? AND booking_date=?
@@ -195,7 +188,6 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
         start_time
       ]
     );
-
     if (conflict.length)
       return res.status(409).json({ message: "Slot already booked" });
 
@@ -204,37 +196,31 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
       [start_time, end_time, bookingId]
     );
 
-    /* ROOM INFO */
     const [[room]] = await db.query(
-      `SELECT room_name, room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
       [booking.room_id]
     );
 
     await sendEmail({
-      to: normalizedEmail,
+      to: userEmail,
       subject: `Booking Updated – ${room.room_name} | ${company.name}`,
       html: `
         <h2 style="color:#3c007a">${company.name}</h2>
-        ${company.logo_url ? `<img src="${company.logo_url}" height="60" />` : ""}
-        <h3>Conference Booking Time Updated</h3>
-
-        <p>Your booking has been successfully rescheduled.</p>
+        <h3>Conference Booking Rescheduled</h3>
 
         <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} ( #${room.room_number} )</td></tr>
+          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
           <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
-          <tr><td><b>Previous Time</b></td>
-              <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+          <tr><td><b>Old Time</b></td>
+            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
           <tr><td><b>New Time</b></td>
-              <td style="color:#007bff">
+            <td style="color:#007bff">
               : ${prettyTime(start_time)} – ${prettyTime(end_time)}
-              </td></tr>
-          <tr><td><b>Department</b></td><td>: ${booking.department}</td></tr>
-          <tr><td><b>Purpose</b></td><td>: ${booking.purpose || "-"}</td></tr>
+            </td></tr>
         </table>
 
         <p style="color:#ff8c00;font-weight:bold">
-          ⏰ Please note the updated timings.
+          ⏰ Please note your revised schedule.
         </p>
 
         ${emailFooter}
@@ -251,7 +237,7 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
 
 
 /* ======================================================
-   CANCEL BOOKING — Detailed Email
+   CANCEL BOOKING
 ====================================================== */
 router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
   try {
@@ -259,11 +245,13 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     const bookingId = Number(req.params.id);
     const email = normalizeEmail(req.body?.email || "");
 
+    if (!email)
+      return res.status(400).json({ message: "Email required" });
+
     const [[company]] = await db.query(
       `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
-
     if (!company)
       return res.status(404).json({ message: "Invalid link" });
 
@@ -274,7 +262,7 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     );
 
     if (!booking)
-      return res.status(404).json({ message: "Booking not found" });
+      return res.status(404).json({ message: "Booking not found or already cancelled" });
 
     if (booking.booked_by !== email)
       return res.status(403).json({ message: "Unauthorized" });
@@ -285,7 +273,7 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     );
 
     const [[room]] = await db.query(
-      `SELECT room_name, room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
       [booking.room_id]
     );
 
@@ -294,21 +282,17 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
       html: `
         <h2 style="color:#3c007a">${company.name}</h2>
-        ${company.logo_url ? `<img src="${company.logo_url}" height="60" />` : ""}
         <h3>Conference Booking Cancelled</h3>
 
-        <p>Your booking has been cancelled successfully.</p>
-
         <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} ( #${room.room_number} )</td></tr>
+          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
           <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
           <tr><td><b>Time</b></td>
-              <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
-          <tr><td><b>Department</b></td><td>: ${booking.department}</td></tr>
+            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
         </table>
 
         <p style="color:red;font-weight:bold">
-          ❌ This time slot is now free and available for others to book.
+          ❌ The slot is now released and available for booking.
         </p>
 
         ${emailFooter}
