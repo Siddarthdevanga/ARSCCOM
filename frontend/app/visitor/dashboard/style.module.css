@@ -1,9 +1,32 @@
+/* ===== GLOBAL: Allow Scroll but Hide Scrollbars ===== */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow-y: auto;                  /* scrolling enabled */
+  -webkit-overflow-scrolling: touch; /* smooth mobile scroll */
+  scrollbar-width: none;             /* Firefox */
+}
+
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;                         /* Chrome / Safari / Edge */
+}
+
 /* ================= ROOT ================= */
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   color: white;
   font-family: "Segoe UI", Arial, sans-serif;
+
+  /* also hide scrollbar if container scrolls */
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ================= HEADER ================= */
