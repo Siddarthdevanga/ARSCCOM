@@ -60,7 +60,7 @@ export const sendEmail = async ({
 
   try {
     const info = await transporter.sendMail({
-      from: `"ARSCCOM" <${process.env.SMTP_USER}>`,
+      from: `"PROMEET" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,
