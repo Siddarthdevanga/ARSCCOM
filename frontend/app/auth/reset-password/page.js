@@ -77,7 +77,7 @@ function ResetPasswordForm() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.brand}>ARSCCOM</div>
+      <div className={styles.brand}>PROMEET</div>
 
       <div className={styles.card}>
         <h2 className={styles.title}>Reset Password</h2>
