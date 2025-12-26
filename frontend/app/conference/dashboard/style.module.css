@@ -1,16 +1,16 @@
-/* ===== GLOBAL: Enable Scroll but Hide Scrollbar Everywhere ===== */
-html, body {
+/* ===== GLOBAL: Enable Scroll but Hide Scrollbars Everywhere ===== */
+html,
+body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  overflow-y: auto;                  /* scrolling enabled */
+  -webkit-overflow-scrolling: touch; /* smooth scroll */
+  scrollbar-width: none;             /* Firefox hide scrollbar */
 }
 
 /* Chrome / Safari / Edge */
 *::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  display: none;
 }
 
 /* ================= ROOT ================= */
@@ -21,7 +21,7 @@ html, body {
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
 
-  overflow-y: auto;
+  overflow-y: auto;                  /* scroll inside page */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
