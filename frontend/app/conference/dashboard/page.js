@@ -15,9 +15,13 @@ export default function ConferenceDashboard() {
 
   const [roomName, setRoomName] = useState("");
   const [roomNumber, setRoomNumber] = useState("");
+  const [error, setError] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  // edit state
+  const [editingRoomId, setEditingRoomId] = useState(null);
+  const [editName, setEditName] = useState("");
 
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
@@ -31,6 +35,7 @@ export default function ConferenceDashboard() {
       setStats(statsRes);
       setRooms(roomsRes);
       setBookings(bookingsRes.slice(0, 5));
+
       setLoading(false);
     } catch {
       router.replace("/auth/login");
@@ -74,6 +79,26 @@ export default function ConferenceDashboard() {
     }
   };
 
+  /* ================= SAVE RENAMED ROOM ================= */
+  const saveRoomName = async (roomId) => {
+    if (!editName.trim()) return;
+
+    try {
+      await apiFetch(`/api/conference/rooms/${roomId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          room_name: editName.trim()
+        })
+      });
+
+      setEditingRoomId(null);
+      setEditName("");
+      loadDashboard();
+    } catch (err) {
+      alert(err.message || "Failed to rename room");
+    }
+  };
+
   if (loading || !company || !stats) return null;
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
@@ -107,16 +132,12 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC LINK + BOOK BUTTON ================= */}
+      {/* ================= PUBLIC BOOK URL ================= */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
             <p className={styles.publicTitle}>Public Booking URL</p>
-            <a
-              href={publicURL}
-              target="_blank"
-              className={styles.publicLink}
-            >
+            <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
           </div>
@@ -156,12 +177,14 @@ export default function ConferenceDashboard() {
             value={roomName}
             onChange={(e) => setRoomName(e.target.value)}
           />
+
           <input
             type="number"
             placeholder="Room Number"
             value={roomNumber}
             onChange={(e) => setRoomNumber(e.target.value)}
           />
+
           <button onClick={createRoom}>Add Room</button>
         </div>
 
@@ -170,7 +193,36 @@ export default function ConferenceDashboard() {
         <ul className={styles.roomList}>
           {rooms.map((r) => (
             <li key={r.id}>
-              #{r.room_number} – {r.room_name}
+              #{r.room_number} —{" "}
+              {editingRoomId === r.id ? (
+                <>
+                  <input
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                  />
+                  <button onClick={() => saveRoomName(r.id)}>Save</button>
+                  <button
+                    onClick={() => {
+                      setEditingRoomId(null);
+                      setEditName("");
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  {r.room_name}{" "}
+                  <button
+                    onClick={() => {
+                      setEditingRoomId(r.id);
+                      setEditName(r.room_name);
+                    }}
+                  >
+                    Rename
+                  </button>
+                </>
+              )}
             </li>
           ))}
         </ul>
