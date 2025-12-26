@@ -14,6 +14,9 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const [activeSection, setActiveSection] = useState(""); 
+  // "about" | "plans" | "contact"
+
   /* ================= LOGIN ================= */
   const handleLogin = async () => {
     if (loading) return;
@@ -53,7 +56,6 @@ export default function LoginPage() {
         return;
       }
 
-      /* ================= SAVE AUTH ================= */
       localStorage.setItem("token", data.token);
       document.cookie = `token=${data.token}; path=/`;
 
@@ -61,7 +63,6 @@ export default function LoginPage() {
         localStorage.setItem("company", JSON.stringify(data.company));
       }
 
-      /* ================= REDIRECT ================= */
       router.replace("/home");
 
     } catch (err) {
@@ -80,7 +81,6 @@ export default function LoginPage() {
             VISITOR MANAGEMENT PLATFORM
           </div>
 
-          {/* ✅ LOGO WITH ANIMATION CLASS APPLIED */}
           <Image
             src="/logo.png"
             alt="ARSCCOM Logo"
@@ -93,9 +93,9 @@ export default function LoginPage() {
         </div>
 
         <nav className={styles.nav}>
-          <button>ABOUT</button>
-          <button>PLANS</button>
-          <button>CONTACT</button>
+          <button onClick={() => setActiveSection("about")}>ABOUT</button>
+          <button onClick={() => setActiveSection("plans")}>PLANS</button>
+          <button onClick={() => setActiveSection("contact")}>CONTACT</button>
         </nav>
       </header>
 
@@ -145,6 +145,130 @@ export default function LoginPage() {
           </div>
         </div>
       </main>
+
+      {/* ================= INFO PANEL ================= */}
+      {activeSection && (
+        <div
+          style={{
+            margin: "0 auto",
+            width: "92%",
+            marginTop: "20px",
+            marginBottom: "28px",
+            padding: "28px",
+            borderRadius: "22px",
+            background: "rgba(255,255,255,0.14)",
+            backdropFilter: "blur(14px)",
+            color: "white",
+            boxShadow: "0 18px 36px rgba(0,0,0,0.35)"
+          }}
+        >
+          {/* ABOUT */}
+          {activeSection === "about" && (
+            <>
+              <h2>About Visitor Management Platform</h2>
+              <p>
+                A powerful end-to-end solution to manage visitors, security,
+                employee experience, conference room bookings and seamless
+                check-ins with pass generation.
+              </p>
+              <ul>
+                <li>✔ Secure Access Management</li>
+                <li>✔ Digital Visitor Pass System</li>
+                <li>✔ Real-time Monitoring</li>
+                <li>✔ Conference Room Management</li>
+              </ul>
+            </>
+          )}
+
+          {/* PLANS */}
+          {activeSection === "plans" && (
+            <>
+              <h2>Subscription Plans</h2>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "18px",
+                  justifyContent: "center",
+                  flexWrap: "wrap",
+                  marginTop: "12px"
+                }}
+              >
+                {/* FREE */}
+                <div style={planCard}>
+                  <h2 style={{ color: "#6d28d9" }}>FREE</h2>
+                  <h1>Free Trial</h1>
+                  <p>Valid for 15 Days</p>
+                  <ul style={{ textAlign: "left" }}>
+                    <li>✔ 100 Visitor Bookings</li>
+                    <li>✔ 100 Conference Room Bookings</li>
+                  </ul>
+                  <button style={planBtn}>Get Started</button>
+                </div>
+
+                {/* BUSINESS */}
+                <div style={planCard}>
+                  <h2 style={{ color: "#6d28d9" }}>BUSINESS</h2>
+                  <h1>₹500 <span style={{ fontSize: "14px" }}>/ month</span></h1>
+                  <p>Best for growing businesses</p>
+                  <ul style={{ textAlign: "left" }}>
+                    <li>✔ Unlimited Visitors</li>
+                    <li>✔ 1000 Room Bookings</li>
+                  </ul>
+                  <button style={planBtn}>Get Started</button>
+                </div>
+
+                {/* ENTERPRISE */}
+                <div style={planCard}>
+                  <h2 style={{ color: "#6d28d9" }}>ENTERPRISE</h2>
+                  <h1>Custom Pricing</h1>
+                  <p>For large organizations</p>
+                  <ul style={{ textAlign: "left" }}>
+                    <li>✔ Tailored Solutions</li>
+                    <li>✔ Advanced Security</li>
+                    <li>✔ Dedicated Support</li>
+                  </ul>
+                  <button style={planBtn}>Contact Sales</button>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* CONTACT */}
+          {activeSection === "contact" && (
+            <>
+              <h2>Contact Us</h2>
+              <p>Email: <b>admin@wheelbrand.in</b></p>
+              <p>Phone: +91 98765 43210</p>
+              <p>We respond within 24 hours.</p>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+
+/* ================= INLINE STYLES ================= */
+
+const planCard = {
+  background: "rgba(255,255,255,0.92)",
+  borderRadius: "20px",
+  padding: "28px",
+  width: "340px",
+  color: "#333",
+  textAlign: "center",
+  boxShadow: "0 18px 40px rgba(0,0,0,0.35)"
+};
+
+const planBtn = {
+  marginTop: "18px",
+  width: "100%",
+  background: "linear-gradient(135deg,#7a00ff,#5a00c2)",
+  color: "#fff",
+  padding: "12px",
+  borderRadius: "12px",
+  border: "none",
+  fontWeight: "700",
+  cursor: "pointer"
+};
