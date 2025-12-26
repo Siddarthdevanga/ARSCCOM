@@ -70,59 +70,12 @@ router.get("/rooms", async (req, res) => {
 });
 
 /**
- * CREATE room (PLAN LIMITED)
+ * 🚫 DISABLE ROOM CREATION COMPLETELY
  */
 router.post("/rooms", async (req, res) => {
-  try {
-    const { companyId } = req.user;
-    const { room_name, room_number } = req.body;
-
-    if (!room_name || !room_number || Number(room_number) <= 0) {
-      return res.status(400).json({
-        message: "Room name and valid room number are required"
-      });
-    }
-
-    const [[company]] = await db.query(
-      `SELECT rooms FROM companies WHERE id = ? LIMIT 1`,
-      [companyId]
-    );
-
-    if (!company) {
-      return res.status(404).json({ message: "Company not found" });
-    }
-
-    const [[count]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM conference_rooms WHERE company_id = ?`,
-      [companyId]
-    );
-
-    if (count.cnt >= company.rooms) {
-      return res.status(403).json({
-        message: `Your plan allows only ${company.rooms} conference rooms`
-      });
-    }
-
-    await db.query(
-      `
-      INSERT INTO conference_rooms
-      (company_id, room_number, room_name)
-      VALUES (?, ?, ?)
-      `,
-      [companyId, room_number, room_name.trim()]
-    );
-
-    res.status(201).json({ message: "Conference room created successfully" });
-  } catch (err) {
-    if (err.code === "ER_DUP_ENTRY") {
-      return res.status(409).json({
-        message: "Room number already exists for this company"
-      });
-    }
-
-    console.error("[ADMIN][CREATE ROOM]", err);
-    res.status(500).json({ message: "Unable to create room" });
-  }
+  return res.status(403).json({
+    message: "Room creation is disabled. Please contact administrator."
+  });
 });
 
 /**
