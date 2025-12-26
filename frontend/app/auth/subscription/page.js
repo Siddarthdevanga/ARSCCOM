@@ -23,7 +23,7 @@ export default function SubscriptionPage() {
 
         {/* FREE PLAN */}
         <div className={styles.card}>
-          <h3 className={styles.planName}>Free</h3>
+          <h3 className={styles.planName}>FREE</h3>
           <p className={styles.price}>Free Trial</p>
           <p className={styles.subText}>Valid for 15 days</p>
 
@@ -42,7 +42,7 @@ export default function SubscriptionPage() {
 
         {/* BUSINESS PLAN */}
         <div className={`${styles.card} ${styles.cardHighlight}`}>
-          <h3 className={styles.planName}>Business</h3>
+          <h3 className={styles.planName}>BUSINESS</h3>
           <p className={styles.price}>₹500 <span>/ month</span></p>
           <p className={styles.subText}>Best for growing businesses</p>
 
@@ -61,7 +61,7 @@ export default function SubscriptionPage() {
 
         {/* ENTERPRISE PLAN */}
         <div className={styles.card}>
-          <h3 className={styles.planName}>Enterprise</h3>
+          <h3 className={styles.planName}>ENTERPRISE</h3>
           <p className={styles.price}>Custom Pricing</p>
           <p className={styles.subText}>
             Fully customizable to meet your business requirements.
