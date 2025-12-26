@@ -1,3 +1,17 @@
+/* ===== GLOBAL: Allow Scroll but Hide Scrollbars ===== */
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;   /* smooth mobile scroll */
+  scrollbar-width: none;               /* Firefox hide scrollbar */
+}
+
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;                           /* Chrome / Safari / Edge hide scrollbar */
+}
+
 /* ================= ROOT ================= */
 .container {
   min-height: 100vh;
@@ -5,6 +19,13 @@
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
+  overflow-y: auto;                     /* scrolling enabled here */
+  scrollbar-width: none;
+}
+
+.container::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ================= HEADER ================= */
