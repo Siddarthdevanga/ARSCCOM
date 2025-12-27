@@ -11,15 +11,15 @@ export default function SubscriptionPage() {
   const [error, setError] = useState("");
 
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.wheelbrand.in";
 
   const choosePlan = async (plan) => {
-    if (loadingPlan) return; // stop spam clicking
+    if (loadingPlan) return; // avoid spam clicking
     setError("");
     setLoadingPlan(plan);
 
-    // Enterprise redirects to contact page
+    // Enterprise redirects to Contact Page
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -29,21 +29,26 @@ export default function SubscriptionPage() {
     try {
       const res = await fetch(`${API_BASE}/api/payment/subscribe`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        credentials: "include", // IMPORTANT for JWT cookie
         body: JSON.stringify({ plan })
       });
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch (_) {}
 
-      // Not logged in
+      /* ================= AUTH FAIL ================= */
       if (res.status === 401) {
-        setError("Please login to continue");
+        setError("Session expired. Please login again.");
         router.push("/login");
         return;
       }
 
-      // Already active
+      /* ================= ALREADY ACTIVE ================= */
       if (res.status === 403) {
         setError("Subscription already active");
         setTimeout(() => router.push("/dashboard"), 1200);
@@ -51,26 +56,26 @@ export default function SubscriptionPage() {
       }
 
       if (!res.ok) {
-        setError(data?.message || "Something went wrong");
+        setError(data?.message || "Subscription failed. Try again.");
         return;
       }
 
-      // Redirect to Zoho Hosted/Payment URL
+      /* ================= ZOHO PAYMENT LINK ================= */
       if (data?.url) {
         window.location.href = data.url;
         return;
       }
 
-      // Trial Success (may not need redirect)
+      /* ================= TRIAL SUCCESS ================= */
       if (data?.redirect) {
         router.push(data.redirect);
         return;
       }
 
-      setError("No redirect URL returned from server");
+      setError("Unexpected server response. Please contact support.");
     } catch (err) {
       console.error("SUBSCRIPTION ERROR", err);
-      setError("Unable to connect to server. Please try again.");
+      setError("Unable to connect to server. Check network & try again.");
     } finally {
       setLoadingPlan("");
     }
@@ -88,7 +93,7 @@ export default function SubscriptionPage() {
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.planGrid}>
-
+        
         {/* FREE TRIAL */}
         <div className={styles.card}>
           <h3 className={styles.planName}>FREE TRIAL</h3>
@@ -97,8 +102,8 @@ export default function SubscriptionPage() {
 
           <ul className={styles.features}>
             <li>✔ 100 Visitor Bookings</li>
-            <li>✔ 100 Conference Room Bookings</li>
-            <li>✔ Dedicated Support</li>
+            <li>✔ 100 Conference Bookings</li>
+            <li>✔ Email Support</li>
           </ul>
 
           <button
@@ -144,7 +149,7 @@ export default function SubscriptionPage() {
           <ul className={styles.features}>
             <li>✔ Tailored Solutions</li>
             <li>✔ Advanced Features</li>
-            <li>✔ Dedicated Support Manager</li>
+            <li>✔ Dedicated Account Manager</li>
           </ul>
 
           <button
@@ -155,7 +160,6 @@ export default function SubscriptionPage() {
             Contact Us
           </button>
         </div>
-
       </div>
     </div>
   );
