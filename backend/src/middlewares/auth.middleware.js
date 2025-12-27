@@ -3,10 +3,20 @@ import jwt from "jsonwebtoken";
 /**
  * JWT Authentication Middleware
  * - Validates Bearer token
+ * - Verifies signature
+ * - Ensures required claims exist
  * - Attaches user context to req.user
  */
 export const authenticate = (req, res, next) => {
   try {
+    /* ================= ENV SAFETY ================= */
+    if (!process.env.JWT_SECRET) {
+      console.error("❌ JWT_SECRET is missing in environment");
+      return res.status(500).json({
+        message: "Server authentication configuration error"
+      });
+    }
+
     const authHeader = req.headers.authorization;
 
     /* ================= HEADER VALIDATION ================= */
@@ -18,7 +28,8 @@ export const authenticate = (req, res, next) => {
 
     /* ================= TOKEN EXTRACTION ================= */
     const token = authHeader.split(" ")[1];
-    if (!token) {
+
+    if (!token || token === "null" || token === "undefined") {
       return res.status(401).json({
         message: "Token not provided"
       });
@@ -27,10 +38,10 @@ export const authenticate = (req, res, next) => {
     /* ================= TOKEN VERIFICATION ================= */
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    /* ================= PAYLOAD VALIDATION ================= */
+    /* ================= VALIDATE CLAIMS ================= */
     if (!decoded?.userId || !decoded?.companyId) {
       return res.status(401).json({
-        message: "Invalid token payload"
+        message: "Invalid authentication token"
       });
     }
 
@@ -38,19 +49,29 @@ export const authenticate = (req, res, next) => {
     req.user = {
       userId: decoded.userId,
       companyId: decoded.companyId,
+      email: decoded.email || null,
+      companyName: decoded.companyName || null,
       role: decoded.role || "user"
     };
 
-    next();
+    // OPTIONAL (future): You can also pre-attach subscription info here
+    // req.user.subscriptionStatus = decoded.subscriptionStatus || null;
+
+    return next();
 
   } catch (error) {
-    console.error("❌ Auth middleware error:", error.message);
+    console.error("❌ AUTH ERROR:", error.message);
+
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({ message: "Session expired — please login again" });
+    }
+
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({ message: "Invalid authentication token" });
+    }
 
     return res.status(401).json({
-      message:
-        error.name === "TokenExpiredError"
-          ? "Token expired"
-          : "Invalid or expired token"
+      message: "Authentication failed"
     });
   }
 };
