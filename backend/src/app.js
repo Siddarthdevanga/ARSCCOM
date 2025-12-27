@@ -17,7 +17,7 @@ const app = express();
    GLOBAL SECURITY + PERFORMANCE
 ====================================================== */
 
-// Needed if behind NGINX / Load balancer
+// Required when using NGINX / Load balancer
 app.set("trust proxy", true);
 
 // Security Headers
@@ -27,25 +27,26 @@ app.use(
   })
 );
 
-// Gzip responses
+// Gzip Compression
 app.use(compression());
 
+
 /* ======================================================
-   CORS
+   CORS CONFIG
 ====================================================== */
 
 const allowedOrigins = [
   "http://localhost:3000",
   "http://13.205.13.110",
   "http://13.205.13.110:3000",
-  "https://www.wheelbrand.in",
-  "https://wheelbrand.in"
+  "https://wheelbrand.in",
+  "https://www.wheelbrand.in"
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow postman / curl
+      // Allow Postman / server-to-server
       if (!origin) return callback(null, true);
 
       if (allowedOrigins.includes(origin)) {
@@ -59,11 +60,10 @@ app.use(
   })
 );
 
+
 /* ======================================================
    BODY PARSERS
 ====================================================== */
-
-// Normal APIs JSON
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -96,10 +96,10 @@ app.use("/api/conference", conferenceRoutes);
 // CONFERENCE (PUBLIC)
 app.use("/api/public/conference", conferencePublicRoutes);
 
-// ZOHO PAYMENT / BILLING
+// PAYMENT / BILLING
 app.use("/api/payment", paymentRoutes);
 
-// ZOHO WEBHOOK (must stay AFTER JSON parser & BEFORE 404)
+// ZOHO BILLING WEBHOOK
 app.use("/api/webhook", webhookRoutes);
 
 
@@ -125,6 +125,5 @@ app.use((err, req, res, next) => {
     message: "Internal Server Error"
   });
 });
-
 
 export default app;
