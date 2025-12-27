@@ -1,226 +1,272 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-export default function ConferenceDashboard() {
+/* ================= TIME OPTIONS (09:30 – 19:00, 30 MIN) ================= */
+const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
+  const total = 9 * 60 + 30 + i * 30;
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return {
+    label: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
+    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+  };
+});
+
+/* ================= HELPERS ================= */
+const normalizeDate = (d) =>
+  typeof d === "string" ? d.split("T")[0] : "";
+
+const toAmPm = (time24) => {
+  const [h, m] = time24.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 || 12;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+};
+
+export default function ConferenceBookings() {
   const router = useRouter();
+  const today = new Date().toISOString().split("T")[0];
 
   const [company, setCompany] = useState(null);
-  const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [date, setDate] = useState(today);
+  const [roomId, setRoomId] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [department, setDepartment] = useState("");
+  const [purpose, setPurpose] = useState("");
 
-  /* ================= LOAD DASHBOARD ================= */
-  const loadDashboard = async () => {
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  /* ================= LOAD DATA ================= */
+  const loadAll = async () => {
     try {
-      const [statsRes, roomsRes, bookingsRes] = await Promise.all([
-        apiFetch("/api/conference/dashboard"),
+      const stored = localStorage.getItem("company");
+      if (stored) setCompany(JSON.parse(stored));
+
+      const [r, b] = await Promise.all([
         apiFetch("/api/conference/rooms"),
         apiFetch("/api/conference/bookings")
       ]);
 
-      setStats(statsRes);
-      setRooms(roomsRes);
-      setBookings(bookingsRes.slice(0, 5));
-      setLoading(false);
+      setRooms(Array.isArray(r) ? r : []);
+      setBookings(Array.isArray(b) ? b : []);
     } catch {
       router.replace("/auth/login");
     }
   };
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedCompany = localStorage.getItem("company");
-
-    if (!token || !storedCompany) {
-      router.replace("/auth/login");
-      return;
-    }
-
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard();
+    loadAll();
   }, []);
 
-  /* =====================================================
-     INLINE RENAME ROOM
-  ====================================================== */
-  const [editingRoomId, setEditingRoomId] = useState(null);
-  const [renameValue, setRenameValue] = useState("");
+  /* ================= DAY BOOKINGS ================= */
+  const dayBookings = useMemo(() => {
+    if (!date || !roomId) return [];
 
-  const renameRoom = async (roomId) => {
+    return bookings.filter(
+      b =>
+        normalizeDate(b.booking_date) === date &&
+        Number(b.room_id) === Number(roomId) &&
+        b.status === "BOOKED"
+    );
+  }, [bookings, date, roomId]);
+
+  /* ================= BLOCKED SLOTS ================= */
+  const blockedSlots = useMemo(() => {
+    const set = new Set();
+
+    dayBookings.forEach(b => {
+      TIME_OPTIONS.forEach(t => {
+        if (t.value >= b.start_time && t.value < b.end_time) {
+          set.add(t.value);
+        }
+      });
+    });
+
+    return set;
+  }, [dayBookings]);
+
+  /* ================= CURRENT TIME FILTER ================= */
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+
+  const availableStartTimes = useMemo(() => {
+    return TIME_OPTIONS.filter(t => {
+      if (blockedSlots.has(t.value)) return false;
+      if (date !== today) return true;
+      const [h, m] = t.value.split(":").map(Number);
+      return h * 60 + m > nowMinutes;
+    });
+  }, [date, today, blockedSlots, nowMinutes]);
+
+  const availableEndTimes = useMemo(() => {
+    if (!startTime) return [];
+    return TIME_OPTIONS.filter(
+      t => t.value > startTime && !blockedSlots.has(t.value)
+    );
+  }, [startTime, blockedSlots]);
+
+  /* ================= CREATE BOOKING ================= */
+  const createBooking = async () => {
+    setError("");
+    setSuccess("");
+
+    if (!date || !roomId || !startTime || !endTime || !department) {
+      return setError("All required fields must be filled");
+    }
+
+    if (endTime <= startTime) {
+      return setError("End time must be after start time");
+    }
+
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ room_name: renameValue })
+      await apiFetch("/api/conference/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          room_id: roomId,
+          booked_by: "ADMIN",
+          department,
+          purpose,
+          booking_date: date,
+          start_time: startTime,
+          end_time: endTime
+        })
       });
 
-      setEditingRoomId(null);
-      setRenameValue("");
-      loadDashboard();
-    } catch (err) {
-      alert(err.message || "Rename failed");
+      setSuccess("✅ Booking created successfully");
+      setStartTime("");
+      setEndTime("");
+      setDepartment("");
+      setPurpose("");
+
+      loadAll();
+    } catch (e) {
+      setError(e.message || "Unable to create booking");
     }
   };
 
-  /* ================= LOGOUT ================= */
-  const handleLogout = () => {
-    localStorage.clear();
-    router.replace("/auth/login");
-  };
-
-  if (loading || !company || !stats) return null;
-
-  const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+  if (!company) return null;
 
   return (
-    <div className={styles.container}>
+    <div className={styles.page}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div>
-          <h2 className={styles.companyName}>{company.name}</h2>
-          <span className={styles.subText}>Conference Dashboard</span>
-        </div>
+        {/* ⬅️ BACK ARROW – LEFT */}
+        <button
+          className={styles.backBtn}
+          onClick={() => router.back()}
+          title="Back"
+        >
+          ←
+        </button>
 
+        {/* COMPANY NAME – CENTER */}
+        <h1 className={styles.companyName}>{company.name}</h1>
+
+        {/* LOGO – RIGHT */}
         <div className={styles.headerRight}>
-          <img
-            src={company.logo_url || "/logo.png"}
-            className={styles.logo}
-            alt="Logo"
-          />
-
-          <button
-            className={styles.logoBtn}
-            title="Logout"
-            onClick={handleLogout}
-          >
-            ⏻
-          </button>
+          {company.logo_url && (
+            <img src={company.logo_url} alt="logo" />
+          )}
         </div>
       </header>
 
-      {/* ================= PUBLIC LINK ================= */}
-      <div className={styles.publicBox}>
-        <div className={styles.publicRow}>
-          <div>
-            <p className={styles.publicTitle}>Public Booking URL</p>
-            <a href={publicURL} target="_blank" className={styles.publicLink}>
-              {publicURL}
-            </a>
-          </div>
+      <div className={styles.content}>
+        {/* ================= LEFT FORM ================= */}
+        <div className={styles.card}>
+          <h2>Book Conference Room</h2>
 
-          <button
-            className={styles.bookBtn}
-            onClick={() => router.push("/conference/bookings")}
+          {error && <p className={styles.error}>{error}</p>}
+          {success && <p className={styles.success}>{success}</p>}
+
+          <label>Date</label>
+          <input
+            type="date"
+            value={date}
+            min={today}
+            onChange={e => setDate(e.target.value)}
+          />
+
+          <label>Room</label>
+          <select value={roomId} onChange={e => setRoomId(e.target.value)}>
+            <option value="">Select</option>
+            {rooms.map(r => (
+              <option key={r.id} value={r.id}>
+                {r.room_name}
+              </option>
+            ))}
+          </select>
+
+          <label>Start Time</label>
+          <select
+            value={startTime}
+            onChange={e => setStartTime(e.target.value)}
           >
-            Book
+            <option value="">Select</option>
+            {availableStartTimes.map(t => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+
+          <label>End Time</label>
+          <select
+            value={endTime}
+            onChange={e => setEndTime(e.target.value)}
+          >
+            <option value="">Select</option>
+            {availableEndTimes.map(t => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+
+          <label>Department</label>
+          <input
+            value={department}
+            onChange={e => setDepartment(e.target.value)}
+          />
+
+          <label>Purpose</label>
+          <input
+            value={purpose}
+            onChange={e => setPurpose(e.target.value)}
+          />
+
+          <button onClick={createBooking}>
+            Confirm Booking
           </button>
         </div>
-      </div>
 
-      {/* ================= STATS ================= */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span>Conference Rooms</span>
-          <b>{stats.rooms}</b>
-        </div>
+        {/* ================= RIGHT PANEL ================= */}
+        <div className={styles.side}>
+          <h2>Bookings</h2>
 
-        <div className={styles.statCard}>
-          <span>Today’s Bookings</span>
-          <b>{stats.todayBookings}</b>
-        </div>
+          {dayBookings.length === 0 && (
+            <p style={{ opacity: 0.8 }}>No bookings</p>
+          )}
 
-        <div className={styles.statCard}>
-          <span>Total Bookings</span>
-          <b>{stats.totalBookings}</b>
-        </div>
-      </div>
-
-      {/* ================= ROOMS ================= */}
-      <div className={styles.section}>
-        <h3>Conference Rooms</h3>
-
-        {error && <p className={styles.error}>{error}</p>}
-
-        <ul className={styles.roomList}>
-          {rooms.map((r) => (
-            <li key={r.id} className={styles.roomItem}>
-              <span className={styles.roomNumber}>
-                #{r.room_number}
-              </span>
-
-              {editingRoomId === r.id ? (
-                <>
-                  <input
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    className={styles.renameInput}
-                  />
-
-                  <button
-                    className={styles.saveBtn}
-                    onClick={() => renameRoom(r.id)}
-                  >
-                    Save
-                  </button>
-
-                  <button
-                    className={styles.cancelBtn}
-                    onClick={() => {
-                      setEditingRoomId(null);
-                      setRenameValue("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  <span className={styles.roomName}>
-                    {r.room_name}
-                  </span>
-
-                  <button
-                    className={styles.renameBtn}
-                    onClick={() => {
-                      setEditingRoomId(r.id);
-                      setRenameValue(r.room_name);
-                    }}
-                  >
-                    Rename
-                  </button>
-                </>
-              )}
-            </li>
+          {dayBookings.map(b => (
+            <div key={b.id} className={styles.booking}>
+              <b>
+                {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
+              </b>
+              <p>{b.department}</p>
+              <span>{b.booked_by}</span>
+            </div>
           ))}
-        </ul>
-      </div>
-
-      {/* ================= RECENT BOOKINGS ================= */}
-      <div className={styles.section}>
-        <h3>Recent Bookings</h3>
-
-        {bookings.length === 0 && <p>No bookings yet</p>}
-
-        {bookings.map((b) => (
-          <div key={b.id} className={styles.bookingRow}>
-            <div>
-              <b>{b.room_name}</b> (#{b.room_number})
-              <p>{b.booking_date}</p>
-            </div>
-
-            <div>
-              {b.start_time} – {b.end_time}
-            </div>
-
-            <div className={styles.status}>{b.status}</div>
-          </div>
-        ))}
+        </div>
       </div>
     </div>
   );
