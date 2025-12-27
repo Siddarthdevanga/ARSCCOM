@@ -14,27 +14,25 @@ import webhookRoutes from "./routes/webhook.routes.js";
 const app = express();
 
 /* ======================================================
-   GLOBAL SECURITY + PERFORMANCE
+   SECURITY + PERFORMANCE
 ====================================================== */
 
-// Required when using NGINX / Load balancer
+// Required when using NGINX / Proxy
 app.set("trust proxy", true);
 
 // Security Headers
 app.use(
   helmet({
-    crossOriginResourcePolicy: false,
+    crossOriginResourcePolicy: false, // allow external logos/images
   })
 );
 
-// Gzip Compression
+// Response Compression
 app.use(compression());
 
-
 /* ======================================================
-   CORS CONFIG
+   CORS
 ====================================================== */
-
 const allowedOrigins = [
   "http://localhost:3000",
   "http://13.205.13.110",
@@ -46,12 +44,8 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow Postman / server-to-server
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+      if (!origin) return callback(null, true); // Postman / server
+      if (allowedOrigins.includes(origin)) return callback(null, true);
 
       console.warn("❌ BLOCKED ORIGIN:", origin);
       return callback(new Error("Not allowed by CORS"));
@@ -60,13 +54,12 @@ app.use(
   })
 );
 
-
 /* ======================================================
    BODY PARSERS
 ====================================================== */
+// Must stay BEFORE routes
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
-
 
 /* ======================================================
    HEALTH CHECK
@@ -78,7 +71,6 @@ app.get("/health", (req, res) => {
     timestamp: new Date()
   });
 });
-
 
 /* ======================================================
    ROUTES
@@ -96,12 +88,11 @@ app.use("/api/conference", conferenceRoutes);
 // CONFERENCE (PUBLIC)
 app.use("/api/public/conference", conferencePublicRoutes);
 
-// PAYMENT / BILLING
+// PAYMENT + BILLING
 app.use("/api/payment", paymentRoutes);
 
-// ZOHO BILLING WEBHOOK
+// ZOHO WEBHOOK (KEEP BEFORE 404)
 app.use("/api/webhook", webhookRoutes);
-
 
 /* ======================================================
    404 HANDLER
@@ -112,7 +103,6 @@ app.use((req, res) => {
     path: req.originalUrl
   });
 });
-
 
 /* ======================================================
    GLOBAL ERROR HANDLER
