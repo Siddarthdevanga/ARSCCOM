@@ -14,9 +14,13 @@ export default function RegisterPage() {
   const [logo, setLogo] = useState(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  /* ======================================================
+     HANDLE REGISTER
+  ====================================================== */
   const handleRegister = async () => {
     setError("");
 
@@ -53,7 +57,8 @@ export default function RegisterPage() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/register`,
         {
           method: "POST",
-          body: formData
+          body: formData,
+          credentials: "include" // IMPORTANT: Keeps login session
         }
       );
 
@@ -64,8 +69,10 @@ export default function RegisterPage() {
         return;
       }
 
+      // 🔥 SUCCESS → GO TO SUBSCRIPTION PAGE
       router.push("/auth/subscription");
-    } catch {
+
+    } catch (err) {
       setError("Unable to connect to server");
     } finally {
       setLoading(false);
@@ -141,6 +148,7 @@ export default function RegisterPage() {
             <input
               className={styles.input}
               type="number"
+              min="1"
               value={rooms}
               onChange={(e) => setRooms(e.target.value)}
             />
@@ -170,8 +178,10 @@ export default function RegisterPage() {
           </div>
         </div>
 
+        {/* ERROR */}
         {error && <div className={styles.error}>{error}</div>}
 
+        {/* BUTTON */}
         <button
           className={styles.submitBtn}
           onClick={handleRegister}
