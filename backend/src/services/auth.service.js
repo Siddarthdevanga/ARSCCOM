@@ -146,7 +146,7 @@ export const registerCompany = async (data, file) => {
       </p>
 
       <p>
-        👉 Login to your dashboard and choose a plan to continue.
+        👉 In the Subscription page choose a plan to continue.
       </p>
 
       <hr/>
