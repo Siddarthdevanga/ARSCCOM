@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 
 /* ================= ROUTES ================= */
 import authRoutes from "./routes/auth.routes.js";
@@ -12,68 +14,117 @@ import webhookRoutes from "./routes/webhook.routes.js";
 const app = express();
 
 /* ======================================================
-   GLOBAL MIDDLEWARE
+   GLOBAL SECURITY + PERFORMANCE
 ====================================================== */
 
-/* ---------- CORS (CRITICAL) ---------- */
+// Needed if behind NGINX / Load balancer
+app.set("trust proxy", true);
+
+// Security Headers
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+  })
+);
+
+// Gzip responses
+app.use(compression());
+
+/* ======================================================
+   CORS
+====================================================== */
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://13.205.13.110",
+  "http://13.205.13.110:3000",
+  "https://www.wheelbrand.in",
+  "https://wheelbrand.in"
+];
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://13.205.13.110",
-      "http://13.205.13.110:3000",
-      "https://www.wheelbrand.in"
-    ],
+    origin: (origin, callback) => {
+      // allow postman / curl
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      console.warn("❌ BLOCKED ORIGIN:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true
   })
 );
 
-/* ---------- BODY PARSERS ---------- */
-app.use(express.json({ limit: "10mb" }));
+/* ======================================================
+   BODY PARSERS
+====================================================== */
+
+// Normal APIs JSON
+app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true }));
+
 
 /* ======================================================
    HEALTH CHECK
 ====================================================== */
 app.get("/health", (req, res) => {
-  res.status(200).json({ status: "OK" });
+  res.status(200).json({
+    status: "OK",
+    uptime: process.uptime(),
+    timestamp: new Date()
+  });
 });
+
 
 /* ======================================================
    ROUTES
 ====================================================== */
 
-/* AUTH */
+// AUTH
 app.use("/api/auth", authRoutes);
 
-/* VISITOR */
+// VISITOR
 app.use("/api/visitors", visitorRoutes);
 
-/* CONFERENCE (ADMIN – AUTH REQUIRED) */
+// CONFERENCE (ADMIN)
 app.use("/api/conference", conferenceRoutes);
 
-/* CONFERENCE (PUBLIC – OTP + BOOKING) */
+// CONFERENCE (PUBLIC)
 app.use("/api/public/conference", conferencePublicRoutes);
 
-/* PAYMENT + BILLING */
+// ZOHO PAYMENT / BILLING
 app.use("/api/payment", paymentRoutes);
 
-/* ZOHO BILLING WEBHOOK */
+// ZOHO WEBHOOK (must stay AFTER JSON parser & BEFORE 404)
 app.use("/api/webhook", webhookRoutes);
+
 
 /* ======================================================
    404 HANDLER
 ====================================================== */
 app.use((req, res) => {
-  res.status(404).json({ message: "Route not found" });
+  res.status(404).json({
+    message: "Route not found",
+    path: req.originalUrl
+  });
 });
+
 
 /* ======================================================
    GLOBAL ERROR HANDLER
 ====================================================== */
 app.use((err, req, res, next) => {
-  console.error("❌ GLOBAL ERROR:", err);
-  res.status(500).json({ message: "Internal Server Error" });
+  console.error("❌ GLOBAL ERROR:", err?.message);
+  if (err?.stack) console.error(err.stack);
+
+  return res.status(500).json({
+    message: "Internal Server Error"
+  });
 });
+
 
 export default app;
