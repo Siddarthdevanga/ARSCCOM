@@ -30,10 +30,20 @@ async function startServer() {
     /* ---------- VALIDATE REQUIRED ENV ---------- */
     const REQUIRED = [
       "PORT",
+
+      // DB
+      "DB_HOST",
+      "DB_USER",
+      "DB_PASSWORD",
+      "DB_NAME",
+
+      // SMTP
       "SMTP_HOST",
       "SMTP_PORT",
       "SMTP_USER",
       "SMTP_PASSWORD",
+
+      // ZOHO
       "ZOHO_ACCOUNTS_URL",
       "ZOHO_API_BASE",
       "ZOHO_CLIENT_ID",
@@ -45,14 +55,14 @@ async function startServer() {
 
     if (missing.length) {
       throw new Error(
-        `Missing Required Environment Variables:\n${missing.join("\n")}`
+        `❌ Missing Environment Variables:\n${missing.join("\n")}`
       );
     }
 
-    /* ---------- NORMALIZE ---------- */
     process.env.PORT = Number(process.env.PORT);
+
     if (Number.isNaN(process.env.PORT) || process.env.PORT <= 0) {
-      throw new Error("Invalid PORT value");
+      throw new Error("❌ Invalid PORT value");
     }
 
     console.log("📦 Initializing Express App...");
@@ -63,8 +73,9 @@ async function startServer() {
       console.log("=======================================");
       console.log(`🚀 Server Running on Port: ${process.env.PORT}`);
       console.log(`🌍 Mode: ${process.env.NODE_ENV || "development"}`);
-      console.log("📧 SMTP Ready");
+      console.log("📧 SMTP Loaded");
       console.log("🧾 Zoho Billing Ready");
+      console.log("🗄️ Database Connected");
       console.log("=======================================");
     });
 
@@ -82,10 +93,7 @@ async function startServer() {
 function shutdown(reason) {
   console.log(`\n⚠️ Shutting down server (${reason})...`);
 
-  if (!server) {
-    process.exit(0);
-    return;
-  }
+  if (!server) return process.exit(0);
 
   server.close(() => {
     console.log("🛑 Server stopped gracefully");
@@ -100,4 +108,3 @@ process.on("SIGINT", () => shutdown("SIGINT"));
    BOOT
 ====================================================== */
 startServer();
-
