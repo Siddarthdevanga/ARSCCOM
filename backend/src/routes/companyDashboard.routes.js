@@ -1,18 +1,16 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { authMiddleware } from "../middleware/auth.js";
-import { subscriptionGuard } from "../middleware/subscriptionGuard.js";
 
 const router = express.Router();
 
-/* ================= PROTECT ALL ROUTES ================= */
-// Must be in this order
-router.use(authMiddleware, subscriptionGuard);
+/* ================= AUTH ================= */
+router.use(authMiddleware);
 
 /* ================= DASHBOARD STATS ================= */
 router.get("/dashboard", async (req, res) => {
   try {
-    const companyId = req.company.id;   // 🔥 available because authMiddleware sets req.company
+    const companyId = req.user.company_id;
 
     const [[rooms]] = await db.query(
       "SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?",
@@ -48,7 +46,7 @@ router.get("/dashboard", async (req, res) => {
 /* ================= GET ROOMS ================= */
 router.get("/rooms", async (req, res) => {
   try {
-    const companyId = req.company.id;
+    const companyId = req.user.company_id;
 
     const [rooms] = await db.query(
       `
@@ -70,7 +68,7 @@ router.get("/rooms", async (req, res) => {
 /* ================= CREATE ROOM ================= */
 router.post("/rooms", async (req, res) => {
   try {
-    const companyId = req.company.id;
+    const companyId = req.user.company_id;
     const { room_name, room_number } = req.body;
 
     if (!room_name || !room_number) {
@@ -98,7 +96,7 @@ router.post("/rooms", async (req, res) => {
 /* ================= RENAME ROOM ================= */
 router.put("/rooms/:id", async (req, res) => {
   try {
-    const companyId = req.company.id;
+    const companyId = req.user.company_id;
     const roomId = req.params.id;
     const { room_name } = req.body;
 
@@ -130,4 +128,3 @@ router.put("/rooms/:id", async (req, res) => {
 });
 
 export default router;
-
