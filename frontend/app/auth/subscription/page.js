@@ -3,8 +3,35 @@
 import styles from "./style.module.css";
 
 export default function SubscriptionPage() {
-  const choosePlan = (plan) => {
-    window.location.href = `/payment?plan=${plan}`;
+  const choosePlan = async (plan) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment/pay`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ plan })
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Something went wrong");
+        return;
+      }
+
+      // Redirect to Zoho Hosted Page
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Payment link not received");
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Unable to connect to server");
+    }
   };
 
   return (
@@ -35,7 +62,7 @@ export default function SubscriptionPage() {
 
           <button
             className={styles.btn}
-            onClick={() => choosePlan("free")}
+            onClick={() => choosePlan("trial")}
           >
             Get Started
           </button>
