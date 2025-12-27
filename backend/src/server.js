@@ -2,7 +2,7 @@ import "dotenv/config";
 import { loadSecrets } from "./config/secrets.js";
 
 /* ======================================================
-   GLOBAL PROCESS SAFETY
+   GLOBAL FAIL-SAFE LOGGING
 ====================================================== */
 process.on("unhandledRejection", (reason) => {
   console.error("❌ Unhandled Promise Rejection:", reason);
@@ -22,47 +22,53 @@ let server = null;
 
 async function startServer() {
   try {
-    console.log("🔐 Loading secrets from AWS...");
+    console.log("🔐 Loading AWS Secrets...");
 
-    /* ================= LOAD AWS SECRETS ================= */
+    // Load Secrets First
     await loadSecrets();
-    console.log("✅ Secrets loaded successfully");
+    console.log("✅ AWS Secrets Loaded");
 
-    /* ================= VALIDATE SMTP ================= */
+    /* ================= REQUIRED ENV ================= */
     const REQUIRED_ENV = [
+      "PORT",
       "SMTP_HOST",
       "SMTP_PORT",
       "SMTP_USER",
       "SMTP_PASSWORD",
-      "PORT"
+
+      // ZOHO CRITICALS
+      "ZOHO_ACCOUNTS_URL",
+      "ZOHO_API_BASE",
+      "ZOHO_REFRESH_TOKEN",
+      "ZOHO_CLIENT_ID",
+      "ZOHO_CLIENT_SECRET"
     ];
 
     const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
-
     if (missing.length) {
       throw new Error(
         `❌ Missing required environment variables: ${missing.join(", ")}`
       );
     }
 
-    /* ================= NORMALIZE ================= */
+    /* ================= NORMALIZE VALUES ================= */
     process.env.PORT = Number(process.env.PORT);
-
-    if (Number.isNaN(process.env.PORT) || process.env.PORT <= 0) {
+    if (!process.env.PORT || process.env.PORT <= 0) {
       throw new Error("❌ Invalid PORT value");
     }
 
-    /* ================= LOAD EXPRESS APP ================= */
+    /* ================= LOAD EXPRESS ================= */
     console.log("📦 Initializing application...");
     const { default: app } = await import("./app.js");
 
     /* ================= START SERVER ================= */
     server = app.listen(process.env.PORT, () => {
       console.log("=======================================");
-      console.log(`🚀 Server running on port ${process.env.PORT}`);
-      console.log(`📧 SMTP User: ${process.env.SMTP_USER}`);
-      console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log("✅ Application ready");
+      console.log(`🚀 Server running on PORT: ${process.env.PORT}`);
+      console.log(`🌍 ENV: ${process.env.NODE_ENV || "development"}`);
+      console.log(`📧 SMTP: ${process.env.SMTP_USER}`);
+      console.log(`💳 Zoho: Connected`);
+      console.log("✅ Application Ready");
       console.log("=======================================");
     });
 
@@ -78,7 +84,7 @@ async function startServer() {
    GRACEFUL SHUTDOWN
 ====================================================== */
 function shutdown(reason) {
-  console.log(`\n⚠️  Shutting down server (${reason})...`);
+  console.log(`\n⚠️  Shutting down (${reason})...`);
 
   if (server) {
     server.close(() => {
