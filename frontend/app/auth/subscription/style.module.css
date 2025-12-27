@@ -1,13 +1,17 @@
-/* FULL PAGE */
+/* =========================
+   GLOBAL PAGE
+========================= */
 .container {
   height: 100vh;
   background: linear-gradient(135deg, #3c007a, #8a2be2);
   color: white;
   font-family: Arial, sans-serif;
-  overflow: hidden;              /* ⬅️ prevent scroll */
+  overflow: hidden;
 }
 
-/* HEADER */
+/* =========================
+   HEADER
+========================= */
 .header {
   padding: 18px 40px;
   display: flex;
@@ -15,33 +19,53 @@
 }
 
 .logo {
-  font-size: 26px;               /* ⬇️ smaller */
+  font-size: 26px;
   font-weight: bold;
   letter-spacing: 1.5px;
 }
 
-/* TITLE */
+/* =========================
+   PAGE TITLE
+========================= */
 .title {
   text-align: center;
-  font-size: 28px;               /* ⬇️ smaller */
+  font-size: 28px;
   margin: 6px 0 22px;
   font-weight: bold;
 }
 
-/* PLAN GRID */
+/* =========================
+   ERROR MESSAGE
+========================= */
+.error {
+  text-align: center;
+  background: rgba(255, 0, 0, 0.15);
+  padding: 10px 14px;
+  border-radius: 10px;
+  max-width: 500px;
+  margin: auto;
+  color: #ffbaba;
+  font-size: 14px;
+}
+
+/* =========================
+   PLAN GRID
+========================= */
 .planGrid {
   display: flex;
   justify-content: center;
-  gap: 26px;                     /* ⬇️ reduced gap */
+  gap: 26px;
   max-width: 1200px;
   margin: auto;
 }
 
-/* PLAN CARD */
+/* =========================
+   PLAN CARD
+========================= */
 .card {
   background: white;
-  width: 300px;                  /* ⬇️ reduced */
-  padding: 22px 20px;            /* ⬇️ compact */
+  width: 300px;
+  padding: 22px 20px;
   border-radius: 16px;
   text-align: center;
   box-shadow: 0 8px 20px rgba(0,0,0,0.22);
@@ -54,23 +78,23 @@
   transform: translateY(-4px);
 }
 
-/* CENTER HIGHLIGHTED PLAN */
 .cardHighlight {
   border: 2px solid #7a00ff;
-  transform: scale(1.03);        /* ⬇️ subtle */
+  transform: scale(1.03);
 }
 
-/* PLAN NAME */
+/* =========================
+   PLAN TEXTS
+========================= */
 .planName {
-  font-size: 20px;               /* ⬇️ smaller */
+  font-size: 20px;
   font-weight: bold;
   color: #4b008f;
   margin-bottom: 6px;
 }
 
-/* PRICE */
 .price {
-  font-size: 28px;               /* ⬇️ smaller */
+  font-size: 28px;
   font-weight: bold;
   margin-bottom: 2px;
 }
@@ -80,14 +104,15 @@
   color: #777;
 }
 
-/* SUBTEXT */
 .subText {
   font-size: 13px;
   margin-bottom: 14px;
   color: #666;
 }
 
-/* FEATURES LIST */
+/* =========================
+   FEATURES
+========================= */
 .features {
   list-style: none;
   padding-left: 0;
@@ -97,21 +122,147 @@
 
 .features li {
   margin-bottom: 7px;
-  font-size: 14px;               /* ⬇️ smaller */
+  font-size: 14px;
 }
 
-/* BUTTON */
+/* =========================
+   BUTTONS
+========================= */
 .btn {
   width: 100%;
-  padding: 12px;                 /* ⬇️ smaller */
+  padding: 12px;
   background: #7a00ff;
   color: white;
   border: none;
   border-radius: 9px;
   font-size: 16px;
   cursor: pointer;
+  transition: 0.2s;
 }
 
 .btn:hover {
   background: #5c00c7;
+}
+
+/* =========================
+   SUCCESS SCREEN
+========================= */
+.successWrapper {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  height: calc(100vh - 80px);
+  padding: 30px 60px;
+  gap: 30px;
+}
+
+/* LEFT */
+.successLeft {
+  background: rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 22px 26px;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+.successTitle {
+  font-size: 30px;
+  margin-bottom: 10px;
+}
+
+.successText {
+  font-size: 15px;
+  color: #eee;
+  margin-bottom: 18px;
+}
+
+.planBox {
+  background: white;
+  color: #333;
+  padding: 18px;
+  border-radius: 14px;
+  margin-top: 6px;
+  line-height: 1.6;
+  border-left: 5px solid #7a00ff;
+}
+
+.planBox h3 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+/* RIGHT */
+.successRight {
+  background: rgba(0,0,0,0.35);
+  border-radius: 18px;
+  padding: 24px 26px;
+  text-align: center;
+  border: 1px solid rgba(255,255,255,0.25);
+}
+
+.successRight h3 {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.successRight p {
+  color: #ddd;
+  font-size: 14px;
+}
+
+.loginBtn {
+  margin-top: 18px;
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: none;
+  background: white;
+  color: #4b008f;
+  border-radius: 9px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.25s;
+}
+
+.loginBtn:hover {
+  transform: translateY(-2px);
+}
+
+/* NOTE */
+.note {
+  margin-top: 14px;
+  font-size: 13px;
+  color: #ddd;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+@media (max-width: 1024px) {
+  .planGrid {
+    gap: 16px;
+  }
+
+  .card {
+    width: 270px;
+  }
+
+  .successWrapper {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .planGrid {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .card {
+    width: 90%;
+  }
+
+  .successWrapper {
+    padding: 20px;
+  }
 }
