@@ -1,13 +1,16 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { subscriptionGuard } from "../middlewares/subscriptionGuard.js";
 import { db } from "../config/db.js";
 
 const router = express.Router();
 
 /* ======================================================
-   AUTH (COMPANY ADMIN)
+   AUTH + SUBSCRIPTION PROTECTION
 ====================================================== */
+// Must be in this order
 router.use(authenticate);
+router.use(subscriptionGuard);
 
 /* ======================================================
    DASHBOARD STATS + DEPARTMENT STATS
@@ -30,12 +33,9 @@ router.get("/dashboard", async (req, res) => {
       [companyId, companyId, companyId]
     );
 
-    /* ================= DEPARTMENT WISE BOOKINGS ================= */
     const [departments] = await db.query(
       `
-      SELECT 
-        department,
-        COUNT(*) AS total
+      SELECT department, COUNT(*) AS total
       FROM conference_bookings
       WHERE company_id = ?
       GROUP BY department
@@ -44,10 +44,7 @@ router.get("/dashboard", async (req, res) => {
       [companyId]
     );
 
-    res.json({
-      ...stats,
-      departments
-    });
+    res.json({ ...stats, departments });
 
   } catch (err) {
     console.error("[ADMIN][DASHBOARD]", err);
@@ -56,12 +53,8 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   CONFERENCE ROOMS
+   ROOMS
 ====================================================== */
-
-/**
- * GET rooms
- */
 router.get("/rooms", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -76,7 +69,7 @@ router.get("/rooms", async (req, res) => {
       [companyId]
     );
 
-    res.json(Array.isArray(rooms) ? rooms : []);
+    res.json(rooms || []);
   } catch (err) {
     console.error("[ADMIN][GET ROOMS]", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
@@ -86,14 +79,14 @@ router.get("/rooms", async (req, res) => {
 /**
  * 🚫 DISABLE ROOM CREATION
  */
-router.post("/rooms", async (req, res) => {
+router.post("/rooms", async (_, res) => {
   return res.status(403).json({
     message: "Room creation is disabled. Please contact administrator."
   });
 });
 
 /**
- * UPDATE (Rename / Renumber) ROOM
+ * UPDATE ROOM
  */
 router.put("/rooms/:id", async (req, res) => {
   try {
@@ -101,7 +94,8 @@ router.put("/rooms/:id", async (req, res) => {
     const roomId = Number(req.params.id);
     const { room_name, room_number } = req.body;
 
-    if (!roomId) return res.status(400).json({ message: "Invalid room ID" });
+    if (!roomId)
+      return res.status(400).json({ message: "Invalid room ID" });
 
     if (!room_name && !room_number) {
       return res.status(400).json({
@@ -110,38 +104,28 @@ router.put("/rooms/:id", async (req, res) => {
     }
 
     const [[room]] = await db.query(
-      `
-      SELECT id
-      FROM conference_rooms
-      WHERE id = ? AND company_id = ?
-      LIMIT 1
-      `,
+      `SELECT id FROM conference_rooms WHERE id=? AND company_id=? LIMIT 1`,
       [roomId, companyId]
     );
 
-    if (!room) {
+    if (!room)
       return res
         .status(404)
         .json({ message: "Room not found or unauthorized" });
-    }
 
     if (room_number) {
       const [[exists]] = await db.query(
-        `
-        SELECT id FROM conference_rooms
-        WHERE company_id = ?
-        AND room_number = ?
-        AND id <> ?
-        LIMIT 1
-        `,
+        `SELECT id 
+         FROM conference_rooms
+         WHERE company_id=? AND room_number=? AND id<>?
+         LIMIT 1`,
         [companyId, room_number, roomId]
       );
 
-      if (exists) {
-        return res.status(409).json({
-          message: "Room number already exists for your company"
-        });
-      }
+      if (exists)
+        return res
+          .status(409)
+          .json({ message: "Room number already exists" });
     }
 
     await db.query(
@@ -150,7 +134,7 @@ router.put("/rooms/:id", async (req, res) => {
       SET 
         room_name = COALESCE(?, room_name),
         room_number = COALESCE(?, room_number)
-      WHERE id = ? AND company_id = ?
+      WHERE id=? AND company_id=?
       `,
       [room_name?.trim() || null, room_number || null, roomId, companyId]
     );
@@ -165,7 +149,6 @@ router.put("/rooms/:id", async (req, res) => {
 /* ======================================================
    BOOKINGS
 ====================================================== */
-
 router.get("/bookings", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -204,13 +187,17 @@ router.get("/bookings", async (req, res) => {
     sql += " ORDER BY b.booking_date ASC, b.start_time ASC";
 
     const [rows] = await db.query(sql, params);
-    res.json(Array.isArray(rows) ? rows : []);
+
+    res.json(rows || []);
   } catch (err) {
     console.error("[ADMIN][GET BOOKINGS]", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
   }
 });
 
+/**
+ * CREATE BOOKING
+ */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
@@ -226,52 +213,39 @@ router.post("/bookings", async (req, res) => {
       end_time
     } = req.body;
 
-    if (
-      !room_id ||
-      !booked_by ||
-      !department ||
-      !booking_date ||
-      !start_time ||
-      !end_time
-    ) {
+    if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time)
       return res.status(400).json({
         message: "Room, department, date and time are required"
       });
-    }
 
-    if (end_time <= start_time) {
+    if (end_time <= start_time)
       return res.status(400).json({
         message: "End time must be after start time"
       });
-    }
 
     await conn.beginTransaction();
 
     const [[room]] = await conn.query(
       `
-      SELECT id
-      FROM conference_rooms
-      WHERE id = ? AND company_id = ?
-      LIMIT 1
+      SELECT id FROM conference_rooms
+      WHERE id=? AND company_id=? LIMIT 1
       `,
       [room_id, companyId]
     );
 
     if (!room) {
       await conn.rollback();
-      return res.status(403).json({
-        message: "Invalid room selection"
-      });
+      return res.status(403).json({ message: "Invalid room selection" });
     }
 
     const [[conflict]] = await conn.query(
       `
       SELECT COUNT(*) AS cnt
       FROM conference_bookings
-      WHERE company_id = ?
-        AND room_id = ?
-        AND booking_date = ?
-        AND status = 'BOOKED'
+      WHERE company_id=?
+        AND room_id=?
+        AND booking_date=?
+        AND status='BOOKED'
         AND start_time < ?
         AND end_time > ?
       `,
@@ -280,9 +254,9 @@ router.post("/bookings", async (req, res) => {
 
     if (conflict.cnt > 0) {
       await conn.rollback();
-      return res.status(409).json({
-        message: "Room already booked for this time slot"
-      });
+      return res
+        .status(409)
+        .json({ message: "Room already booked for this slot" });
     }
 
     await conn.query(
@@ -314,45 +288,40 @@ router.post("/bookings", async (req, res) => {
 
     await conn.commit();
 
-    res.status(201).json({
-      message: "Booking created successfully"
-    });
+    res.status(201).json({ message: "Booking created successfully" });
   } catch (err) {
     await conn.rollback();
     console.error("[ADMIN][CREATE BOOKING]", err);
-    res.status(500).json({
-      message: "Unable to create booking"
-    });
+    res.status(500).json({ message: "Unable to create booking" });
   } finally {
     conn.release();
   }
 });
 
+/**
+ * CANCEL BOOKING
+ */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const { companyId } = req.user;
     const bookingId = Number(req.params.id);
 
-    if (!bookingId) {
+    if (!bookingId)
       return res.status(400).json({ message: "Invalid booking ID" });
-    }
 
     const [result] = await db.query(
       `
       UPDATE conference_bookings
-      SET status = 'CANCELLED'
-      WHERE id = ?
-        AND company_id = ?
-        AND status = 'BOOKED'
+      SET status='CANCELLED'
+      WHERE id=? AND company_id=? AND status='BOOKED'
       `,
       [bookingId, companyId]
     );
 
-    if (!result.affectedRows) {
+    if (!result.affectedRows)
       return res.status(404).json({
         message: "Booking not found or already cancelled"
       });
-    }
 
     res.json({ message: "Booking cancelled successfully" });
   } catch (err) {
