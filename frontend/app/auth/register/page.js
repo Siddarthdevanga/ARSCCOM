@@ -58,21 +58,30 @@ export default function RegisterPage() {
         {
           method: "POST",
           body: formData,
-          credentials: "include" // IMPORTANT: Keeps login session
+          credentials: "include"
         }
       );
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.message || "Registration failed");
+        setError(data?.message || "Registration failed");
         return;
       }
+
+      /** ================================================
+       *  SAVE DETAILS FOR SUBSCRIPTION PAGE
+       *  ================================================ */
+      if (data?.companyId) localStorage.setItem("companyId", data.companyId);
+      if (email) localStorage.setItem("regEmail", email);
+      if (companyName)
+        localStorage.setItem("regCompanyName", companyName);
 
       // 🔥 SUCCESS → GO TO SUBSCRIPTION PAGE
       router.push("/auth/subscription");
 
     } catch (err) {
+      console.error(err);
       setError("Unable to connect to server");
     } finally {
       setLoading(false);
@@ -97,7 +106,7 @@ export default function RegisterPage() {
       <div className={styles.card}>
         <h2 className={styles.title}>Create Company Account</h2>
         <p className={styles.subtitle}>
-          Register your company to start managing visitors
+          Register your company to start managing visitors & conference rooms
         </p>
 
         {/* ROW 1 */}
