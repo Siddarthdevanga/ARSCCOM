@@ -12,15 +12,14 @@ export default function SubscriptionPage() {
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL ||
-    "https://www.wheelbrand.in"; // fallback safe
+    "https://www.wheelbrand.in";
 
   const choosePlan = async (plan) => {
-    setError("");
-
     if (loadingPlan) return; // stop spam clicking
+    setError("");
     setLoadingPlan(plan);
 
-    // Enterprise → go to contact page
+    // Enterprise redirects to contact page
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -28,23 +27,23 @@ export default function SubscriptionPage() {
     }
 
     try {
-      const res = await fetch(`${API_BASE}/api/payment/pay`, {
+      const res = await fetch(`${API_BASE}/api/payment/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan })
       });
 
       const data = await res.json();
 
-      // ------------- AUTH ERROR ----------------
+      // Not logged in
       if (res.status === 401) {
         setError("Please login to continue");
         router.push("/login");
         return;
       }
 
-      // ------------- ALREADY ACTIVE ------------
+      // Already active
       if (res.status === 403) {
         setError("Subscription already active");
         setTimeout(() => router.push("/dashboard"), 1200);
@@ -52,19 +51,25 @@ export default function SubscriptionPage() {
       }
 
       if (!res.ok) {
-        setError(data.message || "Something went wrong");
+        setError(data?.message || "Something went wrong");
         return;
       }
 
-      // ------------- REDIRECT TO ZOHO ----------
-      if (data.url) {
+      // Redirect to Zoho Hosted/Payment URL
+      if (data?.url) {
         window.location.href = data.url;
+        return;
+      }
+
+      // Trial Success (may not need redirect)
+      if (data?.redirect) {
+        router.push(data.redirect);
         return;
       }
 
       setError("No redirect URL returned from server");
     } catch (err) {
-      console.error(err);
+      console.error("SUBSCRIPTION ERROR", err);
       setError("Unable to connect to server. Please try again.");
     } finally {
       setLoadingPlan("");
@@ -83,6 +88,7 @@ export default function SubscriptionPage() {
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.planGrid}>
+
         {/* FREE TRIAL */}
         <div className={styles.card}>
           <h3 className={styles.planName}>FREE TRIAL</h3>
@@ -149,6 +155,7 @@ export default function SubscriptionPage() {
             Contact Us
           </button>
         </div>
+
       </div>
     </div>
   );
