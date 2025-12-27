@@ -10,7 +10,10 @@ import {
 const router = express.Router();
 
 /**
- * Subscribe based on EMAIL + PLAN
+ * Subscribe customer based on EMAIL + PLAN
+ * Plans:
+ *  - free     → Zoho Trial Subscription
+ *  - business → Paid subscription (Zoho Hosted Checkout)
  */
 router.post("/subscribe", async (req, res) => {
   try {
@@ -24,12 +27,16 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     if (!["free", "business"].includes(plan)) {
       return res.status(400).json({
         success: false,
         message: "Invalid plan selected"
       });
     }
+
+    console.log(`⚡ Subscription Request → ${normalizedEmail} | ${plan}`);
 
     /* ================= GET COMPANY ================= */
     const [[company]] = await db.query(
@@ -45,7 +52,7 @@ router.post("/subscribe", async (req, res) => {
       WHERE email = ?
       LIMIT 1
       `,
-      [email.toLowerCase()]
+      [normalizedEmail]
     );
 
     if (!company) {
@@ -58,12 +65,14 @@ router.post("/subscribe", async (req, res) => {
     const companyId = company.id;
     const companyName = company.name;
 
-    /* ================= CHECK / CREATE CUSTOMER ================= */
+    /* =====================================================
+       STEP 1: CHECK / CREATE ZOHO CUSTOMER
+    ===================================================== */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
       console.log("🧾 Creating Zoho Customer...");
-      customerId = await createCustomer(companyName, email);
+      customerId = await createCustomer(companyName, normalizedEmail);
 
       await db.query(
         `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
@@ -72,11 +81,13 @@ router.post("/subscribe", async (req, res) => {
     }
 
     let subscriptionId = null;
-    let redirectUrl = null;
 
-    /* ================= TRIAL ================= */
+    /* =====================================================
+       FREE TRIAL FLOW
+    ===================================================== */
     if (plan === "free") {
       if (company.subscription_status === "trial") {
+        console.log("ℹ️ Trial already exists");
         return res.json({
           success: true,
           message: "Trial already active",
@@ -85,6 +96,7 @@ router.post("/subscribe", async (req, res) => {
       }
 
       console.log("🎟 Creating TRIAL subscription...");
+
       subscriptionId = await createTrial(customerId);
 
       await db.query(
@@ -101,17 +113,24 @@ router.post("/subscribe", async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Trial Activated",
+        message: "Trial Activated Successfully",
         redirect: "/login"
       });
     }
 
-    /* ================= BUSINESS (PAID) ================= */
+    /* =====================================================
+       BUSINESS (PAID) FLOW
+    ===================================================== */
     console.log("💳 Creating BUSINESS subscription...");
+
     const result = await createBusinessSubscription(customerId);
 
-    subscriptionId = result.subscriptionId;
-    redirectUrl = result.hostedPageUrl;
+    subscriptionId = result?.subscriptionId;
+    const redirectUrl = result?.hostedPageUrl;
+
+    if (!subscriptionId || !redirectUrl) {
+      throw new Error("Zoho did not return subscription or hosted URL");
+    }
 
     await db.query(
       `
@@ -127,16 +146,19 @@ router.post("/subscribe", async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Redirect to Zoho Payment",
-      url: redirectUrl
+      message: "Redirecting to Zoho payment",
+      redirectUrl
     });
 
   } catch (err) {
-    console.error("❌ SUBSCRIPTION ERROR:", err?.response?.data || err);
+    console.error("❌ SUBSCRIPTION ERROR:", err?.response?.data || err?.message || err);
 
     return res.status(500).json({
       success: false,
-      message: "Subscription failed, please try again later"
+      message:
+        err?.response?.data?.message ||
+        err?.message ||
+        "Subscription failed, please try again later"
     });
   }
 });
