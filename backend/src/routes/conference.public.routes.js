@@ -28,49 +28,75 @@ If you did not perform this action, please contact your administrator immediatel
 `;
 
 /* ======================================================
-   GET COMPANY
+   COMMON COMPANY FETCH
 ====================================================== */
-router.get("/company/:slug", async (req, res) => {
+const getCompanyBySlug = async (slug, fields = "*") => {
+  const [[company]] = await db.query(
+    `SELECT ${fields}, subscription_status 
+     FROM companies 
+     WHERE slug=? LIMIT 1`,
+    [normalizeSlug(slug)]
+  );
+  return company || null;
+};
+
+/* ======================================================
+   SUBSCRIPTION GUARD
+====================================================== */
+const publicSubscriptionGuard = (req, res, next) => {
+  const c = req.publicCompany;
+
+  if (!c) return res.status(404).json({ message: "Invalid company" });
+
+  if (!["active", "trial"].includes(c.subscription_status)) {
+    return res
+      .status(403)
+      .json({ message: "Company subscription inactive" });
+  }
+
+  next();
+};
+
+/* ======================================================
+   PARAM LOADER (Runs for every :slug route)
+====================================================== */
+router.param("slug", async (req, res, next, slug) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
-
-    const [[company]] = await db.query(
-      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-
+    const company = await getCompanyBySlug(slug, "id,name,logo_url,slug");
     if (!company)
       return res.status(404).json({ message: "Invalid booking link" });
 
-    res.json(company);
+    req.publicCompany = company;
+    next();
   } catch (err) {
-    console.error("[PUBLIC][COMPANY]", err);
+    console.error("[PUBLIC][COMPANY LOAD]", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 /* ======================================================
+   GET COMPANY
+====================================================== */
+router.get("/company/:slug", publicSubscriptionGuard, (req, res) => {
+  res.json(req.publicCompany);
+});
+
+/* ======================================================
    GET ROOMS
 ====================================================== */
-router.get("/company/:slug/rooms", async (req, res) => {
+router.get("/company/:slug/rooms", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
-
-    const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company) return res.json([]);
+    const company = req.publicCompany;
 
     const [rooms] = await db.query(
-      `SELECT id,room_name,room_number
+      `SELECT id, room_name, room_number
        FROM conference_rooms
        WHERE company_id=?
        ORDER BY room_number ASC`,
       [company.id]
     );
 
-    res.json(Array.isArray(rooms) ? rooms : []);
+    res.json(rooms || []);
   } catch (err) {
     console.error("[PUBLIC][ROOMS]", err);
     res.json([]);
@@ -80,32 +106,26 @@ router.get("/company/:slug/rooms", async (req, res) => {
 /* ======================================================
    GET BOOKINGS
 ====================================================== */
-router.get("/company/:slug/bookings", async (req, res) => {
+router.get("/company/:slug/bookings", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
     const { roomId, date } = req.query;
-
     if (!roomId || !date) return res.json([]);
 
-    const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company) return res.json([]);
+    const company = req.publicCompany;
 
     const [bookings] = await db.query(
       `SELECT id, room_id, booking_date, start_time, end_time,
               department, booked_by, purpose
        FROM conference_bookings
-       WHERE company_id=?
-         AND room_id=?
-         AND booking_date=?
-         AND status='BOOKED'
+       WHERE company_id=? 
+       AND room_id=? 
+       AND booking_date=? 
+       AND status='BOOKED'
        ORDER BY start_time ASC`,
       [company.id, roomId, date]
     );
 
-    res.json(Array.isArray(bookings) ? bookings : []);
+    res.json(bookings || []);
   } catch (err) {
     console.error("[PUBLIC][BOOKINGS]", err);
     res.json([]);
@@ -115,20 +135,13 @@ router.get("/company/:slug/bookings", async (req, res) => {
 /* ======================================================
    SEND OTP
 ====================================================== */
-router.post("/company/:slug/send-otp", async (req, res) => {
+router.post("/company/:slug/send-otp", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
     const email = normalizeEmail(req.body.email);
-
     if (!email || !email.includes("@"))
       return res.status(400).json({ message: "Valid email required" });
 
-    const [[company]] = await db.query(
-      `SELECT id,name FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company)
-      return res.status(404).json({ message: "Invalid booking link" });
+    const company = req.publicCompany;
 
     const otp = String(Math.floor(100000 + Math.random() * 900000));
 
@@ -165,21 +178,15 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 /* ======================================================
    VERIFY OTP
 ====================================================== */
-router.post("/company/:slug/verify-otp", async (req, res) => {
+router.post("/company/:slug/verify-otp", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
     const email = normalizeEmail(req.body.email);
     const otp = String(req.body.otp || "").trim();
 
     if (!email || !otp)
       return res.status(400).json({ message: "Email and OTP required" });
 
-    const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company)
-      return res.status(404).json({ message: "Invalid booking link" });
+    const company = req.publicCompany;
 
     const [[row]] = await db.query(
       `SELECT id FROM public_booking_otp
@@ -207,9 +214,9 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 /* ======================================================
    CREATE BOOKING
 ====================================================== */
-router.post("/company/:slug/book", async (req, res) => {
+router.post("/company/:slug/book", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const company = req.publicCompany;
 
     let {
       room_id,
@@ -229,12 +236,6 @@ router.post("/company/:slug/book", async (req, res) => {
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start time" });
-
-    const [[company]] = await db.query(
-      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company) return res.status(404).json({ message: "Invalid booking link" });
 
     const [[verified]] = await db.query(
       `SELECT id FROM public_booking_otp
@@ -306,9 +307,9 @@ router.post("/company/:slug/book", async (req, res) => {
 /* ======================================================
    UPDATE BOOKING
 ====================================================== */
-router.patch("/company/:slug/bookings/:id", async (req, res) => {
+router.patch("/company/:slug/bookings/:id", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const company = req.publicCompany;
     const bookingId = Number(req.params.id);
     const { start_time, end_time, email } = req.body;
 
@@ -319,12 +320,6 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
       return res.status(400).json({ message: "End time must be after start" });
 
     const userEmail = normalizeEmail(email);
-
-    const [[company]] = await db.query(
-      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company) return res.status(404).json({ message: "Invalid link" });
 
     const [[booking]] = await db.query(
       `SELECT * FROM conference_bookings
@@ -403,21 +398,14 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
 /* ======================================================
    CANCEL BOOKING
 ====================================================== */
-router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
+router.patch("/company/:slug/bookings/:id/cancel", publicSubscriptionGuard, async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const company = req.publicCompany;
     const bookingId = Number(req.params.id);
     const email = normalizeEmail(req.body?.email || "");
 
     if (!email)
       return res.status(400).json({ message: "Email required" });
-
-    const [[company]] = await db.query(
-      `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-    if (!company)
-      return res.status(404).json({ message: "Invalid link" });
 
     const [[booking]] = await db.query(
       `SELECT * FROM conference_bookings
