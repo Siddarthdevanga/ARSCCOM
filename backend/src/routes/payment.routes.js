@@ -4,12 +4,14 @@ import { db } from "../config/db.js";
 import {
   createCustomer,
   createTrial,
-  createBusinessSubscription
+  createBusinessSubscription,
 } from "../services/zohoBilling.service.js";
 
 const router = express.Router();
 
-
+/**
+ * Subscribe using USER EMAIL + PLAN
+ */
 router.post("/subscribe", async (req, res) => {
   try {
     const { email, plan } = req.body;
@@ -28,20 +30,10 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-
-    /* =====================================================
-       STEP 1: GET USER → COMPANY ID
-    ===================================================== */
+    /* ================= FIND USER ================= */
     const [[user]] = await db.query(
-      `
-      SELECT id, company_id 
-      FROM users 
-      WHERE email = ? 
-      LIMIT 1
-      `,
-      [normalizedEmail]
+      `SELECT id, company_id FROM users WHERE email = ? LIMIT 1`,
+      [email.toLowerCase()]
     );
 
     if (!user) {
@@ -51,22 +43,10 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
-
-    /* =====================================================
-       STEP 2: GET COMPANY
-    ===================================================== */
+    /* ================= FIND COMPANY ================= */
     const [[company]] = await db.query(
-      `
-      SELECT 
-        id,
-        name,
-        zoho_customer_id,
-        zoho_subscription_id,
-        subscription_status
-      FROM companies
-      WHERE id = ?
-      LIMIT 1
-      `,
+      `SELECT id, name, zoho_customer_id, zoho_subscription_id, subscription_status 
+       FROM companies WHERE id = ? LIMIT 1`,
       [user.company_id]
     );
 
@@ -80,15 +60,12 @@ router.post("/subscribe", async (req, res) => {
     const companyId = company.id;
     const companyName = company.name;
 
-
-    /* =====================================================
-       STEP 3: CHECK / CREATE ZOHO CUSTOMER
-    ===================================================== */
+    /* ================= CREATE CUSTOMER IF NEEDED ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
       console.log("🧾 Creating Zoho Customer...");
-      customerId = await createCustomer(companyName, normalizedEmail);
+      customerId = await createCustomer(companyName, email);
 
       await db.query(
         `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
@@ -96,10 +73,7 @@ router.post("/subscribe", async (req, res) => {
       );
     }
 
-
-    /* =====================================================
-       STEP 4: TRIAL PLAN
-    ===================================================== */
+    /* ====================== TRIAL ======================= */
     if (plan === "free") {
       if (company.subscription_status === "trial") {
         return res.json({
@@ -109,16 +83,15 @@ router.post("/subscribe", async (req, res) => {
         });
       }
 
-      console.log("🎟 Creating TRIAL subscription...");
+      console.log("🎟 Creating TRIAL Subscription...");
       const subscriptionId = await createTrial(customerId);
 
       await db.query(
         `
         UPDATE companies 
-        SET 
-          subscription_status='trial',
-          plan='trial',
-          zoho_subscription_id=?
+        SET subscription_status='trial',
+            plan='trial',
+            zoho_subscription_id=?
         WHERE id=?
         `,
         [subscriptionId, companyId]
@@ -126,42 +99,25 @@ router.post("/subscribe", async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Trial Activated",
+        message: "Trial Activated Successfully",
         redirect: "/login",
       });
     }
 
+    /* ====================== BUSINESS (TEMP DISABLED) ======================= */
+    console.log("💳 Business Plan Requested (BLOCKED)");
 
-    /* =====================================================
-       STEP 5: BUSINESS (PAID)
-    ===================================================== */
-    console.log("💳 Creating BUSINESS subscription...");
-    const result = await createBusinessSubscription(customerId);
-
-    await db.query(
-      `
-      UPDATE companies 
-      SET 
-        subscription_status='pending',
-        plan='business',
-        zoho_subscription_id=?
-      WHERE id=?
-      `,
-      [result.subscriptionId, companyId]
-    );
-
-    return res.json({
-      success: true,
-      message: "Redirect to Zoho Payment",
-      url: result.hostedPageUrl,
+    return res.status(501).json({
+      success: false,
+      message:
+        "Business plan integration is in progress. Please proceed with Free Trial.",
     });
-
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR:", err?.response?.data || err);
 
     return res.status(500).json({
       success: false,
-      message: "Subscription failed, please try again later",
+      message: err?.message || "Subscription failed",
     });
   }
 });
