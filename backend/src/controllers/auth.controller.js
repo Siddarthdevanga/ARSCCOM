@@ -6,27 +6,39 @@ import * as service from "../services/auth.service.js";
 ====================================================== */
 export const register = async (req, res) => {
   try {
+    /* ---------- BASIC VALIDATION ---------- */
     if (!req.file) {
       return res.status(400).json({
         message: "Company logo is required"
       });
     }
 
-    const result = await service.registerCompany(
-      req.body,
-      req.file
-    );
+    if (
+      !req.body.companyName ||
+      !req.body.email ||
+      !req.body.phone ||
+      !req.body.conferenceRooms ||
+      !req.body.password
+    ) {
+      return res.status(400).json({
+        message: "All fields are required"
+      });
+    }
+
+    /* ---------- SERVICE LAYER ---------- */
+    const result = await service.registerCompany(req.body, req.file);
 
     return res.status(201).json({
-      message: "Company registered successfully",
-      ...result
+      message: "Company registered successfully. Proceed to subscription.",
+      company: result.company,
+      user: result.user
     });
 
   } catch (err) {
     console.error("REGISTER ERROR:", err);
 
-    return res.status(400).json({
-      message: err.message || "Registration failed"
+    return res.status(err?.statusCode || 400).json({
+      message: err?.message || "Registration failed"
     });
   }
 };
@@ -46,19 +58,11 @@ export const login = async (req, res) => {
       });
     }
 
-    const result = await service.login({
-      email,
-      password
-    });
+    const result = await service.login({ email, password });
 
-    /**
-     * IMPORTANT:
-     * result.company MUST contain:
-     * { id, name, slug, logo_url }
-     */
     if (!result?.company?.slug) {
       console.warn(
-        "LOGIN WARNING: Company slug missing for",
+        "⚠ LOGIN WARNING: Company slug missing for:",
         result?.company?.name
       );
     }
@@ -66,10 +70,10 @@ export const login = async (req, res) => {
     return res.status(200).json(result);
 
   } catch (err) {
-    console.error("LOGIN ERROR:", err.message);
+    console.error("LOGIN ERROR:", err?.message);
 
     return res.status(401).json({
-      message: err.message || "Invalid email or password"
+      message: err?.message || "Invalid email or password"
     });
   }
 };
@@ -89,8 +93,8 @@ export const forgotPassword = async (req, res) => {
     }
 
     /**
-     * Security:
-     * Never reveal whether email exists
+     * Security Policy:
+     * Do NOT reveal if email exists
      */
     await service.forgotPassword(email);
 
@@ -99,10 +103,10 @@ export const forgotPassword = async (req, res) => {
     });
 
   } catch (err) {
-    console.error("FORGOT PASSWORD ERROR:", err.message);
+    console.error("FORGOT PASSWORD ERROR:", err?.message);
 
     return res.status(400).json({
-      message: err.message || "Unable to process request"
+      message: err?.message || "Unable to process request"
     });
   }
 };
@@ -119,25 +123,21 @@ export const resetPassword = async (req, res) => {
 
     if (!email || !code || !password) {
       return res.status(400).json({
-        message: "Email, code and new password are required"
+        message: "Email, verification code, and password are required"
       });
     }
 
-    await service.resetPassword({
-      email,
-      code,
-      password
-    });
+    await service.resetPassword({ email, code, password });
 
     return res.status(200).json({
       message: "Password updated successfully"
     });
 
   } catch (err) {
-    console.error("RESET PASSWORD ERROR:", err.message);
+    console.error("RESET PASSWORD ERROR:", err?.message);
 
     return res.status(400).json({
-      message: err.message || "Unable to reset password"
+      message: err?.message || "Unable to reset password"
     });
   }
 };
