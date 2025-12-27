@@ -1,5 +1,6 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { subscriptionGuard } from "../middlewares/subscriptionGuard.js";
 import { upload } from "../middlewares/upload.middleware.js";
 
 import {
@@ -16,7 +17,7 @@ const router = express.Router();
    🌐 PUBLIC VISITOR PASS (EMAIL / QR)
    GET /api/visitors/public/code/:visitorCode
    - NO AUTH
-   - Read-only
+   - ALWAYS ACCESSIBLE
 ====================================================== */
 router.get(
   "/public/code/:visitorCode",
@@ -24,47 +25,43 @@ router.get(
 );
 
 /* ======================================================
+   PROTECTED ROUTES (AUTH + SUBSCRIPTION REQUIRED)
+====================================================== */
+router.use(authenticate, subscriptionGuard);
+
+/* ======================================================
    CREATE VISITOR
    POST /api/visitors
-   - Auth required
-   - multipart/form-data
-   - photo field name = "photo"
+   multipart/form-data
+   field: photo
 ====================================================== */
 router.post(
   "/",
-  authenticate,
   upload.single("photo"),
   createVisitor
 );
 
 /* ======================================================
-   VISITOR DASHBOARD (ADMIN)
-   GET /api/visitors/dashboard
+   VISITOR DASHBOARD
 ====================================================== */
 router.get(
   "/dashboard",
-  authenticate,
   getVisitorDashboard
 );
 
 /* ======================================================
-   ADMIN VISITOR PASS (SECURE)
-   GET /api/visitors/code/:visitorCode
-   - Company-isolated
+   ADMIN VISITOR PASS (Secure scoped)
 ====================================================== */
 router.get(
   "/code/:visitorCode",
-  authenticate,
   getVisitorPass
 );
 
 /* ======================================================
    CHECKOUT VISITOR
-   POST /api/visitors/:visitorCode/checkout
 ====================================================== */
 router.post(
   "/:visitorCode/checkout",
-  authenticate,
   checkoutVisitor
 );
 
