@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { loadSecrets } from "./config/secrets.js";
 
+let server = null;
+
 /* ======================================================
-   GLOBAL FAIL-SAFE LOGGING
+   GLOBAL CRASH SAFETY
 ====================================================== */
 process.on("unhandledRejection", (reason) => {
   console.error("❌ Unhandled Promise Rejection:", reason);
@@ -12,70 +14,64 @@ process.on("unhandledRejection", (reason) => {
 
 process.on("uncaughtException", (error) => {
   console.error("❌ Uncaught Exception:", error);
+  console.error(error?.stack || error);
   process.exit(1);
 });
 
 /* ======================================================
-   SERVER BOOTSTRAP
+   START SERVER
 ====================================================== */
-let server = null;
-
 async function startServer() {
   try {
-    console.log("🔐 Loading AWS Secrets...");
-
-    // Load Secrets First
+    console.log("🔐 Loading secrets from AWS Secrets Manager...");
     await loadSecrets();
-    console.log("✅ AWS Secrets Loaded");
+    console.log("✅ AWS Secrets loaded successfully");
 
-    /* ================= REQUIRED ENV ================= */
-    const REQUIRED_ENV = [
+    /* ---------- VALIDATE REQUIRED ENV ---------- */
+    const REQUIRED = [
       "PORT",
       "SMTP_HOST",
       "SMTP_PORT",
       "SMTP_USER",
       "SMTP_PASSWORD",
-
-      // ZOHO CRITICALS
       "ZOHO_ACCOUNTS_URL",
       "ZOHO_API_BASE",
-      "ZOHO_REFRESH_TOKEN",
       "ZOHO_CLIENT_ID",
-      "ZOHO_CLIENT_SECRET"
+      "ZOHO_CLIENT_SECRET",
+      "ZOHO_REFRESH_TOKEN"
     ];
 
-    const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
+    const missing = REQUIRED.filter((v) => !process.env[v]);
+
     if (missing.length) {
       throw new Error(
-        `❌ Missing required environment variables: ${missing.join(", ")}`
+        `Missing Required Environment Variables:\n${missing.join("\n")}`
       );
     }
 
-    /* ================= NORMALIZE VALUES ================= */
+    /* ---------- NORMALIZE ---------- */
     process.env.PORT = Number(process.env.PORT);
-    if (!process.env.PORT || process.env.PORT <= 0) {
-      throw new Error("❌ Invalid PORT value");
+    if (Number.isNaN(process.env.PORT) || process.env.PORT <= 0) {
+      throw new Error("Invalid PORT value");
     }
 
-    /* ================= LOAD EXPRESS ================= */
-    console.log("📦 Initializing application...");
+    console.log("📦 Initializing Express App...");
     const { default: app } = await import("./app.js");
 
-    /* ================= START SERVER ================= */
+    /* ---------- START SERVER ---------- */
     server = app.listen(process.env.PORT, () => {
       console.log("=======================================");
-      console.log(`🚀 Server running on PORT: ${process.env.PORT}`);
-      console.log(`🌍 ENV: ${process.env.NODE_ENV || "development"}`);
-      console.log(`📧 SMTP: ${process.env.SMTP_USER}`);
-      console.log(`💳 Zoho: Connected`);
-      console.log("✅ Application Ready");
+      console.log(`🚀 Server Running on Port: ${process.env.PORT}`);
+      console.log(`🌍 Mode: ${process.env.NODE_ENV || "development"}`);
+      console.log("📧 SMTP Ready");
+      console.log("🧾 Zoho Billing Ready");
       console.log("=======================================");
     });
 
-  } catch (error) {
-    console.error("❌ Server startup failed");
-    console.error(error?.message || error);
-    if (error?.stack) console.error(error.stack);
+  } catch (err) {
+    console.error("❌ Failed to start server");
+    console.error(err?.message || err);
+    if (err?.stack) console.error(err.stack);
     process.exit(1);
   }
 }
@@ -84,22 +80,24 @@ async function startServer() {
    GRACEFUL SHUTDOWN
 ====================================================== */
 function shutdown(reason) {
-  console.log(`\n⚠️  Shutting down (${reason})...`);
+  console.log(`\n⚠️ Shutting down server (${reason})...`);
 
-  if (server) {
-    server.close(() => {
-      console.log("🛑 Server stopped gracefully");
-      process.exit(0);
-    });
-  } else {
+  if (!server) {
     process.exit(0);
+    return;
   }
+
+  server.close(() => {
+    console.log("🛑 Server stopped gracefully");
+    process.exit(0);
+  });
 }
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
 
 /* ======================================================
-   START
+   BOOT
 ====================================================== */
 startServer();
+
