@@ -1,10 +1,14 @@
 import AWS from "aws-sdk";
 
+let isLoaded = false;
+
 const client = new AWS.SecretsManager({
   region: process.env.AWS_REGION
 });
 
 export const loadSecrets = async () => {
+  if (isLoaded) return; // Prevent multiple loads
+
   const secretId = process.env.AWS_SECRET_ARN;
 
   if (!secretId) {
@@ -16,35 +20,36 @@ export const loadSecrets = async () => {
     .promise();
 
   if (!SecretString) {
-    throw new Error("SecretString is empty");
+    throw new Error("AWS SecretString is empty");
   }
 
-  // 🔍 Try JSON first
+  // ---------- Try JSON (Preferred) ----------
   try {
     const parsed = JSON.parse(SecretString);
 
-    for (const [key, value] of Object.entries(parsed)) {
-      process.env[key] = String(value);
-    }
+    Object.entries(parsed).forEach(([key, value]) => {
+      if (!process.env[key]) process.env[key] = String(value);
+    });
 
-    console.log("Secrets loaded (JSON format)");
+    console.log("✔ AWS Secrets loaded (JSON format)");
+    isLoaded = true;
     return;
   } catch {
-    // Not JSON — fall through
+    // Continue to fallback
   }
 
-  // 🔍 Fallback: key=value format
+  // ---------- Try key=value fallback ----------
   const lines = SecretString.split(/\r?\n/);
 
-  for (const line of lines) {
-    if (!line.includes("=")) continue;
+  lines.forEach((line) => {
+    if (!line.includes("=")) return;
 
-    const idx = line.indexOf("=");
-    const key = line.slice(0, idx).trim();
-    const value = line.slice(idx + 1).trim();
+    const [key, value] = line.split("=");
+    if (key && value && !process.env[key.trim()]) {
+      process.env[key.trim()] = value.trim();
+    }
+  });
 
-    process.env[key] = value;
-  }
-
-  console.log("Secrets loaded (key=value format)");
+  console.log("✔ AWS Secrets loaded (key=value format)");
+  isLoaded = true;
 };
