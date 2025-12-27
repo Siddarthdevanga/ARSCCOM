@@ -9,7 +9,7 @@ const BASE = process.env.ZOHO_API_BASE;
 async function headers() {
   const token = await getZohoAccessToken();
   return {
-    Authorization: `Zoho-oauthtoken ${token}`
+    Authorization: `Zoho-oauthtoken ${token}`,
   };
 }
 
@@ -23,7 +23,7 @@ export async function createCustomer(company, email, phone) {
       display_name: company,
       company_name: company,
       email,
-      phone: phone || ""
+      phone: phone || "",
     },
     { headers: await headers() }
   );
@@ -32,7 +32,7 @@ export async function createCustomer(company, email, phone) {
 }
 
 /* ======================================================
-   CREATE SUBSCRIPTION (TRIAL)
+   CREATE TRIAL SUBSCRIPTION
 ====================================================== */
 export async function createTrial(customerId) {
   const res = await axios.post(
@@ -40,8 +40,8 @@ export async function createTrial(customerId) {
     {
       customer_id: customerId,
       plan: {
-        plan_code: process.env.ZOHO_PLAN_TRIAL_CODE
-      }
+        plan_code: process.env.ZOHO_PLAN_TRIAL_CODE, // Must be "1"
+      },
     },
     { headers: await headers() }
   );
@@ -50,25 +50,16 @@ export async function createTrial(customerId) {
 }
 
 /* ======================================================
-   CREATE BUSINESS SUBSCRIPTION
+   BUSINESS SUBSCRIPTION (NOT READY)
 ====================================================== */
-export async function createBusinessSubscription(customerId) {
-  const res = await axios.post(
-    `${BASE}/subscriptions`,
-    {
-      customer_id: customerId,
-      plan: {
-        plan_code: process.env.ZOHO_PLAN_BUSINESS_CODE
-      }
-    },
-    { headers: await headers() }
+export async function createBusinessSubscription() {
+  throw new Error(
+    "Business subscription integration is not yet enabled. Please use Free Trial."
   );
-
-  return res.data.subscription.subscription_id;
 }
 
 /* ======================================================
-   PAYMENT LINK (IF YOU WANT DIRECT PAY)
+   PAYMENT LINK (OPTIONAL FUTURE USE)
 ====================================================== */
 export async function createPaymentLink(customerId, amount) {
   const res = await axios.post(
@@ -76,7 +67,7 @@ export async function createPaymentLink(customerId, amount) {
     {
       customer_id: customerId,
       amount,
-      description: "PROMEET Business Subscription"
+      description: "PROMEET Business Subscription",
     },
     { headers: await headers() }
   );
