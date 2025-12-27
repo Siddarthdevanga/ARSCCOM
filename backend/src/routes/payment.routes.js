@@ -12,7 +12,7 @@ const router = express.Router();
 /**
  * PLAN FLOW
  * free     → Zoho Trial Subscription
- * business → Paid subscription (Zoho Subscription Hosted Page)
+ * business → Paid subscription (Zoho Hosted Payment Page)
  */
 
 router.post("/subscribe", async (req, res) => {
@@ -36,8 +36,15 @@ router.post("/subscribe", async (req, res) => {
 
     /* ================= CHECK COMPANY ================= */
     const [[company]] = await db.query(
-      `SELECT id, zoho_customer_id, zoho_subscription_id, subscription_status 
-       FROM companies WHERE id = ? LIMIT 1`,
+      `SELECT 
+          id, 
+          zoho_customer_id, 
+          zoho_subscription_id, 
+          subscription_status,
+          plan 
+       FROM companies 
+       WHERE id = ? 
+       LIMIT 1`,
       [companyId]
     );
 
@@ -48,6 +55,14 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
+    /* ================= BLOCK IF ALREADY ACTIVE ================= */
+    if (company.subscription_status === "active") {
+      return res.status(403).json({
+        success: false,
+        message: "Subscription already active"
+      });
+    }
+
     /* =====================================================
        STEP 1: CHECK / CREATE CUSTOMER
     ===================================================== */
@@ -55,10 +70,13 @@ router.post("/subscribe", async (req, res) => {
 
     if (!customerId) {
       console.log("🧾 Creating Zoho Customer...");
+
       customerId = await createCustomer(companyName, email);
 
       await db.query(
-        `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
+        `UPDATE companies 
+         SET zoho_customer_id=? 
+         WHERE id=?`,
         [customerId, companyId]
       );
     }
@@ -67,44 +85,53 @@ router.post("/subscribe", async (req, res) => {
        STEP 2: CREATE SUBSCRIPTION
     ===================================================== */
     let subscriptionId = null;
-    let redirectUrl = null;
+    let hostedUrl = null;
 
-    // Prevent creating 2 trials
+    // Prevent duplicate trials
     if (plan === "free") {
-      if (company?.subscription_status === "trial") {
+      if (company.subscription_status === "trial") {
         return res.json({
           success: true,
           message: "Trial already active",
+          redirect: "/conference/dashboard",
           zoho_customer_id: customerId,
-          zoho_subscription_id: company?.zoho_subscription_id
+          zoho_subscription_id: company.zoho_subscription_id
         });
       }
 
       console.log("🎟 Creating TRIAL subscription...");
+
       subscriptionId = await createTrial(customerId);
     }
 
     if (plan === "business") {
       console.log("💳 Creating BUSINESS subscription...");
+
       const result = await createBusinessSubscription(customerId);
 
       subscriptionId = result.subscriptionId;
-      redirectUrl = result.hostedPageUrl || null;
+      hostedUrl = result.hostedPageUrl;
+
+      if (!hostedUrl) {
+        throw new Error("Zoho hosted payment URL missing");
+      }
     }
 
     /* =====================================================
-       STEP 3: SAVE SUBSCRIPTION
+       STEP 3: SAVE STATUS
     ===================================================== */
     await db.query(
       `
       UPDATE companies 
       SET 
         zoho_subscription_id=?,
+        plan=?,
         subscription_status=?
       WHERE id=?
       `,
       [
         subscriptionId,
+        plan === "free" ? "trial" : "business",
         plan === "free" ? "trial" : "pending",
         companyId
       ]
@@ -121,7 +148,8 @@ router.post("/subscribe", async (req, res) => {
           : "Business Subscription Initiated",
       zoho_customer_id: customerId,
       zoho_subscription_id: subscriptionId,
-      redirectUrl // frontend redirects if business
+      url: hostedUrl || null,      // 👈 FRONTEND EXPECTS "url"
+      redirect: plan === "free" ? "/conference/dashboard" : null
     });
 
   } catch (err) {
@@ -129,7 +157,10 @@ router.post("/subscribe", async (req, res) => {
 
     return res.status(500).json({
       success: false,
-      message: err?.message || "Subscription failed, please try again later"
+      message:
+        err?.response?.data?.message ||
+        err?.message ||
+        "Subscription failed, please try again later"
     });
   }
 });
