@@ -10,45 +10,55 @@ import {
 const router = express.Router();
 
 /**
- * Subscription without login
- * Requires: companyId + plan
+ * Subscribe based on EMAIL + PLAN
  */
 router.post("/subscribe", async (req, res) => {
   try {
-    const { companyId, plan } = req.body;
+    const { email, plan } = req.body;
 
-    if (!companyId || !plan) {
+    /* ================= VALIDATION ================= */
+    if (!email || !plan) {
       return res.status(400).json({
-        message: "companyId and plan are required"
+        success: false,
+        message: "email and plan are required"
       });
     }
 
     if (!["free", "business"].includes(plan)) {
       return res.status(400).json({
-        message: "Invalid plan"
+        success: false,
+        message: "Invalid plan selected"
       });
     }
 
-    // ---------------- GET COMPANY ----------------
+    /* ================= GET COMPANY ================= */
     const [[company]] = await db.query(
-      `SELECT id, name, email,
-              zoho_customer_id,
-              zoho_subscription_id,
-              subscription_status
-       FROM companies
-       WHERE id = ?
-       LIMIT 1`,
-      [companyId]
+      `
+      SELECT 
+        id,
+        name,
+        email,
+        zoho_customer_id,
+        zoho_subscription_id,
+        subscription_status
+      FROM companies
+      WHERE email = ?
+      LIMIT 1
+      `,
+      [email.toLowerCase()]
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({
+        success: false,
+        message: "Company not found for this email"
+      });
     }
 
+    const companyId = company.id;
     const companyName = company.name;
-    const email = company.email;
 
-    // ---------------- CREATE CUSTOMER IF NEEDED ----------------
+    /* ================= CHECK / CREATE CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
@@ -64,7 +74,7 @@ router.post("/subscribe", async (req, res) => {
     let subscriptionId = null;
     let redirectUrl = null;
 
-    // ---------------- TRIAL ----------------
+    /* ================= TRIAL ================= */
     if (plan === "free") {
       if (company.subscription_status === "trial") {
         return res.json({
@@ -74,14 +84,18 @@ router.post("/subscribe", async (req, res) => {
         });
       }
 
+      console.log("🎟 Creating TRIAL subscription...");
       subscriptionId = await createTrial(customerId);
 
       await db.query(
-        `UPDATE companies 
-         SET subscription_status='trial',
-             plan='trial',
-             zoho_subscription_id=?
-         WHERE id=?`,
+        `
+        UPDATE companies 
+        SET 
+          subscription_status='trial',
+          plan='trial',
+          zoho_subscription_id=?
+        WHERE id=?
+        `,
         [subscriptionId, companyId]
       );
 
@@ -92,18 +106,22 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
-    // ---------------- BUSINESS PLAN ----------------
+    /* ================= BUSINESS (PAID) ================= */
+    console.log("💳 Creating BUSINESS subscription...");
     const result = await createBusinessSubscription(customerId);
 
     subscriptionId = result.subscriptionId;
     redirectUrl = result.hostedPageUrl;
 
     await db.query(
-      `UPDATE companies 
-       SET subscription_status='pending',
-           plan='business',
-           zoho_subscription_id=?
-       WHERE id=?`,
+      `
+      UPDATE companies 
+      SET 
+        subscription_status='pending',
+        plan='business',
+        zoho_subscription_id=?
+      WHERE id=?
+      `,
       [subscriptionId, companyId]
     );
 
@@ -114,11 +132,11 @@ router.post("/subscribe", async (req, res) => {
     });
 
   } catch (err) {
-    console.error("SUBSCRIPTION ERROR:", err?.response?.data || err);
+    console.error("❌ SUBSCRIPTION ERROR:", err?.response?.data || err);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: "Subscription failed"
+      message: "Subscription failed, please try again later"
     });
   }
 });
