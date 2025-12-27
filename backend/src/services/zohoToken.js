@@ -3,13 +3,10 @@ import axios from "axios";
 let cachedToken = null;
 let tokenExpiry = null;
 
-/**
- * Get Fresh Zoho OAuth Token Using Refresh Token
- */
-export const getZohoAccessToken = async () => {
+export async function getZohoToken() {
   const now = Date.now();
 
-  // reuse token if valid
+  // reuse token if still valid
   if (cachedToken && tokenExpiry && now < tokenExpiry) {
     return cachedToken;
   }
@@ -20,33 +17,21 @@ export const getZohoAccessToken = async () => {
     refresh_token: process.env.ZOHO_REFRESH_TOKEN,
     client_id: process.env.ZOHO_CLIENT_ID,
     client_secret: process.env.ZOHO_CLIENT_SECRET,
-    grant_type: "refresh_token",
+    grant_type: "refresh_token"
   });
 
   const { data } = await axios.post(url, params);
 
   if (!data.access_token) {
-    throw new Error("Failed to retrieve Zoho Access Token");
+    throw new Error("Zoho token generation failed");
   }
 
   cachedToken = data.access_token;
 
-  // expires in seconds → convert to ms
-  tokenExpiry = now + (data.expires_in - 60) * 1000;
+  // expire 50 mins
+  tokenExpiry = now + 50 * 60 * 1000;
+
+  console.log("🔐 Zoho Access Token Generated");
 
   return cachedToken;
-};
-
-/**
- * Helper Axios Client
- */
-export const zohoClient = async () => {
-  const token = await getZohoAccessToken();
-
-  return axios.create({
-    baseURL: process.env.ZOHO_API_BASE,
-    headers: {
-      Authorization: `Zoho-oauthtoken ${token}`,
-    },
-  });
-};
+}
