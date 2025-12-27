@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -10,16 +10,37 @@ export default function SubscriptionPage() {
   const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
 
+  const [email, setEmail] = useState("");
+  const [companyId, setCompanyId] = useState("");
+  const [companyName, setCompanyName] = useState("");
+
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.wheelbrand.in";
 
+  /* ======================================================
+      LOAD DATA FROM LOCAL STORAGE
+  ====================================================== */
+  useEffect(() => {
+    try {
+      const storedEmail = localStorage.getItem("regEmail");
+      const storedCompanyId = localStorage.getItem("companyId");
+      const storedCompanyName = localStorage.getItem("regCompanyName");
+
+      if (storedEmail) setEmail(storedEmail);
+      if (storedCompanyId) setCompanyId(storedCompanyId);
+      if (storedCompanyName) setCompanyName(storedCompanyName);
+    } catch (e) {}
+  }, []);
+
+  /* ======================================================
+      HANDLE PLAN SELECTION
+  ====================================================== */
   const choosePlan = async (plan) => {
-    if (loadingPlan) return; // avoid spam clicking
+    if (loadingPlan) return;
     setError("");
     setLoadingPlan(plan);
 
-    // Enterprise redirects to Contact Page
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -27,13 +48,20 @@ export default function SubscriptionPage() {
     }
 
     try {
+      const body = {
+        email,
+        companyId,
+        companyName,
+        plan
+      };
+
       const res = await fetch(`${API_BASE}/api/payment/subscribe`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
-        credentials: "include", // IMPORTANT for JWT cookie
-        body: JSON.stringify({ plan })
+        credentials: "include",
+        body: JSON.stringify(body)
       });
 
       let data = {};
@@ -41,14 +69,14 @@ export default function SubscriptionPage() {
         data = await res.json();
       } catch (_) {}
 
-      /* ================= AUTH FAIL ================= */
+      // Not logged in
       if (res.status === 401) {
         setError("Session expired. Please login again.");
-        router.push("/login");
+        router.push("/auth/login");
         return;
       }
 
-      /* ================= ALREADY ACTIVE ================= */
+      // Already active
       if (res.status === 403) {
         setError("Subscription already active");
         setTimeout(() => router.push("/dashboard"), 1200);
@@ -60,13 +88,13 @@ export default function SubscriptionPage() {
         return;
       }
 
-      /* ================= ZOHO PAYMENT LINK ================= */
-      if (data?.url) {
-        window.location.href = data.url;
+      // Business → Redirect to Zoho
+      if (data?.redirectUrl) {
+        window.location.href = data.redirectUrl;
         return;
       }
 
-      /* ================= TRIAL SUCCESS ================= */
+      // Trial success
       if (data?.redirect) {
         router.push(data.redirect);
         return;
@@ -75,7 +103,7 @@ export default function SubscriptionPage() {
       setError("Unexpected server response. Please contact support.");
     } catch (err) {
       console.error("SUBSCRIPTION ERROR", err);
-      setError("Unable to connect to server. Check network & try again.");
+      setError("Unable to connect to server");
     } finally {
       setLoadingPlan("");
     }
@@ -160,6 +188,7 @@ export default function SubscriptionPage() {
             Contact Us
           </button>
         </div>
+
       </div>
     </div>
   );
