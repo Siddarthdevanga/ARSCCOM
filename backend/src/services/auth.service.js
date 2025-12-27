@@ -17,7 +17,6 @@ if (!process.env.JWT_SECRET) {
 /* ======================================================
    HELPERS
 ====================================================== */
-
 const generateSlug = (name) =>
   name
     .toLowerCase()
@@ -105,9 +104,7 @@ export const registerCompany = async (data, file) => {
       [companyId, email, phone, passwordHash]
     );
 
-    /* ======================================================
-       AUTO CREATE CONFERENCE ROOMS (FIXED WITH room_number)
-    ======================================================= */
+    /* ---------- Create Conference Rooms ---------- */
     for (let i = 1; i <= conferenceRooms; i++) {
       await conn.execute(
         `
@@ -121,53 +118,37 @@ export const registerCompany = async (data, file) => {
     await conn.commit();
 
     /* ======================================================
-       PROFESSIONAL WELCOME EMAIL
-    ======================================================= */
+       WELCOME EMAIL
+    ====================================================== */
     sendEmail({
       to: email,
-      subject: "🎉 Welcome to PROMEET – Complete Your Subscription",
+      subject: "Welcome to PROMEET – Complete Your Subscription",
       html: `
-  <div style="font-family:Arial,Helvetica,sans-serif;padding:20px;background:#f9f9f9;">
-    <div style="max-width:650px;margin:auto;background:white;border-radius:8px;padding:25px;border:1px solid #ddd;">
-      
-      <h2 style="color:#6c2bd9;">Welcome to PROMEET 🎉</h2>
+<p>Hi,</p>
 
-      <p>Hello,</p>
+<p>
+Thank you for registering <b>${companyName}</b> on <b>PROMEET</b>.
+Your company account has been successfully created and your admin profile is now active.
+</p>
 
-      <p>
-        We’re excited to have <b>${companyName}</b> onboard with PROMEET.
-        Your company has been successfully registered and your admin account is now active.
-      </p>
+<h3 style="margin-top:10px;">Next Step</h3>
+<p>
+Please proceed to the Subscription page and select a suitable plan
+to activate your account and start using PROMEET.
+</p>
 
-      <h3>🚀 Next Step – Activate Your Subscription</h3>
-      <p>
-        To start using PROMEET features such as Visitor Management & Conference Room Booking,
-        please complete your subscription.
-      </p>
+<p>
+If you need any help with onboarding or billing setup, feel free to contact us anytime.
+</p>
 
-      <p>
-        👉 In the Subscription page choose a plan to continue.
-      </p>
+<br/>
+<p>Regards,<br/>PROMEET Team</p>
 
-      <hr/>
-
-      <p>
-        If you need any help with onboarding or billing setup, our support team is always available.
-      </p>
-
-      <br/>
-
-      <p>Regards,<br/><b>PROMEET Team</b></p>
-
-      <hr/>
-
-      <p style="font-size:12px;color:#666;">
-        This is an auto-generated email. Please do not reply directly to this message.
-      </p>
-
-    </div>
-  </div>
-  `
+<hr/>
+<p style="font-size:12px;color:#777;">
+This is an auto-generated email. Please do not reply.
+</p>
+`
     }).catch(() => {});
 
     return {
@@ -187,6 +168,7 @@ export const registerCompany = async (data, file) => {
 
 /* ======================================================
    LOGIN
+   (Allow only Trial or Active companies)
 ====================================================== */
 export const login = async ({ email, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
@@ -202,7 +184,8 @@ export const login = async ({ email, password }) => {
       c.id       AS companyId,
       c.name     AS companyName,
       c.slug     AS companySlug,
-      c.logo_url AS companyLogo
+      c.logo_url AS companyLogo,
+      c.subscription_status
     FROM users u
     JOIN companies c ON c.id = u.company_id
     WHERE u.email = ?
@@ -212,6 +195,11 @@ export const login = async ({ email, password }) => {
 
   if (!rows.length) {
     throw new Error("Invalid credentials");
+  }
+
+  // block login if not trial or active
+  if (!["trial", "active"].includes(rows[0].subscription_status)) {
+    throw new Error("Your subscription is not active. Please subscribe to continue.");
   }
 
   const valid = await bcrypt.compare(password, rows[0].password_hash);
@@ -269,21 +257,25 @@ export const forgotPassword = async (email) => {
     to: cleanEmail,
     subject: "PROMEET Password Reset Code",
     html: `
-      <p>Your password reset code:</p>
-      <h2>${resetCode}</h2>
-      <p>This code is valid for <b>10 minutes</b>.</p>
-      <br/>
-      <p>Regards,<br/><b>PROMEET Team</b></p>
-      <hr/>
-      <p style="font-size:12px;color:#666;">
-        This is an auto-generated email. Please do not reply directly.
-      </p>
-    `
+<p>Your password reset code is:</p>
+
+<h2>${resetCode}</h2>
+
+<p>This code is valid for <b>10 minutes</b>.</p>
+
+<br/>
+<p>Regards,<br/>PROMEET Team</p>
+
+<hr/>
+<p style="font-size:12px;color:#777;">
+This is an auto-generated email. Please do not reply.
+</p>
+`
   });
 };
 
 /* ======================================================
-   RESET PASSWORD
+   RESET PASSWORD + SUCCESS EMAIL
 ====================================================== */
 export const resetPassword = async ({ email, code, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
@@ -320,6 +312,31 @@ export const resetPassword = async ({ email, code, password }) => {
     [newHash, rows[0].id]
   );
 
+  /* ================= PASSWORD RESET SUCCESS EMAIL ================= */
+  await sendEmail({
+    to: cleanEmail,
+    subject: "Your PROMEET Password Has Been Reset",
+    html: `
+<p>Hi,</p>
+
+<p>
+Your PROMEET account password has been reset successfully.
+If this action was done by you, no further action is required.
+</p>
+
+<p>
+If you did NOT request this change, please contact support immediately.
+</p>
+
+<br/>
+<p>Regards,<br/>PROMEET Team</p>
+
+<hr/>
+<p style="font-size:12px;color:#777;">
+This is an auto-generated email. Please do not reply.
+</p>
+`
+  });
+
   return { message: "Password reset successful" };
 };
-
