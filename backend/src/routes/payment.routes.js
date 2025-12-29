@@ -1,16 +1,14 @@
 import express from "express";
 import { db } from "../config/db.js";
-
-import {
-  createCustomer,
-  createTrial,
-  createBusinessSubscription,
-} from "../services/zohoBilling.service.js";
+import { zohoClient } from "../services/zohoAuth.service.js";
 
 const router = express.Router();
 
 /**
- * Subscribe using USER EMAIL + PLAN
+ * Subscribe using EMAIL + PLAN
+ * FREE  -> ₹49 Processing Fee
+ * BUSINESS -> ₹500
+ * Activation happens via Zoho Webhook
  */
 router.post("/subscribe", async (req, res) => {
   try {
@@ -45,7 +43,7 @@ router.post("/subscribe", async (req, res) => {
 
     /* ================= FIND COMPANY ================= */
     const [[company]] = await db.query(
-      `SELECT id, name, zoho_customer_id, zoho_subscription_id, subscription_status 
+      `SELECT id, name, subscription_status, zoho_customer_id
        FROM companies WHERE id = ? LIMIT 1`,
       [user.company_id]
     );
@@ -57,15 +55,34 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
+    // Prevent duplicate paid/trial active users
+    if (["trial", "active"].includes(company.subscription_status)) {
+      return res.status(403).json({
+        success: false,
+        message: "Subscription already active",
+      });
+    }
+
     const companyId = company.id;
     const companyName = company.name;
 
-    /* ================= CREATE CUSTOMER IF NEEDED ================= */
+    const client = await zohoClient();
+
+    /* ======================================================
+       ENSURE ZOHO CUSTOMER
+    ====================================================== */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
       console.log("🧾 Creating Zoho Customer...");
-      customerId = await createCustomer(companyName, email);
+
+      const { data } = await client.post("/customers", {
+        display_name: companyName,
+        company_name: companyName,
+        email,
+      });
+
+      customerId = data.customer.customer_id;
 
       await db.query(
         `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
@@ -73,51 +90,66 @@ router.post("/subscribe", async (req, res) => {
       );
     }
 
-    /* ====================== TRIAL ======================= */
+    /* ======================================================
+       AMOUNT & DESCRIPTION
+    ====================================================== */
+    let amount = 0;
+    let description = "";
+
     if (plan === "free") {
-      if (company.subscription_status === "trial") {
-        return res.json({
-          success: true,
-          message: "Trial already active",
-          redirect: "/login",
-        });
-      }
-
-      console.log("🎟 Creating TRIAL Subscription...");
-      const subscriptionId = await createTrial(customerId);
-
-      await db.query(
-        `
-        UPDATE companies 
-        SET subscription_status='trial',
-            plan='trial',
-            zoho_subscription_id=?
-        WHERE id=?
-        `,
-        [subscriptionId, companyId]
-      );
-
-      return res.json({
-        success: true,
-        message: "Trial Activated Successfully",
-        redirect: "/login",
-      });
+      amount = 4900; // ₹49
+      description = "PROMEET Trial Processing Fee";
+    } else if (plan === "business") {
+      amount = 50000; // ₹500
+      description = "PROMEET Business Subscription";
     }
 
-    /* ====================== BUSINESS (TEMP DISABLED) ======================= */
-    console.log("💳 Business Plan Requested (BLOCKED)");
+    /* ======================================================
+       CREATE PAYMENT LINK
+    ====================================================== */
+    console.log("💳 Creating Zoho Payment Link...");
 
-    return res.status(501).json({
-      success: false,
-      message:
-        "Business plan integration is in progress. Please proceed with Free Trial.",
+    const { data } = await client.post("/paymentlinks", {
+      customer_id: customerId,
+      amount,
+      currency_code: "INR",
+      description,
+    });
+
+    const paymentUrl = data?.payment_link?.url;
+
+    if (!paymentUrl) {
+      throw new Error("Failed to generate payment link");
+    }
+
+    /* ======================================================
+       MARK COMPANY AS PENDING
+       Final activation happens via webhook
+    ====================================================== */
+    await db.query(
+      `
+      UPDATE companies
+      SET subscription_status='pending',
+          plan = ?
+      WHERE id=?
+      `,
+      [plan === "business" ? "business" : "trial", companyId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Payment link created",
+      url: paymentUrl,
     });
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR:", err?.response?.data || err);
 
     return res.status(500).json({
       success: false,
-      message: err?.message || "Subscription failed",
+      message:
+        err?.response?.data?.message ||
+        err?.message ||
+        "Subscription failed",
     });
   }
 });
