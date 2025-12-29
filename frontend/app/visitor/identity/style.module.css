@@ -33,13 +33,10 @@ body {
   line-height: 1;
 }
 
-/* Company logo – RIGHT */
-/* 🔥 FIXED: Now logo will always show correctly */
-.companyLogo {
-  max-width: 140px;
-  max-height: 60px;
-  object-fit: contain;
-  display: block;
+.logo {
+  height: 36px;          /* Matches requirement */
+  width: auto;           /* Prevent distortion */
+  object-fit: contain;   /* Keeps proportions */
 }
 
 /* ================= CARD ================= */
