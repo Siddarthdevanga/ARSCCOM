@@ -2,10 +2,15 @@ import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
 
 /**
- * Handles Subscription Payment Flow
- * FREE/TRIAL  -> Paid Processing Fee ₹49 -> Zoho Checkout
- * BUSINESS    -> Paid ₹500 -> Zoho Checkout
- * ACTIVATION  -> Only via Webhook
+ * ================================
+ * SUBSCRIPTION PAYMENT HANDLER
+ *
+ * FREE/TRIAL  → ₹49 Processing Fee
+ * BUSINESS    → ₹500 Subscription Fee
+ *
+ * Actual activation happens ONLY
+ * after Zoho Webhook confirmation
+ * ================================
  */
 export const createPayment = async (req, res) => {
   try {
@@ -22,11 +27,7 @@ export const createPayment = async (req, res) => {
       });
     }
 
-    const client = await zohoClient();
-
-    /* =====================================================
-       FETCH COMPANY
-    ===================================================== */
+    /* ================= DB CHECK ================= */
     const [[company]] = await db.query(
       `
       SELECT 
@@ -43,16 +44,16 @@ export const createPayment = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Prevent duplicate purchase
+    // Block duplicate subscriptions
     if (["trial", "active"].includes(company.subscription_status)) {
       return res.status(403).json({
         message: "Subscription already active"
       });
     }
 
-    /* =====================================================
-       ENSURE ZOHO CUSTOMER
-    ===================================================== */
+    const client = await zohoClient();
+
+    /* ================= ENSURE ZOHO CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
@@ -67,49 +68,50 @@ export const createPayment = async (req, res) => {
       customerId = data.customer.customer_id;
 
       await db.query(
-        "UPDATE companies SET zoho_customer_id=? WHERE id=?",
+        `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
         [customerId, companyId]
       );
     }
 
-    /* =====================================================
-       PLAN → AMOUNT MAP
-    ===================================================== */
-    let amount = 0;
-    let description = "";
+    /* ================= PLAN → PRICE ================= */
+    const pricing = {
+      free: {
+        amount: 49.0,
+        description: "PROMEET Trial Processing Fee"
+      },
+      trial: {
+        amount: 49.0,
+        description: "PROMEET Trial Processing Fee"
+      },
+      business: {
+        amount: 500.0,
+        description: "PROMEET Business Subscription"
+      }
+    };
 
-    if (plan === "free" || plan === "trial") {
-      amount = 4900; // ₹49 (Zoho in paise)
-      description = "PROMEET Trial Processing Fee";
-    } else if (plan === "business") {
-      amount = 50000; // ₹500
-      description = "PROMEET Business Subscription";
-    } else {
+    if (!pricing[plan]) {
       return res.status(400).json({ message: "Invalid plan selected" });
     }
 
-    /* =====================================================
-       CREATE PAYMENT LINK
-    ===================================================== */
-    console.log("💳 Creating Zoho Payment Link...");
+    const { amount, description } = pricing[plan];
 
+    console.log(`💳 Creating Zoho Payment Link — ₹${amount} (${plan})`);
+
+    /* ================= CREATE PAYMENT LINK ================= */
     const { data } = await client.post("/paymentlinks", {
       customer_id: customerId,
-      amount,
       currency_code: "INR",
+      amount,           // <-- IMPORTANT: decimal format only
       description
     });
 
     const paymentUrl = data?.payment_link?.url;
 
     if (!paymentUrl) {
-      throw new Error("Failed to generate Zoho payment link");
+      throw new Error("Zoho failed to return payment link");
     }
 
-    /* =====================================================
-       UPDATE DB → PENDING STATUS
-       FINAL STATUS WILL BE SET BY WEBHOOK
-    ===================================================== */
+    /* ================= UPDATE DB → PENDING ================= */
     await db.query(
       `
       UPDATE companies
@@ -122,6 +124,7 @@ export const createPayment = async (req, res) => {
     );
 
     return res.json({
+      success: true,
       message: "Payment link created successfully",
       url: paymentUrl
     });
@@ -130,10 +133,13 @@ export const createPayment = async (req, res) => {
     console.error("❌ PAYMENT ERROR:", err?.response?.data || err);
 
     return res.status(500).json({
+      success: false,
       message:
         err?.response?.data?.message ||
+        err?.message ||
         "Payment initialization failed"
     });
   }
 };
+
 
