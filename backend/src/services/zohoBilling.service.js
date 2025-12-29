@@ -3,74 +3,129 @@ import { getZohoAccessToken } from "./zohoToken.service.js";
 
 const BASE = process.env.ZOHO_API_BASE;
 
+if (!BASE) {
+  throw new Error("ZOHO_API_BASE is not configured");
+}
+
 /* ======================================================
-   AUTH HEADER
+   INTERNAL — AUTH HEADER
 ====================================================== */
-async function headers() {
+async function authHeaders() {
   const token = await getZohoAccessToken();
+  if (!token) throw new Error("Failed to obtain Zoho Access Token");
+
   return {
     Authorization: `Zoho-oauthtoken ${token}`,
+    "Content-Type": "application/json",
   };
+}
+
+/* ======================================================
+   HELPER — HANDLE ZOHO ERRORS
+====================================================== */
+function handleZohoError(err) {
+  const apiError = err?.response?.data;
+
+  const message =
+    apiError?.message ||
+    apiError?.error ||
+    err?.message ||
+    "Zoho API Request Failed";
+
+  console.error("❌ ZOHO ERROR:", apiError || err);
+
+  throw new Error(message);
 }
 
 /* ======================================================
    CREATE CUSTOMER
 ====================================================== */
-export async function createCustomer(company, email, phone) {
-  const res = await axios.post(
-    `${BASE}/customers`,
-    {
-      display_name: company,
-      company_name: company,
-      email,
-      phone: phone || "",
-    },
-    { headers: await headers() }
-  );
+export async function createCustomer(companyName, email, phone = "") {
+  try {
+    if (!companyName || !email) {
+      throw new Error("Company name and email are required to create customer");
+    }
 
-  return res.data.customer.customer_id;
+    const { data } = await axios.post(
+      `${BASE}/customers`,
+      {
+        display_name: companyName,
+        company_name: companyName,
+        email: email.toLowerCase(),
+        phone,
+      },
+      { headers: await authHeaders() }
+    );
+
+    return data?.customer?.customer_id;
+  } catch (err) {
+    handleZohoError(err);
+  }
 }
 
 /* ======================================================
    CREATE TRIAL SUBSCRIPTION
 ====================================================== */
 export async function createTrial(customerId) {
-  const res = await axios.post(
-    `${BASE}/subscriptions`,
-    {
-      customer_id: customerId,
-      plan: {
-        plan_code: process.env.ZOHO_PLAN_TRIAL_CODE, // Must be "1"
-      },
-    },
-    { headers: await headers() }
-  );
+  try {
+    if (!customerId) {
+      throw new Error("Customer ID is required for trial subscription");
+    }
 
-  return res.data.subscription.subscription_id;
+    const planCode =
+      process.env.ZOHO_PLAN_TRIAL_CODE ||
+      process.env.ZOHO_TRIAL_PLAN_CODE || // fallback if old env name
+      "1";
+
+    if (!planCode) {
+      throw new Error("Trial plan code is not configured");
+    }
+
+    const { data } = await axios.post(
+      `${BASE}/subscriptions`,
+      {
+        customer_id: customerId,
+        plan: { plan_code: planCode },
+      },
+      { headers: await authHeaders() }
+    );
+
+    return data?.subscription?.subscription_id;
+  } catch (err) {
+    handleZohoError(err);
+  }
 }
 
 /* ======================================================
-   BUSINESS SUBSCRIPTION (NOT READY)
+   BUSINESS SUBSCRIPTION (FUTURE USE)
 ====================================================== */
 export async function createBusinessSubscription() {
   throw new Error(
-    "Business subscription integration is not yet enabled. Please use Free Trial."
+    "Business subscription billing flow is currently disabled. Please enable integration before using."
   );
 }
 
 /* ======================================================
-   PAYMENT LINK (OPTIONAL FUTURE USE)
+   PAYMENT LINK — IF NEEDED IN FUTURE
 ====================================================== */
 export async function createPaymentLink(customerId, amount) {
-  const res = await axios.post(
-    `${BASE}/paymentlinks`,
-    {
-      customer_id: customerId,
-      amount,
-      description: "PROMEET Business Subscription",
-    },
-    { headers: await headers() }
-  );
+  try {
+    if (!customerId) throw new Error("Customer ID required");
+    if (!amount) throw new Error("Payment amount required");
 
-  return res.data.payment_link.url;
+    const { data } = await axios.post(
+      `${BASE}/paymentlinks`,
+      {
+        customer_id: customerId,
+        amount,
+        currency_code: "INR",
+        description: "PROMEET Subscription Payment",
+      },
+      { headers: await authHeaders() }
+    );
+
+    return data?.payment_link?.url;
+  } catch (err) {
+    handleZohoError(err);
+  }
 }
