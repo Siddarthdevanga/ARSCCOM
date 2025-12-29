@@ -17,7 +17,7 @@ const client = axios.create({
 });
 
 /* ======================================================
-   AUTH HANDLER + AUTO TOKEN REFRESH
+   AUTH HEADERS
 ====================================================== */
 async function withAuth(headers = {}) {
   const token = await getZohoAccessToken();
@@ -30,7 +30,7 @@ async function withAuth(headers = {}) {
 }
 
 /* ======================================================
-   ERROR HANDLER
+   CENTRAL ERROR HANDLER
 ====================================================== */
 function handleZohoError(err) {
   const apiError = err?.response?.data;
@@ -39,17 +39,16 @@ function handleZohoError(err) {
 
   throw new Error(
     apiError?.message ||
-      apiError?.error ||
-      err?.message ||
-      "Zoho API Request Failed"
+    apiError?.error ||
+    err?.message ||
+    "Zoho API Request Failed"
   );
 }
 
 /* ======================================================
    SAFE REQUEST WRAPPER
-   - retries once if token expires
 ====================================================== */
-async function zohoRequest(method, url, body = {}) {
+async function zohoRequest(method, url, body = null) {
   try {
     return (
       await client.request({
@@ -59,17 +58,18 @@ async function zohoRequest(method, url, body = {}) {
         headers: await withAuth(),
       })
     ).data;
+
   } catch (err) {
-    // Retry once on invalid token
+    // Retry once if access token expired
     if (err?.response?.status === 401) {
-      console.warn("🔄 Retrying Zoho request after token refresh…");
+      console.warn("🔄 Zoho token expired — retrying…");
 
       return (
         await client.request({
           method,
           url,
           data: body,
-          headers: await withAuth(), // refresh happens inside
+          headers: await withAuth(), // fresh token
         })
       ).data;
     }
@@ -79,13 +79,12 @@ async function zohoRequest(method, url, body = {}) {
 }
 
 /* ======================================================
-   CREATE CUSTOMER
+   CUSTOMER
 ====================================================== */
 export async function createCustomer(companyName, email, phone = "") {
   try {
-    if (!companyName || !email) {
-      throw new Error("Company name and email are required");
-    }
+    if (!companyName || !email)
+      throw new Error("Company name & email are required");
 
     const data = await zohoRequest("post", "/customers", {
       display_name: companyName,
@@ -94,14 +93,14 @@ export async function createCustomer(companyName, email, phone = "") {
       phone,
     });
 
-    return data?.customer?.customer_id;
+    return data?.customer?.customer_id || null;
   } catch (err) {
     handleZohoError(err);
   }
 }
 
 /* ======================================================
-   CREATE TRIAL SUBSCRIPTION
+   TRIAL SUBSCRIPTION
 ====================================================== */
 export async function createTrial(customerId) {
   try {
@@ -112,37 +111,37 @@ export async function createTrial(customerId) {
       process.env.ZOHO_PLAN_TRIAL_CODE ||
       process.env.ZOHO_TRIAL_PLAN_CODE;
 
-    if (!planCode) throw new Error("Trial plan code is not configured");
+    if (!planCode)
+      throw new Error("Trial plan code is not configured");
 
     const data = await zohoRequest("post", "/subscriptions", {
       customer_id: customerId,
       plan: { plan_code: planCode },
     });
 
-    return data?.subscription?.subscription_id;
+    return data?.subscription?.subscription_id || null;
   } catch (err) {
     handleZohoError(err);
   }
 }
 
 /* ======================================================
-   BUSINESS SUBSCRIPTION (DISABLED)
+   BUSINESS (DISABLED INTENTIONALLY)
 ====================================================== */
 export async function createBusinessSubscription() {
   throw new Error(
-    "Business subscription billing flow is currently disabled. Enable integration before using."
+    "Business subscription billing flow is disabled. Enable before using."
   );
 }
 
 /* ======================================================
    PAYMENT LINK
-   ⛔ IMPORTANT:
-   Zoho Payment Links expects amount AS NUMBER
+   IMPORTANT → amount MUST BE NUMBER
 ====================================================== */
 export async function createPaymentLink(customerId, amount) {
   try {
     if (!customerId) throw new Error("Customer ID required");
-    if (!amount) throw new Error("Payment amount required");
+    if (amount == null) throw new Error("Payment amount required");
 
     const numericAmount = Number(amount);
 
@@ -152,7 +151,7 @@ export async function createPaymentLink(customerId, amount) {
 
     const payload = {
       customer_id: customerId,
-      amount: Number(numericAmount.toFixed(2)), // NUMBER (not string)
+      amount: Number(numericAmount.toFixed(2)),  // NUMBER ✔
       currency_code: "INR",
       description: "PROMEET Subscription Payment",
       is_partial_payment: false,
@@ -162,7 +161,7 @@ export async function createPaymentLink(customerId, amount) {
 
     const data = await zohoRequest("post", "/paymentlinks", payload);
 
-    return data?.payment_link?.url;
+    return data?.payment_link?.url || null;
   } catch (err) {
     handleZohoError(err);
   }
