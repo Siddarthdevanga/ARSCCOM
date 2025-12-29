@@ -2,15 +2,12 @@ import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
 
 /**
- * ================================
- * SUBSCRIPTION PAYMENT HANDLER
+ * Subscription Payment Handler
  *
  * FREE/TRIAL  → ₹49 Processing Fee
  * BUSINESS    → ₹500 Subscription Fee
  *
- * Actual activation happens ONLY
- * after Zoho Webhook confirmation
- * ================================
+ * Activation only after Zoho webhook confirmation
  */
 export const createPayment = async (req, res) => {
   try {
@@ -73,7 +70,7 @@ export const createPayment = async (req, res) => {
       );
     }
 
-    /* ================= PLAN → PRICE ================= */
+    /* ================= PLAN PRICING ================= */
     const pricing = {
       free: {
         amount: 49.0,
@@ -93,17 +90,31 @@ export const createPayment = async (req, res) => {
       return res.status(400).json({ message: "Invalid plan selected" });
     }
 
-    const { amount, description } = pricing[plan];
+    let { amount, description } = pricing[plan];
+
+    // Ensure numeric + max 2 decimals
+    amount = Number(Number(amount).toFixed(2));
+
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        message: "Invalid payment amount"
+      });
+    }
 
     console.log(`💳 Creating Zoho Payment Link — ₹${amount} (${plan})`);
 
-    /* ================= CREATE PAYMENT LINK ================= */
-    const { data } = await client.post("/paymentlinks", {
+    const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount,           // <-- IMPORTANT: decimal format only
-      description
-    });
+      amount,              // MUST be number
+      description,
+      is_partial_payment: false
+    };
+
+    console.log("🔎 ZOHO PAYMENT PAYLOAD:", payload);
+
+    /* ================= CREATE PAYMENT LINK ================= */
+    const { data } = await client.post("/paymentlinks", payload);
 
     const paymentUrl = data?.payment_link?.url;
 
@@ -111,7 +122,7 @@ export const createPayment = async (req, res) => {
       throw new Error("Zoho failed to return payment link");
     }
 
-    /* ================= UPDATE DB → PENDING ================= */
+    /* ================= UPDATE DB ================= */
     await db.query(
       `
       UPDATE companies
@@ -141,5 +152,6 @@ export const createPayment = async (req, res) => {
     });
   }
 };
+
 
 
