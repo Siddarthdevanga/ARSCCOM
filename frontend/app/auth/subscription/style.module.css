@@ -1,13 +1,13 @@
 /* =========================
-   GLOBAL PAGE + SCROLL CONTROL
+   GLOBAL PAGE + SCROLL
 ========================= */
 html,
 body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;                  /* scrolling enabled */
-  -webkit-overflow-scrolling: touch; /* smooth mobile scroll */
-  scrollbar-width: none !important;  /* Firefox hide scrollbar */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
 }
 
 /* Hide scrollbar (Chrome / Safari / Edge) */
@@ -175,87 +175,6 @@ body::-webkit-scrollbar {
 }
 
 /* =========================
-   SUCCESS SCREEN (Unified Layout)
-========================= */
-.successContainer {
-  display: flex;
-  justify-content: center;
-  margin-top: 25px;
-}
-
-.successCard {
-  width: 85%;
-  max-width: 900px;
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
-  padding: 28px 30px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(8px);
-
-  -webkit-overflow-scrolling: touch;
-  overflow-y: auto;
-  scrollbar-width: none !important;
-}
-
-.successCard::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-}
-
-/* TEXT */
-.successHeading {
-  font-size: 28px;
-  font-weight: bold;
-  margin-bottom: 12px;
-}
-
-.successMessage {
-  font-size: 15px;
-  color: #eee;
-  margin-bottom: 20px;
-}
-
-.planDetails {
-  background: white;
-  color: #333;
-  padding: 18px;
-  border-radius: 14px;
-  border-left: 6px solid #7a00ff;
-  line-height: 1.65;
-}
-
-.planTitle {
-  margin-top: 0;
-  margin-bottom: 8px;
-}
-
-/* EMAIL LINE */
-.emailInfo {
-  margin-top: 16px;
-  font-size: 13px;
-  color: #ddd;
-}
-
-/* LOGIN BUTTON */
-.loginButton {
-  margin-top: 22px;
-  width: 100%;
-  padding: 13px;
-  font-size: 16px;
-  background: white;
-  color: #4b008f;
-  border-radius: 9px;
-  border: none;
-  cursor: pointer;
-  font-weight: bold;
-  transition: 0.25s ease;
-}
-
-.loginButton:hover {
-  transform: translateY(-2px);
-}
-
-/* =========================
    RESPONSIVE
 ========================= */
 @media (max-width: 1024px) {
@@ -265,10 +184,6 @@ body::-webkit-scrollbar {
 
   .card {
     width: 270px;
-  }
-
-  .successCard {
-    width: 92%;
   }
 }
 
@@ -280,10 +195,5 @@ body::-webkit-scrollbar {
 
   .card {
     width: 90%;
-  }
-
-  .successCard {
-    width: 94%;
-    padding: 22px;
   }
 }
