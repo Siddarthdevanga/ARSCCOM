@@ -66,6 +66,7 @@ export default function VisitorIdentity() {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true
       });
+
       setStream(mediaStream);
       setCameraActive(true);
     } catch {
@@ -101,17 +102,14 @@ export default function VisitorIdentity() {
       setError("Visitor photo is required");
       return false;
     }
-
     if (!idType) {
       setError("Please select an ID proof type");
       return false;
     }
-
     if (!idNumber.trim()) {
       setError("Please enter ID number");
       return false;
     }
-
     return true;
   };
 
@@ -135,9 +133,7 @@ export default function VisitorIdentity() {
 
       /* Convert photo to File */
       const blob = await fetch(photo).then(r => r.blob());
-      const file = new File([blob], "visitor.jpg", {
-        type: "image/jpeg"
-      });
+      const file = new File([blob], "visitor.jpg", { type: "image/jpeg" });
 
       const formData = new FormData();
 
@@ -174,12 +170,8 @@ export default function VisitorIdentity() {
       );
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Visitor creation failed");
 
-      if (!res.ok) {
-        throw new Error(data?.message || "Visitor creation failed");
-      }
-
-      /* Cleanup */
       localStorage.removeItem("visitor_primary");
       localStorage.removeItem("visitor_secondary");
 
@@ -196,14 +188,13 @@ export default function VisitorIdentity() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <div className={styles.companyName}>{company.name}</div>
-        {company.logo && (
-          <img
-            src={company.logo}
-            alt="Company Logo"
-            className={styles.companyLogo}
-          />
-        )}
+        <div className={styles.companyName}>{company?.name}</div>
+
+        <img
+          src={company?.logo_url || "/logo.png"}
+          alt={`${company?.name || "Company"} Logo`}
+          className={styles.logo}
+        />
       </header>
 
       <div className={styles.card}>
@@ -224,7 +215,10 @@ export default function VisitorIdentity() {
               {cameraActive && (
                 <>
                   <video ref={videoRef} className={styles.video} />
-                  <button className={styles.captureBtn} onClick={capturePhoto}>
+                  <button
+                    className={styles.captureBtn}
+                    onClick={capturePhoto}
+                  >
                     Capture Photo
                   </button>
                 </>
@@ -264,7 +258,10 @@ export default function VisitorIdentity() {
               onChange={e => setIdNumber(e.target.value)}
             />
 
-            <button className={styles.generateBtn} onClick={handleGeneratePass}>
+            <button
+              className={styles.generateBtn}
+              onClick={handleGeneratePass}
+            >
               Generate Pass
             </button>
           </div>
