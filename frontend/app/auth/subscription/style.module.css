@@ -1,12 +1,40 @@
 /* =========================
-   GLOBAL PAGE
+   GLOBAL PAGE + SCROLL CONTROL
+========================= */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow-y: auto;                  /* scrolling enabled */
+  -webkit-overflow-scrolling: touch; /* smooth mobile scroll */
+  scrollbar-width: none !important;  /* Firefox hide scrollbar */
+}
+
+/* Hide scrollbar (Chrome / Safari / Edge) */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* =========================
+   PAGE BACKGROUND
 ========================= */
 .container {
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #8a2be2);
   color: white;
   font-family: Arial, sans-serif;
-  overflow: hidden;
+  box-sizing: border-box;
+
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
+}
+
+.container::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* =========================
@@ -25,7 +53,7 @@
 }
 
 /* =========================
-   PAGE TITLE
+   TITLE
 ========================= */
 .title {
   text-align: center;
@@ -35,14 +63,14 @@
 }
 
 /* =========================
-   ERROR MESSAGE
+   ERROR
 ========================= */
 .error {
   text-align: center;
-  background: rgba(255, 0, 0, 0.15);
+  background: rgba(255, 0, 0, 0.18);
   padding: 10px 14px;
   border-radius: 10px;
-  max-width: 500px;
+  max-width: 520px;
   margin: auto;
   color: #ffbaba;
   font-size: 14px;
@@ -56,7 +84,8 @@
   justify-content: center;
   gap: 26px;
   max-width: 1200px;
-  margin: auto;
+  margin: 10px auto 40px auto;
+  flex-wrap: wrap;
 }
 
 /* =========================
@@ -68,7 +97,7 @@
   padding: 22px 20px;
   border-radius: 16px;
   text-align: center;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.22);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
   color: #333;
   border: 2px solid transparent;
   transition: 0.25s ease;
@@ -84,7 +113,7 @@
 }
 
 /* =========================
-   PLAN TEXTS
+   PLAN CONTENT
 ========================= */
 .planName {
   font-size: 20px;
@@ -126,7 +155,7 @@
 }
 
 /* =========================
-   BUTTONS
+   BUTTON
 ========================= */
 .btn {
   width: 100%;
@@ -137,101 +166,93 @@
   border-radius: 9px;
   font-size: 16px;
   cursor: pointer;
-  transition: 0.2s;
+  transition: 0.25s ease;
 }
 
 .btn:hover {
   background: #5c00c7;
+  transform: translateY(-2px);
 }
 
 /* =========================
-   SUCCESS SCREEN
+   SUCCESS SCREEN (Unified Layout)
 ========================= */
-.successWrapper {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  height: calc(100vh - 80px);
-  padding: 30px 60px;
-  gap: 30px;
+.successContainer {
+  display: flex;
+  justify-content: center;
+  margin-top: 25px;
 }
 
-/* LEFT */
-.successLeft {
-  background: rgba(255,255,255,0.12);
+.successCard {
+  width: 85%;
+  max-width: 900px;
+  background: rgba(255, 255, 255, 0.12);
   border-radius: 18px;
-  padding: 22px 26px;
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255,255,255,0.25);
+  padding: 28px 30px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(8px);
+
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  scrollbar-width: none !important;
 }
 
-.successTitle {
-  font-size: 30px;
-  margin-bottom: 10px;
+.successCard::-webkit-scrollbar {
+  width: 0 !important;
+  height: 0 !important;
 }
 
-.successText {
+/* TEXT */
+.successHeading {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.successMessage {
   font-size: 15px;
   color: #eee;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 }
 
-.planBox {
+.planDetails {
   background: white;
   color: #333;
   padding: 18px;
   border-radius: 14px;
-  margin-top: 6px;
-  line-height: 1.6;
-  border-left: 5px solid #7a00ff;
+  border-left: 6px solid #7a00ff;
+  line-height: 1.65;
 }
 
-.planBox h3 {
+.planTitle {
   margin-top: 0;
   margin-bottom: 8px;
 }
 
-/* RIGHT */
-.successRight {
-  background: rgba(0,0,0,0.35);
-  border-radius: 18px;
-  padding: 24px 26px;
-  text-align: center;
-  border: 1px solid rgba(255,255,255,0.25);
-}
-
-.successRight h3 {
-  font-size: 22px;
-  margin-bottom: 10px;
-}
-
-.successRight p {
+/* EMAIL LINE */
+.emailInfo {
+  margin-top: 16px;
+  font-size: 13px;
   color: #ddd;
-  font-size: 14px;
 }
 
-.loginBtn {
-  margin-top: 18px;
+/* LOGIN BUTTON */
+.loginButton {
+  margin-top: 22px;
   width: 100%;
-  padding: 12px;
+  padding: 13px;
   font-size: 16px;
-  border: none;
   background: white;
   color: #4b008f;
   border-radius: 9px;
+  border: none;
   cursor: pointer;
   font-weight: bold;
-  transition: 0.25s;
+  transition: 0.25s ease;
 }
 
-.loginBtn:hover {
+.loginButton:hover {
   transform: translateY(-2px);
-}
-
-/* NOTE */
-.note {
-  margin-top: 14px;
-  font-size: 13px;
-  color: #ddd;
 }
 
 /* =========================
@@ -246,9 +267,8 @@
     width: 270px;
   }
 
-  .successWrapper {
-    grid-template-columns: 1fr;
-    height: auto;
+  .successCard {
+    width: 92%;
   }
 }
 
@@ -262,7 +282,8 @@
     width: 90%;
   }
 
-  .successWrapper {
-    padding: 20px;
+  .successCard {
+    width: 94%;
+    padding: 22px;
   }
 }
