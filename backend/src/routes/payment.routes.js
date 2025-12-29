@@ -4,16 +4,6 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 
 const router = express.Router();
 
-/**
- * ================================
- *  SUBSCRIPTION CONTROLLER
- *
- * FREE PLAN   → ₹49 Processing Fee
- * BUSINESS    → ₹500 Subscription
- *
- * Activation will happen via Webhook
- * ================================
- */
 router.post("/subscribe", async (req, res) => {
   try {
     const { email, plan } = req.body;
@@ -34,7 +24,7 @@ router.post("/subscribe", async (req, res) => {
 
     const cleanEmail = email.toLowerCase();
 
-    /* ================= FIND USER ================= */
+    /* FIND USER */
     const [[user]] = await db.query(
       `SELECT id, company_id FROM users WHERE email=? LIMIT 1`,
       [cleanEmail]
@@ -43,22 +33,14 @@ router.post("/subscribe", async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found for this email"
+        message: "User not found"
       });
     }
 
-    /* ================= FIND COMPANY ================= */
+    /* FIND COMPANY */
     const [[company]] = await db.query(
-      `
-      SELECT 
-        id,
-        name,
-        subscription_status,
-        zoho_customer_id
-      FROM companies
-      WHERE id=?
-      LIMIT 1
-      `,
+      `SELECT id, name, subscription_status, zoho_customer_id 
+       FROM companies WHERE id=? LIMIT 1`,
       [user.company_id]
     );
 
@@ -79,10 +61,9 @@ router.post("/subscribe", async (req, res) => {
     const companyId = company.id;
     const companyName = company.name;
 
-    /* ================= ZOHO CLIENT ================= */
     const client = await zohoClient();
 
-    /* ================= ENSURE CUSTOMER ================= */
+    /* ENSURE CUSTOMER IN ZOHO */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
@@ -102,54 +83,49 @@ router.post("/subscribe", async (req, res) => {
       );
     }
 
-    /* ================= AMOUNT ================= */
+    /* PRICING */
     const pricing = {
       free: {
-        amount: "49.00",
+        amount: 49.0,
         description: "PROMEET Trial Processing Fee"
       },
       business: {
-        amount: "500.00",
+        amount: 500.0,
         description: "PROMEET Business Subscription"
       }
     };
 
     const { amount, description } = pricing[plan];
 
-    /* ================= CREATE PAYMENT LINK ================= */
-    console.log(`💳 Creating Payment Link (${plan.toUpperCase()}) — ₹${amount}`);
+    console.log(`💳 Creating Payment Link (${plan}) → ₹${amount}`);
 
+    /* =========================
+       CREATE PAYMENT LINK
+       (STRICT — ONLY THESE FIELDS)
+    ========================== */
     const { data } = await client.post("/paymentlinks", {
       customer_id: customerId,
-      customer_name: companyName,
       currency_code: "INR",
-      amount,              // MUST BE STRING LIKE "49.00"
-      date: new Date().toISOString().split("T")[0],
-      payment_mode: "online",
+      amount: amount,
       description
     });
 
     const paymentUrl = data?.payment_link?.url;
 
-    if (!paymentUrl) {
-      throw new Error("Zoho did not return a payment link");
-    }
+    if (!paymentUrl) throw new Error("No payment link returned");
 
-    /* ================= SET STATUS PENDING ================= */
+    /* UPDATE STATUS */
     await db.query(
-      `
-      UPDATE companies 
-      SET 
-        subscription_status='pending',
-        plan = ?
-      WHERE id=?
-      `,
+      `UPDATE companies 
+       SET subscription_status='pending',
+           plan=? 
+       WHERE id=?`,
       [plan === "business" ? "business" : "trial", companyId]
     );
 
     return res.json({
       success: true,
-      message: "Payment link generated",
+      message: "Payment link created",
       url: paymentUrl
     });
 
