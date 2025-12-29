@@ -8,15 +8,24 @@ if (!BASE) {
 }
 
 /* ======================================================
-   INTERNAL — AUTH HEADER
+   AXIOS INSTANCE
 ====================================================== */
-async function authHeaders() {
+const client = axios.create({
+  baseURL: BASE,
+  timeout: 12000,
+  headers: { "Content-Type": "application/json" },
+});
+
+/* ======================================================
+   AUTH HANDLER + AUTO TOKEN REFRESH
+====================================================== */
+async function withAuth(headers = {}) {
   const token = await getZohoAccessToken();
   if (!token) throw new Error("Failed to obtain Zoho Access Token");
 
   return {
+    ...headers,
     Authorization: `Zoho-oauthtoken ${token}`,
-    "Content-Type": "application/json",
   };
 }
 
@@ -37,24 +46,53 @@ function handleZohoError(err) {
 }
 
 /* ======================================================
+   SAFE REQUEST WRAPPER
+   - retries once if token expires
+====================================================== */
+async function zohoRequest(method, url, body = {}) {
+  try {
+    return (
+      await client.request({
+        method,
+        url,
+        data: body,
+        headers: await withAuth(),
+      })
+    ).data;
+  } catch (err) {
+    // Retry once on invalid token
+    if (err?.response?.status === 401) {
+      console.warn("🔄 Retrying Zoho request after token refresh…");
+
+      return (
+        await client.request({
+          method,
+          url,
+          data: body,
+          headers: await withAuth(), // refresh happens inside
+        })
+      ).data;
+    }
+
+    handleZohoError(err);
+  }
+}
+
+/* ======================================================
    CREATE CUSTOMER
 ====================================================== */
 export async function createCustomer(companyName, email, phone = "") {
   try {
     if (!companyName || !email) {
-      throw new Error("Company name and email are required to create customer");
+      throw new Error("Company name and email are required");
     }
 
-    const { data } = await axios.post(
-      `${BASE}/customers`,
-      {
-        display_name: companyName,
-        company_name: companyName,
-        email: email.toLowerCase(),
-        phone,
-      },
-      { headers: await authHeaders() }
-    );
+    const data = await zohoRequest("post", "/customers", {
+      display_name: companyName,
+      company_name: companyName,
+      email: email.toLowerCase(),
+      phone,
+    });
 
     return data?.customer?.customer_id;
   } catch (err) {
@@ -72,19 +110,14 @@ export async function createTrial(customerId) {
 
     const planCode =
       process.env.ZOHO_PLAN_TRIAL_CODE ||
-      process.env.ZOHO_TRIAL_PLAN_CODE ||
-      "1";
+      process.env.ZOHO_TRIAL_PLAN_CODE;
 
     if (!planCode) throw new Error("Trial plan code is not configured");
 
-    const { data } = await axios.post(
-      `${BASE}/subscriptions`,
-      {
-        customer_id: customerId,
-        plan: { plan_code: planCode },
-      },
-      { headers: await authHeaders() }
-    );
+    const data = await zohoRequest("post", "/subscriptions", {
+      customer_id: customerId,
+      plan: { plan_code: planCode },
+    });
 
     return data?.subscription?.subscription_id;
   } catch (err) {
@@ -97,33 +130,37 @@ export async function createTrial(customerId) {
 ====================================================== */
 export async function createBusinessSubscription() {
   throw new Error(
-    "Business subscription billing flow is currently disabled. Please enable integration before using."
+    "Business subscription billing flow is currently disabled. Enable integration before using."
   );
 }
 
 /* ======================================================
    PAYMENT LINK
-   Zoho Requires:
-   - amount MUST be 2-decimal precision string ("49.00")
+   ⛔ IMPORTANT:
+   Zoho Payment Links expects amount AS NUMBER
 ====================================================== */
 export async function createPaymentLink(customerId, amount) {
   try {
     if (!customerId) throw new Error("Customer ID required");
     if (!amount) throw new Error("Payment amount required");
 
-    // Force correct format
-    const formattedAmount = Number(amount).toFixed(2);
+    const numericAmount = Number(amount);
 
-    const { data } = await axios.post(
-      `${BASE}/paymentlinks`,
-      {
-        customer_id: customerId,
-        amount: formattedAmount, // IMPORTANT
-        currency_code: "INR",
-        description: "PROMEET Subscription Payment",
-      },
-      { headers: await authHeaders() }
-    );
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      throw new Error("Invalid payment amount");
+    }
+
+    const payload = {
+      customer_id: customerId,
+      amount: Number(numericAmount.toFixed(2)), // NUMBER (not string)
+      currency_code: "INR",
+      description: "PROMEET Subscription Payment",
+      is_partial_payment: false,
+    };
+
+    console.log("📤 Creating Zoho Payment Link:", payload);
+
+    const data = await zohoRequest("post", "/paymentlinks", payload);
 
     return data?.payment_link?.url;
   } catch (err) {
