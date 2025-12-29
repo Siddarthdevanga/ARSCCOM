@@ -15,6 +15,24 @@ if (!process.env.JWT_SECRET) {
 }
 
 /* ======================================================
+   EMAIL FOOTER
+====================================================== */
+const emailFooter = (company) => `
+<br/>
+Regards,<br/>
+<b style="color:#6c2bd9">${company?.name || "PROMEET"}</b><br/>
+
+<img src="/logo.png" height="55" />
+
+<hr/>
+<p style="font-size:13px;color:#666">
+This email was automatically sent from the PROMEET Conference Room 
+and Visitor Management Platform.
+If you did not initiate this action, please contact your administrator immediately.
+</p>
+`;
+
+/* ======================================================
    HELPERS
 ====================================================== */
 const generateSlug = (name) =>
@@ -49,7 +67,7 @@ export const registerCompany = async (data, file) => {
 
   validatePassword(password);
 
-  /* ---------- Check existing user ---------- */
+  /* ---------- Check existing ---------- */
   const [existing] = await db.execute(
     "SELECT id FROM users WHERE email = ?",
     [email]
@@ -59,7 +77,7 @@ export const registerCompany = async (data, file) => {
     throw new Error("Email already registered");
   }
 
-  /* ---------- Generate UNIQUE slug ---------- */
+  /* ---------- Slug ---------- */
   let slug = generateSlug(companyName);
   let suffix = 1;
 
@@ -82,7 +100,7 @@ export const registerCompany = async (data, file) => {
   try {
     await conn.beginTransaction();
 
-    /* ---------- Create company ---------- */
+    /* ---------- Create Company ---------- */
     const [companyResult] = await conn.execute(
       `
       INSERT INTO companies (name, slug, logo_url, rooms)
@@ -93,7 +111,7 @@ export const registerCompany = async (data, file) => {
 
     const companyId = companyResult.insertId;
 
-    /* ---------- Create admin user ---------- */
+    /* ---------- Create Admin ---------- */
     const passwordHash = await bcrypt.hash(password, 10);
 
     await conn.execute(
@@ -104,7 +122,7 @@ export const registerCompany = async (data, file) => {
       [companyId, email, phone, passwordHash]
     );
 
-    /* ---------- Create Conference Rooms ---------- */
+    /* ---------- Create Rooms ---------- */
     for (let i = 1; i <= conferenceRooms; i++) {
       await conn.execute(
         `
@@ -117,37 +135,30 @@ export const registerCompany = async (data, file) => {
 
     await conn.commit();
 
-    /* ======================================================
-       WELCOME EMAIL
-    ====================================================== */
+    /* ---------- Professional Welcome Email ---------- */
     sendEmail({
       to: email,
       subject: "Welcome to PROMEET – Complete Your Subscription",
       html: `
-<p>Hi,</p>
+<p>Hello,</p>
 
 <p>
-Thank you for registering <b>${companyName}</b> on <b>PROMEET</b>.
-Your company account has been successfully created and your admin profile is now active.
+We are pleased to inform you that <b style="color:#6c2bd9">${companyName}</b> 
+has been successfully registered on <b>PROMEET</b>.
+Your admin account is now active.
 </p>
 
-<h3 style="margin-top:10px;">Next Step</h3>
+<h3 style="color:#6c2bd9;">Next Step</h3>
 <p>
-Please proceed to the Subscription page and select a suitable plan
-to activate your account and start using PROMEET.
+Please proceed to the Subscription section and choose the appropriate plan
+to activate your organization and start using PROMEET services.
 </p>
 
 <p>
-If you need any help with onboarding or billing setup, feel free to contact us anytime.
+For any onboarding or billing assistance, our support team is always available to help.
 </p>
 
-<br/>
-<p>Regards,<br/>PROMEET Team</p>
-
-<hr/>
-<p style="font-size:12px;color:#777;">
-This is an auto-generated email. Please do not reply.
-</p>
+${emailFooter({ name: "PROMEET" })}
 `
     }).catch(() => {});
 
@@ -157,7 +168,6 @@ This is an auto-generated email. Please do not reply.
       slug,
       logoUrl
     };
-
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -167,8 +177,7 @@ This is an auto-generated email. Please do not reply.
 };
 
 /* ======================================================
-   LOGIN
-   (Allow only Trial or Active companies)
+   LOGIN (Allow only Trial or Active)
 ====================================================== */
 export const login = async ({ email, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
@@ -197,7 +206,6 @@ export const login = async ({ email, password }) => {
     throw new Error("Invalid credentials");
   }
 
-  // block login if not trial or active
   if (!["trial", "active"].includes(rows[0].subscription_status)) {
     throw new Error("Your subscription is not active. Please subscribe to continue.");
   }
@@ -257,19 +265,18 @@ export const forgotPassword = async (email) => {
     to: cleanEmail,
     subject: "PROMEET Password Reset Code",
     html: `
+<p>Hello,</p>
+
 <p>Your password reset code is:</p>
 
-<h2>${resetCode}</h2>
+<h2 style="color:#6c2bd9">${resetCode}</h2>
 
-<p>This code is valid for <b>10 minutes</b>.</p>
-
-<br/>
-<p>Regards,<br/>PROMEET Team</p>
-
-<hr/>
-<p style="font-size:12px;color:#777;">
-This is an auto-generated email. Please do not reply.
+<p>
+This code is valid for <b>10 minutes</b>.
+Please do not share this code with anyone.
 </p>
+
+${emailFooter({ name: "PROMEET" })}
 `
   });
 };
@@ -312,29 +319,23 @@ export const resetPassword = async ({ email, code, password }) => {
     [newHash, rows[0].id]
   );
 
-  /* ================= PASSWORD RESET SUCCESS EMAIL ================= */
   await sendEmail({
     to: cleanEmail,
     subject: "Your PROMEET Password Has Been Reset",
     html: `
-<p>Hi,</p>
+<p>Hello,</p>
 
 <p>
-Your PROMEET account password has been reset successfully.
-If this action was done by you, no further action is required.
+We would like to inform you that your PROMEET account password
+has been successfully reset.
 </p>
 
 <p>
-If you did NOT request this change, please contact support immediately.
+If this change was made by you, no further action is required.
+If this was not initiated by you, please contact support immediately.
 </p>
 
-<br/>
-<p>Regards,<br/>PROMEET Team</p>
-
-<hr/>
-<p style="font-size:12px;color:#777;">
-This is an auto-generated email. Please do not reply.
-</p>
+${emailFooter({ name: "PROMEET" })}
 `
   });
 
