@@ -14,14 +14,12 @@ export default function SubscriptionPage() {
   const [companyId, setCompanyId] = useState("");
   const [companyName, setCompanyName] = useState("");
 
-  const [activatedPlan, setActivatedPlan] = useState(null);
-
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.wheelbrand.in";
 
   /* ======================================================
-      LOAD LOCAL STORAGE + URL PARAMS
+      LOAD LOCAL STORAGE ONLY
   ====================================================== */
   useEffect(() => {
     try {
@@ -29,18 +27,6 @@ export default function SubscriptionPage() {
       setCompanyId(localStorage.getItem("companyId") || "");
       setCompanyName(localStorage.getItem("regCompanyName") || "");
     } catch {}
-
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-
-      if (params.get("status") === "active") {
-        setActivatedPlan("business");
-      }
-
-      if (params.get("trial") === "true") {
-        setActivatedPlan("free");
-      }
-    }
   }, []);
 
   /* ======================================================
@@ -52,6 +38,7 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
+    // ENTERPRISE → CONTACT PAGE
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -86,13 +73,9 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // FREE TRIAL SUCCESS
-      if (plan === "free") {
-        setActivatedPlan("free");
-        return;
-      }
-
-      // BUSINESS REDIRECT
+      /* ======================================================
+          BOTH FREE + BUSINESS → PAYMENT REDIRECT
+      ====================================================== */
       if (data?.url || data?.redirectUrl) {
         window.location.href = data.url || data.redirectUrl;
         return;
@@ -108,60 +91,6 @@ export default function SubscriptionPage() {
   };
 
   /* ======================================================
-      SUCCESS UI
-  ====================================================== */
-  const renderSuccessScreen = () => {
-    const isTrial = activatedPlan === "free";
-
-    return (
-      <div className={styles.successContainer}>
-        <div className={styles.successCard}>
-          <h2 className={styles.successHeading}>
-            {isTrial ? "Trial Subscription Activated" : "Subscription Activated"}
-          </h2>
-
-          <p className={styles.successMessage}>
-            Your company <b>{companyName}</b> has successfully subscribed to PROMEET.
-          </p>
-
-          <div className={styles.planDetails}>
-            <h3 className={styles.planTitle}>
-              {isTrial ? "Free Trial Plan" : "Business Plan"}
-            </h3>
-
-            {isTrial ? (
-              <>
-                <p>• Valid for 15 days</p>
-                <p>• 100 Visitor Bookings</p>
-                <p>• 100 Conference Room Bookings</p>
-                <p>• Email Support</p>
-              </>
-            ) : (
-              <>
-                <p>• Unlimited Visitors</p>
-                <p>• 1000 Conference Room Bookings</p>
-                <p>• Priority Support</p>
-                <p>• Full Feature Access</p>
-              </>
-            )}
-          </div>
-
-          <p className={styles.emailInfo}>
-            A confirmation email has been sent to <b>{email}</b>.
-          </p>
-
-          <button
-            className={styles.loginButton}
-            onClick={() => router.push("/auth/login")}
-          >
-            Go to Login
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  /* ======================================================
       VIEW
   ====================================================== */
   return (
@@ -170,82 +99,77 @@ export default function SubscriptionPage() {
         <div className={styles.logo}>PROMEET</div>
       </header>
 
-      {activatedPlan ? (
-        renderSuccessScreen()
-      ) : (
-        <>
-          <h2 className={styles.title}>Choose Your Subscription Plan</h2>
+      <h2 className={styles.title}>Choose Your Subscription Plan</h2>
 
-          {error && <div className={styles.error}>{error}</div>}
+      {error && <div className={styles.error}>{error}</div>}
 
-          <div className={styles.planGrid}>
-            {/* ================= FREE ================= */}
-            <div className={styles.card}>
-              <h3 className={styles.planName}>FREE TRIAL</h3>
-              <p className={styles.price}>Free</p>
-              <p className={styles.subText}>Valid for 15 days</p>
+      <div className={styles.planGrid}>
+        
+        {/* ================= FREE ================= */}
+        <div className={styles.card}>
+          <h3 className={styles.planName}>FREE TRIAL</h3>
+          <p className={styles.price}>₹49</p>
+          <p className={styles.subText}>Valid for 15 days</p>
 
-              <ul className={styles.features}>
-                <li>• 100 Visitor Bookings</li>
-                <li>• 100 Conference Bookings</li>
-                <li>• Email Support</li>
-              </ul>
+          <ul className={styles.features}>
+            <li>• 100 Visitor Bookings</li>
+            <li>• 100 Conference Bookings</li>
+            <li>• Email Support</li>
+          </ul>
 
-              <button
-                className={styles.btn}
-                disabled={loadingPlan === "free"}
-                onClick={() => choosePlan("free")}
-              >
-                {loadingPlan === "free" ? "Activating..." : "Start Free Trial"}
-              </button>
-            </div>
+          <button
+            className={styles.btn}
+            disabled={loadingPlan === "free"}
+            onClick={() => choosePlan("free")}
+          >
+            {loadingPlan === "free" ? "Processing..." : "Start Free Trial"}
+          </button>
+        </div>
 
-            {/* ================= BUSINESS ================= */}
-            <div className={`${styles.card} ${styles.cardHighlight}`}>
-              <h3 className={styles.planName}>BUSINESS</h3>
-              <p className={styles.price}>
-                ₹500 <span>/ month</span>
-              </p>
-              <p className={styles.subText}>Best for growing teams</p>
+        {/* ================= BUSINESS ================= */}
+        <div className={`${styles.card} ${styles.cardHighlight}`}>
+          <h3 className={styles.planName}>BUSINESS</h3>
+          <p className={styles.price}>
+            ₹500 <span>/ month</span>
+          </p>
+          <p className={styles.subText}>Best for growing teams</p>
 
-              <ul className={styles.features}>
-                <li>• Unlimited Visitors</li>
-                <li>• 1000 Conference Bookings</li>
-                <li>• Priority Support</li>
-              </ul>
+          <ul className={styles.features}>
+            <li>• Unlimited Visitors</li>
+            <li>• 1000 Conference Bookings</li>
+            <li>• Priority Support</li>
+          </ul>
 
-              <button
-                className={styles.btn}
-                disabled={loadingPlan === "business"}
-                onClick={() => choosePlan("business")}
-              >
-                {loadingPlan === "business" ? "Processing..." : "Proceed to Payment"}
-              </button>
-            </div>
+          <button
+            className={styles.btn}
+            disabled={loadingPlan === "business"}
+            onClick={() => choosePlan("business")}
+          >
+            {loadingPlan === "business" ? "Processing..." : "Proceed to Payment"}
+          </button>
+        </div>
 
-            {/* ================= ENTERPRISE ================= */}
-            <div className={styles.card}>
-              <h3 className={styles.planName}>ENTERPRISE</h3>
-              <p className={styles.price}>Custom Pricing</p>
-              <p className={styles.subText}>Tailored for large organizations</p>
+        {/* ================= ENTERPRISE ================= */}
+        <div className={styles.card}>
+          <h3 className={styles.planName}>ENTERPRISE</h3>
+          <p className={styles.price}>Custom Pricing</p>
+          <p className={styles.subText}>Tailored for large organizations</p>
 
-              <ul className={styles.features}>
-                <li>• Custom Solutions</li>
-                <li>• Dedicated Support</li>
-                <li>• Advanced Controls</li>
-              </ul>
+          <ul className={styles.features}>
+            <li>• Custom Solutions</li>
+            <li>• Dedicated Support</li>
+            <li>• Advanced Controls</li>
+          </ul>
 
-              <button
-                className={styles.btn}
-                disabled={loadingPlan === "enterprise"}
-                onClick={() => choosePlan("enterprise")}
-              >
-                Contact Us
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+          <button
+            className={styles.btn}
+            disabled={loadingPlan === "enterprise"}
+            onClick={() => choosePlan("enterprise")}
+          >
+            Contact Us
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
