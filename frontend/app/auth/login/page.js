@@ -68,7 +68,7 @@ export default function LoginPage() {
           <div className={styles.logoText}>VISITOR MANAGEMENT PLATFORM</div>
 
           <Image
-            src="/logo.png"
+            src="/download.png"
             alt="ARSCCOM Logo"
             width={420}
             height={140}
