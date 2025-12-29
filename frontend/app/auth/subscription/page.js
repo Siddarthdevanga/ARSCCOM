@@ -20,9 +20,7 @@ export default function SubscriptionPage() {
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.wheelbrand.in";
 
-  /* ======================================================
-      LOAD DATA FROM LOCAL STORAGE
-  ====================================================== */
+  /* ================= LOAD LOCAL STORAGE ================= */
   useEffect(() => {
     try {
       setEmail(localStorage.getItem("regEmail") || "");
@@ -31,9 +29,7 @@ export default function SubscriptionPage() {
     } catch {}
   }, []);
 
-  /* ======================================================
-      HANDLE PLAN SELECTION
-  ====================================================== */
+  /* ================= HANDLE PLAN ================= */
   const choosePlan = async (plan) => {
     if (loadingPlan) return;
 
@@ -64,30 +60,26 @@ export default function SubscriptionPage() {
         data = await res.json();
       } catch {}
 
-      // Session expired
       if (res.status === 401) {
         router.push("/auth/login");
         return;
       }
 
-      // Already active
       if (res.status === 403) {
         setActivatedPlan("business");
         return;
       }
 
       if (!res.ok) {
-        setError(data?.message || "Subscription failed. Try again.");
+        setError(data?.message || "Subscription failed. Please try again.");
         return;
       }
 
-      // ⛔ Paid plan → redirect to Zoho
       if (data?.redirectUrl) {
         window.location.href = data.redirectUrl;
         return;
       }
 
-      // 🎉 Trial activated instantly
       if (data?.redirect || plan === "free") {
         setActivatedPlan("free");
         return;
@@ -102,57 +94,50 @@ export default function SubscriptionPage() {
     }
   };
 
-  /* ======================================================
-      SUCCESS UI
-  ====================================================== */
+  /* ================= SUCCESS VIEW ================= */
   const renderSuccessScreen = () => {
     const isTrial = activatedPlan === "free";
 
     return (
-      <div className={styles.successWrapper}>
-        {/* LEFT PANEL */}
-        <div className={styles.successLeft}>
-          <h2 className={styles.successTitle}>
-            {isTrial ? "🎉 Trial Activated" : "✅ Subscription Activated"}
+      <div className={styles.successContainer}>
+        <div className={styles.successCard}>
+          <h2 className={styles.successHeading}>
+            {isTrial ? "Trial Subscription Activated" : "Subscription Activated"}
           </h2>
 
-          <p className={styles.successText}>
-            Your company <b>{companyName}</b> is now successfully subscribed
-            to PROMEET.
+          <p className={styles.successMessage}>
+            Your company <b>{companyName}</b> has been successfully subscribed to
+            PROMEET.
           </p>
 
-          <div className={styles.planBox}>
-            <h3>{isTrial ? "FREE TRIAL PLAN" : "BUSINESS PLAN"}</h3>
+          <div className={styles.planDetails}>
+            <h3 className={styles.planTitle}>
+              {isTrial ? "Free Trial Plan" : "Business Plan"}
+            </h3>
 
             {isTrial ? (
               <>
-                <p>✔ Valid for 15 days</p>
-                <p>✔ 100 Visitor Bookings</p>
-                <p>✔ 100 Conference Bookings</p>
-                <p>✔ Email Support</p>
+                <p>• Valid for 15 days</p>
+                <p>• 100 Visitor Bookings</p>
+                <p>• 100 Conference Room Bookings</p>
+                <p>• Email Support</p>
               </>
             ) : (
               <>
-                <p>✔ Unlimited Visitors</p>
-                <p>✔ 1000 Conference Bookings</p>
-                <p>✔ Priority Support</p>
-                <p>✔ Full Feature Access</p>
+                <p>• Unlimited Visitors</p>
+                <p>• 1000 Conference Room Bookings</p>
+                <p>• Priority Support</p>
+                <p>• Complete Feature Access</p>
               </>
             )}
           </div>
 
-          <p className={styles.note}>
+          <p className={styles.emailInfo}>
             A confirmation email has been sent to <b>{email}</b>.
           </p>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div className={styles.successRight}>
-          <h3>Next Step</h3>
-          <p>You can now login and start using PROMEET.</p>
 
           <button
-            className={styles.loginBtn}
+            className={styles.loginButton}
             onClick={() => router.push("/auth/login")}
           >
             Go to Login
@@ -179,16 +164,16 @@ export default function SubscriptionPage() {
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.planGrid}>
-            {/* FREE */}
+            {/* FREE TRIAL */}
             <div className={styles.card}>
               <h3 className={styles.planName}>FREE TRIAL</h3>
               <p className={styles.price}>Free</p>
               <p className={styles.subText}>Valid for 15 days</p>
 
               <ul className={styles.features}>
-                <li>✔ 100 Visitor Bookings</li>
-                <li>✔ 100 Conference Bookings</li>
-                <li>✔ Email Support</li>
+                <li>• 100 Visitor Bookings</li>
+                <li>• 100 Conference Bookings</li>
+                <li>• Email Support</li>
               </ul>
 
               <button
@@ -211,9 +196,9 @@ export default function SubscriptionPage() {
               <p className={styles.subText}>Best for growing teams</p>
 
               <ul className={styles.features}>
-                <li>✔ Unlimited Visitors</li>
-                <li>✔ 1000 Conference Bookings</li>
-                <li>✔ Priority Support</li>
+                <li>• Unlimited Visitors</li>
+                <li>• 1000 Conference Bookings</li>
+                <li>• Priority Support</li>
               </ul>
 
               <button
@@ -236,9 +221,9 @@ export default function SubscriptionPage() {
               </p>
 
               <ul className={styles.features}>
-                <li>✔ Custom Solutions</li>
-                <li>✔ Dedicated Support</li>
-                <li>✔ Advanced Controls</li>
+                <li>• Custom Solutions</li>
+                <li>• Dedicated Support</li>
+                <li>• Advanced Controls</li>
               </ul>
 
               <button
