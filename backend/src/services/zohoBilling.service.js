@@ -21,20 +21,19 @@ async function authHeaders() {
 }
 
 /* ======================================================
-   HELPER — HANDLE ZOHO ERRORS
+   ERROR HANDLER
 ====================================================== */
 function handleZohoError(err) {
   const apiError = err?.response?.data;
 
-  const message =
-    apiError?.message ||
-    apiError?.error ||
-    err?.message ||
-    "Zoho API Request Failed";
-
   console.error("❌ ZOHO ERROR:", apiError || err);
 
-  throw new Error(message);
+  throw new Error(
+    apiError?.message ||
+      apiError?.error ||
+      err?.message ||
+      "Zoho API Request Failed"
+  );
 }
 
 /* ======================================================
@@ -68,18 +67,15 @@ export async function createCustomer(companyName, email, phone = "") {
 ====================================================== */
 export async function createTrial(customerId) {
   try {
-    if (!customerId) {
+    if (!customerId)
       throw new Error("Customer ID is required for trial subscription");
-    }
 
     const planCode =
       process.env.ZOHO_PLAN_TRIAL_CODE ||
-      process.env.ZOHO_TRIAL_PLAN_CODE || // fallback if old env name
+      process.env.ZOHO_TRIAL_PLAN_CODE ||
       "1";
 
-    if (!planCode) {
-      throw new Error("Trial plan code is not configured");
-    }
+    if (!planCode) throw new Error("Trial plan code is not configured");
 
     const { data } = await axios.post(
       `${BASE}/subscriptions`,
@@ -97,7 +93,7 @@ export async function createTrial(customerId) {
 }
 
 /* ======================================================
-   BUSINESS SUBSCRIPTION (FUTURE USE)
+   BUSINESS SUBSCRIPTION (DISABLED)
 ====================================================== */
 export async function createBusinessSubscription() {
   throw new Error(
@@ -106,18 +102,23 @@ export async function createBusinessSubscription() {
 }
 
 /* ======================================================
-   PAYMENT LINK — IF NEEDED IN FUTURE
+   PAYMENT LINK
+   Zoho Requires:
+   - amount MUST be 2-decimal precision string ("49.00")
 ====================================================== */
 export async function createPaymentLink(customerId, amount) {
   try {
     if (!customerId) throw new Error("Customer ID required");
     if (!amount) throw new Error("Payment amount required");
 
+    // Force correct format
+    const formattedAmount = Number(amount).toFixed(2);
+
     const { data } = await axios.post(
       `${BASE}/paymentlinks`,
       {
         customer_id: customerId,
-        amount,
+        amount: formattedAmount, // IMPORTANT
         currency_code: "INR",
         description: "PROMEET Subscription Payment",
       },
