@@ -5,56 +5,92 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 const router = express.Router();
 
 /**
- * FREE PLAN : ₹49 Payment Link
- * BUSINESS  : ₹500 Payment Link
+ * ================================
+ *  SUBSCRIPTION CONTROLLER
+ *
+ * FREE PLAN   → ₹49 Processing Fee
+ * BUSINESS    → ₹500 Subscription
+ *
+ * Activation will happen via Webhook
+ * ================================
  */
 router.post("/subscribe", async (req, res) => {
   try {
     const { email, plan } = req.body;
 
-    if (!email || !plan)
-      return res.status(400).json({ success:false, message:"Email & plan required" });
+    if (!email || !plan) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and plan are required"
+      });
+    }
 
-    if (!["free","business"].includes(plan))
-      return res.status(400).json({ success:false, message:"Invalid plan" });
+    if (!["free", "business"].includes(plan)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid plan selected"
+      });
+    }
 
     const cleanEmail = email.toLowerCase();
 
-    /* ---------- USER ---------- */
+    /* ================= FIND USER ================= */
     const [[user]] = await db.query(
       `SELECT id, company_id FROM users WHERE email=? LIMIT 1`,
       [cleanEmail]
     );
 
-    if (!user)
-      return res.status(404).json({ success:false, message:"User not found" });
-
-    /* ---------- COMPANY ---------- */
-    const [[company]] = await db.query(
-      `SELECT id,name,subscription_status,zoho_customer_id 
-       FROM companies WHERE id=? LIMIT 1`,
-      [user.company_id]
-    );
-
-    if (!company)
-      return res.status(404).json({ success:false, message:"Company not found" });
-
-    if (["trial","active"].includes(company.subscription_status)) {
-      return res.status(403).json({
-        success:false,
-        message:"Subscription already active"
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found for this email"
       });
     }
 
+    /* ================= FIND COMPANY ================= */
+    const [[company]] = await db.query(
+      `
+      SELECT 
+        id,
+        name,
+        subscription_status,
+        zoho_customer_id
+      FROM companies
+      WHERE id=?
+      LIMIT 1
+      `,
+      [user.company_id]
+    );
+
+    if (!company) {
+      return res.status(404).json({
+        success: false,
+        message: "Company not found"
+      });
+    }
+
+    if (["trial", "active"].includes(company.subscription_status)) {
+      return res.status(403).json({
+        success: false,
+        message: "Subscription already active"
+      });
+    }
+
+    const companyId = company.id;
+    const companyName = company.name;
+
+    /* ================= ZOHO CLIENT ================= */
     const client = await zohoClient();
 
-    /* ---------- ENSURE ZOHO CUSTOMER ---------- */
+    /* ================= ENSURE CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
+      console.log("🧾 Creating Zoho Customer...");
+
       const { data } = await client.post("/customers", {
-        display_name: company.name,
-        company_name: company.name,
+        display_name: companyName,
+        company_name: companyName,
         email: cleanEmail
       });
 
@@ -62,47 +98,58 @@ router.post("/subscribe", async (req, res) => {
 
       await db.query(
         `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
-        [customerId, company.id]
+        [customerId, companyId]
       );
     }
 
-    /* ---------- AMOUNT ---------- */
+    /* ================= AMOUNT ================= */
     const pricing = {
-      free: { amount: 49.00, description:"PROMEET Trial Processing Fee" },
-      business: { amount: 500.00, description:"PROMEET Business Subscription" }
+      free: {
+        amount: "49.00",
+        description: "PROMEET Trial Processing Fee"
+      },
+      business: {
+        amount: "500.00",
+        description: "PROMEET Business Subscription"
+      }
     };
 
     const { amount, description } = pricing[plan];
 
-    console.log(`💳 Creating Payment Link for ${plan.toUpperCase()} — ₹${amount}`);
+    /* ================= CREATE PAYMENT LINK ================= */
+    console.log(`💳 Creating Payment Link (${plan.toUpperCase()}) — ₹${amount}`);
 
-    /* ---------- CREATE PAYMENT LINK (CORRECT FORMAT) ---------- */
     const { data } = await client.post("/paymentlinks", {
       customer_id: customerId,
-      customer_name: company.name,
+      customer_name: companyName,
       currency_code: "INR",
-      amount,               // very important: 49.00 not 4900
+      amount,              // MUST BE STRING LIKE "49.00"
+      date: new Date().toISOString().split("T")[0],
+      payment_mode: "online",
       description
     });
 
     const paymentUrl = data?.payment_link?.url;
 
-    if (!paymentUrl) throw new Error("Zoho did not return payment URL");
+    if (!paymentUrl) {
+      throw new Error("Zoho did not return a payment link");
+    }
 
-    /* ---------- UPDATE STATUS ---------- */
+    /* ================= SET STATUS PENDING ================= */
     await db.query(
       `
       UPDATE companies 
-      SET subscription_status='pending',
-          plan = ?
+      SET 
+        subscription_status='pending',
+        plan = ?
       WHERE id=?
       `,
-      [plan === "business" ? "business" : "trial", company.id]
+      [plan === "business" ? "business" : "trial", companyId]
     );
 
     return res.json({
-      success:true,
-      message:"Payment link generated",
+      success: true,
+      message: "Payment link generated",
       url: paymentUrl
     });
 
@@ -110,7 +157,7 @@ router.post("/subscribe", async (req, res) => {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
     return res.status(500).json({
-      success:false,
+      success: false,
       message:
         err?.response?.data?.message ||
         err?.message ||
