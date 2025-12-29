@@ -1,16 +1,51 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
+import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
 /* ======================================================
-   AUTH (COMPANY ADMIN)
+   AUTH — COMPANY ADMIN ONLY
 ====================================================== */
 router.use(authenticate);
 
 /* ======================================================
-   DASHBOARD STATS + DEPARTMENT STATS
+   EMAIL HELPER
+====================================================== */
+const sendBookingMail = async ({ to, subject, heading, booking }) => {
+  if (!to) return;
+
+  try {
+    await sendEmail({
+      to,
+      subject,
+      html: `
+      <div style="font-family:Arial;padding:18px">
+        <h2 style="color:#6c2bd9;">${heading}</h2>
+
+        <p><b>Room:</b> ${booking.room_name}</p>
+        <p><b>Date:</b> ${booking.booking_date}</p>
+        <p><b>Time:</b> ${booking.start_time} – ${booking.end_time}</p>
+        <p><b>Department:</b> ${booking.department}</p>
+        ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
+
+        <br/>
+        <hr/>
+        <p style="font-size:12px;color:#777">
+          PROMEET Conference Booking System<br/>
+          This is an automated message.
+        </p>
+      </div>
+      `
+    });
+  } catch (err) {
+    console.log("❌ EMAIL FAILED:", err.message);
+  }
+};
+
+/* ======================================================
+   DASHBOARD
 ====================================================== */
 router.get("/dashboard", async (req, res) => {
   try {
@@ -41,11 +76,7 @@ router.get("/dashboard", async (req, res) => {
       [companyId]
     );
 
-    res.json({
-      ...stats,
-      departments
-    });
-
+    res.json({ ...stats, departments });
   } catch (err) {
     console.error("[ADMIN][DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard stats" });
@@ -55,7 +86,6 @@ router.get("/dashboard", async (req, res) => {
 /* ======================================================
    ROOMS
 ====================================================== */
-
 router.get("/rooms", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -77,81 +107,9 @@ router.get("/rooms", async (req, res) => {
   }
 });
 
-router.post("/rooms", async () => {
-  return res.status(403).json({
-    message: "Room creation disabled"
-  });
-});
-
-router.put("/rooms/:id", async (req, res) => {
-  try {
-    const { companyId } = req.user;
-    const roomId = Number(req.params.id);
-    const { room_name, room_number } = req.body;
-
-    if (!roomId) return res.status(400).json({ message: "Invalid room ID" });
-
-    if (!room_name && !room_number) {
-      return res.status(400).json({
-        message: "Provide room_name or room_number"
-      });
-    }
-
-    const [[room]] = await db.query(
-      `
-      SELECT id
-      FROM conference_rooms
-      WHERE id = ? AND company_id = ?
-      LIMIT 1
-      `,
-      [roomId, companyId]
-    );
-
-    if (!room) {
-      return res.status(404).json({ message: "Room not found" });
-    }
-
-    if (room_number) {
-      const [[exists]] = await db.query(
-        `
-        SELECT id FROM conference_rooms
-        WHERE company_id = ?
-        AND room_number = ?
-        AND id <> ?
-        LIMIT 1
-        `,
-        [companyId, room_number, roomId]
-      );
-
-      if (exists) {
-        return res.status(409).json({
-          message: "Room number already exists"
-        });
-      }
-    }
-
-    await db.query(
-      `
-      UPDATE conference_rooms
-      SET 
-        room_name = COALESCE(?, room_name),
-        room_number = COALESCE(?, room_number)
-      WHERE id = ? AND company_id = ?
-      `,
-      [room_name?.trim() || null, room_number || null, roomId, companyId]
-    );
-
-    res.json({ message: "Room updated successfully" });
-  } catch (err) {
-    console.error("[ADMIN][UPDATE ROOM]", err);
-    res.status(500).json({ message: "Unable to update room" });
-  }
-});
-
 /* ======================================================
-   BOOKINGS
+   BOOKINGS — LIST
 ====================================================== */
-
 router.get("/bookings", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -197,6 +155,9 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
+/* ======================================================
+   CREATE BOOKING
+====================================================== */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
@@ -221,7 +182,7 @@ router.post("/bookings", async (req, res) => {
       !end_time
     ) {
       return res.status(400).json({
-        message: "Room, department, date and time required"
+        message: "Room, department, date and time are required"
       });
     }
 
@@ -235,7 +196,7 @@ router.post("/bookings", async (req, res) => {
 
     const [[room]] = await conn.query(
       `
-      SELECT id
+      SELECT id, room_name
       FROM conference_rooms
       WHERE id = ? AND company_id = ?
       LIMIT 1
@@ -245,9 +206,7 @@ router.post("/bookings", async (req, res) => {
 
     if (!room) {
       await conn.rollback();
-      return res.status(403).json({
-        message: "Invalid room"
-      });
+      return res.status(403).json({ message: "Invalid room selection" });
     }
 
     const [[conflict]] = await conn.query(
@@ -267,7 +226,7 @@ router.post("/bookings", async (req, res) => {
     if (conflict.cnt > 0) {
       await conn.rollback();
       return res.status(409).json({
-        message: "Room already booked for this slot"
+        message: "Room already booked for this time slot"
       });
     }
 
@@ -300,15 +259,25 @@ router.post("/bookings", async (req, res) => {
 
     await conn.commit();
 
-    res.status(201).json({
-      message: "Booking created successfully"
+    await sendBookingMail({
+      to: booked_by?.includes("@") ? booked_by : null,
+      subject: "Conference Room Booking Confirmed",
+      heading: "Booking Confirmed",
+      booking: {
+        room_name: room.room_name,
+        booking_date,
+        start_time,
+        end_time,
+        department,
+        purpose
+      }
     });
+
+    res.status(201).json({ message: "Booking created successfully" });
   } catch (err) {
     await conn.rollback();
     console.error("[ADMIN][CREATE BOOKING]", err);
-    res.status(500).json({
-      message: "Unable to create booking"
-    });
+    res.status(500).json({ message: "Unable to create booking" });
   } finally {
     conn.release();
   }
@@ -321,25 +290,19 @@ router.patch("/bookings/:id", async (req, res) => {
   try {
     const { companyId } = req.user;
     const bookingId = Number(req.params.id);
-    const { start_time, end_time } = req.body;
+    const { start_time, end_time, email } = req.body;
 
     if (!bookingId || !start_time || !end_time) {
       return res.status(400).json({
-        message: "Booking ID, start_time & end_time required"
-      });
-    }
-
-    if (end_time <= start_time) {
-      return res.status(400).json({
-        message: "End time must be after start time"
+        message: "Start time and end time are required"
       });
     }
 
     const [[booking]] = await db.query(
       `
-      SELECT room_id, booking_date
+      SELECT *
       FROM conference_bookings
-      WHERE id = ? AND company_id = ? AND status='BOOKED'
+      WHERE id = ? AND company_id = ?
       LIMIT 1
       `,
       [bookingId, companyId]
@@ -359,7 +322,7 @@ router.patch("/bookings/:id", async (req, res) => {
         AND room_id = ?
         AND booking_date = ?
         AND id <> ?
-        AND status='BOOKED'
+        AND status = 'BOOKED'
         AND start_time < ?
         AND end_time > ?
       `,
@@ -382,14 +345,27 @@ router.patch("/bookings/:id", async (req, res) => {
     await db.query(
       `
       UPDATE conference_bookings
-      SET start_time=?, end_time=?
-      WHERE id=? AND company_id=?
+      SET start_time = ?, end_time = ?
+      WHERE id = ? AND company_id = ?
       `,
       [start_time, end_time, bookingId, companyId]
     );
 
-    res.json({ message: "Booking updated successfully" });
+    await sendBookingMail({
+      to: email || (booking.booked_by?.includes("@") ? booking.booked_by : null),
+      subject: "Conference Room Booking Updated",
+      heading: "Booking Updated",
+      booking: {
+        room_name: booking.room_name || "Conference Room",
+        booking_date: booking.booking_date,
+        start_time,
+        end_time,
+        department: booking.department,
+        purpose: booking.purpose
+      }
+    });
 
+    res.json({ message: "Booking updated successfully" });
   } catch (err) {
     console.error("[ADMIN][EDIT BOOKING]", err);
     res.status(500).json({ message: "Unable to update booking" });
@@ -404,26 +380,39 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     const { companyId } = req.user;
     const bookingId = Number(req.params.id);
 
-    if (!bookingId) {
-      return res.status(400).json({ message: "Invalid booking ID" });
-    }
-
-    const [result] = await db.query(
+    const [[booking]] = await db.query(
       `
-      UPDATE conference_bookings
-      SET status = 'CANCELLED'
-      WHERE id = ?
-        AND company_id = ?
-        AND status = 'BOOKED'
+      SELECT 
+        b.*, r.room_name
+      FROM conference_bookings b
+      JOIN conference_rooms r ON r.id = b.room_id
+      WHERE b.id = ? AND b.company_id = ?
+      LIMIT 1
       `,
       [bookingId, companyId]
     );
 
-    if (!result.affectedRows) {
+    if (!booking) {
       return res.status(404).json({
-        message: "Booking not found or already cancelled"
+        message: "Booking not found"
       });
     }
+
+    await db.query(
+      `
+      UPDATE conference_bookings
+      SET status = 'CANCELLED'
+      WHERE id = ? AND company_id = ?
+      `,
+      [bookingId, companyId]
+    );
+
+    await sendBookingMail({
+      to: booking.booked_by?.includes("@") ? booking.booked_by : null,
+      subject: "Conference Room Booking Cancelled",
+      heading: "Booking Cancelled",
+      booking
+    });
 
     res.json({ message: "Booking cancelled successfully" });
   } catch (err) {
