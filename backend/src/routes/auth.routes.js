@@ -16,11 +16,23 @@ const router = express.Router();
 ====================================================== */
 
 /**
- * Company Registration
- * - Creates company
- * - Creates admin user
- * - Accepts multipart/form-data
- * - Logo field name: "logo"
+ * ======================================================
+ * REGISTER
+ * ------------------------------------------------------
+ * PURPOSE:
+ *  - Creates Company
+ *  - Creates Admin User
+ *  - Optionally uploads Company Logo
+ *
+ * REQUEST TYPE:
+ *  multipart/form-data
+ *
+ * LOGO FIELD NAME:
+ *  logo
+ *
+ * RESPONSE:
+ *  company + user + token
+ * ======================================================
  */
 router.post(
   "/register",
@@ -29,24 +41,55 @@ router.post(
 );
 
 /**
- * Login (Admin / Company User)
- * - Returns JWT with companyId
- * - Returns company object (id, name, slug, logo_url)
- * - Used by Conference Dashboard
+ * ======================================================
+ * LOGIN
+ * ------------------------------------------------------
+ * PURPOSE:
+ *  - Allows Admin / Employee Login
+ *  - Returns JWT Token
+ *  - MUST Return Company Subscription Details
+ *
+ * FRONTEND DEPENDS ON:
+ *  company.subscription_status
+ *
+ * VALUES:
+ *  active | trial | pending | expired | cancelled | none
+ *
+ * RESPONSE FORMAT (IMPORTANT):
+ * {
+ *   token: "",
+ *   user: {},
+ *   company: {
+ *     id,
+ *     name,
+ *     slug,
+ *     logo_url,
+ *     subscription_status,
+ *     plan
+ *   }
+ * }
+ * ======================================================
  */
 router.post("/login", login);
 
 /**
- * Forgot Password
- * - Sends reset code
- * - Used by all modules
+ * ======================================================
+ * FORGOT PASSWORD
+ * ------------------------------------------------------
+ * PURPOSE:
+ *  - Sends Reset OTP / Code
+ * ======================================================
  */
 router.post("/forgot-password", forgotPassword);
 
 /**
- * Reset Password
- * - Verifies reset code
- * - Updates password
+ * ======================================================
+ * RESET PASSWORD
+ * ------------------------------------------------------
+ * PURPOSE:
+ *  - Validates Reset Code
+ *  - Updates Password
+ * ======================================================
  */
 router.post("/reset-password", resetPassword);
 
