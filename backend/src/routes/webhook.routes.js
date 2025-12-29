@@ -22,7 +22,7 @@ If you did not perform this action, please contact your administrator immediatel
 </p>`;
 
 /* ======================================================
-   HELPER → Normalize Zoho to Internal Status
+   STATUS NORMALIZER (For Subscription Events)
 ====================================================== */
 function mapStatus(status) {
   if (!status) return null;
@@ -35,14 +35,14 @@ function mapStatus(status) {
     active: "active",
     cancelled: "cancelled",
     canceled: "cancelled",
-    expired: "expired"
+    expired: "expired",
   };
 
   return map[status] || null;
 }
 
 /* ======================================================
-   ZOHO WEBHOOK
+   ZOHO WEBHOOK HANDLER
 ====================================================== */
 router.post("/", async (req, res) => {
   try {
@@ -60,12 +60,83 @@ router.post("/", async (req, res) => {
     const event = req.body?.event_type || req.body?.event || "unknown";
     const payload = req.body?.data || req.body;
 
-    if (!payload) {
-      return res.status(400).json({ message: "Invalid payload" });
+    if (!payload) return res.status(400).json({ message: "Invalid payload" });
+
+    console.log("🔔 ZOHO EVENT RECEIVED:", event);
+
+    /* ======================================================
+       CASE 1: PAYMENT LINK EVENTS (Payment Success Flow)
+    ======================================================= */
+    if (
+      event.includes("payment") ||
+      event.includes("payment_succeeded") ||
+      event.includes("payment_collected")
+    ) {
+      const payment = payload.payment || payload;
+      const customer = payload.customer || {};
+
+      const zohoCustomerId =
+        customer.customer_id || payment.customer_id || null;
+
+      if (!zohoCustomerId) {
+        console.log("❌ Payment webhook missing customer id");
+        return res.json({ message: "ignored - no customer id" });
+      }
+
+      const email =
+        customer.email ||
+        payment.customer_email ||
+        null;
+
+      const companyName =
+        customer.display_name ||
+        customer.customer_name ||
+        "Your Company";
+
+      console.log("💰 Payment Success Webhook for Customer:", zohoCustomerId);
+
+      // Update subscription active after payment success
+      const [result] = await db.query(
+        `
+        UPDATE companies
+        SET subscription_status='active',
+            plan='business',
+            updated_at = NOW()
+        WHERE zoho_customer_id=?
+        `,
+        [zohoCustomerId]
+      );
+
+      if (result.affectedRows === 0) {
+        console.log("❌ Company not found for payment webhook");
+        return res.json({ message: "company not found" });
+      }
+
+      console.log("🎉 PAYMENT SUCCESS — SUBSCRIPTION ACTIVATED");
+
+      if (email) {
+        try {
+          await sendEmail({
+            to: email,
+            subject: "PROMEET Subscription Activated",
+            html: `
+<p>Hello,</p>
+<p>Your payment was successful and 
+<b style="color:#6c2bd9">${companyName}</b> subscription is now <b>ACTIVE</b>.</p>
+<p>You now have full unrestricted access to PROMEET.</p>
+${emailFooter()}`
+          });
+        } catch (mailErr) {
+          console.error("📧 Email failed:", mailErr);
+        }
+      }
+
+      return res.json({ message: "Payment processed successfully" });
     }
 
-    console.log("🔔 ZOHO EVENT:", event);
-
+    /* ======================================================
+       CASE 2: SUBSCRIPTION EVENTS (Zoho Subscription Plans)
+    ======================================================= */
     const subscription = payload.subscription || {};
     const customer = payload.customer || subscription.customer || {};
 
@@ -100,8 +171,8 @@ router.post("/", async (req, res) => {
     const newStatus = mapStatus(receivedStatus);
 
     if (!newStatus) {
-      console.log("⚠️ Unknown / ignored status:", receivedStatus);
-      return res.json({ message: "Ignored - unknown status" });
+      console.log("⚠️ Unknown / ignored subscription status:", receivedStatus);
+      return res.json({ message: "Ignored - unknown subscription status" });
     }
 
     /* ================= FETCH COMPANY ================= */
@@ -114,13 +185,12 @@ router.post("/", async (req, res) => {
     );
 
     if (!company) {
-      console.log("❌ Company not found for webhook!");
+      console.log("❌ Company not found for subscription webhook!");
       return res.json({ message: "Company not found" });
     }
 
     const oldStatus = company.subscription_status;
 
-    /* ================= IDEMPOTENCY ================= */
     if (oldStatus === newStatus) {
       console.log(`ℹ️ No change (${oldStatus}) → ignoring`);
       return res.json({ message: "No change" });
@@ -145,16 +215,15 @@ router.post("/", async (req, res) => {
 
     console.log(`✅ STATUS UPDATED: ${oldStatus} → ${newStatus}`);
 
-    /* ================= EMAIL HANDLING ================= */
+    /* EMAILS SAME AS BEFORE — kept as is */
     if (!email) {
       console.log("⚠️ No email found — skipping email send");
       return res.json({ message: "Processed without email" });
     }
 
-    // Send emails async but don't block webhook success
+    // async email send
     (async () => {
       try {
-        /* TRIAL */
         if (newStatus === "trial") {
           await sendEmail({
             to: email,
@@ -162,13 +231,11 @@ router.post("/", async (req, res) => {
             html: `
 <p>Hello,</p>
 <p>The trial subscription for 
-<b style="color:#6c2bd9">${companyName}</b> has been successfully activated.</p>
-<p>You may now explore PROMEET during the trial period.</p>
+<b style="color:#6c2bd9">${companyName}</b> is now active.</p>
 ${emailFooter()}`
           });
         }
 
-        /* BUSINESS LIVE */
         if (newStatus === "active") {
           await sendEmail({
             to: email,
@@ -177,26 +244,23 @@ ${emailFooter()}`
 <p>Hello,</p>
 <p>The business subscription for 
 <b style="color:#6c2bd9">${companyName}</b> is now active.</p>
-<p>You now have full unrestricted access to PROMEET.</p>
 ${emailFooter()}`
           });
         }
 
-        /* CANCELLED / EXPIRED */
         if (["cancelled", "expired"].includes(newStatus)) {
           await sendEmail({
             to: email,
-            subject: "PROMEET Subscription Status Update",
+            subject: "PROMEET Subscription Status Updated",
             html: `
 <p>Hello,</p>
-<p>Your subscription status for 
+<p>Your subscription for 
 <b style="color:#6c2bd9">${companyName}</b> is now <b>${newStatus}</b>.</p>
-<p>If this was not intentional, please contact support.</p>
 ${emailFooter()}`
           });
         }
       } catch (mailErr) {
-        console.error("📧 Email send failed:", mailErr);
+        console.error("📧 Email failed:", mailErr);
       }
     })();
 
