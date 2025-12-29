@@ -3,9 +3,9 @@ html,
 body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;                  /* scrolling enabled */
-  -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
-  scrollbar-width: none !important;  /* Firefox hide scrollbar */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none !important;
 }
 
 /* Hide scrollbar (Chrome / Safari / Edge) */
@@ -18,7 +18,7 @@ html::-webkit-scrollbar {
 /* ================= PAGE ================= */
 .page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  background: linear-gradient(135deg, #380076, #8a2be2);
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
   box-sizing: border-box;
@@ -38,20 +38,21 @@ html::-webkit-scrollbar {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
   color: #fff;
 }
 
 .header h1 {
   text-align: center;
   font-size: 26px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
   margin: 0;
 }
 
 .header img {
-  height: 38px;
+  height: 44px;
+  width: auto;
   object-fit: contain;
 }
 
@@ -60,42 +61,44 @@ html::-webkit-scrollbar {
   background: rgba(255, 255, 255, 0.18);
   border: none;
   color: #fff;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 800;
   cursor: pointer;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s ease, transform 0.15s ease;
+
+  transition: all 0.2s ease;
 }
 
 .backBtn:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.32);
   transform: translateX(-2px);
 }
 
 /* ================= LAYOUT ================= */
 .content {
   display: grid;
-  grid-template-columns: 1.25fr 0.75fr;
-  gap: 28px;
+  grid-template-columns: 1.3fr 0.7fr;
+  gap: 30px;
   align-items: flex-start;
 }
 
-/* ================= CARD ================= */
+/* ================= FORM CARD ================= */
 .card {
   background: #ffffff;
-  border-radius: 22px;
-  padding: 32px 34px;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+  border-radius: 24px;
+  padding: 36px 36px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
 }
 
 .card h2 {
   font-size: 22px;
-  font-weight: 800;
+  font-weight: 900;
   margin-bottom: 18px;
   color: #3c007a;
 }
@@ -104,7 +107,7 @@ html::-webkit-scrollbar {
 .card label {
   display: block;
   margin-top: 16px;
-  font-weight: 600;
+  font-weight: 700;
   font-size: 14px;
   color: #333;
 }
@@ -115,67 +118,107 @@ html::-webkit-scrollbar {
   padding: 12px 14px;
   margin-top: 6px;
   border-radius: 12px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid #c9c9c9;
   font-size: 14px;
+  background: #fafafa;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
 .card input:focus,
 .card select:focus {
   outline: none;
   border-color: #7a00ff;
+  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.18);
 }
 
+/* MAIN ACTION BUTTON */
 .card button {
-  margin-top: 26px;
+  margin-top: 28px;
   width: 100%;
-  padding: 15px;
+  padding: 16px;
   border-radius: 999px;
   border: none;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 15px;
   color: #000;
+
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   cursor: pointer;
+
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .card button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 8px 20px rgba(255, 140, 0, 0.35);
+  box-shadow: 0 10px 26px rgba(255, 140, 0, 0.35);
 }
 
 /* ================= BOOKINGS PANEL ================= */
-.side,
-.bookings {
+.side {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 22px;
-  padding: 22px;
-  color: #fff;
+  padding: 24px;
+  color: white;
+  backdrop-filter: blur(12px);
 }
 
+.side h2 {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+/* INDIVIDUAL BOOKING */
 .booking {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 14px;
-  padding: 14px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 16px;
+  padding: 16px 14px;
   margin-bottom: 12px;
 }
 
 .booking b {
   display: block;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.booking p {
+  margin: 0 0 8px 0;
+}
+
+/* BOOKING ACTIONS */
+.bookingActions {
+  display: flex;
+  gap: 8px;
+}
+
+.bookingActions button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
   font-weight: 700;
-  margin-bottom: 4px;
+}
+
+.bookingActions button:first-child {
+  background: #ffd54f;
+}
+
+.bookingActions .redBtn {
+  background: #ef5350;
+  color: #fff;
 }
 
 /* ================= MESSAGES ================= */
 .success {
   color: #2e7d32;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 10px;
 }
 
 .error {
   color: #d32f2f;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 10px;
 }
 
@@ -190,6 +233,25 @@ html::-webkit-scrollbar {
   }
 
   .header img {
-    height: 32px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 18px;
+  }
+
+  .card {
+    padding: 28px;
+  }
+
+  .side {
+    padding: 18px;
+  }
+
+  .backBtn {
+    width: 36px;
+    height: 36px;
   }
 }
