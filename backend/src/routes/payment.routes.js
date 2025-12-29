@@ -80,7 +80,6 @@ router.post("/subscribe", async (req, res) => {
       });
 
       customerId = data?.customer?.customer_id;
-
       if (!customerId) throw new Error("Zoho failed to create customer");
 
       await db.query(
@@ -96,27 +95,27 @@ router.post("/subscribe", async (req, res) => {
     };
 
     const priceConfig = pricing[plan];
-    if (!priceConfig) {
+    if (!priceConfig)
       return res.status(400).json({ success: false, message: "Invalid plan" });
-    }
 
-    let amount = Number(Number(priceConfig.amount).toFixed(2));
-
-    if (!amount || isNaN(amount) || amount <= 0) {
+    const numericAmount = Number(priceConfig.amount);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid payment amount",
       });
     }
 
-    console.log(`💳 Creating Payment Link (${plan}) → ₹${amount}`);
+    const paymentAmount = numericAmount.toFixed(2); // STRING ✔ REQUIRED
+
+    console.log(`💳 Creating Payment Link (${plan}) → ₹${paymentAmount}`);
 
     const payload = {
       customer_id: customerId,
+      customer_name: companyName,
       currency_code: "INR",
-      amount, // must be NUMBER
-      description: priceConfig.description,
-      is_partial_payment: false,
+      payment_amount: paymentAmount,     // ✔ IMPORTANT
+      description: priceConfig.description
     };
 
     console.log("📤 ZOHO PAYLOAD:", payload);
@@ -126,7 +125,6 @@ router.post("/subscribe", async (req, res) => {
     try {
       ({ data } = await client.post("/paymentlinks", payload));
     } catch (err) {
-      // Retry once if token expired
       if (err?.response?.status === 401) {
         console.warn("🔄 Zoho token expired — retrying...");
         client = await zohoClient();
@@ -139,7 +137,7 @@ router.post("/subscribe", async (req, res) => {
     const paymentUrl = data?.payment_link?.url;
     if (!paymentUrl) throw new Error("Zoho failed to return payment link");
 
-    /* ================= STATUS PENDING ================= */
+    /* ================= STATUS → PENDING ================= */
     await db.query(
       `
       UPDATE companies
@@ -155,6 +153,7 @@ router.post("/subscribe", async (req, res) => {
       message: "Payment link generated successfully",
       url: paymentUrl,
     });
+
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
