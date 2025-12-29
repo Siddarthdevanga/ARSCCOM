@@ -89,7 +89,7 @@ export default function SecondaryDetails() {
         <img
           src={company.logo_url || "/logo.png"}
           alt={`${company.name} logo`}
-          className={styles.companyLogo}
+          className={styles.logo}
         />
       </header>
 
