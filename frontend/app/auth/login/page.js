@@ -15,6 +15,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
 
+  /* ======================================================
+      LOGIN HANDLER WITH SUBSCRIPTION VALIDATION
+  ====================================================== */
   const handleLogin = async () => {
     if (loading) return;
 
@@ -33,7 +36,7 @@ export default function LoginPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: normalizedEmail, password })
+          body: JSON.stringify({ email: normalizedEmail, password }),
         }
       );
 
@@ -44,15 +47,56 @@ export default function LoginPage() {
         return;
       }
 
+      // Store token
       localStorage.setItem("token", data.token);
       document.cookie = `token=${data.token}; path=/`;
 
-      if (data.company) {
-        localStorage.setItem("company", JSON.stringify(data.company));
+      const company = data.company || null;
+
+      /* ============================
+          NO COMPANY REGISTRATION
+      ============================ */
+      if (!company) {
+        alert("Your organization is not registered yet. Please register first.");
+        router.replace("/auth/register");
+        return;
       }
 
-      router.replace("/home");
-    } catch {
+      localStorage.setItem("company", JSON.stringify(company));
+
+      const status =
+        company.subscription_status?.toLowerCase() || "none";
+
+      console.log("SUBSCRIPTION STATUS:", status);
+
+      /* ============================
+          SUBSCRIPTION STATUS LOGIC
+      ============================ */
+
+      // never subscribed / payment pending
+      if (status === "none" || status === "pending") {
+        alert("Your subscription is not active. Please subscribe to continue.");
+        router.replace("/subscriptions");
+        return;
+      }
+
+      // expired / cancelled
+      if (["expired", "cancelled", "canceled"].includes(status)) {
+        alert("Your subscription has expired. Please renew to continue.");
+        router.replace("/subscriptions");
+        return;
+      }
+
+      // active or trial -> allow login
+      if (["active", "trial"].includes(status)) {
+        router.replace("/home");
+        return;
+      }
+
+      // fallback → subscription page
+      router.replace("/subscriptions");
+    } catch (err) {
+      console.error(err);
       setError("Unable to connect to server");
     } finally {
       setLoading(false);
@@ -61,7 +105,6 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
@@ -94,7 +137,10 @@ export default function LoginPage() {
             designed to digitalize visitor flow and organization operations.
           </p>
 
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+          <button
+            className={styles.closeBtn}
+            onClick={() => setActiveTab(null)}
+          >
             Close
           </button>
         </div>
@@ -106,7 +152,6 @@ export default function LoginPage() {
           <h2>Subscription Plans</h2>
 
           <div className={styles.planContainer}>
-
             {/* FREE PLAN */}
             <div className={styles.planCard}>
               <h3>FREE</h3>
@@ -122,7 +167,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            {/* BUSINESS PLAN */}
+            {/* BUSINESS */}
             <div className={styles.planCard}>
               <h3>BUSINESS</h3>
               <h2>₹500 / Month</h2>
@@ -137,7 +182,7 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            {/* ENTERPRISE PLAN */}
+            {/* ENTERPRISE */}
             <div className={styles.planCard}>
               <h3>ENTERPRISE</h3>
               <h2>Custom Pricing</h2>
@@ -153,7 +198,10 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+          <button
+            className={styles.closeBtn}
+            onClick={() => setActiveTab(null)}
+          >
             Close
           </button>
         </div>
@@ -167,7 +215,10 @@ export default function LoginPage() {
           <p>Phone : 8647878785</p>
           <p>We are happy to support you.</p>
 
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+          <button
+            className={styles.closeBtn}
+            onClick={() => setActiveTab(null)}
+          >
             Close
           </button>
         </div>
@@ -200,7 +251,11 @@ export default function LoginPage() {
 
           {error && <p style={{ color: "red" }}>{error}</p>}
 
-          <button className={styles.loginBtn} onClick={handleLogin} disabled={loading}>
+          <button
+            className={styles.loginBtn}
+            onClick={handleLogin}
+            disabled={loading}
+          >
             {loading ? "Logging in..." : "LOGIN"}
           </button>
 
