@@ -8,21 +8,38 @@ const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_WEBHOOK_KEY";
 const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.wheelbrand.in";
 
 /* ======================================================
-   COMMON EMAIL FOOTER
+   EMAIL FOOTER
 ====================================================== */
 const emailFooter = () => `
 <br/>
 Regards,<br/>
 <b style="color:#6c2bd9">PROMEET</b><br/>
-
 <img src="${APP_BASE_URL}/logo.png" height="55" />
-
 <hr/>
 <p style="font-size:13px;color:#666">
-This email was automatically sent from the PROMEET Subscription and Billing System.
+This email was automatically sent from the PROMEET Subscription & Billing System.
 If you did not perform this action, please contact your administrator immediately.
-</p>
-`;
+</p>`;
+
+/* ======================================================
+   HELPER → Normalize Zoho to Internal Status
+====================================================== */
+function mapStatus(status) {
+  if (!status) return null;
+
+  status = status.toLowerCase();
+
+  const map = {
+    trial: "trial",
+    live: "active",
+    active: "active",
+    cancelled: "cancelled",
+    canceled: "cancelled",
+    expired: "expired"
+  };
+
+  return map[status] || null;
+}
 
 /* ======================================================
    ZOHO WEBHOOK
@@ -30,14 +47,18 @@ If you did not perform this action, please contact your administrator immediatel
 router.post("/", async (req, res) => {
   try {
     /* ================= SECURITY ================= */
-    const key = req.headers["x-webhook-key"];
+    const key =
+      req.headers["x-webhook-key"] ||
+      req.headers["x_zoho_webhook_key"] ||
+      null;
+
     if (!key || key !== WEBHOOK_KEY) {
       console.log("❌ INVALID WEBHOOK KEY");
       return res.status(401).json({ message: "Unauthorized webhook" });
     }
 
-    const event = req.body?.event_type;
-    const payload = req.body?.data;
+    const event = req.body?.event_type || req.body?.event || "unknown";
+    const payload = req.body?.data || req.body;
 
     if (!payload) {
       return res.status(400).json({ message: "Invalid payload" });
@@ -48,9 +69,13 @@ router.post("/", async (req, res) => {
     const subscription = payload.subscription || {};
     const customer = payload.customer || subscription.customer || {};
 
-    const zohoSubscriptionId = subscription?.subscription_id;
+    const zohoSubscriptionId =
+      subscription.subscription_id || subscription.id || null;
+
     const zohoCustomerId =
-      customer?.customer_id || subscription?.customer_id;
+      customer.customer_id ||
+      subscription.customer_id ||
+      null;
 
     if (!zohoCustomerId) {
       console.log("❌ Missing Zoho Customer ID");
@@ -58,24 +83,25 @@ router.post("/", async (req, res) => {
     }
 
     const email =
-      customer?.email ||
+      customer.email ||
       subscription?.customer?.email ||
       null;
 
     const companyName =
-      customer?.display_name ||
+      customer.display_name ||
       subscription?.customer?.display_name ||
       "Your Company";
 
-    /* Zoho sends: trial / live / cancelled / expired */
-    const newStatus =
-      subscription?.status ||
-      subscription?.subscription_status ||
+    const receivedStatus =
+      subscription.status ||
+      subscription.subscription_status ||
       null;
 
+    const newStatus = mapStatus(receivedStatus);
+
     if (!newStatus) {
-      console.log("⚠️ No subscription status received");
-      return res.json({ message: "Ignored - no status" });
+      console.log("⚠️ Unknown / ignored status:", receivedStatus);
+      return res.json({ message: "Ignored - unknown status" });
     }
 
     /* ================= FETCH COMPANY ================= */
@@ -94,9 +120,9 @@ router.post("/", async (req, res) => {
 
     const oldStatus = company.subscription_status;
 
-    /* ================= IGNORE NO CHANGE ================= */
+    /* ================= IDEMPOTENCY ================= */
     if (oldStatus === newStatus) {
-      console.log(`ℹ️ No status change (${oldStatus}) → ignoring`);
+      console.log(`ℹ️ No change (${oldStatus}) → ignoring`);
       return res.json({ message: "No change" });
     }
 
@@ -107,10 +133,11 @@ router.post("/", async (req, res) => {
         subscription_status=?,
         plan = CASE 
           WHEN ? = 'trial' THEN 'trial'
-          WHEN ? = 'live' THEN 'business'
+          WHEN ? = 'active' THEN 'business'
           ELSE plan
         END,
-        zoho_subscription_id=?
+        zoho_subscription_id=IFNULL(?, zoho_subscription_id),
+        updated_at = NOW()
       WHERE zoho_customer_id=?
       `,
       [newStatus, newStatus, newStatus, zohoSubscriptionId, zohoCustomerId]
@@ -118,80 +145,60 @@ router.post("/", async (req, res) => {
 
     console.log(`✅ STATUS UPDATED: ${oldStatus} → ${newStatus}`);
 
-    /* ================= EMAIL EVENTS ================= */
+    /* ================= EMAIL HANDLING ================= */
     if (!email) {
       console.log("⚠️ No email found — skipping email send");
       return res.json({ message: "Processed without email" });
     }
 
-    /* ================= TRIAL ACTIVATED ================= */
-    if (newStatus === "trial") {
-      console.log("📧 Sending Trial Email");
-      await sendEmail({
-        to: email,
-        subject: "PROMEET Trial Subscription Activated",
-        html: `
+    // Send emails async but don't block webhook success
+    (async () => {
+      try {
+        /* TRIAL */
+        if (newStatus === "trial") {
+          await sendEmail({
+            to: email,
+            subject: "PROMEET Trial Subscription Activated",
+            html: `
 <p>Hello,</p>
+<p>The trial subscription for 
+<b style="color:#6c2bd9">${companyName}</b> has been successfully activated.</p>
+<p>You may now explore PROMEET during the trial period.</p>
+${emailFooter()}`
+          });
+        }
 
-<p>
-The trial subscription for 
-<b style="color:#6c2bd9">${companyName}</b> has been successfully activated.
-</p>
-
-<p>
-You may now explore PROMEET and experience the platform features during the trial period.
-</p>
-
-${emailFooter()}
-`
-      });
-    }
-
-    /* ================= BUSINESS ACTIVATED ================= */
-    if (newStatus === "live" || newStatus === "active") {
-      console.log("📧 Sending Activation Email");
-      await sendEmail({
-        to: email,
-        subject: "PROMEET Subscription Activated",
-        html: `
+        /* BUSINESS LIVE */
+        if (newStatus === "active") {
+          await sendEmail({
+            to: email,
+            subject: "PROMEET Subscription Activated",
+            html: `
 <p>Hello,</p>
+<p>The business subscription for 
+<b style="color:#6c2bd9">${companyName}</b> is now active.</p>
+<p>You now have full unrestricted access to PROMEET.</p>
+${emailFooter()}`
+          });
+        }
 
-<p>
-The business subscription for 
-<b style="color:#6c2bd9">${companyName}</b> has been successfully activated.
-</p>
-
-<p>
-Your organization now has full access to PROMEET without any restrictions.
-</p>
-
-${emailFooter()}
-`
-      });
-    }
-
-    /* ================= CANCELLED ================= */
-    if (newStatus === "cancelled" || newStatus === "expired") {
-      console.log("📧 Sending Cancellation Email");
-      await sendEmail({
-        to: email,
-        subject: "PROMEET Subscription Cancelled",
-        html: `
+        /* CANCELLED / EXPIRED */
+        if (["cancelled", "expired"].includes(newStatus)) {
+          await sendEmail({
+            to: email,
+            subject: "PROMEET Subscription Status Update",
+            html: `
 <p>Hello,</p>
-
-<p>
-The subscription for 
-<b style="color:#6c2bd9">${companyName}</b> has been cancelled.
-</p>
-
-<p>
-If this was not intentional, please contact support immediately.
-</p>
-
-${emailFooter()}
-`
-      });
-    }
+<p>Your subscription status for 
+<b style="color:#6c2bd9">${companyName}</b> is now <b>${newStatus}</b>.</p>
+<p>If this was not intentional, please contact support.</p>
+${emailFooter()}`
+          });
+        }
+      } catch (mailErr) {
+        console.error("📧 Email send failed:", mailErr);
+      }
+    })();
 
     return res.json({ message: "Webhook processed successfully" });
 
