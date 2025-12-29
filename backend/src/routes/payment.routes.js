@@ -86,11 +86,11 @@ router.post("/subscribe", async (req, res) => {
     /* PRICING */
     const pricing = {
       free: {
-        amount: 49,
+        amount: 49.o,
         description: "PROMEET Trial Processing Fee"
       },
       business: {
-        amount: 500,
+        amount: 500.0,
         description: "PROMEET Business Subscription"
       }
     };
