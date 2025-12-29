@@ -8,6 +8,7 @@ router.post("/subscribe", async (req, res) => {
   try {
     const { email, plan } = req.body;
 
+    /* ================= VALIDATE ================= */
     if (!email || !plan) {
       return res.status(400).json({
         success: false,
@@ -24,7 +25,7 @@ router.post("/subscribe", async (req, res) => {
 
     const cleanEmail = email.toLowerCase();
 
-    /* FIND USER */
+    /* ================= USER ================= */
     const [[user]] = await db.query(
       `SELECT id, company_id FROM users WHERE email=? LIMIT 1`,
       [cleanEmail]
@@ -37,10 +38,18 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
-    /* FIND COMPANY */
+    /* ================= COMPANY ================= */
     const [[company]] = await db.query(
-      `SELECT id, name, subscription_status, zoho_customer_id 
-       FROM companies WHERE id=? LIMIT 1`,
+      `
+      SELECT 
+        id,
+        name,
+        subscription_status,
+        zoho_customer_id
+      FROM companies
+      WHERE id=?
+      LIMIT 1
+      `,
       [user.company_id]
     );
 
@@ -63,7 +72,7 @@ router.post("/subscribe", async (req, res) => {
 
     const client = await zohoClient();
 
-    /* ENSURE CUSTOMER IN ZOHO */
+    /* ================= ENSURE ZOHO CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
@@ -83,7 +92,7 @@ router.post("/subscribe", async (req, res) => {
       );
     }
 
-    /* PRICING */
+    /* ================= PRICING ================= */
     const pricing = {
       free: {
         amount: 49.00,
@@ -95,40 +104,41 @@ router.post("/subscribe", async (req, res) => {
       }
     };
 
-    const { amount, description } = pricing[plan];
+    let { amount, description } = pricing[plan];
 
-    console.log(`💳 Creating Payment Link (${plan}) → ₹${amount}`);
+    // Zoho requires EXACT 2 decimal places STRING
+    amount = amount.toFixed(2);
 
-    /* =========================
-       CREATE PAYMENT LINK
-       (STRICT — ONLY THESE FIELDS)
-    ========================== */
+    console.log(`💳 Creating Payment Link (${plan.toUpperCase()}) — ₹${amount}`);
+
+    /* ================= PAYMENT LINK ================= */
     const { data } = await client.post("/paymentlinks", {
       customer_id: customerId,
       currency_code: "INR",
-      amount: amount,
+      amount,               // MUST BE STRING WITH 2 DECIMALS
       description
     });
 
     const paymentUrl = data?.payment_link?.url;
+    if (!paymentUrl) throw new Error("Zoho failed to return payment link");
 
-    if (!paymentUrl) throw new Error("No payment link returned");
-
-    /* UPDATE STATUS */
+    /* ================= STATUS: PENDING ================= */
     await db.query(
-      `UPDATE companies 
-       SET subscription_status='pending',
-           plan=? 
-       WHERE id=?`,
+      `
+      UPDATE companies
+      SET 
+        subscription_status='pending',
+        plan = ?
+      WHERE id=?
+      `,
       [plan === "business" ? "business" : "trial", companyId]
     );
 
     return res.json({
       success: true,
-      message: "Payment link created",
+      message: "Payment link generated successfully",
       url: paymentUrl
     });
-
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
