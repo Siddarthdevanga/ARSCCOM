@@ -5,6 +5,7 @@ import { sendEmail } from "../utils/mailer.js";
 const router = express.Router();
 
 const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_WEBHOOK_KEY";
+const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.wheelbrand.in";
 
 /* ======================================================
    COMMON EMAIL FOOTER
@@ -14,7 +15,7 @@ const emailFooter = () => `
 Regards,<br/>
 <b style="color:#6c2bd9">PROMEET</b><br/>
 
-<img src="/logo.png" height="55" />
+<img src="${APP_BASE_URL}/logo.png" height="55" />
 
 <hr/>
 <p style="font-size:13px;color:#666">
@@ -66,6 +67,7 @@ router.post("/", async (req, res) => {
       subscription?.customer?.display_name ||
       "Your Company";
 
+    /* Zoho sends: trial / live / cancelled / expired */
     const newStatus =
       subscription?.status ||
       subscription?.subscription_status ||
@@ -98,14 +100,14 @@ router.post("/", async (req, res) => {
       return res.json({ message: "No change" });
     }
 
-    /* ================= UPDATE DB ================= */
+    /* ================= DB UPDATE ================= */
     await db.query(
       `
       UPDATE companies SET
         subscription_status=?,
         plan = CASE 
           WHEN ? = 'trial' THEN 'trial'
-          WHEN ? = 'active' THEN 'business'
+          WHEN ? = 'live' THEN 'business'
           ELSE plan
         END,
         zoho_subscription_id=?
@@ -116,79 +118,83 @@ router.post("/", async (req, res) => {
 
     console.log(`✅ STATUS UPDATED: ${oldStatus} → ${newStatus}`);
 
-    /* ================= NOTIFICATION EMAILS ================= */
-    if (email) {
-      if (newStatus === "trial") {
-        console.log("📧 Sending Trial Email");
-        await sendEmail({
-          to: email,
-          subject: "PROMEET Trial Subscription Activated",
-          html: `
+    /* ================= EMAIL EVENTS ================= */
+    if (!email) {
+      console.log("⚠️ No email found — skipping email send");
+      return res.json({ message: "Processed without email" });
+    }
+
+    /* ================= TRIAL ACTIVATED ================= */
+    if (newStatus === "trial") {
+      console.log("📧 Sending Trial Email");
+      await sendEmail({
+        to: email,
+        subject: "PROMEET Trial Subscription Activated",
+        html: `
 <p>Hello,</p>
 
 <p>
-We are pleased to inform you that the trial subscription for 
+The trial subscription for 
 <b style="color:#6c2bd9">${companyName}</b> has been successfully activated.
 </p>
 
 <p>
-You now have access to PROMEET features during the trial period.
-Feel free to explore and experience the platform.
+You may now explore PROMEET and experience the platform features during the trial period.
 </p>
 
 ${emailFooter()}
 `
-        });
-      }
+      });
+    }
 
-      if (newStatus === "active") {
-        console.log("📧 Sending Activation Email");
-        await sendEmail({
-          to: email,
-          subject: "PROMEET Subscription Activated",
-          html: `
+    /* ================= BUSINESS ACTIVATED ================= */
+    if (newStatus === "live" || newStatus === "active") {
+      console.log("📧 Sending Activation Email");
+      await sendEmail({
+        to: email,
+        subject: "PROMEET Subscription Activated",
+        html: `
 <p>Hello,</p>
 
 <p>
-We are pleased to inform you that the business subscription for 
+The business subscription for 
 <b style="color:#6c2bd9">${companyName}</b> has been successfully activated.
 </p>
 
 <p>
-Your organization can now fully utilize all PROMEET services without restrictions.
+Your organization now has full access to PROMEET without any restrictions.
 </p>
 
 ${emailFooter()}
 `
-        });
-      }
+      });
+    }
 
-      if (newStatus === "cancelled") {
-        console.log("📧 Sending Cancellation Email");
-        await sendEmail({
-          to: email,
-          subject: "PROMEET Subscription Cancelled",
-          html: `
+    /* ================= CANCELLED ================= */
+    if (newStatus === "cancelled" || newStatus === "expired") {
+      console.log("📧 Sending Cancellation Email");
+      await sendEmail({
+        to: email,
+        subject: "PROMEET Subscription Cancelled",
+        html: `
 <p>Hello,</p>
 
 <p>
-We would like to inform you that the subscription for 
+The subscription for 
 <b style="color:#6c2bd9">${companyName}</b> has been cancelled.
 </p>
 
 <p>
-If this cancellation was not intended, kindly contact support for assistance.
+If this was not intentional, please contact support immediately.
 </p>
 
 ${emailFooter()}
 `
-        });
-      }
-    } else {
-      console.log("⚠️ No email found — skipping email send");
+      });
     }
 
-    res.json({ message: "Webhook processed" });
+    return res.json({ message: "Webhook processed successfully" });
+
   } catch (err) {
     console.error("WEBHOOK ERROR", err);
     res.status(500).json({ message: "Webhook failed" });
