@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 export default function SubscriptionPage() {
   const router = useRouter();
-  const params = useSearchParams();
 
   const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
@@ -22,7 +21,7 @@ export default function SubscriptionPage() {
     "https://www.wheelbrand.in";
 
   /* ======================================================
-      LOAD LOCAL STORAGE
+      LOAD LOCAL STORAGE + URL PARAMS
   ====================================================== */
   useEffect(() => {
     try {
@@ -31,19 +30,21 @@ export default function SubscriptionPage() {
       setCompanyName(localStorage.getItem("regCompanyName") || "");
     } catch {}
 
-    // If user returned after payment success
-    if (params.get("status") === "active") {
-      setActivatedPlan("business");
-    }
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
 
-    // If webhook already activated earlier
-    if (params.get("trial") === "true") {
-      setActivatedPlan("free");
+      if (params.get("status") === "active") {
+        setActivatedPlan("business");
+      }
+
+      if (params.get("trial") === "true") {
+        setActivatedPlan("free");
+      }
     }
-  }, [params]);
+  }, []);
 
   /* ======================================================
-      PLAN HANDLER
+      HANDLE PLAN
   ====================================================== */
   const choosePlan = async (plan) => {
     if (loadingPlan) return;
@@ -66,8 +67,8 @@ export default function SubscriptionPage() {
           email,
           companyId,
           companyName,
-          plan,
-        }),
+          plan
+        })
       });
 
       let data = {};
@@ -85,13 +86,13 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // ================= FREE TRIAL =================
+      // FREE TRIAL SUCCESS
       if (plan === "free") {
         setActivatedPlan("free");
         return;
       }
 
-      // ================= BUSINESS PAYMENT =================
+      // BUSINESS REDIRECT
       if (data?.url || data?.redirectUrl) {
         window.location.href = data.url || data.redirectUrl;
         return;
@@ -107,7 +108,7 @@ export default function SubscriptionPage() {
   };
 
   /* ======================================================
-      SUCCESS SCREEN
+      SUCCESS UI
   ====================================================== */
   const renderSuccessScreen = () => {
     const isTrial = activatedPlan === "free";
@@ -116,14 +117,11 @@ export default function SubscriptionPage() {
       <div className={styles.successContainer}>
         <div className={styles.successCard}>
           <h2 className={styles.successHeading}>
-            {isTrial
-              ? "Trial Subscription Activated"
-              : "Subscription Activated"}
+            {isTrial ? "Trial Subscription Activated" : "Subscription Activated"}
           </h2>
 
           <p className={styles.successMessage}>
-            Your company <b>{companyName}</b> has successfully subscribed to
-            PROMEET.
+            Your company <b>{companyName}</b> has successfully subscribed to PROMEET.
           </p>
 
           <div className={styles.planDetails}>
@@ -164,7 +162,7 @@ export default function SubscriptionPage() {
   };
 
   /* ======================================================
-      VIEW RENDER
+      VIEW
   ====================================================== */
   return (
     <div className={styles.container}>
@@ -181,7 +179,7 @@ export default function SubscriptionPage() {
           {error && <div className={styles.error}>{error}</div>}
 
           <div className={styles.planGrid}>
-            {/* ================= FREE TRIAL ================= */}
+            {/* ================= FREE ================= */}
             <div className={styles.card}>
               <h3 className={styles.planName}>FREE TRIAL</h3>
               <p className={styles.price}>Free</p>
@@ -198,9 +196,7 @@ export default function SubscriptionPage() {
                 disabled={loadingPlan === "free"}
                 onClick={() => choosePlan("free")}
               >
-                {loadingPlan === "free"
-                  ? "Activating..."
-                  : "Start Free Trial"}
+                {loadingPlan === "free" ? "Activating..." : "Start Free Trial"}
               </button>
             </div>
 
@@ -223,9 +219,7 @@ export default function SubscriptionPage() {
                 disabled={loadingPlan === "business"}
                 onClick={() => choosePlan("business")}
               >
-                {loadingPlan === "business"
-                  ? "Processing..."
-                  : "Proceed to Payment"}
+                {loadingPlan === "business" ? "Processing..." : "Proceed to Payment"}
               </button>
             </div>
 
@@ -233,9 +227,7 @@ export default function SubscriptionPage() {
             <div className={styles.card}>
               <h3 className={styles.planName}>ENTERPRISE</h3>
               <p className={styles.price}>Custom Pricing</p>
-              <p className={styles.subText}>
-                Tailored for large organizations
-              </p>
+              <p className={styles.subText}>Tailored for large organizations</p>
 
               <ul className={styles.features}>
                 <li>• Custom Solutions</li>
