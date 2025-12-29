@@ -6,9 +6,29 @@ const router = express.Router();
 
 const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_WEBHOOK_KEY";
 
+/* ======================================================
+   COMMON EMAIL FOOTER
+====================================================== */
+const emailFooter = () => `
+<br/>
+Regards,<br/>
+<b style="color:#6c2bd9">PROMEET</b><br/>
+
+<img src="/logo.png" height="55" />
+
+<hr/>
+<p style="font-size:13px;color:#666">
+This email was automatically sent from the PROMEET Subscription and Billing System.
+If you did not perform this action, please contact your administrator immediately.
+</p>
+`;
+
+/* ======================================================
+   ZOHO WEBHOOK
+====================================================== */
 router.post("/", async (req, res) => {
   try {
-    // ================= SECURITY =================
+    /* ================= SECURITY ================= */
     const key = req.headers["x-webhook-key"];
     if (!key || key !== WEBHOOK_KEY) {
       console.log("❌ INVALID WEBHOOK KEY");
@@ -56,7 +76,7 @@ router.post("/", async (req, res) => {
       return res.json({ message: "Ignored - no status" });
     }
 
-    // ================= FETCH EXISTING COMPANY =================
+    /* ================= FETCH COMPANY ================= */
     const [[company]] = await db.query(
       `SELECT id, subscription_status, plan 
        FROM companies 
@@ -72,13 +92,13 @@ router.post("/", async (req, res) => {
 
     const oldStatus = company.subscription_status;
 
-    // ================= IF STATUS DIDN'T CHANGE, IGNORE =================
+    /* ================= IGNORE NO CHANGE ================= */
     if (oldStatus === newStatus) {
       console.log(`ℹ️ No status change (${oldStatus}) → ignoring`);
       return res.json({ message: "No change" });
     }
 
-    // ================= UPDATE DB =================
+    /* ================= UPDATE DB ================= */
     await db.query(
       `
       UPDATE companies SET
@@ -96,16 +116,28 @@ router.post("/", async (req, res) => {
 
     console.log(`✅ STATUS UPDATED: ${oldStatus} → ${newStatus}`);
 
-    // ================= SEND EMAILS =================
-
+    /* ================= NOTIFICATION EMAILS ================= */
     if (email) {
       if (newStatus === "trial") {
         console.log("📧 Sending Trial Email");
         await sendEmail({
           to: email,
-          subject: "🎉 PROMEET Trial Activated",
-          html: `<h3>Your 15-Day Trial is Active!</h3>
-                 <p>Company: <b>${companyName}</b></p>`
+          subject: "PROMEET Trial Subscription Activated",
+          html: `
+<p>Hello,</p>
+
+<p>
+We are pleased to inform you that the trial subscription for 
+<b style="color:#6c2bd9">${companyName}</b> has been successfully activated.
+</p>
+
+<p>
+You now have access to PROMEET features during the trial period.
+Feel free to explore and experience the platform.
+</p>
+
+${emailFooter()}
+`
         });
       }
 
@@ -113,9 +145,21 @@ router.post("/", async (req, res) => {
         console.log("📧 Sending Activation Email");
         await sendEmail({
           to: email,
-          subject: "✅ PROMEET Subscription Activated",
-          html: `<h3>Your Business Subscription is Active!</h3>
-                 <p>Company: <b>${companyName}</b></p>`
+          subject: "PROMEET Subscription Activated",
+          html: `
+<p>Hello,</p>
+
+<p>
+We are pleased to inform you that the business subscription for 
+<b style="color:#6c2bd9">${companyName}</b> has been successfully activated.
+</p>
+
+<p>
+Your organization can now fully utilize all PROMEET services without restrictions.
+</p>
+
+${emailFooter()}
+`
         });
       }
 
@@ -123,8 +167,21 @@ router.post("/", async (req, res) => {
         console.log("📧 Sending Cancellation Email");
         await sendEmail({
           to: email,
-          subject: "⚠️ PROMEET Subscription Cancelled",
-          html: `<h3>Your subscription is cancelled.</h3>`
+          subject: "PROMEET Subscription Cancelled",
+          html: `
+<p>Hello,</p>
+
+<p>
+We would like to inform you that the subscription for 
+<b style="color:#6c2bd9">${companyName}</b> has been cancelled.
+</p>
+
+<p>
+If this cancellation was not intended, kindly contact support for assistance.
+</p>
+
+${emailFooter()}
+`
         });
       }
     } else {
@@ -132,7 +189,6 @@ router.post("/", async (req, res) => {
     }
 
     res.json({ message: "Webhook processed" });
-
   } catch (err) {
     console.error("WEBHOOK ERROR", err);
     res.status(500).json({ message: "Webhook failed" });
