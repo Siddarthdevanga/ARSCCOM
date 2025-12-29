@@ -95,34 +95,46 @@ router.post("/subscribe", async (req, res) => {
     /* ================= PRICING ================= */
     const pricing = {
       free: {
-        amount: 49.00,
+        amount: 49.0,
         description: "PROMEET Trial Processing Fee"
       },
       business: {
-        amount: 500.00,
+        amount: 500.0,
         description: "PROMEET Business Subscription"
       }
     };
 
     let { amount, description } = pricing[plan];
 
-    // Zoho requires EXACT 2 decimal places STRING
-    amount = amount.toFixed(2);
+    // Force numeric with max 2 decimals
+    amount = Number(Number(amount).toFixed(2));
 
-    console.log(`💳 Creating Payment Link (${plan.toUpperCase()}) — ₹${amount}`);
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment amount"
+      });
+    }
 
-    /* ================= PAYMENT LINK ================= */
-    const { data } = await client.post("/paymentlinks", {
+    console.log(`💳 Creating Payment Link (${plan}) → ₹${amount}`);
+
+    const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount,               // MUST BE STRING WITH 2 DECIMALS
-      description
-    });
+      amount,              // MUST be number, not string
+      description,
+      is_partial_payment: false
+    };
+
+    console.log("📤 ZOHO PAYLOAD:", payload);
+
+    /* ================= PAYMENT LINK ================= */
+    const { data } = await client.post("/paymentlinks", payload);
 
     const paymentUrl = data?.payment_link?.url;
     if (!paymentUrl) throw new Error("Zoho failed to return payment link");
 
-    /* ================= STATUS: PENDING ================= */
+    /* ================= STATUS → PENDING ================= */
     await db.query(
       `
       UPDATE companies
@@ -139,6 +151,7 @@ router.post("/subscribe", async (req, res) => {
       message: "Payment link generated successfully",
       url: paymentUrl
     });
+
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
