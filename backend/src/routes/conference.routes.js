@@ -30,12 +30,9 @@ router.get("/dashboard", async (req, res) => {
       [companyId, companyId, companyId]
     );
 
-    /* ================= DEPARTMENT WISE BOOKINGS ================= */
     const [departments] = await db.query(
       `
-      SELECT 
-        department,
-        COUNT(*) AS total
+      SELECT department, COUNT(*) AS total
       FROM conference_bookings
       WHERE company_id = ?
       GROUP BY department
@@ -56,12 +53,9 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   CONFERENCE ROOMS
+   ROOMS
 ====================================================== */
 
-/**
- * GET rooms
- */
 router.get("/rooms", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -83,18 +77,12 @@ router.get("/rooms", async (req, res) => {
   }
 });
 
-/**
- * 🚫 DISABLE ROOM CREATION
- */
-router.post("/rooms", async (req, res) => {
+router.post("/rooms", async () => {
   return res.status(403).json({
-    message: "Room creation is disabled. Please contact administrator."
+    message: "Room creation disabled"
   });
 });
 
-/**
- * UPDATE (Rename / Renumber) ROOM
- */
 router.put("/rooms/:id", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -105,7 +93,7 @@ router.put("/rooms/:id", async (req, res) => {
 
     if (!room_name && !room_number) {
       return res.status(400).json({
-        message: "Provide room_name or room_number to update"
+        message: "Provide room_name or room_number"
       });
     }
 
@@ -120,9 +108,7 @@ router.put("/rooms/:id", async (req, res) => {
     );
 
     if (!room) {
-      return res
-        .status(404)
-        .json({ message: "Room not found or unauthorized" });
+      return res.status(404).json({ message: "Room not found" });
     }
 
     if (room_number) {
@@ -139,7 +125,7 @@ router.put("/rooms/:id", async (req, res) => {
 
       if (exists) {
         return res.status(409).json({
-          message: "Room number already exists for your company"
+          message: "Room number already exists"
         });
       }
     }
@@ -235,7 +221,7 @@ router.post("/bookings", async (req, res) => {
       !end_time
     ) {
       return res.status(400).json({
-        message: "Room, department, date and time are required"
+        message: "Room, department, date and time required"
       });
     }
 
@@ -260,7 +246,7 @@ router.post("/bookings", async (req, res) => {
     if (!room) {
       await conn.rollback();
       return res.status(403).json({
-        message: "Invalid room selection"
+        message: "Invalid room"
       });
     }
 
@@ -281,7 +267,7 @@ router.post("/bookings", async (req, res) => {
     if (conflict.cnt > 0) {
       await conn.rollback();
       return res.status(409).json({
-        message: "Room already booked for this time slot"
+        message: "Room already booked for this slot"
       });
     }
 
@@ -328,6 +314,91 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
+/* ======================================================
+   EDIT BOOKING
+====================================================== */
+router.patch("/bookings/:id", async (req, res) => {
+  try {
+    const { companyId } = req.user;
+    const bookingId = Number(req.params.id);
+    const { start_time, end_time } = req.body;
+
+    if (!bookingId || !start_time || !end_time) {
+      return res.status(400).json({
+        message: "Booking ID, start_time & end_time required"
+      });
+    }
+
+    if (end_time <= start_time) {
+      return res.status(400).json({
+        message: "End time must be after start time"
+      });
+    }
+
+    const [[booking]] = await db.query(
+      `
+      SELECT room_id, booking_date
+      FROM conference_bookings
+      WHERE id = ? AND company_id = ? AND status='BOOKED'
+      LIMIT 1
+      `,
+      [bookingId, companyId]
+    );
+
+    if (!booking) {
+      return res.status(404).json({
+        message: "Booking not found"
+      });
+    }
+
+    const [[conflict]] = await db.query(
+      `
+      SELECT COUNT(*) AS cnt
+      FROM conference_bookings
+      WHERE company_id = ?
+        AND room_id = ?
+        AND booking_date = ?
+        AND id <> ?
+        AND status='BOOKED'
+        AND start_time < ?
+        AND end_time > ?
+      `,
+      [
+        companyId,
+        booking.room_id,
+        booking.booking_date,
+        bookingId,
+        end_time,
+        start_time
+      ]
+    );
+
+    if (conflict.cnt > 0) {
+      return res.status(409).json({
+        message: "Slot already booked"
+      });
+    }
+
+    await db.query(
+      `
+      UPDATE conference_bookings
+      SET start_time=?, end_time=?
+      WHERE id=? AND company_id=?
+      `,
+      [start_time, end_time, bookingId, companyId]
+    );
+
+    res.json({ message: "Booking updated successfully" });
+
+  } catch (err) {
+    console.error("[ADMIN][EDIT BOOKING]", err);
+    res.status(500).json({ message: "Unable to update booking" });
+  }
+});
+
+/* ======================================================
+   CANCEL BOOKING
+====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const { companyId } = req.user;
