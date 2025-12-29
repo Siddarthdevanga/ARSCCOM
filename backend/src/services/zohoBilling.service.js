@@ -30,11 +30,10 @@ async function withAuth(headers = {}) {
 }
 
 /* ======================================================
-   CENTRAL ERROR HANDLER
+   ERROR HANDLER
 ====================================================== */
 function handleZohoError(err) {
   const apiError = err?.response?.data;
-
   console.error("❌ ZOHO ERROR:", apiError || err);
 
   throw new Error(
@@ -60,16 +59,15 @@ async function zohoRequest(method, url, body = null) {
     ).data;
 
   } catch (err) {
-    // Retry once if access token expired
     if (err?.response?.status === 401) {
-      console.warn("🔄 Zoho token expired — retrying…");
+      console.warn("🔄 Zoho token expired — retrying …");
 
       return (
         await client.request({
           method,
           url,
           data: body,
-          headers: await withAuth(), // fresh token
+          headers: await withAuth(),
         })
       ).data;
     }
@@ -126,19 +124,14 @@ export async function createTrial(customerId) {
 }
 
 /* ======================================================
-   BUSINESS (DISABLED INTENTIONALLY)
+   PAYMENT LINK (Zoho Billing)
 ====================================================== */
-export async function createBusinessSubscription() {
-  throw new Error(
-    "Business subscription billing flow is disabled. Enable before using."
-  );
-}
-
-/* ======================================================
-   PAYMENT LINK
-   IMPORTANT → amount MUST BE NUMBER
-====================================================== */
-export async function createPaymentLink(customerId, amount) {
+export async function createPaymentLink(
+  customerId,
+  amount,
+  customerName = "",
+  description = "PROMEET Subscription Payment"
+) {
   try {
     if (!customerId) throw new Error("Customer ID required");
     if (amount == null) throw new Error("Payment amount required");
@@ -151,10 +144,10 @@ export async function createPaymentLink(customerId, amount) {
 
     const payload = {
       customer_id: customerId,
-      amount: Number(numericAmount.toFixed(2)),  // NUMBER ✔
+      customer_name: customerName || undefined,
       currency_code: "INR",
-      description: "PROMEET Subscription Payment",
-      is_partial_payment: false,
+      payment_amount: numericAmount.toFixed(2),   // STRING ✔ required by Zoho Billing
+      description
     };
 
     console.log("📤 Creating Zoho Payment Link:", payload);
