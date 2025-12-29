@@ -5,47 +5,43 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= TIME OPTIONS ================= */
+/* ================= TIME OPTIONS (09:30 – 19:00, 30 mins) ================= */
 const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const total = 9 * 60 + 30 + i * 30;
   const h = Math.floor(total / 60);
   const m = total % 60;
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
-  return {
-    label: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
-    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
-  };
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 });
 
-const normalizeDate = d => (typeof d === "string" ? d.split("T")[0] : "");
 const toAmPm = t => {
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
-  return `${hour}:${m.toString().padStart(2, "0")} ${ampm}`;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 export default function ConferenceBookings() {
   const router = useRouter();
   const today = new Date().toISOString().split("T")[0];
+  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  /* FORM */
   const [date, setDate] = useState(today);
   const [roomId, setRoomId] = useState("");
+
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
 
-  /* EDIT MODE */
-  const [editing, setEditing] = useState(null);
+  /* Edit states */
+  const [editingId, setEditingId] = useState(null);
+  const [editStart, setEditStart] = useState("");
+  const [editEnd, setEditEnd] = useState("");
 
-  /* STATUS */
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -62,65 +58,56 @@ export default function ConferenceBookings() {
 
       setRooms(Array.isArray(r) ? r : []);
       setBookings(Array.isArray(b) ? b : []);
-    } catch (e) {
+    } catch {
       router.replace("/auth/login");
     }
   };
 
-  useEffect(() => {
-    loadAll();
-  }, []);
+  useEffect(() => loadAll(), []);
 
-  /* ================= FILTER DAY ================= */
+  /* ================= FILTER CURRENT DAY + ROOM BOOKINGS ================= */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
       b =>
-        normalizeDate(b.booking_date) === date &&
+        b.booking_date.split("T")[0] === date &&
         Number(b.room_id) === Number(roomId) &&
         b.status === "BOOKED"
     );
   }, [bookings, date, roomId]);
 
-  /* ================= BLOCKED SLOTS ================= */
-  const blockedSlots = useMemo(() => {
-    const set = new Set();
-    dayBookings.forEach(b => {
-      TIME_OPTIONS.forEach(t => {
-        if (t.value >= b.start_time && t.value < b.end_time) {
-          if (!editing || editing?.id !== b.id) set.add(t.value); // allow current slot when editing
-        }
-      });
+  /* ================= SLOT VALIDATION ================= */
+  const isSlotFree = (start, end, ignore = null) => {
+    return !dayBookings.some(b => {
+      if (b.id === ignore) return false;
+      return b.start_time < end && b.end_time > start;
     });
-    return set;
-  }, [dayBookings, editing]);
+  };
 
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
-
+  /* ================= AVAILABLE START TIMES ================= */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter(t => {
-      if (blockedSlots.has(t.value)) return false;
-      if (date !== today) return true;
-      const [h, m] = t.value.split(":").map(Number);
-      return h * 60 + m > nowMinutes;
+      if (date === today) {
+        const [h, m] = t.split(":").map(Number);
+        if (h * 60 + m <= nowMinutes) return false;
+      }
+      return true;
     });
-  }, [date, blockedSlots, nowMinutes]);
+  }, [date, today, nowMinutes]);
 
-  const availableEndTimes = useMemo(() => {
-    if (!startTime) return [];
-    return TIME_OPTIONS.filter(
-      t => t.value > startTime && !blockedSlots.has(t.value)
-    );
-  }, [startTime, blockedSlots]);
-
-  /* ================= CREATE ================= */
+  /* ================= CREATE BOOKING ================= */
   const createBooking = async () => {
     setError("");
     setSuccess("");
 
-    if (!date || !roomId || !startTime || !endTime || !department) {
+    if (!date || !roomId || !startTime || !endTime || !department)
       return setError("All required fields must be filled");
-    }
+
+    if (endTime <= startTime)
+      return setError("End time must be after start");
+
+    if (!isSlotFree(startTime, endTime))
+      return setError("Selected slot unavailable");
 
     try {
       await apiFetch("/api/conference/bookings", {
@@ -143,63 +130,47 @@ export default function ConferenceBookings() {
       setPurpose("");
       loadAll();
     } catch (e) {
-      setError(e.message || "Unable to create booking");
+      setError("Unable to create booking");
     }
   };
 
-  /* ================= ENTER EDIT MODE ================= */
-  const startEdit = b => {
-    setEditing(b);
-    setStartTime(b.start_time);
-    setEndTime(b.end_time);
-    setDepartment(b.department || "");
-    setPurpose(b.purpose || "");
-    setSuccess("");
-    setError("");
-  };
+  /* ================= SAVE EDIT ================= */
+  const saveEdit = async (id) => {
+    if (!editStart || !editEnd)
+      return setError("Select both start and end time");
 
-  /* ================= SUBMIT EDIT ================= */
-  const updateBooking = async () => {
-    if (!editing) return;
-
-    setError("");
-    setSuccess("");
-
-    if (!startTime || !endTime || !department)
-      return setError("Fill required fields");
+    if (!isSlotFree(editStart, editEnd, id))
+      return setError("Slot already booked");
 
     try {
-      await apiFetch(`/api/conference/bookings/${editing.id}`, {
-        method: "PUT",
+      await apiFetch(`/api/conference/bookings/${id}`, {
+        method: "PATCH",
         body: JSON.stringify({
-          start_time: startTime,
-          end_time: endTime,
-          department,
-          purpose
+          start_time: editStart,
+          end_time: editEnd
         })
       });
 
       setSuccess("Booking updated successfully");
-      setEditing(null);
+      setEditingId(null);
       loadAll();
-    } catch (e) {
-      setError(e.message || "Failed to update booking");
+    } catch {
+      setError("Failed to update booking");
     }
   };
 
-  /* ================= CANCEL ================= */
-  const cancelBooking = async id => {
+  /* ================= CANCEL BOOKING ================= */
+  const cancelBooking = async (id) => {
     if (!confirm("Cancel this booking?")) return;
 
     try {
-      await apiFetch(`/api/conference/bookings/${id}`, {
-        method: "DELETE"
+      await apiFetch(`/api/conference/bookings/${id}/cancel`, {
+        method: "PATCH"
       });
 
-      setSuccess("Booking cancelled");
       loadAll();
     } catch {
-      setError("Unable to cancel booking");
+      alert("Failed to cancel booking");
     }
   };
 
@@ -207,22 +178,23 @@ export default function ConferenceBookings() {
 
   return (
     <div className={styles.page}>
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={() => router.back()}>
           ←
         </button>
 
-        <h1 className={styles.companyName}>{company.name}</h1>
+        <h1>{company.name}</h1>
 
-        <div className={styles.headerRight}>
-          {company.logo_url && <img src={company.logo_url} alt="logo" />}
-        </div>
+        {company.logo_url && (
+          <img src={company.logo_url} alt="logo" />
+        )}
       </header>
 
       <div className={styles.content}>
-        {/* FORM */}
+        {/* ================= LEFT FORM ================= */}
         <div className={styles.card}>
-          <h2>{editing ? "Edit Booking" : "Book Conference Room"}</h2>
+          <h2>Book Conference Room</h2>
 
           {error && <p className={styles.error}>{error}</p>}
           {success && <p className={styles.success}>{success}</p>}
@@ -233,15 +205,10 @@ export default function ConferenceBookings() {
             value={date}
             min={today}
             onChange={e => setDate(e.target.value)}
-            disabled={editing}
           />
 
           <label>Room</label>
-          <select
-            value={roomId}
-            onChange={e => setRoomId(e.target.value)}
-            disabled={editing}
-          >
+          <select value={roomId} onChange={e => setRoomId(e.target.value)}>
             <option value="">Select</option>
             {rooms.map(r => (
               <option key={r.id} value={r.id}>
@@ -257,18 +224,21 @@ export default function ConferenceBookings() {
           >
             <option value="">Select</option>
             {availableStartTimes.map(t => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+              <option key={t} value={t}>
+                {toAmPm(t)}
               </option>
             ))}
           </select>
 
           <label>End Time</label>
-          <select value={endTime} onChange={e => setEndTime(e.target.value)}>
+          <select
+            value={endTime}
+            onChange={e => setEndTime(e.target.value)}
+          >
             <option value="">Select</option>
-            {availableEndTimes.map(t => (
-              <option key={t.value} value={t.value}>
-                {t.label}
+            {TIME_OPTIONS.filter(t => t > startTime).map(t => (
+              <option key={t} value={t}>
+                {toAmPm(t)}
               </option>
             ))}
           </select>
@@ -280,28 +250,17 @@ export default function ConferenceBookings() {
           />
 
           <label>Purpose</label>
-          <input value={purpose} onChange={e => setPurpose(e.target.value)} />
+          <input
+            value={purpose}
+            onChange={e => setPurpose(e.target.value)}
+          />
 
-          {!editing && (
-            <button onClick={createBooking}>Confirm Booking</button>
-          )}
-
-          {editing && (
-            <div className={styles.editActions}>
-              <button className={styles.saveBtn} onClick={updateBooking}>
-                Save Changes
-              </button>
-              <button
-                className={styles.cancelEditBtn}
-                onClick={() => setEditing(null)}
-              >
-                Cancel Edit
-              </button>
-            </div>
-          )}
+          <button onClick={createBooking}>
+            Confirm Booking
+          </button>
         </div>
 
-        {/* BOOKINGS PANEL */}
+        {/* ================= BOOKINGS PANEL ================= */}
         <div className={styles.side}>
           <h2>Bookings</h2>
 
@@ -309,20 +268,72 @@ export default function ConferenceBookings() {
 
           {dayBookings.map(b => (
             <div key={b.id} className={styles.booking}>
-              <b>
-                {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
-              </b>
-              <p>{b.department}</p>
+              {editingId === b.id ? (
+                <>
+                  <b>{b.department}</b>
 
-              <div className={styles.bookingActions}>
-                <button onClick={() => startEdit(b)}>Edit</button>
-                <button
-                  className={styles.redBtn}
-                  onClick={() => cancelBooking(b.id)}
-                >
-                  Cancel
-                </button>
-              </div>
+                  <select
+                    value={editStart}
+                    onChange={e => setEditStart(e.target.value)}
+                  >
+                    {TIME_OPTIONS.filter(t =>
+                      isSlotFree(t, editEnd || t, b.id)
+                    ).map(t => (
+                      <option key={t} value={t}>
+                        {toAmPm(t)}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={editEnd}
+                    onChange={e => setEditEnd(e.target.value)}
+                  >
+                    {TIME_OPTIONS.filter(t =>
+                      t > editStart && isSlotFree(editStart, t, b.id)
+                    ).map(t => (
+                      <option key={t} value={t}>
+                        {toAmPm(t)}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div className={styles.bookingActions}>
+                    <button onClick={() => saveEdit(b.id)}>Save</button>
+                    <button
+                      className="redBtn"
+                      onClick={() => setEditingId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <b>{toAmPm(b.start_time)} – {toAmPm(b.end_time)}</b>
+                  <p>{b.department}</p>
+                  <span>{b.booked_by}</span>
+
+                  <div className={styles.bookingActions}>
+                    <button
+                      onClick={() => {
+                        setEditingId(b.id);
+                        setEditStart(b.start_time);
+                        setEditEnd(b.end_time);
+                      }}
+                    >
+                      Edit
+                    </button>
+
+                    <button
+                      className="redBtn"
+                      onClick={() => cancelBooking(b.id)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           ))}
         </div>
