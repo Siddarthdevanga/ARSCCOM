@@ -2,39 +2,51 @@ import axios from "axios";
 
 let cachedToken = null;
 let tokenExpiry = null;
-let refreshingToken = null; // prevents parallel refresh calls
+let refreshingPromise = null; // prevents multiple refresh attempts
 
 /* ======================================================
    FETCH NEW TOKEN FROM ZOHO
 ====================================================== */
 export const getZohoToken = async () => {
-  try {
-    const {
-      ZOHO_ACCOUNTS_URL,
-      ZOHO_REFRESH_TOKEN,
-      ZOHO_CLIENT_ID,
-      ZOHO_CLIENT_SECRET
-    } = process.env;
+  const {
+    ZOHO_ACCOUNTS_URL,
+    ZOHO_REFRESH_TOKEN,
+    ZOHO_CLIENT_ID,
+    ZOHO_CLIENT_SECRET
+  } = process.env;
 
-    if (!ZOHO_ACCOUNTS_URL || !ZOHO_REFRESH_TOKEN || !ZOHO_CLIENT_ID || !ZOHO_CLIENT_SECRET) {
-      throw new Error("Zoho OAuth environment variables missing");
-    }
+  if (
+    !ZOHO_ACCOUNTS_URL ||
+    !ZOHO_REFRESH_TOKEN ||
+    !ZOHO_CLIENT_ID ||
+    !ZOHO_CLIENT_SECRET
+  ) {
+    throw new Error("Zoho OAuth environment variables missing");
+  }
 
-    /* ---------- RETURN CACHED TOKEN IF VALID ---------- */
-    if (
-      cachedToken &&
-      tokenExpiry &&
-      Date.now() < tokenExpiry - 5000 // small buffer
-    ) {
-      return cachedToken;
-    }
+  /**
+   * Return cached token if valid
+   */
+  if (
+    cachedToken &&
+    tokenExpiry &&
+    Date.now() < tokenExpiry - 5000 // 5s buffer
+  ) {
+    return cachedToken;
+  }
 
-    /* ---------- PREVENT MULTIPLE REFRESH CALLS ---------- */
-    if (refreshingToken) {
-      return refreshingToken;
-    }
+  /**
+   * If another request is already refreshing → wait for it
+   */
+  if (refreshingPromise) {
+    return refreshingPromise;
+  }
 
-    refreshingToken = (async () => {
+  /**
+   * Refresh token
+   */
+  refreshingPromise = (async () => {
+    try {
       const url = `${ZOHO_ACCOUNTS_URL}/oauth/v2/token`;
 
       const params = {
@@ -44,39 +56,56 @@ export const getZohoToken = async () => {
         grant_type: "refresh_token"
       };
 
-      const { data } = await axios.post(url, null, { params, timeout: 10000 });
+      const { data } = await axios.post(url, null, {
+        params,
+        timeout: 10000
+      });
 
       if (!data?.access_token) {
-        console.error("❌ Zoho OAuth Failed:", data);
-        throw new Error("Failed to fetch Zoho OAuth Token");
+        console.error("❌ Zoho OAuth Response:", data);
+        throw new Error("Failed to obtain Zoho OAuth Token");
       }
 
       cachedToken = data.access_token;
 
+      /**
+       * Fallback hierarchy:
+       * expires_in_sec > expires_in > 3500
+       */
       const ttlSeconds =
         Number(data.expires_in_sec) ||
         Number(data.expires_in) ||
-        3500; // fallback
+        3500;
 
       tokenExpiry = Date.now() + ttlSeconds * 1000;
 
-      console.log("🔐 Zoho OAuth Token Fetched (valid for", ttlSeconds, "sec)");
+      console.log(
+        `🔐 Zoho OAuth Token refreshed — valid for ${ttlSeconds}s`
+      );
 
-      refreshingToken = null;
+      refreshingPromise = null;
       return cachedToken;
-    })();
+    } catch (err) {
+      refreshingPromise = null;
 
-    return await refreshingToken;
+      console.error(
+        "❌ ZOHO TOKEN ERROR:",
+        err?.response?.data || err.message
+      );
 
-  } catch (err) {
-    refreshingToken = null;
-    console.error("❌ ZOHO TOKEN ERROR:", err?.response?.data || err.message);
-    throw new Error("Zoho Authentication Failed");
-  }
+      // prevent infinite retry loop by clearing cache
+      cachedToken = null;
+      tokenExpiry = null;
+
+      throw new Error("Zoho Authentication Failed");
+    }
+  })();
+
+  return refreshingPromise;
 };
 
 /* ======================================================
-   AXIOS CLIENT WRAPPER
+   ZOHO AXIOS CLIENT
 ====================================================== */
 export const zohoClient = async () => {
   const token = await getZohoToken();
@@ -99,14 +128,22 @@ export const zohoClient = async () => {
   client.interceptors.response.use(
     (res) => res,
     async (error) => {
+      const originalRequest = error.config;
+
+      // Prevent infinite retry loop
+      if (originalRequest._retry) {
+        throw error;
+      }
+
       if (error?.response?.status === 401) {
-        console.warn("🔄 Zoho token expired — refreshing...");
+        console.warn("🔄 Zoho token expired — refreshing…");
+
+        originalRequest._retry = true;
 
         const newToken = await getZohoToken();
+        originalRequest.headers.Authorization = `Zoho-oauthtoken ${newToken}`;
 
-        error.config.headers.Authorization = `Zoho-oauthtoken ${newToken}`;
-
-        return axios.request(error.config);
+        return axios.request(originalRequest);
       }
 
       throw error;
