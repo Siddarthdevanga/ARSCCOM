@@ -2,7 +2,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import path from "path";
-
 import { db } from "../config/db.js";
 import { uploadToS3 } from "./s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
@@ -21,9 +20,6 @@ const emailFooter = () => `
 <br/>
 Regards,<br/>
 <b style="color:#6c2bd9">PROMEET</b><br/>
-
-<img src="/logo.png" height="55" />
-
 <hr/>
 <p style="font-size:13px;color:#666">
 This email was automatically sent from the PROMEET
@@ -72,12 +68,9 @@ export const registerCompany = async (data, file) => {
     "SELECT id FROM users WHERE email = ?",
     [email]
   );
+  if (existing.length) throw new Error("Email already registered");
 
-  if (existing.length) {
-    throw new Error("Email already registered");
-  }
-
-  /* ---------- Generate Slug ---------- */
+  /* ---------- Generate Unique Slug ---------- */
   let slug = generateSlug(companyName);
   let suffix = 1;
 
@@ -136,34 +129,24 @@ export const registerCompany = async (data, file) => {
 
     await conn.commit();
 
-    /* ---------- Send Welcome Email ---------- */
+    /* ---------- Welcome Email ---------- */
     sendEmail({
       to: email,
       subject: "Welcome to PROMEET – Complete Your Subscription",
       html: `
-<p>Hello,</p>
+        <p>Hello,</p>
+        <p><b>${companyName}</b> has been successfully registered on PROMEET.
+        Your admin account is now active.</p>
 
-<p>
-<b>${companyName}</b> has been successfully registered on PROMEET.
-Your admin account is now active.
-</p>
+        <h3 style="color:#6c2bd9;">Next Step</h3>
+        <p>Please proceed to the Subscription section and choose a plan
+        to activate your organization.</p>
 
-<h3 style="color:#6c2bd9;">Next Step</h3>
-<p>
-Please proceed to the Subscription section and choose a plan
-to activate your organization.
-</p>
-
-${emailFooter()}
-`
+        ${emailFooter()}
+      `
     }).catch(() => {});
 
-    return {
-      companyId,
-      companyName,
-      slug,
-      logoUrl
-    };
+    return { companyId, companyName, slug, logoUrl };
 
   } catch (err) {
     await conn.rollback();
@@ -174,10 +157,7 @@ ${emailFooter()}
 };
 
 /* ======================================================
-   LOGIN — Allows:
-   - trial
-   - active
-   - pending / none (so they can subscribe)
+   LOGIN
 ====================================================== */
 export const login = async ({ email, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
@@ -197,38 +177,29 @@ export const login = async ({ email, password }) => {
       c.subscription_status,
       c.plan
     FROM users u
-    JOIN companies c 
-      ON c.id = u.company_id
+    JOIN companies c ON c.id = u.company_id
     WHERE u.email = ?
     `,
     [cleanEmail]
   );
 
-  if (!rows.length) {
-    throw new Error("Invalid credentials");
-  }
+  if (!rows.length) throw new Error("Invalid credentials");
 
   const user = rows[0];
 
-  /* ---------- Password Check ---------- */
+  /* ---------- Password Verify ---------- */
   const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) {
-    throw new Error("Invalid credentials");
-  }
+  if (!valid) throw new Error("Invalid credentials");
 
-  /* ---------- Subscription Logic ---------- */
+  /* ---------- Subscription Blocking ---------- */
   const blockedStates = ["expired", "cancelled", "canceled"];
-
   if (blockedStates.includes(user.subscription_status)) {
     throw new Error("Your subscription is expired. Please renew to continue.");
   }
 
-  // trial / active / pending / none are allowed to login
+  /* ---------- Generate JWT ---------- */
   const token = jwt.sign(
-    {
-      userId: user.id,
-      companyId: user.companyId,
-    },
+    { userId: user.id, companyId: user.companyId },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
   );
@@ -276,21 +247,17 @@ export const forgotPassword = async (email) => {
     [resetCode, rows[0].id]
   );
 
-  await sendEmail({
+  sendEmail({
     to: cleanEmail,
     subject: "PROMEET Password Reset Code",
     html: `
-<p>Hello,</p>
-
-<p>Your password reset code is:</p>
-
-<h2 style="color:#6c2bd9">${resetCode}</h2>
-
-<p>This code is valid for <b>10 minutes</b>.</p>
-
-${emailFooter()}
-`
-  });
+      <p>Hello,</p>
+      <p>Your password reset code is:</p>
+      <h2 style="color:#6c2bd9">${resetCode}</h2>
+      <p>This code is valid for <b>10 minutes</b>.</p>
+      ${emailFooter()}
+    `
+  }).catch(() => {});
 };
 
 /* ======================================================
@@ -331,17 +298,15 @@ export const resetPassword = async ({ email, code, password }) => {
     [newHash, rows[0].id]
   );
 
-  await sendEmail({
+  sendEmail({
     to: cleanEmail,
     subject: "Your PROMEET Password Has Been Reset",
     html: `
-<p>Hello,</p>
-
-<p>Your PROMEET account password has been successfully reset.</p>
-
-${emailFooter()}
-`
-  });
+      <p>Hello,</p>
+      <p>Your PROMEET account password has been successfully reset.</p>
+      ${emailFooter()}
+    `
+  }).catch(() => {});
 
   return { message: "Password reset successful" };
 };
