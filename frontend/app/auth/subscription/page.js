@@ -10,27 +10,37 @@ export default function SubscriptionPage() {
   const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
 
-  const [email, setEmail] = useState("");
-  const [companyId, setCompanyId] = useState("");
-  const [companyName, setCompanyName] = useState("");
-
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.wheelbrand.in";
 
   /* ======================================================
-      LOAD LOCAL STORAGE ONLY
+      CHECK LOGIN + SUBSCRIPTION STATUS
   ====================================================== */
   useEffect(() => {
     try {
-      setEmail(localStorage.getItem("regEmail") || "");
-      setCompanyId(localStorage.getItem("companyId") || "");
-      setCompanyName(localStorage.getItem("regCompanyName") || "");
-    } catch {}
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.replace("/auth/login");
+        return;
+      }
+
+      const company = JSON.parse(localStorage.getItem("company") || "{}");
+      const status = company?.subscription_status?.toLowerCase() || "pending";
+
+      console.log("SUB PAGE STATUS:", status);
+
+      // Already subscribed → redirect to dashboard
+      if (["active", "trial"].includes(status)) {
+        router.replace("/home");
+      }
+    } catch {
+      router.replace("/auth/login");
+    }
   }, []);
 
   /* ======================================================
-      HANDLE PLAN
+      HANDLE PLAN SELECTION
   ====================================================== */
   const choosePlan = async (plan) => {
     if (loadingPlan) return;
@@ -38,7 +48,7 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
-    // ENTERPRISE → CONTACT PAGE
+    // ENTERPRISE
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -46,25 +56,26 @@ export default function SubscriptionPage() {
     }
 
     try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        router.replace("/auth/login");
+        return;
+      }
+
       const res = await fetch(`${API_BASE}/api/payment/subscribe`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          email,
-          companyId,
-          companyName,
-          plan
-        })
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ plan }),
       });
 
-      let data = {};
-      try {
-        data = await res.json();
-      } catch {}
+      const data = await res.json();
 
       if (res.status === 401) {
-        router.push("/auth/login");
+        router.replace("/auth/login");
         return;
       }
 
@@ -73,11 +84,9 @@ export default function SubscriptionPage() {
         return;
       }
 
-      /* ======================================================
-          BOTH FREE + BUSINESS → PAYMENT REDIRECT
-      ====================================================== */
-      if (data?.url || data?.redirectUrl) {
-        window.location.href = data.url || data.redirectUrl;
+      // Redirect to Zoho Payment
+      if (data?.url) {
+        window.location.href = data.url;
         return;
       }
 
@@ -95,6 +104,7 @@ export default function SubscriptionPage() {
   ====================================================== */
   return (
     <div className={styles.container}>
+      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.logo}>PROMEET</div>
       </header>
@@ -104,7 +114,6 @@ export default function SubscriptionPage() {
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.planGrid}>
-        
         {/* ================= FREE ================= */}
         <div className={styles.card}>
           <h3 className={styles.planName}>FREE TRIAL</h3>
@@ -145,7 +154,9 @@ export default function SubscriptionPage() {
             disabled={loadingPlan === "business"}
             onClick={() => choosePlan("business")}
           >
-            {loadingPlan === "business" ? "Processing..." : "Proceed to Payment"}
+            {loadingPlan === "business"
+              ? "Processing..."
+              : "Proceed to Payment"}
           </button>
         </div>
 
@@ -153,7 +164,9 @@ export default function SubscriptionPage() {
         <div className={styles.card}>
           <h3 className={styles.planName}>ENTERPRISE</h3>
           <p className={styles.price}>Custom Pricing</p>
-          <p className={styles.subText}>Tailored for large organizations</p>
+          <p className={styles.subText}>
+            Tailored for large organizations
+          </p>
 
           <ul className={styles.features}>
             <li>• Custom Solutions</li>
