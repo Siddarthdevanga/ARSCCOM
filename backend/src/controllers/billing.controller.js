@@ -59,8 +59,7 @@ export const createPayment = async (req, res) => {
     }
 
     /**
-     * CASE: Already pending & payment link exists
-     * → Reuse existing link
+     * CASE: PENDING + link exists → reuse
      */
     if (
       status === "pending" &&
@@ -78,7 +77,7 @@ export const createPayment = async (req, res) => {
     /* ================= ZOHO CLIENT ================= */
     let client = await zohoClient();
 
-    /* ================= ENSURE ZOHO CUSTOMER EXISTS ================= */
+    /* ================= ENSURE ZOHO CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
@@ -102,13 +101,10 @@ export const createPayment = async (req, res) => {
             company_name: companyName || company.name,
             email
           });
-        } else {
-          throw err;
-        }
+        } else throw err;
       }
 
       customerId = response?.data?.customer?.customer_id;
-
       if (!customerId) throw new Error("Failed to create Zoho customer");
 
       await db.query(
@@ -128,16 +124,17 @@ export const createPayment = async (req, res) => {
     };
 
     const selected = pricing[plan];
-
     if (!selected) {
       return res.status(400).json({ message: "Invalid plan selected" });
     }
 
     /**
-     * Ensure Zoho gets STRICT 2-DECIMAL numeric
-     * (not string)
+     * ZOHO RULE:
+     * MUST be STRING with EXACT 2 decimals
+     * "49.00" ✔
+     * "500.00" ✔
      */
-    const payment_amount = Math.round(selected.payment_amount * 100) / 100;
+    const payment_amount = Number(selected.payment_amount).toFixed(2);
 
     console.log(
       `💳 Creating Zoho Payment Link → ₹${payment_amount} (${plan}) for Company ${companyId}`
@@ -147,7 +144,7 @@ export const createPayment = async (req, res) => {
     const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount: payment_amount, // numeric ✔
+      amount: payment_amount, // <-- MUST BE STRING ✔
       description: selected.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`
@@ -171,7 +168,6 @@ export const createPayment = async (req, res) => {
     }
 
     const paymentUrl = data?.payment_link?.url;
-
     if (!paymentUrl) throw new Error("Zoho failed to return payment link");
 
     /* ================= UPDATE COMPANY ================= */
@@ -192,6 +188,7 @@ export const createPayment = async (req, res) => {
       message: "Payment link created successfully",
       url: paymentUrl
     });
+
   } catch (err) {
     console.error("❌ PAYMENT ERROR:", err?.response?.data || err);
 
