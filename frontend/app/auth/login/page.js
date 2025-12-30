@@ -15,14 +15,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
 
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    "https://www.wheelbrand.in";
+
   /* ======================================================
-      LOGIN HANDLER WITH SUBSCRIPTION VALIDATION
+        LOGIN HANDLER + SUBSCRIPTION LOGIC
   ====================================================== */
   const handleLogin = async () => {
     if (loading) return;
 
     const normalizedEmail = email.trim().toLowerCase();
-
     if (!normalizedEmail || !password) {
       setError("Email and password are required");
       return;
@@ -32,19 +35,19 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: normalizedEmail, password }),
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: normalizedEmail,
+          password
+        })
+      });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data?.message || "Invalid credentials");
+        setError(data?.message || "Invalid email or password");
         return;
       }
 
@@ -52,63 +55,55 @@ export default function LoginPage() {
       const company = data?.company;
 
       if (!token) {
-        setError("Login failed. Please try again.");
+        setError("Authentication failed. Please try again.");
         return;
       }
 
-      // Store token
+      /* ============================
+          SAVE SESSION
+      ============================ */
       localStorage.setItem("token", token);
       document.cookie = `token=${token}; path=/; SameSite=Lax`;
 
-      /* ============================
-          NO COMPANY FOUND
-      ============================ */
       if (!company) {
-        setError("Your organization is not registered. Redirecting...");
-
+        setError("Company not found. Redirecting to registration...");
         setTimeout(() => router.replace("/auth/register"), 1200);
         return;
       }
 
       localStorage.setItem("company", JSON.stringify(company));
 
-      const status =
-        company?.subscription_status?.toLowerCase() || "pending";
-
+      const status = company?.subscription_status?.toLowerCase() || "pending";
       console.log("SUBSCRIPTION STATUS:", status);
 
       /* ==================================================
-          SUBSCRIPTION ROUTING LOGIC
+            SUBSCRIPTION REDIRECT RULES
       =================================================== */
 
-      // Pending payment or never completed
+      // 1️⃣ Not subscribed / payment not done yet
       if (["none", "pending"].includes(status)) {
-        setError("Subscription not completed. Redirecting...");
-
-        setTimeout(() => router.replace("/auth/subscription"), 1200);
+        router.replace("/auth/subscription");
         return;
       }
 
-      // Blocked states
+      // 2️⃣ Expired / cancelled → push back to subscription
       if (["expired", "cancelled", "canceled"].includes(status)) {
-        setError("Your subscription is inactive. Redirecting...");
-
-        setTimeout(() => router.replace("/auth/subscription"), 1200);
+        setError("Your subscription is inactive. Please renew.");
+        setTimeout(() => router.replace("/auth/subscription"), 1000);
         return;
       }
 
-      // Active or trial
+      // 3️⃣ Active or Trial → Welcome 🎉
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
       }
 
       // Fallback
-      setError("Subscription validation failed. Redirecting...");
-      setTimeout(() => router.replace("/auth/subscription"), 1200);
+      router.replace("/auth/subscription");
 
     } catch (err) {
-      console.error(err);
+      console.error("LOGIN ERROR:", err);
       setError("Unable to connect to server. Please try again.");
     } finally {
       setLoading(false);
