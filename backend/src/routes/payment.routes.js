@@ -1,7 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
-import { authenticate } from "../middlewares/authenticate.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
