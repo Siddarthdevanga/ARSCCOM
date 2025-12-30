@@ -18,12 +18,17 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    "https://www.wheelbrand.in";
+
   /* ======================================================
-     HANDLE REGISTER
+        REGISTER HANDLER
   ====================================================== */
   const handleRegister = async () => {
     setError("");
 
+    // ---------- BASIC VALIDATION ----------
     if (
       !companyName ||
       !email ||
@@ -37,30 +42,64 @@ export default function RegisterPage() {
       return;
     }
 
+    // ---------- EMAIL ----------
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+      setError("Enter a valid email address");
+      return;
+    }
+
+    // ---------- PHONE ----------
+    if (phone.trim().length < 8) {
+      setError("Enter a valid phone number");
+      return;
+    }
+
+    // ---------- ROOMS ----------
+    const roomCount = Number(rooms);
+    if (!roomCount || roomCount < 1) {
+      setError("Conference rooms must be at least 1");
+      return;
+    }
+
+    // ---------- PASSWORD ----------
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
     }
 
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+
+    // ---------- LOGO ----------
+    if (!logo) {
+      setError("Company logo is required");
+      return;
+    }
+
+    if (logo.size > 3 * 1024 * 1024) {
+      setError("Logo file must be less than 3MB");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("companyName", companyName.trim());
-    formData.append("email", email.trim().toLowerCase());
+    formData.append("email", normalizedEmail);
     formData.append("phone", phone.trim());
-    formData.append("conferenceRooms", rooms);
+    formData.append("conferenceRooms", roomCount);
     formData.append("password", password);
     formData.append("logo", logo);
 
     try {
       setLoading(true);
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/register`,
-        {
-          method: "POST",
-          body: formData,
-          credentials: "include"
-        }
-      );
+      const res = await fetch(`${API_BASE}/api/auth/register`, {
+        method: "POST",
+        body: formData,
+        credentials: "include"
+      });
 
       const data = await res.json();
 
@@ -69,16 +108,17 @@ export default function RegisterPage() {
         return;
       }
 
-      /** ================================================
-       *  SAVE DETAILS FOR SUBSCRIPTION PAGE
-       *  ================================================ */
-      if (data?.companyId) localStorage.setItem("companyId", data.companyId);
-      if (email) localStorage.setItem("regEmail", email);
-      if (companyName)
-        localStorage.setItem("regCompanyName", companyName);
+      // Save minimal helpful details (optional)
+      if (normalizedEmail)
+        localStorage.setItem("regEmail", normalizedEmail);
 
-      // 🔥 SUCCESS → GO TO SUBSCRIPTION PAGE
-      router.push("/auth/subscription");
+      /* ======================================================
+          IMPORTANT:
+          Backend does NOT give JWT on register
+          So user must LOGIN → then subscription flow continues
+      ====================================================== */
+      alert("Registration successful. Please login to continue.");
+      router.push("/auth/login");
 
     } catch (err) {
       console.error(err);
