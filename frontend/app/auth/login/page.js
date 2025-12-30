@@ -86,7 +86,7 @@ export default function LoginPage() {
         );
 
         setTimeout(() => {
-          router.replace("auth/subscription");
+          router.replace("/auth/subscription");
         }, 1500);
 
         return;
@@ -97,7 +97,7 @@ export default function LoginPage() {
         setError("Your subscription has expired. Please renew to continue.");
 
         setTimeout(() => {
-          router.replace("auth/subscription");
+          router.replace("/auth/subscription");
         }, 1500);
 
         return;
@@ -113,7 +113,7 @@ export default function LoginPage() {
       setError("Please activate your subscription to continue.");
 
       setTimeout(() => {
-        router.replace("auth/subscription");
+        router.replace("/auth/subscription");
       }, 1500);
     } catch (err) {
       console.error(err);
@@ -132,7 +132,7 @@ export default function LoginPage() {
 
           <Image
             src="/Promeet Logo.png"
-            alt="ARSCCOM Logo"
+            alt="Promeet Logo"
             width={420}
             height={140}
             priority
@@ -147,8 +147,6 @@ export default function LoginPage() {
           <button onClick={() => setActiveTab("contact")}>CONTACT</button>
         </div>
       </header>
-
-      {/* ABOUT / PLANS / CONTACT DROPDOWNS remain unchanged */}
 
       {/* LOGIN CARD */}
       <main className={styles.loginWrapper}>
