@@ -13,8 +13,8 @@ router.get("/details", authenticate, async (req, res) => {
 
     if (!companyId) {
       return res.status(401).json({
-        success: false,
-        message: "Unauthorized"
+        SUCCESS: false,
+        MESSAGE: "Unauthorized"
       });
     }
 
@@ -24,8 +24,9 @@ router.get("/details", authenticate, async (req, res) => {
         plan,
         subscription_status,
         zoho_customer_id,
-        subscription_expires_at,
-        last_payment_at
+        trial_ends_at,
+        subscription_ends_at,
+        last_payment_created_at
       FROM companies
       WHERE id = ?
       LIMIT 1
@@ -35,26 +36,30 @@ router.get("/details", authenticate, async (req, res) => {
 
     if (!company) {
       return res.status(404).json({
-        success: false,
-        message: "Company not found"
+        SUCCESS: false,
+        MESSAGE: "Company not found"
       });
     }
 
     return res.json({
-      success: true,
-      plan: company.plan || "free",
-      status: company.subscription_status || "inactive",
-      zohoCustomerId: company.zoho_customer_id || null,
-      expiresOn: company.subscription_expires_at || null,
-      lastPaidOn: company.last_payment_at || null
+      SUCCESS: true,
+
+      PLAN: company.plan || "trial",
+      STATUS: company.subscription_status || "pending",
+
+      ZOHO_CUSTOMER_ID: company.zoho_customer_id || null,
+
+      TRIAL_ENDS_ON: company.trial_ends_at,
+      EXPIRES_ON: company.subscription_ends_at,
+      LAST_PAID_ON: company.last_payment_created_at
     });
 
   } catch (err) {
     console.error("❌ SUBSCRIPTION FETCH ERROR:", err);
 
     return res.status(500).json({
-      success: false,
-      message: "Failed to fetch subscription"
+      SUCCESS: false,
+      MESSAGE: "Failed to fetch subscription"
     });
   }
 });
