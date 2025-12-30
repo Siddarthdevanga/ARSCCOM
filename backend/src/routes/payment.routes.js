@@ -11,7 +11,8 @@ const router = express.Router();
  *  free/trial → ₹49 Processing Fee
  *  business   → ₹500 Subscription
  *
- * NOTE: Subscription activates ONLY via Zoho webhook after payment success
+ * NOTE:
+ * Subscription becomes ACTIVE ONLY via Zoho webhook after payment success.
  */
 router.post("/subscribe", async (req, res) => {
   try {
@@ -82,8 +83,8 @@ router.post("/subscribe", async (req, res) => {
     }
 
     /**
-     * If payment already started → reuse payment link
-     * avoids duplicate invoices
+     * If payment already started → reuse link
+     * Prevents duplicate invoices
      */
     if (
       status === "pending" &&
@@ -98,6 +99,7 @@ router.post("/subscribe", async (req, res) => {
       });
     }
 
+    /* ================= ZOHO CLIENT ================= */
     let client = await zohoClient();
 
     /* ================= ENSURE ZOHO CUSTOMER ================= */
@@ -118,6 +120,7 @@ router.post("/subscribe", async (req, res) => {
         if (err?.response?.status === 401) {
           console.warn("🔄 Zoho token expired — retrying customer create...");
           client = await zohoClient();
+
           response = await client.post("/customers", {
             display_name: companyName,
             company_name: companyName,
@@ -127,6 +130,7 @@ router.post("/subscribe", async (req, res) => {
       }
 
       customerId = response?.data?.customer?.customer_id;
+
       if (!customerId) throw new Error("Zoho failed to create customer");
 
       await db.query(
@@ -151,21 +155,23 @@ router.post("/subscribe", async (req, res) => {
     }
 
     /**
-     * CRITICAL FIX 🔥
-     * payment_amount MUST be:
-     *  "49.00"
-     *  "500.00"
-     * string → not number
+     * 🔥 CRITICAL
+     * Zoho requires STRING → 2 decimal format:
+     *   "49.00"
+     *   "500.00"
      */
     const paymentAmount = Number(price.amount).toFixed(2);
 
-    console.log(`💳 Creating Payment Link (${plan}) → ₹${paymentAmount}`);
+    console.log(
+      `💳 Creating Zoho Payment Link (${plan}) → ₹${paymentAmount} for Company ${companyId}`
+    );
 
+    /* ================= ZOHO PAYLOAD ================= */
     const payload = {
       customer_id: customerId,
       customer_name: companyName,
       currency_code: "INR",
-      payment_amount: paymentAmount,   // ✔ STRING REQUIRED
+      payment_amount: paymentAmount, // MUST be string
       description: price.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`,
