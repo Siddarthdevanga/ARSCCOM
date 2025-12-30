@@ -21,24 +21,15 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     /* ================= VALIDATION ================= */
     if (!plan) {
-      return res.status(400).json({
-        success: false,
-        message: "Plan is required"
-      });
+      return res.status(400).json({ success: false, message: "Plan is required" });
     }
 
     if (!["free", "business"].includes(plan)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid plan selected"
-      });
+      return res.status(400).json({ success: false, message: "Invalid plan selected" });
     }
 
     if (!email || !companyId) {
-      return res.status(401).json({
-        success: false,
-        message: "Authentication failed"
-      });
+      return res.status(401).json({ success: false, message: "Authentication failed" });
     }
 
     /* ================= FETCH COMPANY ================= */
@@ -58,10 +49,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     );
 
     if (!company) {
-      return res.status(404).json({
-        success: false,
-        message: "Company not found"
-      });
+      return res.status(404).json({ success: false, message: "Company not found" });
     }
 
     const companyName = company.name;
@@ -69,10 +57,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     /* ================= ACTIVE GUARD ================= */
     if (["trial", "active"].includes(status)) {
-      return res.status(403).json({
-        success: false,
-        message: "Subscription already active"
-      });
+      return res.status(403).json({ success: false, message: "Subscription already active" });
     }
 
     let client = await zohoClient();
@@ -145,26 +130,16 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     const selected = pricing[plan];
     if (!selected) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid plan pricing"
-      });
+      return res.status(400).json({ success: false, message: "Invalid plan pricing" });
     }
 
     /**
-     * STRICT 2-DECIMAL numeric for Zoho
-     * 49.00 ✔ number
-     * 500.00 ✔ number
+     * ZOHO RULE:
+     * MUST BE '49.00' or '500.00'
+     * STRING with 2 decimals — NOT number
      */
-    const payment_amount =
-      Math.round(Number(selected.payment_amount) * 100) / 100;
-
-    if (!payment_amount || isNaN(payment_amount) || payment_amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment amount"
-      });
-    }
+    const payment_amount = Number(selected.payment_amount)
+      .toFixed(2); // → "49.00"
 
     console.log(
       `💳 Creating Zoho Payment Link → ₹${payment_amount} (${plan}) for Company ${companyId}`
@@ -173,7 +148,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount: payment_amount, // numeric ✔
+      amount: payment_amount,          // <-- STRING ✔
       description: selected.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`
@@ -195,7 +170,6 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     const link = data?.payment_link;
-
     if (!link?.url || !link?.payment_link_id) {
       throw new Error("Zoho did not return payment link");
     }
@@ -225,6 +199,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       message: "Payment link generated successfully",
       url: link.url
     });
+
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
