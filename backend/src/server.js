@@ -3,24 +3,28 @@ import { loadSecrets } from "./config/secrets.js";
 
 let server = null;
 let isShuttingDown = false;
+let isReady = false;
 
 /* ======================================================
    GLOBAL CRASH SAFETY
 ====================================================== */
+function logFatal(label, error) {
+  console.error(`\n❌ ${label}:`, error?.message || error);
+  if (error?.stack) console.error(error.stack);
+}
+
 process.on("unhandledRejection", (reason) => {
-  console.error("❌ Unhandled Promise Rejection:", reason);
-  console.error(reason?.stack || reason);
+  logFatal("Unhandled Promise Rejection", reason);
   initiateShutdown("unhandledRejection");
 });
 
 process.on("uncaughtException", (error) => {
-  console.error("❌ Uncaught Exception:", error);
-  console.error(error?.stack || error);
+  logFatal("Uncaught Exception", error);
   initiateShutdown("uncaughtException");
 });
 
 /* ======================================================
-   VALIDATE REQUIRED ENV
+   REQUIRED ENV VALIDATION
 ====================================================== */
 const REQUIRED = [
   "PORT",
@@ -42,7 +46,7 @@ const REQUIRED = [
   "ZOHO_API_BASE",
   "ZOHO_CLIENT_ID",
   "ZOHO_CLIENT_SECRET",
-  "ZOHO_REFRESH_TOKEN"
+  "ZOHO_REFRESH_TOKEN",
 ];
 
 function validateEnv() {
@@ -50,14 +54,13 @@ function validateEnv() {
 
   if (missing.length) {
     throw new Error(
-      `❌ Missing Environment Variables:\n${missing.join("\n")}`
+      `Missing Required Environment Variables:\n${missing.join("\n")}`
     );
   }
 
   process.env.PORT = Number(process.env.PORT);
-
   if (Number.isNaN(process.env.PORT) || process.env.PORT <= 0) {
-    throw new Error("❌ Invalid PORT value");
+    throw new Error("Invalid PORT value");
   }
 }
 
@@ -66,9 +69,9 @@ function validateEnv() {
 ====================================================== */
 async function startServer() {
   try {
-    console.log("🔐 Loading secrets from AWS Secrets Manager...");
+    console.log("🔐 Loading AWS Secrets...");
     await loadSecrets();
-    console.log("✅ AWS Secrets loaded successfully");
+    console.log("✅ AWS Secrets Loaded");
 
     validateEnv();
 
@@ -84,20 +87,18 @@ async function startServer() {
       console.log("=======================================");
       console.log(`🚀 Server Running on Port: ${process.env.PORT}`);
       console.log(`🌍 Mode: ${process.env.NODE_ENV || "development"}`);
-      console.log("📧 SMTP Loaded");
+      console.log("📧 SMTP Ready");
       console.log("🧾 Zoho Billing Ready");
       console.log("🗄️ Database Ready");
       console.log("=======================================");
+      isReady = true;
     });
 
-    // Prevent memory leaks with very long requests
+    // Protect against hanging requests
     server.setTimeout?.(120000);
 
   } catch (err) {
-    console.error("❌ Failed to start server");
-    console.error(err?.message || err);
-    if (err?.stack) console.error(err.stack);
-
+    logFatal("Startup Failure", err);
     initiateShutdown("startup failure");
   }
 }
@@ -111,31 +112,46 @@ async function initiateShutdown(reason) {
 
   console.log(`\n⚠️ Shutting down server (${reason})...`);
 
+  const shutdownTimeout = setTimeout(() => {
+    console.error("⏳ Forced shutdown — timeout exceeded");
+    process.exit(1);
+  }, 10000);
+
   try {
-    // Close express server if exists
     if (server) {
       await new Promise((resolve) => server.close(resolve));
       console.log("🛑 HTTP Server stopped");
     }
 
-    // Close DB pool safely if exists
     try {
       const { db } = await import("./config/db.js");
       await db.end?.();
       console.log("🗄️ Database connection closed");
     } catch {
-      /* ignore db close errors */
+      console.warn("⚠️ Failed to close DB connection gracefully");
     }
 
   } catch (err) {
     console.error("❌ Error during shutdown:", err);
   }
 
+  clearTimeout(shutdownTimeout);
   process.exit(0);
 }
 
+/* ======================================================
+   SIGNALS
+====================================================== */
 process.on("SIGTERM", () => initiateShutdown("SIGTERM"));
 process.on("SIGINT", () => initiateShutdown("SIGINT"));
+
+/* ======================================================
+   HEALTH / READINESS SUPPORT
+   (optional but safe to keep)
+====================================================== */
+export function isAppReady() {
+  return isReady && !isShuttingDown;
+}
 
 /* ======================================================
    BOOT
