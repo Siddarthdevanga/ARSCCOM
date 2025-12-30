@@ -4,6 +4,13 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 
 const router = express.Router();
 
+/**
+ * Subscription Payment Handler
+ * FREE/TRIAL  → ₹49 Processing Fee
+ * BUSINESS    → ₹500 Subscription Fee
+ *
+ * Activation ONLY after Zoho webhook confirmation
+ */
 router.post("/subscribe", async (req, res) => {
   try {
     const { email, plan } = req.body;
@@ -12,58 +19,78 @@ router.post("/subscribe", async (req, res) => {
     if (!email || !plan) {
       return res.status(400).json({
         success: false,
-        message: "Email and plan are required",
+        message: "Email and plan are required"
       });
     }
 
     if (!["free", "business"].includes(plan)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid plan selected",
+        message: "Invalid plan selected"
       });
     }
 
     const cleanEmail = email.toLowerCase();
 
     /* ================= USER ================= */
-    const [[user]] = await db.query(
+    const [userRows] = await db.query(
       `SELECT id, company_id FROM users WHERE email=? LIMIT 1`,
       [cleanEmail]
     );
 
+    const user = userRows?.[0];
+
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User not found",
+        message: "User not found"
       });
     }
 
     /* ================= COMPANY ================= */
-    const [[company]] = await db.query(
+    const [companyRows] = await db.query(
       `
-      SELECT id, name, subscription_status, zoho_customer_id
+      SELECT 
+        id,
+        name,
+        subscription_status,
+        zoho_customer_id,
+        last_payment_link
       FROM companies
       WHERE id=? LIMIT 1
       `,
       [user.company_id]
     );
 
+    const company = companyRows?.[0];
+
     if (!company) {
       return res.status(404).json({
         success: false,
-        message: "Company not found",
-      });
-    }
-
-    if (["trial", "active"].includes(company.subscription_status)) {
-      return res.status(403).json({
-        success: false,
-        message: "Subscription already active",
+        message: "Company not found"
       });
     }
 
     const companyId = company.id;
     const companyName = company.name;
+    const status = (company.subscription_status || "").toLowerCase();
+
+    /* ================= STATE PROTECTION ================= */
+    if (["trial", "active"].includes(status)) {
+      return res.status(403).json({
+        success: false,
+        message: "Subscription already active"
+      });
+    }
+
+    // If already pending → reuse existing link
+    if (status === "pending" && company.last_payment_link) {
+      return res.json({
+        success: true,
+        message: "Payment already initiated",
+        url: company.last_payment_link
+      });
+    }
 
     let client = await zohoClient();
 
@@ -76,7 +103,7 @@ router.post("/subscribe", async (req, res) => {
       const { data } = await client.post("/customers", {
         display_name: companyName,
         company_name: companyName,
-        email: cleanEmail,
+        email: cleanEmail
       });
 
       customerId = data?.customer?.customer_id;
@@ -90,32 +117,29 @@ router.post("/subscribe", async (req, res) => {
 
     /* ================= PRICING ================= */
     const pricing = {
-      free: { amount: 49.0, description: "PROMEET Trial Processing Fee" },
-      business: { amount: 500.0, description: "PROMEET Business Subscription" },
+      free: { amount: 49, description: "PROMEET Trial Processing Fee" },
+      business: { amount: 500, description: "PROMEET Business Subscription" }
     };
 
-    const priceConfig = pricing[plan];
-    if (!priceConfig)
-      return res.status(400).json({ success: false, message: "Invalid plan" });
+    const price = pricing[plan];
 
-    const numericAmount = Number(priceConfig.amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    const amount = Number(Number(price.amount).toFixed(2));
+    if (!amount || amount <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Invalid payment amount",
+        message: "Invalid payment amount"
       });
     }
 
-    const paymentAmount = numericAmount.toFixed(2); // STRING ✔ REQUIRED
-
-    console.log(`💳 Creating Payment Link (${plan}) → ₹${paymentAmount}`);
+    console.log(`💳 Creating Payment Link → ₹${amount} (${plan})`);
 
     const payload = {
       customer_id: customerId,
-      customer_name: companyName,
       currency_code: "INR",
-      payment_amount: paymentAmount,     // ✔ IMPORTANT
-      description: priceConfig.description
+      amount,                                // ✔ Zoho expects numeric
+      description: price.description,
+      is_partial_payment: false,
+      reference_id: `COMP-${companyId}-${Date.now()}`  // ✔ helps webhook mapping
     };
 
     console.log("📤 ZOHO PAYLOAD:", payload);
@@ -129,9 +153,7 @@ router.post("/subscribe", async (req, res) => {
         console.warn("🔄 Zoho token expired — retrying...");
         client = await zohoClient();
         ({ data } = await client.post("/paymentlinks", payload));
-      } else {
-        throw err;
-      }
+      } else throw err;
     }
 
     const paymentUrl = data?.payment_link?.url;
@@ -141,17 +163,19 @@ router.post("/subscribe", async (req, res) => {
     await db.query(
       `
       UPDATE companies
-      SET subscription_status='pending',
-          plan = ?
+      SET 
+        subscription_status='pending',
+        plan = ?,
+        last_payment_link = ?
       WHERE id=?
       `,
-      [plan === "business" ? "business" : "trial", companyId]
+      [plan === "business" ? "business" : "trial", paymentUrl, companyId]
     );
 
     return res.json({
       success: true,
       message: "Payment link generated successfully",
-      url: paymentUrl,
+      url: paymentUrl
     });
 
   } catch (err) {
@@ -162,7 +186,7 @@ router.post("/subscribe", async (req, res) => {
       message:
         err?.response?.data?.message ||
         err?.message ||
-        "Subscription failed",
+        "Subscription failed"
     });
   }
 });
