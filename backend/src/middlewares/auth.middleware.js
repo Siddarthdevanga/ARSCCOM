@@ -2,50 +2,81 @@ import jwt from "jsonwebtoken";
 
 /**
  * JWT Authentication Middleware
- * - Validates Bearer token or HttpOnly Cookie
+ * -----------------------------------------
+ * - Accepts:
+ *      Authorization: Bearer <token>
+ *      Cookie: token=<jwt>
+ *      Header: x-access-token (fallback)
+ *
  * - Verifies signature
- * - Ensures required claims exist
+ * - Validates claims
  * - Attaches user context to req.user
  */
 export const authenticate = (req, res, next) => {
   try {
-    /* ================= ENV SAFETY ================= */
+    /* ================= ENV VALIDATION ================= */
     const secret = process.env.JWT_SECRET;
+
     if (!secret) {
-      console.error("❌ JWT_SECRET is missing in environment");
+      console.error("❌ CRITICAL: JWT_SECRET missing in environment");
       return res.status(500).json({
-        message: "Server authentication configuration error"
+        success: false,
+        message: "Server authentication not configured"
       });
     }
 
-    /* ================= TOKEN SOURCE ================= */
-    const authHeader = req.headers.authorization;
+    /* ================= TOKEN SOURCES ================= */
     let token = null;
 
-    // Bearer Token Support
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.split(" ")[1];
+    // Authorization Header
+    const auth = req.headers?.authorization;
+    if (auth && typeof auth === "string" && auth.startsWith("Bearer ")) {
+      token = auth.substring(7).trim();
     }
 
-    // Optional Cookie Support (if you enable HttpOnly cookies later)
+    // Cookie Support
     if (!token && req.cookies?.token) {
       token = req.cookies.token;
     }
 
-    /* ================= TOKEN VALIDATION ================= */
-    if (!token || token === "null" || token === "undefined") {
+    // Fallback Support
+    if (!token && req.headers["x-access-token"]) {
+      token = req.headers["x-access-token"];
+    }
+
+    /* ================= TOKEN CHECK ================= */
+    if (!token || token === "undefined" || token === "null") {
       return res.status(401).json({
+        success: false,
         message: "Authentication token missing"
       });
     }
 
     /* ================= VERIFY TOKEN ================= */
-    const decoded = jwt.verify(token, secret);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, secret);
+    } catch (err) {
+      console.warn("⚠️ Invalid JWT:", err?.message);
+
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({
+          success: false,
+          message: "Session expired — please login again"
+        });
+      }
+
+      return res.status(401).json({
+        success: false,
+        message: "Invalid authentication token"
+      });
+    }
 
     /* ================= CLAIM VALIDATION ================= */
     if (!decoded?.userId || !decoded?.companyId) {
       return res.status(401).json({
-        message: "Invalid authentication token payload"
+        success: false,
+        message: "Invalid authentication payload"
       });
     }
 
@@ -56,27 +87,16 @@ export const authenticate = (req, res, next) => {
       email: decoded.email ?? null,
       companyName: decoded.companyName ?? null,
       role: decoded.role ?? "user",
-      issuedAt: decoded.iat,
-      expiresAt: decoded.exp
+      issuedAt: decoded.iat || null,
+      expiresAt: decoded.exp || null
     };
 
     return next();
   } catch (error) {
-    console.error("❌ AUTH ERROR:", error);
-
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        message: "Session expired — please login again"
-      });
-    }
-
-    if (error.name === "JsonWebTokenError" || error.name === "NotBeforeError") {
-      return res.status(401).json({
-        message: "Invalid authentication token"
-      });
-    }
+    console.error("❌ AUTH MIDDLEWARE ERROR:", error);
 
     return res.status(401).json({
+      success: false,
       message: "Authentication failed"
     });
   }
