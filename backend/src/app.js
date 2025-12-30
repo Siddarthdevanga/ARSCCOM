@@ -11,24 +11,27 @@ import conferencePublicRoutes from "./routes/conference.public.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
+import billingRepair from "./routes/billingRepair.route.js";
 
 const app = express();
 
 /* ======================================================
-   SECURITY + PERFORMANCE
+   TRUST PROXY (HTTPS / AWS / NGINX)
 ====================================================== */
-
-// Trust Proxy (Required for AWS / NGINX / HTTPS)
 app.set("trust proxy", 1);
 
-// Security Headers
+/* ======================================================
+   SECURITY HEADERS
+====================================================== */
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // allow logo + assets loading
+    crossOriginResourcePolicy: false // allow logo + static assets
   })
 );
 
-// Response Compression
+/* ======================================================
+   PERFORMANCE
+====================================================== */
 app.use(
   compression({
     level: 6,
@@ -50,11 +53,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / Backend Requests
+      if (!origin) return callback(null, true); // Postman / Internal
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
       console.warn("❌ BLOCKED ORIGIN:", origin);
-      return callback(new Error("Not allowed by CORS"));
+      callback(new Error("Not allowed by CORS"));
     },
     credentials: true
   })
@@ -63,7 +66,7 @@ app.use(
 /* ======================================================
    BODY PARSERS
 ====================================================== */
-// Must stay BEFORE routes
+// Supports Zoho JSON + x-www-form-urlencoded webhooks
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
@@ -95,11 +98,14 @@ app.use("/api/conference", conferenceRoutes);
 // CONFERENCE (PUBLIC)
 app.use("/api/public/conference", conferencePublicRoutes);
 
-// PAYMENT & BILLING
+// PAYMENT
 app.use("/api/payment", paymentRoutes);
 
-// SUBSCRIPTION DETAILS (Frontend Popup)
+// SUBSCRIPTION POPUP INFO
 app.use("/api/subscription", subscriptionRoutes);
+
+// BILLING FIX / REPAIR TOOL
+app.use("/api/billing/repair", billingRepair);
 
 // ZOHO WEBHOOK (KEEP BEFORE 404 ALWAYS)
 app.use("/api/webhook", webhookRoutes);
@@ -129,4 +135,3 @@ app.use((err, req, res, next) => {
 });
 
 export default app;
-
