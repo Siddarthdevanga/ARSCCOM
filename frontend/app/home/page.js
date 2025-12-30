@@ -33,7 +33,6 @@ export default function Home() {
     }
   }, [router]);
 
-
   /* ================= FETCH SUBSCRIPTION ================= */
   const fetchSubscription = async () => {
     try {
@@ -49,7 +48,7 @@ export default function Home() {
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data?.message || "Failed to load");
+      if (!res.ok) throw new Error(data?.MESSAGE || "Failed to load");
 
       setSubData(data);
     } catch (err) {
@@ -73,6 +72,7 @@ export default function Home() {
 
   return (
     <div className={styles.container}>
+
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
 
@@ -131,10 +131,12 @@ export default function Home() {
       </div>
 
 
-      {/* ================= SUBSCRIPTION POPUP ================= */}
+      {/* ================= LEFT SLIDE SUBSCRIPTION PANEL ================= */}
       {showSub && (
-        <div className={styles.overlay}>
-          <div className={styles.subBox}>
+        <>
+          <div className={styles.overlay} onClick={() => setShowSub(false)} />
+
+          <div className={styles.subSlide}>
             <div className={styles.subHeader}>
               <h3>Subscription Details</h3>
               <button onClick={() => setShowSub(false)}>✖</button>
@@ -148,30 +150,37 @@ export default function Home() {
 
             {subData && (
               <div className={styles.subContent}>
-                <p><b>Plan:</b> {subData.plan || "—"}</p>
-                <p><b>Status:</b> {subData.status || "—"}</p>
+                <p><b>PLAN:</b> {subData.PLAN || "—"}</p>
+                <p><b>STATUS:</b> {subData.STATUS || "—"}</p>
 
-                {subData.zohoCustomerId && (
-                  <p><b>Zoho Customer No:</b> {subData.zohoCustomerId}</p>
+                {subData.ZOHO_CUSTOMER_ID && (
+                  <p><b>ZOHO CUSTOMER NO:</b> {subData.ZOHO_CUSTOMER_ID}</p>
                 )}
 
-                {subData.expiresOn && (
+                {subData.TRIAL_ENDS_ON && (
                   <p>
-                    <b>Expires On:</b>{" "}
-                    {new Date(subData.expiresOn).toLocaleDateString()}
+                    <b>TRIAL ENDS:</b>{" "}
+                    {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString()}
                   </p>
                 )}
 
-                {subData.lastPaidOn && (
+                {subData.EXPIRES_ON && (
                   <p>
-                    <b>Last Paid:</b>{" "}
-                    {new Date(subData.lastPaidOn).toLocaleString()}
+                    <b>SUBSCRIPTION EXPIRES:</b>{" "}
+                    {new Date(subData.EXPIRES_ON).toLocaleDateString()}
+                  </p>
+                )}
+
+                {subData.LAST_PAID_ON && (
+                  <p>
+                    <b>LAST PAID:</b>{" "}
+                    {new Date(subData.LAST_PAID_ON).toLocaleString()}
                   </p>
                 )}
               </div>
             )}
           </div>
-        </div>
+        </>
       )}
     </div>
   );
