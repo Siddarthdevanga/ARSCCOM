@@ -1,72 +1,73 @@
-/* ===== STOP PAGE SCROLL COMPLETELY ===== */
+/* ================= GLOBAL ================= */
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden;           /* 🚫 disables scrolling */
+  overflow: hidden;
   font-family: Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* BACKGROUND */
+/* ================= MAIN BACKGROUND ================= */
 .container {
   height: 100vh;
   width: 100%;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   color: white;
-  overflow: hidden;           /* ensures no internal scroll */
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 25px 60px;
+  padding: 22px 55px;
 }
 
-/* LEFT: COMPANY NAME */
 .logoText {
-  font-size: 34px;
+  font-size: 32px;
   font-weight: 700;
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
   text-transform: uppercase;
 }
 
-/* RIGHT HEADER SECTION */
+/* ================= RIGHT HEADER ================= */
 .rightSection {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: 18px;
 }
 
 .companyLogo {
   width: 120px;
   height: 80px;
   object-fit: contain;
-  padding: 0;
-  border-radius: 0;
-  background: none;
 }
 
-/* LOGOUT BUTTON */
+/* ================= LOGOUT BUTTON ================= */
 .logoutBtn {
-  width: 55px;
-  height: 55px;
+  width: 52px;
+  height: 52px;
   background: white;
   border: none;
   border-radius: 14px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  display: grid;
+  place-items: center;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
   font-size: 22px;
+  box-shadow: 0 8px 18px rgba(0,0,0,.25);
 }
 
 .logoutBtn:hover {
-  opacity: 0.85;
+  transform: translateY(-2px);
+  opacity: .9;
+  box-shadow: 0 10px 25px rgba(0,0,0,.35);
 }
 
-/* CARDS WRAPPER */
+/* ================= CARD AREA ================= */
 .cardWrapper {
   margin-top: 70px;
   display: flex;
@@ -74,54 +75,101 @@ html, body {
   gap: 80px;
 }
 
-/* CARD STYLE */
+/* ================= CARD ================= */
 .card {
   width: 420px;
-  padding: 35px 20px;
+  padding: 35px 22px;
   background: white;
   color: #333;
   text-align: center;
-  border-radius: 25px;
-  box-shadow: 0 6px 25px rgba(0,0,0,0.25);
+  border-radius: 26px;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.28);
   cursor: pointer;
-  transition: 0.25s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
 .card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 35px rgba(0,0,0,0.28);
+  transform: translateY(-10px);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.35);
 }
 
-/* CARD TITLE */
+/* ================= CARD CONTENT ================= */
 .card h2 {
   margin-top: 15px;
   font-size: 24px;
-  font-weight: bold;
+  font-weight: 800;
   color: #5d00c7;
 }
 
-/* CARD TEXT */
 .card p {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 15px;
   color: #666;
-  line-height: 1.4;
+  line-height: 1.5;
 }
 
-/* ICON CIRCLE */
+/* ================= ICON CIRCLE ================= */
 .iconCircle {
   width: 85px;
   height: 85px;
   background: #7a00ff;
   border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   margin: 0 auto;
-  box-shadow: 0px 4px 15px rgba(0,0,0,0.25);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 6px 18px rgba(0,0,0,.3);
 }
 
 .iconCircle svg {
   width: 45px;
   height: 45px;
+  fill: white;
+}
+
+/* ================= RESPONSIVE ================= */
+
+/* Tablets */
+@media(max-width: 1024px) {
+  .header {
+    padding: 22px 35px;
+  }
+
+  .cardWrapper {
+    gap: 40px;
+  }
+
+  .card {
+    width: 360px;
+  }
+}
+
+/* Mobile */
+@media(max-width: 768px) {
+  .header {
+    padding: 18px 22px;
+  }
+
+  .logoText {
+    font-size: 24px;
+  }
+
+  .cardWrapper {
+    margin-top: 40px;
+    flex-direction: column;
+    align-items: center;
+    gap: 25px;
+  }
+
+  .card {
+    width: 320px;
+  }
+}
+
+/* Small Mobile */
+@media(max-width: 450px) {
+  .card {
+    width: 90%;
+  }
 }
