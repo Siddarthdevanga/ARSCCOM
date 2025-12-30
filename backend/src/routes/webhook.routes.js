@@ -3,32 +3,16 @@ import { db } from "../config/db.js";
 
 const router = express.Router();
 
-const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_WEBHOOK_KEY";
+/* ======================================================
+   ENV KEY (Make sure ZOHO_WEBHOOK_KEY exists)
+====================================================== */
+const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY;
 
-/* =========================================
-   HEADERS SUPPORTED (Zoho variants)
-========================================= */
-const HEADER_KEYS = [
-  "x-webhook-key",
-  "x_zoho_webhook_key",
-  "zoho-webhook-key",
-  "x-zoho-webhook-signature"
-];
+console.log("🔐 Webhook Loaded — Expecting Key:", WEBHOOK_KEY);
 
-function getWebhookKey(req) {
-  for (const k of HEADER_KEYS) {
-    if (req.headers[k]) return req.headers[k];
-  }
-
-  // allow ?key=TEST only for temporary testing
-  if (req.query?.key) return req.query.key;
-
-  return null;
-}
-
-/* =========================================
+/* ======================================================
    STATUS NORMALIZER
-========================================= */
+====================================================== */
 function normalizeStatus(status) {
   if (!status) return null;
   status = status.toLowerCase();
@@ -38,23 +22,20 @@ function normalizeStatus(status) {
     live: "active",
     active: "active",
     success: "active",
-    succeeded: "active",
     paid: "active",
-    completed: "active",
     generated: "pending",
-    created: "pending",
+    pending: "pending",
     expired: "expired",
     cancelled: "cancelled",
-    canceled: "cancelled",
-    failed: "failed"
+    canceled: "cancelled"
   };
 
   return map[status] || null;
 }
 
-/* =========================================
+/* ======================================================
    IDEMPOTENCY
-========================================= */
+====================================================== */
 async function isDuplicate(eventId) {
   if (!eventId) return false;
 
@@ -73,78 +54,76 @@ async function isDuplicate(eventId) {
   return false;
 }
 
-/* =========================================
-   WEBHOOK ROUTE
-========================================= */
+/* ======================================================
+   WEBHOOK
+====================================================== */
 router.post("/", async (req, res) => {
   try {
-    /* -------- SECURITY -------- */
-    const key = getWebhookKey(req);
+    /* ---------- SECURITY ---------- */
+    const receivedKey =
+      req.headers["x-webhook-key"] ||
+      req.headers["x_zoho_webhook_key"] ||
+      req.headers["zoho-webhook-key"] ||
+      null;
 
-    if (!key || key !== WEBHOOK_KEY) {
-      console.log("❌ INVALID WEBHOOK KEY RECEIVED →", key);
+    console.log("🔐 WEBHOOK KEY RECEIVED:", receivedKey);
+
+    if (!WEBHOOK_KEY) {
+      console.log("❌ ENV ZOHO_WEBHOOK_KEY NOT SET");
+      return res.status(500).json({ message: "Server key not configured" });
+    }
+
+    if (!receivedKey || receivedKey !== WEBHOOK_KEY) {
+      console.log("❌ INVALID WEBHOOK KEY");
       return res.status(401).json({ message: "Invalid webhook key" });
     }
 
-    /* -------- RAW LOG -------- */
-    console.log("📩 RAW ZOHO WEBHOOK ======================");
-    console.log(JSON.stringify(req.body, null, 2));
-    console.log("=========================================");
-
     const body = req.body || {};
-    const event =
-      body.event_type ||
-      body.event ||
-      body.action ||
-      "unknown";
-
+    const event = body.event_type || body.event || "unknown";
     const payload = body.data || body || {};
 
-    console.log("🔔 ZOHO EVENT:", event);
+    console.log("🔔 ZOHO WEBHOOK EVENT:", event);
 
-    /* -------- IDEMPOTENCY -------- */
+    /* ---------- IDEMPOTENCY ---------- */
     const eventId =
       body.event_id ||
       payload?.payment?.payment_id ||
       payload?.subscription?.subscription_id ||
       payload?.transaction_id ||
-      `${event}-${Date.now()}`;
+      Date.now().toString();
 
     if (await isDuplicate(eventId)) {
-      console.log("♻️ DUPLICATE IGNORED:", eventId);
+      console.log("♻️ Duplicate webhook ignored:", eventId);
       return res.json({ message: "duplicate ignored" });
     }
 
     /* ======================================================
-       1️⃣ PAYMENT EVENTS (Payment Link Success)
+       1️⃣ PAYMENT SUCCESS HANDLER
     ======================================================= */
     if (
       event.includes("payment") ||
       event.includes("payment_collected") ||
-      event.includes("payment_succeeded") ||
-      event.includes("payment_link") ||
-      event.includes("paid")
+      event.includes("payment_succeeded")
     ) {
       const payment = payload.payment || payload;
       const customer = payload.customer || {};
 
       const zohoCustomerId =
-        customer.customer_id ||
-        payment.customer_id ||
-        null;
+        customer.customer_id || payment.customer_id || null;
 
       if (!zohoCustomerId) {
-        console.log("❌ PAYMENT → Missing customer id");
+        console.log("❌ Payment webhook missing customer id");
         return res.json({ message: "missing customer id" });
       }
 
       const status =
         normalizeStatus(payment.payment_status) ||
-        normalizeStatus(payment.status) ||
-        "active";
+        normalizeStatus(payment.status);
+
+      console.log("💳 PAYMENT STATUS:", status);
 
       if (status !== "active") {
-        console.log("⚠️ PAYMENT NOT SUCCESS — Ignored");
+        console.log("⚠️ Payment not successful → ignored");
         return res.json({ message: "ignored unpaid" });
       }
 
@@ -163,7 +142,7 @@ router.post("/", async (req, res) => {
       );
 
       if (!result.affectedRows) {
-        console.log("❌ PAYMENT → Company not found");
+        console.log("❌ Company not found for payment webhook");
         return res.json({ message: "company not found" });
       }
 
@@ -178,13 +157,11 @@ router.post("/", async (req, res) => {
     const customer = payload.customer || subscription.customer || {};
 
     const zohoCustomerId =
-      customer.customer_id ||
-      subscription.customer_id ||
-      null;
+      customer.customer_id || subscription.customer_id || null;
 
     if (!zohoCustomerId) {
-      console.log("❌ SUBSCRIPTION → missing customer id");
-      return res.json({ message: "customer id missing" });
+      console.log("❌ Subscription webhook missing customer id");
+      return res.status(400).json({ message: "customer id missing" });
     }
 
     const zohoSubId = subscription.subscription_id || null;
@@ -197,11 +174,11 @@ router.post("/", async (req, res) => {
     const newStatus = normalizeStatus(statusRaw);
 
     if (!newStatus) {
-      console.log("⚠️ UNKNOWN STATUS →", statusRaw);
+      console.log("⚠️ Unknown status →", statusRaw);
       return res.json({ message: "ignored unknown status" });
     }
 
-    console.log("📢 SUBSCRIPTION STATUS CHANGE →", newStatus);
+    console.log("📢 SUBSCRIPTION STATUS:", newStatus);
 
     const [[company]] = await db.query(
       `SELECT id FROM companies WHERE zoho_customer_id=? LIMIT 1`,
@@ -209,7 +186,7 @@ router.post("/", async (req, res) => {
     );
 
     if (!company) {
-      console.log("❌ SUBSCRIPTION → company not found");
+      console.log("❌ Company not found for subscription webhook");
       return res.json({ message: "company not found" });
     }
 
@@ -229,8 +206,7 @@ router.post("/", async (req, res) => {
       [newStatus, zohoSubId, newStatus, newStatus, zohoCustomerId]
     );
 
-    console.log(`✅ DB UPDATED → ${newStatus}`);
-
+    console.log(`✅ DB UPDATED — STATUS: ${newStatus}`);
     return res.json({ message: "subscription processed" });
 
   } catch (err) {
