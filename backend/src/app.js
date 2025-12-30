@@ -10,6 +10,7 @@ import conferenceRoutes from "./routes/conference.routes.js";
 import conferencePublicRoutes from "./routes/conference.public.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
+import subscriptionRoutes from "./routes/subscription.route.js";
 
 const app = express();
 
@@ -17,18 +18,23 @@ const app = express();
    SECURITY + PERFORMANCE
 ====================================================== */
 
-// Required when using NGINX / Proxy
-app.set("trust proxy", true);
+// Trust Proxy (Required for AWS / NGINX / HTTPS)
+app.set("trust proxy", 1);
 
 // Security Headers
 app.use(
   helmet({
-    crossOriginResourcePolicy: false, // allow external logos/images
+    crossOriginResourcePolicy: false, // allow logo + assets loading
   })
 );
 
 // Response Compression
-app.use(compression());
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024
+  })
+);
 
 /* ======================================================
    CORS
@@ -44,7 +50,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / server
+      if (!origin) return callback(null, true); // Postman / Backend Requests
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
       console.warn("❌ BLOCKED ORIGIN:", origin);
@@ -59,7 +65,7 @@ app.use(
 ====================================================== */
 // Must stay BEFORE routes
 app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 /* ======================================================
    HEALTH CHECK
@@ -68,7 +74,8 @@ app.get("/health", (req, res) => {
   res.status(200).json({
     status: "OK",
     uptime: process.uptime(),
-    timestamp: new Date()
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV || "development"
   });
 });
 
@@ -79,7 +86,7 @@ app.get("/health", (req, res) => {
 // AUTH
 app.use("/api/auth", authRoutes);
 
-// VISITOR
+// VISITORS
 app.use("/api/visitors", visitorRoutes);
 
 // CONFERENCE (ADMIN)
@@ -88,10 +95,13 @@ app.use("/api/conference", conferenceRoutes);
 // CONFERENCE (PUBLIC)
 app.use("/api/public/conference", conferencePublicRoutes);
 
-// PAYMENT + BILLING
+// PAYMENT & BILLING
 app.use("/api/payment", paymentRoutes);
 
-// ZOHO WEBHOOK (KEEP BEFORE 404)
+// SUBSCRIPTION DETAILS (Frontend Popup)
+app.use("/api/subscription", subscriptionRoutes);
+
+// ZOHO WEBHOOK (KEEP BEFORE 404 ALWAYS)
 app.use("/api/webhook", webhookRoutes);
 
 /* ======================================================
@@ -99,6 +109,7 @@ app.use("/api/webhook", webhookRoutes);
 ====================================================== */
 app.use((req, res) => {
   res.status(404).json({
+    success: false,
     message: "Route not found",
     path: req.originalUrl
   });
@@ -108,12 +119,14 @@ app.use((req, res) => {
    GLOBAL ERROR HANDLER
 ====================================================== */
 app.use((err, req, res, next) => {
-  console.error("❌ GLOBAL ERROR:", err?.message);
+  console.error("❌ GLOBAL ERROR:", err?.message || err);
   if (err?.stack) console.error(err.stack);
 
-  return res.status(500).json({
+  res.status(500).json({
+    success: false,
     message: "Internal Server Error"
   });
 });
 
 export default app;
+
