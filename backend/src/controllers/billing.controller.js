@@ -4,8 +4,8 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 /**
  * Subscription Payment Handler
  *
- * FREE/TRIAL  → ₹49 Processing Fee
- * BUSINESS    → ₹500 Subscription Fee
+ * free/trial → ₹49 Processing Fee
+ * business   → ₹500 Subscription Fee
  *
  * Subscription becomes ACTIVE only after Zoho Webhook confirmation
  */
@@ -16,15 +16,16 @@ export const createPayment = async (req, res) => {
 
     /* ================= AUTH & INPUT VALIDATION ================= */
     if (!companyId || !email) {
-      return res.status(401).json({ message: "Unauthorized" });
+      return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
     if (!plan) {
-      return res.status(400).json({ message: "Plan is required" });
+      return res.status(400).json({ success: false, message: "Plan is required" });
     }
 
     if (plan === "enterprise") {
       return res.status(400).json({
+        success: false,
         message: "Enterprise plan requires contacting sales team"
       });
     }
@@ -35,18 +36,17 @@ export const createPayment = async (req, res) => {
       SELECT 
         id,
         name,
-        zoho_customer_id,
         subscription_status,
+        zoho_customer_id,
         last_payment_link
       FROM companies
-      WHERE id = ?
-      LIMIT 1
+      WHERE id=? LIMIT 1
       `,
       [companyId]
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      return res.status(404).json({ success: false, message: "Company not found" });
     }
 
     const status = (company.subscription_status || "").toLowerCase();
@@ -54,13 +54,14 @@ export const createPayment = async (req, res) => {
     /* ================= BLOCK ACTIVE USERS ================= */
     if (["trial", "active"].includes(status)) {
       return res.status(403).json({
+        success: false,
         message: "Subscription already active"
       });
     }
 
     /**
-     * CASE: Already pending & payment link exists
-     * → Reuse existing link
+     * CASE: Already pending + link already exists
+     * Reuse existing link to avoid duplicate billing
      */
     if (
       status === "pending" &&
@@ -78,7 +79,7 @@ export const createPayment = async (req, res) => {
     /* ================= ZOHO CLIENT ================= */
     let client = await zohoClient();
 
-    /* ================= ENSURE ZOHO CUSTOMER EXISTS ================= */
+    /* ================= ENSURE ZOHO CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
@@ -94,8 +95,9 @@ export const createPayment = async (req, res) => {
         });
 
       } catch (err) {
+        // OAuth expired? retry once
         if (err?.response?.status === 401) {
-          console.warn("🔄 Zoho token expired — retrying create customer…");
+          console.warn("🔄 Zoho token expired — retrying customer create…");
           client = await zohoClient();
 
           response = await client.post("/customers", {
@@ -107,7 +109,6 @@ export const createPayment = async (req, res) => {
       }
 
       customerId = response?.data?.customer?.customer_id;
-
       if (!customerId) throw new Error("Failed to create Zoho customer");
 
       await db.query(
@@ -118,35 +119,35 @@ export const createPayment = async (req, res) => {
 
     /* ================= PLAN PRICING ================= */
     const pricing = {
-      free: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      trial: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      business: { amount: 500, description: "PROMEET Business Subscription" }
+      free: { amount: 49.0, description: "PROMEET Trial Processing Fee" },
+      trial: { amount: 49.0, description: "PROMEET Trial Processing Fee" },
+      business: { amount: 500.0, description: "PROMEET Business Subscription" }
     };
 
     const selected = pricing[plan];
 
     if (!selected) {
-      return res.status(400).json({ message: "Invalid plan selected" });
+      return res.status(400).json({ success: false, message: "Invalid plan selected" });
     }
 
     /**
-     * 🔥 CRITICAL FIX FOR ZOHO
-     * Zoho REQUIRES strict 2-decimal numeric:
-     * 49.00  ✔
-     * 500.00 ✔
-     * 49     ❌ "Invalid value passed for Total payment Amount"
+     * 🔥 CRITICAL FOR ZOHO
+     * payment_amount MUST BE string with 2-decimals:
+     *   "49.00"
+     *   "500.00"
      */
-    const amount = Number(selected.amount).toFixed(2); // keeps 2-decimals always
+    const paymentAmount = Number(selected.amount).toFixed(2);
 
     console.log(
-      `💳 Creating Zoho Payment Link → ₹${amount} (${plan}) for Company ${companyId}`
+      `💳 Creating Zoho Payment Link → ₹${paymentAmount} (${plan}) for Company ${companyId}`
     );
 
-    /* ================= CREATE PAYMENT LINK ================= */
+    /* ================= PAYMENT PAYLOAD ================= */
     const payload = {
       customer_id: customerId,
+      customer_name: companyName || company.name,
       currency_code: "INR",
-      amount: Number(amount), // ensure numeric
+      payment_amount: paymentAmount,   // ✔ MUST be string w/ 2 decimals
       description: selected.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`
@@ -154,6 +155,7 @@ export const createPayment = async (req, res) => {
 
     console.log("📤 ZOHO PAYMENT PAYLOAD:", payload);
 
+    /* ================= CREATE PAYMENT LINK ================= */
     let data;
 
     try {
@@ -181,14 +183,14 @@ export const createPayment = async (req, res) => {
         plan = ?,
         subscription_status = 'pending',
         last_payment_link = ?
-      WHERE id = ?
+      WHERE id=?
       `,
       [plan === "business" ? "business" : "trial", paymentUrl, companyId]
     );
 
     return res.json({
       success: true,
-      message: "Payment link created successfully",
+      message: "Payment link generated successfully",
       url: paymentUrl
     });
 
