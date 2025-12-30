@@ -1,6 +1,5 @@
 import express from "express";
 import { upload } from "../middlewares/upload.middleware.js";
-
 import {
   register,
   login,
@@ -8,59 +7,64 @@ import {
   resetPassword
 } from "../controllers/auth.controller.js";
 
+/* ======================================================
+   SAFE ASYNC WRAPPER
+   Prevents Node crash from unhandled async errors
+====================================================== */
+const asyncHandler = (fn) => (req, res, next) =>
+  Promise.resolve(fn(req, res, next)).catch(next);
+
 const router = express.Router();
 
 /* ======================================================
-   AUTH ROUTES
-   Shared for Visitor + Conference Modules
-====================================================== */
-
-/* ======================================================
-   REGISTER
+   ROUTE: REGISTER
 --------------------------------------------------------
 PURPOSE:
  - Creates Company
  - Creates Admin User
- - (Optional) Uploads Company Logo
+ - Optional Logo Upload
 
 REQUEST:
  - multipart/form-data
  - logo field name: "logo"
 
-RESPONSE:
+SUCCESS RESPONSE:
  {
    token,
    user,
-   company
- }
+   company: {
+     id,
+     name,
+     slug,
+     logo_url,
+     plan,
+     subscription_status
+   }
+}
+
+NOTES:
+ - Should initialize subscription_status = "pending" or "trial"
 ====================================================== */
 router.post(
   "/register",
-  upload.single("logo"),
-  register
+  upload.single("logo"),   // handles file upload
+  asyncHandler(register)
 );
 
 /* ======================================================
-   LOGIN
+   ROUTE: LOGIN
 --------------------------------------------------------
 PURPOSE:
  - Authenticates Admin / Employees
- - Returns JWT Token
- - MUST return company.subscription_status
+ - Returns JWT + Subscription Context
 
-IMPORTANT (Frontend Logic Depends On This):
- company.subscription_status must be one of:
-   "active"
-   "trial"
-   "pending"
-   "expired"
-   "cancelled"
-   "none"
+Frontend **depends** on subscription_status values:
+  "active" | "trial" | "pending" | "expired" | "cancelled" | "none"
 
-EXPECTED RESPONSE FORMAT:
+SUCCESS RESPONSE:
  {
-   token: "",
-   user: {},
+   token,
+   user,
    company: {
      id,
      name,
@@ -69,25 +73,25 @@ EXPECTED RESPONSE FORMAT:
      subscription_status,
      plan
    }
- }
+}
 ====================================================== */
-router.post("/login", login);
+router.post("/login", asyncHandler(login));
 
 /* ======================================================
-   FORGOT PASSWORD
+   ROUTE: FORGOT PASSWORD
 --------------------------------------------------------
 PURPOSE:
- - Sends password reset OTP / link
+ - Sends Reset OTP / Link
 ====================================================== */
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", asyncHandler(forgotPassword));
 
 /* ======================================================
-   RESET PASSWORD
+   ROUTE: RESET PASSWORD
 --------------------------------------------------------
 PURPOSE:
- - Validates reset token / OTP
- - Updates user password
+ - Verifies OTP / Token
+ - Updates Password
 ====================================================== */
-router.post("/reset-password", resetPassword);
+router.post("/reset-password", asyncHandler(resetPassword));
 
 export default router;
