@@ -7,7 +7,7 @@ import { uploadToS3 } from "./s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
 
 /* ======================================================
-   ENV VALIDATION (Fail Fast)
+   ENV VALIDATION
 ====================================================== */
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET is not configured");
@@ -62,12 +62,12 @@ export const registerCompany = async (data, file) => {
 
   validatePassword(password);
 
-  /* ---------- Ensure Unique User ---------- */
-  const [existingUser] = await db.execute(
+  /* ---------- Ensure email doesn't exist ---------- */
+  const [existing] = await db.execute(
     "SELECT id FROM users WHERE email = ? LIMIT 1",
     [email]
   );
-  if (existingUser.length) throw new Error("Email already registered");
+  if (existing.length) throw new Error("Email already registered");
 
   /* ---------- Generate Unique Slug ---------- */
   let baseSlug = generateSlug(companyName);
@@ -76,7 +76,7 @@ export const registerCompany = async (data, file) => {
 
   while (true) {
     const [[exists]] = await db.query(
-      "SELECT id FROM companies WHERE slug = ? LIMIT 1",
+      "SELECT id FROM companies WHERE slug=? LIMIT 1",
       [slug]
     );
     if (!exists) break;
@@ -121,7 +121,7 @@ export const registerCompany = async (data, file) => {
       const values = Array.from({ length: conferenceRooms }).map((_, i) => [
         companyId,
         `Conference Room ${i + 1}`,
-        i + 1
+        i + 1,
       ]);
 
       await conn.query(
@@ -191,21 +191,22 @@ export const login = async ({ email, password }) => {
   if (!rows.length) throw new Error("Invalid credentials");
   const user = rows[0];
 
-  /* ---------- Password Verify ---------- */
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw new Error("Invalid credentials");
 
-  /* ---------- Subscription Blocking ---------- */
+  /* ---------- Block expired/cancelled ---------- */
   const blockedStates = ["expired", "cancelled", "canceled"];
   if (blockedStates.includes(user.subscription_status)) {
     throw new Error("Your subscription has expired. Please renew to continue.");
   }
 
-  /* ---------- Generate JWT ---------- */
+  /* ---------- JWT ---------- */
   const token = jwt.sign(
     {
       userId: user.id,
-      companyId: user.companyId
+      companyId: user.companyId,
+      email: cleanEmail,
+      companyName: user.companyName
     },
     process.env.JWT_SECRET,
     { expiresIn: "7d" }
@@ -222,8 +223,8 @@ export const login = async ({ email, password }) => {
       name: user.companyName,
       slug: user.companySlug,
       logo_url: user.companyLogo,
-      subscription_status: user.subscription_status || "none",
-      plan: user.plan || "free"
+      subscription_status: user.subscription_status || "pending",
+      plan: user.plan || "trial"
     }
   };
 };
@@ -232,11 +233,11 @@ export const login = async ({ email, password }) => {
    FORGOT PASSWORD
 ====================================================== */
 export const forgotPassword = async (email) => {
-  const cleanEmail = email?.trim().toLowerCase();
+  const cleanEmail = email?.trim()?.toLowerCase();
   if (!cleanEmail) return;
 
   const [rows] = await db.execute(
-    "SELECT id FROM users WHERE email = ? LIMIT 1",
+    "SELECT id FROM users WHERE email=? LIMIT 1",
     [cleanEmail]
   );
 
@@ -247,9 +248,9 @@ export const forgotPassword = async (email) => {
   await db.execute(
     `
     UPDATE users
-    SET reset_code = ?,
+    SET reset_code=?,
         reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
-    WHERE id = ?
+    WHERE id=?
     `,
     [resetCode, rows[0].id]
   );
@@ -298,10 +299,10 @@ export const resetPassword = async ({ email, code, password }) => {
   await db.execute(
     `
     UPDATE users
-    SET password_hash = ?,
-        reset_code = NULL,
-        reset_expires = NULL
-    WHERE id = ?
+    SET password_hash=?,
+        reset_code=NULL,
+        reset_expires=NULL
+    WHERE id=?
     `,
     [newHash, rows[0].id]
   );
