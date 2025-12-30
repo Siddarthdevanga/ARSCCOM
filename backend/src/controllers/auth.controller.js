@@ -30,7 +30,7 @@ export const register = async (req, res) => {
       });
     }
 
-    /* ---------- SERVICE LAYER ---------- */
+    /* ---------- REGISTER SERVICE ---------- */
     const result = await service.registerCompany(req.body, req.file);
 
     return res.status(201).json({
@@ -69,16 +69,17 @@ export const login = async (req, res) => {
 
     /**
      * result MUST contain:
-     *  token
-     *  user
-     *  company {
-     *     id
-     *     name
-     *     slug
-     *     logo_url
-     *     subscription_status
-     *     plan
-     *  }
+     * token
+     * user
+     * company {
+     *  id
+     *  name
+     *  slug
+     *  logo_url
+     *  subscription_status   ---> MUST BE one of:
+     *     active | trial | pending | expired | cancelled | none
+     *  plan
+     * }
      */
 
     if (!result?.company) {
@@ -119,10 +120,7 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    /**
-     * Security Policy:
-     * Do NOT reveal if email exists
-     */
+    // Security: Do not expose if email exists
     await service.forgotPassword(email);
 
     return res.status(200).json({
