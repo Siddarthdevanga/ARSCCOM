@@ -17,18 +17,18 @@ if (!process.env.JWT_SECRET) {
 /* ======================================================
    EMAIL FOOTER
 ====================================================== */
-const emailFooter = (company) => `
+const emailFooter = () => `
 <br/>
 Regards,<br/>
-<b style="color:#6c2bd9">${company?.name || "PROMEET"}</b><br/>
+<b style="color:#6c2bd9">PROMEET</b><br/>
 
 <img src="/logo.png" height="55" />
 
 <hr/>
 <p style="font-size:13px;color:#666">
-This email was automatically sent from the PROMEET Conference Room 
-and Visitor Management Platform.
-If you did not initiate this action, please contact your administrator immediately.
+This email was automatically sent from the PROMEET
+Conference & Visitor Management Platform.
+If this was not you, please contact your administrator immediately.
 </p>
 `;
 
@@ -67,7 +67,7 @@ export const registerCompany = async (data, file) => {
 
   validatePassword(password);
 
-  /* ---------- Check existing ---------- */
+  /* ---------- Check existing user ---------- */
   const [existing] = await db.execute(
     "SELECT id FROM users WHERE email = ?",
     [email]
@@ -77,7 +77,7 @@ export const registerCompany = async (data, file) => {
     throw new Error("Email already registered");
   }
 
-  /* ---------- Slug ---------- */
+  /* ---------- Generate Slug ---------- */
   let slug = generateSlug(companyName);
   let suffix = 1;
 
@@ -90,7 +90,7 @@ export const registerCompany = async (data, file) => {
     slug = `${generateSlug(companyName)}-${suffix++}`;
   }
 
-  /* ---------- Upload logo ---------- */
+  /* ---------- Upload Logo ---------- */
   const ext = path.extname(file.originalname).toLowerCase() || ".png";
   const logoKey = `companies/${slug}/logo${ext}`;
   const logoUrl = await uploadToS3(file, logoKey);
@@ -103,15 +103,16 @@ export const registerCompany = async (data, file) => {
     /* ---------- Create Company ---------- */
     const [companyResult] = await conn.execute(
       `
-      INSERT INTO companies (name, slug, logo_url, rooms)
-      VALUES (?, ?, ?, ?)
+      INSERT INTO companies 
+      (name, slug, logo_url, rooms, subscription_status, plan)
+      VALUES (?, ?, ?, ?, 'none', 'free')
       `,
       [companyName, slug, logoUrl, conferenceRooms]
     );
 
     const companyId = companyResult.insertId;
 
-    /* ---------- Create Admin ---------- */
+    /* ---------- Create Admin User ---------- */
     const passwordHash = await bcrypt.hash(password, 10);
 
     await conn.execute(
@@ -135,7 +136,7 @@ export const registerCompany = async (data, file) => {
 
     await conn.commit();
 
-    /* ---------- Professional Welcome Email ---------- */
+    /* ---------- Send Welcome Email ---------- */
     sendEmail({
       to: email,
       subject: "Welcome to PROMEET – Complete Your Subscription",
@@ -143,22 +144,17 @@ export const registerCompany = async (data, file) => {
 <p>Hello,</p>
 
 <p>
-We are pleased to inform you that <b style="color:#6c2bd9">${companyName}</b> 
-has been successfully registered on <b>PROMEET</b>.
+<b>${companyName}</b> has been successfully registered on PROMEET.
 Your admin account is now active.
 </p>
 
 <h3 style="color:#6c2bd9;">Next Step</h3>
 <p>
-Please proceed to the Subscription section and choose the appropriate plan
-to activate your organization and start using PROMEET services.
+Please proceed to the Subscription section and choose a plan
+to activate your organization.
 </p>
 
-<p>
-For any onboarding or billing assistance, our support team is always available to help.
-</p>
-
-${emailFooter({ name: "PROMEET" })}
+${emailFooter()}
 `
     }).catch(() => {});
 
@@ -168,6 +164,7 @@ ${emailFooter({ name: "PROMEET" })}
       slug,
       logoUrl
     };
+
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -177,7 +174,10 @@ ${emailFooter({ name: "PROMEET" })}
 };
 
 /* ======================================================
-   LOGIN (Allow only Trial or Active)
+   LOGIN — Allows:
+   - trial
+   - active
+   - pending / none (so they can subscribe)
 ====================================================== */
 export const login = async ({ email, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
@@ -194,9 +194,11 @@ export const login = async ({ email, password }) => {
       c.name     AS companyName,
       c.slug     AS companySlug,
       c.logo_url AS companyLogo,
-      c.subscription_status
+      c.subscription_status,
+      c.plan
     FROM users u
-    JOIN companies c ON c.id = u.company_id
+    JOIN companies c 
+      ON c.id = u.company_id
     WHERE u.email = ?
     `,
     [cleanEmail]
@@ -206,31 +208,44 @@ export const login = async ({ email, password }) => {
     throw new Error("Invalid credentials");
   }
 
-  if (!["trial", "active"].includes(rows[0].subscription_status)) {
-    throw new Error("Your subscription is not active. Please subscribe to continue.");
-  }
+  const user = rows[0];
 
-  const valid = await bcrypt.compare(password, rows[0].password_hash);
+  /* ---------- Password Check ---------- */
+  const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
     throw new Error("Invalid credentials");
   }
 
+  /* ---------- Subscription Logic ---------- */
+  const blockedStates = ["expired", "cancelled", "canceled"];
+
+  if (blockedStates.includes(user.subscription_status)) {
+    throw new Error("Your subscription is expired. Please renew to continue.");
+  }
+
+  // trial / active / pending / none are allowed to login
   const token = jwt.sign(
     {
-      userId: rows[0].id,
-      companyId: rows[0].companyId
+      userId: user.id,
+      companyId: user.companyId,
     },
     process.env.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "7d" }
   );
 
   return {
     token,
+    user: {
+      id: user.id,
+      email: cleanEmail
+    },
     company: {
-      id: rows[0].companyId,
-      name: rows[0].companyName,
-      slug: rows[0].companySlug,
-      logo_url: rows[0].companyLogo
+      id: user.companyId,
+      name: user.companyName,
+      slug: user.companySlug,
+      logo_url: user.companyLogo,
+      subscription_status: user.subscription_status || "none",
+      plan: user.plan || "free"
     }
   };
 };
@@ -271,18 +286,15 @@ export const forgotPassword = async (email) => {
 
 <h2 style="color:#6c2bd9">${resetCode}</h2>
 
-<p>
-This code is valid for <b>10 minutes</b>.
-Please do not share this code with anyone.
-</p>
+<p>This code is valid for <b>10 minutes</b>.</p>
 
-${emailFooter({ name: "PROMEET" })}
+${emailFooter()}
 `
   });
 };
 
 /* ======================================================
-   RESET PASSWORD + SUCCESS EMAIL
+   RESET PASSWORD
 ====================================================== */
 export const resetPassword = async ({ email, code, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
@@ -325,17 +337,9 @@ export const resetPassword = async ({ email, code, password }) => {
     html: `
 <p>Hello,</p>
 
-<p>
-We would like to inform you that your PROMEET account password
-has been successfully reset.
-</p>
+<p>Your PROMEET account password has been successfully reset.</p>
 
-<p>
-If this change was made by you, no further action is required.
-If this was not initiated by you, please contact support immediately.
-</p>
-
-${emailFooter({ name: "PROMEET" })}
+${emailFooter()}
 `
   });
 
