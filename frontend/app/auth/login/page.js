@@ -86,7 +86,7 @@ export default function LoginPage() {
         );
 
         setTimeout(() => {
-          router.replace("auth/subscription");
+          router.replace("/subscription");
         }, 1500);
 
         return;
@@ -97,7 +97,7 @@ export default function LoginPage() {
         setError("Your subscription has expired. Please renew to continue.");
 
         setTimeout(() => {
-          router.replace("/subscriptions");
+          router.replace("/subscription");
         }, 1500);
 
         return;
@@ -113,7 +113,7 @@ export default function LoginPage() {
       setError("Please activate your subscription to continue.");
 
       setTimeout(() => {
-        router.replace("/subscriptions");
+        router.replace("/subscription");
       }, 1500);
     } catch (err) {
       console.error(err);
