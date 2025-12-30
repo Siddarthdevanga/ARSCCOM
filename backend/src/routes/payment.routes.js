@@ -1,47 +1,53 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
-import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
 /**
- * SUBSCRIPTION PAYMENT FLOW
+ * PAYMENT ENTRY POINT
+ * -------------------
+ * Plans:
+ *  free/trial → ₹49 Processing Fee
+ *  business   → ₹500 Subscription
  *
- * TRIAL     → ₹49  (Processing Fee)
- * BUSINESS  → ₹500 / Month
- *
- * Activation happens ONLY via Zoho Webhook after payment success
+ * NOTE: Subscription activates ONLY via Zoho webhook after payment success
  */
-router.post("/subscribe", authenticate, async (req, res) => {
+router.post("/subscribe", async (req, res) => {
   try {
-    const { plan } = req.body;
-    const email = req.user?.email;
-    const companyId = req.user?.companyId;
+    const { email, plan } = req.body;
 
     /* ================= VALIDATION ================= */
-    if (!plan) {
+    if (!email || !plan) {
       return res.status(400).json({
         success: false,
-        message: "Plan is required"
+        message: "Email and plan are required",
       });
     }
 
     if (!["free", "business"].includes(plan)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid plan selected"
+        message: "Invalid plan selected",
       });
     }
 
-    if (!email || !companyId) {
-      return res.status(401).json({
+    const cleanEmail = email.trim().toLowerCase();
+
+    /* ================= USER ================= */
+    const [[user]] = await db.query(
+      `SELECT id, company_id FROM users WHERE email=? LIMIT 1`,
+      [cleanEmail]
+    );
+
+    if (!user) {
+      return res.status(404).json({
         success: false,
-        message: "Authentication failed"
+        message: "User not found",
       });
     }
 
-    /* ================= FETCH COMPANY ================= */
+    /* ================= COMPANY ================= */
     const [[company]] = await db.query(
       `
       SELECT 
@@ -49,81 +55,78 @@ router.post("/subscribe", authenticate, async (req, res) => {
         name,
         subscription_status,
         zoho_customer_id,
-        last_payment_link,
-        last_payment_link_id
+        last_payment_link
       FROM companies
       WHERE id=? LIMIT 1
       `,
-      [companyId]
+      [user.company_id]
     );
 
     if (!company) {
       return res.status(404).json({
         success: false,
-        message: "Company not found"
+        message: "Company not found",
       });
     }
 
+    const companyId = company.id;
     const companyName = company.name;
     const status = (company.subscription_status || "").toLowerCase();
 
-    /* ================= ACTIVE GUARD ================= */
+    /* ================= ACTIVE BLOCK ================= */
     if (["trial", "active"].includes(status)) {
       return res.status(403).json({
         success: false,
-        message: "Subscription already active"
+        message: "Subscription already active",
+      });
+    }
+
+    /**
+     * If payment already started → reuse payment link
+     * avoids duplicate invoices
+     */
+    if (
+      status === "pending" &&
+      company.last_payment_link &&
+      company.last_payment_link.trim() !== ""
+    ) {
+      return res.json({
+        success: true,
+        reused: true,
+        message: "Payment already initiated",
+        url: company.last_payment_link,
       });
     }
 
     let client = await zohoClient();
 
-    /**
-     * ======================================================
-     * PENDING CASE → Reuse existing valid payment link
-     * ======================================================
-     */
-    if (
-      status === "pending" &&
-      company.last_payment_link &&
-      company.last_payment_link_id
-    ) {
-      try {
-        const { data } = await client.get(
-          `/paymentlinks/${company.last_payment_link_id}`
-        );
-
-        const linkStatus = data?.payment_link?.status?.toLowerCase();
-        console.log("🔍 Zoho payment link status:", linkStatus);
-
-        if (["created", "sent"].includes(linkStatus)) {
-          return res.json({
-            success: true,
-            reused: true,
-            message: "Existing payment link still valid",
-            url: data.payment_link.url
-          });
-        }
-
-        console.log("⚠ Old payment link expired/closed → will generate new");
-      } catch (err) {
-        console.log("⚠ Could not verify old link → generating new");
-      }
-    }
-
     /* ================= ENSURE ZOHO CUSTOMER ================= */
     let customerId = company.zoho_customer_id;
 
     if (!customerId) {
-      console.log("🧾 Creating Zoho Customer…");
+      console.log("🧾 Creating Zoho Customer...");
 
-      const { data } = await client.post("/customers", {
-        display_name: companyName,
-        company_name: companyName,
-        email
-      });
+      let response;
 
-      customerId = data?.customer?.customer_id;
+      try {
+        response = await client.post("/customers", {
+          display_name: companyName,
+          company_name: companyName,
+          email: cleanEmail,
+        });
+      } catch (err) {
+        if (err?.response?.status === 401) {
+          console.warn("🔄 Zoho token expired — retrying customer create...");
+          client = await zohoClient();
+          response = await client.post("/customers", {
+            display_name: companyName,
+            company_name: companyName,
+            email: cleanEmail,
+          });
+        } else throw err;
+      }
 
+      customerId = response?.data?.customer?.customer_id;
       if (!customerId) throw new Error("Zoho failed to create customer");
 
       await db.query(
@@ -132,10 +135,10 @@ router.post("/subscribe", authenticate, async (req, res) => {
       );
     }
 
-    /* ================= PLAN PRICING ================= */
+    /* ================= PRICING ================= */
     const pricing = {
-      free: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      business: { amount: 500, description: "PROMEET Business Subscription" }
+      free: { amount: 49.0, description: "PROMEET Trial Processing Fee" },
+      business: { amount: 500.0, description: "PROMEET Business Subscription" },
     };
 
     const price = pricing[plan];
@@ -143,60 +146,48 @@ router.post("/subscribe", authenticate, async (req, res) => {
     if (!price) {
       return res.status(400).json({
         success: false,
-        message: "Invalid plan pricing"
+        message: "Invalid plan",
       });
     }
 
     /**
-     * 🔥 IMPORTANT → ZOHO STRICT FORMAT
-     * Must be EXACT numeric:
-     * 49.00 / 500.00
-     * Not: 49 or "49"
+     * CRITICAL FIX 🔥
+     * payment_amount MUST be:
+     *  "49.00"
+     *  "500.00"
+     * string → not number
      */
-    let amount = Number(Number(price.amount).toFixed(2));
+    const paymentAmount = Number(price.amount).toFixed(2);
 
-    if (!amount || isNaN(amount) || amount <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment amount"
-      });
-    }
-
-    console.log(
-      `💳 Creating Zoho Payment Link → ₹${amount.toFixed(
-        2
-      )} (${plan}) for Company ${companyId}`
-    );
+    console.log(`💳 Creating Payment Link (${plan}) → ₹${paymentAmount}`);
 
     const payload = {
       customer_id: customerId,
+      customer_name: companyName,
       currency_code: "INR",
-      amount, // numeric two-decimal enforced
+      payment_amount: paymentAmount,   // ✔ STRING REQUIRED
       description: price.description,
       is_partial_payment: false,
-      reference_id: `COMP-${companyId}-${Date.now()}`
+      reference_id: `COMP-${companyId}-${Date.now()}`,
     };
 
-    console.log("📤 ZOHO PAYMENT PAYLOAD:", payload);
+    console.log("📤 ZOHO PAYLOAD:", payload);
 
     /* ================= CREATE PAYMENT LINK ================= */
     let data;
-
     try {
       ({ data } = await client.post("/paymentlinks", payload));
     } catch (err) {
       if (err?.response?.status === 401) {
-        console.warn("🔄 Zoho token expired — retrying…");
+        console.warn("🔄 Zoho token expired — retrying...");
         client = await zohoClient();
         ({ data } = await client.post("/paymentlinks", payload));
       } else throw err;
     }
 
-    const link = data?.payment_link;
+    const paymentLink = data?.payment_link?.url;
 
-    if (!link?.url || !link?.payment_link_id) {
-      throw new Error("Zoho did not return payment link");
-    }
+    if (!paymentLink) throw new Error("Zoho failed to return payment link");
 
     /* ================= UPDATE DB ================= */
     await db.query(
@@ -205,23 +196,16 @@ router.post("/subscribe", authenticate, async (req, res) => {
       SET 
         subscription_status='pending',
         plan = ?,
-        last_payment_link = ?,
-        last_payment_link_id = ?,
-        last_payment_created_at = NOW()
+        last_payment_link = ?
       WHERE id=?
       `,
-      [
-        plan === "business" ? "business" : "trial",
-        link.url,
-        link.payment_link_id,
-        companyId
-      ]
+      [plan === "business" ? "business" : "trial", paymentLink, companyId]
     );
 
     return res.json({
       success: true,
       message: "Payment link generated successfully",
-      url: link.url
+      url: paymentLink,
     });
 
   } catch (err) {
@@ -232,7 +216,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       message:
         err?.response?.data?.message ||
         err?.message ||
-        "Subscription failed"
+        "Subscription failed",
     });
   }
 });
