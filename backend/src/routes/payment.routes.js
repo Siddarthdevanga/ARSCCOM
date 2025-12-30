@@ -8,8 +8,8 @@ const router = express.Router();
 /**
  * SUBSCRIPTION PAYMENT FLOW
  *
- * TRIAL  → ₹49 (Processing Fee)
- * BUSINESS → ₹500 / Month
+ * TRIAL     → ₹49  (Processing Fee)
+ * BUSINESS  → ₹500 / Month
  *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
@@ -23,21 +23,21 @@ router.post("/subscribe", authenticate, async (req, res) => {
     if (!plan) {
       return res.status(400).json({
         success: false,
-        message: "Plan is required",
+        message: "Plan is required"
       });
     }
 
     if (!["free", "business"].includes(plan)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid plan selected",
+        message: "Invalid plan selected"
       });
     }
 
     if (!email || !companyId) {
       return res.status(401).json({
         success: false,
-        message: "Authentication failed",
+        message: "Authentication failed"
       });
     }
 
@@ -60,7 +60,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     if (!company) {
       return res.status(404).json({
         success: false,
-        message: "Company not found",
+        message: "Company not found"
       });
     }
 
@@ -71,7 +71,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     if (["trial", "active"].includes(status)) {
       return res.status(403).json({
         success: false,
-        message: "Subscription already active",
+        message: "Subscription already active"
       });
     }
 
@@ -79,7 +79,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     /**
      * ======================================================
-     * PENDING CASE → Check if previous link still valid
+     * PENDING CASE → Reuse existing valid payment link
      * ======================================================
      */
     if (
@@ -100,15 +100,13 @@ router.post("/subscribe", authenticate, async (req, res) => {
             success: true,
             reused: true,
             message: "Existing payment link still valid",
-            url: data.payment_link.url,
+            url: data.payment_link.url
           });
         }
 
         console.log("⚠ Old payment link expired/closed → will generate new");
-      } catch {
-        console.log(
-          "⚠ Unable to verify previous Zoho link → generating new"
-        );
+      } catch (err) {
+        console.log("⚠ Could not verify old link → generating new");
       }
     }
 
@@ -121,7 +119,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       const { data } = await client.post("/customers", {
         display_name: companyName,
         company_name: companyName,
-        email,
+        email
       });
 
       customerId = data?.customer?.customer_id;
@@ -137,17 +135,30 @@ router.post("/subscribe", authenticate, async (req, res) => {
     /* ================= PLAN PRICING ================= */
     const pricing = {
       free: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      business: { amount: 500, description: "PROMEET Business Subscription" },
+      business: { amount: 500, description: "PROMEET Business Subscription" }
     };
 
     const price = pricing[plan];
 
-    let amount = Number(parseFloat(price.amount).toFixed(2));
+    if (!price) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid plan pricing"
+      });
+    }
+
+    /**
+     * 🔥 IMPORTANT → ZOHO STRICT FORMAT
+     * Must be EXACT numeric:
+     * 49.00 / 500.00
+     * Not: 49 or "49"
+     */
+    let amount = Number(Number(price.amount).toFixed(2));
 
     if (!amount || isNaN(amount) || amount <= 0) {
       return res.status(400).json({
         success: false,
-        message: "Invalid payment amount",
+        message: "Invalid payment amount"
       });
     }
 
@@ -160,10 +171,10 @@ router.post("/subscribe", authenticate, async (req, res) => {
     const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount: amount, // MUST BE PURE NUMBER LIKE 500.00
+      amount, // numeric two-decimal enforced
       description: price.description,
       is_partial_payment: false,
-      reference_id: `COMP-${companyId}-${Date.now()}`,
+      reference_id: `COMP-${companyId}-${Date.now()}`
     };
 
     console.log("📤 ZOHO PAYMENT PAYLOAD:", payload);
@@ -203,15 +214,16 @@ router.post("/subscribe", authenticate, async (req, res) => {
         plan === "business" ? "business" : "trial",
         link.url,
         link.payment_link_id,
-        companyId,
+        companyId
       ]
     );
 
     return res.json({
       success: true,
       message: "Payment link generated successfully",
-      url: link.url,
+      url: link.url
     });
+
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
@@ -220,7 +232,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       message:
         err?.response?.data?.message ||
         err?.message ||
-        "Subscription failed",
+        "Subscription failed"
     });
   }
 });
