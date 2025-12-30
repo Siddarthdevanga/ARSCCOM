@@ -5,21 +5,34 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 const router = express.Router();
 
 /**
- * ONE-TIME REPAIR UTILITY
- * ------------------------
- * Fix past companies stuck in:
- * pending / expired / none / empty
+ * BILLING REPAIR TOOL
+ * ----------------------------------------------------
+ * Fixes OLD customers whose records were not updated.
  *
- * Reads actual status from ZOHO Billing
- * and updates DB accordingly
+ * WHAT IT DOES:
+ * 1️⃣ Finds companies with:
+ *      subscription_status = 'pending'
+ *      OR zoho_customer_id present but inactive
+ * 2️⃣ Checks Zoho Billing for:
+ *      - Payment Status
+ *      - Subscription Status
+ * 3️⃣ If PAID → Marks ACTIVE in DB
+ * 4️⃣ Logs EVERYTHING
+ *
+ * SAFE TO RUN MULTIPLE TIMES
  */
 
-router.post("/repair-old-companies", async (req, res) => {
+router.get("/repair", async (req, res) => {
   try {
+    console.log("======================================================");
+    console.log("🛠️  STARTING BILLING REPAIR JOB");
+    console.log("======================================================");
+
     let client = await zohoClient();
 
-    // Fetch companies who are stuck / not updated
-    const [companies] = await db.query(`
+    /** FETCH TARGET COMPANIES */
+    const [companies] = await db.query(
+      `
       SELECT 
         id,
         name,
@@ -28,145 +41,99 @@ router.post("/repair-old-companies", async (req, res) => {
         plan
       FROM companies
       WHERE 
-        subscription_status IN ('pending','none','expired','')
+        (subscription_status = 'pending'
         OR subscription_status IS NULL
-        OR plan IS NULL
-    `);
+        OR subscription_status = '')
+        AND zoho_customer_id IS NOT NULL
+      `
+    );
 
     if (!companies.length) {
-      return res.json({
-        success: true,
-        message: "No broken companies found",
-      });
+      console.log("✅ No companies need repair");
+      return res.json({ message: "No repair needed", repaired: 0 });
     }
 
-    let fixed = [];
-    let skipped = [];
+    console.log(`🔍 Found ${companies.length} companies to verify...\n`);
 
-    for (const c of companies) {
-      if (!c.zoho_customer_id) {
-        skipped.push({ id: c.id, reason: "No zoho_customer_id" });
-        continue;
-      }
+    let repaired = 0;
 
+    for (const company of companies) {
       try {
-        /* ================= GET CUSTOMER ================= */
-        const { data: custRes } = await client.get(
-          `/customers/${c.zoho_customer_id}`
+        console.log(
+          `------------------------------------------------------`
+        );
+        console.log(
+          `🏢 Checking Company: ${company.name} (ID: ${company.id})`
+        );
+        console.log(`👤 Zoho Customer ID: ${company.zoho_customer_id}`);
+
+        /** FETCH CUSTOMER SUBSCRIPTIONS */
+        const { data: subRes } = await client.get(
+          `/subscriptions?customer_id=${company.zoho_customer_id}`
         );
 
-        const cust = custRes?.customer;
-        const status = (cust?.status || "").toLowerCase();
+        const subs = subRes?.subscriptions || [];
 
-        /**
-         * ================= CHECK PAYMENTS =================
-         */
-        let paid = false;
-
-        try {
-          const { data: payRes } = await client.get(
-            `/payments?customer_id=${c.zoho_customer_id}`
-          );
-
-          const payments = payRes?.payments || [];
-
-          paid = payments.some(
-            (p) =>
-              (p.status || "").toLowerCase() === "success" ||
-              (p.payment_status || "").toLowerCase() === "paid"
-          );
-        } catch {
-          console.log("Payments fetch failed for", c.name);
-        }
-
-        /**
-         * ================= CHECK SUBSCRIPTIONS =================
-         */
-        let subStatus = null;
-
-        try {
-          const { data: subRes } = await client.get(
-            `/subscriptions?customer_id=${c.zoho_customer_id}`
-          );
-
-          const subs = subRes?.subscriptions || [];
-
-          if (subs.length) {
-            subStatus = (subs[0].status || "").toLowerCase();
-          }
-        } catch {
-          console.log("Subscription fetch failed for", c.name);
-        }
-
-        /**
-         * ================= DECISION LOGIC =================
-         */
-
-        let newPlan = c.plan;
-        let newStatus = c.subscription_status;
-
-        // If payment happened → Active Business
-        if (paid) {
-          newPlan = "business";
-          newStatus = "active";
-        }
-
-        // If subscription trial exists
-        if (subStatus === "trial") {
-          newPlan = "trial";
-          newStatus = "trial";
-        }
-
-        // If subscription active
-        if (subStatus === "active" || subStatus === "live") {
-          newPlan = "business";
-          newStatus = "active";
-        }
-
-        // If nothing useful found → skip
-        if (!newStatus || newStatus === c.subscription_status) {
-          skipped.push({ id: c.id, name: c.name, reason: "No change" });
+        if (!subs.length) {
+          console.log("⚠️ No subscription found for this customer");
           continue;
         }
 
-        /* ================= UPDATE DB ================= */
-        await db.query(
-          `
-            UPDATE companies
+        const sub = subs[0];
+        const status = (sub.status || "").toLowerCase();
+
+        console.log(`📌 Zoho Subscription Status: ${status}`);
+
+        /** IF SUB IS TRIAL / ACTIVE → FIX DB */
+        if (status === "trial" || status === "active" || status === "live") {
+          await db.query(
+            `
+            UPDATE companies 
             SET 
-              plan = ?,
               subscription_status = ?,
+              zoho_subscription_id = ?,
+              plan = CASE
+                WHEN ? = 'trial' THEN 'trial'
+                ELSE 'business'
+              END,
               updated_at = NOW()
             WHERE id=?
           `,
-          [newPlan, newStatus, c.id]
-        );
+            [
+              status === "trial" ? "trial" : "active",
+              sub.subscription_id,
+              status,
+              company.id
+            ]
+          );
 
-        fixed.push({
-          id: c.id,
-          name: c.name,
-          newPlan,
-          newStatus,
-        });
+          console.log("🎉 FIXED → Subscription marked ACTIVE in database");
+          repaired++;
+          continue;
+        }
+
+        console.log("❌ Not paid yet — no DB update");
 
       } catch (err) {
-        console.log("Repair failed for company:", c.name, err?.response?.data || err);
-        skipped.push({ id: c.id, name: c.name, reason: "Zoho error" });
+        console.log("❌ ERROR checking company:", company.name);
+        console.log(err?.response?.data || err);
       }
     }
 
+    console.log("\n======================================================");
+    console.log(`🏁 REPAIR COMPLETED — FIXED: ${repaired} companies`);
+    console.log("======================================================");
+
     return res.json({
       success: true,
-      message: "Repair completed",
-      fixed,
-      skipped
+      repaired
     });
 
   } catch (err) {
-    console.error("REPAIR ERROR:", err);
+    console.error("❌ BILLING REPAIR FAILED", err);
     return res.status(500).json({
       success: false,
-      message: "Repair failed",
+      message: "Billing repair failed"
     });
   }
 });
