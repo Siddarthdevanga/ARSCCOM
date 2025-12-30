@@ -26,7 +26,6 @@ If you did not perform this action, please contact your administrator.
 ====================================================== */
 function mapStatus(status) {
   if (!status) return null;
-
   status = status.toLowerCase();
 
   const map = {
@@ -35,14 +34,14 @@ function mapStatus(status) {
     active: "active",
     cancelled: "cancelled",
     canceled: "cancelled",
-    expired: "expired",
+    expired: "expired"
   };
 
   return map[status] || null;
 }
 
 /* ======================================================
-   IDEMPOTENCY HELPER
+   IDEMPOTENCY
 ====================================================== */
 async function isAlreadyProcessed(eventId) {
   if (!eventId) return false;
@@ -88,6 +87,7 @@ router.post("/", async (req, res) => {
       req.body?.event_id ||
       payload?.payment?.payment_id ||
       payload?.subscription?.subscription_id ||
+      payload?.transaction_id ||
       null;
 
     if (await isAlreadyProcessed(eventId)) {
@@ -95,10 +95,11 @@ router.post("/", async (req, res) => {
       return res.json({ message: "duplicate ignored" });
     }
 
-    console.log("🔔 ZOHO EVENT RECEIVED:", event);
+    console.log("🔔 ZOHO WEBHOOK EVENT:", event);
 
     /* ======================================================
-       1️⃣ PAYMENT SUCCESS
+       1️⃣ PAYMENT SUCCESS EVENTS
+       (Payment Link Paid)
     ======================================================= */
     if (
       event.includes("payment") ||
@@ -109,16 +110,18 @@ router.post("/", async (req, res) => {
       const customer = payload.customer || {};
 
       const zohoCustomerId =
-        customer.customer_id || payment.customer_id || null;
+        customer.customer_id ||
+        payment.customer_id ||
+        null;
 
       if (!zohoCustomerId) {
-        console.log("❌ Missing customer id in payment webhook");
+        console.log("❌ Payment webhook without customer id");
         return res.json({ message: "ignored" });
       }
 
-      console.log("💰 PAYMENT SUCCESS FOR:", zohoCustomerId);
+      console.log("💰 PAYMENT SUCCESS — CUSTOMER:", zohoCustomerId);
 
-      await db.query(
+      const [result] = await db.query(
         `
         UPDATE companies
         SET 
@@ -130,11 +133,19 @@ router.post("/", async (req, res) => {
         [zohoCustomerId]
       );
 
+      if (!result.affectedRows) {
+        console.log("❌ Company not found for payment");
+        return res.json({ message: "company not found" });
+      }
+
+      console.log("🎉 SUBSCRIPTION ACTIVATED");
+
       return res.json({ message: "Payment processed" });
     }
 
     /* ======================================================
        2️⃣ SUBSCRIPTION EVENTS
+       (Zoho Subscription Object Change)
     ======================================================= */
     const subscription = payload.subscription || {};
     const customer = payload.customer || subscription.customer || {};
@@ -145,11 +156,12 @@ router.post("/", async (req, res) => {
       null;
 
     if (!zohoCustomerId) {
-      console.log("❌ No customer id");
+      console.log("❌ Subscription webhook missing customer id");
       return res.status(400).json({ message: "No customer id" });
     }
 
-    const subId = subscription.subscription_id || null;
+    const zohoSubId = subscription.subscription_id || null;
+
     const receivedStatus =
       subscription.status ||
       subscription.subscription_status ||
@@ -158,17 +170,20 @@ router.post("/", async (req, res) => {
     const newStatus = mapStatus(receivedStatus);
 
     if (!newStatus) {
-      console.log("⚠️ Unknown status:", receivedStatus);
+      console.log("⚠️ Unknown subscription status:", receivedStatus);
       return res.json({ message: "ignored unknown status" });
     }
 
     const [[company]] = await db.query(
-      `SELECT id, subscription_status FROM companies WHERE zoho_customer_id=? LIMIT 1`,
+      `SELECT id, subscription_status 
+       FROM companies 
+       WHERE zoho_customer_id=? 
+       LIMIT 1`,
       [zohoCustomerId]
     );
 
     if (!company) {
-      console.log("❌ Company not found");
+      console.log("❌ Company not found for subscription webhook");
       return res.json({ message: "company not found" });
     }
 
@@ -185,10 +200,10 @@ router.post("/", async (req, res) => {
         updated_at = NOW()
       WHERE zoho_customer_id=?
       `,
-      [newStatus, subId, newStatus, newStatus, zohoCustomerId]
+      [newStatus, zohoSubId, newStatus, newStatus, zohoCustomerId]
     );
 
-    console.log("✅ COMPANY STATUS UPDATED:", newStatus, "SUB:", subId);
+    console.log(`✅ STATUS UPDATED → ${newStatus} | SUB ID: ${zohoSubId}`);
 
     return res.json({ message: "Subscription processed" });
 
