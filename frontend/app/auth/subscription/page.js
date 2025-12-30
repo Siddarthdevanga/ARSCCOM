@@ -15,7 +15,7 @@ export default function SubscriptionPage() {
     "https://www.wheelbrand.in";
 
   /* ======================================================
-      CHECK LOGIN + SUBSCRIPTION STATUS
+      VALIDATE LOGIN + CURRENT STATUS
   ====================================================== */
   useEffect(() => {
     try {
@@ -25,30 +25,35 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const companyData = localStorage.getItem("company");
-      if (!companyData) return;
+      const stored = localStorage.getItem("company");
+      if (!stored) return;
 
       let company = {};
       try {
-        company = JSON.parse(companyData);
+        company = JSON.parse(stored);
       } catch {}
 
-      const status = company?.subscription_status?.toLowerCase() || "pending";
+      const status =
+        company?.subscription_status?.toLowerCase() || "pending";
 
-      console.log("🔎 SUB PAGE STATUS:", status);
+      console.log("🔎 SUBSCRIPTION PAGE STATUS:", status);
 
-      // Already subscribed → redirect dashboard
+      // Already subscribed → go home
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
+        return;
       }
 
-    } catch {
+      // Expired / cancelled should still stay here
+      // because they need to pay again (so do NOT redirect)
+
+    } catch (err) {
       router.replace("/auth/login");
     }
   }, []);
 
   /* ======================================================
-      HANDLE PLAN SELECTION
+      HANDLE PLAN ACTION
   ====================================================== */
   const choosePlan = async (plan) => {
     if (loadingPlan) return;
@@ -56,7 +61,7 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
-    // ENTERPRISE → Contact Page
+    // ENTERPRISE
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -86,31 +91,43 @@ export default function SubscriptionPage() {
         data = await res.json();
       } catch {}
 
-      // If session expired
+      // Session expired
       if (res.status === 401) {
         router.replace("/auth/login");
         return;
       }
 
+      // Forbidden state or backend denial
+      if (res.status === 403) {
+        setError(
+          data?.message ||
+            "Subscription already active or not allowed."
+        );
+        return;
+      }
+
       if (!res.ok) {
-        setError(data?.message || "Subscription failed. Please try again.");
+        setError(
+          data?.message || "Subscription failed. Please try again."
+        );
         return;
       }
 
       /**
        * BACKEND RETURNS:
-       * { url: "payment link" }
-       * OR reused previous payment link
+       *  success:true
+       *  reused:true   (if same pending link reused)
+       *  url:"payment-link"
        */
       if (data?.url) {
         window.location.href = data.url;
         return;
       }
 
-      setError("Unexpected server response");
+      setError("Unexpected server response. Please retry.");
     } catch (err) {
-      console.error(err);
-      setError("Unable to connect to server");
+      console.error("SUBSCRIPTION ERROR:", err);
+      setError("Unable to connect to server. Try again later.");
     } finally {
       setLoadingPlan("");
     }
