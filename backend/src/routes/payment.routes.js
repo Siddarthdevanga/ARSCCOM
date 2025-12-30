@@ -52,12 +52,15 @@ router.post("/subscribe", authenticate, async (req, res) => {
       return res.status(404).json({ success: false, message: "Company not found" });
     }
 
-    const companyName = company.name;
+    const companyName = company.name || "Customer";
     const status = (company.subscription_status || "").toLowerCase();
 
     /* ================= ACTIVE GUARD ================= */
     if (["trial", "active"].includes(status)) {
-      return res.status(403).json({ success: false, message: "Subscription already active" });
+      return res.status(403).json({
+        success: false,
+        message: "Subscription already active"
+      });
     }
 
     let client = await zohoClient();
@@ -90,7 +93,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
         }
 
         console.log("⚠ Old payment link expired/closed → will generate new");
-      } catch {
+      } catch (err) {
         console.log("⚠ Could not verify old link → generating new");
       }
     }
@@ -138,8 +141,14 @@ router.post("/subscribe", authenticate, async (req, res) => {
      * MUST BE '49.00' or '500.00'
      * STRING with 2 decimals — NOT number
      */
-    const payment_amount = Number(selected.payment_amount)
-      .toFixed(2); // → "49.00"
+    const payment_amount = Number(selected.payment_amount).toFixed(2); // "49.00"
+
+    if (!payment_amount || Number(payment_amount) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment amount"
+      });
+    }
 
     console.log(
       `💳 Creating Zoho Payment Link → ₹${payment_amount} (${plan}) for Company ${companyId}`
@@ -148,7 +157,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount: payment_amount,          // <-- STRING ✔
+      amount: payment_amount,      // MUST be string with 2 decimals ✔
       description: selected.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`
