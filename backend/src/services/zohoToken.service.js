@@ -2,6 +2,7 @@ import axios from "axios";
 
 let cachedToken = null;
 let expiresAt = null;
+let refreshingPromise = null; // prevents parallel refresh
 
 export async function getZohoAccessToken() {
   try {
@@ -18,45 +19,62 @@ export async function getZohoAccessToken() {
 
     const now = Date.now();
 
-    // Use cached token if valid
-    if (cachedToken && expiresAt && now < expiresAt) {
+    /* ======================================================
+       RETURN CACHED TOKEN IF VALID
+    ======================================================= */
+    if (cachedToken && expiresAt && now < expiresAt - 5000) {
       return cachedToken;
     }
 
-    const url = `${ZOHO_ACCOUNTS_URL}/oauth/v2/token`;
-
-    const params = {
-      refresh_token: ZOHO_REFRESH_TOKEN,
-      client_id: ZOHO_CLIENT_ID,
-      client_secret: ZOHO_CLIENT_SECRET,
-      grant_type: "refresh_token"
-    };
-
-    const { data } = await axios.post(url, null, {
-      params,
-      timeout: 8000
-    });
-
-    if (!data?.access_token) {
-      console.error("❌ Zoho OAuth Failure:", data);
-      throw new Error("Failed to obtain Zoho access token");
+    /* ======================================================
+       PREVENT MULTIPLE PARALLEL REFRESHES
+    ======================================================= */
+    if (refreshingPromise) {
+      return refreshingPromise;
     }
 
-    cachedToken = data.access_token;
+    refreshingPromise = (async () => {
+      const url = `${ZOHO_ACCOUNTS_URL}/oauth/v2/token`;
 
-    const ttlSeconds =
-      Number(data.expires_in_sec) ||
-      Number(data.expires_in) ||
-      3600;
+      const params = {
+        refresh_token: ZOHO_REFRESH_TOKEN,
+        client_id: ZOHO_CLIENT_ID,
+        client_secret: ZOHO_CLIENT_SECRET,
+        grant_type: "refresh_token"
+      };
 
-    // refresh slightly earlier than expiry
-    expiresAt = now + (ttlSeconds - 60) * 1000;
+      const { data } = await axios.post(url, null, {
+        params,
+        timeout: 10000
+      });
 
-    console.log("🔐 Zoho Access Token Generated");
+      if (!data?.access_token) {
+        console.error("❌ Zoho OAuth Failure:", data);
+        throw new Error("Failed to obtain Zoho access token");
+      }
 
-    return cachedToken;
+      cachedToken = data.access_token;
+
+      const ttlSeconds =
+        Number(data.expires_in_sec) ||
+        Number(data.expires_in) ||
+        3600;
+
+      const safeTTL = Math.max(ttlSeconds - 60, 300); // never less than 5 min
+      expiresAt = Date.now() + safeTTL * 1000;
+
+      console.log(
+        `🔐 Zoho Access Token Generated (valid ~${safeTTL}s)`
+      );
+
+      refreshingPromise = null;
+      return cachedToken;
+    })();
+
+    return await refreshingPromise;
 
   } catch (err) {
+    refreshingPromise = null;
     console.error("❌ ZOHO TOKEN ERROR:", err?.response?.data || err.message || err);
     throw new Error("Zoho Authentication Failed");
   }
