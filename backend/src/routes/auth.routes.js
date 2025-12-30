@@ -1,5 +1,6 @@
 import express from "express";
 import { upload } from "../middlewares/upload.middleware.js";
+
 import {
   register,
   login,
@@ -7,90 +8,67 @@ import {
   resetPassword
 } from "../controllers/auth.controller.js";
 
+const router = express.Router();
+
 /* ======================================================
    SAFE ASYNC WRAPPER
    Prevents Node crash from unhandled async errors
 ====================================================== */
 const asyncHandler = (fn) => (req, res, next) =>
-  Promise.resolve(fn(req, res, next)).catch(next);
-
-const router = express.Router();
+  Promise.resolve(fn(req, res, next)).catch((err) => {
+    console.error("❌ ROUTE ERROR:", err);
+    next(err);
+  });
 
 /* ======================================================
-   ROUTE: REGISTER
+   REGISTER
 --------------------------------------------------------
-PURPOSE:
- - Creates Company
- - Creates Admin User
- - Optional Logo Upload
+Creates:
+ - Company
+ - Admin User
+ - Uploads Logo (optional)
 
-REQUEST:
- - multipart/form-data
- - logo field name: "logo"
-
-SUCCESS RESPONSE:
- {
-   token,
-   user,
-   company: {
-     id,
-     name,
-     slug,
-     logo_url,
-     plan,
-     subscription_status
-   }
-}
-
-NOTES:
- - Should initialize subscription_status = "pending" or "trial"
+Frontend expectation:
+ - After success, redirect to Subscription Page
 ====================================================== */
 router.post(
   "/register",
-  upload.single("logo"),   // handles file upload
+  upload.single("logo"),
   asyncHandler(register)
 );
 
 /* ======================================================
-   ROUTE: LOGIN
+   LOGIN
 --------------------------------------------------------
-PURPOSE:
- - Authenticates Admin / Employees
- - Returns JWT + Subscription Context
+Returns:
+ - JWT Token
+ - User
+ - Company Subscription Context
 
-Frontend **depends** on subscription_status values:
-  "active" | "trial" | "pending" | "expired" | "cancelled" | "none"
-
-SUCCESS RESPONSE:
- {
-   token,
-   user,
-   company: {
-     id,
-     name,
-     slug,
-     logo_url,
-     subscription_status,
-     plan
-   }
-}
+subscription_status expected values:
+  "pending" | "trial" | "active" | "expired" | "cancelled"
 ====================================================== */
 router.post("/login", asyncHandler(login));
 
 /* ======================================================
-   ROUTE: FORGOT PASSWORD
+   FORGOT PASSWORD
 --------------------------------------------------------
-PURPOSE:
- - Sends Reset OTP / Link
+Returns:
+ - Always success message (no email leak)
+ - Sends reset code internally
 ====================================================== */
 router.post("/forgot-password", asyncHandler(forgotPassword));
 
 /* ======================================================
-   ROUTE: RESET PASSWORD
+   RESET PASSWORD
 --------------------------------------------------------
-PURPOSE:
- - Verifies OTP / Token
- - Updates Password
+Validates:
+ - Email
+ - OTP Code
+ - New Password
+
+Updates:
+ - Password
 ====================================================== */
 router.post("/reset-password", asyncHandler(resetPassword));
 
