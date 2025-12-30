@@ -25,15 +25,23 @@ export default function SubscriptionPage() {
         return;
       }
 
-      const company = JSON.parse(localStorage.getItem("company") || "{}");
+      const companyData = localStorage.getItem("company");
+      if (!companyData) return;
+
+      let company = {};
+      try {
+        company = JSON.parse(companyData);
+      } catch {}
+
       const status = company?.subscription_status?.toLowerCase() || "pending";
 
-      console.log("SUB PAGE STATUS:", status);
+      console.log("🔎 SUB PAGE STATUS:", status);
 
-      // Already subscribed → redirect to dashboard
+      // Already subscribed → redirect dashboard
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
       }
+
     } catch {
       router.replace("/auth/login");
     }
@@ -48,7 +56,7 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
-    // ENTERPRISE
+    // ENTERPRISE → Contact Page
     if (plan === "enterprise") {
       router.push("/contact-us");
       setLoadingPlan("");
@@ -69,11 +77,16 @@ export default function SubscriptionPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
+        credentials: "include",
         body: JSON.stringify({ plan }),
       });
 
-      const data = await res.json();
+      let data = {};
+      try {
+        data = await res.json();
+      } catch {}
 
+      // If session expired
       if (res.status === 401) {
         router.replace("/auth/login");
         return;
@@ -84,7 +97,11 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // Redirect to Zoho Payment
+      /**
+       * BACKEND RETURNS:
+       * { url: "payment link" }
+       * OR reused previous payment link
+       */
       if (data?.url) {
         window.location.href = data.url;
         return;
@@ -114,7 +131,7 @@ export default function SubscriptionPage() {
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.planGrid}>
-        {/* ================= FREE ================= */}
+        {/* ================= FREE TRIAL ================= */}
         <div className={styles.card}>
           <h3 className={styles.planName}>FREE TRIAL</h3>
           <p className={styles.price}>₹49</p>
@@ -164,9 +181,7 @@ export default function SubscriptionPage() {
         <div className={styles.card}>
           <h3 className={styles.planName}>ENTERPRISE</h3>
           <p className={styles.price}>Custom Pricing</p>
-          <p className={styles.subText}>
-            Tailored for large organizations
-          </p>
+          <p className={styles.subText}>Tailored for large organizations</p>
 
           <ul className={styles.features}>
             <li>• Custom Solutions</li>
