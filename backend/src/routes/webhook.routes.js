@@ -1,30 +1,14 @@
 import express from "express";
 import { db } from "../config/db.js";
-import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
 const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_WEBHOOK_KEY";
-const APP_BASE_URL = process.env.APP_BASE_URL || "https://www.wheelbrand.in";
 
 /* ======================================================
-   EMAIL FOOTER
+   HELPER → Normalize Subscription Status
 ====================================================== */
-const emailFooter = () => `
-<br/>
-Regards,<br/>
-<b style="color:#6c2bd9">PROMEET</b><br/>
-<img src="${APP_BASE_URL}/logo.png" height="55" />
-<hr/>
-<p style="font-size:13px;color:#666">
-This email was automatically sent from the PROMEET Billing Platform.
-If you did not perform this action, please contact your administrator.
-</p>`;
-
-/* ======================================================
-   STATUS NORMALIZER
-====================================================== */
-function mapStatus(status) {
+function normalizeStatus(status) {
   if (!status) return null;
   status = status.toLowerCase();
 
@@ -32,22 +16,24 @@ function mapStatus(status) {
     trial: "trial",
     live: "active",
     active: "active",
+    success: "active",
+    paid: "active",
+    expired: "expired",
     cancelled: "cancelled",
-    canceled: "cancelled",
-    expired: "expired"
+    canceled: "cancelled"
   };
 
   return map[status] || null;
 }
 
 /* ======================================================
-   IDEMPOTENCY
+   IDEMPOTENCY → Prevent Duplicate Execution
 ====================================================== */
-async function isAlreadyProcessed(eventId) {
+async function isDuplicate(eventId) {
   if (!eventId) return false;
 
   const [rows] = await db.query(
-    `SELECT id FROM webhook_events WHERE event_id = ? LIMIT 1`,
+    `SELECT id FROM webhook_events WHERE event_id=? LIMIT 1`,
     [eventId]
   );
 
@@ -62,7 +48,7 @@ async function isAlreadyProcessed(eventId) {
 }
 
 /* ======================================================
-   WEBHOOK
+   WEBHOOK HANDLER
 ====================================================== */
 router.post("/", async (req, res) => {
   try {
@@ -75,36 +61,35 @@ router.post("/", async (req, res) => {
 
     if (!key || key !== WEBHOOK_KEY) {
       console.log("❌ INVALID WEBHOOK KEY");
-      return res.status(401).json({ message: "Unauthorized webhook" });
+      return res.status(401).json({ message: "Invalid webhook key" });
     }
 
-    const event = req.body?.event_type || req.body?.event || "unknown";
-    const payload = req.body?.data || req.body;
+    const body = req.body || {};
+    const event = body.event_type || body.event || "unknown";
+    const payload = body.data || body || {};
+    
+    console.log("🔔 ZOHO WEBHOOK EVENT:", event);
 
-    if (!payload) return res.status(400).json({ message: "Invalid payload" });
-
+    /* ---------- IDEMPOTENCY ---------- */
     const eventId =
-      req.body?.event_id ||
+      body.event_id ||
       payload?.payment?.payment_id ||
       payload?.subscription?.subscription_id ||
       payload?.transaction_id ||
-      null;
+      Date.now().toString();
 
-    if (await isAlreadyProcessed(eventId)) {
+    if (await isDuplicate(eventId)) {
       console.log("♻️ Duplicate webhook ignored:", eventId);
       return res.json({ message: "duplicate ignored" });
     }
 
-    console.log("🔔 ZOHO WEBHOOK EVENT:", event);
-
     /* ======================================================
-       1️⃣ PAYMENT SUCCESS EVENTS
-       (Payment Link Paid)
+       1️⃣ PAYMENT SUCCESS (PAYMENT LINK)
     ======================================================= */
     if (
       event.includes("payment") ||
-      event.includes("payment_succeeded") ||
-      event.includes("payment_collected")
+      event.includes("payment_collected") ||
+      event.includes("payment_succeeded")
     ) {
       const payment = payload.payment || payload;
       const customer = payload.customer || {};
@@ -115,8 +100,17 @@ router.post("/", async (req, res) => {
         null;
 
       if (!zohoCustomerId) {
-        console.log("❌ Payment webhook without customer id");
-        return res.json({ message: "ignored" });
+        console.log("❌ Payment webhook missing customer id");
+        return res.json({ message: "missing customer id" });
+      }
+
+      const status =
+        normalizeStatus(payment.payment_status) ||
+        normalizeStatus(payment.status);
+
+      if (status !== "active") {
+        console.log("⚠️ Payment not successful → ignoring");
+        return res.json({ message: "ignored unpaid" });
       }
 
       console.log("💰 PAYMENT SUCCESS — CUSTOMER:", zohoCustomerId);
@@ -134,18 +128,22 @@ router.post("/", async (req, res) => {
       );
 
       if (!result.affectedRows) {
-        console.log("❌ Company not found for payment");
+        console.log("❌ Company not found for payment webhook");
         return res.json({ message: "company not found" });
       }
 
-      console.log("🎉 SUBSCRIPTION ACTIVATED");
+      console.log("🎉 SUBSCRIPTION ACTIVATED VIA PAYMENT");
 
-      return res.json({ message: "Payment processed" });
+      return res.json({ message: "payment processed" });
     }
 
     /* ======================================================
        2️⃣ SUBSCRIPTION EVENTS
-       (Zoho Subscription Object Change)
+       Handles:
+       - trial
+       - active / live
+       - expired
+       - cancelled
     ======================================================= */
     const subscription = payload.subscription || {};
     const customer = payload.customer || subscription.customer || {};
@@ -157,28 +155,27 @@ router.post("/", async (req, res) => {
 
     if (!zohoCustomerId) {
       console.log("❌ Subscription webhook missing customer id");
-      return res.status(400).json({ message: "No customer id" });
+      return res.status(400).json({ message: "customer id missing" });
     }
 
     const zohoSubId = subscription.subscription_id || null;
 
-    const receivedStatus =
+    const statusRaw =
       subscription.status ||
       subscription.subscription_status ||
       null;
 
-    const newStatus = mapStatus(receivedStatus);
+    const newStatus = normalizeStatus(statusRaw);
 
     if (!newStatus) {
-      console.log("⚠️ Unknown subscription status:", receivedStatus);
+      console.log("⚠️ Unknown status →", statusRaw);
       return res.json({ message: "ignored unknown status" });
     }
 
+    console.log("📢 SUBSCRIPTION STATUS CHANGE →", newStatus);
+
     const [[company]] = await db.query(
-      `SELECT id, subscription_status 
-       FROM companies 
-       WHERE zoho_customer_id=? 
-       LIMIT 1`,
+      `SELECT id FROM companies WHERE zoho_customer_id=? LIMIT 1`,
       [zohoCustomerId]
     );
 
@@ -203,9 +200,9 @@ router.post("/", async (req, res) => {
       [newStatus, zohoSubId, newStatus, newStatus, zohoCustomerId]
     );
 
-    console.log(`✅ STATUS UPDATED → ${newStatus} | SUB ID: ${zohoSubId}`);
+    console.log(`✅ UPDATED IN DB → STATUS: ${newStatus}`);
 
-    return res.json({ message: "Subscription processed" });
+    return res.json({ message: "subscription processed" });
 
   } catch (err) {
     console.error("❌ WEBHOOK ERROR", err);
