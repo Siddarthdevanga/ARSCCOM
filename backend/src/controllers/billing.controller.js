@@ -1,4 +1,3 @@
-
 import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
 
@@ -25,9 +24,9 @@ export const createPayment = async (req, res) => {
     }
 
     if (plan === "enterprise") {
-      return res.status(400).json({
-        message: "Enterprise plan requires contacting sales team"
-      });
+      return res
+        .status(400)
+        .json({ message: "Enterprise plan requires contacting sales team" });
     }
 
     /* ================= FETCH COMPANY ================= */
@@ -93,7 +92,6 @@ export const createPayment = async (req, res) => {
           company_name: companyName || company.name,
           email
         });
-
       } catch (err) {
         if (err?.response?.status === 401) {
           console.warn("🔄 Zoho token expired — retrying create customer…");
@@ -104,7 +102,9 @@ export const createPayment = async (req, res) => {
             company_name: companyName || company.name,
             email
           });
-        } else throw err;
+        } else {
+          throw err;
+        }
       }
 
       customerId = response?.data?.customer?.customer_id;
@@ -119,9 +119,12 @@ export const createPayment = async (req, res) => {
 
     /* ================= PLAN PRICING ================= */
     const pricing = {
-      free: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      trial: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      business: { amount: 500, description: "PROMEET Business Subscription" }
+      free: { payment_amount: 49.0, description: "PROMEET Trial Processing Fee" },
+      trial: { payment_amount: 49.0, description: "PROMEET Trial Processing Fee" },
+      business: {
+        payment_amount: 500.0,
+        description: "PROMEET Business Subscription"
+      }
     };
 
     const selected = pricing[plan];
@@ -131,23 +134,20 @@ export const createPayment = async (req, res) => {
     }
 
     /**
-     * 🔥 CRITICAL FIX FOR ZOHO
-     * Zoho REQUIRES strict 2-decimal numeric:
-     * 49.00  ✔
-     * 500.00 ✔
-     * 49     ❌ "Invalid value passed for Total payment Amount"
+     * Ensure Zoho gets STRICT 2-DECIMAL numeric
+     * (not string)
      */
-    const amount = Number(selected.amount).toFixed(2); // keeps 2-decimals always
+    const payment_amount = Math.round(selected.payment_amount * 100) / 100;
 
     console.log(
-      `💳 Creating Zoho Payment Link → ₹${amount} (${plan}) for Company ${companyId}`
+      `💳 Creating Zoho Payment Link → ₹${payment_amount} (${plan}) for Company ${companyId}`
     );
 
     /* ================= CREATE PAYMENT LINK ================= */
     const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount: Number(amount), // ensure numeric
+      amount: payment_amount, // numeric ✔
       description: selected.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`
@@ -192,7 +192,6 @@ export const createPayment = async (req, res) => {
       message: "Payment link created successfully",
       url: paymentUrl
     });
-
   } catch (err) {
     console.error("❌ PAYMENT ERROR:", err?.response?.data || err);
 
