@@ -12,12 +12,12 @@ if (!BASE) {
 ====================================================== */
 const client = axios.create({
   baseURL: BASE,
-  timeout: 12000,
+  timeout: 15000,
   headers: { "Content-Type": "application/json" },
 });
 
 /* ======================================================
-   AUTH HEADERS
+   AUTH HEADER BUILDER
 ====================================================== */
 async function withAuth(headers = {}) {
   const token = await getZohoAccessToken();
@@ -33,19 +33,26 @@ async function withAuth(headers = {}) {
    ERROR HANDLER
 ====================================================== */
 function handleZohoError(err) {
-  const apiError = err?.response?.data;
-  console.error("❌ ZOHO ERROR:", apiError || err);
+  const res = err?.response;
+  const api = res?.data;
 
-  throw new Error(
-    apiError?.message ||
-    apiError?.error ||
+  console.error("❌ ZOHO API ERROR:", api || err);
+
+  const message =
+    api?.message ||
+    api?.error ||
+    api?.errors?.[0]?.message ||
+    res?.statusText ||
     err?.message ||
-    "Zoho API Request Failed"
-  );
+    "Zoho API Request Failed";
+
+  const error = new Error(message);
+  error.status = res?.status || 500;
+  throw error;
 }
 
 /* ======================================================
-   SAFE REQUEST WRAPPER
+   SAFE REQUEST WRAPPER (w/ 401 Refresh Once)
 ====================================================== */
 async function zohoRequest(method, url, body = null) {
   try {
@@ -59,25 +66,30 @@ async function zohoRequest(method, url, body = null) {
     ).data;
 
   } catch (err) {
+    // Retry ONCE if unauthorized
     if (err?.response?.status === 401) {
-      console.warn("🔄 Zoho token expired — retrying …");
+      console.warn("🔄 Zoho token expired — retrying once...");
 
-      return (
-        await client.request({
-          method,
-          url,
-          data: body,
-          headers: await withAuth(),
-        })
-      ).data;
+      try {
+        return (
+          await client.request({
+            method,
+            url,
+            data: body,
+            headers: await withAuth(),
+          })
+        ).data;
+      } catch (retryErr) {
+        return handleZohoError(retryErr);
+      }
     }
 
-    handleZohoError(err);
+    return handleZohoError(err);
   }
 }
 
 /* ======================================================
-   CUSTOMER
+   CREATE CUSTOMER
 ====================================================== */
 export async function createCustomer(companyName, email, phone = "") {
   try {
@@ -98,7 +110,7 @@ export async function createCustomer(companyName, email, phone = "") {
 }
 
 /* ======================================================
-   TRIAL SUBSCRIPTION
+   CREATE TRIAL SUBSCRIPTION
 ====================================================== */
 export async function createTrial(customerId) {
   try {
@@ -118,13 +130,14 @@ export async function createTrial(customerId) {
     });
 
     return data?.subscription?.subscription_id || null;
+
   } catch (err) {
     handleZohoError(err);
   }
 }
 
 /* ======================================================
-   PAYMENT LINK (Zoho Billing)
+   CREATE PAYMENT LINK
 ====================================================== */
 export async function createPaymentLink(
   customerId,
@@ -146,8 +159,10 @@ export async function createPaymentLink(
       customer_id: customerId,
       customer_name: customerName || undefined,
       currency_code: "INR",
-      payment_amount: numericAmount.toFixed(2),   // STRING ✔ required by Zoho Billing
-      description
+      amount: Number(numericAmount.toFixed(2)),   // ✔ modern Zoho Billing prefers numeric
+      description,
+      is_partial_payment: false,
+      reference_id: `PAY-${customerId}-${Date.now()}`
     };
 
     console.log("📤 Creating Zoho Payment Link:", payload);
@@ -155,6 +170,7 @@ export async function createPaymentLink(
     const data = await zohoRequest("post", "/paymentlinks", payload);
 
     return data?.payment_link?.url || null;
+
   } catch (err) {
     handleZohoError(err);
   }
