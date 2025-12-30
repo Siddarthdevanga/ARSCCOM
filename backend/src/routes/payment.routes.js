@@ -105,7 +105,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
         }
 
         console.log("⚠ Old payment link expired/closed → will generate new");
-      } catch (err) {
+      } catch {
         console.log("⚠ Could not verify old link → generating new");
       }
     }
@@ -123,7 +123,6 @@ router.post("/subscribe", authenticate, async (req, res) => {
       });
 
       customerId = data?.customer?.customer_id;
-
       if (!customerId) throw new Error("Zoho failed to create customer");
 
       await db.query(
@@ -134,13 +133,18 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     /* ================= PLAN PRICING ================= */
     const pricing = {
-      free: { amount: 49, description: "PROMEET Trial Processing Fee" },
-      business: { amount: 500, description: "PROMEET Business Subscription" }
+      free: {
+        payment_amount: 49.0,
+        description: "PROMEET Trial Processing Fee"
+      },
+      business: {
+        payment_amount: 500.0,
+        description: "PROMEET Business Subscription"
+      }
     };
 
-    const price = pricing[plan];
-
-    if (!price) {
+    const selected = pricing[plan];
+    if (!selected) {
       return res.status(400).json({
         success: false,
         message: "Invalid plan pricing"
@@ -148,14 +152,14 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     /**
-     * 🔥 IMPORTANT → ZOHO STRICT FORMAT
-     * Must be EXACT numeric:
-     * 49.00 / 500.00
-     * Not: 49 or "49"
+     * STRICT 2-DECIMAL numeric for Zoho
+     * 49.00 ✔ number
+     * 500.00 ✔ number
      */
-    let amount = Number(Number(price.amount).toFixed(2));
+    const payment_amount =
+      Math.round(Number(selected.payment_amount) * 100) / 100;
 
-    if (!amount || isNaN(amount) || amount <= 0) {
+    if (!payment_amount || isNaN(payment_amount) || payment_amount <= 0) {
       return res.status(400).json({
         success: false,
         message: "Invalid payment amount"
@@ -163,16 +167,14 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     console.log(
-      `💳 Creating Zoho Payment Link → ₹${amount.toFixed(
-        2
-      )} (${plan}) for Company ${companyId}`
+      `💳 Creating Zoho Payment Link → ₹${payment_amount} (${plan}) for Company ${companyId}`
     );
 
     const payload = {
       customer_id: customerId,
       currency_code: "INR",
-      amount, // numeric two-decimal enforced
-      description: price.description,
+      amount: payment_amount, // numeric ✔
+      description: selected.description,
       is_partial_payment: false,
       reference_id: `COMP-${companyId}-${Date.now()}`
     };
@@ -223,7 +225,6 @@ router.post("/subscribe", authenticate, async (req, res) => {
       message: "Payment link generated successfully",
       url: link.url
     });
-
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
