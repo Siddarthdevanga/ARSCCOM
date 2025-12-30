@@ -22,6 +22,7 @@ export default function LoginPage() {
     if (loading) return;
 
     const normalizedEmail = email.trim().toLowerCase();
+
     if (!normalizedEmail || !password) {
       setError("Email and password are required");
       return;
@@ -47,77 +48,68 @@ export default function LoginPage() {
         return;
       }
 
-      // Store token
-      localStorage.setItem("token", data.token);
-      document.cookie = `token=${data.token}; path=/`;
+      const token = data?.token;
+      const company = data?.company;
 
-      const company = data.company || null;
+      if (!token) {
+        setError("Login failed. Please try again.");
+        return;
+      }
+
+      // Store token
+      localStorage.setItem("token", token);
+      document.cookie = `token=${token}; path=/; SameSite=Lax`;
 
       /* ============================
-          NO COMPANY REGISTRATION
+          NO COMPANY FOUND
       ============================ */
       if (!company) {
-        setError(
-          "Your organization is not registered yet. Please register first."
-        );
+        setError("Your organization is not registered. Redirecting...");
 
-        setTimeout(() => {
-          router.replace("/auth/register");
-        }, 1500);
-
+        setTimeout(() => router.replace("/auth/register"), 1200);
         return;
       }
 
       localStorage.setItem("company", JSON.stringify(company));
 
       const status =
-        company.subscription_status?.toLowerCase() || "none";
+        company?.subscription_status?.toLowerCase() || "pending";
 
       console.log("SUBSCRIPTION STATUS:", status);
 
-      /* ============================
-          SUBSCRIPTION STATUS LOGIC
-      ============================ */
+      /* ==================================================
+          SUBSCRIPTION ROUTING LOGIC
+      =================================================== */
 
-      // never subscribed / payment pending
-      if (status === "none" || status === "pending") {
-        setError(
-          "Your subscription is not active. Please subscribe to continue."
-        );
+      // Pending payment or never completed
+      if (["none", "pending"].includes(status)) {
+        setError("Subscription not completed. Redirecting...");
 
-        setTimeout(() => {
-          router.replace("/auth/subscription");
-        }, 1500);
-
+        setTimeout(() => router.replace("/auth/subscription"), 1200);
         return;
       }
 
-      // expired / cancelled
+      // Blocked states
       if (["expired", "cancelled", "canceled"].includes(status)) {
-        setError("Your subscription has expired. Please renew to continue.");
+        setError("Your subscription is inactive. Redirecting...");
 
-        setTimeout(() => {
-          router.replace("/auth/subscription");
-        }, 1500);
-
+        setTimeout(() => router.replace("/auth/subscription"), 1200);
         return;
       }
 
-      // active or trial -> allow login
+      // Active or trial
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
       }
 
-      // fallback → subscription page
-      setError("Please activate your subscription to continue.");
+      // Fallback
+      setError("Subscription validation failed. Redirecting...");
+      setTimeout(() => router.replace("/auth/subscription"), 1200);
 
-      setTimeout(() => {
-        router.replace("/auth/subscription");
-      }, 1500);
     } catch (err) {
       console.error(err);
-      setError("Unable to connect to server");
+      setError("Unable to connect to server. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -128,7 +120,9 @@ export default function LoginPage() {
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
-          <div className={styles.logoText}>VISITOR MANAGEMENT PLATFORM</div>
+          <div className={styles.logoText}>
+            VISITOR MANAGEMENT PLATFORM
+          </div>
 
           <Image
             src="/Promeet Logo.png"
@@ -140,7 +134,6 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* TOP RIGHT NAV */}
         <div className={styles.nav}>
           <button onClick={() => setActiveTab("about")}>ABOUT</button>
           <button onClick={() => setActiveTab("plans")}>PLANS</button>
