@@ -5,86 +5,100 @@ import styles from "./style.module.css";
 export default function ContactUs() {
   return (
     <div className={styles.container}>
-      
-      {/* LEFT CONTENT */}
-      <div className={styles.leftPanel}>
-        <h1>Promeet – Smart Visitor & Conference Management</h1>
+      <header className={styles.header}>
+        <div className={styles.brandSection}>
+          <div className={styles.logoText}>VISITOR MANAGEMENT PLATFORM</div>
 
-        <p>
-          <strong>Promeet</strong> is a secure, intelligent and enterprise-grade
-          Visitor & Conference Management Platform designed to digitalize 
-          organization entry management, streamline conference bookings and 
-          ensure a professional visitor experience.
-        </p>
+          <img
+            src="/Promeet Logo.png"
+            alt="Promeet Logo"
+            className={styles.brandLogo}
+          />
+        </div>
+      </header>
 
-        <h3>Why Organizations Love Promeet?</h3>
-        <ul>
-          <li>
-            <strong>Instant Digital Visitor Pass</strong> – Visitors receive 
-            secure online Visitor Pass on email / SMS eliminating manual slips.
-          </li>
+      {/* MAIN BODY */}
+      <main className={styles.bodyWrapper}>
+        
+        {/* LEFT CARD */}
+        <div className={styles.leftCard}>
+          <h1>Promeet – Smart Visitor & Conference Management</h1>
 
-          <li>
-            <strong>Powerful Real-Time Dashboard</strong> – Track check-ins, 
-            check-outs, pending visitors, approvals and analytics in a 
-            beautiful admin dashboard.
-          </li>
+          <p>
+            <strong>Promeet</strong> is a secure, intelligent and enterprise-grade
+            Visitor & Conference Management Platform designed to digitalize
+            organization entry management, streamline conference bookings and
+            ensure a professional visitor experience.
+          </p>
 
-          <li>
-            <strong>Conference Room Booking + Email Alerts</strong> – 
-            Employees can instantly book conference rooms and meeting halls.
-            Organizer and attendees receive booking confirmation emails 
-            along with schedule and room details.
-          </li>
+          <h3>Why Organizations Love Promeet?</h3>
 
-          <li>
-            <strong>Company Specific Public URL</strong> – Each company gets 
-            a dedicated public portal where employees can directly login using 
-            OTP without separate employee onboarding. No HR dependency. No 
-            registrations. Completely hassle-free.
-          </li>
+          <ul>
+            <li>
+              <strong>Instant Digital Visitor Pass</strong> – Visitors receive secure 
+              online Visitor Pass on email / SMS eliminating manual slips.
+            </li>
 
-          <li>
-            <strong>Zero Manual Work</strong> – No spreadsheets, no registers,
-            no paper passes. Everything is automated.
-          </li>
+            <li>
+              <strong>Powerful Real-Time Dashboard</strong> – Track check-ins, 
+              check-outs, pending visitors, approvals and analytics in a beautiful 
+              admin dashboard.
+            </li>
 
-          <li>
-            <strong>Secure & Compliant</strong> – Access controlled, encrypted
-            and designed to support corporate compliance requirements.
-          </li>
-        </ul>
+            <li>
+              <strong>Conference Room Booking + Email Alerts</strong> – Employees can 
+              instantly book conference rooms. Organizer & attendees get confirmation 
+              emails with schedule & room details.
+            </li>
 
-        <p>
-          With Promeet, organizations save time, improve security, enhance 
-          visitor experience and empower employees with instant access to 
-          conference room management. Designed for Businesses, IT Parks, 
-          Corporates, Co-working Spaces, Manufacturing Units and Enterprises.
-        </p>
+            <li>
+              <strong>Company Specific Public URL</strong> – Each company gets a 
+              dedicated public portal where employees can login instantly using OTP — 
+              no HR dependency and no registrations required.
+            </li>
 
-        <h3>Let’s make your organization smarter with Promeet.</h3>
-      </div>
+            <li>
+              <strong>Zero Manual Work</strong> – No registers, no spreadsheets, no 
+              paper passes. Everything automated.
+            </li>
 
-      {/* RIGHT CONTACT PANEL */}
-      <div className={styles.rightPanel}>
-        <h2>Contact Us</h2>
-        <p>We are happy to support you. Reach out to us anytime.</p>
+            <li>
+              <strong>Secure & Compliant</strong> – Role based access, encrypted and 
+              designed to meet corporate security standards.
+            </li>
+          </ul>
 
-        <div className={styles.contactBox}>
-          <p><strong>Email:</strong></p>
-          <p>admin@wheelbrand.in</p>
+          <p>
+            With Promeet, organizations save time, improve security, enhance visitor 
+            experience and empower employees with instant access to conference room 
+            management. Suitable for Corporates, IT Parks, Co-working Spaces, 
+            Manufacturing Units and Enterprises.
+          </p>
+
+          <h3>Let’s make your organization smarter with Promeet.</h3>
         </div>
 
-        <div className={styles.contactBox}>
-          <p><strong>Phone:</strong></p>
-          <p>+91 86478 78785</p>
-        </div>
+        {/* RIGHT CONTACT CARD */}
+        <div className={styles.rightCard}>
+          <h2>Contact Us</h2>
+          <p>We are always happy to support you.</p>
 
-        <div className={styles.note}>
-          Our team will get in touch with you regarding onboarding, 
-          pricing, enterprise plans or product demonstrations.
+          <div className={styles.contactBox}>
+            <span>Email</span>
+            <strong>admin@wheelbrand.in</strong>
+          </div>
+
+          <div className={styles.contactBox}>
+            <span>Phone</span>
+            <strong>+91 86478 78785</strong>
+          </div>
+
+          <div className={styles.note}>
+            Contact us for onboarding, subscription plans, enterprise deployment 
+            or product demonstrations.
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
