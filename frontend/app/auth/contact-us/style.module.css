@@ -1,13 +1,20 @@
-/* GLOBAL */
+/* ================= GLOBAL ================= */
+html,
+body {
+  height: 100%;
+  overflow: auto; 
+  margin: 0;
+}
+
+/* ================= PAGE BACKGROUND ================= */
 .container {
   height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: "Segoe UI", Arial, sans-serif;
   color: white;
-  overflow: hidden;
 }
 
-/* HEADER */
+/* ================= HEADER ================= */
 .header {
   padding: 24px 60px;
   position: relative;
@@ -30,14 +37,14 @@
   max-width: 100%;
 }
 
-/* MAIN BODY */
+/* ================= BODY LAYOUT ================= */
 .bodyWrapper {
   display: flex;
   gap: 30px;
   padding: 0 60px;
 }
 
-/* LEFT INFO CARD */
+/* ================= LEFT CARD ================= */
 .leftCard {
   flex: 2;
   background: white;
@@ -45,8 +52,9 @@
   border-radius: 20px;
   padding: 30px 32px;
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
-  overflow-y: auto;
   height: 70vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .leftCard h1 {
@@ -63,17 +71,24 @@
   line-height: 1.6;
 }
 
-.leftCard ul {
-  margin-top: 10px;
-}
-
 .leftCard li {
   margin-bottom: 10px;
   font-size: 14px;
   line-height: 1.6;
 }
 
-/* RIGHT CONTACT CARD */
+/* Hide Scrollbar but keep scroll working */
+.leftCard::-webkit-scrollbar,
+.rightCard::-webkit-scrollbar {
+  display: none;
+}
+
+.leftCard,
+.rightCard {
+  scrollbar-width: none;
+}
+
+/* ================= RIGHT CARD ================= */
 .rightCard {
   flex: 1;
   background: white;
@@ -82,6 +97,8 @@
   padding: 30px;
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
   height: 70vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .rightCard h2 {
@@ -113,13 +130,15 @@
   color: #444;
 }
 
-/* RESPONSIVE */
+/* ================= RESPONSIVE ================= */
 @media(max-width: 1024px){
   .bodyWrapper {
     flex-direction: column;
+    padding: 20px;
   }
 
-  .rightCard, .leftCard {
+  .leftCard,
+  .rightCard {
     height: auto;
   }
 }
