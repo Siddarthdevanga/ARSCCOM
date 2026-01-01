@@ -5,6 +5,7 @@ import styles from "./style.module.css";
 export default function ContactUs() {
   return (
     <div className={styles.container}>
+      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
           <div className={styles.logoText}>VISITOR MANAGEMENT PLATFORM</div>
@@ -35,53 +36,53 @@ export default function ContactUs() {
 
           <ul>
             <li>
-              <strong>Instant Digital Visitor Pass</strong> – Visitors receive secure 
-              online Visitor Pass on email / SMS eliminating manual slips.
+              <strong>Instant Digital Visitor Pass</strong> – Visitors receive secure
+              online Visitor Pass via Email / SMS eliminating manual slips.
             </li>
 
             <li>
-              <strong>Powerful Real-Time Dashboard</strong> – Track check-ins, 
-              check-outs, pending visitors, approvals and analytics in a beautiful 
-              admin dashboard.
+              <strong>Powerful Real-Time Dashboard</strong> – Track check-ins,
+              check-outs, pending visitors, approvals and analytics in a
+              beautiful live dashboard.
             </li>
 
             <li>
-              <strong>Conference Room Booking + Email Alerts</strong> – Employees can 
-              instantly book conference rooms. Organizer & attendees get confirmation 
-              emails with schedule & room details.
+              <strong>Conference Room Booking + Email Alerts</strong> – Employees can
+              instantly book conference & meeting rooms. Organizer and attendees
+              receive booking confirmation emails with complete details.
             </li>
 
             <li>
-              <strong>Company Specific Public URL</strong> – Each company gets a 
-              dedicated public portal where employees can login instantly using OTP — 
-              no HR dependency and no registrations required.
+              <strong>Company Specific Public URL</strong> – Each company gets a
+              dedicated public portal. Employees login instantly using OTP.
+              No HR dependency. No employee registration. Fully hassle-free.
             </li>
 
             <li>
-              <strong>Zero Manual Work</strong> – No registers, no spreadsheets, no 
-              paper passes. Everything automated.
+              <strong>Zero Manual Work</strong> – No registers, no spreadsheets,
+              no paper passes. Everything automated.
             </li>
 
             <li>
-              <strong>Secure & Compliant</strong> – Role based access, encrypted and 
-              designed to meet corporate security standards.
+              <strong>Secure & Compliant</strong> – Role-based access, encryption
+              and corporate level security standards.
             </li>
           </ul>
 
           <p>
-            With Promeet, organizations save time, improve security, enhance visitor 
-            experience and empower employees with instant access to conference room 
-            management. Suitable for Corporates, IT Parks, Co-working Spaces, 
-            Manufacturing Units and Enterprises.
+            With Promeet, organizations save time, improve security, enhance
+            visitor experience and empower employees with instant access to
+            conference room management. Designed for Corporates, IT Parks,
+            Co-working Spaces, Manufacturing Units and Enterprises.
           </p>
 
           <h3>Let’s make your organization smarter with Promeet.</h3>
         </div>
 
-        {/* RIGHT CONTACT CARD */}
+        {/* RIGHT CARD */}
         <div className={styles.rightCard}>
           <h2>Contact Us</h2>
-          <p>We are always happy to support you.</p>
+          <p>We’re always happy to assist you.</p>
 
           <div className={styles.contactBox}>
             <span>Email</span>
@@ -94,8 +95,8 @@ export default function ContactUs() {
           </div>
 
           <div className={styles.note}>
-            Contact us for onboarding, subscription plans, enterprise deployment 
-            or product demonstrations.
+            Reach out for onboarding, subscription plans, enterprise rollout or
+            a product demo. Our team will support you end-to-end.
           </div>
         </div>
       </main>
