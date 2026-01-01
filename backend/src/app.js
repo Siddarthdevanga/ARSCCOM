@@ -16,7 +16,7 @@ import billingRepair from "./routes/billingRepair.route.js";
 const app = express();
 
 /* ======================================================
-   TRUST PROXY (HTTPS / AWS / NGINX)
+   TRUST PROXY (IMPORTANT for HTTPS / AWS / NGINX / Cloudflare)
 ====================================================== */
 app.set("trust proxy", 1);
 
@@ -25,7 +25,7 @@ app.set("trust proxy", 1);
 ====================================================== */
 app.use(
   helmet({
-    crossOriginResourcePolicy: false // allow logo + static assets
+    crossOriginResourcePolicy: false // allow external logo/images
   })
 );
 
@@ -40,7 +40,7 @@ app.use(
 );
 
 /* ======================================================
-   CORS
+   CORS CONFIGURATION
 ====================================================== */
 const allowedOrigins = [
   "http://localhost:3000",
@@ -53,11 +53,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / Internal
+      if (!origin) return callback(null, true); // Postman / Server Internal Calls
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
-      console.warn("❌ BLOCKED ORIGIN:", origin);
-      callback(new Error("Not allowed by CORS"));
+      console.warn("❌ BLOCKED CORS ORIGIN:", origin);
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true
   })
@@ -66,12 +66,11 @@ app.use(
 /* ======================================================
    BODY PARSERS
 ====================================================== */
-// Supports Zoho JSON + x-www-form-urlencoded webhooks
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 /* ======================================================
-   HEALTH CHECK
+   HEALTH CHECK ENDPOINT
 ====================================================== */
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -83,7 +82,7 @@ app.get("/health", (req, res) => {
 });
 
 /* ======================================================
-   ROUTES
+   ROUTE MAPPINGS
 ====================================================== */
 
 // AUTH
@@ -101,13 +100,13 @@ app.use("/api/public/conference", conferencePublicRoutes);
 // PAYMENT
 app.use("/api/payment", paymentRoutes);
 
-// SUBSCRIPTION POPUP INFO
+// SUBSCRIPTION DETAILS (3-dot popup)
 app.use("/api/subscription", subscriptionRoutes);
 
-// BILLING FIX / REPAIR TOOL
+// BILLING REPAIR / RESYNC TOOL
 app.use("/api/billing/repair", billingRepair);
 
-// ZOHO WEBHOOK (KEEP BEFORE 404 ALWAYS)
+// ZOHO WEBHOOK (IMPORTANT — Must be before 404)
 app.use("/api/webhook", webhookRoutes);
 
 /* ======================================================
