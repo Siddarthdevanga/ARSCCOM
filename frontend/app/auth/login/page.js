@@ -38,10 +38,7 @@ export default function LoginPage() {
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: normalizedEmail,
-          password
-        })
+        body: JSON.stringify({ email: normalizedEmail, password }),
       });
 
       const data = await res.json();
@@ -59,9 +56,6 @@ export default function LoginPage() {
         return;
       }
 
-      /* ============================
-          SAVE SESSION
-      ============================ */
       localStorage.setItem("token", token);
       document.cookie = `token=${token}; path=/; SameSite=Lax`;
 
@@ -74,26 +68,26 @@ export default function LoginPage() {
       localStorage.setItem("company", JSON.stringify(company));
 
       const status = company?.subscription_status?.toLowerCase() || "pending";
-      console.log("SUBSCRIPTION STATUS:", status);
+      console.log("SUBSCRIPTION STATUS →", status);
 
-      /* ==================================================
-            SUBSCRIPTION REDIRECT RULES
-      =================================================== */
+      /* =========================
+            REDIRECT RULES
+      ========================= */
 
-      // 1️⃣ Not subscribed / payment not done yet
+      // Not subscribed yet
       if (["none", "pending"].includes(status)) {
         router.replace("/auth/subscription");
         return;
       }
 
-      // 2️⃣ Expired / cancelled → push back to subscription
+      // Expired / Cancelled
       if (["expired", "cancelled", "canceled"].includes(status)) {
-        setError("Your subscription is inactive. Please renew.");
-        setTimeout(() => router.replace("/auth/subscription"), 1000);
+        setError("Your subscription is inactive. Redirecting to subscription...");
+        setTimeout(() => router.replace("/auth/subscription"), 700);
         return;
       }
 
-      // 3️⃣ Active or Trial → Welcome 🎉
+      // Active / Trial
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
@@ -101,7 +95,6 @@ export default function LoginPage() {
 
       // Fallback
       router.replace("/auth/subscription");
-
     } catch (err) {
       console.error("LOGIN ERROR:", err);
       setError("Unable to connect to server. Please try again.");
@@ -129,12 +122,102 @@ export default function LoginPage() {
           />
         </div>
 
+        {/* NAV BUTTONS */}
         <div className={styles.nav}>
           <button onClick={() => setActiveTab("about")}>ABOUT</button>
           <button onClick={() => setActiveTab("plans")}>PLANS</button>
           <button onClick={() => setActiveTab("contact")}>CONTACT</button>
         </div>
       </header>
+
+      {/* ABOUT SECTION */}
+      {activeTab === "about" && (
+        <div className={styles.dropdownBox}>
+          <h2>About Our Platform</h2>
+          <p>
+            Promeet is a secure Visitor & Conference Management Platform
+            designed to digitalize visitor flow, improve security, and enhance
+            organizational efficiency.
+          </p>
+          <p>
+            Manage visitors, schedule meetings, track conference rooms, and
+            maintain complete control — all in one place.
+          </p>
+
+          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+            Close
+          </button>
+        </div>
+      )}
+
+      {/* PLANS SECTION */}
+      {activeTab === "plans" && (
+        <div className={styles.dropdownBox}>
+          <h2>Subscription Plans</h2>
+
+          <div className={styles.planContainer}>
+            {/* FREE PLAN */}
+            <div className={styles.planCard}>
+              <h3>FREE</h3>
+              <h2>Free Trial</h2>
+              <ul>
+                <li>✔ Valid 15 Days</li>
+                <li>✔ 100 Visitor Bookings</li>
+                <li>✔ 100 Conference Bookings</li>
+              </ul>
+              <Link href="/auth/register">
+                <button className={styles.planBtn}>Enroll Now</button>
+              </Link>
+            </div>
+
+            {/* BUSINESS PLAN */}
+            <div className={styles.planCard}>
+              <h3>BUSINESS</h3>
+              <h2>₹500 / Month</h2>
+              <ul>
+                <li>✔ Unlimited Visitors</li>
+                <li>✔ 1000 Conference Rooms</li>
+                <li>✔ Dedicated Support</li>
+              </ul>
+              <Link href="/auth/register">
+                <button className={styles.planBtn}>Enroll Now</button>
+              </Link>
+            </div>
+
+            {/* ENTERPRISE */}
+            <div className={styles.planCard}>
+              <h3>ENTERPRISE</h3>
+              <h2>Custom Pricing</h2>
+              <ul>
+                <li>✔ Tailored Solutions</li>
+                <li>✔ Advanced Security</li>
+                <li>✔ Premium Support</li>
+              </ul>
+              <Link href="/auth/contact-us">
+                <button className={styles.planBtn}>Contact Us</button>
+              </Link>
+            </div>
+          </div>
+
+          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+            Close
+          </button>
+        </div>
+      )}
+
+      {/* CONTACT SECTION */}
+      {activeTab === "contact" && (
+        <div className={styles.dropdownBox}>
+          <h2>Contact Us</h2>
+          <p>Email: admin@wheelbrand.in</p>
+          <p>Phone: 8647878785</p>
+          <p>We are happy to support you.</p>
+
+          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+            Close
+          </button>
+        </div>
+      )}
 
       {/* LOGIN CARD */}
       <main className={styles.loginWrapper}>
@@ -162,17 +245,15 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p
-              style={{
-                color: "#ff3333",
-                background: "rgba(255,0,0,.15)",
-                padding: "8px",
-                borderRadius: "6px",
-                textAlign: "center",
-                marginTop: "6px",
-                fontSize: "13px",
-              }}
-            >
+            <p style={{
+              color: "#ff3333",
+              background: "rgba(255,0,0,.15)",
+              padding: "8px",
+              borderRadius: "6px",
+              textAlign: "center",
+              marginTop: "6px",
+              fontSize: "13px",
+            }}>
               {error}
             </p>
           )}
