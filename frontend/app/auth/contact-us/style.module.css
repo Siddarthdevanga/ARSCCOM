@@ -1,0 +1,125 @@
+/* GLOBAL */
+.container {
+  height: 100vh;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: white;
+  overflow: hidden;
+}
+
+/* HEADER */
+.header {
+  padding: 24px 60px;
+  position: relative;
+}
+
+.brandSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.logoText {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  margin-bottom: 18px;
+}
+
+.brandLogo {
+  width: 480px;
+  max-width: 100%;
+}
+
+/* MAIN BODY */
+.bodyWrapper {
+  display: flex;
+  gap: 30px;
+  padding: 0 60px;
+}
+
+/* LEFT INFO CARD */
+.leftCard {
+  flex: 2;
+  background: white;
+  color: #222;
+  border-radius: 20px;
+  padding: 30px 32px;
+  box-shadow: 0 25px 60px rgba(0,0,0,.35);
+  overflow-y: auto;
+  height: 70vh;
+}
+
+.leftCard h1 {
+  color: #4b008f;
+}
+
+.leftCard h3 {
+  color: #4b008f;
+  margin-top: 20px;
+}
+
+.leftCard p {
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.leftCard ul {
+  margin-top: 10px;
+}
+
+.leftCard li {
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* RIGHT CONTACT CARD */
+.rightCard {
+  flex: 1;
+  background: white;
+  color: #333;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0 25px 60px rgba(0,0,0,.35);
+  height: 70vh;
+}
+
+.rightCard h2 {
+  color: #4b008f;
+}
+
+.contactBox {
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #f7f7ff;
+  border: 1px solid rgba(0,0,0,0.18);
+}
+
+.contactBox span {
+  font-size: 13px;
+  color: #666;
+}
+
+.contactBox strong {
+  display: block;
+  margin-top: 5px;
+  font-size: 15px;
+}
+
+.note {
+  margin-top: 30px;
+  font-size: 14px;
+  color: #444;
+}
+
+/* RESPONSIVE */
+@media(max-width: 1024px){
+  .bodyWrapper {
+    flex-direction: column;
+  }
+
+  .rightCard, .leftCard {
+    height: auto;
+  }
+}
