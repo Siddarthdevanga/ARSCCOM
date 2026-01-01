@@ -12,11 +12,12 @@ import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
 import billingRepair from "./routes/billingRepair.route.js";
+import billingCron from "./routes/billingCron.route.js";
 
 const app = express();
 
 /* ======================================================
-   TRUST PROXY (IMPORTANT for HTTPS / AWS / NGINX / Cloudflare)
+   TRUST PROXY (HTTPS / AWS / Load Balancer)
 ====================================================== */
 app.set("trust proxy", 1);
 
@@ -25,7 +26,7 @@ app.set("trust proxy", 1);
 ====================================================== */
 app.use(
   helmet({
-    crossOriginResourcePolicy: false // allow external logo/images
+    crossOriginResourcePolicy: false // allow logos/assets
   })
 );
 
@@ -40,7 +41,7 @@ app.use(
 );
 
 /* ======================================================
-   CORS CONFIGURATION
+   CORS CONFIG
 ====================================================== */
 const allowedOrigins = [
   "http://localhost:3000",
@@ -53,11 +54,11 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / Server Internal Calls
+      if (!origin) return callback(null, true); // Postman / Internal / Cron
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
       console.warn("❌ BLOCKED CORS ORIGIN:", origin);
-      return callback(new Error("Not allowed by CORS"));
+      return callback(new Error("CORS Not Allowed"));
     },
     credentials: true
   })
@@ -70,7 +71,7 @@ app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
 /* ======================================================
-   HEALTH CHECK ENDPOINT
+   HEALTH CHECK
 ====================================================== */
 app.get("/health", (req, res) => {
   res.status(200).json({
@@ -82,7 +83,7 @@ app.get("/health", (req, res) => {
 });
 
 /* ======================================================
-   ROUTE MAPPINGS
+   ROUTES
 ====================================================== */
 
 // AUTH
@@ -100,13 +101,16 @@ app.use("/api/public/conference", conferencePublicRoutes);
 // PAYMENT
 app.use("/api/payment", paymentRoutes);
 
-// SUBSCRIPTION DETAILS (3-dot popup)
+// SUBSCRIPTION POPUP INFO
 app.use("/api/subscription", subscriptionRoutes);
 
-// BILLING REPAIR / RESYNC TOOL
+// BILLING SELF-REPAIR / MANUAL SYNC TOOL
 app.use("/api/billing/repair", billingRepair);
 
-// ZOHO WEBHOOK (IMPORTANT — Must be before 404)
+// CRON BASED AUTO SYNC (runs + manual trigger)
+app.use("/api/billing/cron", billingCron);
+
+// ZOHO WEBHOOK — MUST BE BEFORE 404
 app.use("/api/webhook", webhookRoutes);
 
 /* ======================================================
