@@ -1,26 +1,48 @@
-/* PAGE BACKGROUND */
+/* =========================
+   GLOBAL SCROLL — ALWAYS HIDE
+========================= */
 html,
 body {
   height: 100%;
-  overflow: auto;
   margin: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* Hide scrollbar everywhere */
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* Old Edge / IE */
 }
 
+/* Chrome / Safari / Edge */
+*::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* =========================
+   PAGE BACKGROUND
+========================= */
 .container {
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   font-family: "Segoe UI", Arial, sans-serif;
   color: white;
+
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* MAIN LAYOUT */
+/* =========================
+   LAYOUT
+========================= */
 .bodyWrapper {
   display: flex;
   gap: 30px;
   padding: 40px 60px;
 }
 
-/* LEFT PANEL */
+/* =========================
+   LEFT PANEL
+========================= */
 .leftCard {
   flex: 2;
   background: white;
@@ -29,17 +51,14 @@ body {
   padding: 30px 32px;
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
   height: 80vh;
+
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-.leftCard h1 {
-  color: #4b008f;
-}
-
+.leftCard h1,
 .leftCard h3 {
   color: #4b008f;
-  margin-top: 20px;
 }
 
 .leftCard p {
@@ -53,7 +72,9 @@ body {
   line-height: 1.6;
 }
 
-/* RIGHT PANEL */
+/* =========================
+   RIGHT PANEL
+========================= */
 .rightCard {
   flex: 1;
   background: white;
@@ -62,6 +83,7 @@ body {
   padding: 30px;
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
   height: 80vh;
+
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
@@ -95,18 +117,9 @@ body {
   color: #444;
 }
 
-/* HIDE SCROLLBAR BUT KEEP SCROLL */
-.leftCard::-webkit-scrollbar,
-.rightCard::-webkit-scrollbar {
-  display: none;
-}
-
-.leftCard,
-.rightCard {
-  scrollbar-width: none;
-}
-
-/* RESPONSIVE */
+/* =========================
+   RESPONSIVE
+========================= */
 @media(max-width: 1024px){
   .bodyWrapper {
     flex-direction: column;
