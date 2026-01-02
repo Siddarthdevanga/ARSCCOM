@@ -7,6 +7,12 @@ const router = express.Router();
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
+/* ================= DEBUG LOGGER (keeps sanity) ================= */
+router.use((req, res, next) => {
+  console.log("✔ Conference API:", req.method, req.originalUrl);
+  next();
+});
+
 /* ======================================================
    DASHBOARD STATS
 ====================================================== */
@@ -114,6 +120,8 @@ router.put("/rooms/:id", async (req, res) => {
     const roomId = Number(req.params.id);
     const { room_name } = req.body;
 
+    console.log("🛠 Rename Attempt:", { roomId, room_name, companyId });
+
     if (!roomId || isNaN(roomId)) {
       return res.status(400).json({ message: "Invalid room ID" });
     }
@@ -131,12 +139,12 @@ router.put("/rooms/:id", async (req, res) => {
     );
 
     if (!result.affectedRows) {
+      console.log("❌ Room not found / wrong company / inactive");
       return res.status(404).json({
         message: "Room not found or not authorized"
       });
     }
 
-    // fetch updated room to return
     const [[updatedRoom]] = await db.query(
       `SELECT id, room_number, room_name
        FROM conference_rooms
@@ -155,5 +163,6 @@ router.put("/rooms/:id", async (req, res) => {
     return res.status(500).json({ message: "Unable to rename room" });
   }
 });
+
 
 export default router;
