@@ -3,12 +3,11 @@ html,
 body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;                  /* scrolling enabled */
-  -webkit-overflow-scrolling: touch; /* smooth scroll */
-  scrollbar-width: none;             /* Firefox hide scrollbar */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
-/* Chrome / Safari / Edge */
 *::-webkit-scrollbar {
   display: none;
 }
@@ -21,7 +20,7 @@ body {
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
 
-  overflow-y: auto;                  /* scroll inside page */
+  overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
 }
@@ -32,6 +31,40 @@ body {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 28px;
+}
+
+.leftHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Sidebar Trigger Next to Company Name */
+.leftMenuTrigger {
+  width: 34px;
+  height: 60px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.18);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding-left: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: .25s ease;
+}
+
+.leftMenuTrigger:hover {
+  transform: scale(1.06);
+}
+
+.leftMenuTrigger span {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
 }
 
 .companyName {
@@ -105,7 +138,6 @@ body {
   word-break: break-all;
 }
 
-/* BOOK BUTTON */
 .bookBtn {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
@@ -204,6 +236,66 @@ body {
   font-weight: 700;
 }
 
+/* ================= LEFT SLIDE PANEL (30%) ================= */
+.leftPanel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 30%;
+  height: 100vh;
+
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  color: white;
+
+  border-right: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 6px 0 22px rgba(0,0,0,.35);
+  padding: 22px;
+  animation: panelSlide .3s ease-in-out;
+
+  backdrop-filter: blur(8px);
+  z-index: 100;
+}
+
+@keyframes panelSlide {
+  from { left: -35%; opacity: .4; }
+  to { left: 0; opacity: 1; }
+}
+
+/* ================= PANEL HEADER ================= */
+.leftPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.leftPanelHeader h3 {
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.leftCloseBtn {
+  background: #ff4d4d;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 12px;
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+  transition: .2s;
+}
+
+.leftCloseBtn:hover {
+  transform: scale(1.05);
+}
+
+/* ================= PANEL BODY ================= */
+.leftPanelContent {
+  height: calc(100vh - 80px);
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
 /* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
   .container {
@@ -220,5 +312,9 @@ body {
 
   .publicRow {
     gap: 10px;
+  }
+
+  .leftPanel {
+    width: 85%;
   }
 }
