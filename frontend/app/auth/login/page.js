@@ -146,8 +146,8 @@ export default function LoginPage() {
           <div className={styles.planContainer}>
             {/* FREE PLAN */}
             <div className={styles.planCard}>
-              <h3>FREE</h3>
-              <h2>Free Trial</h2>
+              <h3>TRAIL</h3>
+              <h2>₹49 / 15 DAYS</h2>
               <ul>
                 <li>✔ Valid 15 Days</li>
                 <li>✔ 100 Visitor Bookings</li>
