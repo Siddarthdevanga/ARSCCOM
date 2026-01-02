@@ -3,7 +3,6 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 
-/* ================= ROUTES ================= */
 import authRoutes from "./routes/auth.routes.js";
 import visitorRoutes from "./routes/visitor.routes.js";
 import conferenceRoutes from "./routes/conference.routes.js";
@@ -17,23 +16,17 @@ import zohoPushRoutes from "./routes/zohoPush.route.js";
 
 const app = express();
 
-/* ======================================================
-   TRUST PROXY (HTTPS / AWS / Load Balancer)
-====================================================== */
+/* ================= PROXY ================= */
 app.set("trust proxy", 1);
 
-/* ======================================================
-   SECURITY HEADERS
-====================================================== */
+/* ================= SECURITY ================= */
 app.use(
   helmet({
     crossOriginResourcePolicy: false
   })
 );
 
-/* ======================================================
-   PERFORMANCE
-====================================================== */
+/* ================= COMPRESSION ================= */
 app.use(
   compression({
     level: 6,
@@ -41,15 +34,13 @@ app.use(
   })
 );
 
-/* ======================================================
-   CORS
-====================================================== */
+/* ================= CORS ================= */
 const allowedOrigins = [
   "http://localhost:3000",
   "http://13.205.13.110",
   "http://13.205.13.110:3000",
   "https://wheelbrand.in",
-  "https://www.wheelbrand.in"
+  "https://www.wheelbrand.in",
 ];
 
 app.use(
@@ -61,83 +52,53 @@ app.use(
       console.warn("❌ BLOCKED CORS ORIGIN:", origin);
       return callback(new Error("CORS Not Allowed"));
     },
-    credentials: true
+    credentials: true,
   })
 );
 
-/* ======================================================
-   BODY PARSERS
-====================================================== */
+/* ================= BODY PARSER ================= */
 app.use(express.json({ limit: "20mb" }));
 app.use(express.urlencoded({ extended: true, limit: "20mb" }));
 
-/* ======================================================
-   HEALTH CHECK
-====================================================== */
+/* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
-  res.status(200).json({
+  res.json({
     status: "OK",
     uptime: process.uptime(),
     timestamp: new Date(),
-    environment: process.env.NODE_ENV || "development"
+    environment: process.env.NODE_ENV || "development",
   });
 });
 
-/* ======================================================
-   ROUTES
-====================================================== */
-
-// AUTH
+/* ================= ROUTES ================= */
 app.use("/api/auth", authRoutes);
-
-// VISITORS
 app.use("/api/visitors", visitorRoutes);
-
-// CONFERENCE (ADMIN)
 app.use("/api/conference", conferenceRoutes);
-
-// CONFERENCE (PUBLIC)
 app.use("/api/public/conference", conferencePublicRoutes);
-
-// PAYMENT
 app.use("/api/payment", paymentRoutes);
-
-// SUBSCRIPTION DETAILS
 app.use("/api/subscription", subscriptionRoutes);
-
-// BILLING SELF-REPAIR
 app.use("/api/billing/repair", billingRepair);
-
-// CRON AUTO SYNC
 app.use("/api/billing/cron", billingCron);
-
-// ✅ ZOHO DIRECT PUSH (Correct Mounting)
 app.use("/api/payment", zohoPushRoutes);
-
-// ZOHO WEBHOOK
 app.use("/api/webhook", webhookRoutes);
 
-/* ======================================================
-   404 HANDLER
-====================================================== */
+/* ================= 404 ================= */
 app.use((req, res) => {
   res.status(404).json({
     success: false,
     message: "Route not found",
-    path: req.originalUrl
+    path: req.originalUrl,
   });
 });
 
-/* ======================================================
-   GLOBAL ERROR HANDLER
-====================================================== */
+/* ================= GLOBAL ERROR ================= */
 app.use((err, req, res, next) => {
   console.error("❌ GLOBAL ERROR:", err?.message || err);
   if (err?.stack) console.error(err.stack);
 
   res.status(500).json({
     success: false,
-    message: "Internal Server Error"
+    message: "Internal Server Error",
   });
 });
 
