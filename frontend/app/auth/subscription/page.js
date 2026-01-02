@@ -15,7 +15,7 @@ export default function SubscriptionPage() {
     "https://www.wheelbrand.in";
 
   /* ======================================================
-      VALIDATE LOGIN + CURRENT STATUS
+        VALIDATE LOGIN + SUBSCRIPTION STATUS
   ====================================================== */
   useEffect(() => {
     try {
@@ -38,22 +38,20 @@ export default function SubscriptionPage() {
 
       console.log("🔎 SUBSCRIPTION PAGE STATUS:", status);
 
-      // Already subscribed → go home
+      // Already subscribed → Go home
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
       }
 
-      // Expired / cancelled should still stay here
-      // because they need to pay again (so do NOT redirect)
-
-    } catch (err) {
+      // Expired / cancelled stay on page to renew
+    } catch {
       router.replace("/auth/login");
     }
-  }, []);
+  }, [router]);
 
   /* ======================================================
-      HANDLE PLAN ACTION
+        HANDLE PLAN SELECTION
   ====================================================== */
   const choosePlan = async (plan) => {
     if (loadingPlan) return;
@@ -61,9 +59,9 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
-    // ENTERPRISE
+    // ENTERPRISE → Contact Page (correct absolute route)
     if (plan === "enterprise") {
-      router.push("auth/contact-us");
+      router.push("/auth/contact-us");
       setLoadingPlan("");
       return;
     }
@@ -97,11 +95,10 @@ export default function SubscriptionPage() {
         return;
       }
 
-      // Forbidden state or backend denial
+      // Backend denied
       if (res.status === 403) {
         setError(
-          data?.message ||
-            "Subscription already active or not allowed."
+          data?.message || "Subscription already active or not allowed."
         );
         return;
       }
@@ -114,10 +111,10 @@ export default function SubscriptionPage() {
       }
 
       /**
-       * BACKEND RETURNS:
-       *  success:true
-       *  reused:true   (if same pending link reused)
-       *  url:"payment-link"
+       * Expected backend return:
+       * success: true
+       * reused: true (if old pending payment link used)
+       * url: "redirect-payment-url"
        */
       if (data?.url) {
         window.location.href = data.url;
@@ -134,7 +131,7 @@ export default function SubscriptionPage() {
   };
 
   /* ======================================================
-      VIEW
+        UI
   ====================================================== */
   return (
     <div className={styles.container}>
@@ -148,9 +145,9 @@ export default function SubscriptionPage() {
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.planGrid}>
-        {/* ================= FREE TRIAL ================= */}
+        {/* ================= TRIAL ================= */}
         <div className={styles.card}>
-          <h3 className={styles.planName}> TRIAL</h3>
+          <h3 className={styles.planName}>TRIAL</h3>
           <p className={styles.price}>₹49</p>
           <p className={styles.subText}>Valid for 15 days</p>
 
@@ -165,7 +162,9 @@ export default function SubscriptionPage() {
             disabled={loadingPlan === "free"}
             onClick={() => choosePlan("free")}
           >
-            {loadingPlan === "free" ? "Processing..." : "Proceed to Payment"}
+            {loadingPlan === "free"
+              ? "Processing..."
+              : "Proceed to Payment"}
           </button>
         </div>
 
@@ -198,7 +197,9 @@ export default function SubscriptionPage() {
         <div className={styles.card}>
           <h3 className={styles.planName}>ENTERPRISE</h3>
           <p className={styles.price}>Custom Pricing</p>
-          <p className={styles.subText}>Tailored for large organizations</p>
+          <p className={styles.subText}>
+            Tailored for large organizations
+          </p>
 
           <ul className={styles.features}>
             <li>• Custom Solutions</li>
@@ -218,3 +219,4 @@ export default function SubscriptionPage() {
     </div>
   );
 }
+
