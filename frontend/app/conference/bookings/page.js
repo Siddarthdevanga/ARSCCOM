@@ -146,6 +146,24 @@ export default function ConferenceBookings() {
     }
   };
 
+  // ===============================
+  // BLOCKED SLOTS FOR EDIT MODE
+  // ===============================
+  const getBlockedSlotsExcluding = (bookingId) => {
+    const set = new Set();
+
+    dayBookings.forEach(b => {
+      if (b.id === bookingId) return;
+      TIME_OPTIONS.forEach(t => {
+        if (t.value >= b.start_time && t.value < b.end_time) {
+          set.add(t.value);
+        }
+      });
+    });
+
+    return set;
+  };
+
   const saveEdit = async id => {
     if (!editStart || !editEnd)
       return setError("Select both start & end");
@@ -268,81 +286,93 @@ export default function ConferenceBookings() {
 
           {dayBookings.length === 0 && <p>No bookings</p>}
 
-          {dayBookings.map(b => (
-            <div key={b.id} className={styles.booking}>
-              {editingId === b.id ? (
-                <>
-                  <b>Edit Booking</b>
+          {dayBookings.map(b => {
+            const blocked = getBlockedSlotsExcluding(b.id);
 
-                  <select
-                    value={editStart}
-                    onChange={e => setEditStart(e.target.value)}
-                  >
-                    {TIME_OPTIONS.map(t => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+            const editableStartOptions = TIME_OPTIONS.filter(
+              t => !blocked.has(t.value)
+            );
 
-                  <select
-                    value={editEnd}
-                    onChange={e => setEditEnd(e.target.value)}
-                  >
-                    {TIME_OPTIONS.filter(t => t.value > editStart).map(t => (
-                      <option key={t.value} value={t.value}>
-                        {t.label}
-                      </option>
-                    ))}
-                  </select>
+            const editableEndOptions = TIME_OPTIONS.filter(
+              t => t.value > editStart && !blocked.has(t.value)
+            );
 
-                  <div className={styles.inlineButtons}>
-                    <button
-                      className={styles.saveBtn}
-                      onClick={() => saveEdit(b.id)}
+            return (
+              <div key={b.id} className={styles.booking}>
+                {editingId === b.id ? (
+                  <>
+                    <b>Edit Booking</b>
+
+                    <select
+                      value={editStart}
+                      onChange={e => setEditStart(e.target.value)}
                     >
-                      Save
-                    </button>
+                      {editableStartOptions.map(t => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
 
-                    <button
-                      className={styles.cancelBtn}
-                      onClick={() => setEditingId(null)}
+                    <select
+                      value={editEnd}
+                      onChange={e => setEditEnd(e.target.value)}
                     >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <b>
-                    {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
-                  </b>
-                  <p>{b.department}</p>
-                  <span>{b.booked_by}</span>
+                      {editableEndOptions.map(t => (
+                        <option key={t.value} value={t.value}>
+                          {t.label}
+                        </option>
+                      ))}
+                    </select>
 
-                  <div className={styles.inlineButtons}>
-                    <button
-                      className={styles.primaryBtn}
-                      onClick={() => {
-                        setEditingId(b.id);
-                        setEditStart(b.start_time);
-                        setEditEnd(b.end_time);
-                      }}
-                    >
-                      Edit
-                    </button>
+                    <div className={styles.inlineButtons}>
+                      <button
+                        className={styles.saveBtn}
+                        onClick={() => saveEdit(b.id)}
+                      >
+                        Save
+                      </button>
 
-                    <button
-                      className={styles.dangerBtn}
-                      onClick={() => cancelBooking(b.id)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
+                      <button
+                        className={styles.cancelBtn}
+                        onClick={() => setEditingId(null)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <b>
+                      {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
+                    </b>
+                    <p>{b.department}</p>
+                    <span>{b.booked_by}</span>
+
+                    <div className={styles.inlineButtons}>
+                      <button
+                        className={styles.primaryBtn}
+                        onClick={() => {
+                          setEditingId(b.id);
+                          setEditStart(b.start_time);
+                          setEditEnd(b.end_time);
+                        }}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className={styles.dangerBtn}
+                        onClick={() => cancelBooking(b.id)}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
