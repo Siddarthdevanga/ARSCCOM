@@ -146,12 +146,8 @@ export default function ConferenceBookings() {
     }
   };
 
-  // ===============================
-  // BLOCKED SLOTS FOR EDIT MODE
-  // ===============================
   const getBlockedSlotsExcluding = (bookingId) => {
     const set = new Set();
-
     dayBookings.forEach(b => {
       if (b.id === bookingId) return;
       TIME_OPTIONS.forEach(t => {
@@ -160,7 +156,6 @@ export default function ConferenceBookings() {
         }
       });
     });
-
     return set;
   };
 
@@ -236,7 +231,11 @@ export default function ConferenceBookings() {
           />
 
           <label>Room</label>
-          <select value={roomId} onChange={e => setRoomId(e.target.value)}>
+          <select
+            className={styles.dropdown}
+            value={roomId}
+            onChange={e => setRoomId(e.target.value)}
+          >
             <option value="">Select</option>
             {rooms.map(r => (
               <option key={r.id} value={r.id}>
@@ -247,6 +246,7 @@ export default function ConferenceBookings() {
 
           <label>Start Time</label>
           <select
+            className={styles.dropdown}
             value={startTime}
             onChange={e => setStartTime(e.target.value)}
           >
@@ -260,6 +260,7 @@ export default function ConferenceBookings() {
 
           <label>End Time</label>
           <select
+            className={styles.dropdown}
             value={endTime}
             onChange={e => setEndTime(e.target.value)}
           >
@@ -304,6 +305,7 @@ export default function ConferenceBookings() {
                     <b>Edit Booking</b>
 
                     <select
+                      className={styles.dropdown}
                       value={editStart}
                       onChange={e => setEditStart(e.target.value)}
                     >
@@ -315,6 +317,7 @@ export default function ConferenceBookings() {
                     </select>
 
                     <select
+                      className={styles.dropdown}
                       value={editEnd}
                       onChange={e => setEditEnd(e.target.value)}
                     >
