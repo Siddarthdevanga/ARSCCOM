@@ -111,8 +111,8 @@ app.use("/api/billing/repair", billingRepair);
 // CRON AUTO SYNC
 app.use("/api/billing/cron", billingCron);
 
-// ZOHO DIRECT PUSH (Alternative to webhook)
-app.use("/api/payment/zoho/push", zohoPushRoutes);
+// ✅ ZOHO DIRECT PUSH (Correct Mounting)
+app.use("/api/payment", zohoPushRoutes);
 
 // ZOHO WEBHOOK
 app.use("/api/webhook", webhookRoutes);
