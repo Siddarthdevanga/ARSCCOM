@@ -15,10 +15,12 @@ export default function ConferenceDashboard() {
 
   const [loading, setLoading] = useState(true);
 
+  /* LEFT PANEL */
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* ================= DATE FILTER ================= */
+  /* DATE FILTER */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -38,13 +40,13 @@ export default function ConferenceDashboard() {
       ? tomorrow
       : today;
 
-  /* ================= LOAD DASHBOARD ================= */
+  /* LOAD DASHBOARD */
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
         apiFetch("/api/conference/rooms"),
-        apiFetch("/api/conference/bookings")
+        apiFetch("/api/conference/bookings"),
       ]);
 
       setStats(statsRes);
@@ -69,7 +71,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE RENAMED ROOM ================= */
+  /* SAVE ROOM RENAME */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
@@ -77,8 +79,8 @@ export default function ConferenceDashboard() {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
         method: "PUT",
         body: JSON.stringify({
-          room_name: editName.trim()
-        })
+          room_name: editName.trim(),
+        }),
       });
 
       setEditingRoomId(null);
@@ -89,7 +91,7 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= FILTERED BOOKINGS ================= */
+  /* FILTER BOOKINGS */
   const filteredBookings = useMemo(() => {
     return bookings.filter(
       (b) =>
@@ -98,7 +100,7 @@ export default function ConferenceDashboard() {
     );
   }, [bookings, selectedDate]);
 
-  /* ================= DEPARTMENT STATS ================= */
+  /* DEPARTMENT STATS */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -115,7 +117,7 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <header className={styles.header}>
         <div>
           <h2 className={styles.companyName}>{company.name}</h2>
@@ -142,7 +144,7 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC URL ================= */}
+      {/* PUBLIC URL */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -161,97 +163,97 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= ROOM NAMES STRIP ================= */}
-      <div className={styles.section}>
-        <h3>Conference Rooms</h3>
-
-        <ul className={styles.roomList}>
-          {rooms.map((r) => (
-            <li key={r.id}>
-              #{r.room_number} —{" "}
-              {editingRoomId === r.id ? (
-                <>
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                  />
-                  <button onClick={() => saveRoomName(r.id)}>Save</button>
-                  <button
-                    onClick={() => {
-                      setEditingRoomId(null);
-                      setEditName("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  {r.room_name}{" "}
-                  <button
-                    onClick={() => {
-                      setEditingRoomId(r.id);
-                      setEditName(r.room_name);
-                    }}
-                  >
-                    Rename
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
+      {/* LEFT BAR */}
+      <div className={styles.leftBar}>
+        <button onClick={() => setSidePanelOpen(true)}>
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
       </div>
 
-      {/* ================= DATE NAVIGATION ================= */}
+      {/* LEFT PANEL */}
+      {sidePanelOpen && (
+        <div className={styles.leftPanel}>
+          <div className={styles.leftPanelHeader}>
+            <h3>Rename the Conference Rooms</h3>
+
+            <button
+              className={styles.leftCloseBtn}
+              onClick={() => {
+                setSidePanelOpen(false);
+                setEditingRoomId(null);
+              }}
+            >
+              ✖
+            </button>
+          </div>
+
+          <div className={styles.leftPanelContent}>
+            <ul className={styles.roomList}>
+              {rooms.map((r) => (
+                <li key={r.id}>
+                  #{r.room_number} —{" "}
+                  {editingRoomId === r.id ? (
+                    <>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                      <button onClick={() => saveRoomName(r.id)}>Save</button>
+                      <button
+                        onClick={() => {
+                          setEditingRoomId(null);
+                          setEditName("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {r.room_name}{" "}
+                      <button
+                        onClick={() => {
+                          setEditingRoomId(r.id);
+                          setEditName(r.room_name);
+                        }}
+                      >
+                        Rename
+                      </button>
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* DATE FILTER */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => setFilterDay("yesterday")}
-            style={{
-              background:
-                filterDay === "yesterday" ? "yellow" : "#ffffff",
-              color: "#000",
-              padding: "8px 18px",
-              borderRadius: 30,
-              border: "none"
-            }}
-          >
-            Yesterday
-          </button>
-
-          <button
-            onClick={() => setFilterDay("today")}
-            style={{
-              background: filterDay === "today" ? "yellow" : "#ffffff",
-              color: "#000",
-              padding: "8px 18px",
-              borderRadius: 30,
-              border: "none"
-            }}
-          >
-            Today
-          </button>
-
-          <button
-            onClick={() => setFilterDay("tomorrow")}
-            style={{
-              background:
-                filterDay === "tomorrow" ? "yellow" : "#ffffff",
-              color: "#000",
-              padding: "8px 18px",
-              borderRadius: 30,
-              border: "none"
-            }}
-          >
-            Tomorrow
-          </button>
+          {["yesterday", "today", "tomorrow"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setFilterDay(d)}
+              style={{
+                background: filterDay === d ? "yellow" : "#ffffff",
+                color: "#000",
+                padding: "8px 18px",
+                borderRadius: 30,
+                border: "none",
+              }}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ================= STATS ================= */}
+      {/* STATS */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
@@ -269,7 +271,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= DEPARTMENT WISE ================= */}
+      {/* DEPARTMENT STATS */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -286,7 +288,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* ================= RECENT BOOKINGS ================= */}
+      {/* BOOKINGS LIST */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
@@ -308,3 +310,4 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
+
