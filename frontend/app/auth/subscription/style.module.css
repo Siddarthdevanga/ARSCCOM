@@ -7,14 +7,13 @@ body {
   margin: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none !important;
+  scrollbar-width: none;          /* Firefox hide scrollbar */
+  -ms-overflow-style: none;       /* Old Edge / IE hide scrollbar */
 }
 
-/* Hide scrollbar (Chrome / Safari / Edge) */
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
+/* Hide scrollbar globally (Chrome / Safari / Edge) */
+*::-webkit-scrollbar {
+  display: none !important;
 }
 
 /* =========================
@@ -29,12 +28,6 @@ body::-webkit-scrollbar {
 
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none !important;
-}
-
-.container::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
 }
 
 /* =========================
@@ -197,3 +190,4 @@ body::-webkit-scrollbar {
     width: 90%;
   }
 }
+
