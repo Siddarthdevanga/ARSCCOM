@@ -71,20 +71,24 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE RENAMED ROOM ================= */
+  /* ================= SAVE ROOM RENAME ================= */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
     try {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
         method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
-          room_name: editName.trim(),
+          room_name: editName.trim()
         }),
       });
 
       setEditingRoomId(null);
       setEditName("");
+
       loadDashboard();
     } catch (err) {
       alert(err.message || "Failed to rename room");
@@ -120,7 +124,6 @@ export default function ConferenceDashboard() {
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          {/* LEFT MENU TRIGGER */}
           <div
             className={styles.leftMenuTrigger}
             onClick={() => setSidePanelOpen(true)}
@@ -197,6 +200,7 @@ export default function ConferenceDashboard() {
               {rooms.map((r) => (
                 <li key={r.id}>
                   <b>{r.room_name}</b> (#{r.room_number})
+
                   {editingRoomId === r.id ? (
                     <>
                       <input
