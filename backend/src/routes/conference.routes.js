@@ -11,9 +11,25 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
+   EMAIL FOOTER
+====================================================== */
+const emailFooter = (company) => `
+<br/>
+Regards,<br/>
+<b>${company?.name || "Conference Platform"}</b><br/>
+${company?.logo_url ? `<img src="${company.logo_url}" height="55" />` : ""}
+
+<hr/>
+<p style="font-size:13px;color:#666">
+This email was automatically sent from the Conference Room Booking Platform.<br/>
+If you did not perform this action, please contact your administrator immediately.
+</p>
+`;
+
+/* ======================================================
    EMAIL HELPER
 ====================================================== */
-const sendBookingMail = async ({ to, subject, heading, booking }) => {
+const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
   if (!to) return;
 
   try {
@@ -30,12 +46,7 @@ const sendBookingMail = async ({ to, subject, heading, booking }) => {
         <p><b>Department:</b> ${booking.department}</p>
         ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
 
-        <br/>
-        <hr/>
-        <p style="font-size:12px;color:#777">
-          PROMEET Conference Booking System<br/>
-          This is an automated message.
-        </p>
+        ${emailFooter(company)}
       </div>
       `
     });
@@ -107,9 +118,8 @@ router.get("/rooms", async (req, res) => {
   }
 });
 
-
 /* ======================================================
-   ROOMS — RENAME ( NEW 🚀 )
+   ROOMS — RENAME
 ====================================================== */
 router.patch("/rooms/:id", async (req, res) => {
   try {
@@ -121,7 +131,6 @@ router.patch("/rooms/:id", async (req, res) => {
       return res.status(400).json({ message: "Room name required" });
     }
 
-    // Check if room belongs to company
     const [[room]] = await db.query(
       `
       SELECT id FROM conference_rooms
@@ -135,7 +144,6 @@ router.patch("/rooms/:id", async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // Prevent duplicate name inside same company
     const [[exists]] = await db.query(
       `
       SELECT COUNT(*) AS cnt
@@ -168,7 +176,6 @@ router.patch("/rooms/:id", async (req, res) => {
     res.status(500).json({ message: "Unable to rename room" });
   }
 });
-
 
 /* ======================================================
    BOOKINGS — LIST
@@ -218,7 +225,6 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-
 /* ======================================================
    CREATE BOOKING
 ====================================================== */
@@ -226,7 +232,7 @@ router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
   try {
-    const { companyId } = req.user;
+    const { companyId, company } = req.user;
     const {
       room_id,
       booked_by,
@@ -334,7 +340,8 @@ router.post("/bookings", async (req, res) => {
         end_time,
         department,
         purpose
-      }
+      },
+      company
     });
 
     res.status(201).json({ message: "Booking created successfully" });
@@ -347,15 +354,14 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
-
 /* ======================================================
-   EDIT BOOKING
+   EDIT BOOKING  (SEND RESCHEDULE MAIL)
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const { companyId, company } = req.user;
     const bookingId = Number(req.params.id);
-    const { start_time, end_time, email } = req.body;
+    const { start_time, end_time } = req.body;
 
     if (!bookingId || !start_time || !end_time) {
       return res.status(400).json({
@@ -418,9 +424,9 @@ router.patch("/bookings/:id", async (req, res) => {
     );
 
     await sendBookingMail({
-      to: email || (booking.booked_by?.includes("@") ? booking.booked_by : null),
-      subject: "Conference Room Booking Updated",
-      heading: "Booking Updated",
+      to: booking.booked_by?.includes("@") ? booking.booked_by : null,
+      subject: "Conference Room Booking Rescheduled",
+      heading: "Your Meeting Has Been Rescheduled",
       booking: {
         room_name: booking.room_name,
         booking_date: booking.booking_date,
@@ -428,7 +434,8 @@ router.patch("/bookings/:id", async (req, res) => {
         end_time,
         department: booking.department,
         purpose: booking.purpose
-      }
+      },
+      company
     });
 
     res.json({ message: "Booking updated successfully" });
@@ -438,13 +445,12 @@ router.patch("/bookings/:id", async (req, res) => {
   }
 });
 
-
 /* ======================================================
-   CANCEL BOOKING
+   CANCEL BOOKING (SEND CANCEL MAIL)
 ====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const { companyId, company } = req.user;
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
@@ -476,8 +482,9 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     await sendBookingMail({
       to: booking.booked_by?.includes("@") ? booking.booked_by : null,
       subject: "Conference Room Booking Cancelled",
-      heading: "Booking Cancelled",
-      booking
+      heading: "Your Meeting Has Been Cancelled",
+      booking,
+      company
     });
 
     res.json({ message: "Booking cancelled successfully" });
@@ -488,3 +495,4 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+
