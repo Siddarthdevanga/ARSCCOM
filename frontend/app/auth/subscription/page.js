@@ -150,7 +150,7 @@ export default function SubscriptionPage() {
       <div className={styles.planGrid}>
         {/* ================= FREE TRIAL ================= */}
         <div className={styles.card}>
-          <h3 className={styles.planName}>FREE TRIAL</h3>
+          <h3 className={styles.planName}> TRIAL</h3>
           <p className={styles.price}>₹49</p>
           <p className={styles.subText}>Valid for 15 days</p>
 
@@ -165,7 +165,7 @@ export default function SubscriptionPage() {
             disabled={loadingPlan === "free"}
             onClick={() => choosePlan("free")}
           >
-            {loadingPlan === "free" ? "Processing..." : "Start Free Trial"}
+            {loadingPlan === "free" ? "Processing..." : "Proceed to Payment"}
           </button>
         </div>
 
