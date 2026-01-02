@@ -84,7 +84,7 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   ROOMS
+   ROOMS — LIST
 ====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
@@ -106,6 +106,69 @@ router.get("/rooms", async (req, res) => {
     res.status(500).json({ message: "Unable to fetch rooms" });
   }
 });
+
+
+/* ======================================================
+   ROOMS — RENAME ( NEW 🚀 )
+====================================================== */
+router.patch("/rooms/:id", async (req, res) => {
+  try {
+    const { companyId } = req.user;
+    const roomId = Number(req.params.id);
+    const { room_name } = req.body;
+
+    if (!roomId || !room_name?.trim()) {
+      return res.status(400).json({ message: "Room name required" });
+    }
+
+    // Check if room belongs to company
+    const [[room]] = await db.query(
+      `
+      SELECT id FROM conference_rooms
+      WHERE id = ? AND company_id = ?
+      LIMIT 1
+      `,
+      [roomId, companyId]
+    );
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Prevent duplicate name inside same company
+    const [[exists]] = await db.query(
+      `
+      SELECT COUNT(*) AS cnt
+      FROM conference_rooms
+      WHERE company_id = ?
+        AND room_name = ?
+        AND id <> ?
+      `,
+      [companyId, room_name.trim(), roomId]
+    );
+
+    if (exists.cnt > 0) {
+      return res.status(409).json({
+        message: "Another room already has this name"
+      });
+    }
+
+    await db.query(
+      `
+      UPDATE conference_rooms
+      SET room_name = ?
+      WHERE id = ? AND company_id = ?
+      `,
+      [room_name.trim(), roomId, companyId]
+    );
+
+    res.json({ message: "Room renamed successfully" });
+  } catch (err) {
+    console.error("[ADMIN][RENAME ROOM]", err);
+    res.status(500).json({ message: "Unable to rename room" });
+  }
+});
+
 
 /* ======================================================
    BOOKINGS — LIST
@@ -154,6 +217,7 @@ router.get("/bookings", async (req, res) => {
     res.status(500).json({ message: "Unable to fetch bookings" });
   }
 });
+
 
 /* ======================================================
    CREATE BOOKING
@@ -283,6 +347,7 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
+
 /* ======================================================
    EDIT BOOKING
 ====================================================== */
@@ -300,9 +365,10 @@ router.patch("/bookings/:id", async (req, res) => {
 
     const [[booking]] = await db.query(
       `
-      SELECT *
-      FROM conference_bookings
-      WHERE id = ? AND company_id = ?
+      SELECT b.*, r.room_name
+      FROM conference_bookings b
+      JOIN conference_rooms r ON r.id = b.room_id
+      WHERE b.id = ? AND b.company_id = ?
       LIMIT 1
       `,
       [bookingId, companyId]
@@ -356,7 +422,7 @@ router.patch("/bookings/:id", async (req, res) => {
       subject: "Conference Room Booking Updated",
       heading: "Booking Updated",
       booking: {
-        room_name: booking.room_name || "Conference Room",
+        room_name: booking.room_name,
         booking_date: booking.booking_date,
         start_time,
         end_time,
@@ -372,6 +438,7 @@ router.patch("/bookings/:id", async (req, res) => {
   }
 });
 
+
 /* ======================================================
    CANCEL BOOKING
 ====================================================== */
@@ -382,8 +449,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 
     const [[booking]] = await db.query(
       `
-      SELECT 
-        b.*, r.room_name
+      SELECT b.*, r.room_name
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
       WHERE b.id = ? AND b.company_id = ?
