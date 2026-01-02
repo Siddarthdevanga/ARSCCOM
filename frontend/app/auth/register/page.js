@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const API_BASE =
@@ -27,8 +28,8 @@ export default function RegisterPage() {
   ====================================================== */
   const handleRegister = async () => {
     setError("");
+    setSuccess("");
 
-    // ---------- BASIC VALIDATION ----------
     if (
       !companyName ||
       !email ||
@@ -42,27 +43,23 @@ export default function RegisterPage() {
       return;
     }
 
-    // ---------- EMAIL ----------
     const normalizedEmail = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
       setError("Enter a valid email address");
       return;
     }
 
-    // ---------- PHONE ----------
     if (phone.trim().length < 8) {
       setError("Enter a valid phone number");
       return;
     }
 
-    // ---------- ROOMS ----------
     const roomCount = Number(rooms);
     if (!roomCount || roomCount < 1) {
       setError("Conference rooms must be at least 1");
       return;
     }
 
-    // ---------- PASSWORD ----------
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -73,7 +70,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // ---------- LOGO ----------
     if (!logo) {
       setError("Company logo is required");
       return;
@@ -108,17 +104,15 @@ export default function RegisterPage() {
         return;
       }
 
-      // Save minimal helpful details (optional)
       if (normalizedEmail)
         localStorage.setItem("regEmail", normalizedEmail);
 
-      /* ======================================================
-          IMPORTANT:
-          Backend does NOT give JWT on register
-          So user must LOGIN → then subscription flow continues
-      ====================================================== */
-      alert("Registration successful. Please login to continue.");
-      router.push("/auth/login");
+      // 🎯 NEW BEHAVIOR
+      setSuccess("Registration complete. Login to subscribe and continue...");
+
+      setTimeout(() => {
+        router.push("/auth/login");
+      }, 4000);
 
     } catch (err) {
       console.error(err);
@@ -130,7 +124,6 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.brand}>PROMEET</div>
 
@@ -142,14 +135,12 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      {/* ================= CARD ================= */}
       <div className={styles.card}>
         <h2 className={styles.title}>Create Company Account</h2>
         <p className={styles.subtitle}>
           Register your company to start managing visitors & conference rooms
         </p>
 
-        {/* ROW 1 */}
         <div className={styles.row3}>
           <div>
             <label className={styles.label}>Company Name *</label>
@@ -180,7 +171,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* ROW 2 */}
         <div className={styles.row2}>
           <div>
             <label className={styles.label}>Company Logo *</label>
@@ -204,7 +194,6 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* ROW 3 */}
         <div className={styles.row2}>
           <div>
             <label className={styles.label}>Password *</label>
@@ -227,10 +216,9 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        {/* ERROR */}
         {error && <div className={styles.error}>{error}</div>}
+        {success && <div className={styles.success}>{success}</div>}
 
-        {/* BUTTON */}
         <button
           className={styles.submitBtn}
           onClick={handleRegister}
