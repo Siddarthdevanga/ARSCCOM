@@ -1,8 +1,5 @@
-/* =========================================================
-   GLOBAL — Smooth Scroll, No Scrollbar Anywhere
-========================================================= */
-html,
-body {
+/* ===== GLOBAL: Scroll enabled but scrollbar hidden ===== */
+html, body {
   height: 100%;
   margin: 0;
   overflow-y: auto;
@@ -10,47 +7,87 @@ body {
   scrollbar-width: none;
 }
 
-/* Chrome / Safari / Edge */
-*::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
-  display: none !important;
-}
+*::-webkit-scrollbar { display: none; }
 
-/* =========================================================
-   ROOT
-========================================================= */
-.container {
+/* ================= LAYOUT ================= */
+.layout {
+  display: flex;
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  padding: 34px;
   font-family: "Segoe UI", Arial, sans-serif;
-  color: #ffffff;
-
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  color: #fff;
 }
 
-/* =========================================================
-   HEADER
-========================================================= */
+/* ================= SIDEBAR ================= */
+.sidebar {
+  width: 240px;
+  background: #ffffff;
+  color: #000;
+  padding: 20px 18px;
+  border-right: 1px solid rgba(0,0,0,.12);
+}
+
+.sidebarTitle {
+  font-size: 24px;
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 10px;
+}
+
+.sidebar li {
+  padding: 10px 6px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.sidebar li:hover {
+  background: rgba(0,0,0,.07);
+}
+
+.active {
+  background: rgba(0,0,0,.1);
+  font-weight: 700;
+}
+
+.logoutBtn {
+  margin-top: 25px;
+  padding: 8px;
+  width: 100%;
+  background: #ff4747;
+  border: none;
+  border-radius: 10px;
+  color: white;
+  cursor: pointer;
+}
+
+/* ================= MAIN AREA ================= */
+.main {
+  flex: 1;
+  padding: 32px;
+}
+
+/* ================= HEADER ================= */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 26px;
+  margin-bottom: 24px;
 }
 
 .companyName {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 900;
-  letter-spacing: .6px;
 }
 
 .subText {
   font-size: 13px;
-  opacity: 0.85;
+  opacity: .9;
 }
 
 .headerRight {
@@ -64,188 +101,122 @@ body {
   object-fit: contain;
 }
 
-.logoBtn {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  border: none;
-  background: #ffffff;
-  color: #000;
-  font-size: 20px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: .25s ease-in-out;
-}
-
-.logoBtn:hover {
-  transform: scale(1.08) rotate(-2deg);
-}
-
-/* =========================================================
-   PUBLIC URL BOX
-========================================================= */
+/* ================= PUBLIC BOX ================= */
 .publicBox {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 20px;
-  padding: 24px;
-  margin-bottom: 36px;
-  border: 1px solid rgba(255, 255, 255, .45);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, .32);
-  backdrop-filter: blur(12px);
+  background: white;
+  border-radius: 18px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+  color: #000;
+  box-shadow: 0 10px 28px rgba(0,0,0,.25);
 }
 
 .publicRow {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
 }
 
 .publicTitle {
   font-size: 13px;
-  opacity: .9;
-  margin-bottom: 6px;
+  color: #555;
 }
 
 .publicLink {
-  color: #ffffff;
-  font-weight: 800;
-  text-decoration: underline;
+  font-weight: 700;
   word-break: break-all;
 }
 
-/* CTA */
+/* BUTTON */
 .bookBtn {
-  background: linear-gradient(135deg, #ffbe0b, #ff8c00);
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
   border: none;
-  padding: 12px 30px;
+  padding: 12px 28px;
   border-radius: 999px;
-  font-size: 14px;
-  font-weight: 900;
   cursor: pointer;
-  white-space: nowrap;
-  transition: .25s ease;
+  font-weight: 900;
 }
 
-.bookBtn:hover {
-  transform: scale(1.06);
-  filter: brightness(1.06);
-}
-
-/* =========================================================
-   STATS
-========================================================= */
+/* ================= STATS ================= */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 18px;
-  margin-bottom: 40px;
+  grid-template-columns: repeat(auto-fit,minmax(190px,1fr));
+  gap: 16px;
+  margin-bottom:28px;
 }
 
 .statCard {
-  background: white;
-  color: #333;
-  border-radius: 22px;
-  padding: 22px;
-  text-align: center;
-  box-shadow: 0 20px 42px rgba(0, 0, 0, .32);
+  background: #ffffff;
+  color:#333;
+  padding:20px;
+  border-radius:18px;
+  text-align:center;
+  box-shadow:0 12px 30px rgba(0,0,0,.25);
 }
 
 .statCard span {
-  font-size: 13px;
-  color: #777;
+  font-size:13px;
+  color:#777;
 }
 
 .statCard b {
-  font-size: 34px;
-  color: #5b00c9;
+  font-size:32px;
+  color:#5b00c9;
 }
 
-/* =========================================================
-   CONTENT SECTIONS
-========================================================= */
+/* ================= SECTIONS ================= */
 .section {
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 22px;
-  padding: 26px;
-  margin-bottom: 36px;
-  border: 1px solid rgba(255, 255, 255, .45);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, .32);
+  background:white;
+  color:#000;
+  border-radius:20px;
+  padding:22px;
+  box-shadow:0 18px 40px rgba(0,0,0,.25);
+  margin-bottom:24px;
 }
 
 .section h3 {
-  margin-bottom: 18px;
-  font-size: 18px;
-  font-weight: 800;
+  margin-bottom: 14px;
+  font-weight: 900;
 }
 
-/* =========================================================
-   ROOM LIST
-========================================================= */
+/* ================= ROOM LIST ================= */
 .roomList {
-  list-style: none;
-  padding: 0;
+  list-style:none;
+  padding:0;
 }
 
 .roomList li {
-  padding: 12px;
-  background: rgba(255, 255, 255, .2);
-  border-radius: 14px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(255, 255, 255, .45);
+  padding:10px;
+  background:#f6f6ff;
+  border-radius:10px;
+  border:1px solid rgba(0,0,0,.12);
+  margin-bottom:8px;
 }
 
-/* =========================================================
-   BOOKINGS
-========================================================= */
-.bookingRow {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr .7fr;
-  gap: 14px;
-  background: rgba(255, 255, 255, .22);
-  padding: 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, .45);
+/* ================= BOOKINGS ================= */
+.bookingRow{
+  display:grid;
+  grid-template-columns:1.5fr 1fr .8fr;
+  background:#f5f1ff;
+  border:1px solid rgba(0,0,0,.12);
+  border-radius:10px;
+  padding:12px;
+  margin-bottom:10px;
 }
 
-.status {
-  text-align: right;
-  font-weight: 900;
-  color: #ffe4a8;
+.status{
+  text-align:right;
+  font-weight:700;
+  color:#c99000;
 }
 
-/* =========================================================
-   ERROR
-========================================================= */
-.error {
-  color: #ffb1b1;
-  font-weight: 800;
-}
-
-/* =========================================================
-   RESPONSIVE
-========================================================= */
-@media (max-width: 768px) {
-  .container {
-    padding: 18px;
-  }
-
-  .companyName {
-    font-size: 24px;
-  }
-
-  .bookingRow {
-    grid-template-columns: 1fr;
-  }
-
-  .status {
-    text-align: left;
-  }
-
-  .publicRow {
-    gap: 10px;
-  }
+/* ================= RESPONSIVE ================= */
+@media(max-width:900px){
+  .layout{flex-direction:column;}
+  .sidebar{width:100%;border-right:none;border-bottom:1px solid rgba(0,0,0,.15);}
+  .main{padding:20px;}
+  .bookingRow{grid-template-columns:1fr;}
+  .status{text-align:left;}
 }
