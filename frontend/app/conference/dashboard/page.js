@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
 export default function ConferenceDashboard() {
   const router = useRouter();
 
@@ -15,10 +17,10 @@ export default function ConferenceDashboard() {
 
   const [loading, setLoading] = useState(true);
 
+  const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* ================= DATE FILTER ================= */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -42,16 +44,17 @@ export default function ConferenceDashboard() {
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
-        apiFetch("/api/conference/dashboard"),
-        apiFetch("/api/conference/rooms"),
-        apiFetch("/api/conference/bookings")
+        apiFetch(`${API_BASE}/api/conference/dashboard`),
+        apiFetch(`${API_BASE}/api/conference/rooms`),
+        apiFetch(`${API_BASE}/api/conference/bookings`),
       ]);
 
       setStats(statsRes);
       setRooms(roomsRes);
       setBookings(bookingsRes);
       setLoading(false);
-    } catch {
+    } catch (e) {
+      console.error("LOAD FAILED", e);
       router.replace("/auth/login");
     }
   };
@@ -69,16 +72,15 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE RENAMED ROOM ================= */
+  /* ================= SAVE ROOM RENAME ================= */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
+      await apiFetch(`${API_BASE}/api/conference/rooms/${roomId}`, {
         method: "PUT",
-        body: JSON.stringify({
-          room_name: editName.trim()
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_name: editName.trim() }),
       });
 
       setEditingRoomId(null);
@@ -89,7 +91,7 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= FILTERED BOOKINGS ================= */
+  /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
     return bookings.filter(
       (b) =>
@@ -117,9 +119,18 @@ export default function ConferenceDashboard() {
     <div className={styles.container}>
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div>
-          <h2 className={styles.companyName}>{company.name}</h2>
-          <span className={styles.subText}>Conference Dashboard</span>
+        <div className={styles.leftHeader}>
+          <div
+            className={styles.leftMenuTrigger}
+            onClick={() => setSidePanelOpen(true)}
+          >
+            <span></span><span></span><span></span>
+          </div>
+
+          <div>
+            <h2 className={styles.companyName}>{company.name}</h2>
+            <span className={styles.subText}>Conference Dashboard</span>
+          </div>
         </div>
 
         <div className={styles.headerRight}>
@@ -142,7 +153,7 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC URL ================= */}
+      {/* PUBLIC LINK */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -161,93 +172,82 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= ROOM NAMES STRIP ================= */}
-      <div className={styles.section}>
-        <h3>Conference Rooms</h3>
+      {/* LEFT PANEL */}
+      {sidePanelOpen && (
+        <div className={styles.leftPanel}>
+          <div className={styles.leftPanelHeader}>
+            <h3>Rename the Conference Rooms</h3>
 
-        <ul className={styles.roomList}>
-          {rooms.map((r) => (
-            <li key={r.id}>
-              #{r.room_number} —{" "}
-              {editingRoomId === r.id ? (
-                <>
-                  <input
-                    value={editName}
-                    onChange={(e) => setEditName(e.target.value)}
-                  />
-                  <button onClick={() => saveRoomName(r.id)}>Save</button>
-                  <button
-                    onClick={() => {
-                      setEditingRoomId(null);
-                      setEditName("");
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
-              ) : (
-                <>
-                  {r.room_name}{" "}
-                  <button
-                    onClick={() => {
-                      setEditingRoomId(r.id);
-                      setEditName(r.room_name);
-                    }}
-                  >
-                    Rename
-                  </button>
-                </>
-              )}
-            </li>
-          ))}
-        </ul>
-      </div>
+            <button
+              className={styles.leftCloseBtn}
+              onClick={() => {
+                setSidePanelOpen(false);
+                setEditingRoomId(null);
+              }}
+            >
+              Close ✖
+            </button>
+          </div>
 
-      {/* ================= DATE NAVIGATION ================= */}
+          <div className={styles.leftPanelContent}>
+            <ul className={styles.roomList}>
+              {rooms.map((r) => (
+                <li key={r.id}>
+                  <b>{r.room_name}</b> (#{r.room_number})
+
+                  {editingRoomId === r.id ? (
+                    <>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                      <button onClick={() => saveRoomName(r.id)}>Save</button>
+                      <button
+                        onClick={() => {
+                          setEditingRoomId(null);
+                          setEditName("");
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingRoomId(r.id);
+                        setEditName(r.room_name);
+                      }}
+                    >
+                      Rename
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* DATE FILTER */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={() => setFilterDay("yesterday")}
-            style={{
-              background:
-                filterDay === "yesterday" ? "yellow" : "#ffffff",
-              color: "#000",
-              padding: "8px 18px",
-              borderRadius: 30,
-              border: "none"
-            }}
-          >
-            Yesterday
-          </button>
-
-          <button
-            onClick={() => setFilterDay("today")}
-            style={{
-              background: filterDay === "today" ? "yellow" : "#ffffff",
-              color: "#000",
-              padding: "8px 18px",
-              borderRadius: 30,
-              border: "none"
-            }}
-          >
-            Today
-          </button>
-
-          <button
-            onClick={() => setFilterDay("tomorrow")}
-            style={{
-              background:
-                filterDay === "tomorrow" ? "yellow" : "#ffffff",
-              color: "#000",
-              padding: "8px 18px",
-              borderRadius: 30,
-              border: "none"
-            }}
-          >
-            Tomorrow
-          </button>
+          {["yesterday", "today", "tomorrow"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setFilterDay(d)}
+              style={{
+                background: filterDay === d ? "yellow" : "#ffffff",
+                color: "#000",
+                padding: "8px 18px",
+                borderRadius: 30,
+                border: "none",
+              }}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -269,7 +269,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= DEPARTMENT WISE ================= */}
+      {/* DEPARTMENT */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -286,7 +286,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* ================= RECENT BOOKINGS ================= */}
+      {/* LIST */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
