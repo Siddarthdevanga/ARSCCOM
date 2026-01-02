@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
 export default function ConferenceDashboard() {
   const router = useRouter();
 
@@ -15,12 +17,10 @@ export default function ConferenceDashboard() {
 
   const [loading, setLoading] = useState(true);
 
-  /* LEFT PANEL */
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* DATE FILTER */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -44,16 +44,17 @@ export default function ConferenceDashboard() {
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
-        apiFetch("/api/conference/dashboard"),
-        apiFetch("/api/conference/rooms"),
-        apiFetch("/api/conference/bookings"),
+        apiFetch(`${API_BASE}/api/conference/dashboard`),
+        apiFetch(`${API_BASE}/api/conference/rooms`),
+        apiFetch(`${API_BASE}/api/conference/bookings`),
       ]);
 
       setStats(statsRes);
       setRooms(roomsRes);
       setBookings(bookingsRes);
       setLoading(false);
-    } catch {
+    } catch (e) {
+      console.error("LOAD FAILED", e);
       router.replace("/auth/login");
     }
   };
@@ -76,19 +77,14 @@ export default function ConferenceDashboard() {
     if (!editName.trim()) return;
 
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
+      await apiFetch(`${API_BASE}/api/conference/rooms/${roomId}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          room_name: editName.trim()
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_name: editName.trim() }),
       });
 
       setEditingRoomId(null);
       setEditName("");
-
       loadDashboard();
     } catch (err) {
       alert(err.message || "Failed to rename room");
@@ -128,9 +124,7 @@ export default function ConferenceDashboard() {
             className={styles.leftMenuTrigger}
             onClick={() => setSidePanelOpen(true)}
           >
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </div>
 
           <div>
@@ -159,7 +153,7 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC LINK ================= */}
+      {/* PUBLIC LINK */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -178,7 +172,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= LEFT PANEL ================= */}
+      {/* LEFT PANEL */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
@@ -234,7 +228,7 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* ================= DATE FILTER ================= */}
+      {/* DATE FILTER */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
 
@@ -275,7 +269,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= DEPARTMENT ================= */}
+      {/* DEPARTMENT */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -292,7 +286,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* ================= BOOKINGS ================= */}
+      {/* LIST */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
