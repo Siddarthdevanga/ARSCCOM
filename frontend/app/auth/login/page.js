@@ -113,8 +113,8 @@ export default function LoginPage() {
           </div>
 
           <Image
-            src="/Promeet Logo.png"
-            alt="Promeet Logo"
+            src="/promeet.png"
+            alt="promeet"
             width={420}
             height={140}
             priority
