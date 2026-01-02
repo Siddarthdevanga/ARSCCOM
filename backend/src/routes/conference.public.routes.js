@@ -10,12 +10,12 @@ const normalizeEmail = v => String(v || "").trim().toLowerCase();
 
 const prettyTime = (t = "") => {
   const [h, m] = t.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
+  const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, "0")} ${period}`;
+  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
-const emailFooter = (company) => `
+const emailFooter = company => `
 <br/>
 Regards,<br/>
 <b>${company.name}</b><br/>
@@ -60,6 +60,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
       `SELECT id FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+
     if (!company) return res.json([]);
 
     const [rooms] = await db.query(
@@ -78,19 +79,22 @@ router.get("/company/:slug/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   GET BOOKINGS
+   GET BOOKINGS (returns can_modify flag)
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
-    const { roomId, date } = req.query;
+    const { roomId, date, userEmail } = req.query;
 
     if (!roomId || !date) return res.json([]);
+
+    const safeUser = normalizeEmail(userEmail || "");
 
     const [[company]] = await db.query(
       `SELECT id FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+
     if (!company) return res.json([]);
 
     const [bookings] = await db.query(
@@ -105,7 +109,12 @@ router.get("/company/:slug/bookings", async (req, res) => {
       [company.id, roomId, date]
     );
 
-    res.json(Array.isArray(bookings) ? bookings : []);
+    const enriched = bookings.map(b => ({
+      ...b,
+      can_modify: safeUser && b.booked_by?.toLowerCase() === safeUser
+    }));
+
+    res.json(enriched);
   } catch (err) {
     console.error("[PUBLIC][BOOKINGS]", err);
     res.json([]);
@@ -127,6 +136,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       `SELECT id,name FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+
     if (!company)
       return res.status(404).json({ message: "Invalid booking link" });
 
@@ -178,6 +188,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
       `SELECT id FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+
     if (!company)
       return res.status(404).json({ message: "Invalid booking link" });
 
@@ -234,7 +245,9 @@ router.post("/company/:slug/book", async (req, res) => {
       `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
-    if (!company) return res.status(404).json({ message: "Invalid booking link" });
+
+    if (!company)
+      return res.status(404).json({ message: "Invalid booking link" });
 
     const [[verified]] = await db.query(
       `SELECT id FROM public_booking_otp
@@ -242,6 +255,7 @@ router.post("/company/:slug/book", async (req, res) => {
        ORDER BY id DESC LIMIT 1`,
       [company.id, email]
     );
+
     if (!verified)
       return res.status(401).json({ message: "OTP verification required" });
 
@@ -253,6 +267,7 @@ router.post("/company/:slug/book", async (req, res) => {
        LIMIT 1`,
       [company.id, room_id, booking_date, end_time, start_time]
     );
+
     if (conflict.length)
       return res.status(409).json({ message: "Slot already booked" });
 
@@ -284,6 +299,7 @@ router.post("/company/:slug/book", async (req, res) => {
       html: `
         <h2>${company.name}</h2>
         <h3>Conference Room Booking Confirmed</h3>
+
         <table style="padding:10px;font-size:15px">
           <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
           <tr><td><b>Date</b></td><td>: ${booking_date}</td></tr>
@@ -291,6 +307,7 @@ router.post("/company/:slug/book", async (req, res) => {
           <tr><td><b>Department</b></td><td>: ${department}</td></tr>
           <tr><td><b>Purpose</b></td><td>: ${purpose || "-"}</td></tr>
         </table>
+
         ${emailFooter(company)}
       `
     });
@@ -304,27 +321,29 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 /* ======================================================
-   UPDATE BOOKING
+   UPDATE BOOKING (Only Owner)
 ====================================================== */
 router.patch("/company/:slug/bookings/:id", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
     const bookingId = Number(req.params.id);
-    const { start_time, end_time, email } = req.body;
 
-    if (!email || !start_time || !end_time)
+    const { start_time, end_time, email } = req.body;
+    const userEmail = normalizeEmail(email);
+
+    if (!userEmail || !start_time || !end_time)
       return res.status(400).json({ message: "Email, start time and end time required" });
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start" });
 
-    const userEmail = normalizeEmail(email);
-
     const [[company]] = await db.query(
       `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
-    if (!company) return res.status(404).json({ message: "Invalid link" });
+
+    if (!company)
+      return res.status(404).json({ message: "Invalid link" });
 
     const [[booking]] = await db.query(
       `SELECT * FROM conference_bookings
@@ -338,13 +357,10 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     if (booking.booked_by !== userEmail)
       return res.status(403).json({ message: "Unauthorized" });
 
-    if (new Date(booking.booking_date) < new Date().setHours(0,0,0,0))
-      return res.status(400).json({ message: "Cannot modify past bookings" });
-
     const [conflict] = await db.query(
       `SELECT id FROM conference_bookings
-       WHERE company_id=? 
-       AND room_id=? 
+       WHERE company_id=?
+       AND room_id=?
        AND booking_date=?
        AND id<>?
        AND status='BOOKED'
@@ -361,47 +377,25 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     );
 
     if (conflict.length)
-      return res.status(409).json({ message: "Selected time conflicts with another booking" });
+      return res.status(409).json({ message: "Time conflict" });
 
     await db.query(
-      `UPDATE conference_bookings 
-       SET start_time=?, end_time=? 
+      `UPDATE conference_bookings
+       SET start_time=?, end_time=?
        WHERE id=?`,
       [start_time, end_time, bookingId]
     );
 
-    const [[room]] = await db.query(
-      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
-      [booking.room_id]
-    );
-
-    await sendEmail({
-      to: userEmail,
-      subject: `Booking Updated – ${room.room_name} | ${company.name}`,
-      html: `
-        <h2>${company.name}</h2>
-        <h3>Conference Booking Updated</h3>
-        <table style="padding:10px;font-size:15px">
-          <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
-          <tr><td><b>Old Time</b></td>
-            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
-          <tr><td><b>New Time</b></td>
-            <td>: ${prettyTime(start_time)} – ${prettyTime(end_time)}</td></tr>
-        </table>
-        ${emailFooter(company)}
-      `
-    });
-
     res.json({ message: "Booking updated successfully" });
 
   } catch (err) {
-    console.error("[PUBLIC][UPDATE BOOKING]", err);
+    console.error("[PUBLIC][UPDATE]", err);
     res.status(500).json({ message: "Server Error" });
   }
 });
 
 /* ======================================================
-   CANCEL BOOKING
+   CANCEL BOOKING (Only Owner)
 ====================================================== */
 router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
   try {
@@ -416,6 +410,7 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       `SELECT id,name,logo_url FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
+
     if (!company)
       return res.status(404).json({ message: "Invalid link" });
 
@@ -426,7 +421,7 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     );
 
     if (!booking)
-      return res.status(404).json({ message: "Booking not found or already cancelled" });
+      return res.status(404).json({ message: "Booking not found" });
 
     if (booking.booked_by !== email)
       return res.status(403).json({ message: "Unauthorized" });
@@ -436,37 +431,10 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       [bookingId]
     );
 
-    const [[room]] = await db.query(
-      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
-      [booking.room_id]
-    );
-
-    await sendEmail({
-      to: email,
-      subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
-      html: `
-        <h2>${company.name}</h2>
-        <h3>Conference Booking Cancelled</h3>
-
-        <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
-          <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
-          <tr><td><b>Time</b></td>
-            <td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
-        </table>
-
-        <p style="color:red;font-weight:bold">
-          ❌ The slot is now released and available for booking.
-        </p>
-
-        ${emailFooter(company)}
-      `
-    });
-
     res.json({ message: "Booking cancelled successfully" });
 
   } catch (err) {
-    console.error("[PUBLIC][CANCEL BOOKING]", err);
+    console.error("[PUBLIC][CANCEL]", err);
     res.status(500).json({ message: "Server Error" });
   }
 });
