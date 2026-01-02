@@ -33,6 +33,40 @@ body {
   margin-bottom: 28px;
 }
 
+.leftHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* Sidebar Trigger Next to Company Name */
+.leftMenuTrigger {
+  width: 34px;
+  height: 60px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.18);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  padding-left: 13px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: .25s ease;
+}
+
+.leftMenuTrigger:hover {
+  transform: scale(1.06);
+}
+
+.leftMenuTrigger span {
+  width: 6px;
+  height: 6px;
+  background: white;
+  border-radius: 50%;
+}
+
 .companyName {
   font-size: 28px;
   font-weight: 900;
@@ -202,56 +236,29 @@ body {
   font-weight: 700;
 }
 
-/* ================= LEFT BAR BUTTON ================= */
-.leftBar {
-  position: fixed;
-  top: 30%;
-  left: 12px;
-  z-index: 60;
-}
-
-.leftBar button {
-  width: 32px;
-  height: 80px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.2);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 8px;
-  cursor: pointer;
-  backdrop-filter: blur(8px);
-}
-
-.leftBar button span {
-  width: 6px;
-  height: 6px;
-  background: white;
-  border-radius: 50%;
-}
-
-/* ================= LEFT PANEL (30% WIDTH) ================= */
+/* ================= LEFT SLIDE PANEL (30%) ================= */
 .leftPanel {
   position: fixed;
   top: 0;
   left: 0;
   width: 30%;
   height: 100vh;
-  background: #ffffff;
-  box-shadow: 6px 0 22px rgba(0, 0, 0, 0.3);
+
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  color: white;
+
+  border-right: 1px solid rgba(255,255,255,0.35);
+  box-shadow: 6px 0 22px rgba(0,0,0,.35);
   padding: 22px;
-  animation: slideLeft .28s ease-in-out;
+  animation: panelSlide .3s ease-in-out;
+
+  backdrop-filter: blur(8px);
   z-index: 100;
 }
 
-@keyframes slideLeft {
-  from {
-    left: -35%;
-  }
-  to {
-    left: 0;
-  }
+@keyframes panelSlide {
+  from { left: -35%; opacity: .4; }
+  to { left: 0; opacity: 1; }
 }
 
 /* ================= PANEL HEADER ================= */
@@ -259,24 +266,34 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
+}
+
+.leftPanelHeader h3 {
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .leftCloseBtn {
+  background: #ff4d4d;
   border: none;
-  background: #ef4444;
+  padding: 8px 16px;
+  border-radius: 12px;
   color: white;
-  padding: 6px 14px;
-  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 800;
+  transition: .2s;
+}
+
+.leftCloseBtn:hover {
+  transform: scale(1.05);
 }
 
 /* ================= PANEL BODY ================= */
 .leftPanelContent {
   height: calc(100vh - 80px);
   overflow-y: auto;
-  padding-right: 6px;
+  padding-right: 10px;
 }
 
 /* ================= RESPONSIVE ================= */
