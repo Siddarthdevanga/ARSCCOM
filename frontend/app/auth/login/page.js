@@ -20,7 +20,7 @@ export default function LoginPage() {
     "https://www.wheelbrand.in";
 
   /* ======================================================
-        LOGIN HANDLER + SUBSCRIPTION LOGIC
+        LOGIN + STRICT SUBSCRIPTION RULE
   ====================================================== */
   const handleLogin = async () => {
     if (loading) return;
@@ -70,31 +70,19 @@ export default function LoginPage() {
       const status = company?.subscription_status?.toLowerCase() || "pending";
       console.log("SUBSCRIPTION STATUS →", status);
 
-      /* =========================
-            REDIRECT RULES
-      ========================= */
-
-      // Not subscribed yet
-      if (["none", "pending"].includes(status)) {
-        router.replace("/auth/subscription");
-        return;
-      }
-
-      // Expired / Cancelled
-      if (["expired", "cancelled", "canceled"].includes(status)) {
-        setError("Your subscription is inactive. Redirecting to subscription...");
-        setTimeout(() => router.replace("/auth/subscription"), 700);
-        return;
-      }
-
-      // Active / Trial
+      /* ======================================================
+            STRICT RULE
+            Active / Trial  → /home
+            Everything else → /auth/subscription
+      ====================================================== */
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
       }
 
-      // Fallback
       router.replace("/auth/subscription");
+      return;
+
     } catch (err) {
       console.error("LOGIN ERROR:", err);
       setError("Unable to connect to server. Please try again.");
@@ -245,15 +233,17 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p style={{
-              color: "#ff3333",
-              background: "rgba(255,0,0,.15)",
-              padding: "8px",
-              borderRadius: "6px",
-              textAlign: "center",
-              marginTop: "6px",
-              fontSize: "13px",
-            }}>
+            <p
+              style={{
+                color: "#ff3333",
+                background: "rgba(255,0,0,.15)",
+                padding: "8px",
+                borderRadius: "6px",
+                textAlign: "center",
+                marginTop: "6px",
+                fontSize: "13px",
+              }}
+            >
               {error}
             </p>
           )}
