@@ -6,7 +6,6 @@ import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-/* ================= TIME OPTIONS (09:30 – 19:00) ================= */
 const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const total = 9 * 60 + 30 + i * 30;
   const h = Math.floor(total / 60);
@@ -14,8 +13,7 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 });
 
-/* ================= AM/PM FORMAT ================= */
-const toAmPm = (time24) => {
+const toAmPm = time24 => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
@@ -44,7 +42,6 @@ export default function PublicConferenceBooking() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
 
-  /* ===== Edit states ===== */
   const [editingId, setEditingId] = useState(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
@@ -53,7 +50,6 @@ export default function PublicConferenceBooking() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  /* ================= LOAD COMPANY ================= */
   useEffect(() => {
     fetch(`${API}/api/public/conference/company/${slug}`)
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -61,71 +57,53 @@ export default function PublicConferenceBooking() {
       .catch(() => setError("Invalid booking link"));
   }, [slug]);
 
-  /* ================= LOAD ROOMS ================= */
   useEffect(() => {
     if (!company) return;
-
     fetch(`${API}/api/public/conference/company/${slug}/rooms`)
       .then(r => r.ok ? r.json() : [])
-      .then(d => setRooms(Array.isArray(d) ? d : []));
+      .then(setRooms);
   }, [company, slug]);
 
-  /* ================= LOAD BOOKINGS ================= */
+  /** LOAD BOOKINGS WITH USER EMAIL INCLUDED */
   const loadBookings = () => {
-    if (!roomId || !date) {
-      setBookings([]);
-      return;
-    }
+    if (!roomId || !date) return setBookings([]);
+
+    const userEmail = email || "";
 
     fetch(
-      `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}`
+      `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}&userEmail=${userEmail}`
     )
       .then(r => r.ok ? r.json() : [])
       .then(d => setBookings(Array.isArray(d) ? d : []));
   };
 
-  useEffect(() => loadBookings(), [roomId, date, slug]);
+  useEffect(() => loadBookings(), [roomId, date, slug, otpVerified]);
 
-  /* ================= SLOT VALIDATION ================= */
-  const isSlotFree = (start, end, ignoreId = null) => {
-    return !bookings.some(b => {
-      if (b.id === ignoreId) return false;
-      return b.start_time < end && b.end_time > start;
-    });
-  };
+  const isSlotFree = (start, end, ignoreId = null) =>
+    !bookings.some(b => b.id !== ignoreId && b.start_time < end && b.end_time > start);
 
-  /* ================= AVAILABLE START TIMES ================= */
-  const availableStartTimes = useMemo(() => {
-    return TIME_OPTIONS.filter(t => {
+  const availableStartTimes = useMemo(() =>
+    TIME_OPTIONS.filter(t => {
       if (date === today) {
         const [h, m] = t.split(":").map(Number);
         if (h * 60 + m <= nowMinutes) return false;
       }
       return true;
-    });
-  }, [date, today, nowMinutes]);
+    }),
+    [date, today, nowMinutes]
+  );
 
-  const availableEndTimes = useMemo(() => {
-    if (!startTime) return [];
-    return TIME_OPTIONS.filter(t => t > startTime);
-  }, [startTime]);
-
-  /* ================= LOGOUT ================= */
   const handleLogout = () => {
     setOtpVerified(false);
     setOtpSent(false);
     setOtp("");
     setEmail("");
-    setError("");
-    setSuccess("");
+    setBookings([]);
   };
 
-  /* ================= SEND OTP ================= */
   const sendOtp = async () => {
-    if (!email.includes("@")) return setError("Enter a valid email");
+    if (!email.includes("@")) return setError("Enter valid email");
     setLoading(true);
-    setError("");
-
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/send-otp`,
@@ -135,7 +113,6 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({ email })
         }
       );
-
       if (!r.ok) throw new Error();
       setOtpSent(true);
     } catch {
@@ -145,7 +122,6 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
     try {
       const r = await fetch(
@@ -156,23 +132,19 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({ email, otp })
         }
       );
-
       if (!r.ok) throw new Error();
       setOtpVerified(true);
+      loadBookings();
     } catch {
       setError("Invalid OTP");
     }
   };
 
-  /* ================= CREATE BOOKING ================= */
   const confirmBooking = async () => {
     if (!roomId || !date || !startTime || !endTime || !department)
       return setError("All fields except purpose are required");
 
     setLoading(true);
-    setError("");
-    setSuccess("");
-
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/book`,
@@ -192,8 +164,7 @@ export default function PublicConferenceBooking() {
       );
 
       if (!r.ok) throw new Error();
-
-      setSuccess("Booking confirmed successfully");
+      setSuccess("Booking confirmed");
       setStartTime("");
       setEndTime("");
       setDepartment("");
@@ -206,48 +177,33 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= SAVE EDIT ================= */
-  const saveEdit = async (id) => {
-    if (!editStart || !editEnd)
-      return setError("Select both start and end time");
-
+  const saveEdit = async id => {
+    if (!editStart || !editEnd) return setError("Select both times");
     if (!isSlotFree(editStart, editEnd, id))
-      return setError("Selected slot unavailable");
+      return setError("Slot unavailable");
 
     setLoading(true);
-    setError("");
-    setSuccess("");
-
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/bookings/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            start_time: editStart,
-            end_time: editEnd,
-            email
-          })
+          body: JSON.stringify({ start_time: editStart, end_time: editEnd, email })
         }
       );
-
       if (!r.ok) throw new Error();
-
-      setSuccess("Booking updated successfully");
       setEditingId(null);
       loadBookings();
     } catch {
-      setError("Unable to update — slot may already be booked");
+      setError("Update failed");
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= CANCEL BOOKING ================= */
-  const cancelBooking = async (id) => {
-    if (!confirm("Cancel this booking?")) return;
-
+  const cancelBooking = async id => {
+    if (!confirm("Cancel booking?")) return;
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/bookings/${id}/cancel`,
@@ -257,11 +213,10 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({ email })
         }
       );
-
       if (!r.ok) throw new Error();
       loadBookings();
     } catch {
-      alert("Failed to cancel");
+      alert("Cancel failed");
     }
   };
 
@@ -269,116 +224,75 @@ export default function PublicConferenceBooking() {
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        {otpVerified ? (
+        {otpVerified && (
           <button className={styles.logout} onClick={handleLogout}>
             ⎋
           </button>
-        ) : (
-          <span />
         )}
-
         <h1>{company.name}</h1>
-        {company.logo_url && <img src={company.logo_url} alt="logo" />}
       </header>
 
-      {/* ================= OTP ================= */}
       {!otpVerified ? (
         <div className={styles.card}>
           <h2>Email Verification</h2>
           {error && <p className={styles.error}>{error}</p>}
-
-          <input
-            placeholder="Enter email"
-            value={email}
-            onChange={e => setEmail(e.target.value)}
-          />
+          <input value={email} placeholder="Enter email" onChange={e => setEmail(e.target.value)} />
 
           {!otpSent ? (
             <button onClick={sendOtp}>Send OTP</button>
           ) : (
             <>
-              <input
-                placeholder="Enter OTP"
-                value={otp}
-                onChange={e => setOtp(e.target.value)}
-              />
+              <input value={otp} placeholder="Enter OTP" onChange={e => setOtp(e.target.value)} />
               <button onClick={verifyOtp}>Verify</button>
             </>
           )}
         </div>
       ) : (
         <div className={styles.layout}>
-          {/* ================= BOOKING FORM ================= */}
+          {/* BOOKING FORM */}
           <div className={styles.card}>
             <h2>Book Conference Room</h2>
-
             {error && <p className={styles.error}>{error}</p>}
             {success && <p className={styles.success}>{success}</p>}
 
             <label>Date</label>
-            <input
-              type="date"
-              value={date}
-              min={today}
-              onChange={e => setDate(e.target.value)}
-            />
+            <input type="date" value={date} min={today} onChange={e => setDate(e.target.value)} />
 
             <label>Room</label>
             <select value={roomId} onChange={e => setRoomId(e.target.value)}>
               <option value="">Select</option>
               {rooms.map(r => (
-                <option key={r.id} value={r.id}>
-                  {r.room_name}
-                </option>
+                <option key={r.id} value={r.id}>{r.room_name}</option>
               ))}
             </select>
 
-            <label>Start Time</label>
-            <select
-              value={startTime}
-              onChange={e => setStartTime(e.target.value)}
-            >
+            <label>Start</label>
+            <select value={startTime} onChange={e => setStartTime(e.target.value)}>
               <option value="">Select</option>
               {availableStartTimes.map(t => (
-                <option key={t} value={t}>
-                  {toAmPm(t)}
-                </option>
+                <option key={t} value={t}>{toAmPm(t)}</option>
               ))}
             </select>
 
-            <label>End Time</label>
-            <select
-              value={endTime}
-              onChange={e => setEndTime(e.target.value)}
-            >
+            <label>End</label>
+            <select value={endTime} onChange={e => setEndTime(e.target.value)}>
               <option value="">Select</option>
               {TIME_OPTIONS.filter(t => t > startTime).map(t => (
-                <option key={t} value={t}>
-                  {toAmPm(t)}
-                </option>
+                <option key={t} value={t}>{toAmPm(t)}</option>
               ))}
             </select>
 
             <label>Department</label>
-            <input
-              value={department}
-              onChange={e => setDepartment(e.target.value)}
-            />
+            <input value={department} onChange={e => setDepartment(e.target.value)} />
 
             <label>Purpose</label>
-            <input
-              value={purpose}
-              onChange={e => setPurpose(e.target.value)}
-            />
+            <input value={purpose} onChange={e => setPurpose(e.target.value)} />
 
-            <button onClick={confirmBooking} disabled={loading}>
-              Confirm Booking
-            </button>
+            <button onClick={confirmBooking} disabled={loading}>Confirm Booking</button>
           </div>
 
-          {/* ================= BOOKINGS LIST ================= */}
+          {/* BOOKINGS LIST */}
           <div className={styles.card}>
             <h2>Bookings</h2>
 
@@ -390,35 +304,15 @@ export default function PublicConferenceBooking() {
                   <>
                     <b>{b.department}</b>
 
-                    {/* EDIT START */}
-                    <select
-                      value={editStart}
-                      onChange={e => setEditStart(e.target.value)}
-                    >
-                      {TIME_OPTIONS.filter(t => {
-                        if (date === today) {
-                          const [h, m] = t.split(":").map(Number);
-                          if (h * 60 + m <= nowMinutes) return false;
-                        }
-                        return isSlotFree(t, editEnd || t, b.id);
-                      }).map(t => (
-                        <option key={t} value={t}>
-                          {toAmPm(t)}
-                        </option>
+                    <select value={editStart} onChange={e => setEditStart(e.target.value)}>
+                      {TIME_OPTIONS.map(t => (
+                        <option key={t} value={t}>{toAmPm(t)}</option>
                       ))}
                     </select>
 
-                    {/* EDIT END */}
-                    <select
-                      value={editEnd}
-                      onChange={e => setEditEnd(e.target.value)}
-                    >
-                      {TIME_OPTIONS.filter(t =>
-                        t > editStart && isSlotFree(editStart, t, b.id)
-                      ).map(t => (
-                        <option key={t} value={t}>
-                          {toAmPm(t)}
-                        </option>
+                    <select value={editEnd} onChange={e => setEditEnd(e.target.value)}>
+                      {TIME_OPTIONS.filter(t => t > editStart).map(t => (
+                        <option key={t} value={t}>{toAmPm(t)}</option>
                       ))}
                     </select>
 
@@ -427,27 +321,27 @@ export default function PublicConferenceBooking() {
                   </>
                 ) : (
                   <>
-                    <b>
-                      {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
-                    </b>
+                    <b>{toAmPm(b.start_time)} – {toAmPm(b.end_time)}</b>
                     <p>{b.department}</p>
                     <span>{b.booked_by}</span>
 
-                    <div>
-                      <button
-                        onClick={() => {
-                          setEditingId(b.id);
-                          setEditStart(b.start_time);
-                          setEditEnd(b.end_time);
-                        }}
-                      >
-                        Edit
-                      </button>
+                    {b.can_modify && (
+                      <div>
+                        <button
+                          onClick={() => {
+                            setEditingId(b.id);
+                            setEditStart(b.start_time);
+                            setEditEnd(b.end_time);
+                          }}
+                        >
+                          Edit
+                        </button>
 
-                      <button onClick={() => cancelBooking(b.id)}>
-                        Cancel
-                      </button>
-                    </div>
+                        <button onClick={() => cancelBooking(b.id)}>
+                          Cancel
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
