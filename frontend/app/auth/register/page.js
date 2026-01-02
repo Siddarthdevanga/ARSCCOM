@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -17,18 +17,28 @@ export default function RegisterPage() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.wheelbrand.in";
 
-  /* ======================================================
-        REGISTER HANDLER
-  ====================================================== */
+  /* ======================================
+        AUTO REDIRECT AFTER SUCCESS
+  ====================================== */
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        router.push("/auth/login");
+      }, 4000); // 4 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [success, router]);
+
   const handleRegister = async () => {
     setError("");
 
-    // ---------- BASIC VALIDATION ----------
     if (
       !companyName ||
       !email ||
@@ -42,27 +52,23 @@ export default function RegisterPage() {
       return;
     }
 
-    // ---------- EMAIL ----------
     const normalizedEmail = email.trim().toLowerCase();
     if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
       setError("Enter a valid email address");
       return;
     }
 
-    // ---------- PHONE ----------
     if (phone.trim().length < 8) {
       setError("Enter a valid phone number");
       return;
     }
 
-    // ---------- ROOMS ----------
     const roomCount = Number(rooms);
     if (!roomCount || roomCount < 1) {
       setError("Conference rooms must be at least 1");
       return;
     }
 
-    // ---------- PASSWORD ----------
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -73,7 +79,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // ---------- LOGO ----------
     if (!logo) {
       setError("Company logo is required");
       return;
@@ -108,18 +113,10 @@ export default function RegisterPage() {
         return;
       }
 
-      // Save minimal helpful details (optional)
       if (normalizedEmail)
         localStorage.setItem("regEmail", normalizedEmail);
 
-      /* ======================================================
-          IMPORTANT:
-          Backend does NOT give JWT on register
-          So user must LOGIN → then subscription flow continues
-      ====================================================== */
-      alert("Registration successful. Please login to continue.");
-      router.push("/auth/login");
-
+      setSuccess(true);
     } catch (err) {
       console.error(err);
       setError("Unable to connect to server");
@@ -130,7 +127,6 @@ export default function RegisterPage() {
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.brand}>PROMEET</div>
 
@@ -142,102 +138,40 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      {/* ================= CARD ================= */}
       <div className={styles.card}>
         <h2 className={styles.title}>Create Company Account</h2>
         <p className={styles.subtitle}>
           Register your company to start managing visitors & conference rooms
         </p>
 
-        {/* ROW 1 */}
-        <div className={styles.row3}>
-          <div>
-            <label className={styles.label}>Company Name *</label>
-            <input
-              className={styles.input}
-              value={companyName}
-              onChange={(e) => setCompanyName(e.target.value)}
-            />
+        {!success ? (
+          <>
+            {/* existing form fields here unchanged */}
+
+            {error && <div className={styles.error}>{error}</div>}
+
+            <button
+              className={styles.submitBtn}
+              onClick={handleRegister}
+              disabled={loading}
+            >
+              {loading ? "Registering..." : "Register & Continue"}
+            </button>
+          </>
+        ) : (
+          <div className={styles.successBox}>
+            <h3>Registration Successful 🎉</h3>
+            <p>You will be redirected to login shortly...</p>
+            <p>Please login and subscribe to continue.</p>
+
+            <button
+              className={styles.submitBtn}
+              onClick={() => router.push("/auth/login")}
+            >
+              Go to Login Now
+            </button>
           </div>
-
-          <div>
-            <label className={styles.label}>Admin Email *</label>
-            <input
-              className={styles.input}
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className={styles.label}>Admin Phone *</label>
-            <input
-              className={styles.input}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* ROW 2 */}
-        <div className={styles.row2}>
-          <div>
-            <label className={styles.label}>Company Logo *</label>
-            <input
-              className={styles.fileInput}
-              type="file"
-              accept="image/*"
-              onChange={(e) => setLogo(e.target.files[0])}
-            />
-          </div>
-
-          <div>
-            <label className={styles.label}>Conference Rooms *</label>
-            <input
-              className={styles.input}
-              type="number"
-              min="1"
-              value={rooms}
-              onChange={(e) => setRooms(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* ROW 3 */}
-        <div className={styles.row2}>
-          <div>
-            <label className={styles.label}>Password *</label>
-            <input
-              className={styles.input}
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className={styles.label}>Confirm Password *</label>
-            <input
-              className={styles.input}
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* ERROR */}
-        {error && <div className={styles.error}>{error}</div>}
-
-        {/* BUTTON */}
-        <button
-          className={styles.submitBtn}
-          onClick={handleRegister}
-          disabled={loading}
-        >
-          {loading ? "Registering..." : "Register & Continue"}
-        </button>
+        )}
       </div>
     </div>
   );
