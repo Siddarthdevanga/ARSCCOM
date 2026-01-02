@@ -23,7 +23,7 @@ export default function ContactUs() {
           <ul>
             <li>
               <strong>Instant Digital Visitor Pass</strong> – Visitors receive secure
-              virtual passes via Email / SMS eliminating manual paper slips.
+              virtual passes via Email / Whatsapp eliminating manual paper slips.
             </li>
 
             <li>
