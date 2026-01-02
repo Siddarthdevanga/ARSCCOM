@@ -13,6 +13,7 @@ import webhookRoutes from "./routes/webhook.routes.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
 import billingRepair from "./routes/billingRepair.route.js";
 import billingCron from "./routes/billingCron.route.js";
+import zohoPushRoutes from "./routes/zohoPush.route.js";
 
 const app = express();
 
@@ -26,7 +27,7 @@ app.set("trust proxy", 1);
 ====================================================== */
 app.use(
   helmet({
-    crossOriginResourcePolicy: false // allow logos/assets
+    crossOriginResourcePolicy: false
   })
 );
 
@@ -41,7 +42,7 @@ app.use(
 );
 
 /* ======================================================
-   CORS CONFIG
+   CORS
 ====================================================== */
 const allowedOrigins = [
   "http://localhost:3000",
@@ -54,7 +55,7 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // Postman / Internal / Cron
+      if (!origin) return callback(null, true);
       if (allowedOrigins.includes(origin)) return callback(null, true);
 
       console.warn("❌ BLOCKED CORS ORIGIN:", origin);
@@ -101,16 +102,19 @@ app.use("/api/public/conference", conferencePublicRoutes);
 // PAYMENT
 app.use("/api/payment", paymentRoutes);
 
-// SUBSCRIPTION POPUP INFO
+// SUBSCRIPTION DETAILS
 app.use("/api/subscription", subscriptionRoutes);
 
-// BILLING SELF-REPAIR / MANUAL SYNC TOOL
+// BILLING SELF-REPAIR
 app.use("/api/billing/repair", billingRepair);
 
-// CRON BASED AUTO SYNC (runs + manual trigger)
+// CRON AUTO SYNC
 app.use("/api/billing/cron", billingCron);
 
-// ZOHO WEBHOOK — MUST BE BEFORE 404
+// ZOHO DIRECT PUSH (Alternative to webhook)
+app.use("/api/payment/zoho/push", zohoPushRoutes);
+
+// ZOHO WEBHOOK
 app.use("/api/webhook", webhookRoutes);
 
 /* ======================================================
