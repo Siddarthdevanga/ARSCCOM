@@ -40,7 +40,7 @@ export default function ConferenceDashboard() {
       ? tomorrow
       : today;
 
-  /* LOAD DASHBOARD */
+  /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
@@ -71,7 +71,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* SAVE ROOM RENAME */
+  /* ================= SAVE RENAMED ROOM ================= */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
@@ -91,7 +91,7 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* FILTER BOOKINGS */
+  /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
     return bookings.filter(
       (b) =>
@@ -100,7 +100,7 @@ export default function ConferenceDashboard() {
     );
   }, [bookings, selectedDate]);
 
-  /* DEPARTMENT STATS */
+  /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -117,11 +117,23 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div>
-          <h2 className={styles.companyName}>{company.name}</h2>
-          <span className={styles.subText}>Conference Dashboard</span>
+        <div className={styles.leftHeader}>
+          {/* LEFT MENU TRIGGER */}
+          <div
+            className={styles.leftMenuTrigger}
+            onClick={() => setSidePanelOpen(true)}
+          >
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+
+          <div>
+            <h2 className={styles.companyName}>{company.name}</h2>
+            <span className={styles.subText}>Conference Dashboard</span>
+          </div>
         </div>
 
         <div className={styles.headerRight}>
@@ -144,7 +156,7 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* PUBLIC URL */}
+      {/* ================= PUBLIC LINK ================= */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -163,16 +175,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* LEFT BAR */}
-      <div className={styles.leftBar}>
-        <button onClick={() => setSidePanelOpen(true)}>
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
-      </div>
-
-      {/* LEFT PANEL */}
+      {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
@@ -185,7 +188,7 @@ export default function ConferenceDashboard() {
                 setEditingRoomId(null);
               }}
             >
-              ✖
+              Close ✖
             </button>
           </div>
 
@@ -193,7 +196,7 @@ export default function ConferenceDashboard() {
             <ul className={styles.roomList}>
               {rooms.map((r) => (
                 <li key={r.id}>
-                  #{r.room_number} —{" "}
+                  <b>{r.room_name}</b> (#{r.room_number})
                   {editingRoomId === r.id ? (
                     <>
                       <input
@@ -211,17 +214,14 @@ export default function ConferenceDashboard() {
                       </button>
                     </>
                   ) : (
-                    <>
-                      {r.room_name}{" "}
-                      <button
-                        onClick={() => {
-                          setEditingRoomId(r.id);
-                          setEditName(r.room_name);
-                        }}
-                      >
-                        Rename
-                      </button>
-                    </>
+                    <button
+                      onClick={() => {
+                        setEditingRoomId(r.id);
+                        setEditName(r.room_name);
+                      }}
+                    >
+                      Rename
+                    </button>
                   )}
                 </li>
               ))}
@@ -230,7 +230,7 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* DATE FILTER */}
+      {/* ================= DATE FILTER ================= */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
 
@@ -253,7 +253,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* STATS */}
+      {/* ================= STATS ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
@@ -271,7 +271,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* DEPARTMENT STATS */}
+      {/* ================= DEPARTMENT ================= */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -288,7 +288,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* BOOKINGS LIST */}
+      {/* ================= BOOKINGS ================= */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
@@ -310,4 +310,3 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
-
