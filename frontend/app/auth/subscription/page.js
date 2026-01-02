@@ -63,7 +63,7 @@ export default function SubscriptionPage() {
 
     // ENTERPRISE
     if (plan === "enterprise") {
-      router.push("/contact-us");
+      router.push("auth/contact-us");
       setLoadingPlan("");
       return;
     }
