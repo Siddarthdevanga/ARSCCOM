@@ -111,10 +111,26 @@ html::-webkit-scrollbar {
   color: #333;
 }
 
-/* PURE SCOPED DROPDOWNS (PRODUCTION SAFE) */
-.page select,
-.card select,
-.side select {
+.card input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 6px;
+  border-radius: 12px;
+  border: 1px solid #c9c9c9;
+  font-size: 14px;
+  background: #fafafa;
+  transition: border 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card input:focus {
+  outline: none;
+  border-color: #7a00ff;
+  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.18);
+}
+
+/* ====================== FIX FOR NEXT.JS PURE SELECTOR ===================== */
+/* Safe dropdown styling — no Turbopack error */
+:global(select) {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -132,37 +148,20 @@ html::-webkit-scrollbar {
   cursor: pointer;
 }
 
-.page select:hover {
+:global(select:hover) {
   background: #ffffff;
 }
 
-.page select:focus {
+:global(select:focus) {
   outline: none;
   border-color: #7a00ff;
   box-shadow: 0 0 0 3px rgba(122,0,255,0.25);
 }
 
-.page select:disabled {
+:global(select:disabled) {
   background: #eee !important;
   color: #777;
   cursor: not-allowed;
-}
-
-.card input {
-  width: 100%;
-  padding: 12px 14px;
-  margin-top: 6px;
-  border-radius: 12px;
-  border: 1px solid #c9c9c9;
-  font-size: 14px;
-  background: #fafafa;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card input:focus {
-  outline: none;
-  border-color: #7a00ff;
-  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.18);
 }
 
 /* MAIN ACTION BUTTON */
@@ -226,7 +225,7 @@ html::-webkit-scrollbar {
   margin: 0 0 8px 0;
 }
 
-/* EDIT MODE */
+/* EDIT STATE LOOK */
 .booking.editing {
   border: 2px solid rgba(255,255,255,0.6);
   background: rgba(255,255,255,0.22);
@@ -266,19 +265,19 @@ html::-webkit-scrollbar {
   box-shadow: 0 8px 22px rgba(0,0,0,0.18);
 }
 
-/* EDIT */
+/* EDIT BUTTON */
 .primaryBtn {
   background: linear-gradient(135deg, #ffd54f, #ff9800);
   color: #000;
 }
 
-/* SAVE */
+/* SAVE BUTTON */
 .saveBtn {
   background: linear-gradient(135deg, #00ffa6, #00c853);
-  color: rgb(0, 0, 0);
+  color: #000;
 }
 
-/* CANCEL / DELETE */
+/* CANCEL / DELETE BUTTON */
 .dangerBtn,
 .redBtn,
 .cancelBtn {
@@ -286,7 +285,7 @@ html::-webkit-scrollbar {
   color: white;
 }
 
-/* Tap */
+/* Press Effect */
 .inlineButtons button:active,
 .bookingActions button:active {
   transform: scale(0.97);
