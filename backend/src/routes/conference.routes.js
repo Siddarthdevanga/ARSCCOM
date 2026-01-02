@@ -11,9 +11,25 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
+   EMAIL FOOTER
+====================================================== */
+const emailFooter = (company) => `
+<br/>
+Regards,<br/>
+<b>${company?.name || "Conference Platform"}</b><br/>
+${company?.logo_url ? `<img src="${company.logo_url}" height="55" />` : ""}
+
+<hr/>
+<p style="font-size:13px;color:#666">
+This email was automatically sent from the Conference Room Booking Platform.<br/>
+If you did not perform this action, please contact your administrator immediately.
+</p>
+`;
+
+/* ======================================================
    EMAIL HELPER
 ====================================================== */
-const sendBookingMail = async ({ to, subject, heading, booking }) => {
+const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
   if (!to) return;
 
   try {
@@ -30,12 +46,7 @@ const sendBookingMail = async ({ to, subject, heading, booking }) => {
         <p><b>Department:</b> ${booking.department}</p>
         ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
 
-        <br/>
-        <hr/>
-        <p style="font-size:12px;color:#777">
-          PROMEET Conference Booking System<br/>
-          This is an automated message.
-        </p>
+        ${emailFooter(company)}
       </div>
       `
     });
@@ -84,7 +95,7 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   ROOMS
+   ROOMS — LIST
 ====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
@@ -104,6 +115,65 @@ router.get("/rooms", async (req, res) => {
   } catch (err) {
     console.error("[ADMIN][GET ROOMS]", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
+  }
+});
+
+/* ======================================================
+   ROOMS — RENAME
+====================================================== */
+router.patch("/rooms/:id", async (req, res) => {
+  try {
+    const { companyId } = req.user;
+    const roomId = Number(req.params.id);
+    const { room_name } = req.body;
+
+    if (!roomId || !room_name?.trim()) {
+      return res.status(400).json({ message: "Room name required" });
+    }
+
+    const [[room]] = await db.query(
+      `
+      SELECT id FROM conference_rooms
+      WHERE id = ? AND company_id = ?
+      LIMIT 1
+      `,
+      [roomId, companyId]
+    );
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    const [[exists]] = await db.query(
+      `
+      SELECT COUNT(*) AS cnt
+      FROM conference_rooms
+      WHERE company_id = ?
+        AND room_name = ?
+        AND id <> ?
+      `,
+      [companyId, room_name.trim(), roomId]
+    );
+
+    if (exists.cnt > 0) {
+      return res.status(409).json({
+        message: "Another room already has this name"
+      });
+    }
+
+    await db.query(
+      `
+      UPDATE conference_rooms
+      SET room_name = ?
+      WHERE id = ? AND company_id = ?
+      `,
+      [room_name.trim(), roomId, companyId]
+    );
+
+    res.json({ message: "Room renamed successfully" });
+  } catch (err) {
+    console.error("[ADMIN][RENAME ROOM]", err);
+    res.status(500).json({ message: "Unable to rename room" });
   }
 });
 
@@ -162,7 +232,7 @@ router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
   try {
-    const { companyId } = req.user;
+    const { companyId, company } = req.user;
     const {
       room_id,
       booked_by,
@@ -270,7 +340,8 @@ router.post("/bookings", async (req, res) => {
         end_time,
         department,
         purpose
-      }
+      },
+      company
     });
 
     res.status(201).json({ message: "Booking created successfully" });
@@ -284,13 +355,13 @@ router.post("/bookings", async (req, res) => {
 });
 
 /* ======================================================
-   EDIT BOOKING
+   EDIT BOOKING  (SEND RESCHEDULE MAIL)
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const { companyId, company } = req.user;
     const bookingId = Number(req.params.id);
-    const { start_time, end_time, email } = req.body;
+    const { start_time, end_time } = req.body;
 
     if (!bookingId || !start_time || !end_time) {
       return res.status(400).json({
@@ -300,9 +371,10 @@ router.patch("/bookings/:id", async (req, res) => {
 
     const [[booking]] = await db.query(
       `
-      SELECT *
-      FROM conference_bookings
-      WHERE id = ? AND company_id = ?
+      SELECT b.*, r.room_name
+      FROM conference_bookings b
+      JOIN conference_rooms r ON r.id = b.room_id
+      WHERE b.id = ? AND b.company_id = ?
       LIMIT 1
       `,
       [bookingId, companyId]
@@ -352,17 +424,18 @@ router.patch("/bookings/:id", async (req, res) => {
     );
 
     await sendBookingMail({
-      to: email || (booking.booked_by?.includes("@") ? booking.booked_by : null),
-      subject: "Conference Room Booking Updated",
-      heading: "Booking Updated",
+      to: booking.booked_by?.includes("@") ? booking.booked_by : null,
+      subject: "Conference Room Booking Rescheduled",
+      heading: "Your Meeting Has Been Rescheduled",
       booking: {
-        room_name: booking.room_name || "Conference Room",
+        room_name: booking.room_name,
         booking_date: booking.booking_date,
         start_time,
         end_time,
         department: booking.department,
         purpose: booking.purpose
-      }
+      },
+      company
     });
 
     res.json({ message: "Booking updated successfully" });
@@ -373,17 +446,16 @@ router.patch("/bookings/:id", async (req, res) => {
 });
 
 /* ======================================================
-   CANCEL BOOKING
+   CANCEL BOOKING (SEND CANCEL MAIL)
 ====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const { companyId, company } = req.user;
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
       `
-      SELECT 
-        b.*, r.room_name
+      SELECT b.*, r.room_name
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
       WHERE b.id = ? AND b.company_id = ?
@@ -410,8 +482,9 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     await sendBookingMail({
       to: booking.booked_by?.includes("@") ? booking.booked_by : null,
       subject: "Conference Room Booking Cancelled",
-      heading: "Booking Cancelled",
-      booking
+      heading: "Your Meeting Has Been Cancelled",
+      booking,
+      company
     });
 
     res.json({ message: "Booking cancelled successfully" });
@@ -422,3 +495,4 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+

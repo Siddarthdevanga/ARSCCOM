@@ -11,15 +11,17 @@ const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
   const m = total % 60;
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
+
   return {
     label: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
-    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`
+    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
   };
 });
 
-const normalizeDate = d => (typeof d === "string" ? d.split("T")[0] : "");
+const normalizeDate = (d) =>
+  typeof d === "string" ? d.split("T")[0] : "";
 
-const toAmPm = time24 => {
+const toAmPm = (time24) => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
@@ -55,7 +57,7 @@ export default function ConferenceBookings() {
 
       const [r, b] = await Promise.all([
         apiFetch("/api/conference/rooms"),
-        apiFetch("/api/conference/bookings")
+        apiFetch("/api/conference/bookings"),
       ]);
 
       setRooms(Array.isArray(r) ? r : []);
@@ -72,7 +74,7 @@ export default function ConferenceBookings() {
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
-      b =>
+      (b) =>
         normalizeDate(b.booking_date) === date &&
         Number(b.room_id) === Number(roomId) &&
         b.status === "BOOKED"
@@ -81,8 +83,8 @@ export default function ConferenceBookings() {
 
   const blockedSlots = useMemo(() => {
     const set = new Set();
-    dayBookings.forEach(b => {
-      TIME_OPTIONS.forEach(t => {
+    dayBookings.forEach((b) => {
+      TIME_OPTIONS.forEach((t) => {
         if (t.value >= b.start_time && t.value < b.end_time) {
           set.add(t.value);
         }
@@ -95,7 +97,7 @@ export default function ConferenceBookings() {
     new Date().getHours() * 60 + new Date().getMinutes();
 
   const availableStartTimes = useMemo(() => {
-    return TIME_OPTIONS.filter(t => {
+    return TIME_OPTIONS.filter((t) => {
       if (blockedSlots.has(t.value)) return false;
       if (date !== today) return true;
       const [h, m] = t.value.split(":").map(Number);
@@ -106,16 +108,17 @@ export default function ConferenceBookings() {
   const availableEndTimes = useMemo(() => {
     if (!startTime) return [];
     return TIME_OPTIONS.filter(
-      t => t.value > startTime && !blockedSlots.has(t.value)
+      (t) => t.value > startTime && !blockedSlots.has(t.value)
     );
   }, [startTime, blockedSlots]);
 
+  /* ================= CREATE BOOKING ================= */
   const createBooking = async () => {
     setError("");
     setSuccess("");
 
     if (!date || !roomId || !startTime || !endTime || !department)
-      return setError("All fields required");
+      return setError("All fields are required");
 
     if (endTime <= startTime)
       return setError("End time must be after start");
@@ -130,11 +133,11 @@ export default function ConferenceBookings() {
           purpose,
           booking_date: date,
           start_time: startTime,
-          end_time: endTime
-        })
+          end_time: endTime,
+        }),
       });
 
-      setSuccess("Booking created");
+      setSuccess("Booking created successfully");
       setStartTime("");
       setEndTime("");
       setDepartment("");
@@ -142,29 +145,29 @@ export default function ConferenceBookings() {
 
       loadAll();
     } catch (e) {
-      setError(e.message || "Failed");
+      setError(e.message || "Failed to create booking");
     }
   };
 
-  // ===============================
-  // BLOCKED SLOTS FOR EDIT MODE
-  // ===============================
+  /* ================= BLOCK SLOTS EXCEPT CURRENT ================= */
   const getBlockedSlotsExcluding = (bookingId) => {
     const set = new Set();
-
-    dayBookings.forEach(b => {
+    dayBookings.forEach((b) => {
       if (b.id === bookingId) return;
-      TIME_OPTIONS.forEach(t => {
+      TIME_OPTIONS.forEach((t) => {
         if (t.value >= b.start_time && t.value < b.end_time) {
           set.add(t.value);
         }
       });
     });
-
     return set;
   };
 
-  const saveEdit = async id => {
+  /* ================= SAVE EDIT ================= */
+  const saveEdit = async (id) => {
+    setError("");
+    setSuccess("");
+
     if (!editStart || !editEnd)
       return setError("Select both start & end");
 
@@ -176,10 +179,11 @@ export default function ConferenceBookings() {
         method: "PATCH",
         body: JSON.stringify({
           start_time: editStart,
-          end_time: editEnd
-        })
+          end_time: editEnd,
+        }),
       });
-      setSuccess("Booking updated");
+
+      setSuccess("Booking updated successfully");
       setEditingId(null);
       loadAll();
     } catch {
@@ -187,16 +191,20 @@ export default function ConferenceBookings() {
     }
   };
 
-  const cancelBooking = async id => {
-    if (!confirm("Cancel booking?")) return;
+  /* ================= CANCEL BOOKING ================= */
+  const cancelBooking = async (id) => {
+    setError("");
+    setSuccess("");
 
     try {
       await apiFetch(`/api/conference/bookings/${id}/cancel`, {
-        method: "PATCH"
+        method: "PATCH",
       });
+
+      setSuccess("Booking cancelled successfully");
       loadAll();
     } catch {
-      alert("Failed to cancel");
+      setError("Failed to cancel booking");
     }
   };
 
@@ -212,14 +220,11 @@ export default function ConferenceBookings() {
         <h1 className={styles.companyName}>{company.name}</h1>
 
         <div className={styles.headerRight}>
-          {company.logo_url && (
-            <img src={company.logo_url} alt="logo" />
-          )}
+          {company.logo_url && <img src={company.logo_url} alt="logo" />}
         </div>
       </header>
 
       <div className={styles.content}>
-        
         {/* LEFT FORM */}
         <div className={styles.card}>
           <h2>Book Conference Room</h2>
@@ -232,13 +237,17 @@ export default function ConferenceBookings() {
             type="date"
             value={date}
             min={today}
-            onChange={e => setDate(e.target.value)}
+            onChange={(e) => setDate(e.target.value)}
           />
 
           <label>Room</label>
-          <select value={roomId} onChange={e => setRoomId(e.target.value)}>
+          <select
+            className={styles.dropdown}
+            value={roomId}
+            onChange={(e) => setRoomId(e.target.value)}
+          >
             <option value="">Select</option>
-            {rooms.map(r => (
+            {rooms.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.room_name}
               </option>
@@ -247,11 +256,12 @@ export default function ConferenceBookings() {
 
           <label>Start Time</label>
           <select
+            className={styles.dropdown}
             value={startTime}
-            onChange={e => setStartTime(e.target.value)}
+            onChange={(e) => setStartTime(e.target.value)}
           >
             <option value="">Select</option>
-            {availableStartTimes.map(t => (
+            {availableStartTimes.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
@@ -260,11 +270,12 @@ export default function ConferenceBookings() {
 
           <label>End Time</label>
           <select
+            className={styles.dropdown}
             value={endTime}
-            onChange={e => setEndTime(e.target.value)}
+            onChange={(e) => setEndTime(e.target.value)}
           >
             <option value="">Select</option>
-            {availableEndTimes.map(t => (
+            {availableEndTimes.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
               </option>
@@ -272,10 +283,16 @@ export default function ConferenceBookings() {
           </select>
 
           <label>Department</label>
-          <input value={department} onChange={e => setDepartment(e.target.value)} />
+          <input
+            value={department}
+            onChange={(e) => setDepartment(e.target.value)}
+          />
 
           <label>Purpose</label>
-          <input value={purpose} onChange={e => setPurpose(e.target.value)} />
+          <input
+            value={purpose}
+            onChange={(e) => setPurpose(e.target.value)}
+          />
 
           <button onClick={createBooking}>Confirm Booking</button>
         </div>
@@ -286,15 +303,13 @@ export default function ConferenceBookings() {
 
           {dayBookings.length === 0 && <p>No bookings</p>}
 
-          {dayBookings.map(b => {
+          {dayBookings.map((b) => {
             const blocked = getBlockedSlotsExcluding(b.id);
-
             const editableStartOptions = TIME_OPTIONS.filter(
-              t => !blocked.has(t.value)
+              (t) => !blocked.has(t.value)
             );
-
             const editableEndOptions = TIME_OPTIONS.filter(
-              t => t.value > editStart && !blocked.has(t.value)
+              (t) => t.value > editStart && !blocked.has(t.value)
             );
 
             return (
@@ -304,10 +319,11 @@ export default function ConferenceBookings() {
                     <b>Edit Booking</b>
 
                     <select
+                      className={styles.dropdown}
                       value={editStart}
-                      onChange={e => setEditStart(e.target.value)}
+                      onChange={(e) => setEditStart(e.target.value)}
                     >
-                      {editableStartOptions.map(t => (
+                      {editableStartOptions.map((t) => (
                         <option key={t.value} value={t.value}>
                           {t.label}
                         </option>
@@ -315,10 +331,11 @@ export default function ConferenceBookings() {
                     </select>
 
                     <select
+                      className={styles.dropdown}
                       value={editEnd}
-                      onChange={e => setEditEnd(e.target.value)}
+                      onChange={(e) => setEditEnd(e.target.value)}
                     >
-                      {editableEndOptions.map(t => (
+                      {editableEndOptions.map((t) => (
                         <option key={t.value} value={t.value}>
                           {t.label}
                         </option>

@@ -27,7 +27,6 @@ html::-webkit-scrollbar {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none !important;
 }
-
 .page::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
@@ -112,8 +111,7 @@ html::-webkit-scrollbar {
   color: #333;
 }
 
-.card input,
-.card select {
+.card input {
   width: 100%;
   padding: 12px 14px;
   margin-top: 6px;
@@ -124,11 +122,40 @@ html::-webkit-scrollbar {
   transition: border 0.2s ease, box-shadow 0.2s ease;
 }
 
-.card input:focus,
-.card select:focus {
+.card input:focus {
   outline: none;
   border-color: #7a00ff;
   box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.18);
+}
+
+/* ================= DROPDOWN (PURE SAFE) ================= */
+.dropdown {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 6px;
+  border-radius: 12px;
+  border: 1px solid #c9c9c9;
+  font-size: 14px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.95);
+  transition: all .25s ease;
+  cursor: pointer;
+}
+
+.dropdown:hover {
+  background: white;
+}
+
+.dropdown:focus {
+  outline: none;
+  border-color: #7a00ff;
+  box-shadow: 0 0 0 3px rgba(122,0,255,0.25);
+}
+
+.dropdown:disabled {
+  background: #eee !important;
+  color: #777;
+  cursor: not-allowed;
 }
 
 /* MAIN ACTION BUTTON */
@@ -173,6 +200,13 @@ html::-webkit-scrollbar {
   border-radius: 16px;
   padding: 16px 14px;
   margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,0.22);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.booking:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
 }
 
 .booking b {
@@ -185,28 +219,64 @@ html::-webkit-scrollbar {
   margin: 0 0 8px 0;
 }
 
-/* BOOKING ACTIONS */
+/* EDIT STATE */
+.booking.editing {
+  border: 2px solid rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.22);
+  padding: 18px;
+}
+
+/* ================= BOOKING ACTION BUTTONS ================= */
+.inlineButtons,
 .bookingActions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
+.inlineButtons button,
 .bookingActions button {
   flex: 1;
-  padding: 8px;
-  border-radius: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 13px;
+
+  background: rgba(255,255,255,0.25);
+  color: #000;
+
+  backdrop-filter: blur(10px);
+  transition: all 0.2s ease-in-out;
 }
 
-.bookingActions button:first-child {
-  background: #ffd54f;
+.inlineButtons button:hover,
+.bookingActions button:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 8px 22px rgba(0,0,0,0.18);
 }
 
-.bookingActions .redBtn {
-  background: #ef5350;
-  color: #fff;
+.primaryBtn {
+  background: linear-gradient(135deg, #ffd54f, #ff9800);
+  color: #000;
+}
+
+.saveBtn {
+  background: linear-gradient(135deg, #00ffa6, #00c853);
+  color: #000;
+}
+
+.dangerBtn,
+.redBtn,
+.cancelBtn {
+  background: linear-gradient(135deg, #ff4d4d, #d50000);
+  color: white;
+}
+
+.inlineButtons button:active,
+.bookingActions button:active {
+  transform: scale(0.97);
 }
 
 /* ================= MESSAGES ================= */
