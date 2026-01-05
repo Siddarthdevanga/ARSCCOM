@@ -36,7 +36,9 @@ body {
   width: 340px;
   max-width: 100%;
   height: auto;
+  margin-left: 40px;   /* adjust value as needed */
 }
+
 
 /* ================= NAV ================= */
 .nav {
