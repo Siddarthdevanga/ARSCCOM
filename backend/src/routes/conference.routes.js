@@ -11,23 +11,41 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
-   EMAIL FOOTER
+   EMAIL FOOTER (COMPANY LOGO BASED)
 ====================================================== */
 const emailFooter = (company) => `
 <br/>
 Regards,<br/>
 <b>${company?.name || "Conference Platform"}</b><br/>
-${company?.logo_url ? `<img src="${company.logo_url}" height="55" />` : ""}
 
-<hr/>
+${
+  company?.logo_url
+    ? `<img src="${company.logo_url}" height="65" style="margin:10px 0;display:block" />`
+    : ""
+}
+
+<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
+
 <p style="font-size:13px;color:#666">
-This email was automatically sent from the Conference Room Booking Platform.<br/>
-If you did not perform this action, please contact your administrator immediately.
+This email was automatically sent from the PROMEET
+Conference & Visitor Management Platform.<br/>
+If this wasn’t you, please contact your administrator immediately.
 </p>
 `;
 
 /* ======================================================
-   EMAIL HELPER
+   TIME FORMATTER (AM/PM)
+====================================================== */
+const toAmPm = (time) => {
+  if (!time) return "";
+  const [h, m] = time.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hr = (h % 12) || 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
+};
+
+/* ======================================================
+   EMAIL SENDER
 ====================================================== */
 const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
   if (!to) return;
@@ -38,13 +56,32 @@ const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
       subject,
       html: `
       <div style="font-family:Arial;padding:18px">
-        <h2 style="color:#6c2bd9;">${heading}</h2>
+        
+        <h2 style="color:#6c2bd9;margin-bottom:6px">
+          ${heading}
+        </h2>
 
-        <p><b>Room:</b> ${booking.room_name}</p>
-        <p><b>Date:</b> ${booking.booking_date}</p>
-        <p><b>Time:</b> ${booking.start_time} – ${booking.end_time}</p>
-        <p><b>Department:</b> ${booking.department}</p>
-        ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
+        <p style="font-size:14px;color:#444;margin-top:0">
+          Below are your meeting details:
+        </p>
+
+        <div style="
+          background:#f7f7ff;
+          border-radius:12px;
+          border:1px solid #ddd;
+          padding:16px;
+          margin:12px 0">
+
+          <p><b>Room:</b> ${booking.room_name}</p>
+          <p><b>Date:</b> ${booking.booking_date}</p>
+          <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(booking.end_time)}</p>
+          <p><b>Department:</b> ${booking.department}</p>
+          ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
+        </div>
+
+        <p style="font-size:13px;color:#444">
+          Thank you for using PROMEET.
+        </p>
 
         ${emailFooter(company)}
       </div>
@@ -355,7 +392,7 @@ router.post("/bookings", async (req, res) => {
 });
 
 /* ======================================================
-   EDIT BOOKING  (SEND RESCHEDULE MAIL)
+   EDIT BOOKING — RESCHEDULE MAIL
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
@@ -446,7 +483,7 @@ router.patch("/bookings/:id", async (req, res) => {
 });
 
 /* ======================================================
-   CANCEL BOOKING (SEND CANCEL MAIL)
+   CANCEL BOOKING — CANCEL MAIL
 ====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
@@ -495,4 +532,3 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
-
