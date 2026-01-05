@@ -37,7 +37,7 @@ body::-webkit-scrollbar,
 .header h1 {
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: 0.3px;
+  letter-spacing: .4px;
   margin: 0;
   white-space: nowrap;
 }
@@ -57,12 +57,12 @@ body::-webkit-scrollbar,
   padding: 10px 14px;
   border-radius: 50%;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.15s ease;
+  transition: .2s ease;
 }
 
 .logout:hover {
-  background: rgba(255, 255, 255, 0.32);
-  transform: scale(1.05);
+  background: rgba(255, 255, 255, .3);
+  transform: scale(1.06);
 }
 
 /* ================= LAYOUT ================= */
@@ -108,13 +108,13 @@ body::-webkit-scrollbar,
   font-size: 14px;
   outline: none;
   background: #fff;
-  transition: border 0.2s ease, box-shadow 0.2s ease;
+  transition: .2s ease;
 }
 
 .card input:focus,
 .card select:focus {
   border-color: #7a00ff;
-  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.15);
+  box-shadow: 0 0 0 3px rgba(122,0,255,.15);
 }
 
 /* ================= BUTTON ================= */
@@ -129,23 +129,23 @@ body::-webkit-scrollbar,
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
   cursor: pointer;
-  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
+  transition: .15s ease;
 }
 
 .card button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(255, 167, 0, 0.35);
+  box-shadow: 0 10px 20px rgba(255,167,0,.35);
 }
 
 .card button:disabled {
-  opacity: 0.6;
+  opacity: .6;
   cursor: not-allowed;
   box-shadow: none;
 }
 
 /* ================= BOOKINGS PANEL ================= */
 .side {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255,255,255,.18);
   border-radius: 22px;
   padding: 26px;
   color: #ffffff;
@@ -160,36 +160,30 @@ body::-webkit-scrollbar,
 
 /* ================= BOOKING ITEM ================= */
 .booking {
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(255,255,255,.24);
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 12px;
-  border: 1px solid rgba(255,255,255,0.35);
+  border: 1px solid rgba(255,255,255,.35);
   backdrop-filter: blur(5px);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: .15s ease;
 }
 
 .booking:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+  box-shadow: 0 10px 24px rgba(0,0,0,.28);
 }
 
-/* Active Editing Highlight */
+/* Active Editing */
 .booking.editing {
   border: 2px solid #ffea00;
-  background: rgba(255,255,0,0.25);
+  background: rgba(255,255,0,.25);
 }
 
 /* Status colors */
 .booking.upcoming { border-left: 5px solid #03e9b5; }
 .booking.running  { border-left: 5px solid #ffeb3b; }
-.booking.past     { border-left: 5px solid #ff5252; opacity: 0.6; }
-
-.bookingHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
+.booking.past     { border-left: 5px solid #ff5252; opacity: .6; }
 
 .booking b {
   display: block;
@@ -200,12 +194,12 @@ body::-webkit-scrollbar,
 .booking p {
   margin: 4px 0;
   font-size: 13px;
-  opacity: 0.9;
+  opacity: .9;
 }
 
 .booking span {
   font-size: 12px;
-  opacity: 0.85;
+  opacity: .85;
 }
 
 /* ================= ACTION BUTTONS ================= */
@@ -222,30 +216,30 @@ body::-webkit-scrollbar,
   border: none;
   font-weight: 700;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition: .2s ease;
 }
 
-/* Edit Button */
+/* Edit */
 .editBtn {
-  background: rgba(3, 155, 229, 0.25);
-  color: #ffffff;
-  border: 1px solid rgba(3,155,229,0.6);
+  background: rgba(3,155,229,.25);
+  color: #fff;
+  border: 1px solid rgba(3,155,229,.6);
 }
 
 .editBtn:hover {
-  background: rgba(3, 155, 229, 0.35);
+  background: rgba(3,155,229,.35);
   transform: translateY(-1px);
 }
 
-/* Cancel Button */
+/* Cancel */
 .cancelBtn {
-  background: rgba(244, 67, 54, 0.22);
-  color: #ffffff;
-  border: 1px solid rgba(244,67,54,0.6);
+  background: rgba(244,67,54,.22);
+  color: #fff;
+  border: 1px solid rgba(244,67,54,.6);
 }
 
 .cancelBtn:hover {
-  background: rgba(244, 67, 54, 0.32);
+  background: rgba(244,67,54,.32);
   transform: translateY(-1px);
 }
 
@@ -258,7 +252,7 @@ body::-webkit-scrollbar,
 
 .error {
   color: #fff;
-  background: rgba(244, 67, 54, 0.38);
+  background: rgba(244,67,54,.38);
   padding: 10px;
   border-radius: 10px;
   font-weight: 800;
@@ -277,7 +271,6 @@ body::-webkit-scrollbar,
   }
 
   .header h1 {
-    text-align: left;
     font-size: 22px;
   }
 
