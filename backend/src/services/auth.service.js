@@ -17,20 +17,18 @@ if (!process.env.JWT_SECRET) {
    EMAIL FOOTER
 ====================================================== */
 const emailFooter = () => `
-
-Regards,<br/>
-<b style="color:#6c2bd9">PROMEET</b><br/>
-
-<hr/>
-<p style="font-size:13px;color:#666">
-
 <br/>
+Regards,<br/>
+
 <img 
   src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
   alt="PROMEET Logo"
   style="height:65px;margin:10px 0;display:block"
 />
 
+<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
+
+<p style="font-size:13px;color:#666">
 This email was automatically sent from the PROMEET
 Conference & Visitor Management Platform.
 If this was not you, please contact your administrator immediately.
