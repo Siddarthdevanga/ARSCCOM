@@ -7,7 +7,8 @@ html, body {
   scrollbar-width: none;
 }
 
-body::-webkit-scrollbar {
+body::-webkit-scrollbar,
+.page::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
@@ -23,22 +24,32 @@ body::-webkit-scrollbar {
   scrollbar-width: none;
 }
 
-.page::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
-
 /* ================= HEADER ================= */
 .header {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: 28px;
   color: #fff;
+  width: 100%;
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.header img {
+  height: 46px;
+  max-width: 180px;
+  object-fit: contain;
 }
 
 .logout {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
   border: none;
   color: #fff;
   font-size: 18px;
@@ -50,20 +61,8 @@ body::-webkit-scrollbar {
 }
 
 .logout:hover {
-  background: rgba(255, 255, 255, 0.28);
-  transform: translateY(-1px);
-}
-
-.header h1 {
-  text-align: center;
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-}
-
-.header img {
-  height: 42px;
-  object-fit: contain;
+  background: rgba(255, 255, 255, 0.32);
+  transform: scale(1.05);
 }
 
 /* ================= LAYOUT ================= */
@@ -133,7 +132,7 @@ body::-webkit-scrollbar {
   transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s;
 }
 
-.card button:hover {
+.card button:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 10px 20px rgba(255, 167, 0, 0.35);
 }
@@ -146,10 +145,11 @@ body::-webkit-scrollbar {
 
 /* ================= BOOKINGS PANEL ================= */
 .side {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.18);
   border-radius: 22px;
   padding: 26px;
   color: #ffffff;
+  backdrop-filter: blur(6px);
 }
 
 .side h2 {
@@ -160,24 +160,23 @@ body::-webkit-scrollbar {
 
 /* ================= BOOKING ITEM ================= */
 .booking {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.24);
   border-radius: 14px;
   padding: 14px 16px;
   margin-bottom: 12px;
   border: 1px solid rgba(255,255,255,0.35);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(5px);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Hover effect */
 .booking:hover {
   transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.28);
 }
 
 /* Active Editing Highlight */
 .booking.editing {
-  border: 2px solid #ffeb3b;
+  border: 2px solid #ffea00;
   background: rgba(255,255,0,0.25);
 }
 
@@ -195,7 +194,7 @@ body::-webkit-scrollbar {
 .booking b {
   display: block;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .booking p {
@@ -206,7 +205,7 @@ body::-webkit-scrollbar {
 
 .booking span {
   font-size: 12px;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 /* ================= ACTION BUTTONS ================= */
@@ -253,16 +252,16 @@ body::-webkit-scrollbar {
 /* ================= FEEDBACK ================= */
 .success {
   color: #2e7d32;
-  font-weight: 700;
+  font-weight: 800;
   margin-bottom: 12px;
 }
 
 .error {
-  color: #ffebee;
-  background: rgba(244, 67, 54, 0.35);
+  color: #fff;
+  background: rgba(244, 67, 54, 0.38);
   padding: 10px;
-  border-radius: 8px;
-  font-weight: 700;
+  border-radius: 10px;
+  font-weight: 800;
   margin-bottom: 12px;
 }
 
@@ -277,13 +276,30 @@ body::-webkit-scrollbar {
     margin-top: 20px;
   }
 
-  .header {
-    grid-template-columns: auto 1fr;
-    row-gap: 12px;
+  .header h1 {
+    text-align: left;
+    font-size: 22px;
+  }
+
+  .header img {
+    height: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 18px;
+  }
+
+  .card {
+    padding: 22px 24px;
   }
 
   .header h1 {
-    grid-column: 1 / -1;
-    text-align: center;
+    font-size: 20px;
+  }
+
+  .header img {
+    height: 36px;
   }
 }
