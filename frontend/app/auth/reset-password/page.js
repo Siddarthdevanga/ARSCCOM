@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   INNER COMPONENT (uses useSearchParams)
+   INNER COMPONENT
 ====================================================== */
 function ResetPasswordForm() {
   const router = useRouter();
@@ -19,11 +19,36 @@ function ResetPasswordForm() {
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
 
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+
+  const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
+
+  const [waitSeconds, setWaitSeconds] = useState(0);
+
+  /* ================= TIMER ================= */
+  useEffect(() => {
+    if (!waitSeconds) return;
+
+    const timer = setInterval(() => {
+      setWaitSeconds(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [waitSeconds]);
+
+  /* ================= RESET PASSWORD ================= */
   const handleSubmit = async () => {
     setError("");
+    setInfo("");
 
     if (!email) {
       setError("Invalid or expired reset link. Please request a new one.");
@@ -63,15 +88,55 @@ function ResetPasswordForm() {
 
       const data = await res.json();
 
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to reset password");
-      }
+      if (!res.ok) throw new Error(data.message || "Failed to reset password");
 
-      router.replace("/login");
+      setInfo("Password reset successful! Redirecting to login...");
+
+      setTimeout(() => {
+        router.replace("/login");
+      }, 3000);
+
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* ================= RESEND RESET CODE ================= */
+  const handleResend = async () => {
+    if (!email) return;
+
+    setError("");
+    setInfo("");
+    setResendLoading(true);
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        }
+      );
+
+      const data = await res.json();
+
+      if (data.waitSeconds) {
+        setWaitSeconds(data.waitSeconds);
+      }
+
+      if (data.sent) {
+        setInfo("Reset code sent successfully");
+      } else {
+        setInfo("Please wait before requesting again");
+      }
+
+    } catch {
+      setError("Failed to resend code");
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -87,6 +152,7 @@ function ResetPasswordForm() {
         </p>
 
         {error && <div className={styles.error}>{error}</div>}
+        {info && <div className={styles.success}>{info}</div>}
 
         <label className={styles.label}>Reset Code</label>
         <input
@@ -128,6 +194,23 @@ function ResetPasswordForm() {
         >
           {loading ? "Updating..." : "Update Password"}
         </button>
+
+        {/* ================= RESEND SECTION ================= */}
+        <div style={{ marginTop: 18 }}>
+          {waitSeconds > 0 ? (
+            <div className={styles.info}>
+              Resend available in <b>{waitSeconds}</b> seconds
+            </div>
+          ) : (
+            <button
+              onClick={handleResend}
+              disabled={resendLoading}
+              className={styles.linkButton}
+            >
+              {resendLoading ? "Sending..." : "Resend Reset Code"}
+            </button>
+          )}
+        </div>
 
         <div
           className={styles.back}
