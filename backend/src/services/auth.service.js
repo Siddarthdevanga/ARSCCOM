@@ -38,11 +38,7 @@ If this was not you, please contact your administrator immediately.
    HELPERS
 ====================================================== */
 const generateSlug = (name) =>
-  name
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+  name.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
 
 const generateResetCode = () =>
   crypto.randomBytes(3).toString("hex").toUpperCase();
@@ -69,14 +65,12 @@ export const registerCompany = async (data, file) => {
 
   validatePassword(password);
 
-  /* ---------- Ensure email doesn't exist ---------- */
   const [existing] = await db.execute(
     "SELECT id FROM users WHERE email = ? LIMIT 1",
     [email]
   );
   if (existing.length) throw new Error("Email already registered");
 
-  /* ---------- Generate Unique Slug ---------- */
   let baseSlug = generateSlug(companyName);
   let slug = baseSlug;
   let suffix = 1;
@@ -90,7 +84,6 @@ export const registerCompany = async (data, file) => {
     slug = `${baseSlug}-${suffix++}`;
   }
 
-  /* ---------- Upload Logo ---------- */
   const ext = path.extname(file.originalname || "").toLowerCase() || ".png";
   const logoKey = `companies/${slug}/logo${ext}`;
   const logoUrl = await uploadToS3(file, logoKey);
@@ -100,7 +93,6 @@ export const registerCompany = async (data, file) => {
   try {
     await conn.beginTransaction();
 
-    /* ---------- Create Company ---------- */
     const [companyResult] = await conn.execute(
       `
       INSERT INTO companies 
@@ -112,7 +104,6 @@ export const registerCompany = async (data, file) => {
 
     const companyId = companyResult.insertId;
 
-    /* ---------- Create Admin User ---------- */
     const passwordHash = await bcrypt.hash(password, 10);
 
     await conn.execute(
@@ -123,7 +114,6 @@ export const registerCompany = async (data, file) => {
       [companyId, email, phone, passwordHash]
     );
 
-    /* ---------- Create Rooms ---------- */
     if (conferenceRooms > 0) {
       const values = Array.from({ length: conferenceRooms }).map((_, i) => [
         companyId,
@@ -142,7 +132,6 @@ export const registerCompany = async (data, file) => {
 
     await conn.commit();
 
-    /* ---------- Welcome Email ---------- */
     sendEmail({
       to: email,
       subject: "Welcome to PROMEET – Complete Your Subscription",
@@ -201,13 +190,11 @@ export const login = async ({ email, password }) => {
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw new Error("Invalid credentials");
 
-  /* ---------- Block expired/cancelled ---------- */
   const blockedStates = ["expired", "cancelled", "canceled"];
   if (blockedStates.includes(user.subscription_status)) {
     throw new Error("Your subscription has expired. Please renew to continue.");
   }
 
-  /* ---------- JWT ---------- */
   const token = jwt.sign(
     {
       userId: user.id,
@@ -221,10 +208,7 @@ export const login = async ({ email, password }) => {
 
   return {
     token,
-    user: {
-      id: user.id,
-      email: cleanEmail
-    },
+    user: { id: user.id, email: cleanEmail },
     company: {
       id: user.companyId,
       name: user.companyName,
@@ -237,18 +221,35 @@ export const login = async ({ email, password }) => {
 };
 
 /* ======================================================
-   FORGOT PASSWORD
+   FORGOT PASSWORD WITH 30s RESEND LOCK
 ====================================================== */
 export const forgotPassword = async (email) => {
   const cleanEmail = email?.trim()?.toLowerCase();
   if (!cleanEmail) return;
 
   const [rows] = await db.execute(
-    "SELECT id FROM users WHERE email=? LIMIT 1",
+    "SELECT id, reset_last_sent FROM users WHERE email=? LIMIT 1",
     [cleanEmail]
   );
 
   if (!rows.length) return;
+
+  const user = rows[0];
+
+  let waitSeconds = 0;
+
+  if (user.reset_last_sent) {
+    const [timeRow] = await db.query(
+      `SELECT GREATEST(0, 30 - TIMESTAMPDIFF(SECOND, reset_last_sent, NOW())) AS waitSeconds
+       FROM users WHERE id=?`,
+      [user.id]
+    );
+    waitSeconds = timeRow[0].waitSeconds;
+  }
+
+  if (waitSeconds > 0) {
+    return { sent: false, waitSeconds };
+  }
 
   const resetCode = generateResetCode();
 
@@ -256,10 +257,11 @@ export const forgotPassword = async (email) => {
     `
     UPDATE users
     SET reset_code=?,
-        reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE)
+        reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE),
+        reset_last_sent = NOW()
     WHERE id=?
     `,
-    [resetCode, rows[0].id]
+    [resetCode, user.id]
   );
 
   sendEmail({
@@ -273,6 +275,8 @@ export const forgotPassword = async (email) => {
       ${emailFooter()}
     `
   }).catch(() => {});
+
+  return { sent: true, waitSeconds: 30 };
 };
 
 /* ======================================================
