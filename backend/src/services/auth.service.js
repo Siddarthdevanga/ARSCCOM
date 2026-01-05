@@ -18,8 +18,15 @@ if (!process.env.JWT_SECRET) {
 ====================================================== */
 const emailFooter = () => `
 <br/>
+<img 
+  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
+  alt="PROMEET Logo"
+  style="height:65px;margin:10px 0;display:block"
+/>
+
 Regards,<br/>
 <b style="color:#6c2bd9">PROMEET</b><br/>
+
 <hr/>
 <p style="font-size:13px;color:#666">
 This email was automatically sent from the PROMEET
