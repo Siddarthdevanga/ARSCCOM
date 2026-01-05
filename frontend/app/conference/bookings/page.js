@@ -5,16 +5,19 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
-  const total = 9 * 60 + 30 + i * 30;
-  const h = Math.floor(total / 60);
-  const m = total % 60;
+/* ======================================================
+   UNIVERSAL TIME SLOTS (30 mins from 00:00 — 23:30)
+====================================================== */
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? 0 : 30;
+
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
 
   return {
-    label: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
-    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
+    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,
+    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`
   };
 });
 
@@ -38,6 +41,7 @@ export default function ConferenceBookings() {
 
   const [date, setDate] = useState(today);
   const [roomId, setRoomId] = useState("");
+
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [department, setDepartment] = useState("");
@@ -50,6 +54,9 @@ export default function ConferenceBookings() {
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
 
+  /* ======================================================
+     LOAD DATA
+  ====================================================== */
   const loadAll = async () => {
     try {
       const stored = localStorage.getItem("company");
@@ -71,6 +78,9 @@ export default function ConferenceBookings() {
     loadAll();
   }, []);
 
+  /* ======================================================
+     FILTER BOOKINGS FOR SELECTED DAY
+  ====================================================== */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
     return bookings.filter(
@@ -81,6 +91,9 @@ export default function ConferenceBookings() {
     );
   }, [bookings, date, roomId]);
 
+  /* ======================================================
+     BLOCKED SLOTS FOR CREATE
+  ====================================================== */
   const blockedSlots = useMemo(() => {
     const set = new Set();
     dayBookings.forEach((b) => {
@@ -93,13 +106,18 @@ export default function ConferenceBookings() {
     return set;
   }, [dayBookings]);
 
-  const nowMinutes =
-    new Date().getHours() * 60 + new Date().getMinutes();
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
+  /* ======================================================
+     AVAILABLE START FOR CREATE (Today → after current time)
+  ====================================================== */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter((t) => {
       if (blockedSlots.has(t.value)) return false;
+
       if (date !== today) return true;
+
       const [h, m] = t.value.split(":").map(Number);
       return h * 60 + m > nowMinutes;
     });
@@ -112,7 +130,9 @@ export default function ConferenceBookings() {
     );
   }, [startTime, blockedSlots]);
 
-  /* ================= CREATE BOOKING ================= */
+  /* ======================================================
+     CREATE BOOKING
+  ====================================================== */
   const createBooking = async () => {
     setError("");
     setSuccess("");
@@ -142,14 +162,15 @@ export default function ConferenceBookings() {
       setEndTime("");
       setDepartment("");
       setPurpose("");
-
       loadAll();
     } catch (e) {
       setError(e.message || "Failed to create booking");
     }
   };
 
-  /* ================= BLOCK SLOTS EXCEPT CURRENT ================= */
+  /* ======================================================
+     BLOCKED SLOTS FOR EDITING (Exclude Current Booking)
+  ====================================================== */
   const getBlockedSlotsExcluding = (bookingId) => {
     const set = new Set();
     dayBookings.forEach((b) => {
@@ -163,7 +184,9 @@ export default function ConferenceBookings() {
     return set;
   };
 
-  /* ================= SAVE EDIT ================= */
+  /* ======================================================
+     SAVE EDIT
+  ====================================================== */
   const saveEdit = async (id) => {
     setError("");
     setSuccess("");
@@ -186,12 +209,14 @@ export default function ConferenceBookings() {
       setSuccess("Booking updated successfully");
       setEditingId(null);
       loadAll();
-    } catch {
-      setError("Unable to update — slot conflict");
+    } catch (e) {
+      setError(e.message || "Unable to update — slot conflict");
     }
   };
 
-  /* ================= CANCEL BOOKING ================= */
+  /* ======================================================
+     CANCEL BOOKING
+  ====================================================== */
   const cancelBooking = async (id) => {
     setError("");
     setSuccess("");
@@ -210,6 +235,9 @@ export default function ConferenceBookings() {
 
   if (!company) return null;
 
+  /* ======================================================
+     UI
+  ====================================================== */
   return (
     <div className={styles.page}>
       <header className={styles.header}>
@@ -297,7 +325,7 @@ export default function ConferenceBookings() {
           <button onClick={createBooking}>Confirm Booking</button>
         </div>
 
-        {/* RIGHT BOOKINGS LIST */}
+        {/* RIGHT LIST */}
         <div className={styles.side}>
           <h2>Bookings</h2>
 
@@ -305,11 +333,24 @@ export default function ConferenceBookings() {
 
           {dayBookings.map((b) => {
             const blocked = getBlockedSlotsExcluding(b.id);
-            const editableStartOptions = TIME_OPTIONS.filter(
-              (t) => !blocked.has(t.value)
-            );
-            const editableEndOptions = TIME_OPTIONS.filter(
-              (t) => t.value > editStart && !blocked.has(t.value)
+
+            /* --- EDIT START OPTIONS --- */
+            const editStartOptions = TIME_OPTIONS.filter((t) => {
+              if (blocked.has(t.value)) return false;
+
+              // If today → only allow future times
+              if (b.booking_date === today) {
+                const [h, m] = t.value.split(":").map(Number);
+                if (h * 60 + m <= nowMinutes) return false;
+              }
+              return true;
+            });
+
+            /* --- EDIT END OPTIONS --- */
+            const editEndOptions = TIME_OPTIONS.filter(
+              (t) =>
+                t.value > editStart &&
+                !blocked.has(t.value)
             );
 
             return (
@@ -323,7 +364,7 @@ export default function ConferenceBookings() {
                       value={editStart}
                       onChange={(e) => setEditStart(e.target.value)}
                     >
-                      {editableStartOptions.map((t) => (
+                      {editStartOptions.map((t) => (
                         <option key={t.value} value={t.value}>
                           {t.label}
                         </option>
@@ -335,7 +376,7 @@ export default function ConferenceBookings() {
                       value={editEnd}
                       onChange={(e) => setEditEnd(e.target.value)}
                     >
-                      {editableEndOptions.map((t) => (
+                      {editEndOptions.map((t) => (
                         <option key={t.value} value={t.value}>
                           {t.label}
                         </option>
