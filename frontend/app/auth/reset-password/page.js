@@ -4,9 +4,6 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ======================================================
-   INNER COMPONENT
-====================================================== */
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,34 +18,46 @@ function ResetPasswordForm() {
   const [confirm, setConfirm] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [resendLoading, setResendLoading] = useState(false);
-
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
-
-  const [waitSeconds, setWaitSeconds] = useState(0);
+  const [success, setSuccess] = useState("");
 
   /* ================= TIMER ================= */
+  const [seconds, setSeconds] = useState(30);
+
   useEffect(() => {
-    if (!waitSeconds) return;
+    if (seconds <= 0) return;
+    const t = setTimeout(() => setSeconds(seconds - 1), 1000);
+    return () => clearTimeout(t);
+  }, [seconds]);
 
-    const timer = setInterval(() => {
-      setWaitSeconds(prev => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
+  /* ================= RESEND CODE ================= */
+  const resendCode = async () => {
+    if (!email) return;
+
+    setError("");
+    setSuccess("");
+    setSeconds(30);
+
+    try {
+      await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/forgot-password`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
         }
-        return prev - 1;
-      });
-    }, 1000);
+      );
 
-    return () => clearInterval(timer);
-  }, [waitSeconds]);
+      setSuccess("A new reset code has been sent to your email.");
+    } catch {
+      setError("Failed to resend reset code. Try again later.");
+    }
+  };
 
   /* ================= RESET PASSWORD ================= */
   const handleSubmit = async () => {
     setError("");
-    setInfo("");
+    setSuccess("");
 
     if (!email) {
       setError("Invalid or expired reset link. Please request a new one.");
@@ -90,53 +99,12 @@ function ResetPasswordForm() {
 
       if (!res.ok) throw new Error(data.message || "Failed to reset password");
 
-      setInfo("Password reset successful! Redirecting to login...");
-
-      setTimeout(() => {
-        router.replace("/login");
-      }, 3000);
-
+      setSuccess("Password reset successful! Redirecting to login...");
+      setTimeout(() => router.replace("/auth/login"), 3000);
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
-    }
-  };
-
-  /* ================= RESEND RESET CODE ================= */
-  const handleResend = async () => {
-    if (!email) return;
-
-    setError("");
-    setInfo("");
-    setResendLoading(true);
-
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/forgot-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
-
-      const data = await res.json();
-
-      if (data.waitSeconds) {
-        setWaitSeconds(data.waitSeconds);
-      }
-
-      if (data.sent) {
-        setInfo("Reset code sent successfully");
-      } else {
-        setInfo("Please wait before requesting again");
-      }
-
-    } catch {
-      setError("Failed to resend code");
-    } finally {
-      setResendLoading(false);
     }
   };
 
@@ -152,7 +120,14 @@ function ResetPasswordForm() {
         </p>
 
         {error && <div className={styles.error}>{error}</div>}
-        {info && <div className={styles.success}>{info}</div>}
+        {success && <div className={styles.success}>{success}</div>}
+
+        {/* TIMER MESSAGE */}
+        <p className={`${styles.info} ${seconds > 0 ? styles.waiting : ""}`}>
+          {seconds > 0
+            ? `Please wait ${seconds} seconds before requesting again`
+            : "You can request a new reset code"}
+        </p>
 
         <label className={styles.label}>Reset Code</label>
         <input
@@ -195,22 +170,14 @@ function ResetPasswordForm() {
           {loading ? "Updating..." : "Update Password"}
         </button>
 
-        {/* ================= RESEND SECTION ================= */}
-        <div style={{ marginTop: 18 }}>
-          {waitSeconds > 0 ? (
-            <div className={styles.info}>
-              Resend available in <b>{waitSeconds}</b> seconds
-            </div>
-          ) : (
-            <button
-              onClick={handleResend}
-              disabled={resendLoading}
-              className={styles.linkButton}
-            >
-              {resendLoading ? "Sending..." : "Resend Reset Code"}
-            </button>
-          )}
-        </div>
+        {/* RESEND BUTTON */}
+        <button
+          className={styles.resendBtn}
+          onClick={resendCode}
+          disabled={seconds > 0}
+        >
+          Resend Reset Code
+        </button>
 
         <div
           className={styles.back}
@@ -223,9 +190,6 @@ function ResetPasswordForm() {
   );
 }
 
-/* ======================================================
-   PAGE EXPORT (Suspense wrapper)
-====================================================== */
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={<div style={{ color: "white", padding: 40 }}>Loading...</div>}>
