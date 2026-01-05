@@ -177,7 +177,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 });
 
 /* ======================================================
-   RESEND OTP
+   RESEND OTP  (30 Seconds Cooldown — No Schema Change)
 ====================================================== */
 router.post("/company/:slug/resend-otp", async (req, res) => {
   try {
@@ -196,16 +196,30 @@ router.post("/company/:slug/resend-otp", async (req, res) => {
       return res.status(404).json({ message: "Invalid booking link" });
 
     const [[existing]] = await db.query(
-      `SELECT otp FROM public_booking_otp
+      `SELECT otp,
+        expires_at,
+        600 - TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS age
+       FROM public_booking_otp
        WHERE company_id=? AND email=? 
-       AND verified=0 AND expires_at>NOW()
+       AND verified=0
        ORDER BY id DESC LIMIT 1`,
       [company.id, email]
     );
 
-    let otp = existing?.otp;
+    let otp;
 
-    if (!otp) {
+    if (existing && existing.expires_at > new Date()) {
+      const age = existing.age || 0;
+
+      if (age < 30) {
+        const remain = 30 - age;
+        return res.status(429).json({
+          message: `Please wait ${remain} seconds before resending`
+        });
+      }
+
+      otp = existing.otp;
+    } else {
       otp = String(Math.floor(100000 + Math.random() * 900000));
 
       await db.query(
@@ -224,6 +238,7 @@ router.post("/company/:slug/resend-otp", async (req, res) => {
     await sendOtpEmail(email, otp, company);
 
     res.json({ message: "OTP resent successfully" });
+
   } catch (err) {
     console.error("[PUBLIC][RESEND OTP]", err);
     res.status(500).json({ message: "Failed to resend OTP" });
