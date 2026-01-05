@@ -27,6 +27,19 @@ If you did not perform this action, please contact your administrator immediatel
 </p>
 `;
 
+async function sendOtpEmail(email, otp, company) {
+  await sendEmail({
+    to: email,
+    subject: `OTP for Conference Booking – ${company.name}`,
+    html: `
+      <h3>Your OTP</h3>
+      <h1>${otp}</h1>
+      <p>Valid for 10 minutes.</p>
+      ${emailFooter(company)}
+    `
+  });
+}
+
 /* ======================================================
    GET COMPANY
 ====================================================== */
@@ -154,21 +167,66 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       [company.id, email, otp]
     );
 
-    await sendEmail({
-      to: email,
-      subject: `OTP for Conference Booking – ${company.name}`,
-      html: `
-        <h3>Your OTP</h3>
-        <h1>${otp}</h1>
-        <p>Valid for 10 minutes.</p>
-        ${emailFooter(company)}
-      `
-    });
+    await sendOtpEmail(email, otp, company);
 
     res.json({ message: "OTP sent successfully" });
   } catch (err) {
     console.error("[PUBLIC][SEND OTP]", err);
     res.status(500).json({ message: "Failed to send OTP" });
+  }
+});
+
+/* ======================================================
+   RESEND OTP
+====================================================== */
+router.post("/company/:slug/resend-otp", async (req, res) => {
+  try {
+    const slug = normalizeSlug(req.params.slug);
+    const email = normalizeEmail(req.body.email);
+
+    if (!email || !email.includes("@"))
+      return res.status(400).json({ message: "Valid email required" });
+
+    const [[company]] = await db.query(
+      `SELECT id,name FROM companies WHERE slug=? LIMIT 1`,
+      [slug]
+    );
+
+    if (!company)
+      return res.status(404).json({ message: "Invalid booking link" });
+
+    const [[existing]] = await db.query(
+      `SELECT otp FROM public_booking_otp
+       WHERE company_id=? AND email=? 
+       AND verified=0 AND expires_at>NOW()
+       ORDER BY id DESC LIMIT 1`,
+      [company.id, email]
+    );
+
+    let otp = existing?.otp;
+
+    if (!otp) {
+      otp = String(Math.floor(100000 + Math.random() * 900000));
+
+      await db.query(
+        `DELETE FROM public_booking_otp WHERE company_id=? AND email=?`,
+        [company.id, email]
+      );
+
+      await db.query(
+        `INSERT INTO public_booking_otp
+         (company_id,email,otp,expires_at,verified)
+         VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE), 0)`,
+        [company.id, email, otp]
+      );
+    }
+
+    await sendOtpEmail(email, otp, company);
+
+    res.json({ message: "OTP resent successfully" });
+  } catch (err) {
+    console.error("[PUBLIC][RESEND OTP]", err);
+    res.status(500).json({ message: "Failed to resend OTP" });
   }
 });
 
