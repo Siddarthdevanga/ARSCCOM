@@ -101,7 +101,7 @@ export default function LoginPage() {
           </div>
 
           <Image
-            src="/wheelbrand.png"
+            src="/Brand Logo.png"
             alt="promeet"
             width={420}
             height={140}
