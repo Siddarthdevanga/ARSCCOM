@@ -11,7 +11,7 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
-   EMAIL FOOTER (COMPANY LOGO BASED)
+   EMAIL FOOTER (COMPANY LOGO)
 ====================================================== */
 const emailFooter = (company) => `
 <br/>
@@ -34,7 +34,7 @@ If this wasn’t you, please contact your administrator immediately.
 `;
 
 /* ======================================================
-   TIME FORMATTER (AM/PM)
+   TIME FORMAT
 ====================================================== */
 const toAmPm = (time) => {
   if (!time) return "";
@@ -45,7 +45,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   EMAIL SENDER
+   EMAIL SENDER WRAPPER
 ====================================================== */
 const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
   if (!to) return;
@@ -152,65 +152,6 @@ router.get("/rooms", async (req, res) => {
   } catch (err) {
     console.error("[ADMIN][GET ROOMS]", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
-  }
-});
-
-/* ======================================================
-   ROOMS — RENAME
-====================================================== */
-router.patch("/rooms/:id", async (req, res) => {
-  try {
-    const { companyId } = req.user;
-    const roomId = Number(req.params.id);
-    const { room_name } = req.body;
-
-    if (!roomId || !room_name?.trim()) {
-      return res.status(400).json({ message: "Room name required" });
-    }
-
-    const [[room]] = await db.query(
-      `
-      SELECT id FROM conference_rooms
-      WHERE id = ? AND company_id = ?
-      LIMIT 1
-      `,
-      [roomId, companyId]
-    );
-
-    if (!room) {
-      return res.status(404).json({ message: "Room not found" });
-    }
-
-    const [[exists]] = await db.query(
-      `
-      SELECT COUNT(*) AS cnt
-      FROM conference_rooms
-      WHERE company_id = ?
-        AND room_name = ?
-        AND id <> ?
-      `,
-      [companyId, room_name.trim(), roomId]
-    );
-
-    if (exists.cnt > 0) {
-      return res.status(409).json({
-        message: "Another room already has this name"
-      });
-    }
-
-    await db.query(
-      `
-      UPDATE conference_rooms
-      SET room_name = ?
-      WHERE id = ? AND company_id = ?
-      `,
-      [room_name.trim(), roomId, companyId]
-    );
-
-    res.json({ message: "Room renamed successfully" });
-  } catch (err) {
-    console.error("[ADMIN][RENAME ROOM]", err);
-    res.status(500).json({ message: "Unable to rename room" });
   }
 });
 
@@ -392,7 +333,7 @@ router.post("/bookings", async (req, res) => {
 });
 
 /* ======================================================
-   EDIT BOOKING — **FINAL STABLE VERSION**
+   EDIT BOOKING — STRICT TIME VALIDATION
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
@@ -403,12 +344,6 @@ router.patch("/bookings/:id", async (req, res) => {
     if (!bookingId || !start_time || !end_time) {
       return res.status(400).json({
         message: "Start time and end time are required"
-      });
-    }
-
-    if (end_time <= start_time) {
-      return res.status(400).json({
-        message: "End time must be after start time"
       });
     }
 
@@ -424,31 +359,25 @@ router.patch("/bookings/:id", async (req, res) => {
     );
 
     if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
-
-    const [[timeCheck]] = await db.query(`
-      SELECT CURDATE() AS today,
-             DATE_FORMAT(NOW(), '%H:%i') AS currentTime
-    `);
-
-    const today = timeCheck.today;
-    const currentTime = timeCheck.currentTime;
-
-    // Meeting already finished?
-    if (
-      booking.booking_date < today ||
-      (booking.booking_date === today && booking.end_time <= currentTime)
-    ) {
-      return res.status(400).json({
-        message: "This meeting has already ended. Editing is not allowed."
+      return res.status(404).json({
+        message: "Booking not found"
       });
     }
 
-    // If today, ensure new start is future
-    if (booking.booking_date === today && start_time <= currentTime) {
+    // Prevent editing past times
+    const today = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const current = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+
+    if (booking.booking_date === today && start_time <= current) {
       return res.status(400).json({
-        message: "Cannot reschedule to a past time today"
+        message: "Cannot choose past times"
+      });
+    }
+
+    if (end_time <= start_time) {
+      return res.status(400).json({
+        message: "End time must be after start time"
       });
     }
 
@@ -460,7 +389,7 @@ router.patch("/bookings/:id", async (req, res) => {
         AND room_id = ?
         AND booking_date = ?
         AND id <> ?
-        AND status NOT IN ('CANCELLED','cancelled')
+        AND status = 'BOOKED'
         AND start_time < ?
         AND end_time > ?
       `,
