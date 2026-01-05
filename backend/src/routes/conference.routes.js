@@ -11,7 +11,22 @@ const router = express.Router();
 router.use(authenticate);
 
 /* ======================================================
-   EMAIL FOOTER (COMPANY LOGO)
+   TIME UTILS
+====================================================== */
+const nowTime = () => {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2, "0")}:${String(
+    d.getMinutes()
+  ).padStart(2, "0")}`;
+};
+
+const toMinutes = (t) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+};
+
+/* ======================================================
+   EMAIL FOOTER
 ====================================================== */
 const emailFooter = (company) => `
 <br/>
@@ -34,7 +49,7 @@ If this wasn’t you, please contact your administrator immediately.
 `;
 
 /* ======================================================
-   TIME FORMAT
+   AM/PM FORMATTER
 ====================================================== */
 const toAmPm = (time) => {
   if (!time) return "";
@@ -45,7 +60,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   EMAIL SENDER WRAPPER
+   EMAIL SENDER
 ====================================================== */
 const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
   if (!to) return;
@@ -132,7 +147,7 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   ROOMS — LIST
+   ROOMS LIST
 ====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
@@ -156,7 +171,7 @@ router.get("/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   BOOKINGS — LIST
+   BOOKINGS LIST
 ====================================================== */
 router.get("/bookings", async (req, res) => {
   try {
@@ -221,24 +236,14 @@ router.post("/bookings", async (req, res) => {
       end_time
     } = req.body;
 
-    if (
-      !room_id ||
-      !booked_by ||
-      !department ||
-      !booking_date ||
-      !start_time ||
-      !end_time
-    ) {
+    if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time) {
       return res.status(400).json({
         message: "Room, department, date and time are required"
       });
     }
 
-    if (end_time <= start_time) {
-      return res.status(400).json({
-        message: "End time must be after start time"
-      });
-    }
+    if (end_time <= start_time)
+      return res.status(400).json({ message: "End time must be after start time" });
 
     await conn.beginTransaction();
 
@@ -333,7 +338,7 @@ router.post("/bookings", async (req, res) => {
 });
 
 /* ======================================================
-   EDIT BOOKING — STRICT TIME VALIDATION
+   EDIT BOOKING — REAL TIME VALIDATION
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
@@ -341,11 +346,11 @@ router.patch("/bookings/:id", async (req, res) => {
     const bookingId = Number(req.params.id);
     const { start_time, end_time } = req.body;
 
-    if (!bookingId || !start_time || !end_time) {
-      return res.status(400).json({
-        message: "Start time and end time are required"
-      });
-    }
+    if (!bookingId || !start_time || !end_time)
+      return res.status(400).json({ message: "Start time and end time are required" });
+
+    if (end_time <= start_time)
+      return res.status(400).json({ message: "End must be after start" });
 
     const [[booking]] = await db.query(
       `
@@ -358,27 +363,15 @@ router.patch("/bookings/:id", async (req, res) => {
       [bookingId, companyId]
     );
 
-    if (!booking) {
-      return res.status(404).json({
-        message: "Booking not found"
-      });
-    }
+    if (!booking)
+      return res.status(404).json({ message: "Booking not found" });
 
-    // Prevent editing past times
+    // Prevent editing into past if booking is today
     const today = new Date().toISOString().slice(0, 10);
-    const now = new Date();
-    const current = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-
-    if (booking.booking_date === today && start_time <= current) {
-      return res.status(400).json({
-        message: "Cannot choose past times"
-      });
-    }
-
-    if (end_time <= start_time) {
-      return res.status(400).json({
-        message: "End time must be after start time"
-      });
+    if (booking.booking_date === today) {
+      const now = nowTime();
+      if (start_time <= now)
+        return res.status(400).json({ message: "Cannot move booking into past time" });
     }
 
     const [[conflict]] = await db.query(
@@ -403,11 +396,8 @@ router.patch("/bookings/:id", async (req, res) => {
       ]
     );
 
-    if (conflict.cnt > 0) {
-      return res.status(409).json({
-        message: "Slot already booked"
-      });
-    }
+    if (conflict.cnt > 0)
+      return res.status(409).json({ message: "Slot already booked" });
 
     await db.query(
       `
@@ -459,11 +449,8 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       [bookingId, companyId]
     );
 
-    if (!booking) {
-      return res.status(404).json({
-        message: "Booking not found"
-      });
-    }
+    if (!booking)
+      return res.status(404).json({ message: "Booking not found" });
 
     await db.query(
       `
