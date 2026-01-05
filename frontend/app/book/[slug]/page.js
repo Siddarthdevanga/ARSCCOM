@@ -127,6 +127,28 @@ export default function PublicConferenceBooking() {
     }
   };
 
+  /* ================= RESEND OTP ================= */
+  const resendOtp = async () => {
+    if (!email.includes("@")) return setError("Enter valid email");
+    setLoading(true);
+    try {
+      const r = await fetch(
+        `${API}/api/public/conference/company/${slug}/resend-otp`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        }
+      );
+      if (!r.ok) throw new Error();
+      setOtpSent(true);
+    } catch {
+      setError("Failed to resend OTP");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
     try {
@@ -237,23 +259,27 @@ export default function PublicConferenceBooking() {
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER WITH LOGO ================= */}
+      {/* ================= HEADER: Name Left | Logo Right ================= */}
       <header className={styles.header}>
-        {otpVerified && (
-          <button className={styles.logout} onClick={handleLogout}>
-            ⎋
-          </button>
-        )}
+        <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
+          <h1>{company.name}</h1>
 
-        {company.logo_url && (
-          <img
-            src={company.logo_url}
-            alt="Company Logo"
-            className={styles.logo}
-          />
-        )}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {otpVerified && (
+              <button className={styles.logout} onClick={handleLogout}>
+                ⎋
+              </button>
+            )}
 
-        <h1>{company.name}</h1>
+            {company.logo_url && (
+              <img
+                src={company.logo_url}
+                alt="Company Logo"
+                className={styles.logo}
+              />
+            )}
+          </div>
+        </div>
       </header>
 
       {/* ================= AUTH / OTP ================= */}
@@ -278,6 +304,11 @@ export default function PublicConferenceBooking() {
                 onChange={e => setOtp(e.target.value)}
               />
               <button onClick={verifyOtp}>Verify</button>
+
+              {/* RESEND BUTTON */}
+              <button onClick={resendOtp}>
+                Resend OTP
+              </button>
             </>
           )}
         </div>
