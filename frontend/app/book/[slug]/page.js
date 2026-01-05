@@ -50,6 +50,9 @@ export default function PublicConferenceBooking() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  // resend cooldown
+  const [resendTimer, setResendTimer] = useState(0);
+
   /* ================= LOAD COMPANY ================= */
   useEffect(() => {
     fetch(`${API}/api/public/conference/company/${slug}`)
@@ -109,6 +112,9 @@ export default function PublicConferenceBooking() {
   const sendOtp = async () => {
     if (!email.includes("@")) return setError("Enter valid email");
     setLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/send-otp`,
@@ -118,19 +124,35 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({ email })
         }
       );
-      if (!r.ok) throw new Error();
+
+      const data = await r.json();
+      if (!r.ok) throw new Error(data?.message || "Failed to send OTP");
+
       setOtpSent(true);
-    } catch {
-      setError("Failed to send OTP");
+      setSuccess("OTP sent successfully");
+      setResendTimer(30);
+    } catch (e) {
+      setError(e.message || "Failed to send OTP");
     } finally {
       setLoading(false);
     }
   };
 
+  /* TIMER RUNNER */
+  useEffect(() => {
+    if (!resendTimer) return;
+    const t = setInterval(() => setResendTimer(s => s - 1), 1000);
+    return () => clearInterval(t);
+  }, [resendTimer]);
+
   /* ================= RESEND OTP ================= */
   const resendOtp = async () => {
     if (!email.includes("@")) return setError("Enter valid email");
+
     setLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/resend-otp`,
@@ -140,10 +162,15 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({ email })
         }
       );
-      if (!r.ok) throw new Error();
-      setOtpSent(true);
-    } catch {
-      setError("Failed to resend OTP");
+
+      const data = await r.json();
+
+      if (!r.ok) throw new Error(data?.message || "Failed to resend OTP");
+
+      setSuccess(data?.message || "OTP resent successfully");
+      setResendTimer(30);
+    } catch (e) {
+      setError(e.message || "Failed to resend OTP");
     } finally {
       setLoading(false);
     }
@@ -151,6 +178,9 @@ export default function PublicConferenceBooking() {
 
   /* ================= VERIFY OTP ================= */
   const verifyOtp = async () => {
+    setError("");
+    setSuccess("");
+
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/verify-otp`,
@@ -160,8 +190,11 @@ export default function PublicConferenceBooking() {
           body: JSON.stringify({ email, otp })
         }
       );
+
       if (!r.ok) throw new Error();
+
       setOtpVerified(true);
+      setSuccess("OTP Verified Successfully");
       loadBookings();
     } catch {
       setError("Invalid OTP");
@@ -174,6 +207,9 @@ export default function PublicConferenceBooking() {
       return setError("All fields except purpose are required");
 
     setLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/book`,
@@ -213,6 +249,9 @@ export default function PublicConferenceBooking() {
       return setError("Slot unavailable");
 
     setLoading(true);
+    setError("");
+    setSuccess("");
+
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/bookings/${id}`,
@@ -259,7 +298,7 @@ export default function PublicConferenceBooking() {
 
   return (
     <div className={styles.page}>
-      {/* ================= HEADER: Name Left | Logo Right ================= */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div style={{ display: "flex", width: "100%", justifyContent: "space-between", alignItems: "center" }}>
           <h1>{company.name}</h1>
@@ -286,7 +325,9 @@ export default function PublicConferenceBooking() {
       {!otpVerified ? (
         <div className={styles.card}>
           <h2>Email Verification</h2>
+
           {error && <p className={styles.error}>{error}</p>}
+          {success && <p className={styles.success}>{success}</p>}
 
           <input
             value={email}
@@ -295,7 +336,9 @@ export default function PublicConferenceBooking() {
           />
 
           {!otpSent ? (
-            <button onClick={sendOtp}>Send OTP</button>
+            <button onClick={sendOtp} disabled={loading}>
+              Send OTP
+            </button>
           ) : (
             <>
               <input
@@ -303,11 +346,18 @@ export default function PublicConferenceBooking() {
                 placeholder="Enter OTP"
                 onChange={e => setOtp(e.target.value)}
               />
-              <button onClick={verifyOtp}>Verify</button>
 
-              {/* RESEND BUTTON */}
-              <button onClick={resendOtp}>
-                Resend OTP
+              <button onClick={verifyOtp} disabled={loading}>
+                Verify
+              </button>
+
+              <button
+                onClick={resendOtp}
+                disabled={loading || resendTimer > 0}
+              >
+                {resendTimer > 0
+                  ? `Resend in ${resendTimer}s`
+                  : "Resend OTP"}
               </button>
             </>
           )}
@@ -373,7 +423,7 @@ export default function PublicConferenceBooking() {
             </button>
           </div>
 
-          {/* ================= BOOKINGS LIST ================= */}
+          {/* ================= BOOKINGS ================= */}
           <div className={styles.card}>
             <h2>Bookings</h2>
 
