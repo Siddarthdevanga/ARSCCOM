@@ -1,194 +1,298 @@
-/* ======= STOP PAGE SCROLL COMPLETELY ======= */
+/* ===== GLOBAL: Allow Scroll but Hide Scrollbar ===== */
 html, body {
   height: 100%;
   margin: 0;
-  overflow: hidden;         /* 🚫 No scroll */
-  font-family: "Segoe UI", Arial, sans-serif;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+body::-webkit-scrollbar,
+.page::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ================= PAGE ================= */
 .page {
-  height: 100vh;
+  min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  padding: 32px;
+  font-family: "Segoe UI", Arial, sans-serif;
+  box-sizing: border-box;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-/* ================= BRAND ================= */
-.brand {
-  position: absolute;
-  top: 22px;
-  left: 40px;
+/* ================= HEADER ================= */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
   color: #fff;
-  font-size: 30px;
-  font-weight: 900;
-  letter-spacing: .5px;
+  width: 100%;
+}
+
+.header h1 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.header img {
+  height: 46px;
+  max-width: 180px;
+  object-fit: contain;
+}
+
+.logout {
+  background: rgba(255, 255, 255, 0.22);
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+.logout:hover {
+  background: rgba(255, 255, 255, .3);
+  transform: scale(1.06);
+}
+
+/* ================= LAYOUT ================= */
+.layout,
+.content {
+  display: grid;
+  grid-template-columns: 1.25fr 0.75fr;
+  gap: 28px;
+  align-items: flex-start;
 }
 
 /* ================= CARD ================= */
 .card {
-  width: 620px;
   background: #ffffff;
-  padding: 32px 36px;
   border-radius: 22px;
-  box-shadow: 0 22px 46px rgba(0,0,0,0.28);
-
-  max-height: calc(100vh - 140px);
-  overflow: hidden;
+  padding: 32px 34px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.12);
 }
 
-/* ================= TEXT ================= */
-.title {
-  font-size: 26px;
-  font-weight: 900;
-  color: #3c007a;
-  margin-bottom: 4px;
-}
-
-.subtitle {
-  font-size: 14px;
-  color: #666;
+.card h2 {
+  font-size: 22px;
+  font-weight: 800;
   margin-bottom: 18px;
-}
-
-/* ================= LABEL ================= */
-.label {
-  font-size: 13px;
-  font-weight: 700;
   color: #3c007a;
-  margin-bottom: 6px;
+}
+
+/* ================= FORM ================= */
+.card label {
   display: block;
-}
-
-/* ================= INPUT ================= */
-.input {
-  width: 100%;
-  height: 44px;
-  padding: 0 12px;
-  margin-bottom: 14px;
-  border-radius: 12px;
-  border: 1.2px solid #ccc;
+  margin-top: 16px;
+  font-weight: 600;
   font-size: 14px;
-  transition: border .2s ease, box-shadow .2s ease;
+  color: #333;
 }
 
-.input:focus {
+.card input,
+.card select {
+  width: 100%;
+  padding: 12px 14px;
+  margin-top: 6px;
+  border-radius: 12px;
+  border: 1px solid #d0d0d0;
+  font-size: 14px;
   outline: none;
+  background: #fff;
+  transition: .2s ease;
+}
+
+.card input:focus,
+.card select:focus {
   border-color: #7a00ff;
-  box-shadow: 0 0 0 3px rgba(122, 0, 255, .15);
-}
-
-/* ================= PASSWORD ROW ================= */
-.row {
-  display: flex;
-  gap: 16px;
-}
-
-.col {
-  flex: 1;
+  box-shadow: 0 0 0 3px rgba(122,0,255,.15);
 }
 
 /* ================= BUTTON ================= */
-.button {
-  margin-top: 10px;
+.card button {
+  margin-top: 26px;
   width: 100%;
-  height: 48px;
+  padding: 15px;
+  border-radius: 999px;
   border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #7a00ff, #5a00c2);
-  color: white;
   font-size: 15px;
   font-weight: 800;
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
+  color: #3c007a;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease, opacity .15s;
+  transition: .15s ease;
 }
 
-.button:hover:not(:disabled) {
+.card button:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0,0,0,.25);
+  box-shadow: 0 10px 20px rgba(255,167,0,.35);
 }
 
-.button:disabled {
+.card button:disabled {
   opacity: .6;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-/* ================= ERROR ================= */
-.error {
-  background: #fdecea;
-  color: #b71c1c;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 12px;
+/* ================= BOOKINGS PANEL ================= */
+.side {
+  background: rgba(255,255,255,.18);
+  border-radius: 22px;
+  padding: 26px;
+  color: #ffffff;
+  backdrop-filter: blur(6px);
 }
 
-/* ================= SUCCESS ================= */
-.success {
-  background: #e8f5e9;
-  color: #1b5e20;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 12px;
-}
-
-/* ================= INFO (Timer Text) ================= */
-.info {
-  text-align: center;
-  color: #333;
-  font-size: 13px;
-  margin-top: 6px;
-}
-
-/* ================= RESEND LINK ================= */
-.linkButton {
-  background: transparent;
-  border: none;
-  color: #7a00ff;
+.side h2 {
+  font-size: 20px;
   font-weight: 800;
-  font-size: 14px;
-  cursor: pointer;
-  text-decoration: underline;
-  transition: opacity .15s ease;
+  margin-bottom: 14px;
 }
 
-.linkButton:hover {
-  opacity: .75;
+/* ================= BOOKING ITEM ================= */
+.booking {
+  background: rgba(255,255,255,.24);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(255,255,255,.35);
+  backdrop-filter: blur(5px);
+  transition: .15s ease;
 }
 
-/* ================= BACK ================= */
-.back {
-  margin-top: 18px;
-  text-align: center;
-  font-size: 14px;
-  color: #5a00c2;
-  cursor: pointer;
+.booking:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.28);
+}
+
+/* Active Editing */
+.booking.editing {
+  border: 2px solid #ffea00;
+  background: rgba(255,255,0,.25);
+}
+
+/* Status colors */
+.booking.upcoming { border-left: 5px solid #03e9b5; }
+.booking.running  { border-left: 5px solid #ffeb3b; }
+.booking.past     { border-left: 5px solid #ff5252; opacity: .6; }
+
+.booking b {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.booking p {
+  margin: 4px 0;
+  font-size: 13px;
+  opacity: .9;
+}
+
+.booking span {
+  font-size: 12px;
+  opacity: .85;
+}
+
+/* ================= ACTION BUTTONS ================= */
+.bookingActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.bookingActions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
   font-weight: 700;
+  cursor: pointer;
+  transition: .2s ease;
 }
 
-.back:hover {
-  text-decoration: underline;
+/* Edit */
+.editBtn {
+  background: rgba(3,155,229,.25);
+  color: #fff;
+  border: 1px solid rgba(3,155,229,.6);
+}
+
+.editBtn:hover {
+  background: rgba(3,155,229,.35);
+  transform: translateY(-1px);
+}
+
+/* Cancel */
+.cancelBtn {
+  background: rgba(244,67,54,.22);
+  color: #fff;
+  border: 1px solid rgba(244,67,54,.6);
+}
+
+.cancelBtn:hover {
+  background: rgba(244,67,54,.32);
+  transform: translateY(-1px);
+}
+
+/* ================= FEEDBACK ================= */
+.success {
+  color: #2e7d32;
+  font-weight: 800;
+  margin-bottom: 12px;
+}
+
+.error {
+  color: #fff;
+  background: rgba(244,67,54,.38);
+  padding: 10px;
+  border-radius: 10px;
+  font-weight: 800;
+  margin-bottom: 12px;
 }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width: 720px) {
+@media (max-width: 1024px) {
+  .layout,
+  .content {
+    grid-template-columns: 1fr;
+  }
+
+  .side {
+    margin-top: 20px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+  }
+
+  .header img {
+    height: 40px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 18px;
+  }
+
   .card {
-    width: 90%;
-    padding: 26px 24px;
+    padding: 22px 24px;
   }
 
-  .brand {
-    left: 20px;
-    font-size: 24px;
+  .header h1 {
+    font-size: 20px;
   }
 
-  .row {
-    flex-direction: column;
+  .header img {
+    height: 36px;
   }
 }
