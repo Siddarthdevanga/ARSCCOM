@@ -132,15 +132,48 @@ export const registerCompany = async (data, file) => {
 
     await conn.commit();
 
+    /* ================= UPDATED PROFESSIONAL EMAIL ================= */
     sendEmail({
       to: email,
-      subject: "Welcome to PROMEET – Complete Your Subscription",
+      subject: `Welcome ${companyName} — Activate Your PROMEET Subscription`,
       html: `
-        <p>Hello,</p>
-        <p><b>${companyName}</b> has been successfully registered on PROMEET.</p>
+        <p>Hello <b>${companyName}</b>,</p>
 
-        <h3 style="color:#6c2bd9;">Next Step</h3>
-        <p>Please login and complete your subscription to activate your account.</p>
+        <p>
+          Your organization has been successfully registered on 
+          <b>PROMEET – Visitor & Conference Room Management Platform.</b>
+        </p>
+
+        <h3 style="color:#6c2bd9;margin-bottom:6px;">
+          Next Step: Login & Choose Your Subscription Plan
+        </h3>
+
+        <p>
+          To continue using PROMEET, please login and activate one of the subscription plans:
+        </p>
+
+        <ul style="font-size:14px;margin-top:8px;margin-bottom:12px;">
+          <li><b>Trial</b> – Evaluate PROMEET and experience core features.</li>
+          <li><b>Business</b> – Designed for growing organizations with advanced capabilities.</li>
+          <li><b>Enterprise</b> – Tailored, scalable and secure for large enterprises.</li>
+        </ul>
+
+        <h3 style="color:#6c2bd9;margin-bottom:6px;">
+          What PROMEET Delivers to ${companyName}
+        </h3>
+
+        <ul style="font-size:14px;">
+          <li><b>Instant Digital Visitor Pass</b> – Secure virtual passes via Email / WhatsApp.</li>
+          <li><b>Powerful Live Dashboard</b> – Real-time check-ins, check-outs & analytics.</li>
+          <li><b>Conference Room Booking</b> – Quick booking with automatic email alerts.</li>
+          <li><b>Dedicated Company Access Link</b> – Employees login via OTP. Zero HR dependency.</li>
+          <li><b>Fully Automated Workflow</b> – No registers, spreadsheets or paper passes.</li>
+          <li><b>Enterprise-Grade Security</b> – Role-based authentication & encrypted data handling.</li>
+        </ul>
+
+        <p>
+          Login, activate your subscription, and empower <b>${companyName}</b> with smarter Visitor & Conference Management.
+        </p>
 
         ${emailFooter()}
       `
