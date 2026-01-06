@@ -5,27 +5,33 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   FORMAT MYSQL / ISO DATE
+   SAFE DATE FORMATTER
+   Works for:
+   2026-01-06
+   2026-01-06 00:00:00
+   2026-01-06T00:00:00.000Z
 ====================================================== */
 const formatNiceDate = (value) => {
   if (!value) return "-";
 
   try {
-    const d = new Date(value);
-    if (isNaN(d)) return value;
+    let str = String(value).trim();
 
-    return d.toLocaleDateString("en-US", {
-      month: "short",
-      day: "2-digit",
-      year: "numeric",
-    });
+    if (str.includes("T")) str = str.split("T")[0];
+    if (str.includes(" ")) str = str.split(" ")[0];
+
+    // str = YYYY-MM-DD
+    const [y, m, d] = str.split("-");
+
+    return `${d}-${m}-${y}`;
   } catch {
     return value;
   }
 };
 
 /* ======================================================
-   FORMAT HH:MM:SS OR ISO → AM/PM
+   SAFE TIME FORMATTER
+   Converts →  16:30:00 → 4:30 PM
 ====================================================== */
 const formatNiceTime = (value) => {
   if (!value) return "-";
@@ -33,18 +39,18 @@ const formatNiceTime = (value) => {
   try {
     let str = String(value).trim();
 
-    // ISO → extract time
-    if (str.includes("T")) {
-      str = str.split("T")[1]; // HH:MM:SS.xxx
-    }
+    if (str.includes("T")) str = str.split("T")[1];
+    if (str.includes(" ")) str = str.split(" ")[1];
 
-    const [h, m] = str.split(":").map(Number);
+    const [hRaw, m] = str.split(":");
+    let h = parseInt(hRaw, 10);
+
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
-    const hour = h % 12 || 12;
+    h = h % 12 || 12;
 
-    return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
+    return `${h}:${m} ${suffix}`;
   } catch {
     return "-";
   }
@@ -96,8 +102,8 @@ export default function VisitorDashboard() {
       setStats(data.stats || { today: 0, inside: 0, out: 0 });
       setActiveVisitors(data.activeVisitors || []);
       setCheckedOutVisitors(data.checkedOutVisitors || []);
-    } catch {
-      console.error("Dashboard fetch error");
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -156,7 +162,7 @@ export default function VisitorDashboard() {
         </div>
       </header>
 
-      {/* ================= PAGE HEADING ================= */}
+      {/* ================= TITLE ================= */}
       <div className={styles.titleRow}>
         <h1 className={styles.pageTitle}>Visitor Dashboard</h1>
 
@@ -188,7 +194,7 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        {/* ACTIVE VISITORS */}
+        {/* ACTIVE */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
 
@@ -232,7 +238,7 @@ export default function VisitorDashboard() {
           )}
         </div>
 
-        {/* CHECKED OUT VISITORS */}
+        {/* CHECKED OUT */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
 
