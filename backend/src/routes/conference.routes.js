@@ -57,19 +57,75 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   EMAIL FOOTER
+   UPDATED EMAIL FOOTER ✔️
 ====================================================== */
-const emailFooter = (company) => `
+const emailFooter = company => `
 <br/>
 Regards,<br/>
-<b>${company?.name || "Conference Platform"}</b><br/>
-${company?.logo_url ? `<img src="${company.logo_url}" height="65" />` : ""}
-<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
+<b>${company.name}</b><br/>
+${company.logo_url ? `<img src="${company.logo_url}" height="55" />` : ""}
+<hr/>
 <p style="font-size:13px;color:#666">
-This email was automatically sent from PROMEET Conference & Visitor Platform.
-If this wasn’t you, please contact your administrator immediately.
+This email was automatically sent from the Conference Room Booking Platform.
+If you did not perform this action, please contact your administrator immediately.
 </p>
 `;
+
+/* ======================================================
+   EMAIL VALIDATION
+====================================================== */
+const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+/* ======================================================
+   EMAIL TEMPLATE
+====================================================== */
+const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
+  if (!isEmail(to)) {
+    console.log("🚫 Not a valid email — Skipping:", to);
+    return;
+  }
+
+  try {
+    await sendEmail({
+      to,
+      subject,
+      html: `
+      <div style="font-family:Arial;padding:18px">
+
+        <h2 style="color:#6c2bd9;margin-bottom:6px">${heading}</h2>
+
+        <p style="font-size:14px;color:#444">
+          Below are the meeting details:
+        </p>
+
+        <div style="
+          background:#f7f7ff;
+          border-radius:12px;
+          border:1px solid #ddd;
+          padding:16px;
+          margin:12px 0">
+
+          <p><b>Room:</b> ${booking.room_name}</p>
+          <p><b>Date:</b> ${booking.booking_date}</p>
+          <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(
+            booking.end_time
+          )}</p>
+          <p><b>Department:</b> ${booking.department}</p>
+          ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
+          <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
+        </div>
+
+        ${emailFooter(company)}
+      </div>
+      `
+    });
+
+    console.log("📨 EMAIL SENT TO:", to);
+
+  } catch (err) {
+    console.log("❌ EMAIL FAILED:", err.message);
+  }
+};
 
 /* ======================================================
    EMAIL VALIDATION
