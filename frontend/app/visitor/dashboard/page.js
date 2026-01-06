@@ -8,15 +8,25 @@ import styles from "./style.module.css";
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  if (typeof value === "string") {
+  let str = value;
+
+  // Normalize MySQL "YYYY-MM-DD HH:MM:SS" → safe date format
+  if (typeof value === "string" && value.includes(" ")) {
+    str = value.replace(" ", "T");
+  }
+
+  if (typeof str === "string") {
     const hasTZ =
-      value.includes("Z") ||
-      value.includes("+") ||
-      value.toLowerCase().includes("gmt");
+      str.includes("Z") ||
+      str.includes("+") ||
+      str.toLowerCase().includes("gmt");
 
     // If backend already returns IST without timezone — don't shift again
     if (!hasTZ) {
-      return new Date(value).toLocaleTimeString("en-IN", {
+      const d = new Date(str);
+      if (isNaN(d)) return "-";
+
+      return d.toLocaleTimeString("en-IN", {
         hour: "2-digit",
         minute: "2-digit",
         hour12: true
@@ -24,7 +34,7 @@ const formatISTTime = (value) => {
     }
   }
 
-  const date = new Date(value);
+  const date = new Date(str);
   if (isNaN(date.getTime())) return "-";
 
   return date.toLocaleTimeString("en-IN", {
@@ -34,6 +44,7 @@ const formatISTTime = (value) => {
     hour12: true
   });
 };
+
 
 export default function VisitorDashboard() {
   const router = useRouter();
