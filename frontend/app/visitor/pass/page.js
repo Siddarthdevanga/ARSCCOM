@@ -4,9 +4,31 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ================= IST FORMAT ================= */
+/* ================= SMART IST FORMAT ================= */
 const formatIST = (value) => {
   if (!value) return "-";
+
+  // String form
+  if (typeof value === "string") {
+    const hasTZ =
+      value.includes("Z") ||
+      value.includes("+") ||
+      value.toLowerCase().includes("gmt");
+
+    // If backend already returned IST without timezone
+    if (!hasTZ) {
+      return new Date(value).toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+  }
+
+  // Normal UTC → IST conversion
   const date = new Date(value);
   if (isNaN(date.getTime())) return "-";
 
@@ -22,7 +44,7 @@ const formatIST = (value) => {
 };
 
 /* ======================================================
-   INNER COMPONENT (SAFE to useSearchParams)
+   INNER COMPONENT
 ====================================================== */
 function VisitorPassContent() {
   const router = useRouter();
@@ -38,7 +60,6 @@ function VisitorPassContent() {
   const [visitor, setVisitor] = useState(null);
   const [error, setError] = useState("");
 
-  /* ================= LOAD VISITOR PASS ================= */
   useEffect(() => {
     if (!visitorCode) {
       setError("Visitor pass not found");
@@ -56,10 +77,7 @@ function VisitorPassContent() {
         );
 
         const data = await res.json();
-
-        if (!res.ok) {
-          throw new Error(data?.message || "Visitor not found");
-        }
+        if (!res.ok) throw new Error(data?.message || "Visitor not found");
 
         setCompany(data.company);
         setVisitor(data.visitor);
@@ -76,7 +94,6 @@ function VisitorPassContent() {
     return () => controller.abort();
   }, [visitorCode]);
 
-  /* ================= STATES ================= */
   if (loading) {
     return (
       <div className={styles.page}>
@@ -103,23 +120,16 @@ function VisitorPassContent() {
 
   if (!visitor || !company) return null;
 
-  /* ================= UI ================= */
   return (
     <div className={styles.page}>
       <div className={styles.passCard}>
-        {/* HEADER */}
         <header className={styles.header}>
           <div className={styles.companyName}>{company.name}</div>
           {company.logo && (
-            <img
-              src={company.logo}
-              alt="Company logo"
-              className={styles.logo}
-            />
+            <img src={company.logo} alt="Company logo" className={styles.logo} />
           )}
         </header>
 
-        {/* BODY */}
         <div className={styles.body}>
           <div className={styles.details}>
             <div className={styles.passTitle}>VISITOR PASS</div>
@@ -143,18 +153,13 @@ function VisitorPassContent() {
 
           <div className={styles.photoBox}>
             {visitor.photoUrl ? (
-              <img
-                src={visitor.photoUrl}
-                alt="Visitor"
-                className={styles.photo}
-              />
+              <img src={visitor.photoUrl} alt="Visitor" className={styles.photo} />
             ) : (
               <div className={styles.noPhoto}>NO PHOTO</div>
             )}
           </div>
         </div>
 
-        {/* FOOTER */}
         <div className={styles.footer}>
           <button
             className={styles.secondaryBtn}
@@ -178,16 +183,15 @@ function VisitorPassContent() {
   );
 }
 
-/* ======================================================
-   PAGE EXPORT (Suspense boundary)
-====================================================== */
 export default function VisitorPassPage() {
   return (
-    <Suspense fallback={
-      <div className={styles.page}>
-        <div className={styles.stateCard}>Loading…</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className={styles.page}>
+          <div className={styles.stateCard}>Loading…</div>
+        </div>
+      }
+    >
       <VisitorPassContent />
     </Suspense>
   );
