@@ -6,62 +6,42 @@ import styles from "./style.module.css";
 
 /* ================= PURE SAFE IST DISPLAY =================
    Handles BOTH:
-   1️⃣ 2026-01-06 10:42:44  (already IST)
-   2️⃣ 2026-01-06T11:20:20.000Z (UTC ISO → convert to IST manually)
+   ✔ 2026-01-06 10:42:44  (already IST)
+   ✔ 2026-01-06T11:20:20.000Z (UTC → IST without double shift)
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  /* ---------- CASE 1: ISO UTC TIMESTAMP ---------- */
-  if (value.includes("T")) {
-    try {
-      const [datePart, timePartFull] = value.split("T");
-      const timePart = timePartFull.split(".")[0]; // HH:MM:SS
-      let [h, m, s] = timePart.split(":").map(Number);
-
-      // Add +5:30 manually
-      let totalMinutes = h * 60 + m + 330;
-
-      let finalH = Math.floor(totalMinutes / 60) % 24;
-      let finalM = totalMinutes % 60;
-
-      const suffix = finalH >= 12 ? "PM" : "AM";
-      finalH = finalH % 12 || 12;
-
-      const [yyyy, mm, dd] = datePart.split("-");
-      const monthNames = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-      ];
-      const monthName = monthNames[parseInt(mm) - 1];
-
-      return `${dd} ${monthName} ${yyyy}, ${finalH}:${String(finalM).padStart(2,"0")} ${suffix}`;
-    } catch {
-      return value;
+  try {
+    // If already Date object
+    if (value instanceof Date) {
+      return value.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
     }
+
+    // Convert safely
+    const date = new Date(value);
+    if (isNaN(date)) return "-";
+
+    return date.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  } catch {
+    return "-";
   }
-
-  /* ---------- CASE 2: NORMAL MYSQL ---------- */
-  const parts = value.split(" ");
-  if (parts.length < 2) return value;
-
-  const date = parts[0];       // YYYY-MM-DD
-  const time = parts[1];       // HH:MM:SS
-
-  const [y, mo, d] = date.split("-");
-  let [h, m] = time.split(":");
-
-  h = parseInt(h, 10);
-  const suffix = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
-
-  const monthNames = [
-    "Jan","Feb","Mar","Apr","May","Jun",
-    "Jul","Aug","Sep","Oct","Nov","Dec"
-  ];
-  const monthName = monthNames[parseInt(mo, 10) - 1] || "";
-
-  return `${d} ${monthName} ${y}, ${h}:${m} ${suffix}`;
 };
 
 /* ======================================================
