@@ -57,7 +57,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   UPDATED EMAIL FOOTER ✔️
+   REQUIRED FOOTER ✔️
 ====================================================== */
 const emailFooter = company => `
 <br/>
@@ -77,73 +77,16 @@ If you did not perform this action, please contact your administrator immediatel
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
-   EMAIL TEMPLATE
-====================================================== */
-const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
-  if (!isEmail(to)) {
-    console.log("🚫 Not a valid email — Skipping:", to);
-    return;
-  }
-
-  try {
-    await sendEmail({
-      to,
-      subject,
-      html: `
-      <div style="font-family:Arial;padding:18px">
-
-        <h2 style="color:#6c2bd9;margin-bottom:6px">${heading}</h2>
-
-        <p style="font-size:14px;color:#444">
-          Below are the meeting details:
-        </p>
-
-        <div style="
-          background:#f7f7ff;
-          border-radius:12px;
-          border:1px solid #ddd;
-          padding:16px;
-          margin:12px 0">
-
-          <p><b>Room:</b> ${booking.room_name}</p>
-          <p><b>Date:</b> ${booking.booking_date}</p>
-          <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(
-            booking.end_time
-          )}</p>
-          <p><b>Department:</b> ${booking.department}</p>
-          ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
-          <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
-        </div>
-
-        ${emailFooter(company)}
-      </div>
-      `
-    });
-
-    console.log("📨 EMAIL SENT TO:", to);
-
-  } catch (err) {
-    console.log("❌ EMAIL FAILED:", err.message);
-  }
-};
-
-/* ======================================================
-   EMAIL VALIDATION
-====================================================== */
-const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
-
-/* ======================================================
-   SEND TO ADMIN + USER ALWAYS
+   SEND EMAIL TO ADMIN + USER
 ====================================================== */
 const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, booking, company }) => {
-  // Build recipients safely
   const recipients = [];
 
   if (isEmail(adminEmail)) recipients.push(adminEmail);
   if (isEmail(userEmail) && userEmail !== adminEmail) recipients.push(userEmail);
 
   if (!recipients.length) {
-    console.log("🚫 No valid recipients. Skipping email");
+    console.log("🚫 No valid recipients — skipping email");
     return;
   }
 
@@ -169,9 +112,7 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
 
           <p><b>Room:</b> ${booking.room_name}</p>
           <p><b>Date:</b> ${booking.booking_date}</p>
-          <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(
-            booking.end_time
-          )}</p>
+          <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(booking.end_time)}</p>
           <p><b>Department:</b> ${booking.department}</p>
           ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
           <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
@@ -189,10 +130,8 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
 };
 
 /* ======================================================
-   EVERYTHING BELOW SAME — ONLY MAIL CALLS UPDATED
+   DASHBOARD
 ====================================================== */
-
-/* DASHBOARD */
 router.get("/dashboard", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -229,7 +168,9 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
-/* ROOMS */
+/* ======================================================
+   ROOMS
+====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -251,7 +192,9 @@ router.get("/rooms", async (req, res) => {
   }
 });
 
-/* BOOKINGS LIST */
+/* ======================================================
+   BOOKINGS LIST
+====================================================== */
 router.get("/bookings", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -289,7 +232,9 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-/* CREATE BOOKING */
+/* ======================================================
+   CREATE BOOKING
+====================================================== */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
@@ -393,7 +338,9 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
-/* EDIT BOOKING */
+/* ======================================================
+   EDIT BOOKING
+====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
     const { companyId, company, email: adminEmail } = req.user;
@@ -474,7 +421,9 @@ router.patch("/bookings/:id", async (req, res) => {
   }
 });
 
-/* CANCEL BOOKING */
+/* ======================================================
+   CANCEL BOOKING
+====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const { companyId, company, email: adminEmail } = req.user;
@@ -519,4 +468,5 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+
 
