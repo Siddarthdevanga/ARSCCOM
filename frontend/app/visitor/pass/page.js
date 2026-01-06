@@ -4,15 +4,44 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ================= PURE IST DISPLAY =================
-   DB already stores proper IST string like:
-   2026-01-06 10:42:44
-   We DO NOT convert timezone.
+/* ================= PURE SAFE IST DISPLAY =================
+   Handles BOTH:
+   1️⃣ 2026-01-06 10:42:44  (already IST)
+   2️⃣ 2026-01-06T11:20:20.000Z (UTC ISO → convert to IST manually)
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  // Expected: "YYYY-MM-DD HH:MM:SS"
+  /* ---------- CASE 1: ISO UTC TIMESTAMP ---------- */
+  if (value.includes("T")) {
+    try {
+      const [datePart, timePartFull] = value.split("T");
+      const timePart = timePartFull.split(".")[0]; // HH:MM:SS
+      let [h, m, s] = timePart.split(":").map(Number);
+
+      // Add +5:30 manually
+      let totalMinutes = h * 60 + m + 330;
+
+      let finalH = Math.floor(totalMinutes / 60) % 24;
+      let finalM = totalMinutes % 60;
+
+      const suffix = finalH >= 12 ? "PM" : "AM";
+      finalH = finalH % 12 || 12;
+
+      const [yyyy, mm, dd] = datePart.split("-");
+      const monthNames = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+      ];
+      const monthName = monthNames[parseInt(mm) - 1];
+
+      return `${dd} ${monthName} ${yyyy}, ${finalH}:${String(finalM).padStart(2,"0")} ${suffix}`;
+    } catch {
+      return value;
+    }
+  }
+
+  /* ---------- CASE 2: NORMAL MYSQL ---------- */
   const parts = value.split(" ");
   if (parts.length < 2) return value;
 
@@ -30,7 +59,6 @@ const formatIST = (value) => {
     "Jan","Feb","Mar","Apr","May","Jun",
     "Jul","Aug","Sep","Oct","Nov","Dec"
   ];
-
   const monthName = monthNames[parseInt(mo, 10) - 1] || "";
 
   return `${d} ${monthName} ${y}, ${h}:${m} ${suffix}`;
