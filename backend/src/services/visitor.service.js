@@ -3,24 +3,15 @@ import { uploadToS3 } from "./s3.service.js";
 import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 
 /* ======================================================
-   HELPERS
+   ABSOLUTE SAFE IST (No Intl, No Browser Influence)
 ====================================================== */
-
-/**
- * SAFE & CORRECT IST DATE
- * No Intl parsing
- * No double timezone
- * Works in all servers
- */
 const getISTDate = () => {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
   return new Date(utc + 5.5 * 60 * 60 * 1000);
 };
 
-/**
- * YYYYMMDD (IST)
- */
+/* YYYYMMDD */
 const formatISTDateKey = (date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -56,7 +47,7 @@ export const saveVisitor = async (companyId, data, file) => {
 
   if (!name || !phone) throw new Error("Visitor name and phone are required");
 
-  // 🔒 Absolute IST (true time)
+  // TRUE IST (Stored same as India time)
   const checkInIST = getISTDate();
   if (isNaN(checkInIST.getTime())) throw new Error("Invalid IST datetime");
 
@@ -92,25 +83,25 @@ export const saveVisitor = async (companyId, data, file) => {
       Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
       idType || null,
       idNumber || null,
-      checkInIST   // ✅ STORE REAL IST IN DB
+      checkInIST     // ✅ Stored as REAL IST in DB
     ]
   );
 
   const visitorId = insertResult.insertId;
 
-  /* ================= DAILY COUNT BASED ON IST DATE ================= */
+  /* ================= DAILY COUNT ================= */
   const istDateString = `${checkInIST.getFullYear()}-${String(
     checkInIST.getMonth() + 1
   ).padStart(2, "0")}-${String(checkInIST.getDate()).padStart(2, "0")}`;
 
   const [[countRow]] = await db.execute(
     `
-    SELECT COUNT(*) AS count
-    FROM visitors
-    WHERE company_id = ?
-    AND DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) = ?
+      SELECT COUNT(*) AS count
+      FROM visitors
+      WHERE company_id = ?
+      AND DATE(check_in) = ?
     `,
-    [companyId, istDateString]
+    [companyId, istDateString]       // ❌ removed CONVERT_TZ
   );
 
   const dailyVisitorNumber = countRow.count;
@@ -130,43 +121,36 @@ export const saveVisitor = async (companyId, data, file) => {
     [visitorCode, photoUrl, visitorId]
   );
 
-  /* ================= MAIL (ONCE ONLY) ================= */
+  /* ================= MAIL ================= */
   if (email) {
-    const [[row]] = await db.execute(
-      `SELECT pass_mail_sent FROM visitors WHERE id = ?`,
-      [visitorId]
-    );
+    try {
+      const [[company]] = await db.execute(
+        `SELECT name, logo_url FROM companies WHERE id = ?`,
+        [companyId]
+      );
 
-    if (!row.pass_mail_sent) {
-      try {
-        const [[company]] = await db.execute(
-          `SELECT name, logo_url FROM companies WHERE id = ?`,
-          [companyId]
-        );
+      await sendVisitorPassMail({
+        company: {
+          id: companyId,
+          name: company.name,
+          logo: company.logo_url
+        },
+        visitor: {
+          visitorCode,
+          name,
+          phone,
+          email,
+          photoUrl,
+          checkIn: istDateString + " " + checkInIST.toTimeString().slice(0, 8)
+        }
+      });
 
-        await sendVisitorPassMail({
-          company: {
-            id: companyId,
-            name: company.name,
-            logo: company.logo_url
-          },
-          visitor: {
-            visitorCode,
-            name,
-            phone,
-            email,
-            photoUrl,
-            checkIn: checkInIST
-          }
-        });
-
-        await db.execute(
-          `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
-          [visitorId]
-        );
-      } catch (err) {
-        console.error("VISITOR MAIL ERROR:", err.message);
-      }
+      await db.execute(
+        `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
+        [visitorId]
+      );
+    } catch (err) {
+      console.error("VISITOR MAIL ERROR:", err.message);
     }
   }
 
@@ -181,4 +165,3 @@ export const saveVisitor = async (companyId, data, file) => {
     checkInIST
   };
 };
-
