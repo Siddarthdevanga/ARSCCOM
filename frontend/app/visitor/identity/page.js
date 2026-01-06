@@ -96,22 +96,16 @@ export default function VisitorIdentity() {
     stopCamera();
   };
 
-  /* ================= VALIDATION ================= */
-  const validateAll = () => {
-    if (!photo) {
-      setError("Visitor photo is required");
-      return false;
-    }
-    if (!idType) {
-      setError("Please select an ID proof type");
-      return false;
-    }
-    if (!idNumber.trim()) {
-      setError("Please enter ID number");
-      return false;
-    }
-    return true;
-  };
+/* ================= VALIDATION ================= */
+const validateAll = () => {
+  if (!photo) {
+    setError("Visitor photo is required");
+    return false;
+  }
+
+  // ID is now OPTIONAL
+  return true;
+};
 
   /* ================= GENERATE PASS ================= */
   const handleGeneratePass = async () => {
