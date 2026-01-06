@@ -7,6 +7,7 @@ import styles from "./style.module.css";
 
 /* ======================================================
    UNIVERSAL TIME SLOTS (30 mins from 00:00 — 23:30)
+   UI works in 24hr internally, but backend receives AM/PM
 ====================================================== */
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2);
@@ -16,20 +17,28 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const hour = h % 12 || 12;
 
   return {
-    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,
-    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`
+    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,   // shown to user
+    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`, // internal 24hr
   };
 });
 
 const normalizeDate = (d) =>
   typeof d === "string" ? d.split("T")[0] : "";
 
-const toAmPm = (time24) => {
+/* ======================================================
+   24hr → AM/PM (For Backend Submission)
+====================================================== */
+const toAmPmStrict = (time24) => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
   return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
 };
+
+/* ======================================================
+   Display Helper
+====================================================== */
+const toAmPmDisplay = toAmPmStrict;
 
 export default function ConferenceBookings() {
   const router = useRouter();
@@ -110,7 +119,7 @@ export default function ConferenceBookings() {
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   /* ======================================================
-     AVAILABLE START FOR CREATE (Today → after current time)
+     AVAILABLE START TIMES
   ====================================================== */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter((t) => {
@@ -123,6 +132,9 @@ export default function ConferenceBookings() {
     });
   }, [date, today, blockedSlots, nowMinutes]);
 
+  /* ======================================================
+     AVAILABLE END TIMES
+  ====================================================== */
   const availableEndTimes = useMemo(() => {
     if (!startTime) return [];
     return TIME_OPTIONS.filter(
@@ -131,7 +143,7 @@ export default function ConferenceBookings() {
   }, [startTime, blockedSlots]);
 
   /* ======================================================
-     CREATE BOOKING
+     CREATE BOOKING  — sends AM/PM ONLY
   ====================================================== */
   const createBooking = async () => {
     setError("");
@@ -152,8 +164,8 @@ export default function ConferenceBookings() {
           department,
           purpose,
           booking_date: date,
-          start_time: startTime,
-          end_time: endTime,
+          start_time: toAmPmStrict(startTime),
+          end_time: toAmPmStrict(endTime),
         }),
       });
 
@@ -169,7 +181,7 @@ export default function ConferenceBookings() {
   };
 
   /* ======================================================
-     BLOCKED SLOTS FOR EDITING (Exclude Current Booking)
+     BLOCKED SLOTS EXCLUDING CURRENT
   ====================================================== */
   const getBlockedSlotsExcluding = (bookingId) => {
     const set = new Set();
@@ -185,7 +197,7 @@ export default function ConferenceBookings() {
   };
 
   /* ======================================================
-     SAVE EDIT
+     SAVE EDIT — sends AM/PM ONLY
   ====================================================== */
   const saveEdit = async (id) => {
     setError("");
@@ -201,8 +213,8 @@ export default function ConferenceBookings() {
       await apiFetch(`/api/conference/bookings/${id}`, {
         method: "PATCH",
         body: JSON.stringify({
-          start_time: editStart,
-          end_time: editEnd,
+          start_time: toAmPmStrict(editStart),
+          end_time: toAmPmStrict(editEnd),
         }),
       });
 
@@ -215,7 +227,7 @@ export default function ConferenceBookings() {
   };
 
   /* ======================================================
-     CANCEL BOOKING
+     CANCEL
   ====================================================== */
   const cancelBooking = async (id) => {
     setError("");
@@ -334,11 +346,9 @@ export default function ConferenceBookings() {
           {dayBookings.map((b) => {
             const blocked = getBlockedSlotsExcluding(b.id);
 
-            /* --- EDIT START OPTIONS --- */
             const editStartOptions = TIME_OPTIONS.filter((t) => {
               if (blocked.has(t.value)) return false;
 
-              // If today → only allow future times
               if (b.booking_date === today) {
                 const [h, m] = t.value.split(":").map(Number);
                 if (h * 60 + m <= nowMinutes) return false;
@@ -346,11 +356,8 @@ export default function ConferenceBookings() {
               return true;
             });
 
-            /* --- EDIT END OPTIONS --- */
             const editEndOptions = TIME_OPTIONS.filter(
-              (t) =>
-                t.value > editStart &&
-                !blocked.has(t.value)
+              (t) => t.value > editStart && !blocked.has(t.value)
             );
 
             return (
@@ -402,7 +409,8 @@ export default function ConferenceBookings() {
                 ) : (
                   <>
                     <b>
-                      {toAmPm(b.start_time)} – {toAmPm(b.end_time)}
+                      {toAmPmDisplay(b.start_time)} –{" "}
+                      {toAmPmDisplay(b.end_time)}
                     </b>
                     <p>{b.department}</p>
                     <span>{b.booked_by}</span>
