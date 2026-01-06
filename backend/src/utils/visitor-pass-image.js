@@ -21,20 +21,13 @@ const TEXT_GRAY = "#666";
 const CARD_RADIUS = 18;
 
 /* ======================================================
-   SUPER SAFE IST FORMATTER
-   Handles EVERYTHING:
-
-   ✔ MySQL     → 2026-01-06 10:42:44   (Already IST)
-   ✔ ISO UTC   → 2026-01-06T11:20:20Z  (Convert to IST)
-   ✔ Date Obj  → Valid
-   ✔ null / invalid → "-"
+   SUPER SAFE IST FORMATTER (NO DOUBLE +5:30 ISSUE)
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  /* ---------- CASE 1: If it's a Date Object ---------- */
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return value.toLocaleString("en-IN", {
+  const format = (d) =>
+    d.toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       day: "2-digit",
       month: "short",
@@ -43,48 +36,44 @@ const formatIST = (value) => {
       minute: "2-digit",
       hour12: true
     });
+
+  /* ---------- CASE 1: Already a valid Date ---------- */
+  if (value instanceof Date && !isNaN(value)) {
+    return format(value);
   }
 
-  /* ---------- CASE 2: If it's NOT string ---------- */
+  /* ---------- CASE 2: Non-string ---------- */
   if (typeof value !== "string") {
     try {
       const d = new Date(value);
-      if (!isNaN(d)) {
-        return d.toLocaleString("en-IN", {
-          timeZone: "Asia/Kolkata",
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true
-        });
-      }
-    } catch {}
-    return "-";
-  }
-
-  /* ---------- CASE 3: ISO format with T ---------- */
-  if (value.includes("T")) {
-    try {
-      const d = new Date(value);
-      if (isNaN(d)) return "-";
-
-      return d.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
+      return isNaN(d) ? "-" : format(d);
     } catch {
       return "-";
     }
   }
 
-  /* ---------- CASE 4: MYSQL "YYYY-MM-DD HH:MM:SS" ---------- */
+  /* ---------- CASE 3: ISO with timezone / Z ---------- */
+  if (value.includes("T") && (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))) {
+    try {
+      const d = new Date(value);
+      return isNaN(d) ? "-" : format(d);
+    } catch {
+      return "-";
+    }
+  }
+
+  /* ---------- CASE 4: ISO WITHOUT timezone ---------- */
+  if (value.includes("T")) {
+    try {
+      // Treat it as IST already — do NOT shift
+      const d = new Date(value.replace("T", " ") + " UTC"); 
+      return format(d);
+    } catch {
+      return "-";
+    }
+  }
+
+  /* ---------- CASE 5: MYSQL "YYYY-MM-DD HH:MM:SS" ---------- */
   try {
     const [date, time] = value.split(" ");
     if (!date || !time) return value;
