@@ -5,48 +5,50 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   SAFE DATE FORMATTER
+   READ MYSQL TIME AS-IS (IT IS ALREADY IST)
 ====================================================== */
-const formatNiceDate = (value) => {
+const formatISTTime = (value) => {
   if (!value) return "-";
 
   try {
-    let str = String(value).trim();
+    const str = String(value).trim();
 
-    if (str.includes("T")) str = str.split("T")[0];
-    if (str.includes(" ")) str = str.split(" ")[0];
+    // MySQL: "YYYY-MM-DD HH:MM:SS"
+    if (str.includes(" ")) {
+      const time = str.split(" ")[1];     // HH:MM:SS
+      if (!time) return "-";
 
-    const [y, m, d] = str.split("-");
-    return `${d}-${m}-${y}`;
-  } catch {
-    return value;
-  }
-};
+      let [h, m] = time.split(":");
+      h = parseInt(h, 10);
 
-/* ======================================================
-   SAFE TIME FORMATTER
-====================================================== */
-const formatNiceTime = (value) => {
-  if (!value) return "-";
+      if (isNaN(h)) return "-";
 
-  try {
-    let str = String(value).trim();
+      const suffix = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
 
-    if (str.includes("T")) str = str.split("T")[1];
-    if (str.includes(" ")) str = str.split(" ")[1];
+      return `${h}:${m} ${suffix}`;
+    }
 
-    const [hRaw, m] = str.split(":");
-    let h = parseInt(hRaw, 10);
-    if (isNaN(h)) return "-";
+    // ISO string → DO NOT CONVERT — just read local time part
+    if (str.includes("T")) {
+      const t = str.split("T")[1]; // HH:MM:SS.xxx
+      if (!t) return "-";
 
-    const suffix = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
+      const [h, m] = t.split(":");
+      let hr = parseInt(h, 10);
 
-    return `${h}:${m} ${suffix}`;
+      const suffix = hr >= 12 ? "PM" : "AM";
+      hr = hr % 12 || 12;
+
+      return `${hr}:${m} ${suffix}`;
+    }
+
+    return "-";
   } catch {
     return "-";
   }
 };
+
 
 export default function VisitorDashboard() {
   const router = useRouter();
@@ -58,7 +60,7 @@ export default function VisitorDashboard() {
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= LOAD ================= */
+  /* ================= LOAD COMPANY + DASHBOARD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -83,11 +85,14 @@ export default function VisitorDashboard() {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
         {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.error("Dashboard API failed");
+        return;
+      }
 
       const data = await res.json();
 
@@ -113,15 +118,18 @@ export default function VisitorDashboard() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/checkout`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.error("Checkout failed");
+        return;
+      }
 
       await loadDashboard(token);
-    } catch {
-      console.error("Checkout failed");
+    } catch (err) {
+      console.error("Checkout error:", err);
     } finally {
       setCheckingOut(null);
     }
@@ -186,7 +194,8 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        {/* ACTIVE */}
+        
+        {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
 
@@ -199,45 +208,36 @@ export default function VisitorDashboard() {
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>Check-in Date</th>
-                  <th>Time</th>
+                  <th>Check-in</th>
                   <th>Action</th>
                 </tr>
               </thead>
-
               <tbody>
-                {activeVisitors.map((v) => {
-                  const checkIn = v.check_in || v.checkIn;
-
-                  return (
-                    <tr key={v.visitor_code}>
-                      <td>{v.visitor_code}</td>
-                      <td>{v.name}</td>
-                      <td>{v.phone}</td>
-
-                      <td>{formatNiceDate(checkIn)}</td>
-                      <td>{formatNiceTime(checkIn)}</td>
-
-                      <td>
-                        <button
-                          className={styles.checkoutBtn}
-                          disabled={checkingOut === v.visitor_code}
-                          onClick={() => handleCheckout(v.visitor_code)}
-                        >
-                          {checkingOut === v.visitor_code
-                            ? "Checking out..."
-                            : "Checkout"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {activeVisitors.map(v => (
+                  <tr key={v.visitor_code}>
+                    <td>{v.visitor_code}</td>
+                    <td>{v.name}</td>
+                    <td>{v.phone}</td>
+                    <td>{formatISTTime(v.check_in || v.checkIn)}</td>
+                    <td>
+                      <button
+                        className={styles.checkoutBtn}
+                        disabled={checkingOut === v.visitor_code}
+                        onClick={() => handleCheckout(v.visitor_code)}
+                      >
+                        {checkingOut === v.visitor_code
+                          ? "Checking out..."
+                          : "Checkout"}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
         </div>
 
-        {/* CHECKED OUT */}
+        {/* CHECKED OUT VISITORS */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
 
@@ -250,32 +250,24 @@ export default function VisitorDashboard() {
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>Check-out Date</th>
-                  <th>Time</th>
+                  <th>Check-out</th>
                 </tr>
               </thead>
-
               <tbody>
-                {checkedOutVisitors.map((v) => {
-                  const out = v.check_out || v.checkOut;
-
-                  return (
-                    <tr key={v.visitor_code}>
-                      <td>{v.visitor_code}</td>
-                      <td>{v.name}</td>
-                      <td>{v.phone}</td>
-
-                      <td>{formatNiceDate(out)}</td>
-                      <td>{formatNiceTime(out)}</td>
-                    </tr>
-                  );
-                })}
+                {checkedOutVisitors.map(v => (
+                  <tr key={v.visitor_code}>
+                    <td>{v.visitor_code}</td>
+                    <td>{v.name}</td>
+                    <td>{v.phone}</td>
+                    <td>{formatISTTime(v.check_out || v.checkOut)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
         </div>
+
       </section>
     </div>
   );
 }
-
