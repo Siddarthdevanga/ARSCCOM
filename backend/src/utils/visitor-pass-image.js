@@ -25,22 +25,49 @@ const TEXT_GRAY = "#666";
 const CARD_RADIUS = 18;
 
 /* ======================================================
-   PURE IST FORMATTER – NO TIMEZONE SHIFT
-   DB already stores valid IST string:
-   2026-01-06 10:42:44
+   SAFE IST FORMATTER
+   Supports:
+   1️⃣ "2026-01-06 10:42:44" → already IST
+   2️⃣ "2026-01-06T11:20:20.000Z" → UTC → convert to IST manually
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  // Expect "YYYY-MM-DD HH:MM:SS"
+  /* ---------- CASE 1: ISO UTC ---------- */
+  if (value.includes("T")) {
+    try {
+      const [datePart, timePartFull] = value.split("T");
+      const timePart = timePartFull.split(".")[0]; // HH:MM:SS
+      let [h, m] = timePart.split(":").map(Number);
+
+      // Add +5:30
+      let totalMinutes = h * 60 + m + 330;
+      let finalH = Math.floor(totalMinutes / 60) % 24;
+      let finalM = totalMinutes % 60;
+
+      const suffix = finalH >= 12 ? "PM" : "AM";
+      finalH = finalH % 12 || 12;
+
+      const [yyyy, mm, dd] = datePart.split("-");
+
+      const monthNames = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+      ];
+      const monthName = monthNames[parseInt(mm, 10) - 1];
+
+      return `${dd} ${monthName} ${yyyy}, ${finalH}:${String(finalM).padStart(2,"0")} ${suffix}`;
+    } catch {
+      return value;
+    }
+  }
+
+  /* ---------- CASE 2: Already IST (MYSQL FORMAT) ---------- */
   const parts = value.split(" ");
   if (parts.length < 2) return value;
 
-  const date = parts[0];
-  const time = parts[1];
-
-  const [y, mo, d] = date.split("-");
-  let [h, m] = time.split(":");
+  const [y, mo, d] = parts[0].split("-");
+  let [h, m] = parts[1].split(":");
 
   let hour = parseInt(h, 10);
   const suffix = hour >= 12 ? "PM" : "AM";
@@ -50,7 +77,6 @@ const formatIST = (value) => {
     "Jan","Feb","Mar","Apr","May","Jun",
     "Jul","Aug","Sep","Oct","Nov","Dec"
   ];
-
   const monthName = monthNames[parseInt(mo, 10) - 1] || "";
 
   return `${d} ${monthName} ${y}, ${hour}:${m} ${suffix}`;
@@ -125,6 +151,7 @@ export const generateVisitorPassImage = async ({
   if (company.logo_url || company.logo) {
     try {
       const logo = await loadImage(company.logo_url || company.logo);
+
       const maxH = 48;
       const maxW = 120;
 
