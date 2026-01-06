@@ -90,6 +90,8 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
     return;
   }
 
+  const safeCompany = company || { name: "", logo_url: "" };
+
   try {
     await sendEmail({
       to: recipients,
@@ -118,7 +120,7 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
           <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
         </div>
 
-        ${emailFooter(company)}
+        ${emailFooter(safeCompany)}
       </div>
       `
     });
@@ -468,5 +470,6 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+
 
 
