@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   DASHBOARD – ZERO WRONG TZ CONVERSIONS
+   MySQL stores UTC → Convert to IST correctly
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
@@ -13,26 +13,15 @@ const formatISTTime = (value) => {
   try {
     const str = String(value).trim();
 
-    /* ---------- CASE 1: MySQL "YYYY-MM-DD HH:MM:SS" ---------- */
+    // MySQL "YYYY-MM-DD HH:MM:SS"
     if (str.includes(" ")) {
-      const t = str.split(" ")[1]; // HH:MM:SS
-      if (!t) return "-";
+      const [date, time] = str.split(" ");
+      if (!time) return "-";
 
-      let [h, m] = t.split(":");
-      h = parseInt(h, 10);
+      // Convert as UTC → IST
+      const utcDate = new Date(`${date}T${time}Z`);
 
-      if (isNaN(h)) return "-";
-
-      const suffix = h >= 12 ? "PM" : "AM";
-      h = h % 12 || 12;
-
-      return `${h}:${m} ${suffix}`;
-    }
-
-    /* ---------- CASE 2: ISO WITH timezone (Z or +offset) ---------- */
-    if (str.includes("T") && (str.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(str))) {
-      const d = new Date(str);
-      return d.toLocaleString("en-IN", {
+      return utcDate.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         hour: "2-digit",
         minute: "2-digit",
@@ -40,18 +29,15 @@ const formatISTTime = (value) => {
       });
     }
 
-    /* ---------- CASE 3: ISO WITHOUT timezone (Treat as IST, DO NOT SHIFT) ---------- */
+    // ISO → Convert normally
     if (str.includes("T")) {
-      const timePart = str.split("T")[1]; // HH:MM:SS.xxxx
-      if (!timePart) return "-";
-
-      const [h, m] = timePart.split(":");
-      let hr = parseInt(h, 10);
-
-      const suffix = hr >= 12 ? "PM" : "AM";
-      hr = hr % 12 || 12;
-
-      return `${hr}:${m} ${suffix}`;
+      const d = new Date(str);
+      return d.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
     }
 
     return "-";
