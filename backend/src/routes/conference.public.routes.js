@@ -8,6 +8,34 @@ const router = express.Router();
 const normalizeSlug = v => String(v || "").trim().toLowerCase();
 const normalizeEmail = v => String(v || "").trim().toLowerCase();
 
+/* ======================================================
+   STRICT AM/PM ONLY  → Convert to HH:MM:SS
+====================================================== */
+const normalizeAmPmTime = (input = "") => {
+  const value = String(input).trim().toUpperCase();
+
+  // MUST MATCH FORMAT "4:30 PM" / "11:00 AM" / "12:15 PM"
+  const match = value.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/);
+
+  if (!match)
+    throw new Error("Only AM/PM format allowed (Example: 4:30 PM)");
+
+  let [_, hh, mm, period] = match;
+  let h = Number(hh);
+  const m = Number(mm);
+
+  if (h < 1 || h > 12) throw new Error("Invalid hour");
+  if (m < 0 || m > 59) throw new Error("Invalid minute");
+
+  if (period === "PM" && h !== 12) h += 12;
+  if (period === "AM" && h === 12) h = 0;
+
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`;
+};
+
+/* ======================================================
+   PRETTY AM/PM VIEW FOR EMAIL
+====================================================== */
 const prettyTime = (t = "") => {
   const [h, m] = t.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -177,7 +205,7 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 });
 
 /* ======================================================
-   RESEND OTP  (30 Seconds Cooldown — No Schema Change)
+   RESEND OTP
 ====================================================== */
 router.post("/company/:slug/resend-otp", async (req, res) => {
   try {
@@ -289,7 +317,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING
+   CREATE BOOKING — AM/PM ONLY
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -310,6 +338,13 @@ router.post("/company/:slug/book", async (req, res) => {
 
     if (!room_id || !email || !department || !booking_date || !start_time || !end_time)
       return res.status(400).json({ message: "Missing required fields" });
+
+    try {
+      start_time = normalizeAmPmTime(start_time);
+      end_time = normalizeAmPmTime(end_time);
+    } catch (err) {
+      return res.status(400).json({ message: err.message });
+    }
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start time" });
@@ -394,18 +429,25 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 /* ======================================================
-   UPDATE BOOKING (Only Owner)
+   UPDATE BOOKING (Only Owner) — AM/PM ONLY
 ====================================================== */
 router.patch("/company/:slug/bookings/:id", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
     const bookingId = Number(req.params.id);
 
-    const { start_time, end_time, email } = req.body;
+    let { start_time, end_time, email } = req.body;
     const userEmail = normalizeEmail(email);
 
     if (!userEmail || !start_time || !end_time)
       return res.status(400).json({ message: "Email, start time and end time required" });
+
+    try {
+      start_time = normalizeAmPmTime(start_time);
+      end_time = normalizeAmPmTime(end_time);
+    } catch (err) {
+      return res.status(400).json({ message: err.message });
+    }
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start" });
