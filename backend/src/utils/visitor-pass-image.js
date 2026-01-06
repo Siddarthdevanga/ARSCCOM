@@ -2,7 +2,7 @@ import { createCanvas, loadImage, registerFont } from "canvas";
 import fs from "fs";
 
 /* ======================================================
-   REGISTER FONT (ENGLISH SAFE)
+   REGISTER FONT
 ====================================================== */
 const FONT_PATH = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
 const FONT_FAMILY = "AppFont";
@@ -13,7 +13,6 @@ if (!fs.existsSync(FONT_PATH)) {
 }
 
 registerFont(FONT_PATH, { family: FONT_FAMILY });
-console.log("✅ Font registered:", FONT_FAMILY);
 
 /* ======================================================
    CONSTANTS
@@ -26,14 +25,37 @@ const TEXT_GRAY = "#666";
 const CARD_RADIUS = 18;
 
 /* ======================================================
-   TIME FORMAT (IST)
+   SAFE IST FORMATTER (NO DOUBLE SHIFT)
 ====================================================== */
-const formatIST = (date) => {
-  if (!date) return "-";
+const formatIST = (value) => {
+  if (!value) return "-";
 
-  const d = new Date(date);
+  if (typeof value === "string") {
+    const hasTZ =
+      value.includes("Z") ||
+      value.includes("+") ||
+      value.toLowerCase().includes("gmt");
+
+    // If backend is already IST (most likely)
+    if (!hasTZ) {
+      const d = new Date(value);
+      if (isNaN(d)) return "-";
+
+      return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+  }
+
+  const d = new Date(value);
   if (isNaN(d)) return "-";
 
+  // Only apply timezone if real UTC time
   return d.toLocaleString("en-IN", {
     timeZone: "Asia/Kolkata",
     day: "2-digit",
@@ -46,7 +68,7 @@ const formatIST = (date) => {
 };
 
 /* ======================================================
-   TEXT HELPERS
+   TEXT TRIMMER
 ====================================================== */
 const drawEllipsisText = (ctx, text, x, y, maxWidth) => {
   const value = text || "Company";
@@ -65,7 +87,7 @@ const drawEllipsisText = (ctx, text, x, y, maxWidth) => {
 };
 
 /* ======================================================
-   PASS GENERATOR
+   GENERATE PASS
 ====================================================== */
 export const generateVisitorPassImage = async ({
   company = {},
@@ -79,7 +101,6 @@ export const generateVisitorPassImage = async ({
   const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   const ctx = canvas.getContext("2d");
 
-  /* ================= CANVAS DEFAULTS ================= */
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
 
@@ -109,7 +130,28 @@ export const generateVisitorPassImage = async ({
 
   ctx.fillStyle = "#fff";
   ctx.font = `bold 22px ${FONT_FAMILY}`;
-  drawEllipsisText(ctx, companyName, cardX + 20, cardY + 32, cardW - 40);
+  drawEllipsisText(ctx, companyName, cardX + 20, cardY + 32, cardW - 140);
+
+  /* ================= COMPANY LOGO ================= */
+  if (company.logo_url || company.logo) {
+    try {
+      const logo = await loadImage(company.logo_url || company.logo);
+      const maxH = 48;
+      const maxW = 120;
+
+      const ratio = Math.min(maxW / logo.width, maxH / logo.height);
+
+      const w = logo.width * ratio;
+      const h = logo.height * ratio;
+
+      const x = cardX + cardW - w - 20;
+      const y = cardY + (64 - h) / 2;
+
+      ctx.drawImage(logo, x, y, w, h);
+    } catch (err) {
+      console.error("Logo load failed:", err.message);
+    }
+  }
 
   /* ================= VISITOR DETAILS ================= */
   ctx.fillStyle = BRAND_COLOR;
@@ -120,6 +162,7 @@ export const generateVisitorPassImage = async ({
   ctx.fillText(`Visitor ID : ${visitor.visitorCode || "-"}`, cardX + 20, cardY + 135);
   ctx.fillText(`Name       : ${visitor.name || "-"}`, cardX + 20, cardY + 165);
   ctx.fillText(`Phone      : ${visitor.phone || "-"}`, cardX + 20, cardY + 195);
+
   ctx.fillText(
     `Check-in   : ${formatIST(visitor.checkIn)} (IST)`,
     cardX + 20,
@@ -139,15 +182,18 @@ export const generateVisitorPassImage = async ({
   if (visitor.photoUrl) {
     try {
       const img = await loadImage(visitor.photoUrl);
-
       const ratio = Math.min(photoW / img.width, photoH / img.height);
+
       const imgW = img.width * ratio;
       const imgH = img.height * ratio;
 
-      const imgX = photoX + (photoW - imgW) / 2;
-      const imgY = photoY + (photoH - imgH) / 2;
-
-      ctx.drawImage(img, imgX, imgY, imgW, imgH);
+      ctx.drawImage(
+        img,
+        photoX + (photoW - imgW) / 2,
+        photoY + (photoH - imgH) / 2,
+        imgW,
+        imgH
+      );
     } catch {
       ctx.font = `12px ${FONT_FAMILY}`;
       ctx.fillStyle = "#999";
