@@ -7,38 +7,49 @@ import styles from "./style.module.css";
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 /* ======================================================
-   SLOTS 9:30 AM → 7:30 PM (30 min)
+   PURE AM/PM TIME OPTIONS — Full 24 Hours (30 mins)
 ====================================================== */
-const TIME_OPTIONS = Array.from({ length: 20 }, (_, i) => {
-  const total = 9 * 60 + 30 + i * 30;
-  const h = Math.floor(total / 60);
-  const m = total % 60;
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = i % 2 === 0 ? "00" : "30";
 
   const ampm = h >= 12 ? "PM" : "AM";
   const hour = h % 12 || 12;
 
   return {
-    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,
-    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`
+    label: `${hour}:${m} ${ampm}`,     // User sees this
+    value: `${hour}:${m} ${ampm}`,     // Stored in state also AM/PM
+    minutes: h * 60 + Number(m)       // Used internally
   };
 });
 
-/* DB "16:00:00" → "16:00" (safe) */
-const normalizeDb = t => (t?.length >= 5 ? t.slice(0, 5) : t);
-
-/* 24hr → AM/PM (backend required format) */
-const toAmPmStrict = t => {
+/* Convert DB HH:MM:SS → "4:30 PM" */
+const dbToAmPm = t => {
+  if (!t) return "";
   const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+  const am = h >= 12 ? "PM" : "AM";
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${am}`;
+};
+
+/* Convert AM/PM → minutes for comparison */
+const ampmToMinutes = str => {
+  if (!str) return 0;
+  const [time, suffix] = str.split(" ");
+  let [h, m] = time.split(":").map(Number);
+
+  if (suffix === "PM" && h !== 12) h += 12;
+  if (suffix === "AM" && h === 12) h = 0;
+
+  return h * 60 + m;
 };
 
 export default function PublicConferenceBooking() {
   const { slug } = useParams();
 
   const today = new Date().toISOString().split("T")[0];
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMinutes =
+    new Date().getHours() * 60 + new Date().getMinutes();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -63,10 +74,9 @@ export default function PublicConferenceBooking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
   const [resendTimer, setResendTimer] = useState(0);
 
-  /* ================= LOAD COMPANY ================= */
+  /* ================= COMPANY ================= */
   useEffect(() => {
     fetch(`${API}/api/public/conference/company/${slug}`)
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -74,7 +84,7 @@ export default function PublicConferenceBooking() {
       .catch(() => setError("Invalid booking link"));
   }, [slug]);
 
-  /* ================= LOAD ROOMS ================= */
+  /* ================= ROOMS ================= */
   useEffect(() => {
     if (!company) return;
     fetch(`${API}/api/public/conference/company/${slug}/rooms`)
@@ -82,7 +92,7 @@ export default function PublicConferenceBooking() {
       .then(setRooms);
   }, [company, slug]);
 
-  /* ================= LOAD BOOKINGS ================= */
+  /* ================= BOOKINGS ================= */
   const loadBookings = () => {
     if (!roomId || !date) return setBookings([]);
 
@@ -93,8 +103,8 @@ export default function PublicConferenceBooking() {
       .then(data => {
         const fixed = (Array.isArray(data) ? data : []).map(b => ({
           ...b,
-          start_time: normalizeDb(b.start_time),
-          end_time: normalizeDb(b.end_time)
+          start_time: dbToAmPm(b.start_time),
+          end_time: dbToAmPm(b.end_time)
         }));
         setBookings(fixed);
       });
@@ -102,19 +112,21 @@ export default function PublicConferenceBooking() {
 
   useEffect(() => loadBookings(), [roomId, date, slug, otpVerified]);
 
-  /* ================= SLOT FILTER LOGIC ================= */
+  /* ================= AVAILABLE STARTS ================= */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter(t => {
-      if (date === today) {
-        const [h, m] = t.value.split(":").map(Number);
-        if (h * 60 + m <= nowMinutes) return false;
-      }
+      if (date === today && t.minutes <= nowMinutes) return false;
       return true;
     });
   }, [date, today, nowMinutes]);
 
-  const isSlotFree = (s, e, ignoreId = null) =>
-    !bookings.some(b => b.id !== ignoreId && b.start_time < e && b.end_time > s);
+  const isSlotFree = (s, e, ignore = null) =>
+    !bookings.some(
+      b =>
+        b.id !== ignore &&
+        ampmToMinutes(b.start_time) < ampmToMinutes(e) &&
+        ampmToMinutes(b.end_time) > ampmToMinutes(s)
+    );
 
   /* ================= AUTH ================= */
   const handleLogout = () => {
@@ -142,7 +154,7 @@ export default function PublicConferenceBooking() {
         }
       );
       const d = await r.json();
-      if (!r.ok) throw new Error(d?.message || "Failed");
+      if (!r.ok) throw new Error(d?.message);
 
       setOtpSent(true);
       setSuccess("OTP sent");
@@ -161,11 +173,6 @@ export default function PublicConferenceBooking() {
   }, [resendTimer]);
 
   const resendOtp = async () => {
-    if (!email.includes("@")) return setError("Enter valid email");
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/resend-otp`,
@@ -176,21 +183,16 @@ export default function PublicConferenceBooking() {
         }
       );
       const d = await r.json();
-      if (!r.ok) throw new Error(d?.message || "Failed");
+      if (!r.ok) throw new Error(d?.message);
 
       setSuccess(d?.message);
       setResendTimer(30);
     } catch (e) {
       setError(e.message);
-    } finally {
-      setLoading(false);
     }
   };
 
   const verifyOtp = async () => {
-    setError("");
-    setSuccess("");
-
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/verify-otp`,
@@ -216,6 +218,9 @@ export default function PublicConferenceBooking() {
     if (!roomId || !date || !startTime || !endTime || !department)
       return setError("All fields required");
 
+    if (ampmToMinutes(endTime) <= ampmToMinutes(startTime))
+      return setError("End must be after start");
+
     setLoading(true);
     setError("");
     setSuccess("");
@@ -232,8 +237,8 @@ export default function PublicConferenceBooking() {
             department,
             purpose,
             booking_date: date,
-            start_time: toAmPmStrict(startTime),
-            end_time: toAmPmStrict(endTime)
+            start_time: startTime,
+            end_time: endTime
           })
         }
       );
@@ -272,8 +277,8 @@ export default function PublicConferenceBooking() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            start_time: toAmPmStrict(editStart),
-            end_time: toAmPmStrict(editEnd),
+            start_time: editStart,
+            end_time: editEnd,
             email
           })
         }
@@ -290,9 +295,8 @@ export default function PublicConferenceBooking() {
     }
   };
 
-  /* ================= CANCEL ================= */
+  /* ================= CANCEL (No popup dialog) ================= */
   const cancelBooking = async id => {
-    if (!confirm("Cancel booking?")) return;
     try {
       const r = await fetch(
         `${API}/api/public/conference/company/${slug}/bookings/${id}/cancel`,
@@ -319,9 +323,7 @@ export default function PublicConferenceBooking() {
 
           <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
             {otpVerified && (
-              <button className={styles.logout} onClick={handleLogout}>
-                ⎋
-              </button>
+              <button className={styles.logout} onClick={handleLogout}>⎋</button>
             )}
 
             {company.logo_url && (
@@ -385,9 +387,10 @@ export default function PublicConferenceBooking() {
             <label>End</label>
             <select value={endTime} onChange={e => setEndTime(e.target.value)}>
               <option value="">Select</option>
-              {TIME_OPTIONS.filter(t => t.value > startTime).map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
+              {TIME_OPTIONS.filter(t => ampmToMinutes(t.value) > ampmToMinutes(startTime))
+                .map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
             </select>
 
             <label>Department</label>
@@ -405,54 +408,49 @@ export default function PublicConferenceBooking() {
 
             {!bookings.length && <p>No bookings</p>}
 
-            {bookings.map(b => {
-              return (
-                <div key={b.id} className={styles.booking}>
-                  {editingId === b.id ? (
-                    <>
-                      <b>{b.department}</b>
+            {bookings.map(b => (
+              <div key={b.id} className={styles.booking}>
+                {editingId === b.id ? (
+                  <>
+                    <b>{b.department}</b>
 
-                      <select value={editStart} onChange={e => setEditStart(e.target.value)}>
-                        {TIME_OPTIONS.map(t => (
+                    <select value={editStart} onChange={e => setEditStart(e.target.value)}>
+                      {TIME_OPTIONS.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+
+                    <select value={editEnd} onChange={e => setEditEnd(e.target.value)}>
+                      {TIME_OPTIONS.filter(t => ampmToMinutes(t.value) > ampmToMinutes(editStart))
+                        .map(t => (
                           <option key={t.value} value={t.value}>{t.label}</option>
                         ))}
-                      </select>
+                    </select>
 
-                      <select value={editEnd} onChange={e => setEditEnd(e.target.value)}>
-                        {TIME_OPTIONS.filter(t => t.value > editStart).map(t => (
-                          <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                      </select>
+                    <button onClick={() => saveEdit(b.id)}>Save</button>
+                    <button onClick={() => setEditingId(null)}>Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <b>{b.start_time} – {b.end_time}</b>
+                    <p>{b.department}</p>
+                    <span>{b.booked_by}</span>
 
-                      <button onClick={() => saveEdit(b.id)}>Save</button>
-                      <button onClick={() => setEditingId(null)}>Cancel</button>
-                    </>
-                  ) : (
-                    <>
-                      <b>{toAmPmStrict(b.start_time)} – {toAmPmStrict(b.end_time)}</b>
-                      <p>{b.department}</p>
-                      <span>{b.booked_by}</span>
+                    {b.can_modify && (
+                      <div>
+                        <button onClick={() => {
+                          setEditingId(b.id);
+                          setEditStart(b.start_time);
+                          setEditEnd(b.end_time);
+                        }}>Edit</button>
 
-                      {b.can_modify && (
-                        <div>
-                          <button
-                            onClick={() => {
-                              setEditingId(b.id);
-                              setEditStart(b.start_time);
-                              setEditEnd(b.end_time);
-                            }}
-                          >
-                            Edit
-                          </button>
-
-                          <button onClick={() => cancelBooking(b.id)}>Cancel</button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                        <button onClick={() => cancelBooking(b.id)}>Cancel</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       )}
