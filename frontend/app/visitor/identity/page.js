@@ -239,7 +239,7 @@ const validateAll = () => {
               value={idType}
               onChange={e => setIdType(e.target.value)}
             >
-              <option value="">Select ID Proof *</option>
+              <option value="">Select ID Proof</option>
               <option value="aadhaar">Aadhaar</option>
               <option value="pan">PAN</option>
               <option value="passport">Passport</option>
@@ -247,7 +247,7 @@ const validateAll = () => {
 
             <input
               className={styles.input}
-              placeholder="ID Number *"
+              placeholder="ID Number"
               value={idNumber}
               onChange={e => setIdNumber(e.target.value)}
             />
