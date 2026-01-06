@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   MySQL stores UTC → Convert to IST correctly
+   READ MYSQL TIME AS-IS (IT IS ALREADY IST)
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
@@ -13,31 +13,34 @@ const formatISTTime = (value) => {
   try {
     const str = String(value).trim();
 
-    // MySQL "YYYY-MM-DD HH:MM:SS"
+    // MySQL: "YYYY-MM-DD HH:MM:SS"
     if (str.includes(" ")) {
-      const [date, time] = str.split(" ");
+      const time = str.split(" ")[1];     // HH:MM:SS
       if (!time) return "-";
 
-      // Convert as UTC → IST
-      const utcDate = new Date(`${date}T${time}Z`);
+      let [h, m] = time.split(":");
+      h = parseInt(h, 10);
 
-      return utcDate.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
+      if (isNaN(h)) return "-";
+
+      const suffix = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+
+      return `${h}:${m} ${suffix}`;
     }
 
-    // ISO → Convert normally
+    // ISO string → DO NOT CONVERT — just read local time part
     if (str.includes("T")) {
-      const d = new Date(str);
-      return d.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
+      const t = str.split("T")[1]; // HH:MM:SS.xxx
+      if (!t) return "-";
+
+      const [h, m] = t.split(":");
+      let hr = parseInt(h, 10);
+
+      const suffix = hr >= 12 ? "PM" : "AM";
+      hr = hr % 12 || 12;
+
+      return `${hr}:${m} ${suffix}`;
     }
 
     return "-";
