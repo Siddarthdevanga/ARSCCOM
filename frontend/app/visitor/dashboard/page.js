@@ -5,45 +5,15 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   DASHBOARD SAFE IST FORMATTER
+   DASHBOARD – DO NOT SHIFT TIME (DB ALREADY IN IST)
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  const format = (d) =>
-    d.toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
-
   try {
-    if (value instanceof Date && !isNaN(value)) return format(value);
-
-    if (typeof value !== "string") {
-      const d = new Date(value);
-      return isNaN(d) ? "-" : format(d);
-    }
-
-    // ISO with timezone
-    if (
-      value.includes("T") &&
-      (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
-    ) {
-      const d = new Date(value);
-      return isNaN(d) ? "-" : format(d);
-    }
-
-    // ISO without timezone → treat as UTC
-    if (value.includes("T")) {
-      const d = new Date(value + "Z");
-      return isNaN(d) ? "-" : format(d);
-    }
-
-    // MySQL "YYYY-MM-DD HH:MM:SS"
-    if (value.includes(" ")) {
-      const time = value.split(" ")[1];
+    // MySQL: "YYYY-MM-DD HH:MM:SS"
+    if (typeof value === "string" && value.includes(" ")) {
+      const time = value.split(" ")[1]; // HH:MM:SS
       if (!time) return "-";
 
       let [h, m] = time.split(":");
@@ -56,12 +26,36 @@ const formatISTTime = (value) => {
       return `${h}:${m} ${suffix}`;
     }
 
+    // ISO WITH timezone → convert safely to IST
+    if (
+      typeof value === "string" &&
+      value.includes("T") &&
+      (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
+    ) {
+      const d = new Date(value);
+      return d.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+
+    // Date object already
+    if (value instanceof Date && !isNaN(value)) {
+      return value.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+
     return "-";
   } catch {
     return "-";
   }
 };
-
 
 export default function VisitorDashboard() {
   const router = useRouter();
