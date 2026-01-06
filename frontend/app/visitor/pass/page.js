@@ -5,37 +5,50 @@ import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   FINAL — PURE IST FORMATTER
-   DB already stores IST, so DO NOT CONVERT TIMEZONE
+   FINAL — PURE IST FORMATTER (NO TIMEZONE CONVERSION)
+   DB already stores IST → only format nicely
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
   try {
     const str = String(value).trim();
-    if (!str || !str.includes(" ")) return "-";
-
-    const [date, time] = str.split(" ");  // YYYY-MM-DD HH:MM:SS
-    const [y, mo, d] = date.split("-");
-    let [h, m] = time.split(":");
-
-    h = parseInt(h, 10);
-    if (isNaN(h)) return "-";
+    if (!str) return "-";
 
     const months = [
       "Jan","Feb","Mar","Apr","May","Jun",
       "Jul","Aug","Sep","Oct","Nov","Dec"
     ];
 
+    let y, mo, d, h, m;
+
+    // MySQL: YYYY-MM-DD HH:MM:SS
+    if (str.includes(" ")) {
+      const [date, time] = str.split(" ");
+      [y, mo, d] = date.split("-");
+      [h, m] = time.split(":");
+      h = parseInt(h, 10);
+    }
+    // ISO: YYYY-MM-DDTHH:MM:SS...
+    else if (str.includes("T")) {
+      const [date, timePart] = str.split("T");
+      [y, mo, d] = date.split("-");
+      const [hr, mn] = timePart.split(":");
+      h = parseInt(hr, 10);
+      m = mn;
+    }
+    else return "-";
+
+    if (isNaN(h)) return "-";
+
     const suffix = h >= 12 ? "PM" : "AM";
     const hh = (h % 12) || 12;
 
-    return `${d.padStart(2, "0")} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
+    return `${d.padStart(2,"0")} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
   } catch {
     return "-";
   }
 };
-
 
 /* ======================================================
    INNER COMPONENT
@@ -73,8 +86,8 @@ function VisitorPassContent() {
         const data = await res.json();
         if (!res.ok) throw new Error(data?.message || "Visitor not found");
 
-        setCompany(data.company);
-        setVisitor(data.visitor);
+        setCompany(data.company || null);
+        setVisitor(data.visitor || null);
       } catch (err) {
         if (err.name !== "AbortError") {
           setError(err.message || "Unable to load visitor pass");
@@ -88,6 +101,7 @@ function VisitorPassContent() {
     return () => controller.abort();
   }, [visitorCode]);
 
+  /* ---------- Loading ---------- */
   if (loading) {
     return (
       <div className={styles.page}>
@@ -96,6 +110,7 @@ function VisitorPassContent() {
     );
   }
 
+  /* ---------- Error ---------- */
   if (error) {
     return (
       <div className={styles.page}>
@@ -117,7 +132,7 @@ function VisitorPassContent() {
   return (
     <div className={styles.page}>
       <div className={styles.passCard}>
-
+        
         {/* HEADER */}
         <header className={styles.header}>
           <div className={styles.companyName}>{company.name}</div>
@@ -185,6 +200,7 @@ function VisitorPassContent() {
             Dashboard
           </button>
         </div>
+
       </div>
     </div>
   );
