@@ -5,42 +5,46 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   UNIVERSAL IST FORMATTER
-   Supports BOTH:
-   ✔ 2026-01-06 10:42:44
-   ✔ 2026-01-06T11:20:20.000Z
+   UNIVERSAL IST FORMATTER (Bulletproof)
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  // -------- ISO UTC Format --------
-  if (
-    typeof value === "string" &&
-    (value.includes("Z") || value.includes("+"))
-  ) {
-    const d = new Date(value);
-    if (isNaN(d)) return "-";
+  // ---------- CASE 1: ISO STRING (with or without Z) ----------
+  if (typeof value === "string" && value.includes("T")) {
+    try {
+      const date = new Date(value);
+      if (isNaN(date)) return "-";
 
-    return d.toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+      return date.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    } catch {
+      return "-";
+    }
   }
 
-  // -------- DB IST Format --------
+  // ---------- CASE 2: MySQL IST "YYYY-MM-DD HH:MM:SS" ----------
   if (typeof value === "string" && value.includes(" ")) {
-    const time = value.split(" ")[1]; // HH:MM:SS
-    if (!time) return "-";
+    try {
+      const time = value.split(" ")[1]; // HH:MM:SS
+      if (!time) return "-";
 
-    let [h, m] = time.split(":");
-    h = parseInt(h, 10);
+      let [h, m] = time.split(":");
+      h = parseInt(h, 10);
 
-    const suffix = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
+      if (isNaN(h)) return "-";
 
-    return `${h}:${m} ${suffix}`;
+      const suffix = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+
+      return `${h}:${m} ${suffix}`;
+    } catch {
+      return "-";
+    }
   }
 
   return "-";
@@ -267,4 +271,5 @@ export default function VisitorDashboard() {
     </div>
   );
 }
+
 
