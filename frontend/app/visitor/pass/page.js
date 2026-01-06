@@ -5,71 +5,32 @@ import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   PURE IST DISPLAY (NO TIMEZONE CONVERSION)
-   ✔ MySQL datetime  -> Show as IST
-   ✔ ISO with TZ     -> Convert properly
-   ✔ ISO without TZ  -> Treat as already IST
+   FINAL — PURE IST FORMATTER
+   DB already stores IST, so DO NOT CONVERT TIMEZONE
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
   try {
     const str = String(value).trim();
-    if (!str) return "-";
+    if (!str || !str.includes(" ")) return "-";
 
-    /* ========= MySQL "YYYY-MM-DD HH:MM:SS" ========= */
-    if (str.includes(" ")) {
-      const [date, time] = str.split(" "); // already IST
+    const [date, time] = str.split(" ");  // YYYY-MM-DD HH:MM:SS
+    const [y, mo, d] = date.split("-");
+    let [h, m] = time.split(":");
 
-      const [y, mo, d] = date.split("-");
-      let [h, m] = time.split(":");
-      h = parseInt(h, 10);
+    h = parseInt(h, 10);
+    if (isNaN(h)) return "-";
 
-      const months = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-      ];
+    const months = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
 
-      const suffix = h >= 12 ? "PM" : "AM";
-      const hh = (h % 12) || 12;
+    const suffix = h >= 12 ? "PM" : "AM";
+    const hh = (h % 12) || 12;
 
-      return `${d.padStart(2,"0")} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
-    }
-
-    /* ========= ISO WITH timezone ========= */
-    if (str.includes("T") && (str.endsWith("Z") || /[+-]\d\d:?(\d\d)?$/.test(str))) {
-      const d = new Date(str);
-      return d.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
-
-    /* ========= ISO WITHOUT timezone (treat as IST) ========= */
-    if (str.includes("T")) {
-      const [date, time] = str.split("T");
-
-      const [y, mo, d] = date.split("-");
-      const [hRaw, m] = time.split(":");
-      const h = parseInt(hRaw, 10);
-
-      const months = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-      ];
-
-      const suffix = h >= 12 ? "PM" : "AM";
-      const hh = (h % 12) || 12;
-
-      return `${d} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
-    }
-
-    return "-";
+    return `${d.padStart(2, "0")} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
   } catch {
     return "-";
   }
