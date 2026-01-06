@@ -5,26 +5,26 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ================= PURE DISPLAY FORMAT =================
-   DB already stores IST the way we want.
-   So DO NOT apply timezone conversion.
+   DB already stores correct IST timestamps like:
+   2026-01-06 10:42:44
+   We ONLY convert to hh:mm AM/PM. No timezone conversion.
 ========================================================= */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  try {
-    // Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS"
-    const safe = value.replace(" ", "T");
-    const date = new Date(safe);
-    if (isNaN(date)) return "-";
+  // Expect format: "YYYY-MM-DD HH:MM:SS"
+  const parts = value.split(" ");
+  if (parts.length < 2) return "-";
 
-    return date.toLocaleTimeString("en-IN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
-  } catch {
-    return "-";
-  }
+  const time = parts[1]; // HH:MM:SS
+  let [h, m] = time.split(":");
+
+  h = parseInt(h, 10);
+
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+
+  return `${h}:${m} ${suffix}`;
 };
 
 export default function VisitorDashboard() {
@@ -37,6 +37,7 @@ export default function VisitorDashboard() {
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  /* ================= LOAD COMPANY + DASHBOARD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -46,10 +47,16 @@ export default function VisitorDashboard() {
       return;
     }
 
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard(token);
+    try {
+      setCompany(JSON.parse(storedCompany));
+      loadDashboard(token);
+    } catch {
+      localStorage.clear();
+      router.replace("/auth/login");
+    }
   }, [router]);
 
+  /* ================= FETCH DASHBOARD ================= */
   const loadDashboard = async (token) => {
     try {
       const res = await fetch(
@@ -76,6 +83,7 @@ export default function VisitorDashboard() {
     }
   };
 
+  /* ================= CHECKOUT ================= */
   const handleCheckout = async (visitorCode) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -104,6 +112,7 @@ export default function VisitorDashboard() {
     }
   };
 
+  /* ================= LOGOUT ================= */
   const handleLogout = () => {
     localStorage.clear();
     router.push("/auth/login");
@@ -113,13 +122,13 @@ export default function VisitorDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div className={styles.logoText}>{company.name}</div>
+        <div className={styles.logoText}>{company?.name}</div>
 
         <div className={styles.rightHeader}>
           <img
-            src={company.logo_url || "/logo.png"}
+            src={company?.logo_url || "/logo.png"}
             alt="Company Logo"
             className={styles.companyLogo}
           />
@@ -130,7 +139,7 @@ export default function VisitorDashboard() {
         </div>
       </header>
 
-      {/* TITLE */}
+      {/* ================= TITLE ================= */}
       <div className={styles.titleRow}>
         <h1 className={styles.pageTitle}>Visitor Dashboard</h1>
 
@@ -142,7 +151,7 @@ export default function VisitorDashboard() {
         </button>
       </div>
 
-      {/* STATS */}
+      {/* ================= KPI STATS ================= */}
       <section className={styles.topStats}>
         <div className={styles.bigCard}>
           <h4>Visitors Today</h4>
@@ -160,9 +169,10 @@ export default function VisitorDashboard() {
         </div>
       </section>
 
-      {/* TABLES */}
+      {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        {/* ACTIVE */}
+        
+        {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
 
@@ -204,7 +214,7 @@ export default function VisitorDashboard() {
           )}
         </div>
 
-        {/* CHECKED OUT */}
+        {/* CHECKED OUT VISITORS */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
 
@@ -233,6 +243,7 @@ export default function VisitorDashboard() {
             </table>
           )}
         </div>
+
       </section>
     </div>
   );
