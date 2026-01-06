@@ -7,27 +7,19 @@ import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 ====================================================== */
 
 /**
- * Returns IST Date as REAL Date object
- * Server timezone safe
+ * SAFE & CORRECT IST DATE
+ * No Intl parsing
+ * No double timezone
+ * Works in all servers
  */
 const getISTDate = () => {
   const now = new Date();
-  return new Date(
-    new Intl.DateTimeFormat("en-US", {
-      timeZone: "Asia/Kolkata",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false
-    }).format(now)
-  );
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 5.5 * 60 * 60 * 1000);
 };
 
 /**
- * YYYYMMDD from IST Date
+ * YYYYMMDD (IST)
  */
 const formatISTDateKey = (date) => {
   const y = date.getFullYear();
@@ -64,7 +56,7 @@ export const saveVisitor = async (companyId, data, file) => {
 
   if (!name || !phone) throw new Error("Visitor name and phone are required");
 
-  // 🔒 CONSISTENT IST
+  // 🔒 Absolute IST (true time)
   const checkInIST = getISTDate();
   if (isNaN(checkInIST.getTime())) throw new Error("Invalid IST datetime");
 
@@ -100,13 +92,17 @@ export const saveVisitor = async (companyId, data, file) => {
       Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
       idType || null,
       idNumber || null,
-      new Date() // store actual UTC time in DB
+      checkInIST   // ✅ STORE REAL IST IN DB
     ]
   );
 
   const visitorId = insertResult.insertId;
 
-  /* ================= DAILY COUNT (IST BASED) ================= */
+  /* ================= DAILY COUNT BASED ON IST DATE ================= */
+  const istDateString = `${checkInIST.getFullYear()}-${String(
+    checkInIST.getMonth() + 1
+  ).padStart(2, "0")}-${String(checkInIST.getDate()).padStart(2, "0")}`;
+
   const [[countRow]] = await db.execute(
     `
     SELECT COUNT(*) AS count
@@ -114,7 +110,7 @@ export const saveVisitor = async (companyId, data, file) => {
     WHERE company_id = ?
     AND DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) = ?
     `,
-    [companyId, `${checkInIST.getFullYear()}-${String(checkInIST.getMonth()+1).padStart(2,'0')}-${String(checkInIST.getDate()).padStart(2,'0')}`]
+    [companyId, istDateString]
   );
 
   const dailyVisitorNumber = countRow.count;
@@ -123,7 +119,7 @@ export const saveVisitor = async (companyId, data, file) => {
     dailyVisitorNumber
   ).padStart(5, "0")}`;
 
-  /* ================= PHOTO ================= */
+  /* ================= PHOTO UPLOAD ================= */
   const photoUrl = await uploadToS3(
     file,
     `companies/${companyId}/visitors/${visitorCode}.jpg`
@@ -134,7 +130,7 @@ export const saveVisitor = async (companyId, data, file) => {
     [visitorCode, photoUrl, visitorId]
   );
 
-  /* ================= MAIL ================= */
+  /* ================= MAIL (ONCE ONLY) ================= */
   if (email) {
     const [[row]] = await db.execute(
       `SELECT pass_mail_sent FROM visitors WHERE id = ?`,
@@ -185,3 +181,4 @@ export const saveVisitor = async (companyId, data, file) => {
     checkInIST
   };
 };
+
