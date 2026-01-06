@@ -5,6 +5,58 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
+/* ======================================================
+   DATE FORMATTER
+   Converts safely into → Jan 07, 2026
+====================================================== */
+const formatNiceDate = (value) => {
+  if (!value) return "-";
+
+  try {
+    let str = String(value).trim();
+
+    if (str.includes("T")) str = str.split("T")[0];
+    if (str.includes(" ")) str = str.split(" ")[0];
+
+    const [y, m, d] = str.split("-");
+    const names = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
+
+    return `${names[Number(m) - 1]} ${d}, ${y}`;
+  } catch {
+    return value;
+  }
+};
+
+/* ======================================================
+   TIME FORMATTER
+   Converts → 16:30:00 / 16:30 → 4:30 PM
+====================================================== */
+const formatNiceTime = (value) => {
+  if (!value) return "-";
+
+  try {
+    let str = String(value).trim();
+
+    if (str.includes("T")) str = str.split("T")[1];
+    if (str.includes(" ")) str = str.split(" ")[1];
+
+    const [hRaw, m] = str.split(":");
+    let h = parseInt(hRaw, 10);
+
+    if (isNaN(h)) return "-";
+
+    const suffix = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+
+    return `${h}:${m} ${suffix}`;
+  } catch {
+    return "-";
+  }
+};
+
 export default function ConferenceDashboard() {
   const router = useRouter();
 
@@ -20,7 +72,7 @@ export default function ConferenceDashboard() {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* DATE FILTER */
+  /* FILTER DATE */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -50,8 +102,8 @@ export default function ConferenceDashboard() {
       ]);
 
       setStats(statsRes);
-      setRooms(roomsRes);
-      setBookings(bookingsRes);
+      setRooms(roomsRes || []);
+      setBookings(bookingsRes || []);
       setLoading(false);
     } catch {
       router.replace("/auth/login");
@@ -71,19 +123,15 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE ROOM RENAME ================= */
+  /* ================= SAVE ROOM NAME ================= */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
     try {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PATCH", // IMPORTANT — backend expects PATCH, not PUT
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          room_name: editName.trim(),
-        }),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_name: editName.trim() }),
       });
 
       setEditingRoomId(null);
@@ -96,7 +144,7 @@ export default function ConferenceDashboard() {
 
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
-    return bookings.filter(
+    return (bookings || []).filter(
       (b) =>
         (b.booking_date?.includes("T")
           ? b.booking_date.split("T")[0]
@@ -105,13 +153,12 @@ export default function ConferenceDashboard() {
     );
   }, [bookings, selectedDate]);
 
-  /* ================= DEPARTMENT STATS ================= */
+  /* ================= DEPARTMENT ANALYTICS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
       const dep = b.department || "Unknown";
-      if (!map[dep]) map[dep] = 0;
-      map[dep]++;
+      map[dep] = (map[dep] || 0) + 1;
     });
     return Object.entries(map);
   }, [filteredBookings]);
@@ -160,11 +207,12 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC LINK ================= */}
+      {/* ================= PUBLIC URL ================= */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
             <p className={styles.publicTitle}>Public Booking URL</p>
+
             <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
@@ -183,7 +231,7 @@ export default function ConferenceDashboard() {
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
-            <h3>Rename the Conference Rooms</h3>
+            <h3>Rename Conference Rooms</h3>
 
             <button
               className={styles.leftCloseBtn}
@@ -257,7 +305,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= STATS ================= */}
+      {/* ================= KPIs ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
@@ -275,7 +323,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= DEPARTMENT ================= */}
+      {/* ================= DEPARTMENT STATS ================= */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -292,7 +340,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* ================= BOOKINGS ================= */}
+      {/* ================= BOOKINGS LIST ================= */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
@@ -302,11 +350,11 @@ export default function ConferenceDashboard() {
           <div key={b.id} className={styles.bookingRow}>
             <div>
               <b>{b.room_name}</b> (#{b.room_number})
-              <p>{b.booking_date}</p>
+              <p>{formatNiceDate(b.booking_date)}</p>
             </div>
 
             <div>
-              {b.start_time} – {b.end_time}
+              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
             </div>
 
             <div className={styles.status}>{b.status}</div>
