@@ -5,50 +5,50 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   READ MYSQL TIME AS-IS (IT IS ALREADY IST)
+   FORMAT MYSQL / ISO DATE
 ====================================================== */
-const formatISTTime = (value) => {
+const formatNiceDate = (value) => {
   if (!value) return "-";
 
   try {
-    const str = String(value).trim();
+    const d = new Date(value);
+    if (isNaN(d)) return value;
 
-    // MySQL: "YYYY-MM-DD HH:MM:SS"
-    if (str.includes(" ")) {
-      const time = str.split(" ")[1];     // HH:MM:SS
-      if (!time) return "-";
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+};
 
-      let [h, m] = time.split(":");
-      h = parseInt(h, 10);
+/* ======================================================
+   FORMAT HH:MM:SS OR ISO → AM/PM
+====================================================== */
+const formatNiceTime = (value) => {
+  if (!value) return "-";
 
-      if (isNaN(h)) return "-";
+  try {
+    let str = String(value).trim();
 
-      const suffix = h >= 12 ? "PM" : "AM";
-      h = h % 12 || 12;
-
-      return `${h}:${m} ${suffix}`;
-    }
-
-    // ISO string → DO NOT CONVERT — just read local time part
+    // ISO → extract time
     if (str.includes("T")) {
-      const t = str.split("T")[1]; // HH:MM:SS.xxx
-      if (!t) return "-";
-
-      const [h, m] = t.split(":");
-      let hr = parseInt(h, 10);
-
-      const suffix = hr >= 12 ? "PM" : "AM";
-      hr = hr % 12 || 12;
-
-      return `${hr}:${m} ${suffix}`;
+      str = str.split("T")[1]; // HH:MM:SS.xxx
     }
 
-    return "-";
+    const [h, m] = str.split(":").map(Number);
+    if (isNaN(h)) return "-";
+
+    const suffix = h >= 12 ? "PM" : "AM";
+    const hour = h % 12 || 12;
+
+    return `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
   } catch {
     return "-";
   }
 };
-
 
 export default function VisitorDashboard() {
   const router = useRouter();
@@ -60,7 +60,7 @@ export default function VisitorDashboard() {
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= LOAD COMPANY + DASHBOARD ================= */
+  /* ================= LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -85,22 +85,19 @@ export default function VisitorDashboard() {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (!res.ok) {
-        console.error("Dashboard API failed");
-        return;
-      }
+      if (!res.ok) return;
 
       const data = await res.json();
 
       setStats(data.stats || { today: 0, inside: 0, out: 0 });
       setActiveVisitors(data.activeVisitors || []);
       setCheckedOutVisitors(data.checkedOutVisitors || []);
-    } catch (err) {
-      console.error("Dashboard fetch error:", err);
+    } catch {
+      console.error("Dashboard fetch error");
     } finally {
       setLoading(false);
     }
@@ -118,18 +115,15 @@ export default function VisitorDashboard() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/checkout`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (!res.ok) {
-        console.error("Checkout failed");
-        return;
-      }
+      if (!res.ok) return;
 
       await loadDashboard(token);
-    } catch (err) {
-      console.error("Checkout error:", err);
+    } catch {
+      console.error("Checkout failed");
     } finally {
       setCheckingOut(null);
     }
@@ -162,7 +156,7 @@ export default function VisitorDashboard() {
         </div>
       </header>
 
-      {/* ================= TITLE ================= */}
+      {/* ================= PAGE HEADING ================= */}
       <div className={styles.titleRow}>
         <h1 className={styles.pageTitle}>Visitor Dashboard</h1>
 
@@ -194,7 +188,6 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        
         {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
@@ -212,13 +205,15 @@ export default function VisitorDashboard() {
                   <th>Action</th>
                 </tr>
               </thead>
+
               <tbody>
-                {activeVisitors.map(v => (
+                {activeVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_in || v.checkIn)}</td>
+                    <td>{formatNiceTime(v.check_in || v.checkIn)}</td>
+
                     <td>
                       <button
                         className={styles.checkoutBtn}
@@ -253,20 +248,20 @@ export default function VisitorDashboard() {
                   <th>Check-out</th>
                 </tr>
               </thead>
+
               <tbody>
-                {checkedOutVisitors.map(v => (
+                {checkedOutVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_out || v.checkOut)}</td>
+                    <td>{formatNiceTime(v.check_out || v.checkOut)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </div>
-
       </section>
     </div>
   );
