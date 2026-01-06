@@ -6,19 +6,24 @@ import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
 /* ======================================================
-   UNIVERSAL TIME SLOTS (30 mins from 00:00 — 23:30)
-   UI works in 24hr internally, but backend receives AM/PM
+   NORMALIZE DB HH:MM:SS -> HH:MM
+====================================================== */
+const normalizeDbTime = (t = "") =>
+  t.includes(":") ? t.slice(0, 5) : t;
+
+/* ======================================================
+   UNIVERSAL TIME OPTIONS
 ====================================================== */
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const h = Math.floor(i / 2);
   const m = i % 2 === 0 ? 0 : 30;
 
   const ampm = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
+  const hr = h % 12 || 12;
 
   return {
-    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,
-    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`,
+    label: `${hr}:${m === 0 ? "00" : "30"} ${ampm}`,
+    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`
   };
 });
 
@@ -26,13 +31,13 @@ const normalizeDate = (d) =>
   typeof d === "string" ? d.split("T")[0] : "";
 
 /* ======================================================
-   24hr → AM/PM (For Backend Submission)
+   24hr -> AM/PM
 ====================================================== */
-const toAmPmStrict = (time24) => {
+const toAmPmStrict = (time24 = "") => {
   const [h, m] = time24.split(":").map(Number);
   const ampm = h >= 12 ? "PM" : "AM";
-  const hour = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 const toAmPmDisplay = toAmPmStrict;
@@ -74,7 +79,16 @@ export default function ConferenceBookings() {
       ]);
 
       setRooms(Array.isArray(r) ? r : []);
-      setBookings(Array.isArray(b) ? b : []);
+
+      setBookings(
+        Array.isArray(b)
+          ? b.map((x) => ({
+              ...x,
+              start_time: normalizeDbTime(x.start_time),
+              end_time: normalizeDbTime(x.end_time),
+            }))
+          : []
+      );
     } catch {
       router.replace("/auth/login");
     }
@@ -85,7 +99,7 @@ export default function ConferenceBookings() {
   }, []);
 
   /* ======================================================
-     FILTER BOOKINGS FOR SELECTED DAY
+     DAY BOOKINGS
   ====================================================== */
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
@@ -98,7 +112,7 @@ export default function ConferenceBookings() {
   }, [bookings, date, roomId]);
 
   /* ======================================================
-     BLOCKED SLOTS FOR CREATE
+     BLOCKED
   ====================================================== */
   const blockedSlots = useMemo(() => {
     const set = new Set();
@@ -116,7 +130,7 @@ export default function ConferenceBookings() {
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   /* ======================================================
-     AVAILABLE START TIMES
+     AVAILABLE START
   ====================================================== */
   const availableStartTimes = useMemo(() => {
     return TIME_OPTIONS.filter((t) => {
@@ -130,7 +144,7 @@ export default function ConferenceBookings() {
   }, [date, today, blockedSlots, nowMinutes]);
 
   /* ======================================================
-     AVAILABLE END TIMES
+     AVAILABLE END
   ====================================================== */
   const availableEndTimes = useMemo(() => {
     if (!startTime) return [];
@@ -140,7 +154,7 @@ export default function ConferenceBookings() {
   }, [startTime, blockedSlots]);
 
   /* ======================================================
-     CREATE BOOKING — sends AM/PM ONLY
+     CREATE
   ====================================================== */
   const createBooking = async () => {
     setError("");
@@ -178,12 +192,12 @@ export default function ConferenceBookings() {
   };
 
   /* ======================================================
-     BLOCKED SLOTS EXCLUDING CURRENT BOOKING
+     BLOCKED EXCLUDING CURRENT
   ====================================================== */
-  const getBlockedSlotsExcluding = (bookingId) => {
+  const getBlockedSlotsExcluding = (id) => {
     const set = new Set();
     dayBookings.forEach((b) => {
-      if (b.id === bookingId) return;
+      if (b.id === id) return;
       TIME_OPTIONS.forEach((t) => {
         if (t.value >= b.start_time && t.value < b.end_time) {
           set.add(t.value);
@@ -344,23 +358,22 @@ export default function ConferenceBookings() {
             const blocked = getBlockedSlotsExcluding(b.id);
 
             const editStartOptions = TIME_OPTIONS.filter((t) => {
-              if (t.value === b.start_time) return true; // allow original
+              if (t.value === b.start_time) return true;
               if (blocked.has(t.value)) return false;
 
               if (b.booking_date === today) {
                 const [h, m] = t.value.split(":").map(Number);
                 if (h * 60 + m <= nowMinutes) return false;
               }
+
               return true;
             });
 
             const editEndOptions = TIME_OPTIONS.filter((t) => {
               if (!editStart) return false;
-
-              if (t.value === b.end_time) return true; // allow original
+              if (t.value === b.end_time) return true;
               if (t.value <= editStart) return false;
               if (blocked.has(t.value)) return false;
-
               return true;
             });
 
@@ -424,8 +437,8 @@ export default function ConferenceBookings() {
                         className={styles.primaryBtn}
                         onClick={() => {
                           setEditingId(b.id);
-                          setEditStart(b.start_time);
-                          setEditEnd(b.end_time);
+                          setEditStart(normalizeDbTime(b.start_time));
+                          setEditEnd(normalizeDbTime(b.end_time));
                         }}
                       >
                         Edit
