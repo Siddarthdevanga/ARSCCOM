@@ -2,46 +2,34 @@ import { sendEmail } from "../utils/mailer.js";
 import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
 /* ======================================================
-   HELPERS – SMART IST FORMATTER (Prevents Double Shift)
+   PURE IST FORMATTER (No Timezone Conversion)
+   Input:  2026-01-06 10:42:44
+   Output: 06 Jan 2026, 10:42 AM
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  // Strings without timezone (DB already IST) → DON'T reapply TZ
-  if (typeof value === "string") {
-    const hasTZ =
-      value.includes("Z") ||
-      value.includes("+") ||
-      value.toLowerCase().includes("gmt");
+  const parts = value.split(" ");
+  if (parts.length < 2) return value;
 
-    if (!hasTZ) {
-      const d = new Date(value);
-      if (isNaN(d)) return "-";
+  const date = parts[0]; // YYYY-MM-DD
+  const time = parts[1]; // HH:MM:SS
 
-      return d.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
-  }
+  const [y, mo, d] = date.split("-");
+  let [h, m] = time.split(":");
 
-  // Normal UTC → IST conversion
-  const d = new Date(value);
-  if (isNaN(d)) return "-";
+  let hour = parseInt(h, 10);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
 
-  return d.toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
+  const monthNames = [
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
+  const monthName = monthNames[parseInt(mo, 10) - 1] || "";
+
+  return `${d} ${monthName} ${y}, ${hour}:${m} ${suffix}`;
 };
 
 /* ======================================================
