@@ -72,22 +72,28 @@ If this wasn’t you, please contact your administrator immediately.
 `;
 
 /* ======================================================
-   FIXED EMAIL VALIDATION
+   EMAIL VALIDATION
 ====================================================== */
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
-   EMAIL TEMPLATE (FIXED)
+   SEND TO ADMIN + USER ALWAYS
 ====================================================== */
-const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
-  if (!isEmail(to)) {
-    console.log("🚫 Not a valid email — Skipping:", to);
+const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, booking, company }) => {
+  // Build recipients safely
+  const recipients = [];
+
+  if (isEmail(adminEmail)) recipients.push(adminEmail);
+  if (isEmail(userEmail) && userEmail !== adminEmail) recipients.push(userEmail);
+
+  if (!recipients.length) {
+    console.log("🚫 No valid recipients. Skipping email");
     return;
   }
 
   try {
     await sendEmail({
-      to,
+      to: recipients,
       subject,
       html: `
       <div style="font-family:Arial;padding:18px">
@@ -108,8 +114,8 @@ const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
           <p><b>Room:</b> ${booking.room_name}</p>
           <p><b>Date:</b> ${booking.booking_date}</p>
           <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(
-        booking.end_time
-      )}</p>
+            booking.end_time
+          )}</p>
           <p><b>Department:</b> ${booking.department}</p>
           ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
           <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
@@ -120,18 +126,17 @@ const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
       `
     });
 
-    console.log("📨 EMAIL SENT TO:", to);
-
+    console.log("📨 EMAIL SENT TO:", recipients.join(", "));
   } catch (err) {
     console.log("❌ EMAIL FAILED:", err.message);
   }
 };
 
 /* ======================================================
-   EVERYTHING ELSE BELOW IS SAME
+   EVERYTHING BELOW SAME — ONLY MAIL CALLS UPDATED
 ====================================================== */
 
-// Dashboard
+/* DASHBOARD */
 router.get("/dashboard", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -233,7 +238,8 @@ router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
   try {
-    const { companyId, company } = req.user;
+    const { companyId, company, email: adminEmail } = req.user;
+
     let {
       room_id,
       booked_by,
@@ -305,7 +311,8 @@ router.post("/bookings", async (req, res) => {
     await conn.commit();
 
     await sendBookingMail({
-      to: booked_by,
+      adminEmail,
+      userEmail: booked_by,
       subject: "Conference Room Booking Confirmed",
       heading: "Booking Confirmed 🎉",
       booking: {
@@ -333,7 +340,7 @@ router.post("/bookings", async (req, res) => {
 /* EDIT BOOKING */
 router.patch("/bookings/:id", async (req, res) => {
   try {
-    const { companyId, company } = req.user;
+    const { companyId, company, email: adminEmail } = req.user;
     const bookingId = Number(req.params.id);
 
     let { start_time, end_time } = req.body;
@@ -391,7 +398,8 @@ router.patch("/bookings/:id", async (req, res) => {
     );
 
     await sendBookingMail({
-      to: booking.booked_by,
+      adminEmail,
+      userEmail: booking.booked_by,
       subject: "Conference Room Booking Rescheduled",
       heading: "Meeting Rescheduled 🔄",
       booking: {
@@ -413,7 +421,7 @@ router.patch("/bookings/:id", async (req, res) => {
 /* CANCEL BOOKING */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
-    const { companyId, company } = req.user;
+    const { companyId, company, email: adminEmail } = req.user;
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
@@ -436,7 +444,8 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     );
 
     await sendBookingMail({
-      to: booking.booked_by,
+      adminEmail,
+      userEmail: booking.booked_by,
       subject: "Conference Room Booking Cancelled",
       heading: "Meeting Cancelled ❌",
       booking: {
@@ -454,3 +463,4 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+
