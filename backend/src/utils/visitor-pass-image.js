@@ -25,46 +25,35 @@ const TEXT_GRAY = "#666";
 const CARD_RADIUS = 18;
 
 /* ======================================================
-   SAFE IST FORMATTER (NO DOUBLE SHIFT)
+   PURE IST FORMATTER – NO TIMEZONE SHIFT
+   DB already stores valid IST string:
+   2026-01-06 10:42:44
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  if (typeof value === "string") {
-    const hasTZ =
-      value.includes("Z") ||
-      value.includes("+") ||
-      value.toLowerCase().includes("gmt");
+  // Expect "YYYY-MM-DD HH:MM:SS"
+  const parts = value.split(" ");
+  if (parts.length < 2) return value;
 
-    // If backend is already IST (most likely)
-    if (!hasTZ) {
-      const d = new Date(value);
-      if (isNaN(d)) return "-";
+  const date = parts[0];
+  const time = parts[1];
 
-      return d.toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
-  }
+  const [y, mo, d] = date.split("-");
+  let [h, m] = time.split(":");
 
-  const d = new Date(value);
-  if (isNaN(d)) return "-";
+  let hour = parseInt(h, 10);
+  const suffix = hour >= 12 ? "PM" : "AM";
+  hour = hour % 12 || 12;
 
-  // Only apply timezone if real UTC time
-  return d.toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
+  const monthNames = [
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
+  const monthName = monthNames[parseInt(mo, 10) - 1] || "";
+
+  return `${d} ${monthName} ${y}, ${hour}:${m} ${suffix}`;
 };
 
 /* ======================================================
@@ -140,7 +129,6 @@ export const generateVisitorPassImage = async ({
       const maxW = 120;
 
       const ratio = Math.min(maxW / logo.width, maxH / logo.height);
-
       const w = logo.width * ratio;
       const h = logo.height * ratio;
 
