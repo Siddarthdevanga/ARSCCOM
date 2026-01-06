@@ -7,29 +7,37 @@ import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 ====================================================== */
 
 /**
- * Returns IST Date (UTC + 5:30)
- * Server safe
+ * Returns IST Date as REAL Date object
+ * Server timezone safe
  */
 const getISTDate = () => {
-  const nowUtc = new Date();
-  return new Date(nowUtc.getTime() + 5.5 * 60 * 60 * 1000);
+  const now = new Date();
+  return new Date(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Kolkata",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }).format(now)
+  );
 };
 
 /**
  * YYYYMMDD from IST Date
  */
 const formatISTDateKey = (date) => {
-  const y = date.getUTCFullYear();
-  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const d = String(date.getUTCDate()).padStart(2, "0");
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
   return `${y}${m}${d}`;
 };
 
 /* ======================================================
    SAVE VISITOR
-   - Daily reset per company
-   - IST consistent
-   - Single mail only
 ====================================================== */
 export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
@@ -54,45 +62,25 @@ export const saveVisitor = async (companyId, data, file) => {
     idNumber
   } = data;
 
-  if (!name || !phone) {
-    throw new Error("Visitor name and phone are required");
-  }
+  if (!name || !phone) throw new Error("Visitor name and phone are required");
 
-  // 🔒 IST TIME (single source of truth)
+  // 🔒 CONSISTENT IST
   const checkInIST = getISTDate();
-  if (isNaN(checkInIST.getTime())) {
-    throw new Error("Invalid IST datetime");
-  }
+  if (isNaN(checkInIST.getTime())) throw new Error("Invalid IST datetime");
 
   const dateKey = formatISTDateKey(checkInIST);
 
-  /* ======================================================
-     STEP 1: INSERT VISITOR (NO CODE YET)
-  ====================================================== */
+  /* ================= INSERT ================= */
   const [insertResult] = await db.execute(
     `
     INSERT INTO visitors (
-      company_id,
-      name,
-      phone,
-      email,
-      from_company,
-      department,
-      designation,
-      address,
-      city,
-      state,
-      postal_code,
-      country,
-      person_to_meet,
-      purpose,
-      belongings,
-      id_type,
-      id_number,
-      status,
-      check_in,
-      pass_mail_sent
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', ?, 0)
+      company_id, name, phone, email, from_company, department, designation,
+      address, city, state, postal_code, country,
+      person_to_meet, purpose, belongings,
+      id_type, id_number,
+      status, check_in, pass_mail_sent
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', ?, 0)
     `,
     [
       companyId,
@@ -109,28 +97,24 @@ export const saveVisitor = async (companyId, data, file) => {
       country || null,
       personToMeet || null,
       purpose || null,
-      Array.isArray(belongings)
-        ? belongings.join(", ")
-        : belongings || null,
+      Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
       idType || null,
       idNumber || null,
-      checkInIST
+      new Date() // store actual UTC time in DB
     ]
   );
 
   const visitorId = insertResult.insertId;
 
-  /* ======================================================
-     STEP 2: DAILY COUNT (COMPANY + DATE)
-  ====================================================== */
+  /* ================= DAILY COUNT (IST BASED) ================= */
   const [[countRow]] = await db.execute(
     `
     SELECT COUNT(*) AS count
     FROM visitors
     WHERE company_id = ?
-      AND DATE(check_in) = DATE(?)
+    AND DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) = ?
     `,
-    [companyId, checkInIST]
+    [companyId, `${checkInIST.getFullYear()}-${String(checkInIST.getMonth()+1).padStart(2,'0')}-${String(checkInIST.getDate()).padStart(2,'0')}`]
   );
 
   const dailyVisitorNumber = countRow.count;
@@ -139,26 +123,18 @@ export const saveVisitor = async (companyId, data, file) => {
     dailyVisitorNumber
   ).padStart(5, "0")}`;
 
-  /* ======================================================
-     STEP 3: UPLOAD PHOTO
-  ====================================================== */
+  /* ================= PHOTO ================= */
   const photoUrl = await uploadToS3(
     file,
     `companies/${companyId}/visitors/${visitorCode}.jpg`
   );
 
   await db.execute(
-    `
-    UPDATE visitors
-    SET visitor_code = ?, photo_url = ?
-    WHERE id = ?
-    `,
+    `UPDATE visitors SET visitor_code = ?, photo_url = ? WHERE id = ?`,
     [visitorCode, photoUrl, visitorId]
   );
 
-  /* ======================================================
-     STEP 4: SEND VISITOR PASS MAIL (ONCE)
-  ====================================================== */
+  /* ================= MAIL ================= */
   if (email) {
     const [[row]] = await db.execute(
       `SELECT pass_mail_sent FROM visitors WHERE id = ?`,
@@ -198,9 +174,6 @@ export const saveVisitor = async (companyId, data, file) => {
     }
   }
 
-  /* ======================================================
-     STEP 5: RETURN RESPONSE
-  ====================================================== */
   return {
     id: visitorId,
     visitorCode,
@@ -209,6 +182,6 @@ export const saveVisitor = async (companyId, data, file) => {
     email,
     photoUrl,
     status: "IN",
-    checkIn: checkInIST
+    checkInIST
   };
 };
