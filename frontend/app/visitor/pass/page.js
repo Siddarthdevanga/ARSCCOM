@@ -4,43 +4,36 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ================= SMART IST FORMAT ================= */
+/* ================= PURE IST DISPLAY =================
+   DB already stores proper IST string like:
+   2026-01-06 10:42:44
+   We DO NOT convert timezone.
+====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  // String form
-  if (typeof value === "string") {
-    const hasTZ =
-      value.includes("Z") ||
-      value.includes("+") ||
-      value.toLowerCase().includes("gmt");
+  // Expected: "YYYY-MM-DD HH:MM:SS"
+  const parts = value.split(" ");
+  if (parts.length < 2) return value;
 
-    // If backend already returned IST without timezone
-    if (!hasTZ) {
-      return new Date(value).toLocaleString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
-  }
+  const date = parts[0];       // YYYY-MM-DD
+  const time = parts[1];       // HH:MM:SS
 
-  // Normal UTC → IST conversion
-  const date = new Date(value);
-  if (isNaN(date.getTime())) return "-";
+  const [y, mo, d] = date.split("-");
+  let [h, m] = time.split(":");
 
-  return date.toLocaleString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
+  h = parseInt(h, 10);
+  const suffix = h >= 12 ? "PM" : "AM";
+  h = h % 12 || 12;
+
+  const monthNames = [
+    "Jan","Feb","Mar","Apr","May","Jun",
+    "Jul","Aug","Sep","Oct","Nov","Dec"
+  ];
+
+  const monthName = monthNames[parseInt(mo, 10) - 1] || "";
+
+  return `${d} ${monthName} ${y}, ${h}:${m} ${suffix}`;
 };
 
 /* ======================================================
@@ -123,13 +116,21 @@ function VisitorPassContent() {
   return (
     <div className={styles.page}>
       <div className={styles.passCard}>
+
+        {/* HEADER */}
         <header className={styles.header}>
           <div className={styles.companyName}>{company.name}</div>
+
           {company.logo && (
-            <img src={company.logo} alt="Company logo" className={styles.logo} />
+            <img
+              src={company.logo}
+              alt="Company logo"
+              className={styles.logo}
+            />
           )}
         </header>
 
+        {/* BODY */}
         <div className={styles.body}>
           <div className={styles.details}>
             <div className={styles.passTitle}>VISITOR PASS</div>
@@ -153,13 +154,18 @@ function VisitorPassContent() {
 
           <div className={styles.photoBox}>
             {visitor.photoUrl ? (
-              <img src={visitor.photoUrl} alt="Visitor" className={styles.photo} />
+              <img
+                src={visitor.photoUrl}
+                alt="Visitor"
+                className={styles.photo}
+              />
             ) : (
               <div className={styles.noPhoto}>NO PHOTO</div>
             )}
           </div>
         </div>
 
+        {/* FOOTER */}
         <div className={styles.footer}>
           <button
             className={styles.secondaryBtn}
@@ -183,6 +189,9 @@ function VisitorPassContent() {
   );
 }
 
+/* ======================================================
+   PAGE EXPORT
+====================================================== */
 export default function VisitorPassPage() {
   return (
     <Suspense
