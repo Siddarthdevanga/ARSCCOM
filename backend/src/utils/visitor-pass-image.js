@@ -1,9 +1,7 @@
 import { createCanvas, loadImage, registerFont } from "canvas";
 import fs from "fs";
 
-/* ======================================================
-   REGISTER FONT
-====================================================== */
+/* ================= FONT ================= */
 const FONT_PATH = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
 const FONT_FAMILY = "AppFont";
 
@@ -14,9 +12,7 @@ if (!fs.existsSync(FONT_PATH)) {
 
 registerFont(FONT_PATH, { family: FONT_FAMILY });
 
-/* ======================================================
-   CONSTANTS
-====================================================== */
+/* ================= CONSTANTS ================= */
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 390;
 
@@ -25,66 +21,93 @@ const TEXT_GRAY = "#666";
 const CARD_RADIUS = 18;
 
 /* ======================================================
-   SAFE IST FORMATTER
-   Supports:
-   1️⃣ "2026-01-06 10:42:44" → already IST
-   2️⃣ "2026-01-06T11:20:20.000Z" → UTC → convert to IST manually
+   SUPER SAFE IST FORMATTER
+   Handles EVERYTHING:
+
+   ✔ MySQL     → 2026-01-06 10:42:44   (Already IST)
+   ✔ ISO UTC   → 2026-01-06T11:20:20Z  (Convert to IST)
+   ✔ Date Obj  → Valid
+   ✔ null / invalid → "-"
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  /* ---------- CASE 1: ISO UTC ---------- */
+  /* ---------- CASE 1: If it's a Date Object ---------- */
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  }
+
+  /* ---------- CASE 2: If it's NOT string ---------- */
+  if (typeof value !== "string") {
+    try {
+      const d = new Date(value);
+      if (!isNaN(d)) {
+        return d.toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
+    } catch {}
+    return "-";
+  }
+
+  /* ---------- CASE 3: ISO format with T ---------- */
   if (value.includes("T")) {
     try {
-      const [datePart, timePartFull] = value.split("T");
-      const timePart = timePartFull.split(".")[0]; // HH:MM:SS
-      let [h, m] = timePart.split(":").map(Number);
+      const d = new Date(value);
+      if (isNaN(d)) return "-";
 
-      // Add +5:30
-      let totalMinutes = h * 60 + m + 330;
-      let finalH = Math.floor(totalMinutes / 60) % 24;
-      let finalM = totalMinutes % 60;
-
-      const suffix = finalH >= 12 ? "PM" : "AM";
-      finalH = finalH % 12 || 12;
-
-      const [yyyy, mm, dd] = datePart.split("-");
-
-      const monthNames = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-      ];
-      const monthName = monthNames[parseInt(mm, 10) - 1];
-
-      return `${dd} ${monthName} ${yyyy}, ${finalH}:${String(finalM).padStart(2,"0")} ${suffix}`;
+      return d.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
     } catch {
-      return value;
+      return "-";
     }
   }
 
-  /* ---------- CASE 2: Already IST (MYSQL FORMAT) ---------- */
-  const parts = value.split(" ");
-  if (parts.length < 2) return value;
+  /* ---------- CASE 4: MYSQL "YYYY-MM-DD HH:MM:SS" ---------- */
+  try {
+    const [date, time] = value.split(" ");
+    if (!date || !time) return value;
 
-  const [y, mo, d] = parts[0].split("-");
-  let [h, m] = parts[1].split(":");
+    const [y, mo, d] = date.split("-");
+    let [h, m] = time.split(":");
 
-  let hour = parseInt(h, 10);
-  const suffix = hour >= 12 ? "PM" : "AM";
-  hour = hour % 12 || 12;
+    let hour = parseInt(h, 10);
+    const suffix = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
 
-  const monthNames = [
-    "Jan","Feb","Mar","Apr","May","Jun",
-    "Jul","Aug","Sep","Oct","Nov","Dec"
-  ];
-  const monthName = monthNames[parseInt(mo, 10) - 1] || "";
+    const monthNames = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
 
-  return `${d} ${monthName} ${y}, ${hour}:${m} ${suffix}`;
+    return `${d} ${monthNames[mo - 1]} ${y}, ${hour}:${m} ${suffix}`;
+  } catch {
+    return value;
+  }
 };
 
-/* ======================================================
-   TEXT TRIMMER
-====================================================== */
+/* ================= TEXT TRIM ================= */
 const drawEllipsisText = (ctx, text, x, y, maxWidth) => {
   const value = text || "Company";
 
@@ -101,9 +124,7 @@ const drawEllipsisText = (ctx, text, x, y, maxWidth) => {
   ctx.fillText(trimmed + "...", x, y);
 };
 
-/* ======================================================
-   GENERATE PASS
-====================================================== */
+/* ================= MAIN IMAGE GENERATOR ================= */
 export const generateVisitorPassImage = async ({
   company = {},
   visitor = {}
@@ -119,11 +140,11 @@ export const generateVisitorPassImage = async ({
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
 
-  /* ================= BACKGROUND ================= */
+  /* BG */
   ctx.fillStyle = BRAND_COLOR;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  /* ================= CARD ================= */
+  /* CARD */
   const cardX = 20;
   const cardY = 20;
   const cardW = CANVAS_WIDTH - 40;
@@ -139,7 +160,7 @@ export const generateVisitorPassImage = async ({
   ctx.closePath();
   ctx.fill();
 
-  /* ================= HEADER ================= */
+  /* HEADER */
   ctx.fillStyle = BRAND_COLOR;
   ctx.fillRect(cardX, cardY, cardW, 64);
 
@@ -147,28 +168,25 @@ export const generateVisitorPassImage = async ({
   ctx.font = `bold 22px ${FONT_FAMILY}`;
   drawEllipsisText(ctx, companyName, cardX + 20, cardY + 32, cardW - 140);
 
-  /* ================= COMPANY LOGO ================= */
+  /* LOGO */
   if (company.logo_url || company.logo) {
     try {
       const logo = await loadImage(company.logo_url || company.logo);
+      const ratio = Math.min(120 / logo.width, 48 / logo.height);
 
-      const maxH = 48;
-      const maxW = 120;
-
-      const ratio = Math.min(maxW / logo.width, maxH / logo.height);
-      const w = logo.width * ratio;
-      const h = logo.height * ratio;
-
-      const x = cardX + cardW - w - 20;
-      const y = cardY + (64 - h) / 2;
-
-      ctx.drawImage(logo, x, y, w, h);
+      ctx.drawImage(
+        logo,
+        cardX + cardW - logo.width * ratio - 20,
+        cardY + 8,
+        logo.width * ratio,
+        logo.height * ratio
+      );
     } catch (err) {
       console.error("Logo load failed:", err.message);
     }
   }
 
-  /* ================= VISITOR DETAILS ================= */
+  /* DETAILS */
   ctx.fillStyle = BRAND_COLOR;
   ctx.font = `bold 16px ${FONT_FAMILY}`;
   ctx.fillText("Visitor Pass", cardX + 20, cardY + 100);
@@ -184,7 +202,7 @@ export const generateVisitorPassImage = async ({
     cardY + 225
   );
 
-  /* ================= PHOTO ================= */
+  /* PHOTO */
   const photoX = cardX + cardW - 190;
   const photoY = cardY + 95;
   const photoW = 150;
@@ -197,17 +215,14 @@ export const generateVisitorPassImage = async ({
   if (visitor.photoUrl) {
     try {
       const img = await loadImage(visitor.photoUrl);
-      const ratio = Math.min(photoW / img.width, photoH / img.height);
-
-      const imgW = img.width * ratio;
-      const imgH = img.height * ratio;
+      const r = Math.min(photoW / img.width, photoH / img.height);
 
       ctx.drawImage(
         img,
-        photoX + (photoW - imgW) / 2,
-        photoY + (photoH - imgH) / 2,
-        imgW,
-        imgH
+        photoX + (photoW - img.width * r) / 2,
+        photoY + (photoH - img.height * r) / 2,
+        img.width * r,
+        img.height * r
       );
     } catch {
       ctx.font = `12px ${FONT_FAMILY}`;
@@ -216,7 +231,7 @@ export const generateVisitorPassImage = async ({
     }
   }
 
-  /* ================= FOOTER ================= */
+  /* FOOTER */
   ctx.font = `12px ${FONT_FAMILY}`;
   ctx.fillStyle = TEXT_GRAY;
   ctx.fillText(
