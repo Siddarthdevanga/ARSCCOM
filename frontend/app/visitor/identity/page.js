@@ -27,7 +27,7 @@ export default function VisitorIdentity() {
     }
   }, [router]);
 
-  /* ================= IDENTITY (OPTIONAL NOW) ================= */
+  /* ================= IDENTITY ================= */
   const [idType, setIdType] = useState("");
   const [idNumber, setIdNumber] = useState("");
 
@@ -102,7 +102,15 @@ export default function VisitorIdentity() {
       setError("Visitor photo is required");
       return false;
     }
-    return true; // ✅ ID not required anymore
+    if (!idType) {
+      setError("Please select an ID proof type");
+      return false;
+    }
+    if (!idNumber.trim()) {
+      setError("Please enter ID number");
+      return false;
+    }
+    return true;
   };
 
   /* ================= GENERATE PASS ================= */
@@ -143,9 +151,9 @@ export default function VisitorIdentity() {
         }
       });
 
-      /* Identity (OPTIONAL) */
-      formData.append("idType", idType || "");
-      formData.append("idNumber", idNumber || "");
+      /* Identity */
+      formData.append("idType", idType);
+      formData.append("idNumber", idNumber);
 
       /* Photo */
       formData.append("photo", file);
@@ -176,26 +184,16 @@ export default function VisitorIdentity() {
 
   if (!company) return null;
 
+  /* ================= UI ================= */
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.companyName}>{company?.name}</div>
 
-        {/* ================= PROFESSIONAL LOGO ================= */}
         <img
           src={company?.logo_url || "/logo.png"}
           alt={`${company?.name || "Company"} Logo`}
           className={styles.logo}
-          style={{
-            width: "70px",
-            height: "70px",
-            borderRadius: "14px",
-            objectFit: "cover",
-            background: "#fff",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-            padding: "6px"
-          }}
-          onError={(e) => (e.target.src = "/logo.png")}
         />
       </header>
 
@@ -240,14 +238,14 @@ export default function VisitorIdentity() {
             </div>
           </div>
 
-          {/* OPTIONAL ID */}
+          {/* ID DETAILS */}
           <div className={styles.rightPane}>
             <select
               className={styles.input}
               value={idType}
               onChange={e => setIdType(e.target.value)}
             >
-              <option value="">Select ID Proof (Optional)</option>
+              <option value="">Select ID Proof *</option>
               <option value="aadhaar">Aadhaar</option>
               <option value="pan">PAN</option>
               <option value="passport">Passport</option>
@@ -255,7 +253,7 @@ export default function VisitorIdentity() {
 
             <input
               className={styles.input}
-              placeholder="ID Number (Optional)"
+              placeholder="ID Number *"
               value={idNumber}
               onChange={e => setIdNumber(e.target.value)}
             />
