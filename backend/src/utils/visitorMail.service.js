@@ -2,14 +2,35 @@ import { sendEmail } from "../utils/mailer.js";
 import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
 /* ======================================================
-   HELPERS
+   HELPERS – SMART IST FORMATTER (Prevents Double Shift)
 ====================================================== */
+const formatIST = (value) => {
+  if (!value) return "-";
 
-// Format date strictly in IST for email
-const formatIST = (date) => {
-  if (!date) return "-";
+  // Strings without timezone (DB already IST) → DON'T reapply TZ
+  if (typeof value === "string") {
+    const hasTZ =
+      value.includes("Z") ||
+      value.includes("+") ||
+      value.toLowerCase().includes("gmt");
 
-  const d = new Date(date);
+    if (!hasTZ) {
+      const d = new Date(value);
+      if (isNaN(d)) return "-";
+
+      return d.toLocaleString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+  }
+
+  // Normal UTC → IST conversion
+  const d = new Date(value);
   if (isNaN(d)) return "-";
 
   return d.toLocaleString("en-IN", {
@@ -31,18 +52,12 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
 
   let imageBuffer = null;
 
-  /* ---------- Generate Visitor Pass Image ---------- */
   try {
-    imageBuffer = await generateVisitorPassImage({
-      company,
-      visitor
-    });
+    imageBuffer = await generateVisitorPassImage({ company, visitor });
   } catch (err) {
-    // Image generation failure should NOT block email
     console.error("VISITOR PASS IMAGE ERROR:", err.message);
   }
 
-  /* ---------- Send Email ---------- */
   await sendEmail({
     to: visitor.email,
     subject: `Your Visitor Pass – ${company.name || "ARSCCOM"}`,
