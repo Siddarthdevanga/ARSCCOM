@@ -14,11 +14,8 @@ const normalizeEmail = v => String(v || "").trim().toLowerCase();
 const normalizeAmPmTime = (input = "") => {
   const value = String(input).trim().toUpperCase();
 
-  // MUST MATCH FORMAT "4:30 PM" / "11:00 AM" / "12:15 PM"
   const match = value.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/);
-
-  if (!match)
-    throw new Error("Only AM/PM format allowed (Example: 4:30 PM)");
+  if (!match) throw new Error("Only AM/PM format allowed (Example: 4:30 PM)");
 
   let [_, hh, mm, period] = match;
   let h = Number(hh);
@@ -55,6 +52,9 @@ If you did not perform this action, please contact your administrator immediatel
 </p>
 `;
 
+/* ======================================================
+   EMAIL HELPERS
+====================================================== */
 async function sendOtpEmail(email, otp, company) {
   await sendEmail({
     to: email,
@@ -63,6 +63,64 @@ async function sendOtpEmail(email, otp, company) {
       <h3>Your OTP</h3>
       <h1>${otp}</h1>
       <p>Valid for 10 minutes.</p>
+      ${emailFooter(company)}
+    `
+  });
+}
+
+async function sendBookingEmail(email, company, room, booking) {
+  await sendEmail({
+    to: email,
+    subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
+    html: `
+      <h2>${company.name}</h2>
+      <h3>Conference Room Booking Confirmed</h3>
+
+      <table style="padding:10px;font-size:15px">
+        <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+        <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+        <tr><td><b>Time</b></td><td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+        <tr><td><b>Department</b></td><td>: ${booking.department}</td></tr>
+        <tr><td><b>Purpose</b></td><td>: ${booking.purpose || "-"}</td></tr>
+      </table>
+      ${emailFooter(company)}
+    `
+  });
+}
+
+async function sendUpdateEmail(email, company, room, booking) {
+  await sendEmail({
+    to: email,
+    subject: `Booking Updated – ${room.room_name} | ${company.name}`,
+    html: `
+      <h2>${company.name}</h2>
+      <h3>Your Conference Room Booking was Updated</h3>
+
+      <table style="padding:10px;font-size:15px">
+        <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+        <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+        <tr><td><b>New Time</b></td><td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+      </table>
+
+      ${emailFooter(company)}
+    `
+  });
+}
+
+async function sendCancelEmail(email, company, room, booking) {
+  await sendEmail({
+    to: email,
+    subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
+    html: `
+      <h2>${company.name}</h2>
+      <h3>Your Booking was Cancelled</h3>
+
+      <table style="padding:10px;font-size:15px">
+        <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
+        <tr><td><b>Date</b></td><td>: ${booking.booking_date}</td></tr>
+        <tr><td><b>Time</b></td><td>: ${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td></tr>
+      </table>
+
       ${emailFooter(company)}
     `
   });
@@ -120,7 +178,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   GET BOOKINGS (returns can_modify flag)
+   GET BOOKINGS
 ====================================================== */
 router.get("/company/:slug/bookings", async (req, res) => {
   try {
@@ -150,12 +208,12 @@ router.get("/company/:slug/bookings", async (req, res) => {
       [company.id, roomId, date]
     );
 
-    const enriched = bookings.map(b => ({
-      ...b,
-      can_modify: safeUser && b.booked_by?.toLowerCase() === safeUser
-    }));
-
-    res.json(enriched);
+    res.json(
+      bookings.map(b => ({
+        ...b,
+        can_modify: safeUser && b.booked_by?.toLowerCase() === safeUser
+      }))
+    );
   } catch (err) {
     console.error("[PUBLIC][BOOKINGS]", err);
     res.json([]);
@@ -240,9 +298,8 @@ router.post("/company/:slug/resend-otp", async (req, res) => {
       const age = existing.age || 0;
 
       if (age < 30) {
-        const remain = 30 - age;
         return res.status(429).json({
-          message: `Please wait ${remain} seconds before resending`
+          message: `Please wait ${30 - age} seconds before resending`
         });
       }
 
@@ -317,7 +374,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING — AM/PM ONLY
+   CREATE BOOKING
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -339,12 +396,8 @@ router.post("/company/:slug/book", async (req, res) => {
     if (!room_id || !email || !department || !booking_date || !start_time || !end_time)
       return res.status(400).json({ message: "Missing required fields" });
 
-    try {
-      start_time = normalizeAmPmTime(start_time);
-      end_time = normalizeAmPmTime(end_time);
-    } catch (err) {
-      return res.status(400).json({ message: err.message });
-    }
+    start_time = normalizeAmPmTime(start_time);
+    end_time = normalizeAmPmTime(end_time);
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start time" });
@@ -401,23 +454,12 @@ router.post("/company/:slug/book", async (req, res) => {
       ]
     );
 
-    await sendEmail({
-      to: email,
-      subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
-      html: `
-        <h2>${company.name}</h2>
-        <h3>Conference Room Booking Confirmed</h3>
-
-        <table style="padding:10px;font-size:15px">
-          <tr><td><b>Room</b></td><td>: ${room.room_name} (#${room.room_number})</td></tr>
-          <tr><td><b>Date</b></td><td>: ${booking_date}</td></tr>
-          <tr><td><b>Time</b></td><td>: ${prettyTime(start_time)} – ${prettyTime(end_time)}</td></tr>
-          <tr><td><b>Department</b></td><td>: ${department}</td></tr>
-          <tr><td><b>Purpose</b></td><td>: ${purpose || "-"}</td></tr>
-        </table>
-
-        ${emailFooter(company)}
-      `
+    await sendBookingEmail(email, company, room, {
+      booking_date,
+      start_time,
+      end_time,
+      department,
+      purpose
     });
 
     res.json({ message: "Booking confirmed successfully" });
@@ -429,7 +471,7 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 /* ======================================================
-   UPDATE BOOKING (Only Owner) — AM/PM ONLY
+   UPDATE BOOKING
 ====================================================== */
 router.patch("/company/:slug/bookings/:id", async (req, res) => {
   try {
@@ -442,12 +484,8 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     if (!userEmail || !start_time || !end_time)
       return res.status(400).json({ message: "Email, start time and end time required" });
 
-    try {
-      start_time = normalizeAmPmTime(start_time);
-      end_time = normalizeAmPmTime(end_time);
-    } catch (err) {
-      return res.status(400).json({ message: err.message });
-    }
+    start_time = normalizeAmPmTime(start_time);
+    end_time = normalizeAmPmTime(end_time);
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start" });
@@ -501,6 +539,17 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
       [start_time, end_time, bookingId]
     );
 
+    const [[room]] = await db.query(
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      [booking.room_id]
+    );
+
+    await sendUpdateEmail(userEmail, company, room, {
+      booking_date: booking.booking_date,
+      start_time,
+      end_time
+    });
+
     res.json({ message: "Booking updated successfully" });
 
   } catch (err) {
@@ -510,7 +559,7 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
 });
 
 /* ======================================================
-   CANCEL BOOKING (Only Owner)
+   CANCEL BOOKING
 ====================================================== */
 router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
   try {
@@ -545,6 +594,13 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
       `UPDATE conference_bookings SET status='CANCELLED' WHERE id=?`,
       [bookingId]
     );
+
+    const [[room]] = await db.query(
+      `SELECT room_name,room_number FROM conference_rooms WHERE id=? LIMIT 1`,
+      [booking.room_id]
+    );
+
+    await sendCancelEmail(email, company, room, booking);
 
     res.json({ message: "Booking cancelled successfully" });
 
