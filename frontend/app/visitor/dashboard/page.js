@@ -4,47 +4,28 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ================= SMART IST FORMAT ================= */
+/* ================= PURE DISPLAY FORMAT =================
+   DB already stores IST the way we want.
+   So DO NOT apply timezone conversion.
+========================================================= */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  let str = value;
+  try {
+    // Convert "YYYY-MM-DD HH:MM:SS" → "YYYY-MM-DDTHH:MM:SS"
+    const safe = value.replace(" ", "T");
+    const date = new Date(safe);
+    if (isNaN(date)) return "-";
 
-  // Normalize MySQL "YYYY-MM-DD HH:MM:SS" → safe date format
-  if (typeof value === "string" && value.includes(" ")) {
-    str = value.replace(" ", "T");
+    return date.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  } catch {
+    return "-";
   }
-
-  if (typeof str === "string") {
-    const hasTZ =
-      str.includes("Z") ||
-      str.includes("+") ||
-      str.toLowerCase().includes("gmt");
-
-    // If backend already returns IST without timezone — don't shift again
-    if (!hasTZ) {
-      const d = new Date(str);
-      if (isNaN(d)) return "-";
-
-      return d.toLocaleTimeString("en-IN", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
-  }
-
-  const date = new Date(str);
-  if (isNaN(date.getTime())) return "-";
-
-  return date.toLocaleTimeString("en-IN", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true
-  });
 };
-
 
 export default function VisitorDashboard() {
   const router = useRouter();
@@ -256,5 +237,3 @@ export default function VisitorDashboard() {
     </div>
   );
 }
-
-
