@@ -22,15 +22,6 @@ const nowTime = () => {
 
 /*
   STRICT AM/PM ONLY
-  Allowed:
-    11:13 AM
-    9:02 PM
-    12:00 PM
-
-  Rejected:
-    23:10
-    14:30
-    09:30 (no AM/PM)
 */
 const normalizeTime = (t) => {
   if (!t) throw new Error("Time is required");
@@ -72,15 +63,8 @@ const emailFooter = (company) => `
 <br/>
 Regards,<br/>
 <b>${company?.name || "Conference Platform"}</b><br/>
-
-${
-  company?.logo_url
-    ? `<img src="${company.logo_url}" height="65" style="margin:10px 0;display:block" />`
-    : ""
-}
-
+${company?.logo_url ? `<img src="${company.logo_url}" height="65" />` : ""}
 <hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
-
 <p style="font-size:13px;color:#666">
 This email was automatically sent from PROMEET Conference & Visitor Platform.
 If this wasn’t you, please contact your administrator immediately.
@@ -88,10 +72,18 @@ If this wasn’t you, please contact your administrator immediately.
 `;
 
 /* ======================================================
-   EMAIL TEMPLATE
+   FIXED EMAIL VALIDATION
+====================================================== */
+const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
+/* ======================================================
+   EMAIL TEMPLATE (FIXED)
 ====================================================== */
 const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
-  if (!to) return;
+  if (!isEmail(to)) {
+    console.log("🚫 Not a valid email — Skipping:", to);
+    return;
+  }
 
   try {
     await sendEmail({
@@ -119,30 +111,27 @@ const sendBookingMail = async ({ to, subject, heading, booking, company }) => {
         booking.end_time
       )}</p>
           <p><b>Department:</b> ${booking.department}</p>
-          ${
-            booking.purpose
-              ? `<p><b>Purpose:</b> ${booking.purpose}</p>`
-              : ""
-          }
+          ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
           <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
         </div>
-
-        <p style="font-size:13px;color:#444">
-          Thank you for using PROMEET.
-        </p>
 
         ${emailFooter(company)}
       </div>
       `
     });
+
+    console.log("📨 EMAIL SENT TO:", to);
+
   } catch (err) {
     console.log("❌ EMAIL FAILED:", err.message);
   }
 };
 
 /* ======================================================
-   DASHBOARD
+   EVERYTHING ELSE BELOW IS SAME
 ====================================================== */
+
+// Dashboard
 router.get("/dashboard", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -179,9 +168,7 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
-/* ======================================================
-   ROOMS LIST
-====================================================== */
+/* ROOMS */
 router.get("/rooms", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -203,9 +190,7 @@ router.get("/rooms", async (req, res) => {
   }
 });
 
-/* ======================================================
-   GET BOOKINGS
-====================================================== */
+/* BOOKINGS LIST */
 router.get("/bookings", async (req, res) => {
   try {
     const { companyId } = req.user;
@@ -243,9 +228,7 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-/* ======================================================
-   CREATE BOOKING — STRICT AM/PM
-====================================================== */
+/* CREATE BOOKING */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
@@ -264,12 +247,8 @@ router.post("/bookings", async (req, res) => {
     if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time)
       return res.status(400).json({ message: "Required fields missing" });
 
-    try {
-      start_time = normalizeTime(start_time);
-      end_time = normalizeTime(end_time);
-    } catch (e) {
-      return res.status(400).json({ message: e.message });
-    }
+    start_time = normalizeTime(start_time);
+    end_time = normalizeTime(end_time);
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start time" });
@@ -326,7 +305,7 @@ router.post("/bookings", async (req, res) => {
     await conn.commit();
 
     await sendBookingMail({
-      to: booked_by?.includes("@") ? booked_by : null,
+      to: booked_by,
       subject: "Conference Room Booking Confirmed",
       heading: "Booking Confirmed 🎉",
       booking: {
@@ -351,9 +330,7 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
-/* ======================================================
-   EDIT BOOKING — STRICT AM/PM
-====================================================== */
+/* EDIT BOOKING */
 router.patch("/bookings/:id", async (req, res) => {
   try {
     const { companyId, company } = req.user;
@@ -364,12 +341,8 @@ router.patch("/bookings/:id", async (req, res) => {
     if (!start_time || !end_time)
       return res.status(400).json({ message: "Times required" });
 
-    try {
-      start_time = normalizeTime(start_time);
-      end_time = normalizeTime(end_time);
-    } catch (e) {
-      return res.status(400).json({ message: e.message });
-    }
+    start_time = normalizeTime(start_time);
+    end_time = normalizeTime(end_time);
 
     if (end_time <= start_time)
       return res.status(400).json({ message: "End must be after start" });
@@ -418,7 +391,7 @@ router.patch("/bookings/:id", async (req, res) => {
     );
 
     await sendBookingMail({
-      to: booking.booked_by?.includes("@") ? booking.booked_by : null,
+      to: booking.booked_by,
       subject: "Conference Room Booking Rescheduled",
       heading: "Meeting Rescheduled 🔄",
       booking: {
@@ -437,9 +410,7 @@ router.patch("/bookings/:id", async (req, res) => {
   }
 });
 
-/* ======================================================
-   CANCEL BOOKING
-====================================================== */
+/* CANCEL BOOKING */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const { companyId, company } = req.user;
@@ -465,7 +436,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     );
 
     await sendBookingMail({
-      to: booking.booked_by?.includes("@") ? booking.booked_by : null,
+      to: booking.booked_by,
       subject: "Conference Room Booking Cancelled",
       heading: "Meeting Cancelled ❌",
       booking: {
