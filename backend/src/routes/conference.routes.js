@@ -20,15 +20,15 @@ const nowTime = () => {
   ).padStart(2, "0")}`;
 };
 
-/*
-  STRICT AM/PM ONLY
-*/
+/* ======================================================
+   STRICT AM/PM ONLY
+====================================================== */
 const normalizeTime = (t) => {
   if (!t) throw new Error("Time is required");
 
   let s = String(t).trim().toUpperCase();
-
   const match = s.match(/^(\d{1,2}):(\d{2})\s?(AM|PM)$/);
+
   if (!match)
     throw new Error("Only 12-hour format allowed (example: 11:30 AM)");
 
@@ -46,7 +46,7 @@ const normalizeTime = (t) => {
 };
 
 /* ======================================================
-   AM/PM FOR MAILS
+   AM/PM FORMAT
 ====================================================== */
 const toAmPm = (time) => {
   if (!time) return "";
@@ -57,7 +57,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   REQUIRED FOOTER ✔️
+   REQUIRED FOOTER ✔️ (EXACT AS YOU WANT)
 ====================================================== */
 const emailFooter = company => `
 <br/>
@@ -70,6 +70,18 @@ This email was automatically sent from the Conference Room Booking Platform.
 If you did not perform this action, please contact your administrator immediately.
 </p>
 `;
+
+/* ======================================================
+   GET COMPANY INFO ALWAYS (GUARANTEED)
+====================================================== */
+const getCompanyInfo = async (companyId) => {
+  const [[company]] = await db.query(
+    "SELECT name, logo_url FROM companies WHERE id = ? LIMIT 1",
+    [companyId]
+  );
+
+  return company || { name: "", logo_url: "" };
+};
 
 /* ======================================================
    EMAIL VALIDATION
@@ -241,7 +253,7 @@ router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
   try {
-    const { companyId, company, email: adminEmail } = req.user;
+    const { companyId, email: adminEmail } = req.user;
 
     let {
       room_id,
@@ -313,6 +325,8 @@ router.post("/bookings", async (req, res) => {
 
     await conn.commit();
 
+    const companyInfo = await getCompanyInfo(companyId);
+
     await sendBookingMail({
       adminEmail,
       userEmail: booked_by,
@@ -327,7 +341,7 @@ router.post("/bookings", async (req, res) => {
         purpose,
         status: "CONFIRMED"
       },
-      company
+      company: companyInfo
     });
 
     res.status(201).json({ message: "Booking created successfully" });
@@ -345,7 +359,7 @@ router.post("/bookings", async (req, res) => {
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
-    const { companyId, company, email: adminEmail } = req.user;
+    const { companyId, email: adminEmail } = req.user;
     const bookingId = Number(req.params.id);
 
     let { start_time, end_time } = req.body;
@@ -402,6 +416,8 @@ router.patch("/bookings/:id", async (req, res) => {
       [start_time, end_time, bookingId]
     );
 
+    const companyInfo = await getCompanyInfo(companyId);
+
     await sendBookingMail({
       adminEmail,
       userEmail: booking.booked_by,
@@ -413,7 +429,7 @@ router.patch("/bookings/:id", async (req, res) => {
         end_time,
         status: "RESCHEDULED"
       },
-      company
+      company: companyInfo
     });
 
     res.json({ message: "Booking updated successfully" });
@@ -428,7 +444,7 @@ router.patch("/bookings/:id", async (req, res) => {
 ====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
-    const { companyId, company, email: adminEmail } = req.user;
+    const { companyId, email: adminEmail } = req.user;
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
@@ -450,6 +466,8 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       [bookingId]
     );
 
+    const companyInfo = await getCompanyInfo(companyId);
+
     await sendBookingMail({
       adminEmail,
       userEmail: booking.booked_by,
@@ -459,7 +477,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
         ...booking,
         status: "CANCELLED"
       },
-      company
+      company: companyInfo
     });
 
     res.json({ message: "Booking cancelled successfully" });
@@ -470,6 +488,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+
 
 
 
