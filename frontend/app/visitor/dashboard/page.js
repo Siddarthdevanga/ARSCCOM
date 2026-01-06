@@ -6,46 +6,62 @@ import styles from "./style.module.css";
 
 /* ======================================================
    UNIVERSAL SAFE IST FORMATTER
-   → Never adds extra +5:30
-   → Never crashes
+   → No double +5:30
+   → Handles ISO / MySQL / Date
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  try {
-    // -------- If value is already a Date --------
-    if (value instanceof Date) {
-      return value.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
+  const format = (d) =>
+    d.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
 
-    // -------- Convert safely to string --------
+  try {
+    /* ----- Date object ----- */
+    if (value instanceof Date && !isNaN(value)) return format(value);
+
+    /* ----- Normalize to string ----- */
     value = String(value);
 
-    /* ---------- CASE 1: ISO Timestamp ---------- */
-    if (value.includes("T")) {
+    /* ======================================================
+       ISO WITH timezone (safe convert)
+       e.g 2026-01-06T11:20:20.000Z
+           2026-01-06T16:00:00+05:30
+    ======================================================= */
+    if (
+      value.includes("T") &&
+      (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
+    ) {
       const d = new Date(value);
-      if (isNaN(d)) return "-";
-
-      return d.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
+      return isNaN(d) ? "-" : format(d);
     }
 
-    /* ---------- CASE 2: MYSQL Format ---------- */
+    /* ======================================================
+       ISO WITHOUT timezone
+       Treat as already IST → DO NOT SHIFT
+       e.g 2026-01-06T10:42:44
+    ======================================================= */
+    if (value.includes("T")) {
+      const dateOnly = value.replace("T", " ").split(".")[0];
+      const d = new Date(dateOnly);
+      return isNaN(d) ? "-" : format(d);
+    }
+
+    /* ======================================================
+       MYSQL FORMAT (Already IST)
+       YYYY-MM-DD HH:MM:SS
+    ======================================================= */
     if (value.includes(" ")) {
-      const time = value.split(" ")[1]; // HH:MM:SS
+      const time = value.split(" ")[1];
       if (!time) return "-";
 
       let [h, m] = time.split(":");
       h = parseInt(h, 10);
+
       if (isNaN(h)) return "-";
 
       const suffix = h >= 12 ? "PM" : "AM";
@@ -59,6 +75,7 @@ const formatISTTime = (value) => {
     return "-";
   }
 };
+
 
 export default function VisitorDashboard() {
   const router = useRouter();
