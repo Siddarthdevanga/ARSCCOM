@@ -4,27 +4,46 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ================= PURE DISPLAY FORMAT =================
-   DB already stores correct IST timestamps like:
-   2026-01-06 10:42:44
-   We ONLY convert to hh:mm AM/PM. No timezone conversion.
-========================================================= */
+/* ======================================================
+   UNIVERSAL IST FORMATTER
+   Supports BOTH:
+   ✔ 2026-01-06 10:42:44
+   ✔ 2026-01-06T11:20:20.000Z
+====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  // Expect format: "YYYY-MM-DD HH:MM:SS"
-  const parts = value.split(" ");
-  if (parts.length < 2) return "-";
+  // -------- ISO UTC Format --------
+  if (
+    typeof value === "string" &&
+    (value.includes("Z") || value.includes("+"))
+  ) {
+    const d = new Date(value);
+    if (isNaN(d)) return "-";
 
-  const time = parts[1]; // HH:MM:SS
-  let [h, m] = time.split(":");
+    return d.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  }
 
-  h = parseInt(h, 10);
+  // -------- DB IST Format --------
+  if (typeof value === "string" && value.includes(" ")) {
+    const time = value.split(" ")[1]; // HH:MM:SS
+    if (!time) return "-";
 
-  const suffix = h >= 12 ? "PM" : "AM";
-  h = h % 12 || 12;
+    let [h, m] = time.split(":");
+    h = parseInt(h, 10);
 
-  return `${h}:${m} ${suffix}`;
+    const suffix = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+
+    return `${h}:${m} ${suffix}`;
+  }
+
+  return "-";
 };
 
 export default function VisitorDashboard() {
@@ -195,7 +214,7 @@ export default function VisitorDashboard() {
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_in)}</td>
+                    <td>{formatISTTime(v.check_in || v.checkIn)}</td>
                     <td>
                       <button
                         className={styles.checkoutBtn}
@@ -236,7 +255,7 @@ export default function VisitorDashboard() {
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_out)}</td>
+                    <td>{formatISTTime(v.check_out || v.checkOut)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -248,3 +267,4 @@ export default function VisitorDashboard() {
     </div>
   );
 }
+
