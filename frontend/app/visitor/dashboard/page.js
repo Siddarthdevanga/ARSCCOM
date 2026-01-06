@@ -5,19 +5,22 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   DASHBOARD – DO NOT SHIFT TIME (DB ALREADY IN IST)
+   DASHBOARD – ZERO WRONG TZ CONVERSIONS
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
   try {
-    // MySQL: "YYYY-MM-DD HH:MM:SS"
-    if (typeof value === "string" && value.includes(" ")) {
-      const time = value.split(" ")[1]; // HH:MM:SS
-      if (!time) return "-";
+    const str = String(value).trim();
 
-      let [h, m] = time.split(":");
+    /* ---------- CASE 1: MySQL "YYYY-MM-DD HH:MM:SS" ---------- */
+    if (str.includes(" ")) {
+      const t = str.split(" ")[1]; // HH:MM:SS
+      if (!t) return "-";
+
+      let [h, m] = t.split(":");
       h = parseInt(h, 10);
+
       if (isNaN(h)) return "-";
 
       const suffix = h >= 12 ? "PM" : "AM";
@@ -26,13 +29,9 @@ const formatISTTime = (value) => {
       return `${h}:${m} ${suffix}`;
     }
 
-    // ISO WITH timezone → convert safely to IST
-    if (
-      typeof value === "string" &&
-      value.includes("T") &&
-      (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
-    ) {
-      const d = new Date(value);
+    /* ---------- CASE 2: ISO WITH timezone (Z or +offset) ---------- */
+    if (str.includes("T") && (str.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(str))) {
+      const d = new Date(str);
       return d.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         hour: "2-digit",
@@ -41,14 +40,18 @@ const formatISTTime = (value) => {
       });
     }
 
-    // Date object already
-    if (value instanceof Date && !isNaN(value)) {
-      return value.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
+    /* ---------- CASE 3: ISO WITHOUT timezone (Treat as IST, DO NOT SHIFT) ---------- */
+    if (str.includes("T")) {
+      const timePart = str.split("T")[1]; // HH:MM:SS.xxxx
+      if (!timePart) return "-";
+
+      const [h, m] = timePart.split(":");
+      let hr = parseInt(h, 10);
+
+      const suffix = hr >= 12 ? "PM" : "AM";
+      hr = hr % 12 || 12;
+
+      return `${hr}:${m} ${suffix}`;
     }
 
     return "-";
@@ -56,6 +59,7 @@ const formatISTTime = (value) => {
     return "-";
   }
 };
+
 
 export default function VisitorDashboard() {
   const router = useRouter();
