@@ -17,8 +17,8 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
   const hour = h % 12 || 12;
 
   return {
-    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,   // shown to user
-    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`, // internal 24hr
+    label: `${hour}:${m === 0 ? "00" : "30"} ${ampm}`,
+    value: `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`,
   };
 });
 
@@ -35,9 +35,6 @@ const toAmPmStrict = (time24) => {
   return `${hour}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
-/* ======================================================
-   Display Helper
-====================================================== */
 const toAmPmDisplay = toAmPmStrict;
 
 export default function ConferenceBookings() {
@@ -143,7 +140,7 @@ export default function ConferenceBookings() {
   }, [startTime, blockedSlots]);
 
   /* ======================================================
-     CREATE BOOKING  — sends AM/PM ONLY
+     CREATE BOOKING — sends AM/PM ONLY
   ====================================================== */
   const createBooking = async () => {
     setError("");
@@ -181,7 +178,7 @@ export default function ConferenceBookings() {
   };
 
   /* ======================================================
-     BLOCKED SLOTS EXCLUDING CURRENT
+     BLOCKED SLOTS EXCLUDING CURRENT BOOKING
   ====================================================== */
   const getBlockedSlotsExcluding = (bookingId) => {
     const set = new Set();
@@ -197,7 +194,7 @@ export default function ConferenceBookings() {
   };
 
   /* ======================================================
-     SAVE EDIT — sends AM/PM ONLY
+     SAVE EDIT
   ====================================================== */
   const saveEdit = async (id) => {
     setError("");
@@ -347,6 +344,7 @@ export default function ConferenceBookings() {
             const blocked = getBlockedSlotsExcluding(b.id);
 
             const editStartOptions = TIME_OPTIONS.filter((t) => {
+              if (t.value === b.start_time) return true; // allow original
               if (blocked.has(t.value)) return false;
 
               if (b.booking_date === today) {
@@ -356,9 +354,15 @@ export default function ConferenceBookings() {
               return true;
             });
 
-            const editEndOptions = TIME_OPTIONS.filter(
-              (t) => t.value > editStart && !blocked.has(t.value)
-            );
+            const editEndOptions = TIME_OPTIONS.filter((t) => {
+              if (!editStart) return false;
+
+              if (t.value === b.end_time) return true; // allow original
+              if (t.value <= editStart) return false;
+              if (blocked.has(t.value)) return false;
+
+              return true;
+            });
 
             return (
               <div key={b.id} className={styles.booking}>
