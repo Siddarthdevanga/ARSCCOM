@@ -2,21 +2,50 @@ import { sendEmail } from "../utils/mailer.js";
 import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
 /* ======================================================
-   PURE IST FORMATTER (No Timezone Conversion)
-   Input:  2026-01-06 10:42:44
-   Output: 06 Jan 2026, 10:42 AM
+   SAFE IST FORMATTER
+   Supports:
+   1️⃣ 2026-01-06 10:42:44        (already IST)
+   2️⃣ 2026-01-06T11:20:20.000Z   (UTC ISO → convert to IST)
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
+  /* ---------- CASE 1: ISO UTC ---------- */
+  if (value.includes("T")) {
+    try {
+      const [datePart, timePartFull] = value.split("T");
+      const timePart = timePartFull.split(".")[0]; // HH:MM:SS
+
+      let [h, m] = timePart.split(":").map(Number);
+
+      // Add +5:30 → 330 mins
+      let totalMinutes = h * 60 + m + 330;
+      let finalH = Math.floor(totalMinutes / 60) % 24;
+      let finalM = totalMinutes % 60;
+
+      const suffix = finalH >= 12 ? "PM" : "AM";
+      finalH = finalH % 12 || 12;
+
+      const [yyyy, mm, dd] = datePart.split("-");
+
+      const monthNames = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+      ];
+      const monthName = monthNames[parseInt(mm, 10) - 1];
+
+      return `${dd} ${monthName} ${yyyy}, ${finalH}:${String(finalM).padStart(2,"0")} ${suffix}`;
+    } catch {
+      return value;
+    }
+  }
+
+  /* ---------- CASE 2: Already IST (MySQL Format) ---------- */
   const parts = value.split(" ");
   if (parts.length < 2) return value;
 
-  const date = parts[0]; // YYYY-MM-DD
-  const time = parts[1]; // HH:MM:SS
-
-  const [y, mo, d] = date.split("-");
-  let [h, m] = time.split(":");
+  const [y, mo, d] = parts[0].split("-");
+  let [h, m] = parts[1].split(":");
 
   let hour = parseInt(h, 10);
   const suffix = hour >= 12 ? "PM" : "AM";
@@ -26,7 +55,6 @@ const formatIST = (value) => {
     "Jan","Feb","Mar","Apr","May","Jun",
     "Jul","Aug","Sep","Oct","Nov","Dec"
   ];
-
   const monthName = monthNames[parseInt(mo, 10) - 1] || "";
 
   return `${d} ${monthName} ${y}, ${hour}:${m} ${suffix}`;
