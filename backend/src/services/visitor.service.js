@@ -3,12 +3,22 @@ import { uploadToS3 } from "./s3.service.js";
 import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 
 /* ======================================================
-   ABSOLUTE SAFE IST (No Intl, No Browser Influence)
+   ABSOLUTE SAFE IST HANDLING  (NO DOUBLE +5:30 ISSUE)
+   Works correctly whether server = UTC or already IST
 ====================================================== */
 const getISTDate = () => {
   const now = new Date();
-  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
-  return new Date(utc + 5.5 * 60 * 60 * 1000);
+
+  // IST offset = +5:30 (330 minutes)
+  const IST_OFFSET_MIN = 330;
+
+  // Returns minutes local->UTC (IST systems return -330)
+  const currentOffsetMin = -now.getTimezoneOffset();
+
+  // Adjust only the difference
+  const diff = IST_OFFSET_MIN - currentOffsetMin;
+
+  return new Date(now.getTime() + diff * 60 * 1000);
 };
 
 /* YYYYMMDD */
@@ -47,7 +57,7 @@ export const saveVisitor = async (companyId, data, file) => {
 
   if (!name || !phone) throw new Error("Visitor name and phone are required");
 
-  // TRUE IST (Stored same as India time)
+  /* ================= TRUE IST ================= */
   const checkInIST = getISTDate();
   if (isNaN(checkInIST.getTime())) throw new Error("Invalid IST datetime");
 
@@ -83,7 +93,7 @@ export const saveVisitor = async (companyId, data, file) => {
       Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
       idType || null,
       idNumber || null,
-      checkInIST     // ✅ Stored as REAL IST in DB
+      checkInIST // stored as real IST datetime
     ]
   );
 
@@ -101,7 +111,7 @@ export const saveVisitor = async (companyId, data, file) => {
       WHERE company_id = ?
       AND DATE(check_in) = ?
     `,
-    [companyId, istDateString]       // ❌ removed CONVERT_TZ
+    [companyId, istDateString] // no timezone conversion needed since stored IST
   );
 
   const dailyVisitorNumber = countRow.count;
@@ -141,7 +151,8 @@ export const saveVisitor = async (companyId, data, file) => {
           phone,
           email,
           photoUrl,
-          checkIn: istDateString + " " + checkInIST.toTimeString().slice(0, 8)
+          checkIn:
+            istDateString + " " + checkInIST.toTimeString().slice(0, 8)
         }
       });
 
