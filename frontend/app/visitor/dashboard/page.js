@@ -4,6 +4,39 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
+/* ================= SMART IST FORMAT ================= */
+const formatISTTime = (value) => {
+  if (!value) return "-";
+
+  if (typeof value === "string") {
+    const hasTZ =
+      value.includes("Z") ||
+      value.includes("+") ||
+      value.toLowerCase().includes("gmt");
+
+    // If backend already returns IST without timezone — don't shift again
+    if (!hasTZ) {
+      return new Date(value).toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: false,
+        hour12: true
+      });
+    }
+  }
+
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return "-";
+
+  return date.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: false,
+    hour12: true
+  });
+};
+
 export default function VisitorDashboard() {
   const router = useRouter();
 
@@ -14,7 +47,6 @@ export default function VisitorDashboard() {
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -28,7 +60,6 @@ export default function VisitorDashboard() {
     loadDashboard(token);
   }, [router]);
 
-  /* ================= FETCH DASHBOARD ================= */
   const loadDashboard = async (token) => {
     try {
       const res = await fetch(
@@ -55,7 +86,6 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ================= CHECKOUT ================= */
   const handleCheckout = async (visitorCode) => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -84,7 +114,6 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ================= LOGOUT ================= */
   const handleLogout = () => {
     localStorage.clear();
     router.push("/auth/login");
@@ -94,13 +123,11 @@ export default function VisitorDashboard() {
 
   return (
     <div className={styles.container}>
-
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.logoText}>{company.name}</div>
 
         <div className={styles.rightHeader}>
-          {/* ✅ FIXED: use logo_url with fallback */}
           <img
             src={company.logo_url || "/logo.png"}
             alt="Company Logo"
@@ -113,7 +140,7 @@ export default function VisitorDashboard() {
         </div>
       </header>
 
-      {/* ================= TITLE + ACTION ================= */}
+      {/* TITLE */}
       <div className={styles.titleRow}>
         <h1 className={styles.pageTitle}>Visitor Dashboard</h1>
 
@@ -125,7 +152,7 @@ export default function VisitorDashboard() {
         </button>
       </div>
 
-      {/* ================= KPI CARDS ================= */}
+      {/* STATS */}
       <section className={styles.topStats}>
         <div className={styles.bigCard}>
           <h4>Visitors Today</h4>
@@ -143,10 +170,9 @@ export default function VisitorDashboard() {
         </div>
       </section>
 
-      {/* ================= TABLES ================= */}
+      {/* TABLES */}
       <section className={styles.tablesRow}>
-
-        {/* ACTIVE VISITORS */}
+        {/* ACTIVE */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
 
@@ -169,7 +195,7 @@ export default function VisitorDashboard() {
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{new Date(v.check_in).toLocaleTimeString()}</td>
+                    <td>{formatISTTime(v.check_in)}</td>
                     <td>
                       <button
                         className={styles.checkoutBtn}
@@ -188,7 +214,7 @@ export default function VisitorDashboard() {
           )}
         </div>
 
-        {/* CHECKED-OUT VISITORS */}
+        {/* CHECKED OUT */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
 
@@ -210,15 +236,15 @@ export default function VisitorDashboard() {
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{new Date(v.check_out).toLocaleTimeString()}</td>
+                    <td>{formatISTTime(v.check_out)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
         </div>
-
       </section>
     </div>
   );
 }
+
