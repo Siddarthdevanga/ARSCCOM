@@ -6,10 +6,6 @@ import styles from "./style.module.css";
 
 /* ======================================================
    SAFE DATE FORMATTER
-   Works for:
-   2026-01-06
-   2026-01-06 00:00:00
-   2026-01-06T00:00:00.000Z
 ====================================================== */
 const formatNiceDate = (value) => {
   if (!value) return "-";
@@ -20,9 +16,7 @@ const formatNiceDate = (value) => {
     if (str.includes("T")) str = str.split("T")[0];
     if (str.includes(" ")) str = str.split(" ")[0];
 
-    // str = YYYY-MM-DD
     const [y, m, d] = str.split("-");
-
     return `${d}-${m}-${y}`;
   } catch {
     return value;
@@ -31,7 +25,6 @@ const formatNiceDate = (value) => {
 
 /* ======================================================
    SAFE TIME FORMATTER
-   Converts →  16:30:00 → 4:30 PM
 ====================================================== */
 const formatNiceTime = (value) => {
   if (!value) return "-";
@@ -44,7 +37,6 @@ const formatNiceTime = (value) => {
 
     const [hRaw, m] = str.split(":");
     let h = parseInt(hRaw, 10);
-
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
@@ -207,32 +199,39 @@ export default function VisitorDashboard() {
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>Check-in</th>
+                  <th>Check-in Date</th>
+                  <th>Time</th>
                   <th>Action</th>
                 </tr>
               </thead>
 
               <tbody>
-                {activeVisitors.map((v) => (
-                  <tr key={v.visitor_code}>
-                    <td>{v.visitor_code}</td>
-                    <td>{v.name}</td>
-                    <td>{v.phone}</td>
-                    <td>{formatNiceTime(v.check_in || v.checkIn)}</td>
+                {activeVisitors.map((v) => {
+                  const checkIn = v.check_in || v.checkIn;
 
-                    <td>
-                      <button
-                        className={styles.checkoutBtn}
-                        disabled={checkingOut === v.visitor_code}
-                        onClick={() => handleCheckout(v.visitor_code)}
-                      >
-                        {checkingOut === v.visitor_code
-                          ? "Checking out..."
-                          : "Checkout"}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                  return (
+                    <tr key={v.visitor_code}>
+                      <td>{v.visitor_code}</td>
+                      <td>{v.name}</td>
+                      <td>{v.phone}</td>
+
+                      <td>{formatNiceDate(checkIn)}</td>
+                      <td>{formatNiceTime(checkIn)}</td>
+
+                      <td>
+                        <button
+                          className={styles.checkoutBtn}
+                          disabled={checkingOut === v.visitor_code}
+                          onClick={() => handleCheckout(v.visitor_code)}
+                        >
+                          {checkingOut === v.visitor_code
+                            ? "Checking out..."
+                            : "Checkout"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -251,19 +250,26 @@ export default function VisitorDashboard() {
                   <th>Code</th>
                   <th>Name</th>
                   <th>Phone</th>
-                  <th>Check-out</th>
+                  <th>Check-out Date</th>
+                  <th>Time</th>
                 </tr>
               </thead>
 
               <tbody>
-                {checkedOutVisitors.map((v) => (
-                  <tr key={v.visitor_code}>
-                    <td>{v.visitor_code}</td>
-                    <td>{v.name}</td>
-                    <td>{v.phone}</td>
-                    <td>{formatNiceTime(v.check_out || v.checkOut)}</td>
-                  </tr>
-                ))}
+                {checkedOutVisitors.map((v) => {
+                  const out = v.check_out || v.checkOut;
+
+                  return (
+                    <tr key={v.visitor_code}>
+                      <td>{v.visitor_code}</td>
+                      <td>{v.name}</td>
+                      <td>{v.phone}</td>
+
+                      <td>{formatNiceDate(out)}</td>
+                      <td>{formatNiceTime(out)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           )}
@@ -272,3 +278,4 @@ export default function VisitorDashboard() {
     </div>
   );
 }
+
