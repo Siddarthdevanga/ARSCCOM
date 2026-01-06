@@ -5,9 +5,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ================= PURE SAFE IST DISPLAY =================
+   ✔ MySQL UTC → Converts to IST
+   ✔ ISO with timezone → Correct
+   ✔ ISO without timezone → treat as UTC
    ✔ No double +5:30
-   ✔ Works for ISO / MySQL / Date
-   ✔ Immune to browser timezone
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
@@ -20,7 +21,7 @@ const formatIST = (value) => {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true,
+      hour12: true
     });
 
   try {
@@ -31,8 +32,8 @@ const formatIST = (value) => {
 
     /* =====================================================
        ISO WITH timezone
-       2026-01-06T11:20:20.000Z
-       2026-01-06T16:00:00+05:30
+       e.g 2026-01-06T11:20:20.000Z
+           2026-01-06T16:00:00+05:30
     ====================================================== */
     if (
       value.includes("T") &&
@@ -43,28 +44,23 @@ const formatIST = (value) => {
     }
 
     /* =====================================================
-       ISO WITHOUT timezone  (Treat as IST safely)
-       2026-01-06T10:42:44
+       ISO WITHOUT timezone  → treat as UTC
+       e.g 2026-01-06T10:42:44
     ====================================================== */
     if (value.includes("T")) {
-      const [datePart, timePart] = value.split("T");
-      const [hh, mm] = timePart.split(":");
-
-      const temp = new Date(`${datePart}T${hh}:${mm}:00+05:30`);
-      return isNaN(temp) ? "-" : format(temp);
+      const d = new Date(value + "Z");
+      return isNaN(d) ? "-" : format(d);
     }
 
     /* =====================================================
-       MYSQL → Already IST
-       2026-01-06 10:42:44
+       MYSQL DATETIME (UTC in DB)
+       e.g 2026-01-06 13:09:34
+       → Interpret as UTC and convert to IST
     ====================================================== */
     if (value.includes(" ")) {
       const [datePart, timePart] = value.split(" ");
-      const [y, m, d] = datePart.split("-");
-      const [hh, mm] = timePart.split(":");
-
-      const temp = new Date(`${y}-${m}-${d}T${hh}:${mm}:00+05:30`);
-      return isNaN(temp) ? "-" : format(temp);
+      const d = new Date(datePart + "T" + timePart + "Z");
+      return isNaN(d) ? "-" : format(d);
     }
 
     return "-";
@@ -72,7 +68,6 @@ const formatIST = (value) => {
     return "-";
   }
 };
-
 
 /* ======================================================
    INNER COMPONENT
