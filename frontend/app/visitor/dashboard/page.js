@@ -5,49 +5,59 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   UNIVERSAL IST FORMATTER (Bulletproof)
+   UNIVERSAL SAFE IST FORMATTER
+   → Never adds extra +5:30
+   → Never crashes
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
-  // ---------- CASE 1: ISO STRING (with or without Z) ----------
-  if (typeof value === "string" && value.includes("T")) {
-    try {
-      const date = new Date(value);
-      if (isNaN(date)) return "-";
-
-      return date.toLocaleString("en-IN", {
+  try {
+    // -------- If value is already a Date --------
+    if (value instanceof Date) {
+      return value.toLocaleString("en-IN", {
         timeZone: "Asia/Kolkata",
         hour: "2-digit",
         minute: "2-digit",
         hour12: true
       });
-    } catch {
-      return "-";
     }
-  }
 
-  // ---------- CASE 2: MySQL IST "YYYY-MM-DD HH:MM:SS" ----------
-  if (typeof value === "string" && value.includes(" ")) {
-    try {
+    // -------- Convert safely to string --------
+    value = String(value);
+
+    /* ---------- CASE 1: ISO Timestamp ---------- */
+    if (value.includes("T")) {
+      const d = new Date(value);
+      if (isNaN(d)) return "-";
+
+      return d.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+    }
+
+    /* ---------- CASE 2: MYSQL Format ---------- */
+    if (value.includes(" ")) {
       const time = value.split(" ")[1]; // HH:MM:SS
       if (!time) return "-";
 
       let [h, m] = time.split(":");
       h = parseInt(h, 10);
-
       if (isNaN(h)) return "-";
 
       const suffix = h >= 12 ? "PM" : "AM";
       h = h % 12 || 12;
 
       return `${h}:${m} ${suffix}`;
-    } catch {
-      return "-";
     }
-  }
 
-  return "-";
+    return "-";
+  } catch {
+    return "-";
+  }
 };
 
 export default function VisitorDashboard() {
@@ -271,5 +281,3 @@ export default function VisitorDashboard() {
     </div>
   );
 }
-
-
