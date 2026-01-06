@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   UNIVERSAL SAFE IST FORMATTER
-   → No double +5:30
-   → Handles ISO / MySQL / Date
-   → Immune to browser timezone
+   DASHBOARD SAFE IST FORMATTER
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
@@ -22,17 +19,14 @@ const formatISTTime = (value) => {
     });
 
   try {
-    /* ----- Date object ----- */
     if (value instanceof Date && !isNaN(value)) return format(value);
 
-    /* ----- Normalize to string ----- */
-    value = String(value);
+    if (typeof value !== "string") {
+      const d = new Date(value);
+      return isNaN(d) ? "-" : format(d);
+    }
 
-    /* ======================================================
-       ISO WITH timezone
-       2026-01-06T11:20:20.000Z
-       2026-01-06T16:00:00+05:30
-    ======================================================= */
+    // ISO with timezone
     if (
       value.includes("T") &&
       (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
@@ -41,30 +35,25 @@ const formatISTTime = (value) => {
       return isNaN(d) ? "-" : format(d);
     }
 
-    /* ======================================================
-       ISO WITHOUT timezone (treat as IST)
-       2026-01-06T10:42:44
-    ======================================================= */
+    // ISO without timezone → treat as UTC
     if (value.includes("T")) {
-      const clean = value.replace("T", " ").split(".")[0];
-      const d = new Date(clean);
+      const d = new Date(value + "Z");
       return isNaN(d) ? "-" : format(d);
     }
 
-    /* ======================================================
-       MYSQL FORMAT (Already IST)
-       2026-01-06 10:42:44
-       → Convert to explicit IST date
-    ======================================================= */
+    // MySQL "YYYY-MM-DD HH:MM:SS"
     if (value.includes(" ")) {
-      const [datePart, timePart] = value.split(" ");
-      if (!datePart || !timePart) return "-";
+      const time = value.split(" ")[1];
+      if (!time) return "-";
 
-      const [y, m, d] = datePart.split("-");
-      const [hh, mm] = timePart.split(":");
+      let [h, m] = time.split(":");
+      h = parseInt(h, 10);
+      if (isNaN(h)) return "-";
 
-      const istDate = new Date(`${y}-${m}-${d}T${hh}:${mm}:00+05:30`);
-      return isNaN(istDate) ? "-" : format(istDate);
+      const suffix = h >= 12 ? "PM" : "AM";
+      h = h % 12 || 12;
+
+      return `${h}:${m} ${suffix}`;
     }
 
     return "-";
@@ -72,7 +61,6 @@ const formatISTTime = (value) => {
     return "-";
   }
 };
-
 
 
 export default function VisitorDashboard() {
