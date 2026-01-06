@@ -7,6 +7,7 @@ import styles from "./style.module.css";
 /* ================= PURE SAFE IST DISPLAY =================
    ✔ No double +5:30
    ✔ Works for ISO / MySQL / Date
+   ✔ Immune to browser timezone
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
@@ -42,13 +43,15 @@ const formatIST = (value) => {
     }
 
     /* =====================================================
-       ISO WITHOUT timezone → Treat as already IST
+       ISO WITHOUT timezone  (Treat as IST safely)
        2026-01-06T10:42:44
     ====================================================== */
     if (value.includes("T")) {
-      const clean = value.replace("T", " ").split(".")[0];
-      const d = new Date(clean);
-      return isNaN(d) ? "-" : format(d);
+      const [datePart, timePart] = value.split("T");
+      const [hh, mm] = timePart.split(":");
+
+      const temp = new Date(`${datePart}T${hh}:${mm}:00+05:30`);
+      return isNaN(temp) ? "-" : format(temp);
     }
 
     /* =====================================================
@@ -57,15 +60,10 @@ const formatIST = (value) => {
     ====================================================== */
     if (value.includes(" ")) {
       const [datePart, timePart] = value.split(" ");
-      if (!datePart || !timePart) return "-";
-
       const [y, m, d] = datePart.split("-");
       const [hh, mm] = timePart.split(":");
 
-      const temp = new Date(
-        `${y}-${m}-${d}T${hh}:${mm}:00+05:30`
-      );
-
+      const temp = new Date(`${y}-${m}-${d}T${hh}:${mm}:00+05:30`);
       return isNaN(temp) ? "-" : format(temp);
     }
 
@@ -74,6 +72,7 @@ const formatIST = (value) => {
     return "-";
   }
 };
+
 
 /* ======================================================
    INNER COMPONENT
