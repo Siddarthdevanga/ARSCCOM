@@ -4,11 +4,13 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
-/* ================= PURE SAFE IST DISPLAY =================
-   ✔ MySQL UTC → Converts to IST
-   ✔ ISO with timezone → Correct
-   ✔ ISO without timezone → treat as UTC
-   ✔ No double +5:30
+/* ======================================================
+   PURE SAFE IST DISPLAY
+   ✔ MySQL UTC   → IST
+   ✔ ISO + TZ    → Correct
+   ✔ ISO no TZ   → Treat as UTC
+   ✔ Prevents double +5:30
+   ✔ Handles seconds + ms
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
@@ -25,41 +27,38 @@ const formatIST = (value) => {
     });
 
   try {
-    /* -------- Date object -------- */
+    // -------- Date object ----------
     if (value instanceof Date && !isNaN(value)) return format(value);
 
-    value = String(value);
+    let str = String(value).trim();
+    if (!str) return "-";
 
     /* =====================================================
-       ISO WITH timezone
-       e.g 2026-01-06T11:20:20.000Z
-           2026-01-06T16:00:00+05:30
+        ISO WITH timezone
+        2026-01-06T11:20:20.000Z
+        2026-01-06T16:00:00+05:30
     ====================================================== */
-    if (
-      value.includes("T") &&
-      (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
-    ) {
-      const d = new Date(value);
+    if (str.includes("T") && (str.endsWith("Z") || /[+-]\d\d:?(\d\d)?$/.test(str))) {
+      const d = new Date(str);
       return isNaN(d) ? "-" : format(d);
     }
 
     /* =====================================================
-       ISO WITHOUT timezone  → treat as UTC
-       e.g 2026-01-06T10:42:44
+        ISO WITHOUT timezone  (Treat as UTC)
+        2026-01-06T10:42:44
     ====================================================== */
-    if (value.includes("T")) {
-      const d = new Date(value + "Z");
+    if (str.includes("T")) {
+      const d = new Date(str + "Z");
       return isNaN(d) ? "-" : format(d);
     }
 
     /* =====================================================
-       MYSQL DATETIME (UTC in DB)
-       e.g 2026-01-06 13:09:34
-       → Interpret as UTC and convert to IST
+        MYSQL DATETIME (Stored UTC in DB)
+        2026-01-06 13:09:34
+        → Interpret as UTC and convert to IST
     ====================================================== */
-    if (value.includes(" ")) {
-      const [datePart, timePart] = value.split(" ");
-      const d = new Date(datePart + "T" + timePart + "Z");
+    if (str.includes(" ")) {
+      const d = new Date(str.replace(" ", "T") + "Z");
       return isNaN(d) ? "-" : format(d);
     }
 
