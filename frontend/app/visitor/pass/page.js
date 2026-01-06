@@ -5,40 +5,71 @@ import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ================= PURE SAFE IST DISPLAY =================
-   Handles BOTH:
-   ✔ 2026-01-06 10:42:44  (already IST)
-   ✔ 2026-01-06T11:20:20.000Z (UTC → IST without double shift)
+   ✔ No double +5:30
+   ✔ Works for ISO / MySQL / Date
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  try {
-    // If already Date object
-    if (value instanceof Date) {
-      return value.toLocaleString("en-IN", {
-        timeZone: "Asia/Kolkata",
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true
-      });
-    }
-
-    // Convert safely
-    const date = new Date(value);
-    if (isNaN(date)) return "-";
-
-    return date.toLocaleString("en-IN", {
+  const format = (d) =>
+    d.toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       day: "2-digit",
       month: "short",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true
+      hour12: true,
     });
+
+  try {
+    /* -------- Date object -------- */
+    if (value instanceof Date && !isNaN(value)) return format(value);
+
+    value = String(value);
+
+    /* =====================================================
+       ISO WITH timezone
+       2026-01-06T11:20:20.000Z
+       2026-01-06T16:00:00+05:30
+    ====================================================== */
+    if (
+      value.includes("T") &&
+      (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
+    ) {
+      const d = new Date(value);
+      return isNaN(d) ? "-" : format(d);
+    }
+
+    /* =====================================================
+       ISO WITHOUT timezone → Treat as already IST
+       2026-01-06T10:42:44
+    ====================================================== */
+    if (value.includes("T")) {
+      const clean = value.replace("T", " ").split(".")[0];
+      const d = new Date(clean);
+      return isNaN(d) ? "-" : format(d);
+    }
+
+    /* =====================================================
+       MYSQL → Already IST
+       2026-01-06 10:42:44
+    ====================================================== */
+    if (value.includes(" ")) {
+      const [datePart, timePart] = value.split(" ");
+      if (!datePart || !timePart) return "-";
+
+      const [y, m, d] = datePart.split("-");
+      const [hh, mm] = timePart.split(":");
+
+      const temp = new Date(
+        `${y}-${m}-${d}T${hh}:${mm}:00+05:30`
+      );
+
+      return isNaN(temp) ? "-" : format(temp);
+    }
+
+    return "-";
   } catch {
     return "-";
   }
