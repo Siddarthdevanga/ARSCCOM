@@ -2,128 +2,150 @@ import { sendEmail } from "../utils/mailer.js";
 import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
 /* ======================================================
-   SAFE IST FORMATTER
+   SUPER SAFE IST FORMATTER
    Supports:
-   1️⃣ 2026-01-06 10:42:44        (already IST)
-   2️⃣ 2026-01-06T11:20:20.000Z   (UTC ISO → convert to IST)
+   ✔ 2026-01-06 10:42:44        (Already IST)
+   ✔ 2026-01-06T11:20:20.000Z   (UTC ISO)
+   ✔ Date object
+   ✔ Prevents crashes
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  /* ---------- CASE 1: ISO UTC ---------- */
+  // If Date object
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return value.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
+  }
+
+  // If not string, try convert
+  if (typeof value !== "string") {
+    try {
+      const d = new Date(value);
+      if (!isNaN(d)) {
+        return d.toLocaleString("en-IN", {
+          timeZone: "Asia/Kolkata",
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
+    } catch {}
+    return "-";
+  }
+
+  // If ISO (contains T)
   if (value.includes("T")) {
     try {
-      const [datePart, timePartFull] = value.split("T");
-      const timePart = timePartFull.split(".")[0]; // HH:MM:SS
+      const d = new Date(value);
+      if (isNaN(d)) return "-";
 
-      let [h, m] = timePart.split(":").map(Number);
-
-      // Add +5:30 → 330 mins
-      let totalMinutes = h * 60 + m + 330;
-      let finalH = Math.floor(totalMinutes / 60) % 24;
-      let finalM = totalMinutes % 60;
-
-      const suffix = finalH >= 12 ? "PM" : "AM";
-      finalH = finalH % 12 || 12;
-
-      const [yyyy, mm, dd] = datePart.split("-");
-
-      const monthNames = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-      ];
-      const monthName = monthNames[parseInt(mm, 10) - 1];
-
-      return `${dd} ${monthName} ${yyyy}, ${finalH}:${String(finalM).padStart(
-        2,
-        "0"
-      )} ${suffix}`;
+      return d.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
     } catch {
-      return value;
+      return "-";
     }
   }
 
-  /* ---------- CASE 2: Already IST (MySQL Format) ---------- */
-  const parts = value.split(" ");
-  if (parts.length < 2) return value;
+  // MySQL Format YYYY-MM-DD HH:MM:SS
+  try {
+    const [date, time] = value.split(" ");
+    if (!date || !time) return value;
 
-  const [y, mo, d] = parts[0].split("-");
-  let [h, m] = parts[1].split(":");
+    const [y, mo, d] = date.split("-");
+    let [h, m] = time.split(":");
 
-  let hour = parseInt(h, 10);
-  const suffix = hour >= 12 ? "PM" : "AM";
-  hour = hour % 12 || 12;
+    let hour = parseInt(h, 10);
+    const suffix = hour >= 12 ? "PM" : "AM";
+    hour = hour % 12 || 12;
 
-  const monthNames = [
-    "Jan","Feb","Mar","Apr","May","Jun",
-    "Jul","Aug","Sep","Oct","Nov","Dec"
-  ];
-  const monthName = monthNames[parseInt(mo, 10) - 1] || "";
+    const monthNames = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
 
-  return `${d} ${monthName} ${y}, ${hour}:${m} ${suffix}`;
+    return `${d} ${monthNames[mo - 1]} ${y}, ${hour}:${m} ${suffix}`;
+  } catch {
+    return value;
+  }
 };
 
 /* ======================================================
-   EMAIL FOOTER (Clean Corporate Footer)
+   EMAIL FOOTER — FINAL APPROVED STYLE
 ====================================================== */
 export const emailFooter = (company = {}) => {
   const companyName = company?.name || "Promeet";
   const logo = company?.logo_url || company?.logo || null;
 
   return `
-    <br/>
+<br/>
 
-    <div style="
-      margin-top:18px;
-      padding-top:14px;
-      border-top:1px solid #ddd;
-      font-family:Arial, Helvetica, sans-serif;
-    ">
+<div style="
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid #ddd;
+  font-family:Arial, Helvetica, sans-serif;
+">
 
-      <!-- BRAND -->
-      <div style="
-        display:flex;
-        align-items:center;
-        gap:12px;
-        margin-bottom:6px;
-      ">
-        
-        ${
-          logo
-            ? `<img 
-                src="${logo}" 
-                alt="${companyName} Logo"
-                height="54"
-                style="
-                  border-radius:10px;
-                  border:1px solid #eee;
-                  background:#fff;
-                  padding:6px;
-                "
-              />`
-            : ""
-        }
+  <div style="
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin-bottom:6px;
+  ">
 
-        <strong style="font-size:16px; color:#222;">
-          ${companyName}
-        </strong>
-      </div>
+    ${
+      logo
+        ? `<img 
+            src="${logo}" 
+            alt="${companyName} Logo"
+            height="54"
+            style="
+              border-radius:10px;
+              border:1px solid #eee;
+              background:#fff;
+              padding:6px;
+            "
+          />`
+        : ""
+    }
 
-      <!-- DISCLAIMER -->
-      <p style="
-        font-size:13px;
-        color:#666;
-        line-height:1.6;
-        margin:0;
-      ">
-        This email was automatically generated by the Promeet Visitor Management Platform.
-        If you did not perform this action, please contact your administrator immediately.
-      </p>
+    <strong style="font-size:16px; color:#222;">
+      ${companyName}
+    </strong>
+  </div>
 
-    </div>
-  `;
+  <p style="
+    font-size:13px;
+    color:#666;
+    line-height:1.6;
+    margin:0;
+  ">
+    This email was automatically generated by the Promeet Visitor Management Platform.
+    If you did not perform this action,
+    please contact your administrator immediately.
+  </p>
+
+</div>
+`;
 };
-
 
 /* ======================================================
    SEND VISITOR PASS EMAIL
@@ -139,32 +161,36 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
     console.error("VISITOR PASS IMAGE ERROR:", err.message);
   }
 
-  await sendEmail({
-    to: visitor.email,
-    subject: `Your Visitor Pass – ${company.name || "Promeet"}`,
-    html: `
-      <p>Hello <b>${visitor.name || "Visitor"}</b>,</p>
+  try {
+    await sendEmail({
+      to: visitor.email,
+      subject: `Your Visitor Pass – ${company.name || "Promeet"}`,
+      html: `
+        <p>Hello <b>${visitor.name || "Visitor"}</b>,</p>
 
-      <p>Your visitor pass has been generated successfully.</p>
+        <p>Your visitor pass has been generated successfully.</p>
 
-      <p>
-        <b>Visitor ID:</b> ${visitor.visitorCode || "-"}<br/>
-        <b>Company:</b> ${company.name || "Promeet"}<br/>
-        <b>Check-in:</b> ${formatIST(visitor.checkIn)} (IST)
-      </p>
+        <p>
+          <b>Visitor ID:</b> ${visitor.visitorCode || "-"}<br/>
+          <b>Company:</b> ${company.name || "Promeet"}<br/>
+          <b>Check-in:</b> ${formatIST(visitor.checkIn)} (IST)
+        </p>
 
-      <p>Please show the attached visitor pass at the reception.</p>
+        <p>Please show the attached visitor pass at the reception.</p>
 
-      ${emailFooter(company)}
-    `,
-    attachments: imageBuffer
-      ? [
-          {
-            filename: "visitor-pass.png",
-            content: imageBuffer,
-            contentType: "image/png"
-          }
-        ]
-      : []
-  });
+        ${emailFooter(company)}
+      `,
+      attachments: imageBuffer
+        ? [
+            {
+              filename: "visitor-pass.png",
+              content: imageBuffer,
+              contentType: "image/png"
+            }
+          ]
+        : []
+    });
+  } catch (err) {
+    console.error("VISITOR MAIL ERROR:", err.message);
+  }
 };
