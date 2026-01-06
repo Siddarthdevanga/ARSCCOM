@@ -19,7 +19,6 @@ const formatISTTime = (value) => {
       return new Date(value).toLocaleTimeString("en-IN", {
         hour: "2-digit",
         minute: "2-digit",
-        second: false,
         hour12: true
       });
     }
@@ -32,7 +31,6 @@ const formatISTTime = (value) => {
     timeZone: "Asia/Kolkata",
     hour: "2-digit",
     minute: "2-digit",
-    second: false,
     hour12: true
   });
 };
@@ -247,4 +245,5 @@ export default function VisitorDashboard() {
     </div>
   );
 }
+
 
