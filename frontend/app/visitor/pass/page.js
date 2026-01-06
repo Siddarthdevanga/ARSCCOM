@@ -5,61 +5,68 @@ import { useSearchParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   PURE SAFE IST DISPLAY
-   ✔ MySQL UTC   → IST
-   ✔ ISO + TZ    → Correct
-   ✔ ISO no TZ   → Treat as UTC
-   ✔ Prevents double +5:30
-   ✔ Handles seconds + ms
+   PURE IST DISPLAY (NO TIMEZONE CONVERSION)
+   ✔ MySQL datetime  -> Show as IST
+   ✔ ISO with TZ     -> Convert properly
+   ✔ ISO without TZ  -> Treat as already IST
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  const format = (d) =>
-    d.toLocaleString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
-
   try {
-    // -------- Date object ----------
-    if (value instanceof Date && !isNaN(value)) return format(value);
-
-    let str = String(value).trim();
+    const str = String(value).trim();
     if (!str) return "-";
 
-    /* =====================================================
-        ISO WITH timezone
-        2026-01-06T11:20:20.000Z
-        2026-01-06T16:00:00+05:30
-    ====================================================== */
+    /* ========= MySQL "YYYY-MM-DD HH:MM:SS" ========= */
+    if (str.includes(" ")) {
+      const [date, time] = str.split(" "); // already IST
+
+      const [y, mo, d] = date.split("-");
+      let [h, m] = time.split(":");
+      h = parseInt(h, 10);
+
+      const months = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+      ];
+
+      const suffix = h >= 12 ? "PM" : "AM";
+      const hh = (h % 12) || 12;
+
+      return `${d.padStart(2,"0")} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
+    }
+
+    /* ========= ISO WITH timezone ========= */
     if (str.includes("T") && (str.endsWith("Z") || /[+-]\d\d:?(\d\d)?$/.test(str))) {
       const d = new Date(str);
-      return isNaN(d) ? "-" : format(d);
+      return d.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
     }
 
-    /* =====================================================
-        ISO WITHOUT timezone  (Treat as UTC)
-        2026-01-06T10:42:44
-    ====================================================== */
+    /* ========= ISO WITHOUT timezone (treat as IST) ========= */
     if (str.includes("T")) {
-      const d = new Date(str + "Z");
-      return isNaN(d) ? "-" : format(d);
-    }
+      const [date, time] = str.split("T");
 
-    /* =====================================================
-        MYSQL DATETIME (Stored UTC in DB)
-        2026-01-06 13:09:34
-        → Interpret as UTC and convert to IST
-    ====================================================== */
-    if (str.includes(" ")) {
-      const d = new Date(str.replace(" ", "T") + "Z");
-      return isNaN(d) ? "-" : format(d);
+      const [y, mo, d] = date.split("-");
+      const [hRaw, m] = time.split(":");
+      const h = parseInt(hRaw, 10);
+
+      const months = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+      ];
+
+      const suffix = h >= 12 ? "PM" : "AM";
+      const hh = (h % 12) || 12;
+
+      return `${d} ${months[mo-1]} ${y}, ${String(hh).padStart(2,"0")}:${m} ${suffix}`;
     }
 
     return "-";
@@ -67,6 +74,7 @@ const formatIST = (value) => {
     return "-";
   }
 };
+
 
 /* ======================================================
    INNER COMPONENT
