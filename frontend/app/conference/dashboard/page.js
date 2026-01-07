@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= DATE ================= */
+/* ---------------- DATE ---------------- */
 const formatNiceDate = (value) => {
   if (!value) return "-";
   try {
@@ -24,7 +24,7 @@ const formatNiceDate = (value) => {
   }
 };
 
-/* ================= TIME ================= */
+/* ---------------- TIME ---------------- */
 const formatNiceTime = (value) => {
   if (!value) return "-";
   try {
@@ -32,11 +32,8 @@ const formatNiceTime = (value) => {
     if (str.includes("T")) str = str.split("T")[1];
     if (str.includes(" ")) str = str.split(" ")[1];
 
-    const parts = str.split(":");
-    if (parts.length < 2) return "-";
-
-    let h = parseInt(parts[0], 10);
-    const m = parts[1];
+    const [hRaw, m] = str.split(":");
+    let h = parseInt(hRaw, 10);
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
@@ -78,7 +75,7 @@ export default function ConferenceDashboard() {
     filterDay === "tomorrow" ? tomorrow :
     today;
 
-  /* ================= LOAD DASHBOARD ================= */
+  /* -------- LOAD DASHBOARD -------- */
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
@@ -110,7 +107,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE ROOM NAME (FINAL FIX) ================= */
+  /* -------- RENAME ROOM (FINAL & SAFE) -------- */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
@@ -123,7 +120,7 @@ export default function ConferenceDashboard() {
 
     try {
       await apiFetch(`/api/conference/rooms/${roomId}/rename`, {
-        method: "POST",              // <-- FINAL FIX
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room_name: newName }),
       });
@@ -136,7 +133,7 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= FILTER BOOKINGS ================= */
+  /* -------- FILTER BOOKINGS -------- */
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const date = b.booking_date?.includes("T")
@@ -147,7 +144,7 @@ export default function ConferenceDashboard() {
     });
   }, [bookings, selectedDate]);
 
-  /* ================= DEPARTMENT STATS ================= */
+  /* -------- DEPARTMENT STATS -------- */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -166,10 +163,7 @@ export default function ConferenceDashboard() {
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div
-            className={styles.leftMenuTrigger}
-            onClick={() => setSidePanelOpen(true)}
-          >
+          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
             <span></span><span></span><span></span>
           </div>
 
@@ -359,4 +353,3 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
-
