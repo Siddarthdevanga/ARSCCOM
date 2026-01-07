@@ -4,6 +4,14 @@ import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
+console.log("REQUEST DEBUG >>>", {
+  method: req.method,
+  url: req.originalUrl,
+  headers: req.headers["content-type"],
+  body: req.body
+});
+
+
 /* ================= REQUIRED (Fixes Failed Rename) ================= */
 router.use(express.json());
 
