@@ -4,45 +4,49 @@ import { db } from "../config/db.js";
 const router = express.Router();
 
 /* =====================================================
+   ULTRA SAFE SMART PARSER
+===================================================== */
+const smartParse = (val) => {
+  if (!val) return null;
+
+  // Already JSON
+  if (typeof val === "object") return val;
+
+  let str = String(val).trim();
+
+  // Remove wrapping quotes if present
+  if (
+    (str.startsWith("'") && str.endsWith("'")) ||
+    (str.startsWith('"') && str.endsWith('"'))
+  ) {
+    str = str.substring(1, str.length - 1);
+  }
+
+  // Fix escaped JSON
+  str = str.replace(/\\"/g, '"');
+
+  try {
+    return JSON.parse(str);
+  } catch (e) {
+    console.log("⚠ smartParse failed:", e?.message, "→", str);
+    return null;
+  }
+};
+
+/* =====================================================
    ZOHO PAYMENT PUSH WEBHOOK
-   URL: POST /api/payment/zoho/push
 ===================================================== */
 router.post("/push", async (req, res) => {
   try {
     console.log("📩 Incoming Zoho Push Payload:", req.body);
 
-    let event_type = (req.body?.event_type || "").toLowerCase();
-    let payment = req.body?.payment;
-    let customer = req.body?.customer;
+    const event_type = (req.body?.event_type || "").toLowerCase();
+
+    let payment = smartParse(req.body?.payment);
+    let customer = smartParse(req.body?.customer);
 
     /* ======================================================
-       SMART PARSE (handles JSON + JSON string + quoted JSON)
-    ====================================================== */
-    const smartParse = (val) => {
-      if (!val) return null;
-      if (typeof val === "object") return val;
-
-      let clean = String(val).trim();
-
-      if (
-        (clean.startsWith("'") && clean.endsWith("'")) ||
-        (clean.startsWith('"') && clean.endsWith('"'))
-      ) {
-        clean = clean.substring(1, clean.length - 1);
-      }
-
-      try {
-        return JSON.parse(clean);
-      } catch {
-        return null;
-      }
-    };
-
-    payment = smartParse(payment);
-    customer = smartParse(customer);
-
-    /* ======================================================
-       GUARANTEED CUSTOMER ID EXTRACTION
+       EXTRACT CUSTOMER ID (Guaranteed)
     ====================================================== */
     let customerId =
       customer?.customer_id ||
@@ -50,26 +54,23 @@ router.post("/push", async (req, res) => {
       req.body?.customerId ||
       null;
 
-    /**
-     * If STILL null → Extract via REGEX (works 100%)
-     */
     if (!customerId) {
       const raw = JSON.stringify(req.body);
 
-      // Primary regex
-      let match = raw.match(/customer_id["']?\s*[:=]\s*["']?(\d{6,})/);
+      // Strict Zoho pattern
+      let match = raw.match(/customer_id["']?\s*[:=]\s*["']?(\d{10,})/);
+      if (match) customerId = match[1];
 
-      if (match) {
-        customerId = match[1];
-      } else {
-        // Secondary desperation regex 😄
+      // Last fallback
+      if (!customerId) {
         match = raw.match(/(\d{15,})/);
-        if (match) {
-          customerId = match[1];
-        }
+        if (match) customerId = match[1];
       }
     }
 
+    /* ======================================================
+       PAYMENT STATUS
+    ====================================================== */
     const paymentStatus =
       payment?.payment_status?.toLowerCase() ||
       req.body?.payment_status?.toLowerCase() ||
@@ -80,7 +81,7 @@ router.post("/push", async (req, res) => {
     console.log("📢 Event:", event_type);
 
     if (!customerId) {
-      console.log("❌ Customer ID STILL missing -> THIS SHOULD NEVER HAPPEN NOW");
+      console.log("❌ Customer ID STILL missing — investigate payload!");
       return res.status(400).json({ success: false });
     }
 
@@ -93,7 +94,7 @@ router.post("/push", async (req, res) => {
     );
 
     if (!company) {
-      console.log("❌ Company not found");
+      console.log("❌ Company not found → ignoring");
       return res.json({ success: true });
     }
 
@@ -101,7 +102,7 @@ router.post("/push", async (req, res) => {
     console.log("🏷 PLAN:", plan);
 
     /* ======================================================
-       ONLY ON SUCCESS
+       ONLY PROCESS SUCCESS
     ====================================================== */
     if (
       event_type === "payment_success" ||
@@ -113,10 +114,7 @@ router.post("/push", async (req, res) => {
       const now = new Date();
       const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
 
-      const days =
-        plan === "trial" ? 15 :
-        plan === "business" ? 30 :
-        30;
+      const days = plan === "trial" ? 15 : 30;
 
       const end = new Date(now.getTime() + days * 86400000);
       const endSQL = end.toISOString().slice(0, 19).replace("T", " ");
@@ -151,7 +149,6 @@ router.post("/push", async (req, res) => {
     }
 
     return res.json({ success: true });
-
   } catch (err) {
     console.error("❌ ZOHO PUSH ERROR", err);
     res.status(500).json({ success: false });
