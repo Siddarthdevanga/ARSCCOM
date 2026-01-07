@@ -7,7 +7,6 @@ import styles from "./style.module.css";
 
 /* ======================================================
    DATE FORMATTER
-   Converts safely into → Jan 07, 2026
 ====================================================== */
 const formatNiceDate = (value) => {
   if (!value) return "-";
@@ -32,7 +31,6 @@ const formatNiceDate = (value) => {
 
 /* ======================================================
    TIME FORMATTER
-   Converts → 16:30:00 / 16:30 → 4:30 PM
 ====================================================== */
 const formatNiceTime = (value) => {
   if (!value) return "-";
@@ -138,7 +136,10 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert(err?.message || "Failed to rename room");
+      alert(
+        err?.message ||
+          "Plan limit exceeded. Upgrade plan to manage rooms"
+      );
     }
   };
 
@@ -166,6 +167,13 @@ export default function ConferenceDashboard() {
   if (loading || !company || !stats) return null;
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+
+  /* ================= PLAN REMAINING ================= */
+  const remaining =
+    stats?.remaining?.conference_bookings_left ?? "unlimited";
+
+  const planExceeded =
+    remaining !== "unlimited" && remaining <= 0;
 
   return (
     <div className={styles.container}>
@@ -320,6 +328,25 @@ export default function ConferenceDashboard() {
         <div className={styles.statCard}>
           <span>Departments Using Rooms</span>
           <b>{departmentStats.length}</b>
+        </div>
+
+        <div
+          className={styles.statCard}
+          style={{
+            background: planExceeded ? "#ffcccc" : "#e8ffe8",
+            color: "#000",
+          }}
+        >
+          <span>Remaining Conference Bookings</span>
+          <b>
+            {remaining === "unlimited" ? "Unlimited" : remaining}
+          </b>
+
+          {planExceeded && (
+            <p style={{ color: "red", marginTop: 6 }}>
+              Plan limit exceeded. Contact administrator
+            </p>
+          )}
         </div>
       </div>
 
