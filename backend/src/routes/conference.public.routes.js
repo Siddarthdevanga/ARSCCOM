@@ -127,6 +127,64 @@ async function sendCancelEmail(email, company, room, booking) {
 }
 
 /* ======================================================
+   PLAN VALIDATION (TRIAL / BUSINESS / ENTERPRISE)
+====================================================== */
+const checkConferencePlan = async (companyId) => {
+  const [[company]] = await db.query(
+    `SELECT plan, trial_ends_at, subscription_ends_at, subscription_status
+     FROM companies WHERE id=? LIMIT 1`,
+    [companyId]
+  );
+
+  if (!company) return { ok: false };
+
+  const plan = (company.plan || "trial").toLowerCase();
+  const status = (company.subscription_status || "trial").toLowerCase();
+  const now = new Date();
+
+  const [[rooms]] = await db.query(
+    `SELECT COUNT(*) AS cnt FROM conference_rooms WHERE company_id=?`,
+    [companyId]
+  );
+
+  const [[bookings]] = await db.query(
+    `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id=?`,
+    [companyId]
+  );
+
+  let remaining = {
+    rooms_left: "unlimited",
+    conference_bookings_left: "unlimited"
+  };
+
+  // TRIAL
+  if (plan === "trial") {
+    if (!company.trial_ends_at || now > new Date(company.trial_ends_at))
+      return { ok: false, remaining: { rooms_left: 0, conference_bookings_left: 0 } };
+
+    remaining.rooms_left = Math.max(0, 2 - rooms.cnt);
+    remaining.conference_bookings_left = Math.max(0, 100 - bookings.cnt);
+
+    if (bookings.cnt >= 100) return { ok: false, remaining };
+  }
+
+  // BUSINESS
+  if (plan === "business") {
+    if (status !== "active") return { ok: false, remaining };
+    if (!company.subscription_ends_at || now > new Date(company.subscription_ends_at))
+      return { ok: false, remaining };
+
+    remaining.rooms_left = Math.max(0, 6 - rooms.cnt);
+  }
+
+  // ENTERPRISE — only check active
+  if (plan === "enterprise" && status !== "active")
+    return { ok: false };
+
+  return { ok: true, remaining };
+};
+
+/* ======================================================
    GET COMPANY
 ====================================================== */
 router.get("/company/:slug", async (req, res) => {
@@ -374,7 +432,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING
+   CREATE BOOKING  (WITH PLAN CHECK)
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -409,6 +467,15 @@ router.post("/company/:slug/book", async (req, res) => {
 
     if (!company)
       return res.status(404).json({ message: "Invalid booking link" });
+
+    // PLAN CHECK
+    const planCheck = await checkConferencePlan(company.id);
+
+    if (!planCheck.ok)
+      return res.status(403).json({
+        message: "Plan limit exceeded. Please contact administrator",
+        remaining: planCheck.remaining
+      });
 
     const [[verified]] = await db.query(
       `SELECT id FROM public_booking_otp
@@ -462,7 +529,10 @@ router.post("/company/:slug/book", async (req, res) => {
       purpose
     });
 
-    res.json({ message: "Booking confirmed successfully" });
+    res.json({
+      message: "Booking confirmed successfully",
+      remaining: planCheck.remaining
+    });
 
   } catch (err) {
     console.error("[PUBLIC][BOOK]", err);
