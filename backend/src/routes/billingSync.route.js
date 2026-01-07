@@ -16,20 +16,20 @@ router.post("/push", async (req, res) => {
     let payment = req.body?.payment;
     let customer = req.body?.customer;
 
-    /**
-     * Smart Parser
-     * Handles:
-     * 1️⃣ Pure JSON
-     * 2️⃣ String JSON
-     * 3️⃣ 'JSON inside single quotes'
-     */
+    /* ======================================================
+       SMART + AGGRESSIVE SAFE PARSER
+       Handles:
+       ✔ JSON
+       ✔ "JSON string"
+       ✔ 'JSON string'
+    ====================================================== */
     const smartParse = (val, label) => {
       if (!val) return null;
       if (typeof val === "object") return val;
 
       let clean = String(val).trim();
 
-      // Remove wrapping ' or "
+      // Remove wrapping quotes if exist
       if (
         (clean.startsWith("'") && clean.endsWith("'")) ||
         (clean.startsWith('"') && clean.endsWith('"'))
@@ -41,8 +41,8 @@ router.post("/push", async (req, res) => {
         const parsed = JSON.parse(clean);
         console.log(`✅ Parsed ${label}:`, parsed);
         return parsed;
-      } catch (e) {
-        console.log(`⚠ Failed to parse ${label}`, clean, e.message);
+      } catch {
+        console.log(`⚠ JSON.parse failed for ${label} → fallback regex`);
         return null;
       }
     };
@@ -50,15 +50,24 @@ router.post("/push", async (req, res) => {
     payment = smartParse(payment, "payment");
     customer = smartParse(customer, "customer");
 
-    /* =========================================
-       FINAL FIELD EXTRACTION
-    ========================================= */
-    const customerId =
+    /* ======================================================
+       FINAL GUARANTEED CUSTOMER ID EXTRACTION
+    ====================================================== */
+    let customerId =
       customer?.customer_id ||
       req.body?.customer_id ||
       req.body?.customerId ||
-      req.body?.customerID ||
       null;
+
+    // Regex fallback if still missing
+    if (!customerId) {
+      const raw = JSON.stringify(req.body);
+      const match = raw.match(/customer_id["']?\s*:\s*["']?(\d+)/);
+      if (match) {
+        customerId = match[1];
+        console.log("🎯 Extracted Customer via REGEX:", customerId);
+      }
+    }
 
     const paymentStatus =
       payment?.payment_status?.toLowerCase() ||
@@ -74,61 +83,68 @@ router.post("/push", async (req, res) => {
       return res.status(400).json({ success: false });
     }
 
-    /* =========================================
+    /* ======================================================
        FETCH COMPANY
-    ========================================= */
+    ====================================================== */
     const [[company]] = await db.query(
       `SELECT id, plan FROM companies WHERE zoho_customer_id=? LIMIT 1`,
       [customerId]
     );
 
     if (!company) {
-      console.log("❌ Company not found");
+      console.log("❌ Company Not Found For Customer:", customerId);
       return res.json({ success: true });
     }
 
-    let plan = (company.plan || "trial").toLowerCase();
+    const plan = (company.plan || "trial").toLowerCase();
+    console.log("🏷 COMPANY PLAN:", plan);
 
-    /* =========================================
-       ONLY PROCESS PAYMENT SUCCESS
-    ========================================= */
+    /* ======================================================
+       ONLY PROCESS SUCCESS
+    ====================================================== */
     if (
       event_type === "payment_success" ||
       paymentStatus === "paid" ||
       paymentStatus === "success"
     ) {
-      console.log("🎯 PAYMENT SUCCESS PROCESSING");
+      console.log("🎯 PAYMENT SUCCESS — ACTIVATING SUBSCRIPTION");
 
-      const paid = new Date();
-      const paidSql = paid.toISOString().slice(0, 19).replace("T", " ");
+      const now = new Date();
+      const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
 
-      const days = plan === "trial" ? 15 : 30;
+      const days =
+        plan === "trial" ? 15 :
+        plan === "business" ? 30 :
+        30; // enterprise → 30
 
-      const end = new Date(paid.getTime() + days * 24 * 60 * 60 * 1000);
-      const endSql = end.toISOString().slice(0, 19).replace("T", " ");
+      const end = new Date(now.getTime() + days * 86400000);
+      const endSQL = end.toISOString().slice(0, 19).replace("T", " ");
 
       if (plan === "trial") {
         await db.query(
           `
           UPDATE companies
-          SET subscription_status='active',
-              trial_ends_at=?,
-              last_payment_created_at=?,
-              updated_at=NOW()
-          WHERE id=?`,
-          [endSql, paidSql, company.id]
+          SET 
+            subscription_status='active',
+            trial_ends_at=?,
+            last_payment_created_at=?,
+            updated_at=NOW()
+          WHERE id=?
+        `,
+          [endSQL, nowSQL, company.id]
         );
       } else {
         await db.query(
           `
           UPDATE companies
-          SET subscription_status='active',
-              plan='business',
-              subscription_ends_at=?,
-              last_payment_created_at=?,
-              updated_at=NOW()
-          WHERE id=?`,
-          [endSql, paidSql, company.id]
+          SET 
+            subscription_status='active',
+            subscription_ends_at=?,
+            last_payment_created_at=?,
+            updated_at=NOW()
+          WHERE id=?
+        `,
+          [endSQL, nowSQL, company.id]
         );
       }
 
@@ -143,163 +159,5 @@ router.post("/push", async (req, res) => {
   }
 });
 
-
-/* =====================================================
-   BILLING SYNC / REPAIR
-   GET /api/payment/zoho/run
-===================================================== */
-router.get("/run", async (req, res) => {
-  try {
-    console.log("🚀 Running Billing Sync Repair...");
-
-    const [companies] = await db.query(`
-      SELECT 
-        id,
-        name,
-        zoho_customer_id,
-        subscription_status,
-        zoho_subscription_id,
-        last_payment_link_id
-      FROM companies
-      WHERE 
-        zoho_customer_id IS NOT NULL
-        AND (subscription_status IS NULL 
-          OR subscription_status IN ('pending','trial','unknown',''))
-    `);
-
-    if (!companies.length) {
-      return res.json({
-        success: true,
-        message: "No pending companies to repair",
-        companiesChecked: 0
-      });
-    }
-
-    console.log(\`🏢 Companies To Check: \${companies.length}\`);
-
-    const client = await zohoClient();
-    let repaired = 0;
-
-    for (const c of companies) {
-      console.log("--------------------------------------");
-      console.log(\`🏢 Checking Company → \${c.name} (\${c.id})\`);
-
-      if (!c.zoho_customer_id) {
-        console.log("❌ Skipping — No Customer ID");
-        continue;
-      }
-
-      let paymentStatus = null;
-
-      try {
-        const { data } = await client.get(
-          \`/paymentlinks?customer_id=\${c.zoho_customer_id}\`
-        );
-
-        const links = data?.payment_links || [];
-
-        if (links.length) {
-          const latest = links[0];
-
-          console.log(
-            \`💳 Payment Link: \${latest.status} (\${latest.payment_link_id})\`
-          );
-
-          if (
-            ["paid", "success"].includes(
-              (latest.payment_status || "").toLowerCase()
-            ) ||
-            ["paid", "success"].includes(
-              (latest.status || "").toLowerCase()
-            )
-          ) {
-            paymentStatus = "paid";
-          }
-        }
-      } catch {
-        console.log("⚠ Error fetching payment links");
-      }
-
-      let subscriptionStatus = null;
-      let zohoSubId = null;
-      let trialEnd = null;
-
-      try {
-        const { data } = await client.get(
-          \`/customers/\${c.zoho_customer_id}/subscriptions\`
-        );
-
-        const subs = data?.subscriptions || [];
-
-        if (subs.length) {
-          const sub = subs[0];
-          subscriptionStatus = (sub.status || "").toLowerCase();
-          zohoSubId = sub.subscription_id;
-          trialEnd = sub.trial_ends_at;
-
-          console.log(
-            \`📢 Subscription → \${subscriptionStatus} (\${zohoSubId})\`
-          );
-        }
-      } catch {
-        console.log("⚠ Error fetching subscription");
-      }
-
-      let finalStatus = c.subscription_status;
-
-      if (paymentStatus === "paid") finalStatus = "active";
-      else if (["live", "active"].includes(subscriptionStatus))
-        finalStatus = "active";
-      else if (subscriptionStatus === "trial") finalStatus = "trial";
-      else if (subscriptionStatus === "expired") finalStatus = "expired";
-
-      if (finalStatus === c.subscription_status) {
-        console.log("ℹ No Change Needed");
-        continue;
-      }
-
-      await db.query(
-        `
-        UPDATE companies 
-        SET 
-          subscription_status=?,
-          plan = CASE 
-            WHEN ?='active' THEN 'business'
-            WHEN ?='trial' THEN 'trial'
-            ELSE plan 
-          END,
-          zoho_subscription_id=?,
-          trial_ends_at=?,
-          updated_at = NOW()
-        WHERE id=?`,
-        [
-          finalStatus,
-          finalStatus,
-          finalStatus,
-          zohoSubId,
-          trialEnd,
-          c.id
-        ]
-      );
-
-      repaired++;
-      console.log(\`✅ DB FIXED → \${finalStatus}\`);
-    }
-
-    res.json({
-      success: true,
-      message: "Billing Sync Completed",
-      companiesChecked: companies.length,
-      repaired
-    });
-
-  } catch (err) {
-    console.error("❌ BILLING SYNC FAILED", err);
-    res.status(500).json({
-      success: false,
-      message: "Billing repair failed"
-    });
-  }
-});
-
 export default router;
+
