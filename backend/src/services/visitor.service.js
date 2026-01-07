@@ -1,27 +1,18 @@
 import { db } from "../config/db.js";
-import { uploadToS3 } from "./s3.service.js";
+import { uploadToS3 } from "./s3.service.js"; 
 import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 
 /* ======================================================
-   ABSOLUTE SAFE IST HANDLING  (NO DOUBLE +5:30 ISSUE)
-   Works correctly whether server = UTC or already IST
+   ABSOLUTE SAFE IST
 ====================================================== */
 const getISTDate = () => {
   const now = new Date();
-
-  // IST offset = +5:30 (330 minutes)
   const IST_OFFSET_MIN = 330;
-
-  // Returns minutes local->UTC (IST systems return -330)
   const currentOffsetMin = -now.getTimezoneOffset();
-
-  // Adjust only the difference
   const diff = IST_OFFSET_MIN - currentOffsetMin;
-
   return new Date(now.getTime() + diff * 60 * 1000);
 };
 
-/* YYYYMMDD */
 const formatISTDateKey = (date) => {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -30,7 +21,7 @@ const formatISTDateKey = (date) => {
 };
 
 /* ======================================================
-   SAVE VISITOR
+   SAVE VISITOR + PLAN GUARDRAILS
 ====================================================== */
 export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
@@ -57,13 +48,90 @@ export const saveVisitor = async (companyId, data, file) => {
 
   if (!name || !phone) throw new Error("Visitor name and phone are required");
 
-  /* ================= TRUE IST ================= */
   const checkInIST = getISTDate();
   if (isNaN(checkInIST.getTime())) throw new Error("Invalid IST datetime");
 
+  /* ======================================================
+       FETCH COMPANY
+  ======================================================= */
+  const [[company]] = await db.execute(
+    `
+      SELECT 
+        plan,
+        subscription_status,
+        trial_ends_at,
+        subscription_ends_at
+      FROM companies
+      WHERE id = ?
+      LIMIT 1
+    `,
+    [companyId]
+  );
+
+  if (!company) throw new Error("Company not found");
+
+  const PLAN = (company.plan || "trial").toUpperCase();
+  const STATUS = (company.subscription_status || "pending").toUpperCase();
+
+  const now = checkInIST;
+
+  /* ======================================================
+       SUBSCRIPTION STATE VALIDATION
+  ======================================================= */
+  if (STATUS !== "ACTIVE" && STATUS !== "TRIAL") {
+    throw new Error("Subscription inactive. Please renew subscription.");
+  }
+
+  /* ======================================================
+       TRIAL RULES — 15 DAYS + 100 VISITORS
+  ======================================================= */
+  if (PLAN === "TRIAL") {
+    if (!company.trial_ends_at) throw new Error("Trial not initialized");
+
+    const trialEnd = new Date(company.trial_ends_at);
+    if (trialEnd < now) throw new Error("Trial expired. Please upgrade plan.");
+
+    const [[countRow]] = await db.execute(
+      `
+        SELECT COUNT(*) AS total
+        FROM visitors
+        WHERE company_id = ?
+      `,
+      [companyId]
+    );
+
+    if (countRow.total >= 100) {
+      throw new Error(
+        "Trial limit reached. Max 100 visitors allowed. Upgrade to continue."
+      );
+    }
+  }
+
+  /* ======================================================
+       BUSINESS & ENTERPRISE — SAME RULE NOW
+       VALIDITY 30 DAYS
+  ======================================================= */
+  if (PLAN === "BUSINESS" || PLAN === "ENTERPRISE") {
+    if (!company.subscription_ends_at) {
+      throw new Error("Subscription not initialized");
+    }
+
+    const subEnd = new Date(company.subscription_ends_at);
+
+    if (subEnd < now) {
+      throw new Error(
+        `${PLAN} plan expired. Please renew subscription.`
+      );
+    }
+
+    // Unlimited Visitors — No Count Check
+  }
+
+  /* ======================================================
+       INSERT VISITOR
+  ======================================================= */
   const dateKey = formatISTDateKey(checkInIST);
 
-  /* ================= INSERT ================= */
   const [insertResult] = await db.execute(
     `
     INSERT INTO visitors (
@@ -93,13 +161,15 @@ export const saveVisitor = async (companyId, data, file) => {
       Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
       idType || null,
       idNumber || null,
-      checkInIST // stored as real IST datetime
+      checkInIST
     ]
   );
 
   const visitorId = insertResult.insertId;
 
-  /* ================= DAILY COUNT ================= */
+  /* ======================================================
+       DAILY VISITOR COUNT CODE
+  ======================================================= */
   const istDateString = `${checkInIST.getFullYear()}-${String(
     checkInIST.getMonth() + 1
   ).padStart(2, "0")}-${String(checkInIST.getDate()).padStart(2, "0")}`;
@@ -111,7 +181,7 @@ export const saveVisitor = async (companyId, data, file) => {
       WHERE company_id = ?
       AND DATE(check_in) = ?
     `,
-    [companyId, istDateString] // no timezone conversion needed since stored IST
+    [companyId, istDateString]
   );
 
   const dailyVisitorNumber = countRow.count;
@@ -120,7 +190,7 @@ export const saveVisitor = async (companyId, data, file) => {
     dailyVisitorNumber
   ).padStart(5, "0")}`;
 
-  /* ================= PHOTO UPLOAD ================= */
+  /* ================= PHOTO ================= */
   const photoUrl = await uploadToS3(
     file,
     `companies/${companyId}/visitors/${visitorCode}.jpg`
@@ -134,7 +204,7 @@ export const saveVisitor = async (companyId, data, file) => {
   /* ================= MAIL ================= */
   if (email) {
     try {
-      const [[company]] = await db.execute(
+      const [[companyInfo]] = await db.execute(
         `SELECT name, logo_url FROM companies WHERE id = ?`,
         [companyId]
       );
@@ -142,8 +212,8 @@ export const saveVisitor = async (companyId, data, file) => {
       await sendVisitorPassMail({
         company: {
           id: companyId,
-          name: company.name,
-          logo: company.logo_url
+          name: companyInfo.name,
+          logo: companyInfo.logo_url
         },
         visitor: {
           visitorCode,
@@ -151,8 +221,7 @@ export const saveVisitor = async (companyId, data, file) => {
           phone,
           email,
           photoUrl,
-          checkIn:
-            istDateString + " " + checkInIST.toTimeString().slice(0, 8)
+          checkIn: istDateString + " " + checkInIST.toTimeString().slice(0, 8)
         }
       });
 
