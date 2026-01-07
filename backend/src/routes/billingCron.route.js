@@ -31,13 +31,6 @@ function normalizeStatus(status) {
 async function repairBilling() {
   console.log("⏳ CRON: Checking companies for billing repair...");
 
-  /**
-   * IMPORTANT FIX:
-   * Include:
-   *  - pending
-   *  - trial
-   *  - active WITHOUT expiry set
-   */
   const [companies] = await db.query(
     `
       SELECT 
@@ -53,7 +46,7 @@ async function repairBilling() {
       AND (
           subscription_status IN ('pending','trial')
           OR (
-            subscription_status = 'active'
+            subscription_status='active'
             AND (
               (plan='trial' AND trial_ends_at IS NULL)
               OR
@@ -81,7 +74,6 @@ async function repairBilling() {
     console.log(`\n🏢 Checking Company → ${name} (${id})`);
 
     try {
-      /* ========== 1️⃣ FETCH PAYMENT STATUS ========== */
       const payRes = await axios.get(
         `https://www.zohoapis.in/billing/v1/paymentlinks/${last_payment_link_id}`,
         {
@@ -90,7 +82,6 @@ async function repairBilling() {
       );
 
       const payment = payRes?.data?.payment_link;
-
       if (!payment) {
         console.log("⚠ Payment link not found → skipping");
         continue;
@@ -99,11 +90,7 @@ async function repairBilling() {
       const status = normalizeStatus(payment.status);
       console.log("🔍 Zoho Payment Status:", status);
 
-      /* =====================================================
-         2️⃣ PAYMENT SUCCESS → ACTIVATE + APPLY VALIDITY RULE
-         TRIAL     → 15 days validity from PAID DATE
-         BUSINESS  → 30 days validity from PAID DATE
-      ===================================================== */
+      /* ================== PAYMENT SUCCESS ================== */
       if (status === "paid") {
         console.log("🎯 Payment Success — Activating company");
 
@@ -115,18 +102,24 @@ async function repairBilling() {
 
         let paidDate = new Date(paidAt);
         if (isNaN(paidDate.getTime())) {
-          console.log("⚠ Invalid paid date, using NOW");
+          console.log("⚠ Invalid paid date, fallback → NOW");
           paidDate = new Date();
         }
 
+        // Convert to MySQL DATETIME (YYYY-MM-DD HH:mm:ss)
+        const mysqlPaid =
+          paidDate.toISOString().slice(0, 19).replace("T", " ");
+
         const durationDays = plan === "business" ? 30 : 15;
 
-        const endsAt = new Date(
+        const endsAtDate = new Date(
           paidDate.getTime() + durationDays * 24 * 60 * 60 * 1000
         );
+        const mysqlEnds =
+          endsAtDate.toISOString().slice(0, 19).replace("T", " ");
 
-        console.log("💰 Paid At:", paidDate.toISOString());
-        console.log("📅 Ends At:", endsAt.toISOString());
+        console.log("💰 Paid At:", mysqlPaid);
+        console.log("📅 Ends At:", mysqlEnds);
 
         if (plan === "business") {
           await db.query(
@@ -135,12 +128,12 @@ async function repairBilling() {
               SET 
                 subscription_status='active',
                 plan='business',
-                last_payment_at=?,
+                last_payment_created_at=?,
                 subscription_ends_at=?,
                 updated_at = NOW()
               WHERE id=?
             `,
-            [paidDate, endsAt, id]
+            [mysqlPaid, mysqlEnds, id]
           );
         } else {
           await db.query(
@@ -149,12 +142,12 @@ async function repairBilling() {
               SET 
                 subscription_status='active',
                 plan='trial',
-                last_payment_at=?,
+                last_payment_created_at=?,
                 trial_ends_at=?,
                 updated_at = NOW()
               WHERE id=?
             `,
-            [paidDate, endsAt, id]
+            [mysqlPaid, mysqlEnds, id]
           );
         }
 
@@ -162,7 +155,7 @@ async function repairBilling() {
         continue;
       }
 
-      /* ========== 3️⃣ FAILED / EXPIRED PAYMENT ========== */
+      /* ================= FAILED / EXPIRED ================= */
       if (status === "expired" || status === "failed") {
         console.log("❌ Payment expired/failed — marking pending");
 
@@ -192,7 +185,7 @@ async function repairBilling() {
   console.log("\n✅ CRON Billing Repair Completed\n");
 }
 
-/* ================= SCHEDULE CRON ================= */
+/* ================= CRON SCHEDULE ================= */
 cron.schedule("*/3 * * * *", () => {
   repairBilling();
 });
