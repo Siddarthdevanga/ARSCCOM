@@ -18,10 +18,8 @@ const formatNiceDate = (value) => {
     if (str.includes(" ")) str = str.split(" ")[0];
 
     const [y, m, d] = str.split("-");
-    const names = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
+    const names = ["Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"];
 
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
@@ -43,7 +41,6 @@ const formatNiceTime = (value) => {
 
     const [hRaw, m] = str.split(":");
     let h = parseInt(hRaw, 10);
-
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
@@ -62,7 +59,6 @@ export default function ConferenceDashboard() {
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
-
   const [loading, setLoading] = useState(true);
 
   /* LEFT PANEL */
@@ -70,7 +66,7 @@ export default function ConferenceDashboard() {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* FILTER DATE */
+  /* FILTER */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -90,7 +86,9 @@ export default function ConferenceDashboard() {
       ? tomorrow
       : today;
 
-  /* ================= LOAD DASHBOARD ================= */
+  /* ======================================================
+     LOAD DASHBOARD DATA
+  ====================================================== */
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
@@ -121,7 +119,9 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE ROOM NAME ================= */
+  /* ======================================================
+     SAVE ROOM NAME
+  ====================================================== */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
@@ -136,14 +136,13 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert(
-        err?.message ||
-          "Plan limit exceeded. Upgrade plan to manage rooms"
-      );
+      alert(err?.message || "Plan limit exceeded. Upgrade plan to manage rooms");
     }
   };
 
-  /* ================= FILTER BOOKINGS ================= */
+  /* ======================================================
+     FILTER BOOKINGS
+  ====================================================== */
   const filteredBookings = useMemo(() => {
     return (bookings || []).filter(
       (b) =>
@@ -154,7 +153,9 @@ export default function ConferenceDashboard() {
     );
   }, [bookings, selectedDate]);
 
-  /* ================= DEPARTMENT ANALYTICS ================= */
+  /* ======================================================
+     DEPARTMENT ANALYTICS
+  ====================================================== */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -168,21 +169,29 @@ export default function ConferenceDashboard() {
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
-  /* ================= PLAN REMAINING FROM BACKEND ================= */
-  const remaining = stats?.remaining?.conference_bookings_left ?? "unlimited";
-  const roomsLeft = stats?.remaining?.rooms_left ?? "unlimited";
+  /* ======================================================
+     PLAN REMAINING (BACKEND SOURCE OF TRUTH)
+  ====================================================== */
+  const remainingBookings =
+    stats?.remaining?.conference_bookings_left ?? "unlimited";
+
+  const roomsLeft =
+    stats?.remaining?.rooms_left ?? "unlimited";
 
   const planExceeded =
-    remaining !== "unlimited" && remaining <= 0;
+    remainingBookings !== "unlimited" && remainingBookings <= 0;
 
-  /* ================= ROOM LIMIT USING BACKEND ================= */
-  let allowedRooms = Infinity;
+  /* ======================================================
+     CORRECT ROOM LOCK LOGIC
+     rooms_left = how many MORE they CAN create
+     So existing rooms should NOT be locked unless they exceeded
+  ====================================================== */
+  let lockStartIndex = Infinity;
 
   if (roomsLeft !== "unlimited") {
-    allowedRooms = stats.rooms - roomsLeft;
-    if (allowedRooms < 0) allowedRooms = 0;
-    allowedRooms = Math.max(stats.rooms - roomsLeft, 0);
-    allowedRooms = stats.rooms - roomsLeft === 0 ? stats.rooms : stats.rooms - roomsLeft;
+    const totalExistingRooms = stats.rooms;
+    const maxAllowedRooms = totalExistingRooms + roomsLeft;
+    lockStartIndex = maxAllowedRooms;
   }
 
   return (
@@ -266,15 +275,11 @@ export default function ConferenceDashboard() {
             <ul className={styles.roomList}>
               {rooms.map((r, index) => {
                 const locked =
-                  roomsLeft !== "unlimited" && index >= allowedRooms;
+                  roomsLeft !== "unlimited" && index >= lockStartIndex;
 
                 return (
                   <li key={r.id}>
-                    <b
-                      style={{
-                        color: locked ? "#aaa" : "#fff",
-                      }}
-                    >
+                    <b style={{ color: locked ? "#aaa" : "#fff" }}>
                       {r.room_name}
                     </b>{" "}
                     (#{r.room_number})
@@ -292,10 +297,7 @@ export default function ConferenceDashboard() {
                           disabled={locked}
                           onChange={(e) => setEditName(e.target.value)}
                         />
-                        <button
-                          disabled={locked}
-                          onClick={() => saveRoomName(r.id)}
-                        >
+                        <button disabled={locked} onClick={() => saveRoomName(r.id)}>
                           Save
                         </button>
                         <button
@@ -349,7 +351,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= KPIs ================= */}
+      {/* ================= KPI ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
@@ -375,7 +377,9 @@ export default function ConferenceDashboard() {
         >
           <span>Remaining Conference Bookings</span>
           <b>
-            {remaining === "unlimited" ? "Unlimited" : remaining}
+            {remainingBookings === "unlimited"
+              ? "Unlimited"
+              : remainingBookings}
           </b>
 
           {planExceeded && (
@@ -417,8 +421,7 @@ export default function ConferenceDashboard() {
             </div>
 
             <div>
-              {formatNiceTime(b.start_time)} –{" "}
-              {formatNiceTime(b.end_time)}
+              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
             </div>
 
             <div className={styles.status}>{b.status}</div>
@@ -428,3 +431,4 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
+
