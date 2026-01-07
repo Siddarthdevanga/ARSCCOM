@@ -5,34 +5,53 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 const router = express.Router();
 
 /* =====================================================
+   REQUIRED MIDDLEWARE (IMPORTANT)
+===================================================== */
+// Make sure in server.js you have:
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+
+
+/* =====================================================
    ZOHO PAYMENT PUSH WEBHOOK
-   URL Zoho calls:
-   POST https://www.wheelbrand.in/api/payment/zoho/push
+   URL: POST /api/payment/zoho/push
 ===================================================== */
 router.post("/push", async (req, res) => {
   try {
-    console.log("📩 Incoming Zoho Push Payload:", req.body);
+    console.log("📩 RAW ZOHO PAYLOAD:", req.body);
 
-    let { event_type, payment, customer } = req.body;
+    let event_type = (req.body?.event_type || "").toLowerCase();
+    let payment = req.body?.payment;
+    let customer = req.body?.customer;
 
-    event_type = (event_type || "").toLowerCase();
+    /* ================================================
+       SAFE JSON PARSE SUPPORT (ZOHO sends string JSON)
+    ================================================= */
+    const safeParse = (val, label) => {
+      if (!val) return null;
+      if (typeof val === "object") return val;
 
-    // Zoho sometimes sends JSON as STRING — parse safely
-    if (typeof payment === "string") {
       try {
-        payment = JSON.parse(payment);
-      } catch {}
-    }
+        const parsed = JSON.parse(val);
+        console.log(`✅ Parsed ${label}:`, parsed);
+        return parsed;
+      } catch {
+        console.log(`⚠ Failed to parse ${label}`, val);
+        return null;
+      }
+    };
 
-    if (typeof customer === "string") {
-      try {
-        customer = JSON.parse(customer);
-      } catch {}
-    }
+    payment = safeParse(payment, "payment");
+    customer = safeParse(customer, "customer");
 
+    /* ================================================
+       EXTRACT VALUES ROBUSTLY
+    ================================================= */
     const customerId =
       customer?.customer_id ||
       req.body?.customer_id ||
+      req.body?.customerId ||
+      req.body?.customerID ||
       null;
 
     const paymentStatus =
@@ -40,23 +59,20 @@ router.post("/push", async (req, res) => {
       req.body?.payment_status?.toLowerCase() ||
       null;
 
+    console.log("🧾 Final Customer ID:", customerId);
+    console.log("💳 Final Payment Status:", paymentStatus);
+    console.log("📢 Event:", event_type);
+
     if (!customerId) {
-      console.log("❌ Customer ID missing");
+      console.log("❌ Customer ID STILL missing");
       return res.status(400).json({ success: false });
     }
 
-    console.log("🧾 Customer:", customerId);
-    console.log("💳 Payment Status:", paymentStatus);
-    console.log("📢 Event:", event_type);
-
-    // ================= FETCH COMPANY =================
+    /* ================================================
+       FETCH COMPANY
+    ================================================= */
     const [[company]] = await db.query(
-      `
-        SELECT id, plan
-        FROM companies
-        WHERE zoho_customer_id = ?
-        LIMIT 1
-      `,
+      `SELECT id, plan FROM companies WHERE zoho_customer_id=? LIMIT 1`,
       [customerId]
     );
 
@@ -67,13 +83,15 @@ router.post("/push", async (req, res) => {
 
     let plan = (company.plan || "trial").toLowerCase();
 
-    // ================= ACTIVATE ON SUCCESS =================
+    /* ================================================
+       ONLY PROCESS SUCCESS EVENTS
+    ================================================= */
     if (
       event_type === "payment_success" ||
       paymentStatus === "paid" ||
       paymentStatus === "success"
     ) {
-      console.log("🎯 PAYMENT SUCCESS RECEIVED");
+      console.log("🎯 PAYMENT SUCCESS PROCESSING");
 
       const paidDate = new Date();
       const mysqlPaid = paidDate.toISOString().slice(0, 19).replace("T", " ");
@@ -88,46 +106,43 @@ router.post("/push", async (req, res) => {
       if (plan === "trial") {
         await db.query(
           `
-            UPDATE companies
-            SET 
-              subscription_status='active',
+          UPDATE companies
+          SET subscription_status='active',
               trial_ends_at=?,
               last_payment_created_at=?,
-              updated_at = NOW()
-            WHERE id=?
-          `,
+              updated_at=NOW()
+          WHERE id=?`,
           [mysqlEnd, mysqlPaid, company.id]
         );
       } else {
         await db.query(
           `
-            UPDATE companies
-            SET 
-              subscription_status='active',
+          UPDATE companies
+          SET subscription_status='active',
               plan='business',
               subscription_ends_at=?,
               last_payment_created_at=?,
-              updated_at = NOW()
-            WHERE id=?
-          `,
+              updated_at=NOW()
+          WHERE id=?`,
           [mysqlEnd, mysqlPaid, company.id]
         );
       }
 
-      console.log("🎉 Subscription Activated Successfully");
+      console.log("🎉 Subscription Updated Successfully");
     }
 
     return res.json({ success: true });
 
   } catch (err) {
-    console.error("❌ ZOHO PUSH ERROR:", err);
+    console.error("❌ ZOHO PUSH ERROR", err);
     res.status(500).json({ success: false });
   }
 });
 
+
 /* =====================================================
    BILLING SYNC / REPAIR
-   GET https://www.wheelbrand.in/api/payment/zoho/run
+   GET /api/payment/zoho/run
 ===================================================== */
 router.get("/run", async (req, res) => {
   try {
@@ -252,8 +267,7 @@ router.get("/run", async (req, res) => {
           zoho_subscription_id=?,
           trial_ends_at=?,
           updated_at = NOW()
-        WHERE id=?
-      `,
+        WHERE id=?`,
         [
           finalStatus,
           finalStatus,
