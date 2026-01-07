@@ -57,7 +57,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   FOOTER
+   REQUIRED FOOTER ✔️ (EXACT AS YOU WANT)
 ====================================================== */
 const emailFooter = company => `
 <br/>
@@ -72,165 +72,15 @@ If you did not perform this action, please contact your administrator immediatel
 `;
 
 /* ======================================================
-   COMPANY INFO
+   GET COMPANY INFO ALWAYS (GUARANTEED)
 ====================================================== */
 const getCompanyInfo = async (companyId) => {
   const [[company]] = await db.query(
-    `
-    SELECT
-      name,
-      logo_url,
-      plan,
-      trial_ends_at,
-      subscription_ends_at,
-      subscription_status
-    FROM companies
-    WHERE id = ?
-    LIMIT 1
-    `,
+    "SELECT name, logo_url FROM companies WHERE id = ? LIMIT 1",
     [companyId]
   );
 
-  return (
-    company || {
-      name: "",
-      logo_url: "",
-      plan: "trial",
-      subscription_status: "trial"
-    }
-  );
-};
-
-/* ======================================================
-   PLAN LIMIT ENFORCEMENT + QUOTA LEFT
-   TRIAL      → 2 Rooms, 100 Bookings
-   BUSINESS   → 6 Rooms, 1000 Bookings
-   ENTERPRISE → Unlimited
-====================================================== */
-const checkPlanLimits = async (companyId) => {
-  const [[company]] = await db.query(
-    `
-    SELECT
-      plan,
-      rooms,
-      trial_ends_at,
-      subscription_ends_at,
-      subscription_status
-    FROM companies
-    WHERE id = ?
-    LIMIT 1
-    `,
-    [companyId]
-  );
-
-  if (!company)
-    return { ok: false, message: "Company not found" };
-
-  const plan = (company.plan || "trial").toLowerCase();
-  const status = (company.subscription_status || "trial").toLowerCase();
-  const now = new Date();
-
-  let remaining = {
-    rooms_left: "unlimited",
-    conference_bookings_left: "unlimited"
-  };
-
-  /* ----------- TRIAL ----------- */
-  if (plan === "trial") {
-    if (!company.trial_ends_at)
-      return { ok: false, message: "Trial not initialized" };
-
-    const expiry = new Date(company.trial_ends_at);
-    if (now > expiry)
-      return { ok: false, message: "Trial expired. Please upgrade plan." };
-
-    const [[roomCount]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM conference_rooms WHERE company_id = ?`,
-      [companyId]
-    );
-
-    remaining.rooms_left = Math.max(0, 2 - roomCount.cnt);
-
-    if (roomCount.cnt >= 2)
-      return {
-        ok: false,
-        message: "Trial plan allows maximum 2 rooms",
-        remaining
-      };
-
-    const [[bookingCount]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id = ?`,
-      [companyId]
-    );
-
-    remaining.conference_bookings_left = Math.max(0, 100 - bookingCount.cnt);
-
-    if (bookingCount.cnt >= 100)
-      return {
-        ok: false,
-        message: "Trial plan allows maximum 100 conference bookings",
-        remaining
-      };
-  }
-
-  /* ----------- BUSINESS ----------- */
-  if (plan === "business") {
-    if (status !== "active")
-      return { ok: false, message: "Subscription not active" };
-
-    if (!company.subscription_ends_at)
-      return { ok: false, message: "Subscription period missing" };
-
-    const expiry = new Date(company.subscription_ends_at);
-    if (now > expiry)
-      return { ok: false, message: "Subscription expired. Please renew." };
-
-    const [[roomCount]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM conference_rooms WHERE company_id = ?`,
-      [companyId]
-    );
-
-    remaining.rooms_left = Math.max(0, 6 - roomCount.cnt);
-
-    if (roomCount.cnt >= 6)
-      return {
-        ok: false,
-        message: "Business plan allows maximum 6 rooms",
-        remaining
-      };
-
-    const [[bookingCount]] = await db.query(
-      `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id = ?`,
-      [companyId]
-    );
-
-    remaining.conference_bookings_left = Math.max(0, 1000 - bookingCount.cnt);
-
-    if (bookingCount.cnt >= 1000)
-      return {
-        ok: false,
-        message: "Business plan allows maximum 1000 conference bookings",
-        remaining
-      };
-  }
-
-  /* ----------- ENTERPRISE ----------- */
-  if (plan === "enterprise") {
-    if (status !== "active")
-      return { ok: false, message: "Enterprise subscription not active" };
-
-    if (!company.subscription_ends_at)
-      return { ok: false, message: "Enterprise subscription missing period" };
-
-    const expiry = new Date(company.subscription_ends_at);
-    if (now > expiry)
-      return { ok: false, message: "Enterprise subscription expired" };
-
-    remaining.rooms_left = "unlimited";
-    remaining.conference_bookings_left = "unlimited";
-  }
-
-  return { ok: true, remaining };
+  return company || { name: "", logo_url: "" };
 };
 
 /* ======================================================
@@ -239,13 +89,20 @@ const checkPlanLimits = async (companyId) => {
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
-   SEND MAIL
+   SEND EMAIL TO ADMIN + USER
 ====================================================== */
 const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, booking, company }) => {
   const recipients = [];
+
   if (isEmail(adminEmail)) recipients.push(adminEmail);
   if (isEmail(userEmail) && userEmail !== adminEmail) recipients.push(userEmail);
-  if (!recipients.length) return;
+
+  if (!recipients.length) {
+    console.log("🚫 No valid recipients — skipping email");
+    return;
+  }
+
+  const safeCompany = company || { name: "", logo_url: "" };
 
   try {
     await sendEmail({
@@ -275,11 +132,15 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
           <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
         </div>
 
-        ${emailFooter(company)}
+        ${emailFooter(safeCompany)}
       </div>
       `
     });
-  } catch {}
+
+    console.log("📨 EMAIL SENT TO:", recipients.join(", "));
+  } catch (err) {
+    console.log("❌ EMAIL FAILED:", err.message);
+  }
 };
 
 /* ======================================================
@@ -315,7 +176,8 @@ router.get("/dashboard", async (req, res) => {
     );
 
     res.json({ ...stats, departments });
-  } catch {
+  } catch (err) {
+    console.error("[ADMIN][DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard stats" });
   }
 });
@@ -338,7 +200,8 @@ router.get("/rooms", async (req, res) => {
     );
 
     res.json(Array.isArray(rooms) ? rooms : []);
-  } catch {
+  } catch (err) {
+    console.error("[ADMIN][GET ROOMS]", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
   }
 });
@@ -377,26 +240,20 @@ router.get("/bookings", async (req, res) => {
 
     const [rows] = await db.query(sql, params);
     res.json(Array.isArray(rows) ? rows : []);
-  } catch {
+  } catch (err) {
+    console.error("[ADMIN][GET BOOKINGS]", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
   }
 });
 
 /* ======================================================
-   CREATE BOOKING  (PLAN ENFORCED)
+   CREATE BOOKING
 ====================================================== */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
   try {
     const { companyId, email: adminEmail } = req.user;
-
-    const planCheck = await checkPlanLimits(companyId);
-    if (!planCheck.ok)
-      return res.status(403).json({
-        message: planCheck.message,
-        remaining: planCheck.remaining || null
-      });
 
     let {
       room_id,
@@ -487,13 +344,10 @@ router.post("/bookings", async (req, res) => {
       company: companyInfo
     });
 
-    res.status(201).json({
-      message: "Booking created successfully",
-      remaining: planCheck.remaining || null
-    });
-
-  } catch {
+    res.status(201).json({ message: "Booking created successfully" });
+  } catch (err) {
     await conn.rollback();
+    console.error("[ADMIN][CREATE BOOKING]", err);
     res.status(500).json({ message: "Unable to create booking" });
   } finally {
     conn.release();
@@ -579,7 +433,8 @@ router.patch("/bookings/:id", async (req, res) => {
     });
 
     res.json({ message: "Booking updated successfully" });
-  } catch {
+  } catch (err) {
+    console.error("[ADMIN][EDIT BOOKING]", err);
     res.status(500).json({ message: "Unable to update booking" });
   }
 });
@@ -626,7 +481,8 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     });
 
     res.json({ message: "Booking cancelled successfully" });
-  } catch {
+  } catch (err) {
+    console.error("[ADMIN][CANCEL BOOKING]", err);
     res.status(500).json({ message: "Unable to cancel booking" });
   }
 });
