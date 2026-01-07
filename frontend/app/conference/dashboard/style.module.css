@@ -6,6 +6,7 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  background: #000;
 }
 
 *::-webkit-scrollbar {
@@ -39,12 +40,12 @@ body {
   gap: 14px;
 }
 
-/* Sidebar Trigger Next to Company Name */
+/* Sidebar Trigger */
 .leftMenuTrigger {
-  width: 34px;
+  width: 36px;
   height: 60px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.35);
   background: rgba(255,255,255,0.18);
   display: flex;
   flex-direction: column;
@@ -52,12 +53,12 @@ body {
   gap: 7px;
   padding-left: 13px;
   cursor: pointer;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   transition: .25s ease;
 }
 
 .leftMenuTrigger:hover {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 .leftMenuTrigger span {
@@ -89,6 +90,7 @@ body {
   object-fit: contain;
 }
 
+/* Logout btn */
 .logoBtn {
   width: 44px;
   height: 44px;
@@ -103,18 +105,18 @@ body {
 }
 
 .logoBtn:hover {
-  transform: scale(1.06);
+  transform: scale(1.1);
 }
 
 /* ================= PUBLIC LINK ================= */
 .publicBox {
   background: rgba(255, 255, 255, 0.16);
   border-radius: 18px;
-  padding: 20px 24px;
+  padding: 22px 24px;
   margin-bottom: 34px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
 }
 
 .publicRow {
@@ -133,16 +135,17 @@ body {
 
 .publicLink {
   color: #ffffff;
-  font-weight: 700;
+  font-weight: 800;
   text-decoration: underline;
   word-break: break-all;
 }
 
+/* Book Button */
 .bookBtn {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
   border: none;
-  padding: 12px 28px;
+  padding: 12px 30px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 900;
@@ -152,7 +155,7 @@ body {
 }
 
 .bookBtn:hover {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 /* ================= STATS ================= */
@@ -180,6 +183,7 @@ body {
 .statCard b {
   font-size: 32px;
   color: #5b00c9;
+  letter-spacing: 1px;
 }
 
 /* ================= SECTION ================= */
@@ -196,7 +200,7 @@ body {
 .section h3 {
   margin-bottom: 18px;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 900;
 }
 
 /* ================= ROOM LIST ================= */
@@ -233,22 +237,23 @@ body {
 /* ================= ERROR ================= */
 .error {
   color: #ffb4b4;
-  font-weight: 700;
+  font-weight: 800;
 }
 
-/* ================= LEFT SLIDE PANEL (30%) ================= */
+/* ================= LEFT SLIDE PANEL ================= */
 .leftPanel {
   position: fixed;
   top: 0;
   left: 0;
   width: 30%;
+  max-width: 480px;
   height: 100vh;
 
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   color: white;
 
   border-right: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 6px 0 22px rgba(0,0,0,.35);
+  box-shadow: 8px 0 26px rgba(0,0,0,.35);
   padding: 22px;
   animation: panelSlide .3s ease-in-out;
 
@@ -257,7 +262,7 @@ body {
 }
 
 @keyframes panelSlide {
-  from { left: -35%; opacity: .4; }
+  from { left: -40%; opacity: .3; }
   to { left: 0; opacity: 1; }
 }
 
@@ -277,26 +282,32 @@ body {
 .leftCloseBtn {
   background: #ff4d4d;
   border: none;
-  padding: 8px 16px;
+  padding: 9px 16px;
   border-radius: 12px;
   color: white;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
   transition: .2s;
 }
 
 .leftCloseBtn:hover {
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 /* ================= PANEL BODY ================= */
 .leftPanelContent {
-  height: calc(100vh - 80px);
+  height: calc(100vh - 90px);
   overflow-y: auto;
   padding-right: 10px;
 }
 
 /* ================= RESPONSIVE ================= */
+@media (max-width: 900px) {
+  .leftPanel {
+    width: 65%;
+  }
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 20px;
@@ -316,5 +327,9 @@ body {
 
   .leftPanel {
     width: 85%;
+  }
+
+  .companyName {
+    font-size: 22px;
   }
 }
