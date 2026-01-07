@@ -127,6 +127,82 @@ async function sendCancelEmail(email, company, room, booking) {
 }
 
 /* ======================================================
+   ⭐ PLAN VALIDATION (PUBLIC SAFE)
+====================================================== */
+const checkConferencePlanPublic = async (companyId) => {
+  const [[company]] = await db.query(
+    `
+    SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
+    FROM companies
+    WHERE id = ?
+    LIMIT 1
+    `,
+    [companyId]
+  );
+
+  if (!company)
+    throw new Error("Plan validity exceeded. Contact Administrator");
+
+  const PLAN = (company.plan || "TRIAL").toUpperCase();
+  const STATUS = (company.subscription_status || "PENDING").toUpperCase();
+  const now = new Date();
+
+  if (!["ACTIVE", "TRIAL"].includes(STATUS))
+    throw new Error("Plan validity exceeded. Contact Administrator");
+
+  /* ===== TRIAL ===== */
+  if (PLAN === "TRIAL") {
+    if (!company.trial_ends_at) throw new Error("Plan validity exceeded. Contact Administrator");
+    if (new Date(company.trial_ends_at) < now)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    const [[bookings]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id=?`,
+      [companyId]
+    );
+    if (bookings.total >= 100)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    const [[rooms]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id=?`,
+      [companyId]
+    );
+    if (rooms.total > 2)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    return;
+  }
+
+  /* ===== BUSINESS ===== */
+  if (PLAN === "BUSINESS") {
+    if (!company.subscription_ends_at)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    if (new Date(company.subscription_ends_at) < now)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    const [[bookings]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id=?`,
+      [companyId]
+    );
+    if (bookings.total >= 1000)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    const [[rooms]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id=?`,
+      [companyId]
+    );
+    if (rooms.total > 6)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    return;
+  }
+
+  /* ===== ENTERPRISE ===== */
+  return;
+};
+
+/* ======================================================
    GET COMPANY
 ====================================================== */
 router.get("/company/:slug", async (req, res) => {
@@ -149,7 +225,7 @@ router.get("/company/:slug", async (req, res) => {
 });
 
 /* ======================================================
-   GET ROOMS
+   GET ROOMS  ⭐ PLAN PROTECTED
 ====================================================== */
 router.get("/company/:slug/rooms", async (req, res) => {
   try {
@@ -161,6 +237,12 @@ router.get("/company/:slug/rooms", async (req, res) => {
     );
 
     if (!company) return res.json([]);
+
+    try {
+      await checkConferencePlanPublic(company.id);
+    } catch (err) {
+      return res.status(403).json({ message: err.message });
+    }
 
     const [rooms] = await db.query(
       `SELECT id,room_name,room_number
@@ -263,74 +345,6 @@ router.post("/company/:slug/send-otp", async (req, res) => {
 });
 
 /* ======================================================
-   RESEND OTP
-====================================================== */
-router.post("/company/:slug/resend-otp", async (req, res) => {
-  try {
-    const slug = normalizeSlug(req.params.slug);
-    const email = normalizeEmail(req.body.email);
-
-    if (!email || !email.includes("@"))
-      return res.status(400).json({ message: "Valid email required" });
-
-    const [[company]] = await db.query(
-      `SELECT id,name FROM companies WHERE slug=? LIMIT 1`,
-      [slug]
-    );
-
-    if (!company)
-      return res.status(404).json({ message: "Invalid booking link" });
-
-    const [[existing]] = await db.query(
-      `SELECT otp,
-        expires_at,
-        600 - TIMESTAMPDIFF(SECOND, NOW(), expires_at) AS age
-       FROM public_booking_otp
-       WHERE company_id=? AND email=? 
-       AND verified=0
-       ORDER BY id DESC LIMIT 1`,
-      [company.id, email]
-    );
-
-    let otp;
-
-    if (existing && existing.expires_at > new Date()) {
-      const age = existing.age || 0;
-
-      if (age < 30) {
-        return res.status(429).json({
-          message: `Please wait ${30 - age} seconds before resending`
-        });
-      }
-
-      otp = existing.otp;
-    } else {
-      otp = String(Math.floor(100000 + Math.random() * 900000));
-
-      await db.query(
-        `DELETE FROM public_booking_otp WHERE company_id=? AND email=?`,
-        [company.id, email]
-      );
-
-      await db.query(
-        `INSERT INTO public_booking_otp
-         (company_id,email,otp,expires_at,verified)
-         VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE), 0)`,
-        [company.id, email, otp]
-      );
-    }
-
-    await sendOtpEmail(email, otp, company);
-
-    res.json({ message: "OTP resent successfully" });
-
-  } catch (err) {
-    console.error("[PUBLIC][RESEND OTP]", err);
-    res.status(500).json({ message: "Failed to resend OTP" });
-  }
-});
-
-/* ======================================================
    VERIFY OTP
 ====================================================== */
 router.post("/company/:slug/verify-otp", async (req, res) => {
@@ -374,7 +388,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING
+   ⭐ CREATE BOOKING — PLAN PROTECTED
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -409,6 +423,13 @@ router.post("/company/:slug/book", async (req, res) => {
 
     if (!company)
       return res.status(404).json({ message: "Invalid booking link" });
+
+    // ⭐ PLAN CHECK
+    try {
+      await checkConferencePlanPublic(company.id);
+    } catch (err) {
+      return res.status(403).json({ message: err.message });
+    }
 
     const [[verified]] = await db.query(
       `SELECT id FROM public_booking_otp
