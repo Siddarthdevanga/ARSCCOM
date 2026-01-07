@@ -18,7 +18,6 @@ body::-webkit-scrollbar {
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   color: #fff;
   font-family: "Segoe UI", Arial, sans-serif;
-
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -99,7 +98,6 @@ body::-webkit-scrollbar {
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-
   box-shadow: 0 8px 18px rgba(0,0,0,.25);
   transition: transform .2s ease, box-shadow .2s ease;
 }
@@ -107,6 +105,49 @@ body::-webkit-scrollbar {
 .newBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 12px 26px rgba(0,0,0,.35);
+}
+
+/* ================= PLAN BAR ================= */
+.planBarWrapper {
+  padding: 0 60px;
+  margin-top: 10px;
+}
+
+.planHeader {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.planName {
+  font-size: 16px;
+}
+
+.planRemaining {
+  font-size: 15px;
+  opacity: .9;
+}
+
+.planBarBg {
+  width: 100%;
+  height: 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.25);
+  overflow: hidden;
+}
+
+.planBarFill {
+  height: 100%;
+  background: linear-gradient(135deg, #00ff8a, #16c47f);
+}
+
+.planFooter {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-top: 6px;
+  opacity: .9;
 }
 
 /* ================= KPI CARDS ================= */
@@ -220,6 +261,10 @@ body::-webkit-scrollbar {
     flex-direction: column;
     align-items: flex-start;
     gap: 14px;
+    padding: 0 28px;
+  }
+
+  .planBarWrapper {
     padding: 0 28px;
   }
 
