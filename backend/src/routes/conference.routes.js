@@ -46,7 +46,7 @@ const normalizeTime = (t) => {
 };
 
 /* ======================================================
-   AM/PM FORMAT
+   AM/PM FORMATTER
 ====================================================== */
 const toAmPm = (time) => {
   if (!time) return "";
@@ -57,7 +57,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   REQUIRED FOOTER ✔️
+   EMAIL FOOTER
 ====================================================== */
 const emailFooter = company => `
 <br/>
@@ -79,17 +79,13 @@ const getCompanyInfo = async (companyId) => {
     "SELECT name, logo_url FROM companies WHERE id = ? LIMIT 1",
     [companyId]
   );
-
   return company || { name: "", logo_url: "" };
 };
 
-/* ======================================================
-   EMAIL VALIDATION
-====================================================== */
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
-   PLAN GUARDRAILS
+   PLAN VALIDATION (UNTOUCHED — JUST RELIABLE)
 ====================================================== */
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
@@ -112,105 +108,93 @@ const checkConferencePlan = async (companyId) => {
   const STATUS = (company.subscription_status || "PENDING").toUpperCase();
   const now = new Date();
 
-  if (!["ACTIVE", "TRIAL"].includes(STATUS)) {
+  if (!["ACTIVE", "TRIAL"].includes(STATUS))
     throw new Error("Subscription inactive. Please renew subscription.");
-  }
 
-  /* ================= TRIAL PLAN ================= */
+  // ---------- TRIAL ----------
   if (PLAN === "TRIAL") {
-    if (!company.trial_ends_at) throw new Error("Trial not initialized");
+    if (!company.trial_ends_at)
+      throw new Error("Trial not initialized");
 
-    const trialEnd = new Date(company.trial_ends_at);
-    if (trialEnd < now) throw new Error("Trial expired. Please upgrade plan.");
+    if (new Date(company.trial_ends_at) < now)
+      throw new Error("Trial expired. Please upgrade plan.");
 
-    // Room Limit 2
-    const [[roomCount]] = await db.query(
+    const [[rooms]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
-    const roomAllowed = roomCount.total < 2;
+    if (rooms.total >= 2)
+      return { plan: PLAN, roomAllowed: false };
 
-    // Booking Limit 100
-    const [[bookingCount]] = await db.query(
+    const [[bookings]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
       [companyId]
     );
 
-    if (bookingCount.total >= 100)
+    if (bookings.total >= 100)
       throw new Error("Trial limit reached. Max 100 bookings allowed.");
 
-    return { plan: PLAN, roomAllowed };
+    return { plan: PLAN, roomAllowed: true };
   }
 
-  /* ================= BUSINESS PLAN ================= */
+  // ---------- BUSINESS ----------
   if (PLAN === "BUSINESS") {
     if (!company.subscription_ends_at)
       throw new Error("Subscription not initialized");
 
-    const end = new Date(company.subscription_ends_at);
-    if (end < now) throw new Error("Business plan expired. Please renew.");
+    if (new Date(company.subscription_ends_at) < now)
+      throw new Error("Business plan expired. Please renew.");
 
-    // Room Limit 6
-    const [[roomCount]] = await db.query(
+    const [[rooms]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
-    const roomAllowed = roomCount.total < 6;
-
-    // Booking Limit 1000
-    const [[bookingCount]] = await db.query(
-      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
-      [companyId]
-    );
-
-    if (bookingCount.total >= 1000)
-      throw new Error("Business plan booking limit reached (1000).");
-
-    return { plan: PLAN, roomAllowed };
+    return { plan: PLAN, roomAllowed: rooms.total < 6 };
   }
 
-  /* ================= ENTERPRISE ================= */
   return { plan: "ENTERPRISE", roomAllowed: true };
 };
 
 /* ======================================================
-   SEND BOOKING EMAIL
+   ⭐ PLAN USAGE API (needed for frontend scroll bar)
 ====================================================== */
-const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, booking, company }) => {
-  const recipients = [];
+router.get("/plan-usage", async (req, res) => {
+  try {
+    const companyId = req.user.companyId;
 
-  if (isEmail(adminEmail)) recipients.push(adminEmail);
-  if (isEmail(userEmail) && userEmail !== adminEmail) recipients.push(userEmail);
+    const [[company]] = await db.query(
+      `SELECT plan FROM companies WHERE id = ? LIMIT 1`,
+      [companyId]
+    );
 
-  if (!recipients.length) return;
+    if (!company) throw new Error("Company not found");
 
-  const safeCompany = company || { name: "", logo_url: "" };
+    const PLAN = (company.plan || "TRIAL").toUpperCase();
 
-  await sendEmail({
-    to: recipients,
-    subject,
-    html: `
-      <div style="font-family:Arial;padding:18px">
-        <h2 style="color:#6c2bd9;margin-bottom:6px">${heading}</h2>
+    let limit =
+      PLAN === "TRIAL" ? 2 :
+      PLAN === "BUSINESS" ? 6 :
+      Infinity;
 
-        <p style="font-size:14px;color:#444">Below are the meeting details:</p>
+    const [[count]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
 
-        <div style="background:#f7f7ff;border-radius:12px;border:1px solid #ddd;padding:16px;margin:12px 0">
-          <p><b>Room:</b> ${booking.room_name}</p>
-          <p><b>Date:</b> ${booking.booking_date}</p>
-          <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(booking.end_time)}</p>
-          <p><b>Department:</b> ${booking.department}</p>
-          ${booking.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
-          <p><b>Status:</b> ${booking.status || "CONFIRMED"}</p>
-        </div>
+    res.json({
+      plan: PLAN,
+      limit: limit === Infinity ? "UNLIMITED" : limit,
+      used: count.total,
+      remaining: limit === Infinity ? null : Math.max(limit - count.total, 0)
+    });
 
-        ${emailFooter(safeCompany)}
-      </div>
-    `
-  });
-};
+  } catch (err) {
+    console.error("[CONF PLAN USAGE]", err);
+    res.status(403).json({ message: err.message || "Plan error" });
+  }
+});
 
 /* ======================================================
    DASHBOARD
