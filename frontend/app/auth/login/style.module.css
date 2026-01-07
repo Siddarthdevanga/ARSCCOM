@@ -3,7 +3,7 @@ html,
 body {
   height: 100%;
   margin: 0;
-  overflow-x: hidden;
+  overflow: hidden;             /* 🔥 NO PAGE SCROLL ANYTIME */
 }
 
 :root {
@@ -14,11 +14,11 @@ body {
 
 /* ================= CONTAINER ================= */
 .container {
-  min-height: 100vh;
+  min-height: 100dvh;            /* 🔥 FIXES REFRESH + MOBILE HEIGHT ISSUE */
   background: linear-gradient(135deg, var(--purple1), var(--purple2));
   font-family: "Segoe UI", Arial, sans-serif;
   color: white;
-  padding-bottom: 40px;
+  position: relative;
 }
 
 /* ================= HEADER ================= */
@@ -61,7 +61,6 @@ body {
   color: white;
   font-size: clamp(12px, 1.2vw, 16px);
   font-weight: 800;
-  letter-spacing: 1px;
   cursor: pointer;
   transition: 0.25s ease;
 }
@@ -79,7 +78,7 @@ body {
 
   width: clamp(300px, 55vw, 900px);
 
-  background: #ffffff;
+  background: white;
   color: #222;
 
   border-radius: 18px;
@@ -88,6 +87,9 @@ body {
   border: 1px solid rgba(0,0,0,0.18);
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
   z-index: 100;
+
+  max-height: calc(100dvh - 140px);  /* 🔥 NEVER PUSH PAGE HEIGHT */
+  overflow-y: auto;
 }
 
 .dropdownBox h2 {
@@ -113,10 +115,8 @@ body {
 .planCard {
   flex: 1;
   min-width: 240px;
-
   padding: clamp(12px, 1.5vw, 16px);
   border-radius: 14px;
-
   background: #f7f7ff;
   border: 1px solid rgba(0,0,0,0.18);
   color: #222;
@@ -171,6 +171,8 @@ body {
   position: absolute;
   top: clamp(80px, 10vw, 140px);
   right: clamp(20px, 5vw, 100px);
+  max-height: calc(100dvh - 120px);   /* 🔥 PREVENT PAGE SCROLL */
+  overflow-y: auto;
 }
 
 .loginCard {
@@ -191,6 +193,12 @@ body {
 /* Inputs */
 .inputGroup {
   margin-bottom: 16px;
+}
+
+.inputGroup label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #555;
 }
 
 .inputGroup input {
@@ -224,16 +232,26 @@ body {
   background: #5c00c7;
 }
 
-/* ================= EXTRA LINKS ================= */
 .extraLinks {
   margin-top: 14px;
   text-align: center;
   font-size: clamp(12px, 1vw, 14px);
 }
 
+.extraLinks a {
+  color: #5c00c7;
+  text-decoration: none;
+  margin: 0 8px;
+  font-weight: 700;
+}
+
+.extraLinks a:hover {
+  text-decoration: underline;
+}
+
 /* ================= RESPONSIVE ================= */
 
-/* Tablets */
+/******** TABLETS ********/
 @media (max-width: 1024px) {
   .dropdownBox {
     width: 80vw;
@@ -244,10 +262,10 @@ body {
   }
 }
 
-/* Mobile */
+/******** MOBILE ********/
 @media (max-width: 820px) {
   body {
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   .nav {
@@ -273,7 +291,7 @@ body {
   }
 }
 
-/* Small Mobile */
+/******** SMALL MOBILE ********/
 @media (max-width: 500px) {
   .header {
     padding: 14px 18px;
@@ -288,3 +306,7 @@ body {
   }
 }
 
+/* ================= SAFETY ================= */
+* {
+  overscroll-behavior: none;
+}
