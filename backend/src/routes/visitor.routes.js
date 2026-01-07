@@ -1,12 +1,11 @@
-
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
 
 import {
   createVisitor,
-  getVisitorPass,        // 🔒 admin / dashboard
-  getPublicVisitorPass,  // 🌐 public email / QR
+  getVisitorPass,        // Secure - Admin
+  getPublicVisitorPass,  // Public via Email/QR
   getVisitorDashboard,
   checkoutVisitor
 } from "../controllers/visitor.controller.js";
@@ -14,10 +13,9 @@ import {
 const router = express.Router();
 
 /* ======================================================
-   🌐 PUBLIC VISITOR PASS (EMAIL / QR)
-   GET /api/visitors/public/code/:visitorCode
-   - NO AUTH
-   - Read-only
+   🌐 PUBLIC VISITOR PASS (NO AUTH)
+   Safe public read only access
+   URL used in email + QR
 ====================================================== */
 router.get(
   "/public/code/:visitorCode",
@@ -25,9 +23,9 @@ router.get(
 );
 
 /* ======================================================
-   CREATE VISITOR
+   👤 CREATE VISITOR
    POST /api/visitors
-   - Auth required
+   - Auth Required
    - multipart/form-data
    - photo field name = "photo"
 ====================================================== */
@@ -39,8 +37,9 @@ router.post(
 );
 
 /* ======================================================
-   VISITOR DASHBOARD (ADMIN)
+   📊 VISITOR DASHBOARD (ADMIN)
    GET /api/visitors/dashboard
+   Returns today, monthly count, plan usage etc.
 ====================================================== */
 router.get(
   "/dashboard",
@@ -49,9 +48,10 @@ router.get(
 );
 
 /* ======================================================
-   ADMIN VISITOR PASS (SECURE)
+   🔒 SECURE ADMIN VISITOR PASS
    GET /api/visitors/code/:visitorCode
-   - Company-isolated
+   - Requires auth
+   - Must belong to same company
 ====================================================== */
 router.get(
   "/code/:visitorCode",
@@ -60,7 +60,7 @@ router.get(
 );
 
 /* ======================================================
-   CHECKOUT VISITOR
+   🚪 CHECKOUT VISITOR
    POST /api/visitors/:visitorCode/checkout
 ====================================================== */
 router.post(
