@@ -11,7 +11,7 @@ router.use(express.urlencoded({ extended: true }));
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
-/* ================= HEALTH TEST (to confirm router is mounted) ================= */
+/* ================= HEALTH TEST ================= */
 router.get("/health", (req, res) => {
   res.json({ ok: true, route: "conference router active" });
 });
@@ -103,15 +103,11 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ================= RENAME ROOM ================= */
-/* Supports PUT + PATCH + POST (/rename fallback) */
-router.put("/rooms/:id", renameRoom);
-router.patch("/rooms/:id", renameRoom);
-router.post("/rooms/:id/rename", renameRoom);   // <-- Always works on production
-
-async function renameRoom(req, res) {
+/* FINAL SAFE ROUTE — Works in all servers (no URL params needed) */
+router.post("/rooms/rename", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-    const roomId = Number(req.params.id);
+    const roomId = Number(req.body.id);
     const { room_name } = req.body;
 
     if (!roomId || isNaN(roomId)) {
@@ -124,9 +120,7 @@ async function renameRoom(req, res) {
 
     const newName = room_name.trim();
 
-    // Debug to verify production route recognition
     console.log("[CONF RENAME HIT]", {
-      method: req.method,
       path: req.originalUrl,
       companyId,
       roomId,
@@ -148,7 +142,7 @@ async function renameRoom(req, res) {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // Same name = ok
+    // No change
     if (room.room_name === newName) {
       return res.json({ message: "Room name unchanged", room });
     }
@@ -176,6 +170,7 @@ async function renameRoom(req, res) {
     console.error("[CONF RENAME ROOM]", err);
     res.status(500).json({ message: err.message || "Unable to rename room" });
   }
-}
+});
 
 export default router;
+
