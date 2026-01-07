@@ -245,24 +245,24 @@ body {
   top: 0;
   left: 0;
 
-  width: 30%;
-  max-width: 420px;
+  width: 50%;
+  max-width: 650px;
   height: 100vh;
 
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  background: linear-gradient(140deg, #3c007a, #7a00ff);
   color: white;
 
   border-right: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 6px 0 22px rgba(0,0,0,.35);
+  box-shadow: 12px 0 35px rgba(0,0,0,.45);
   padding: 22px;
-  animation: panelSlide .3s ease-in-out;
 
-  backdrop-filter: blur(8px);
+  animation: panelSlide .32s ease-in-out;
+  backdrop-filter: blur(10px);
   z-index: 100;
 }
 
 @keyframes panelSlide {
-  from { left: -40%; opacity: .4; }
+  from { left: -55%; opacity: .3; }
   to { left: 0; opacity: 1; }
 }
 
@@ -296,7 +296,7 @@ body {
 
 /* ================= PANEL BODY ================= */
 .leftPanelContent {
-  height: calc(100vh - 80px);
+  height: calc(100vh - 90px);
   overflow-y: auto;
   padding-right: 8px;
   scrollbar-width: none;
