@@ -138,7 +138,7 @@ export default function Home() {
 
           <div className={styles.subSlide}>
             <div className={styles.subHeader}>
-              <h3>Subscription Details</h3>
+              <h3>SUBSCRIPTION DETAILS</h3>
               <button onClick={() => setShowSub(false)}>✖</button>
             </div>
 
