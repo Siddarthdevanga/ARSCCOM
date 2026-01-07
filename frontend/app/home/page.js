@@ -154,7 +154,7 @@ export default function Home() {
                 <p><b>STATUS:</b> {subData.STATUS || "—"}</p>
 
                 {subData.ZOHO_CUSTOMER_ID && (
-                  <p><b>ZOHO CUSTOMER NO:</b> {subData.ZOHO_CUSTOMER_ID}</p>
+                  <p><b>CUSTOMER NO:</b> {subData.ZOHO_CUSTOMER_ID}</p>
                 )}
 
                 {subData.TRIAL_ENDS_ON && (
