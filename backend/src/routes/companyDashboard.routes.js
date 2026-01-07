@@ -4,21 +4,14 @@ import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
-console.log("REQUEST DEBUG >>>", {
-  method: req.method,
-  url: req.originalUrl,
-  headers: req.headers["content-type"],
-  body: req.body
-});
-
-
-/* ================= REQUIRED (Fixes Failed Rename) ================= */
+/* ================= BODY PARSERS ================= */
 router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
 
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
-/* ================= DASHBOARD STATS ================= */
+/* ================= DASHBOARD ================= */
 router.get("/dashboard", async (req, res) => {
   try {
     const companyId = req.user.company_id;
@@ -84,7 +77,7 @@ router.post("/rooms", async (req, res) => {
 
     if (!room_name || !room_number) {
       return res.status(400).json({
-        message: "Room name and room number are required"
+        message: "Room name and room number are required",
       });
     }
 
@@ -105,9 +98,10 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ================= RENAME ROOM ================= */
-/* Supports PUT & PATCH */
+/* Supports PUT + PATCH + POST (/rename fallback) */
 router.put("/rooms/:id", renameRoom);
 router.patch("/rooms/:id", renameRoom);
+router.post("/rooms/:id/rename", renameRoom);   // <-- Guaranteed works in production
 
 async function renameRoom(req, res) {
   try {
@@ -115,7 +109,13 @@ async function renameRoom(req, res) {
     const roomId = Number(req.params.id);
     const { room_name } = req.body;
 
-    console.log("RENAME HIT", { roomId, body: req.body });
+    console.log("RENAME REQUEST >>>", {
+      method: req.method,
+      url: req.originalUrl,
+      companyId,
+      roomId,
+      body: req.body
+    });
 
     if (!roomId || isNaN(roomId)) {
       return res.status(400).json({ message: "Invalid room id" });
@@ -127,7 +127,6 @@ async function renameRoom(req, res) {
 
     const newName = room_name.trim();
 
-    // Check room exists
     const [[room]] = await db.query(
       `
       SELECT id, room_name
@@ -141,12 +140,10 @@ async function renameRoom(req, res) {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // If same name
     if (room.room_name === newName) {
       return res.json({ message: "Room name unchanged", room });
     }
 
-    // Update
     const [result] = await db.query(
       `
       UPDATE conference_rooms
@@ -163,7 +160,7 @@ async function renameRoom(req, res) {
 
     res.json({
       message: "Room renamed successfully",
-      room: { id: roomId, room_name: newName }
+      room: { id: roomId, room_name: newName },
     });
 
   } catch (err) {
