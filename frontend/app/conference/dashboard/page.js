@@ -10,7 +10,6 @@ const formatNiceDate = (value) => {
   if (!value) return "-";
   try {
     let str = String(value).trim();
-
     if (str.includes("T")) str = str.split("T")[0];
     if (str.includes(" ")) str = str.split(" ")[0];
 
@@ -19,7 +18,6 @@ const formatNiceDate = (value) => {
       "Jan","Feb","Mar","Apr","May","Jun",
       "Jul","Aug","Sep","Oct","Nov","Dec"
     ];
-
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
     return value;
@@ -31,7 +29,6 @@ const formatNiceTime = (value) => {
   if (!value) return "-";
   try {
     let str = String(value).trim();
-
     if (str.includes("T")) str = str.split("T")[1];
     if (str.includes(" ")) str = str.split(" ")[1];
 
@@ -40,7 +37,6 @@ const formatNiceTime = (value) => {
 
     let h = parseInt(parts[0], 10);
     const m = parts[1];
-
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
@@ -66,7 +62,7 @@ export default function ConferenceDashboard() {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* Filter */
+  /* Filter Day */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -96,7 +92,7 @@ export default function ConferenceDashboard() {
       setStats(statsRes);
       setRooms(roomsRes || []);
       setBookings(bookingsRes || []);
-    } catch (err) {
+    } catch {
       router.replace("/auth/login");
     } finally {
       setLoading(false);
@@ -129,7 +125,7 @@ export default function ConferenceDashboard() {
 
     try {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PUT",       // IMPORTANT — matches backend
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room_name: newName }),
       });
@@ -138,7 +134,7 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert("Failed to rename room");
+      alert(err?.message || "Failed to rename room");
     }
   };
 
@@ -148,7 +144,6 @@ export default function ConferenceDashboard() {
       const date = b.booking_date?.includes("T")
         ? b.booking_date.split("T")[0]
         : b.booking_date;
-
       return date === selectedDate && b.status === "BOOKED";
     });
   }, [bookings, selectedDate]);
@@ -256,9 +251,7 @@ export default function ConferenceDashboard() {
                         onChange={(e) => setEditName(e.target.value)}
                         autoFocus
                       />
-
                       <button onClick={() => saveRoomName(r.id)}>Save</button>
-
                       <button
                         onClick={() => {
                           setEditingRoomId(null);
