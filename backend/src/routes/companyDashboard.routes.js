@@ -94,20 +94,31 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ================= RENAME ROOM ================= */
-router.put("/rooms/:id", async (req, res) => {
+/* Allow PUT or PATCH */
+router.put("/rooms/:id", renameRoom);
+router.patch("/rooms/:id", renameRoom);
+
+async function renameRoom(req, res) {
   try {
     const companyId = req.user.company_id;
-    const roomId = req.params.id;
+    const roomId = Number(req.params.id);
     const { room_name } = req.body;
+
+    if (!roomId || isNaN(roomId)) {
+      return res.status(400).json({ message: "Invalid room id" });
+    }
 
     if (!room_name || !room_name.trim()) {
       return res.status(400).json({ message: "Room name is required" });
     }
 
-    // Check room exists under this company
+    const newName = room_name.trim();
+
+    // Check room exists
     const [[room]] = await db.query(
       `
-      SELECT id FROM conference_rooms
+      SELECT id, room_name
+      FROM conference_rooms
       WHERE id = ? AND company_id = ?
       `,
       [roomId, companyId]
@@ -117,7 +128,12 @@ router.put("/rooms/:id", async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // Update room
+    // If same name → return success
+    if (room.room_name === newName) {
+      return res.json({ message: "Room name unchanged", room });
+    }
+
+    // Update
     const [result] = await db.query(
       `
       UPDATE conference_rooms
@@ -125,19 +141,23 @@ router.put("/rooms/:id", async (req, res) => {
       WHERE id = ?
       AND company_id = ?
       `,
-      [room_name.trim(), roomId, companyId]
+      [newName, roomId, companyId]
     );
 
-    // If name is same → treat as success
-    if (result.affectedRows === 0) {
-      return res.json({ message: "Room name unchanged" });
+    if (!result.affectedRows) {
+      return res.status(400).json({ message: "Rename failed" });
     }
 
-    res.json({ message: "Room renamed successfully" });
+    res.json({
+      message: "Room renamed successfully",
+      room: { id: roomId, room_name: newName }
+    });
+
   } catch (err) {
     console.error("[CONF RENAME ROOM]", err);
-    res.status(500).json({ message: "Unable to rename room" });
+    res.status(500).json({ message: err.message || "Unable to rename room" });
   }
-});
+}
 
 export default router;
+
