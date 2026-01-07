@@ -1,5 +1,5 @@
 import { db } from "../config/db.js";
-import { uploadToS3 } from "./s3.service.js"; 
+import { uploadToS3 } from "./s3.service.js";
 import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 
 /* ======================================================
@@ -43,13 +43,15 @@ export const saveVisitor = async (companyId, data, file) => {
     purpose,
     belongings,
     idType,
-    idNumber
+    idNumber,
   } = data;
 
-  if (!name || !phone) throw new Error("Visitor name and phone are required");
+  if (!name || !phone)
+    throw new Error("Visitor name and phone are required");
 
   const checkInIST = getISTDate();
-  if (isNaN(checkInIST.getTime())) throw new Error("Invalid IST datetime");
+  if (isNaN(checkInIST.getTime()))
+    throw new Error("Invalid IST datetime");
 
   /* ======================================================
        FETCH COMPANY
@@ -70,15 +72,14 @@ export const saveVisitor = async (companyId, data, file) => {
 
   if (!company) throw new Error("Company not found");
 
-  const PLAN = (company.plan || "trial").toUpperCase();
-  const STATUS = (company.subscription_status || "pending").toUpperCase();
-
+  const PLAN = (company.plan || "TRIAL").toUpperCase();
+  const STATUS = (company.subscription_status || "PENDING").toUpperCase();
   const now = checkInIST;
 
   /* ======================================================
-       SUBSCRIPTION STATE VALIDATION
+       SUBSCRIPTION VALIDATION
   ======================================================= */
-  if (STATUS !== "ACTIVE" && STATUS !== "TRIAL") {
+  if (!["ACTIVE", "TRIAL"].includes(STATUS)) {
     throw new Error("Subscription inactive. Please renew subscription.");
   }
 
@@ -86,10 +87,12 @@ export const saveVisitor = async (companyId, data, file) => {
        TRIAL RULES — 15 DAYS + 100 VISITORS
   ======================================================= */
   if (PLAN === "TRIAL") {
-    if (!company.trial_ends_at) throw new Error("Trial not initialized");
+    if (!company.trial_ends_at)
+      throw new Error("Trial not initialized");
 
     const trialEnd = new Date(company.trial_ends_at);
-    if (trialEnd < now) throw new Error("Trial expired. Please upgrade plan.");
+    if (trialEnd < now)
+      throw new Error("Trial expired. Please upgrade plan.");
 
     const [[countRow]] = await db.execute(
       `
@@ -102,29 +105,21 @@ export const saveVisitor = async (companyId, data, file) => {
 
     if (countRow.total >= 100) {
       throw new Error(
-        "Trial limit reached. Max 100 visitors allowed. Upgrade to continue."
+        "Trial visitor limit reached. Max 100 visitors allowed. Please upgrade."
       );
     }
   }
 
   /* ======================================================
-       BUSINESS & ENTERPRISE — SAME RULE NOW
-       VALIDITY 30 DAYS
+       BUSINESS / ENTERPRISE — JUST EXPIRY CHECK
   ======================================================= */
   if (PLAN === "BUSINESS" || PLAN === "ENTERPRISE") {
-    if (!company.subscription_ends_at) {
+    if (!company.subscription_ends_at)
       throw new Error("Subscription not initialized");
-    }
 
     const subEnd = new Date(company.subscription_ends_at);
-
-    if (subEnd < now) {
-      throw new Error(
-        `${PLAN} plan expired. Please renew subscription.`
-      );
-    }
-
-    // Unlimited Visitors — No Count Check
+    if (subEnd < now)
+      throw new Error(`${PLAN} subscription expired. Please renew.`);
   }
 
   /* ======================================================
@@ -158,23 +153,25 @@ export const saveVisitor = async (companyId, data, file) => {
       country || null,
       personToMeet || null,
       purpose || null,
-      Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
+      Array.isArray(belongings)
+        ? belongings.join(", ")
+        : belongings || null,
       idType || null,
       idNumber || null,
-      checkInIST
+      checkInIST,
     ]
   );
 
   const visitorId = insertResult.insertId;
 
   /* ======================================================
-       DAILY VISITOR COUNT CODE
+       DAILY VISITOR COUNT
   ======================================================= */
   const istDateString = `${checkInIST.getFullYear()}-${String(
     checkInIST.getMonth() + 1
   ).padStart(2, "0")}-${String(checkInIST.getDate()).padStart(2, "0")}`;
 
-  const [[countRow]] = await db.execute(
+  const [[dailyCount]] = await db.execute(
     `
       SELECT COUNT(*) AS count
       FROM visitors
@@ -184,7 +181,7 @@ export const saveVisitor = async (companyId, data, file) => {
     [companyId, istDateString]
   );
 
-  const dailyVisitorNumber = countRow.count;
+  const dailyVisitorNumber = dailyCount.count;
 
   const visitorCode = `CMP${companyId}-${dateKey}-${String(
     dailyVisitorNumber
@@ -213,7 +210,7 @@ export const saveVisitor = async (companyId, data, file) => {
         company: {
           id: companyId,
           name: companyInfo.name,
-          logo: companyInfo.logo_url
+          logo: companyInfo.logo_url,
         },
         visitor: {
           visitorCode,
@@ -221,8 +218,8 @@ export const saveVisitor = async (companyId, data, file) => {
           phone,
           email,
           photoUrl,
-          checkIn: istDateString + " " + checkInIST.toTimeString().slice(0, 8)
-        }
+          checkIn: istDateString + " " + checkInIST.toTimeString().slice(0, 8),
+        },
       });
 
       await db.execute(
@@ -242,6 +239,6 @@ export const saveVisitor = async (companyId, data, file) => {
     email,
     photoUrl,
     status: "IN",
-    checkInIST
+    checkInIST,
   };
 };
