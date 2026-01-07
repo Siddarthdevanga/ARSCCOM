@@ -54,6 +54,8 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const [plan, setPlan] = useState(null);
+
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
@@ -78,15 +80,17 @@ export default function ConferenceDashboard() {
   /* -------- LOAD DASHBOARD -------- */
   const loadDashboard = async () => {
     try {
-      const [statsRes, roomsRes, bookingsRes] = await Promise.all([
+      const [statsRes, roomsRes, bookingsRes, planRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
         apiFetch("/api/conference/rooms"),
         apiFetch("/api/conference/bookings"),
+        apiFetch("/api/conference/plan-usage"),
       ]);
 
       setStats(statsRes);
       setRooms(roomsRes || []);
       setBookings(bookingsRes || []);
+      setPlan(planRes);
     } catch {
       router.replace("/auth/login");
     } finally {
@@ -107,8 +111,13 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* -------- RENAME ROOM — FINAL WORKING VERSION -------- */
+  /* -------- RENAME ROOM -------- */
   const saveRoomName = async (roomId) => {
+    if (plan?.remaining === 0) {
+      alert("Plan limit reached. You cannot modify rooms. Contact Administrator.");
+      return;
+    }
+
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
 
@@ -122,10 +131,7 @@ export default function ConferenceDashboard() {
       await apiFetch(`/api/conference/rooms/rename`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: roomId,
-          room_name: newName
-        }),
+        body: JSON.stringify({ id: roomId, room_name: newName }),
       });
 
       setEditingRoomId(null);
@@ -161,12 +167,29 @@ export default function ConferenceDashboard() {
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
+  const percentage =
+    plan?.limit === "UNLIMITED"
+      ? 100
+      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
+
+  const barColor =
+    plan?.limit === "UNLIMITED"
+      ? "#00c853"
+      : percentage >= 90
+      ? "#ff1744"
+      : percentage >= 70
+      ? "#ff9800"
+      : "#00c853";
+
   return (
     <div className={styles.container}>
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
+          <div
+            className={styles.leftMenuTrigger}
+            onClick={() => setSidePanelOpen(true)}
+          >
             <span></span><span></span><span></span>
           </div>
 
@@ -216,6 +239,39 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
+      {/* PLAN USAGE */}
+      {plan && (
+        <div className={styles.planBox}>
+          <h3>Conference Room Plan Usage</h3>
+
+          <p>
+            Plan: <b>{plan.plan}</b>
+          </p>
+
+          {plan.limit === "UNLIMITED" ? (
+            <p>Unlimited Rooms Available 🎉</p>
+          ) : (
+            <p>
+              Rooms Used: <b>{plan.used}</b> / {plan.limit} &nbsp; | Remaining:{" "}
+              <b>{plan.remaining}</b>
+            </p>
+          )}
+
+          <div className={styles.barOuter}>
+            <div
+              className={styles.barInner}
+              style={{ width: percentage + "%", background: barColor }}
+            ></div>
+          </div>
+
+          {plan.remaining === 0 && (
+            <p style={{ color: "#ff1744", marginTop: 6, fontWeight: "bold" }}>
+              Room Limit Reached – Contact Administrator
+            </p>
+          )}
+        </div>
+      )}
+
       {/* LEFT PANEL */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
@@ -259,6 +315,11 @@ export default function ConferenceDashboard() {
                     </>
                   ) : (
                     <button
+                      disabled={plan?.remaining === 0}
+                      style={{
+                        opacity: plan?.remaining === 0 ? 0.5 : 1,
+                        cursor: plan?.remaining === 0 ? "not-allowed" : "pointer",
+                      }}
                       onClick={() => {
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
@@ -356,3 +417,4 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
+
