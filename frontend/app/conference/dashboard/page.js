@@ -6,14 +6,20 @@ import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
 /* ================= DATE ================= */
-const formatNiceDate = (value: any) => {
+const formatNiceDate = (value) => {
   if (!value) return "-";
   try {
     let str = String(value).trim();
+
     if (str.includes("T")) str = str.split("T")[0];
     if (str.includes(" ")) str = str.split(" ")[0];
+
     const [y, m, d] = str.split("-");
-    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const names = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
+
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
     return value;
@@ -21,19 +27,25 @@ const formatNiceDate = (value: any) => {
 };
 
 /* ================= TIME ================= */
-const formatNiceTime = (value: any) => {
+const formatNiceTime = (value) => {
   if (!value) return "-";
   try {
     let str = String(value).trim();
+
     if (str.includes("T")) str = str.split("T")[1];
     if (str.includes(" ")) str = str.split(" ")[1];
 
-    const [hRaw, m] = str.split(":");
-    let h = parseInt(hRaw, 10);
+    const parts = str.split(":");
+    if (parts.length < 2) return "-";
+
+    let h = parseInt(parts[0], 10);
+    const m = parts[1];
+
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
     h = h % 12 || 12;
+
     return `${h}:${m} ${suffix}`;
   } catch {
     return "-";
@@ -43,21 +55,21 @@ const formatNiceTime = (value: any) => {
 export default function ConferenceDashboard() {
   const router = useRouter();
 
-  const [company, setCompany] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [company, setCompany] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [rooms, setRooms] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* Left panel */
+  /* Left Panel */
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
-  const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
+  const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
   /* Filter */
-  const [filterDay, setFilterDay] = useState<"yesterday" | "today" | "tomorrow">("today");
+  const [filterDay, setFilterDay] = useState("today");
 
-  const getDate = (offset: number) => {
+  const getDate = (offset) => {
     const d = new Date();
     d.setDate(d.getDate() + offset);
     return d.toISOString().split("T")[0];
@@ -105,9 +117,9 @@ export default function ConferenceDashboard() {
   }, []);
 
   /* ================= SAVE ROOM NAME ================= */
-  const saveRoomName = async (roomId: number) => {
+  const saveRoomName = async (roomId) => {
     const newName = editName.trim();
-    const original = rooms.find(r => r.id === roomId)?.room_name;
+    const original = rooms.find((r) => r.id === roomId)?.room_name;
 
     if (!newName) return alert("Room name is required");
     if (newName === original) {
@@ -117,7 +129,7 @@ export default function ConferenceDashboard() {
 
     try {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PUT",   // IMPORTANT FIX
+        method: "PUT",       // IMPORTANT — matches backend
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room_name: newName }),
       });
@@ -125,23 +137,25 @@ export default function ConferenceDashboard() {
       setEditingRoomId(null);
       setEditName("");
       loadDashboard();
-    } catch (err: any) {
-      alert(err?.message || "Failed to rename room");
+    } catch (err) {
+      alert("Failed to rename room");
     }
   };
 
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
-    return bookings.filter(
-      (b) =>
-        (b.booking_date?.split("T")[0] || b.booking_date) === selectedDate &&
-        b.status === "BOOKED"
-    );
+    return bookings.filter((b) => {
+      const date = b.booking_date?.includes("T")
+        ? b.booking_date.split("T")[0]
+        : b.booking_date;
+
+      return date === selectedDate && b.status === "BOOKED";
+    });
   }, [bookings, selectedDate]);
 
   /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
-    const map: Record<string, number> = {};
+    const map = {};
     filteredBookings.forEach((b) => {
       const dep = b.department || "Unknown";
       map[dep] = (map[dep] || 0) + 1;
@@ -155,7 +169,7 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
           <div
@@ -172,7 +186,12 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
-          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Logo" />
+          <img
+            src={company.logo_url || "/logo.png"}
+            className={styles.logo}
+            alt="Logo"
+          />
+
           <button
             className={styles.logoBtn}
             title="Logout"
@@ -186,11 +205,12 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* ================= PUBLIC URL ================= */}
+      {/* PUBLIC LINK */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
             <p className={styles.publicTitle}>Public Booking URL</p>
+
             <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
@@ -205,11 +225,12 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= LEFT PANEL ================= */}
+      {/* LEFT PANEL */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
             <h3>Rename Conference Rooms</h3>
+
             <button
               className={styles.leftCloseBtn}
               onClick={() => {
@@ -235,7 +256,9 @@ export default function ConferenceDashboard() {
                         onChange={(e) => setEditName(e.target.value)}
                         autoFocus
                       />
+
                       <button onClick={() => saveRoomName(r.id)}>Save</button>
+
                       <button
                         onClick={() => {
                           setEditingRoomId(null);
@@ -262,7 +285,7 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* ================= DATE FILTER ================= */}
+      {/* DATE FILTER */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
 
@@ -270,7 +293,7 @@ export default function ConferenceDashboard() {
           {["yesterday", "today", "tomorrow"].map((d) => (
             <button
               key={d}
-              onClick={() => setFilterDay(d as any)}
+              onClick={() => setFilterDay(d)}
               style={{
                 background: filterDay === d ? "yellow" : "#ffffff",
                 color: "#000",
@@ -285,7 +308,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= KPIs ================= */}
+      {/* KPIs */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
@@ -303,7 +326,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= DEPARTMENT STATS ================= */}
+      {/* DEPARTMENT STATS */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -320,7 +343,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* ================= BOOKINGS LIST ================= */}
+      {/* BOOKINGS LIST */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
@@ -344,4 +367,3 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
-
