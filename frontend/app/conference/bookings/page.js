@@ -99,6 +99,25 @@ export default function ConferenceBookings() {
   }, []);
 
   /* ======================================================
+     PLAN ROOM LIMIT ENFORCEMENT (FRONTEND SAFETY)
+  ====================================================== */
+  const allowedRooms = useMemo(() => {
+    if (!company) return rooms;
+
+    const plan = (company.plan || "trial").toLowerCase();
+
+    let maxRooms =
+      plan === "trial" ? 2 :
+      plan === "business" ? 6 :
+      Infinity;
+
+    return rooms.map((r, index) => ({
+      ...r,
+      locked: index + 1 > maxRooms
+    }));
+  }, [rooms, company]);
+
+  /* ======================================================
      DAY BOOKINGS
   ====================================================== */
   const dayBookings = useMemo(() => {
@@ -165,6 +184,10 @@ export default function ConferenceBookings() {
 
     if (endTime <= startTime)
       return setError("End time must be after start");
+
+    const selectedRoom = allowedRooms.find(r => r.id == roomId);
+    if (selectedRoom?.locked)
+      return setError("This room is locked as per your plan");
 
     try {
       await apiFetch("/api/conference/bookings", {
@@ -298,9 +321,14 @@ export default function ConferenceBookings() {
             onChange={(e) => setRoomId(e.target.value)}
           >
             <option value="">Select</option>
-            {rooms.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.room_name}
+
+            {allowedRooms.map((r) => (
+              <option
+                key={r.id}
+                value={r.id}
+                disabled={r.locked}
+              >
+                {r.room_name} {r.locked ? "(Locked – Plan Limit)" : ""}
               </option>
             ))}
           </select>
