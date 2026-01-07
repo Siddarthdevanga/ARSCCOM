@@ -54,7 +54,8 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [plan, setPlan] = useState(null);
+  const [plan, setPlan] = useState(null);   // ROOM PLAN
+  const [bookingPlan, setBookingPlan] = useState(null); // BOOKING PLAN BAR
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
@@ -91,6 +92,19 @@ export default function ConferenceDashboard() {
       setRooms(roomsRes || []);
       setBookings(bookingsRes || []);
       setPlan(planRes);
+
+      // booking usage bar logic
+      let bookingLimit =
+        planRes?.plan === "TRIAL" ? 100 :
+        planRes?.plan === "BUSINESS" ? 1000 :
+        Infinity;
+
+      setBookingPlan({
+        limit: bookingLimit,
+        used: statsRes.totalBookings,
+        remaining: bookingLimit === Infinity ? null : Math.max(bookingLimit - statsRes.totalBookings, 0)
+      });
+
     } catch {
       router.replace("/auth/login");
     } finally {
@@ -167,19 +181,15 @@ export default function ConferenceDashboard() {
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
-  const percentage =
+  const roomPercentage =
     plan?.limit === "UNLIMITED"
       ? 100
       : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
 
-  const barColor =
-    plan?.limit === "UNLIMITED"
-      ? "#00c853"
-      : percentage >= 90
-      ? "#ff1744"
-      : percentage >= 70
-      ? "#ff9800"
-      : "#00c853";
+  const bookingPercentage =
+    bookingPlan?.limit === Infinity
+      ? 100
+      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
 
   return (
     <div className={styles.container}>
@@ -239,44 +249,42 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* PLAN USAGE */}
-      {plan && (
-        <div className={styles.planBox}>
-          <h3>Conference Room Plan Usage</h3>
+      {/* ================= BOOKING USAGE BAR ON DASHBOARD ================= */}
+      {bookingPlan && (
+        <div className={styles.section}>
+          <h3>Conference Booking Usage</h3>
 
-          <p>
-            Plan: <b>{plan.plan}</b>
-          </p>
-
-          {plan.limit === "UNLIMITED" ? (
-            <p>Unlimited Rooms Available 🎉</p>
+          {bookingPlan.limit === Infinity ? (
+            <p>Unlimited Bookings Available 🎉</p>
           ) : (
             <p>
-              Rooms Used: <b>{plan.used}</b> / {plan.limit} &nbsp; | Remaining:{" "}
-              <b>{plan.remaining}</b>
+              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} &nbsp; | Remaining:{" "}
+              <b>{bookingPlan.remaining}</b>
             </p>
           )}
 
           <div className={styles.barOuter}>
             <div
               className={styles.barInner}
-              style={{ width: percentage + "%", background: barColor }}
+              style={{
+                width: bookingPercentage + "%",
+                background:
+                  bookingPercentage >= 90
+                    ? "#ff1744"
+                    : bookingPercentage >= 70
+                    ? "#ff9800"
+                    : "#00c853",
+              }}
             ></div>
           </div>
-
-          {plan.remaining === 0 && (
-            <p style={{ color: "#ff1744", marginTop: 6, fontWeight: "bold" }}>
-              Room Limit Reached – Contact Administrator
-            </p>
-          )}
         </div>
       )}
 
-      {/* LEFT PANEL */}
+      {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
-            <h3>Rename Conference Rooms</h3>
+            <h3>Conference Plan + Room Rename</h3>
 
             <button
               className={styles.leftCloseBtn}
@@ -290,6 +298,40 @@ export default function ConferenceDashboard() {
             </button>
           </div>
 
+          {/* PLAN INSIDE SLIDER */}
+          {plan && (
+            <div style={{ marginBottom: 20 }}>
+              <p>
+                Plan: <b>{plan.plan}</b>
+              </p>
+
+              {plan.limit === "UNLIMITED" ? (
+                <p>Unlimited Rooms 🎉</p>
+              ) : (
+                <p>
+                  Rooms: <b>{plan.used}</b> / {plan.limit} &nbsp; | Remaining:{" "}
+                  <b>{plan.remaining}</b>
+                </p>
+              )}
+
+              <div className={styles.barOuter}>
+                <div
+                  className={styles.barInner}
+                  style={{
+                    width: roomPercentage + "%",
+                    background:
+                      roomPercentage >= 90
+                        ? "#ff1744"
+                        : roomPercentage >= 70
+                        ? "#ff9800"
+                        : "#00c853",
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+          {/* ROOM LIST */}
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
               {rooms.map((r) => (
@@ -318,7 +360,8 @@ export default function ConferenceDashboard() {
                       disabled={plan?.remaining === 0}
                       style={{
                         opacity: plan?.remaining === 0 ? 0.5 : 1,
-                        cursor: plan?.remaining === 0 ? "not-allowed" : "pointer",
+                        cursor:
+                          plan?.remaining === 0 ? "not-allowed" : "pointer",
                       }}
                       onClick={() => {
                         setEditingRoomId(r.id);
@@ -376,7 +419,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* DEPARTMENT STATS */}
+      {/* DEPARTMENT */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
 
@@ -393,7 +436,7 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* BOOKINGS LIST */}
+      {/* BOOKINGS */}
       <div className={styles.section}>
         <h3>Bookings List</h3>
 
@@ -417,4 +460,3 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
-
