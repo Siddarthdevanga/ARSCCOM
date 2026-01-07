@@ -15,15 +15,11 @@ const formatISTTime = (value) => {
     let hours = null;
     let minutes = null;
 
-    // MySQL → "YYYY-MM-DD HH:MM:SS"
     if (str.includes(" ")) {
-      const t = str.split(" ")[1]; // HH:MM:SS
+      const t = str.split(" ")[1];
       if (!t) return "-";
       [hours, minutes] = t.split(":");
-    }
-
-    // ISO → "YYYY-MM-DDTHH:MM:SS"
-    else if (str.includes("T")) {
+    } else if (str.includes("T")) {
       const t = str.split("T")[1];
       if (!t) return "-";
       [hours, minutes] = t.split(":");
@@ -52,6 +48,7 @@ export default function VisitorDashboard() {
   const [checkedOutVisitors, setCheckedOutVisitors] = useState([]);
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState(null);
 
   /* ================= FETCH DASHBOARD ================= */
   const loadDashboard = useCallback(async (token) => {
@@ -73,6 +70,7 @@ export default function VisitorDashboard() {
       setStats(data?.stats || { today: 0, inside: 0, out: 0 });
       setActiveVisitors(data?.activeVisitors || []);
       setCheckedOutVisitors(data?.checkedOutVisitors || []);
+      setPlan(data?.plan || null);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
     } finally {
@@ -172,6 +170,40 @@ export default function VisitorDashboard() {
         </button>
       </div>
 
+      {/* ================= PLAN BAR (TRIAL ONLY) ================= */}
+      {plan?.plan === "TRIAL" && (
+        <section className={styles.planBarWrapper}>
+          <div className={styles.planHeader}>
+            <span className={styles.planName}>Trial Plan</span>
+
+            <span className={styles.planRemaining}>
+              {plan.remaining} Visitors Remaining
+            </span>
+          </div>
+
+          <div className={styles.planBarBg}>
+            <div
+              className={styles.planBarFill}
+              style={{
+                width: `${(plan.used / plan.limit) * 100}%`
+              }}
+            />
+          </div>
+
+          <div className={styles.planFooter}>
+            <span>
+              {plan.used} / {plan.limit} Used
+            </span>
+
+            {plan.trialEndsAt && (
+              <span>
+                Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* ================= KPI STATS ================= */}
       <section className={styles.topStats}>
         <div className={styles.bigCard}>
@@ -267,4 +299,3 @@ export default function VisitorDashboard() {
     </div>
   );
 }
-
