@@ -5,14 +5,6 @@ import { zohoClient } from "../services/zohoAuth.service.js";
 const router = express.Router();
 
 /* =====================================================
-   REQUIRED MIDDLEWARE (IMPORTANT)
-===================================================== */
-// Make sure in server.js you have:
-// app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
-
-
-/* =====================================================
    ZOHO PAYMENT PUSH WEBHOOK
    URL: POST /api/payment/zoho/push
 ===================================================== */
@@ -24,29 +16,43 @@ router.post("/push", async (req, res) => {
     let payment = req.body?.payment;
     let customer = req.body?.customer;
 
-    /* ================================================
-       SAFE JSON PARSE SUPPORT (ZOHO sends string JSON)
-    ================================================= */
-    const safeParse = (val, label) => {
+    /**
+     * Smart Parser
+     * Handles:
+     * 1️⃣ Pure JSON
+     * 2️⃣ String JSON
+     * 3️⃣ 'JSON inside single quotes'
+     */
+    const smartParse = (val, label) => {
       if (!val) return null;
       if (typeof val === "object") return val;
 
+      let clean = String(val).trim();
+
+      // Remove wrapping ' or "
+      if (
+        (clean.startsWith("'") && clean.endsWith("'")) ||
+        (clean.startsWith('"') && clean.endsWith('"'))
+      ) {
+        clean = clean.substring(1, clean.length - 1);
+      }
+
       try {
-        const parsed = JSON.parse(val);
+        const parsed = JSON.parse(clean);
         console.log(`✅ Parsed ${label}:`, parsed);
         return parsed;
-      } catch {
-        console.log(`⚠ Failed to parse ${label}`, val);
+      } catch (e) {
+        console.log(`⚠ Failed to parse ${label}`, clean, e.message);
         return null;
       }
     };
 
-    payment = safeParse(payment, "payment");
-    customer = safeParse(customer, "customer");
+    payment = smartParse(payment, "payment");
+    customer = smartParse(customer, "customer");
 
-    /* ================================================
-       EXTRACT VALUES ROBUSTLY
-    ================================================= */
+    /* =========================================
+       FINAL FIELD EXTRACTION
+    ========================================= */
     const customerId =
       customer?.customer_id ||
       req.body?.customer_id ||
@@ -68,9 +74,9 @@ router.post("/push", async (req, res) => {
       return res.status(400).json({ success: false });
     }
 
-    /* ================================================
+    /* =========================================
        FETCH COMPANY
-    ================================================= */
+    ========================================= */
     const [[company]] = await db.query(
       `SELECT id, plan FROM companies WHERE zoho_customer_id=? LIMIT 1`,
       [customerId]
@@ -83,9 +89,9 @@ router.post("/push", async (req, res) => {
 
     let plan = (company.plan || "trial").toLowerCase();
 
-    /* ================================================
-       ONLY PROCESS SUCCESS EVENTS
-    ================================================= */
+    /* =========================================
+       ONLY PROCESS PAYMENT SUCCESS
+    ========================================= */
     if (
       event_type === "payment_success" ||
       paymentStatus === "paid" ||
@@ -93,15 +99,13 @@ router.post("/push", async (req, res) => {
     ) {
       console.log("🎯 PAYMENT SUCCESS PROCESSING");
 
-      const paidDate = new Date();
-      const mysqlPaid = paidDate.toISOString().slice(0, 19).replace("T", " ");
+      const paid = new Date();
+      const paidSql = paid.toISOString().slice(0, 19).replace("T", " ");
 
       const days = plan === "trial" ? 15 : 30;
 
-      const endDate = new Date(
-        paidDate.getTime() + days * 24 * 60 * 60 * 1000
-      );
-      const mysqlEnd = endDate.toISOString().slice(0, 19).replace("T", " ");
+      const end = new Date(paid.getTime() + days * 24 * 60 * 60 * 1000);
+      const endSql = end.toISOString().slice(0, 19).replace("T", " ");
 
       if (plan === "trial") {
         await db.query(
@@ -112,7 +116,7 @@ router.post("/push", async (req, res) => {
               last_payment_created_at=?,
               updated_at=NOW()
           WHERE id=?`,
-          [mysqlEnd, mysqlPaid, company.id]
+          [endSql, paidSql, company.id]
         );
       } else {
         await db.query(
@@ -124,7 +128,7 @@ router.post("/push", async (req, res) => {
               last_payment_created_at=?,
               updated_at=NOW()
           WHERE id=?`,
-          [mysqlEnd, mysqlPaid, company.id]
+          [endSql, paidSql, company.id]
         );
       }
 
@@ -171,14 +175,14 @@ router.get("/run", async (req, res) => {
       });
     }
 
-    console.log(`🏢 Companies To Check: ${companies.length}`);
+    console.log(\`🏢 Companies To Check: \${companies.length}\`);
 
     const client = await zohoClient();
     let repaired = 0;
 
     for (const c of companies) {
       console.log("--------------------------------------");
-      console.log(`🏢 Checking Company → ${c.name} (${c.id})`);
+      console.log(\`🏢 Checking Company → \${c.name} (\${c.id})\`);
 
       if (!c.zoho_customer_id) {
         console.log("❌ Skipping — No Customer ID");
@@ -189,7 +193,7 @@ router.get("/run", async (req, res) => {
 
       try {
         const { data } = await client.get(
-          `/paymentlinks?customer_id=${c.zoho_customer_id}`
+          \`/paymentlinks?customer_id=\${c.zoho_customer_id}\`
         );
 
         const links = data?.payment_links || [];
@@ -198,7 +202,7 @@ router.get("/run", async (req, res) => {
           const latest = links[0];
 
           console.log(
-            `💳 Payment Link: ${latest.status} (${latest.payment_link_id})`
+            \`💳 Payment Link: \${latest.status} (\${latest.payment_link_id})\`
           );
 
           if (
@@ -222,7 +226,7 @@ router.get("/run", async (req, res) => {
 
       try {
         const { data } = await client.get(
-          `/customers/${c.zoho_customer_id}/subscriptions`
+          \`/customers/\${c.zoho_customer_id}/subscriptions\`
         );
 
         const subs = data?.subscriptions || [];
@@ -234,7 +238,7 @@ router.get("/run", async (req, res) => {
           trialEnd = sub.trial_ends_at;
 
           console.log(
-            `📢 Subscription → ${subscriptionStatus} (${zohoSubId})`
+            \`📢 Subscription → \${subscriptionStatus} (\${zohoSubId})\`
           );
         }
       } catch {
@@ -279,7 +283,7 @@ router.get("/run", async (req, res) => {
       );
 
       repaired++;
-      console.log(`✅ DB FIXED → ${finalStatus}`);
+      console.log(\`✅ DB FIXED → \${finalStatus}\`);
     }
 
     res.json({
