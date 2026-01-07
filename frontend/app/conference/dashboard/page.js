@@ -7,6 +7,7 @@ import styles from "./style.module.css";
 
 /* ======================================================
    DATE FORMATTER
+   Converts safely into → Jan 07, 2026
 ====================================================== */
 const formatNiceDate = (value) => {
   if (!value) return "-";
@@ -18,8 +19,10 @@ const formatNiceDate = (value) => {
     if (str.includes(" ")) str = str.split(" ")[0];
 
     const [y, m, d] = str.split("-");
-    const names = ["Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"];
+    const names = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
 
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
@@ -29,6 +32,7 @@ const formatNiceDate = (value) => {
 
 /* ======================================================
    TIME FORMATTER
+   Converts → 16:30:00 / 16:30 → 4:30 PM
 ====================================================== */
 const formatNiceTime = (value) => {
   if (!value) return "-";
@@ -41,6 +45,7 @@ const formatNiceTime = (value) => {
 
     const [hRaw, m] = str.split(":");
     let h = parseInt(hRaw, 10);
+
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
@@ -59,6 +64,7 @@ export default function ConferenceDashboard() {
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
   /* LEFT PANEL */
@@ -66,7 +72,7 @@ export default function ConferenceDashboard() {
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* FILTER */
+  /* FILTER DATE */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -86,9 +92,7 @@ export default function ConferenceDashboard() {
       ? tomorrow
       : today;
 
-  /* ======================================================
-     LOAD DASHBOARD DATA
-  ====================================================== */
+  /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes] = await Promise.all([
@@ -119,9 +123,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ======================================================
-     SAVE ROOM NAME
-  ====================================================== */
+  /* ================= SAVE ROOM NAME ================= */
   const saveRoomName = async (roomId) => {
     if (!editName.trim()) return;
 
@@ -136,13 +138,11 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert(err?.message || "Plan limit exceeded. Upgrade plan to manage rooms");
+      alert(err?.message || "Failed to rename room");
     }
   };
 
-  /* ======================================================
-     FILTER BOOKINGS
-  ====================================================== */
+  /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
     return (bookings || []).filter(
       (b) =>
@@ -153,9 +153,7 @@ export default function ConferenceDashboard() {
     );
   }, [bookings, selectedDate]);
 
-  /* ======================================================
-     DEPARTMENT ANALYTICS
-  ====================================================== */
+  /* ================= DEPARTMENT ANALYTICS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -168,31 +166,6 @@ export default function ConferenceDashboard() {
   if (loading || !company || !stats) return null;
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
-
-  /* ======================================================
-     PLAN REMAINING (BACKEND SOURCE OF TRUTH)
-  ====================================================== */
-  const remainingBookings =
-    stats?.remaining?.conference_bookings_left ?? "unlimited";
-
-  const roomsLeft =
-    stats?.remaining?.rooms_left ?? "unlimited";
-
-  const planExceeded =
-    remainingBookings !== "unlimited" && remainingBookings <= 0;
-
-  /* ======================================================
-     CORRECT ROOM LOCK LOGIC
-     rooms_left = how many MORE they CAN create
-     So existing rooms should NOT be locked unless they exceeded
-  ====================================================== */
-  let lockStartIndex = Infinity;
-
-  if (roomsLeft !== "unlimited") {
-    const totalExistingRooms = stats.rooms;
-    const maxAllowedRooms = totalExistingRooms + roomsLeft;
-    lockStartIndex = maxAllowedRooms;
-  }
 
   return (
     <div className={styles.container}>
@@ -273,56 +246,37 @@ export default function ConferenceDashboard() {
 
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
-              {rooms.map((r, index) => {
-                const locked =
-                  roomsLeft !== "unlimited" && index >= lockStartIndex;
-
-                return (
-                  <li key={r.id}>
-                    <b style={{ color: locked ? "#aaa" : "#fff" }}>
-                      {r.room_name}
-                    </b>{" "}
-                    (#{r.room_number})
-
-                    {locked && (
-                      <span style={{ color: "red", marginLeft: 8 }}>
-                        — Locked (Plan Limit)
-                      </span>
-                    )}
-
-                    {editingRoomId === r.id ? (
-                      <>
-                        <input
-                          value={editName}
-                          disabled={locked}
-                          onChange={(e) => setEditName(e.target.value)}
-                        />
-                        <button disabled={locked} onClick={() => saveRoomName(r.id)}>
-                          Save
-                        </button>
-                        <button
-                          onClick={() => {
-                            setEditingRoomId(null);
-                            setEditName("");
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
+              {rooms.map((r) => (
+                <li key={r.id}>
+                  <b>{r.room_name}</b> (#{r.room_number})
+                  {editingRoomId === r.id ? (
+                    <>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                      />
+                      <button onClick={() => saveRoomName(r.id)}>Save</button>
                       <button
-                        disabled={locked}
                         onClick={() => {
-                          setEditingRoomId(r.id);
-                          setEditName(r.room_name);
+                          setEditingRoomId(null);
+                          setEditName("");
                         }}
                       >
-                        {locked ? "Locked" : "Rename"}
+                        Cancel
                       </button>
-                    )}
-                  </li>
-                );
-              })}
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingRoomId(r.id);
+                        setEditName(r.room_name);
+                      }}
+                    >
+                      Rename
+                    </button>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -351,7 +305,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= KPI ================= */}
+      {/* ================= KPIs ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
@@ -366,27 +320,6 @@ export default function ConferenceDashboard() {
         <div className={styles.statCard}>
           <span>Departments Using Rooms</span>
           <b>{departmentStats.length}</b>
-        </div>
-
-        <div
-          className={styles.statCard}
-          style={{
-            background: planExceeded ? "#ffcccc" : "#e8ffe8",
-            color: "#000",
-          }}
-        >
-          <span>Remaining Conference Bookings</span>
-          <b>
-            {remainingBookings === "unlimited"
-              ? "Unlimited"
-              : remainingBookings}
-          </b>
-
-          {planExceeded && (
-            <p style={{ color: "red", marginTop: 6 }}>
-              Plan limit exceeded. Contact administrator
-            </p>
-          )}
         </div>
       </div>
 
