@@ -29,19 +29,43 @@ function normalizeStatus(status) {
 
 /* ================= MAIN CRON ================= */
 async function repairBilling() {
-  console.log("⏳ CRON: Checking pending subscription companies...");
+  console.log("⏳ CRON: Checking companies for billing repair...");
 
+  /**
+   * IMPORTANT FIX:
+   * Include:
+   *  - pending
+   *  - trial
+   *  - active WITHOUT expiry set
+   */
   const [companies] = await db.query(
     `
-      SELECT id, name, plan, zoho_customer_id, last_payment_link_id 
+      SELECT 
+        id,
+        name,
+        plan,
+        zoho_customer_id,
+        last_payment_link_id
       FROM companies 
-      WHERE subscription_status IN ('pending','trial') 
-      AND zoho_customer_id IS NOT NULL
+      WHERE 
+        zoho_customer_id IS NOT NULL
+      AND last_payment_link_id IS NOT NULL
+      AND (
+          subscription_status IN ('pending','trial')
+          OR (
+            subscription_status = 'active'
+            AND (
+              (plan='trial' AND trial_ends_at IS NULL)
+              OR
+              (plan='business' AND subscription_ends_at IS NULL)
+            )
+          )
+      )
     `
   );
 
   if (!companies.length) {
-    console.log("✅ No pending companies found");
+    console.log("✅ No companies need processing");
     return;
   }
 
@@ -56,11 +80,6 @@ async function repairBilling() {
 
     console.log(`\n🏢 Checking Company → ${name} (${id})`);
 
-    if (!last_payment_link_id) {
-      console.log("⚠ No payment link ID → skip");
-      continue;
-    }
-
     try {
       /* ========== 1️⃣ FETCH PAYMENT STATUS ========== */
       const payRes = await axios.get(
@@ -71,8 +90,9 @@ async function repairBilling() {
       );
 
       const payment = payRes?.data?.payment_link;
+
       if (!payment) {
-        console.log("⚠ Payment link not found");
+        console.log("⚠ Payment link not found → skipping");
         continue;
       }
 
@@ -81,36 +101,32 @@ async function repairBilling() {
 
       /* =====================================================
          2️⃣ PAYMENT SUCCESS → ACTIVATE + APPLY VALIDITY RULE
-         TRIAL → 15 days validity from paid date
-         BUSINESS → 30 days validity from paid date
+         TRIAL     → 15 days validity from PAID DATE
+         BUSINESS  → 30 days validity from PAID DATE
       ===================================================== */
       if (status === "paid") {
-        console.log("🎯 Payment Success — Activating");
+        console.log("🎯 Payment Success — Activating company");
 
-        // Last paid date priority:
         let paidAt =
           payment?.paid_at ||
           payment?.updated_time ||
           payment?.created_time ||
           new Date().toISOString();
 
-        const paidDate = new Date(paidAt);
+        let paidDate = new Date(paidAt);
         if (isNaN(paidDate.getTime())) {
-          console.log("⚠ Invalid paid date from Zoho — using NOW");
-          paidAt = new Date();
+          console.log("⚠ Invalid paid date, using NOW");
+          paidDate = new Date();
         }
 
-        let durationDays =
-          plan === "business"
-            ? 30
-            : 15; // trial/free = 15, business = 30
+        const durationDays = plan === "business" ? 30 : 15;
 
         const endsAt = new Date(
-          new Date(paidAt).getTime() + durationDays * 24 * 60 * 60 * 1000
+          paidDate.getTime() + durationDays * 24 * 60 * 60 * 1000
         );
 
-        console.log("💰 Paid At:", paidAt);
-        console.log("📅 Ends At:", endsAt);
+        console.log("💰 Paid At:", paidDate.toISOString());
+        console.log("📅 Ends At:", endsAt.toISOString());
 
         if (plan === "business") {
           await db.query(
@@ -119,12 +135,12 @@ async function repairBilling() {
               SET 
                 subscription_status='active',
                 plan='business',
-                last_paid_at=?,
+                last_payment_at=?,
                 subscription_ends_at=?,
                 updated_at = NOW()
               WHERE id=?
             `,
-            [paidAt, endsAt, id]
+            [paidDate, endsAt, id]
           );
         } else {
           await db.query(
@@ -133,20 +149,20 @@ async function repairBilling() {
               SET 
                 subscription_status='active',
                 plan='trial',
-                last_paid_at=?,
+                last_payment_at=?,
                 trial_ends_at=?,
                 updated_at = NOW()
               WHERE id=?
             `,
-            [paidAt, endsAt, id]
+            [paidDate, endsAt, id]
           );
         }
 
-        console.log("🎉 USER ACTIVATED WITH CORRECT VALIDITY");
+        console.log("🎉 ACTIVATION + VALIDITY UPDATED SUCCESSFULLY");
         continue;
       }
 
-      /* ========== 3️⃣ FAILED / EXPIRED ========== */
+      /* ========== 3️⃣ FAILED / EXPIRED PAYMENT ========== */
       if (status === "expired" || status === "failed") {
         console.log("❌ Payment expired/failed — marking pending");
 
@@ -163,7 +179,7 @@ async function repairBilling() {
         continue;
       }
 
-      console.log("⏳ Still Pending — will retry...");
+      console.log("⏳ Payment still pending — retry later...");
     } catch (err) {
       console.error(
         "❌ CRON ERROR FOR COMPANY",
