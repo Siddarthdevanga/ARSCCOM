@@ -2,22 +2,29 @@
 html,
 body {
   height: 100%;
-  overflow: hidden; /* Prevent page scroll */
   margin: 0;
+  overflow-x: hidden;
+}
+
+:root {
+  --purple1: #3c007a;
+  --purple2: #7a00ff;
+  --purple3: #5c00c8;
 }
 
 /* ================= CONTAINER ================= */
 .container {
-  height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--purple1), var(--purple2));
   font-family: "Segoe UI", Arial, sans-serif;
   color: white;
+  padding-bottom: 40px;
 }
 
 /* ================= HEADER ================= */
 .header {
   position: relative;
-  padding: 24px 60px;
+  padding: clamp(16px, 2vw, 24px) clamp(20px, 4vw, 60px);
 }
 
 .brandSection {
@@ -26,34 +33,33 @@ body {
 }
 
 .logoText {
-  font-size: 26px;
+  font-size: clamp(18px, 2vw, 26px);
   font-weight: 900;
   letter-spacing: 2px;
   margin-bottom: 18px;
 }
 
 .brandLogo {
-  width: 340px;
+  width: clamp(160px, 28vw, 340px);
   max-width: 100%;
   height: auto;
-  margin-left: 40px;   /* adjust value as needed */
+  margin-left: clamp(10px, 2vw, 40px);
 }
-
 
 /* ================= NAV ================= */
 .nav {
   position: absolute;
-  top: 30px;
-  right: 60px;
+  top: clamp(10px, 2vw, 30px);
+  right: clamp(16px, 4vw, 60px);
   display: flex;
-  gap: 35px;
+  gap: clamp(10px, 2vw, 35px);
 }
 
 .nav button {
   background: none;
   border: none;
   color: white;
-  font-size: 15px;
+  font-size: clamp(12px, 1.2vw, 16px);
   font-weight: 800;
   letter-spacing: 1px;
   cursor: pointer;
@@ -68,47 +74,47 @@ body {
 /* ================= INFO DROPDOWN ================= */
 .dropdownBox {
   position: absolute;
-  top: 90px;
-  right: 60px;
+  top: clamp(70px, 7vw, 100px);
+  right: clamp(10px, 4vw, 60px);
 
-  width: 55vw;
-  min-width: 600px;
-  max-width: 900px;
+  width: clamp(300px, 55vw, 900px);
 
   background: #ffffff;
   color: #222;
 
   border-radius: 18px;
-  padding: 26px;
+  padding: clamp(18px, 2vw, 26px);
 
   border: 1px solid rgba(0,0,0,0.18);
   box-shadow: 0 25px 60px rgba(0,0,0,.35);
-
   z-index: 100;
 }
 
 .dropdownBox h2 {
   margin: 0 0 10px 0;
-  font-size: 22px;
+  font-size: clamp(16px, 1.6vw, 22px);
   font-weight: 900;
-  color: #3c007a;
+  color: var(--purple1);
 }
 
 .dropdownBox p {
-  font-size: 15px;
+  font-size: clamp(12px, 1vw, 15px);
   color: #333;
 }
 
 /* ================= PLANS ================= */
 .planContainer {
   display: flex;
-  gap: 18px;
+  gap: clamp(10px, 1.5vw, 18px);
   margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .planCard {
   flex: 1;
-  padding: 16px;
+  min-width: 240px;
+
+  padding: clamp(12px, 1.5vw, 16px);
   border-radius: 14px;
 
   background: #f7f7ff;
@@ -124,33 +130,28 @@ body {
 
 .planCard h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: clamp(14px, 1.3vw, 18px);
   font-weight: 800;
-  color: #5c00c8;
+  color: var(--purple3);
 }
 
 .planCard h2 {
   margin: 6px 0 8px 0;
-  font-size: 20px;
+  font-size: clamp(16px, 1.8vw, 24px);
   font-weight: 900;
   color: #000;
 }
 
-.planCard ul {
-  list-style: none;
-  padding: 0;
-}
-
 .planCard li {
-  font-size: 14px;
+  font-size: clamp(12px, 1vw, 14px);
   margin-bottom: 4px;
   color: #333;
 }
 
-/* ================= PLAN BUTTONS ================= */
+/* ================= PLAN BUTTON ================= */
 .planBtn {
   margin-top: 12px;
-  padding: 10px 18px;
+  padding: clamp(8px, 1vw, 12px) 18px;
   border-radius: 10px;
   border: none;
   background: linear-gradient(135deg, #4d00ff, #9a00ff);
@@ -165,37 +166,18 @@ body {
   transform: scale(1.05);
 }
 
-/* ================= CLOSE BUTTON ================= */
-.closeBtn {
-  margin-top: 16px;
-  padding: 10px 28px;
-  border-radius: 30px;
-  border: none;
-  background: linear-gradient(135deg,#7a00ff,#5c00c8);
-  color: white;
-  font-size: 14px;
-  font-weight: 800;
-  cursor: pointer;
-  transition: 0.25s ease;
-}
-
-.closeBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
-}
-
 /* ================= LOGIN ================= */
 .loginWrapper {
   position: absolute;
-  top: 110px;
-  right: 100px;
+  top: clamp(80px, 10vw, 140px);
+  right: clamp(20px, 5vw, 100px);
 }
 
 .loginCard {
-  width: 420px;
+  width: clamp(300px, 34vw, 420px);
   background: white;
   color: #333;
-  padding: 36px 38px;
+  padding: clamp(20px, 2vw, 36px);
   border-radius: 20px;
   box-shadow: 0 18px 40px rgba(0,0,0,0.30);
 }
@@ -206,14 +188,9 @@ body {
   margin-top: 0;
 }
 
+/* Inputs */
 .inputGroup {
   margin-bottom: 16px;
-}
-
-.inputGroup label {
-  font-size: 13px;
-  font-weight: 700;
-  color: #555;
 }
 
 .inputGroup input {
@@ -226,17 +203,17 @@ body {
 }
 
 .inputGroup input:focus {
-  border-color: #7a00ff;
+  border-color: var(--purple2);
   outline: none;
 }
 
 .loginBtn {
   width: 100%;
   padding: 13px;
-  background: #7a00ff;
+  background: var(--purple2);
   color: white;
   border-radius: 10px;
-  font-size: 16px;
+  font-size: clamp(14px, 1.2vw, 16px);
   border: none;
   cursor: pointer;
   margin-top: 8px;
@@ -247,24 +224,16 @@ body {
   background: #5c00c7;
 }
 
+/* ================= EXTRA LINKS ================= */
 .extraLinks {
   margin-top: 14px;
   text-align: center;
-  font-size: 14px;
-}
-
-.extraLinks a {
-  color: #5c00c7;
-  text-decoration: none;
-  margin: 0 8px;
-  font-weight: 700;
-}
-
-.extraLinks a:hover {
-  text-decoration: underline;
+  font-size: clamp(12px, 1vw, 14px);
 }
 
 /* ================= RESPONSIVE ================= */
+
+/* Tablets */
 @media (max-width: 1024px) {
   .dropdownBox {
     width: 80vw;
@@ -275,20 +244,47 @@ body {
   }
 }
 
+/* Mobile */
 @media (max-width: 820px) {
-  .planContainer {
-    flex-direction: column;
+  body {
+    overflow-y: auto;
+  }
+
+  .nav {
+    position: static;
+    justify-content: flex-end;
   }
 
   .dropdownBox {
-    min-width: auto;
-    width: 85vw;
+    position: static;
+    width: 90vw;
+    margin: 20px auto;
+  }
+
+  .planContainer {
+    flex-direction: column;
   }
 
   .loginWrapper {
     position: static;
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    margin-top: 30px;
   }
 }
+
+/* Small Mobile */
+@media (max-width: 500px) {
+  .header {
+    padding: 14px 18px;
+  }
+
+  .logoText {
+    letter-spacing: 1px;
+  }
+
+  .loginCard {
+    width: 92vw;
+  }
+}
+
