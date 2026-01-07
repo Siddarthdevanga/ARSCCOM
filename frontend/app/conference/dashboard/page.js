@@ -364,4 +364,3 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
-
