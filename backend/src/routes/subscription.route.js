@@ -41,17 +41,26 @@ router.get("/details", authenticate, async (req, res) => {
       });
     }
 
+    // Convert lowercase → UPPERCASE safely
+    const PLAN = company.plan ? company.plan.toUpperCase() : "TRIAL";
+    const STATUS = company.subscription_status
+      ? company.subscription_status.toUpperCase()
+      : "PENDING";
+    const ZOHO_ID = company.zoho_customer_id
+      ? company.zoho_customer_id.toUpperCase()
+      : null;
+
     return res.json({
       SUCCESS: true,
 
-      PLAN: company.plan || "trial",
-      STATUS: company.subscription_status || "pending",
+      PLAN,
+      STATUS,
 
-      ZOHO_CUSTOMER_ID: company.zoho_customer_id || null,
+      ZOHO_CUSTOMER_ID: ZOHO_ID,
 
-      TRIAL_ENDS_ON: company.trial_ends_at,
-      EXPIRES_ON: company.subscription_ends_at,
-      LAST_PAID_ON: company.last_payment_created_at
+      TRIAL_ENDS_ON: company.trial_ends_at || null,
+      EXPIRES_ON: company.subscription_ends_at || null,
+      LAST_PAID_ON: company.last_payment_created_at || null
     });
 
   } catch (err) {
