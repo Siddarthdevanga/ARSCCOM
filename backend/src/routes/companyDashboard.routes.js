@@ -104,6 +104,20 @@ router.put("/rooms/:id", async (req, res) => {
       return res.status(400).json({ message: "Room name is required" });
     }
 
+    // Check room exists under this company
+    const [[room]] = await db.query(
+      `
+      SELECT id FROM conference_rooms
+      WHERE id = ? AND company_id = ?
+      `,
+      [roomId, companyId]
+    );
+
+    if (!room) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    // Update room
     const [result] = await db.query(
       `
       UPDATE conference_rooms
@@ -114,10 +128,9 @@ router.put("/rooms/:id", async (req, res) => {
       [room_name.trim(), roomId, companyId]
     );
 
-    if (!result.affectedRows) {
-      return res.status(404).json({
-        message: "Room not found or not authorized"
-      });
+    // If name is same → treat as success
+    if (result.affectedRows === 0) {
+      return res.json({ message: "Room name unchanged" });
     }
 
     res.json({ message: "Room renamed successfully" });
