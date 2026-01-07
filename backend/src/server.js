@@ -6,13 +6,20 @@ let isShuttingDown = false;
 let isReady = false;
 
 /* ======================================================
-   GLOBAL CRASH SAFETY
+   LOGGING HELPERS
 ====================================================== */
 function logFatal(label, error) {
   console.error(`\n❌ ${label}:`, error?.message || error);
   if (error?.stack) console.error(error.stack);
 }
 
+const safeExit = (code = 1) => {
+  setTimeout(() => process.exit(code), 300);
+};
+
+/* ======================================================
+   CRASH SAFETY
+====================================================== */
 process.on("unhandledRejection", (reason) => {
   logFatal("Unhandled Promise Rejection", reason);
   initiateShutdown("unhandledRejection");
@@ -46,7 +53,7 @@ const REQUIRED = [
   "ZOHO_API_BASE",
   "ZOHO_CLIENT_ID",
   "ZOHO_CLIENT_SECRET",
-  "ZOHO_REFRESH_TOKEN",
+  "ZOHO_REFRESH_TOKEN"
 ];
 
 function validateEnv() {
@@ -58,8 +65,8 @@ function validateEnv() {
     );
   }
 
-  process.env.PORT = Number(process.env.PORT);
-  if (Number.isNaN(process.env.PORT) || process.env.PORT <= 0) {
+  const port = Number(process.env.PORT);
+  if (Number.isNaN(port) || port <= 0) {
     throw new Error("Invalid PORT value");
   }
 }
@@ -70,7 +77,11 @@ function validateEnv() {
 async function startServer() {
   try {
     console.log("🔐 Loading AWS Secrets...");
-    await loadSecrets();
+    await loadSecrets().catch(async (e) => {
+      console.warn("⚠️ AWS Secrets load failed — retrying...");
+      await new Promise((r) => setTimeout(r, 1200));
+      await loadSecrets();
+    });
     console.log("✅ AWS Secrets Loaded");
 
     validateEnv();
@@ -79,9 +90,15 @@ async function startServer() {
     const { default: app } = await import("./app.js");
 
     if (server) {
-      console.warn("⚠️ Server already running — preventing double start");
+      console.warn("⚠️ Server already running — preventing duplicate start");
       return;
     }
+
+    /* ========= DB WARM CHECK ========= */
+    console.log("🗄️ Checking database connection...");
+    const { db } = await import("./config/db.js");
+    await db.query("SELECT 1");
+    console.log("🗄️ Database Connected");
 
     server = app.listen(process.env.PORT, () => {
       console.log("=======================================");
@@ -94,8 +111,11 @@ async function startServer() {
       isReady = true;
     });
 
-    // Protect against hanging requests
+    // Protect against stuck long requests
     server.setTimeout?.(120000);
+
+    // Node should not exit unexpectedly
+    server.keepAliveTimeout = 65000;
 
   } catch (err) {
     logFatal("Startup Failure", err);
@@ -110,7 +130,7 @@ async function initiateShutdown(reason) {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  console.log(`\n⚠️ Shutting down server (${reason})...`);
+  console.log(`\n⚠️ Graceful Shutdown Initiated (${reason})...`);
 
   const shutdownTimeout = setTimeout(() => {
     console.error("⏳ Forced shutdown — timeout exceeded");
@@ -127,8 +147,8 @@ async function initiateShutdown(reason) {
       const { db } = await import("./config/db.js");
       await db.end?.();
       console.log("🗄️ Database connection closed");
-    } catch {
-      console.warn("⚠️ Failed to close DB connection gracefully");
+    } catch (e) {
+      console.warn("⚠️ Failed to close DB gracefully", e?.message);
     }
 
   } catch (err) {
@@ -136,18 +156,17 @@ async function initiateShutdown(reason) {
   }
 
   clearTimeout(shutdownTimeout);
-  process.exit(0);
+  safeExit(0);
 }
 
 /* ======================================================
-   SIGNALS
+   SIGNAL HANDLERS
 ====================================================== */
 process.on("SIGTERM", () => initiateShutdown("SIGTERM"));
 process.on("SIGINT", () => initiateShutdown("SIGINT"));
 
 /* ======================================================
-   HEALTH / READINESS SUPPORT
-   (optional but safe to keep)
+   HEALTH / READINESS (SAFE EXPORT)
 ====================================================== */
 export function isAppReady() {
   return isReady && !isShuttingDown;
