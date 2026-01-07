@@ -151,6 +151,7 @@ export default function LoginPage() {
               <ul>
                 <li>✔ Valid 15 Days</li>
                 <li>✔ 100 Visitor Bookings</li>
+                <li>✔ 2 Conference Rooms</li>
                 <li>✔ 100 Conference Bookings</li>
               </ul>
               <Link href="/auth/register">
@@ -165,6 +166,7 @@ export default function LoginPage() {
               <ul>
                 <li>✔ Unlimited Visitors</li>
                 <li>✔ 1000 Conference Rooms</li>
+                <li>✔ 6 Conference Rooms</li>
                 <li>✔ Dedicated Support</li>
               </ul>
               <Link href="/auth/register">
