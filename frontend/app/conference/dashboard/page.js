@@ -107,7 +107,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* -------- RENAME ROOM (FINAL & SAFE) -------- */
+  /* -------- RENAME ROOM — FINAL WORKING VERSION -------- */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
@@ -119,10 +119,13 @@ export default function ConferenceDashboard() {
     }
 
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}/rename`, {
+      await apiFetch(`/api/conference/rooms/rename`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room_name: newName }),
+        body: JSON.stringify({
+          id: roomId,
+          room_name: newName
+        }),
       });
 
       setEditingRoomId(null);
