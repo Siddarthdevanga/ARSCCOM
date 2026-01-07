@@ -1,9 +1,9 @@
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
+import { getPlanUsage } from "../services/plan.service.js"; // optional but recommended
 
 /* =========================================================
    CREATE VISITOR
-   POST /api/visitors
 ========================================================= */
 export const createVisitor = async (req, res) => {
   try {
@@ -11,31 +11,32 @@ export const createVisitor = async (req, res) => {
 
     if (!companyId) {
       return res.status(401).json({
+        success: false,
         message: "Unauthorized: company missing in token"
       });
     }
 
     if (!req.file) {
       return res.status(400).json({
+        success: false,
         message: "Visitor photo is required"
       });
     }
 
-    // Save visitor (email sent INSIDE service once)
-    const visitor = await saveVisitor(
-      companyId,
-      req.body,
-      req.file
-    );
+    const visitor = await saveVisitor(companyId, req.body, req.file);
 
     return res.status(201).json({
+      success: true,
       message: "Visitor created successfully",
       visitor
     });
 
   } catch (error) {
-    console.error("CREATE VISITOR ERROR:", error.message);
-    return res.status(500).json({
+    console.error("CREATE VISITOR ERROR:", error);
+
+    // If service already throws user-safe error message, return it
+    return res.status(400).json({
+      success: false,
       message: error.message || "Failed to create visitor"
     });
   }
@@ -43,7 +44,6 @@ export const createVisitor = async (req, res) => {
 
 /* =========================================================
    ADMIN VISITOR PASS (COMPANY SAFE)
-   GET /api/visitors/code/:visitorCode
 ========================================================= */
 export const getVisitorPass = async (req, res) => {
   try {
@@ -52,6 +52,7 @@ export const getVisitorPass = async (req, res) => {
 
     if (!visitorCode) {
       return res.status(400).json({
+        success: false,
         message: "Visitor code is required"
       });
     }
@@ -72,7 +73,7 @@ export const getVisitorPass = async (req, res) => {
         c.name AS company_name,
         c.logo_url AS company_logo
       FROM visitors v
-      JOIN companies c ON c.id = v.company_id
+      INNER JOIN companies c ON c.id = v.company_id
       WHERE v.visitor_code = ?
         AND v.company_id = ?
       LIMIT 1
@@ -82,6 +83,7 @@ export const getVisitorPass = async (req, res) => {
 
     if (!rows.length) {
       return res.status(404).json({
+        success: false,
         message: "Visitor not found"
       });
     }
@@ -89,6 +91,7 @@ export const getVisitorPass = async (req, res) => {
     const v = rows[0];
 
     return res.json({
+      success: true,
       company: {
         name: v.company_name,
         logo: v.company_logo
@@ -108,16 +111,16 @@ export const getVisitorPass = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("GET VISITOR PASS ERROR:", error.message);
+    console.error("GET VISITOR PASS ERROR:", error);
     return res.status(500).json({
+      success: false,
       message: "Failed to fetch visitor pass"
     });
   }
 };
 
 /* =========================================================
-   🌐 PUBLIC VISITOR PASS (EMAIL / QR / NO AUTH)
-   GET /api/visitors/public/code/:visitorCode
+   PUBLIC VISITOR PASS (NO AUTH)
 ========================================================= */
 export const getPublicVisitorPass = async (req, res) => {
   try {
@@ -125,6 +128,7 @@ export const getPublicVisitorPass = async (req, res) => {
 
     if (!visitorCode) {
       return res.status(400).json({
+        success: false,
         message: "Visitor code is required"
       });
     }
@@ -143,7 +147,7 @@ export const getPublicVisitorPass = async (req, res) => {
         c.name AS company_name,
         c.logo_url AS company_logo
       FROM visitors v
-      JOIN companies c ON c.id = v.company_id
+      INNER JOIN companies c ON c.id = v.company_id
       WHERE v.visitor_code = ?
       LIMIT 1
       `,
@@ -152,6 +156,7 @@ export const getPublicVisitorPass = async (req, res) => {
 
     if (!rows.length) {
       return res.status(404).json({
+        success: false,
         message: "Visitor not found"
       });
     }
@@ -159,6 +164,7 @@ export const getPublicVisitorPass = async (req, res) => {
     const v = rows[0];
 
     return res.json({
+      success: true,
       company: {
         name: v.company_name,
         logo: v.company_logo
@@ -176,31 +182,40 @@ export const getPublicVisitorPass = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("PUBLIC VISITOR PASS ERROR:", error.message);
+    console.error("PUBLIC VISITOR PASS ERROR:", error);
     return res.status(500).json({
+      success: false,
       message: "Unable to load visitor pass"
     });
   }
 };
 
 /* =========================================================
-   VISITOR DASHBOARD
-   GET /api/visitors/dashboard
+   VISITOR DASHBOARD + PLAN USAGE
 ========================================================= */
 export const getVisitorDashboard = async (req, res) => {
   try {
     const companyId = req.user?.companyId;
 
+    if (!companyId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized"
+      });
+    }
+
+    // Today Visitors Count (IST Safe)
     const [[today]] = await db.execute(
       `
       SELECT COUNT(*) AS count
       FROM visitors
       WHERE company_id = ?
-        AND DATE(check_in) = CURDATE()
+        AND DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) = CURDATE()
       `,
       [companyId]
     );
 
+    // Current Inside
     const [[inside]] = await db.execute(
       `
       SELECT COUNT(*) AS count
@@ -211,17 +226,19 @@ export const getVisitorDashboard = async (req, res) => {
       [companyId]
     );
 
+    // Checked Out Today
     const [[out]] = await db.execute(
       `
       SELECT COUNT(*) AS count
       FROM visitors
       WHERE company_id = ?
         AND status = 'OUT'
-        AND DATE(check_out) = CURDATE()
+        AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) = CURDATE()
       `,
       [companyId]
     );
 
+    // Active List
     const [activeVisitors] = await db.execute(
       `
       SELECT visitor_code, name, phone, check_in
@@ -233,31 +250,37 @@ export const getVisitorDashboard = async (req, res) => {
       [companyId]
     );
 
+    // Checked Out List
     const [checkedOutVisitors] = await db.execute(
       `
       SELECT visitor_code, name, phone, check_out
       FROM visitors
       WHERE company_id = ?
         AND status = 'OUT'
-        AND DATE(check_out) = CURDATE()
+        AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) = CURDATE()
       ORDER BY check_out DESC
       `,
       [companyId]
     );
 
+    const plan = await getPlanUsage(companyId); // Optional but powerful
+
     return res.json({
+      success: true,
       stats: {
         today: today.count,
         inside: inside.count,
         out: out.count
       },
+      plan,
       activeVisitors,
       checkedOutVisitors
     });
 
   } catch (error) {
-    console.error("DASHBOARD ERROR:", error.message);
+    console.error("DASHBOARD ERROR:", error);
     return res.status(500).json({
+      success: false,
       message: "Failed to load dashboard"
     });
   }
@@ -270,6 +293,13 @@ export const checkoutVisitor = async (req, res) => {
   try {
     const { visitorCode } = req.params;
     const companyId = req.user?.companyId;
+
+    if (!visitorCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Visitor code is required"
+      });
+    }
 
     const [result] = await db.execute(
       `
@@ -285,17 +315,20 @@ export const checkoutVisitor = async (req, res) => {
 
     if (!result.affectedRows) {
       return res.status(404).json({
+        success: false,
         message: "Visitor not found or already checked out"
       });
     }
 
     return res.json({
+      success: true,
       message: "Visitor checked out successfully"
     });
 
   } catch (error) {
-    console.error("CHECKOUT ERROR:", error.message);
+    console.error("CHECKOUT ERROR:", error);
     return res.status(500).json({
+      success: false,
       message: "Checkout failed"
     });
   }
