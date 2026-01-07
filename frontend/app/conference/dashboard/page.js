@@ -5,52 +5,35 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ======================================================
-   DATE FORMATTER
-   Converts safely into → Jan 07, 2026
-====================================================== */
-const formatNiceDate = (value) => {
+/* ================= DATE ================= */
+const formatNiceDate = (value: any) => {
   if (!value) return "-";
-
   try {
     let str = String(value).trim();
-
     if (str.includes("T")) str = str.split("T")[0];
     if (str.includes(" ")) str = str.split(" ")[0];
-
     const [y, m, d] = str.split("-");
-    const names = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-
+    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
     return value;
   }
 };
 
-/* ======================================================
-   TIME FORMATTER
-   Converts → 16:30:00 / 16:30 → 4:30 PM
-====================================================== */
-const formatNiceTime = (value) => {
+/* ================= TIME ================= */
+const formatNiceTime = (value: any) => {
   if (!value) return "-";
-
   try {
     let str = String(value).trim();
-
     if (str.includes("T")) str = str.split("T")[1];
     if (str.includes(" ")) str = str.split(" ")[1];
 
     const [hRaw, m] = str.split(":");
     let h = parseInt(hRaw, 10);
-
     if (isNaN(h)) return "-";
 
     const suffix = h >= 12 ? "PM" : "AM";
     h = h % 12 || 12;
-
     return `${h}:${m} ${suffix}`;
   } catch {
     return "-";
@@ -60,22 +43,21 @@ const formatNiceTime = (value) => {
 export default function ConferenceDashboard() {
   const router = useRouter();
 
-  const [company, setCompany] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [rooms, setRooms] = useState([]);
-  const [bookings, setBookings] = useState([]);
-
+  const [company, setCompany] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [rooms, setRooms] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  /* LEFT PANEL */
+  /* Left panel */
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
-  const [editingRoomId, setEditingRoomId] = useState(null);
+  const [editingRoomId, setEditingRoomId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
 
-  /* FILTER DATE */
-  const [filterDay, setFilterDay] = useState("today");
+  /* Filter */
+  const [filterDay, setFilterDay] = useState<"yesterday" | "today" | "tomorrow">("today");
 
-  const getDate = (offset) => {
+  const getDate = (offset: number) => {
     const d = new Date();
     d.setDate(d.getDate() + offset);
     return d.toISOString().split("T")[0];
@@ -86,11 +68,9 @@ export default function ConferenceDashboard() {
   const tomorrow = getDate(1);
 
   const selectedDate =
-    filterDay === "yesterday"
-      ? yesterday
-      : filterDay === "tomorrow"
-      ? tomorrow
-      : today;
+    filterDay === "yesterday" ? yesterday :
+    filterDay === "tomorrow" ? tomorrow :
+    today;
 
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
@@ -104,9 +84,10 @@ export default function ConferenceDashboard() {
       setStats(statsRes);
       setRooms(roomsRes || []);
       setBookings(bookingsRes || []);
-      setLoading(false);
-    } catch {
+    } catch (err) {
       router.replace("/auth/login");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -124,38 +105,43 @@ export default function ConferenceDashboard() {
   }, []);
 
   /* ================= SAVE ROOM NAME ================= */
-  const saveRoomName = async (roomId) => {
-    if (!editName.trim()) return;
+  const saveRoomName = async (roomId: number) => {
+    const newName = editName.trim();
+    const original = rooms.find(r => r.id === roomId)?.room_name;
+
+    if (!newName) return alert("Room name is required");
+    if (newName === original) {
+      setEditingRoomId(null);
+      return;
+    }
 
     try {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PATCH",
+        method: "PUT",   // IMPORTANT FIX
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room_name: editName.trim() }),
+        body: JSON.stringify({ room_name: newName }),
       });
 
       setEditingRoomId(null);
       setEditName("");
       loadDashboard();
-    } catch (err) {
+    } catch (err: any) {
       alert(err?.message || "Failed to rename room");
     }
   };
 
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
-    return (bookings || []).filter(
+    return bookings.filter(
       (b) =>
-        (b.booking_date?.includes("T")
-          ? b.booking_date.split("T")[0]
-          : b.booking_date) === selectedDate &&
+        (b.booking_date?.split("T")[0] || b.booking_date) === selectedDate &&
         b.status === "BOOKED"
     );
   }, [bookings, selectedDate]);
 
-  /* ================= DEPARTMENT ANALYTICS ================= */
+  /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
-    const map = {};
+    const map: Record<string, number> = {};
     filteredBookings.forEach((b) => {
       const dep = b.department || "Unknown";
       map[dep] = (map[dep] || 0) + 1;
@@ -176,9 +162,7 @@ export default function ConferenceDashboard() {
             className={styles.leftMenuTrigger}
             onClick={() => setSidePanelOpen(true)}
           >
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </div>
 
           <div>
@@ -188,12 +172,7 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
-          <img
-            src={company.logo_url || "/logo.png"}
-            className={styles.logo}
-            alt="Logo"
-          />
-
+          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Logo" />
           <button
             className={styles.logoBtn}
             title="Logout"
@@ -212,7 +191,6 @@ export default function ConferenceDashboard() {
         <div className={styles.publicRow}>
           <div>
             <p className={styles.publicTitle}>Public Booking URL</p>
-
             <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
@@ -232,12 +210,12 @@ export default function ConferenceDashboard() {
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
             <h3>Rename Conference Rooms</h3>
-
             <button
               className={styles.leftCloseBtn}
               onClick={() => {
                 setSidePanelOpen(false);
                 setEditingRoomId(null);
+                setEditName("");
               }}
             >
               Close ✖
@@ -249,11 +227,13 @@ export default function ConferenceDashboard() {
               {rooms.map((r) => (
                 <li key={r.id}>
                   <b>{r.room_name}</b> (#{r.room_number})
+
                   {editingRoomId === r.id ? (
                     <>
                       <input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
                       />
                       <button onClick={() => saveRoomName(r.id)}>Save</button>
                       <button
@@ -290,7 +270,7 @@ export default function ConferenceDashboard() {
           {["yesterday", "today", "tomorrow"].map((d) => (
             <button
               key={d}
-              onClick={() => setFilterDay(d)}
+              onClick={() => setFilterDay(d as any)}
               style={{
                 background: filterDay === d ? "yellow" : "#ffffff",
                 color: "#000",
@@ -364,3 +344,4 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
+
