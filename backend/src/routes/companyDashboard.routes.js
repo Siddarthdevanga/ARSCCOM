@@ -4,6 +4,9 @@ import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
+/* ================= REQUIRED (Fixes Failed Rename) ================= */
+router.use(express.json());
+
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
@@ -94,7 +97,7 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ================= RENAME ROOM ================= */
-/* Allow PUT or PATCH */
+/* Supports PUT & PATCH */
 router.put("/rooms/:id", renameRoom);
 router.patch("/rooms/:id", renameRoom);
 
@@ -103,6 +106,8 @@ async function renameRoom(req, res) {
     const companyId = req.user.company_id;
     const roomId = Number(req.params.id);
     const { room_name } = req.body;
+
+    console.log("RENAME HIT", { roomId, body: req.body });
 
     if (!roomId || isNaN(roomId)) {
       return res.status(400).json({ message: "Invalid room id" });
@@ -128,7 +133,7 @@ async function renameRoom(req, res) {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // If same name → return success
+    // If same name
     if (room.room_name === newName) {
       return res.json({ message: "Room name unchanged", room });
     }
@@ -160,4 +165,3 @@ async function renameRoom(req, res) {
 }
 
 export default router;
-
