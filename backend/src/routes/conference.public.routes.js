@@ -127,7 +127,7 @@ async function sendCancelEmail(email, company, room, booking) {
 }
 
 /* ======================================================
-   PLAN VALIDATION (TRIAL / BUSINESS / ENTERPRISE)
+   PLAN VALIDATION
 ====================================================== */
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
@@ -148,7 +148,7 @@ const checkConferencePlan = async (companyId) => {
   );
 
   const [[bookings]] = await db.query(
-    `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id=?`,
+    `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id=? AND status='BOOKED'`,
     [companyId]
   );
 
@@ -165,7 +165,8 @@ const checkConferencePlan = async (companyId) => {
     remaining.rooms_left = Math.max(0, 2 - rooms.cnt);
     remaining.conference_bookings_left = Math.max(0, 100 - bookings.cnt);
 
-    if (bookings.cnt >= 100) return { ok: false, remaining };
+    if (bookings.cnt >= 100)
+      return { ok: false, remaining };
   }
 
   // BUSINESS
@@ -175,13 +176,16 @@ const checkConferencePlan = async (companyId) => {
       return { ok: false, remaining };
 
     remaining.rooms_left = Math.max(0, 6 - rooms.cnt);
+
+    if (bookings.cnt >= 1000)
+      return { ok: false, remaining: { ...remaining, conference_bookings_left: 0 } };
   }
 
-  // ENTERPRISE — only check active
+  // ENTERPRISE
   if (plan === "enterprise" && status !== "active")
     return { ok: false };
 
-  return { ok: true, remaining };
+  return { ok: true, remaining, companyPlan: plan };
 };
 
 /* ======================================================
@@ -207,14 +211,14 @@ router.get("/company/:slug", async (req, res) => {
 });
 
 /* ======================================================
-   GET ROOMS
+   GET ROOMS  (PLAN ENFORCED DROPDOWN)
 ====================================================== */
 router.get("/company/:slug/rooms", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
 
     const [[company]] = await db.query(
-      `SELECT id FROM companies WHERE slug=? LIMIT 1`,
+      `SELECT id, plan, subscription_status FROM companies WHERE slug=? LIMIT 1`,
       [slug]
     );
 
@@ -228,7 +232,14 @@ router.get("/company/:slug/rooms", async (req, res) => {
       [company.id]
     );
 
-    res.json(Array.isArray(rooms) ? rooms : []);
+    let allowedRooms = rooms;
+    const plan = (company.plan || "trial").toLowerCase();
+    const status = (company.subscription_status || "").toLowerCase();
+
+    if (plan === "trial") allowedRooms = rooms.slice(0, 2);
+    else if (plan === "business" && status === "active") allowedRooms = rooms.slice(0, 6);
+
+    res.json(allowedRooms || []);
   } catch (err) {
     console.error("[PUBLIC][ROOMS]", err);
     res.json([]);
@@ -432,7 +443,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING  (WITH PLAN CHECK)
+   CREATE BOOKING  (PLAN CHECK)
 ====================================================== */
 router.post("/company/:slug/book", async (req, res) => {
   try {
