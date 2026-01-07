@@ -103,6 +103,9 @@ const getCompanyInfo = async (companyId) => {
 
 /* ======================================================
    PLAN LIMIT ENFORCEMENT + QUOTA LEFT
+   TRIAL      → 2 Rooms, 100 Bookings
+   BUSINESS   → 6 Rooms, 1000 Bookings
+   ENTERPRISE → Unlimited
 ====================================================== */
 const checkPlanLimits = async (companyId) => {
   const [[company]] = await db.query(
@@ -149,7 +152,11 @@ const checkPlanLimits = async (companyId) => {
     remaining.rooms_left = Math.max(0, 2 - roomCount.cnt);
 
     if (roomCount.cnt >= 2)
-      return { ok: false, message: "Trial plan allows maximum 2 rooms", remaining };
+      return {
+        ok: false,
+        message: "Trial plan allows maximum 2 rooms",
+        remaining
+      };
 
     const [[bookingCount]] = await db.query(
       `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id = ?`,
@@ -192,7 +199,19 @@ const checkPlanLimits = async (companyId) => {
         remaining
       };
 
-    remaining.conference_bookings_left = "unlimited";
+    const [[bookingCount]] = await db.query(
+      `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id = ?`,
+      [companyId]
+    );
+
+    remaining.conference_bookings_left = Math.max(0, 1000 - bookingCount.cnt);
+
+    if (bookingCount.cnt >= 1000)
+      return {
+        ok: false,
+        message: "Business plan allows maximum 1000 conference bookings",
+        remaining
+      };
   }
 
   /* ----------- ENTERPRISE ----------- */
@@ -260,9 +279,7 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
       </div>
       `
     });
-  } catch (err) {
-    console.log("Email failed", err.message);
-  }
+  } catch {}
 };
 
 /* ======================================================
@@ -366,7 +383,7 @@ router.get("/bookings", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE BOOKING (PLAN ENFORCED + QUOTA RETURN)
+   CREATE BOOKING  (PLAN ENFORCED)
 ====================================================== */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
@@ -396,6 +413,7 @@ router.post("/bookings", async (req, res) => {
 
     start_time = normalizeTime(start_time);
     end_time = normalizeTime(end_time);
+
     if (end_time <= start_time)
       return res.status(400).json({ message: "End time must be after start time" });
 
@@ -474,7 +492,7 @@ router.post("/bookings", async (req, res) => {
       remaining: planCheck.remaining || null
     });
 
-  } catch (err) {
+  } catch {
     await conn.rollback();
     res.status(500).json({ message: "Unable to create booking" });
   } finally {
