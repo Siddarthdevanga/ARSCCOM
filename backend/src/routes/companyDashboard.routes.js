@@ -11,6 +11,11 @@ router.use(express.urlencoded({ extended: true }));
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
+/* ================= HEALTH TEST (to confirm router is mounted) ================= */
+router.get("/health", (req, res) => {
+  res.json({ ok: true, route: "conference router active" });
+});
+
 /* ================= DASHBOARD ================= */
 router.get("/dashboard", async (req, res) => {
   try {
@@ -101,21 +106,13 @@ router.post("/rooms", async (req, res) => {
 /* Supports PUT + PATCH + POST (/rename fallback) */
 router.put("/rooms/:id", renameRoom);
 router.patch("/rooms/:id", renameRoom);
-router.post("/rooms/:id/rename", renameRoom);   // <-- Guaranteed works in production
+router.post("/rooms/:id/rename", renameRoom);   // <-- Always works on production
 
 async function renameRoom(req, res) {
   try {
     const companyId = req.user.company_id;
     const roomId = Number(req.params.id);
     const { room_name } = req.body;
-
-    console.log("RENAME REQUEST >>>", {
-      method: req.method,
-      url: req.originalUrl,
-      companyId,
-      roomId,
-      body: req.body
-    });
 
     if (!roomId || isNaN(roomId)) {
       return res.status(400).json({ message: "Invalid room id" });
@@ -127,11 +124,22 @@ async function renameRoom(req, res) {
 
     const newName = room_name.trim();
 
+    // Debug to verify production route recognition
+    console.log("[CONF RENAME HIT]", {
+      method: req.method,
+      path: req.originalUrl,
+      companyId,
+      roomId,
+      newName
+    });
+
+    // Validate room belongs to company
     const [[room]] = await db.query(
       `
       SELECT id, room_name
       FROM conference_rooms
-      WHERE id = ? AND company_id = ?
+      WHERE id = ?
+      AND company_id = ?
       `,
       [roomId, companyId]
     );
@@ -140,6 +148,7 @@ async function renameRoom(req, res) {
       return res.status(404).json({ message: "Room not found" });
     }
 
+    // Same name = ok
     if (room.room_name === newName) {
       return res.json({ message: "Room name unchanged", room });
     }
