@@ -57,7 +57,7 @@ body {
 }
 
 .leftMenuTrigger:hover {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 .leftMenuTrigger span {
@@ -70,7 +70,7 @@ body {
 .companyName {
   font-size: 28px;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: .5px;
 }
 
 .subText {
@@ -100,11 +100,11 @@ body {
   font-size: 20px;
   font-weight: 800;
   cursor: pointer;
-  transition: 0.25s ease;
+  transition: .25s ease;
 }
 
 .logoBtn:hover {
-  transform: scale(1.06);
+  transform: scale(1.08);
 }
 
 /* ================= PUBLIC LINK ================= */
@@ -114,7 +114,7 @@ body {
   padding: 20px 24px;
   margin-bottom: 34px;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(8px);
 }
 
@@ -150,7 +150,7 @@ body {
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
-  transition: 0.25s ease-in-out;
+  transition: .25s ease-in-out;
 }
 
 .bookBtn:hover {
@@ -171,7 +171,7 @@ body {
   border-radius: 20px;
   padding: 22px;
   text-align: center;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
 }
 
 .statCard span {
@@ -192,7 +192,7 @@ body {
   margin-bottom: 36px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   backdrop-filter: blur(7px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.30);
 }
 
 .section h3 {
@@ -298,7 +298,12 @@ body {
 .leftPanelContent {
   height: calc(100vh - 80px);
   overflow-y: auto;
-  padding-right: 10px;
+  padding-right: 8px;
+  scrollbar-width: none;
+}
+
+.leftPanelContent::-webkit-scrollbar {
+  display: none;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -320,6 +325,6 @@ body {
   }
 
   .leftPanel {
-    width: 85%;
+    width: 88%;
   }
 }
