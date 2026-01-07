@@ -1,54 +1,47 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   READ MYSQL TIME AS-IS (IT IS ALREADY IST)
+   READ MYSQL / ISO TIME AS-IS (No timezone conversion)
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
 
   try {
     const str = String(value).trim();
+    let hours = null;
+    let minutes = null;
 
-    // MySQL: "YYYY-MM-DD HH:MM:SS"
+    // MySQL → "YYYY-MM-DD HH:MM:SS"
     if (str.includes(" ")) {
-      const time = str.split(" ")[1];     // HH:MM:SS
-      if (!time) return "-";
-
-      let [h, m] = time.split(":");
-      h = parseInt(h, 10);
-
-      if (isNaN(h)) return "-";
-
-      const suffix = h >= 12 ? "PM" : "AM";
-      h = h % 12 || 12;
-
-      return `${h}:${m} ${suffix}`;
-    }
-
-    // ISO string → DO NOT CONVERT — just read local time part
-    if (str.includes("T")) {
-      const t = str.split("T")[1]; // HH:MM:SS.xxx
+      const t = str.split(" ")[1]; // HH:MM:SS
       if (!t) return "-";
-
-      const [h, m] = t.split(":");
-      let hr = parseInt(h, 10);
-
-      const suffix = hr >= 12 ? "PM" : "AM";
-      hr = hr % 12 || 12;
-
-      return `${hr}:${m} ${suffix}`;
+      [hours, minutes] = t.split(":");
     }
 
-    return "-";
+    // ISO → "YYYY-MM-DDTHH:MM:SS"
+    else if (str.includes("T")) {
+      const t = str.split("T")[1];
+      if (!t) return "-";
+      [hours, minutes] = t.split(":");
+    }
+
+    if (!hours || !minutes) return "-";
+
+    hours = parseInt(hours, 10);
+    if (isNaN(hours)) return "-";
+
+    const suffix = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12 || 12;
+
+    return `${hours}:${minutes} ${suffix}`;
   } catch {
     return "-";
   }
 };
-
 
 export default function VisitorDashboard() {
   const router = useRouter();
@@ -60,7 +53,34 @@ export default function VisitorDashboard() {
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ================= LOAD COMPANY + DASHBOARD ================= */
+  /* ================= FETCH DASHBOARD ================= */
+  const loadDashboard = useCallback(async (token) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      if (!res.ok) {
+        console.error("Dashboard API failed");
+        return;
+      }
+
+      const data = await res.json();
+
+      setStats(data?.stats || { today: 0, inside: 0, out: 0 });
+      setActiveVisitors(data?.activeVisitors || []);
+      setCheckedOutVisitors(data?.checkedOutVisitors || []);
+    } catch (err) {
+      console.error("Dashboard fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  /* ================= AUTH + INITIAL LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -77,34 +97,7 @@ export default function VisitorDashboard() {
       localStorage.clear();
       router.replace("/auth/login");
     }
-  }, [router]);
-
-  /* ================= FETCH DASHBOARD ================= */
-  const loadDashboard = async (token) => {
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-
-      if (!res.ok) {
-        console.error("Dashboard API failed");
-        return;
-      }
-
-      const data = await res.json();
-
-      setStats(data.stats || { today: 0, inside: 0, out: 0 });
-      setActiveVisitors(data.activeVisitors || []);
-      setCheckedOutVisitors(data.checkedOutVisitors || []);
-    } catch (err) {
-      console.error("Dashboard fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [router, loadDashboard]);
 
   /* ================= CHECKOUT ================= */
   const handleCheckout = async (visitorCode) => {
@@ -141,7 +134,12 @@ export default function VisitorDashboard() {
     router.push("/auth/login");
   };
 
-  if (loading || !company) return null;
+  if (loading || !company)
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>Loading dashboard…</div>
+      </div>
+    );
 
   return (
     <div className={styles.container}>
@@ -194,7 +192,6 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        
         {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
@@ -213,7 +210,7 @@ export default function VisitorDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {activeVisitors.map(v => (
+                {activeVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
@@ -237,7 +234,7 @@ export default function VisitorDashboard() {
           )}
         </div>
 
-        {/* CHECKED OUT VISITORS */}
+        {/* CHECKED OUT */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
 
@@ -254,7 +251,7 @@ export default function VisitorDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {checkedOutVisitors.map(v => (
+                {checkedOutVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
@@ -266,8 +263,8 @@ export default function VisitorDashboard() {
             </table>
           )}
         </div>
-
       </section>
     </div>
   );
 }
+
