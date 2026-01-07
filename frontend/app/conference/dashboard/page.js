@@ -57,12 +57,10 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* Left Panel */
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
 
-  /* Filter Day */
   const [filterDay, setFilterDay] = useState("today");
 
   const getDate = (offset) => {
@@ -112,7 +110,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE ROOM NAME ================= */
+  /* ================= SAVE ROOM NAME (FINAL FIX) ================= */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
@@ -124,8 +122,8 @@ export default function ConferenceDashboard() {
     }
 
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PUT",
+      await apiFetch(`/api/conference/rooms/${roomId}/rename`, {
+        method: "POST",              // <-- FINAL FIX
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ room_name: newName }),
       });
@@ -144,6 +142,7 @@ export default function ConferenceDashboard() {
       const date = b.booking_date?.includes("T")
         ? b.booking_date.split("T")[0]
         : b.booking_date;
+
       return date === selectedDate && b.status === "BOOKED";
     });
   }, [bookings, selectedDate]);
@@ -200,7 +199,7 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-      {/* PUBLIC LINK */}
+      {/* PUBLIC URL */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -360,3 +359,4 @@ export default function ConferenceDashboard() {
     </div>
   );
 }
+
