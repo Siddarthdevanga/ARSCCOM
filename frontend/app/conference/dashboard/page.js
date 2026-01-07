@@ -168,19 +168,22 @@ export default function ConferenceDashboard() {
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
-  /* ================= PLAN REMAINING ================= */
-  const remaining =
-    stats?.remaining?.conference_bookings_left ?? "unlimited";
+  /* ================= PLAN REMAINING FROM BACKEND ================= */
+  const remaining = stats?.remaining?.conference_bookings_left ?? "unlimited";
+  const roomsLeft = stats?.remaining?.rooms_left ?? "unlimited";
 
   const planExceeded =
     remaining !== "unlimited" && remaining <= 0;
 
-  /* ================= ROOM PLAN LIMIT LOGIC ================= */
+  /* ================= ROOM LIMIT USING BACKEND ================= */
   let allowedRooms = Infinity;
 
-  if (company.plan === "trial") allowedRooms = 2;
-  else if (company.plan === "business") allowedRooms = 6;
-  else allowedRooms = Infinity;
+  if (roomsLeft !== "unlimited") {
+    allowedRooms = stats.rooms - roomsLeft;
+    if (allowedRooms < 0) allowedRooms = 0;
+    allowedRooms = Math.max(stats.rooms - roomsLeft, 0);
+    allowedRooms = stats.rooms - roomsLeft === 0 ? stats.rooms : stats.rooms - roomsLeft;
+  }
 
   return (
     <div className={styles.container}>
@@ -262,14 +265,14 @@ export default function ConferenceDashboard() {
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
               {rooms.map((r, index) => {
-
-                const locked = index >= allowedRooms;
+                const locked =
+                  roomsLeft !== "unlimited" && index >= allowedRooms;
 
                 return (
                   <li key={r.id}>
                     <b
                       style={{
-                        color: locked ? "#aaa" : "#fff"
+                        color: locked ? "#aaa" : "#fff",
                       }}
                     >
                       {r.room_name}
@@ -289,7 +292,10 @@ export default function ConferenceDashboard() {
                           disabled={locked}
                           onChange={(e) => setEditName(e.target.value)}
                         />
-                        <button disabled={locked} onClick={() => saveRoomName(r.id)}>
+                        <button
+                          disabled={locked}
+                          onClick={() => saveRoomName(r.id)}
+                        >
                           Save
                         </button>
                         <button
@@ -411,7 +417,8 @@ export default function ConferenceDashboard() {
             </div>
 
             <div>
-              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
+              {formatNiceTime(b.start_time)} –{" "}
+              {formatNiceTime(b.end_time)}
             </div>
 
             <div className={styles.status}>{b.status}</div>
