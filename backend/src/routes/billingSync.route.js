@@ -3,9 +3,6 @@ import { db } from "../config/db.js";
 
 const router = express.Router();
 
-/* =====================================================
-   SECURITY KEY (Zoho must send this header)
-===================================================== */
 const WEBHOOK_KEY = "PROMEET_SUPER_SECRET";
 
 /* =====================================================
@@ -14,49 +11,50 @@ const WEBHOOK_KEY = "PROMEET_SUPER_SECRET";
 router.post("/push", async (req, res) => {
   try {
     console.log("📩 Incoming Zoho Push Payload:", req.body);
+    console.log("📦 typeof req.body:", typeof req.body);
 
     /* ================================
-       SECURITY VALIDATION
+       SECURITY CHECK
     ================================= */
     const incomingKey = req.headers["x-webhook-key"];
-
     if (!incomingKey || incomingKey !== WEBHOOK_KEY) {
       console.log("🚫 Unauthorized webhook access");
-      return res.status(401).json({ success: false, message: "Unauthorized" });
+      return res.status(401).json({ success: false });
     }
 
-    const event_type = (req.body?.event_type || "").toLowerCase();
+    let event_type =
+      (req.body?.event_type || req.body?.eventType || "").toLowerCase();
 
-    /* ================================
-       ZOHO ALWAYS SENDS STRING JSON
-    ================================= */
-    let payment = null;
-    let customer = null;
+    let customerStr = req.body?.customer || "";
+    let paymentStr = req.body?.payment || "";
 
-    try {
-      if (req.body?.payment) {
-        payment = JSON.parse(req.body.payment);
-      }
-    } catch (e) {
-      console.log("❌ Failed to parse payment JSON:", e?.message);
-    }
-
-    try {
-      if (req.body?.customer) {
-        customer = JSON.parse(req.body.customer);
-      }
-    } catch (e) {
-      console.log("❌ Failed to parse customer JSON:", e?.message);
+    // if Zoho sent full raw string body
+    if (typeof req.body === "string") {
+      customerStr = req.body;
+      paymentStr = req.body;
     }
 
     /* ================================
-       FINAL CUSTOMER ID (GUARANTEED)
+       EXTRACT CUSTOMER ID (Guaranteed)
     ================================= */
-    const customerId =
-      customer?.customer_id ||
-      req.body?.customer_id ||
-      req.body?.customerId ||
-      null;
+    let customerId = null;
+
+    // 1️⃣ direct JSON parse attempt
+    try {
+      if (typeof customerStr === "string") {
+        const parsed = JSON.parse(customerStr);
+        customerId = parsed?.customer_id || null;
+      } else if (typeof customerStr === "object") {
+        customerId = customerStr?.customer_id || null;
+      }
+    } catch {}
+
+    // 2️⃣ Regex fallback (works even if JSON.parse fails)
+    if (!customerId) {
+      const raw = JSON.stringify(req.body);
+      const match = raw.match(/customer_id["']?\s*[:=]\s*["']?(\d{6,})/);
+      if (match) customerId = match[1];
+    }
 
     console.log("🧾 Final Extracted Customer ID:", customerId);
 
@@ -68,11 +66,17 @@ router.post("/push", async (req, res) => {
     /* ================================
        PAYMENT STATUS
     ================================= */
-    const paymentStatus =
-      payment?.payment_status?.toLowerCase() ||
-      payment?.status?.toLowerCase() ||
-      req.body?.payment_status?.toLowerCase() ||
-      null;
+    let paymentStatus = null;
+
+    try {
+      if (typeof paymentStr === "string") {
+        const parsed = JSON.parse(paymentStr);
+        paymentStatus =
+          parsed?.payment_status?.toLowerCase() ||
+          parsed?.status?.toLowerCase() ||
+          null;
+      }
+    } catch {}
 
     console.log("💳 Payment Status:", paymentStatus);
     console.log("📢 Event:", event_type);
@@ -93,9 +97,9 @@ router.post("/push", async (req, res) => {
     const plan = (company.plan || "trial").toLowerCase();
     console.log("🏷 PLAN:", plan);
 
-    /* ======================================================
-       PAYMENT SUCCESS → ACTIVATE
-    ====================================================== */
+    /* ================================
+       SUCCESS → ACTIVATE
+    ================================= */
     if (
       event_type === "payment_success" ||
       paymentStatus === "paid" ||
@@ -140,27 +144,6 @@ router.post("/push", async (req, res) => {
       }
 
       console.log("🎉 Subscription Activated Successfully");
-    }
-
-    /* ======================================================
-       FAILED / EXPIRED (Optional Handling)
-    ====================================================== */
-    else if (
-      paymentStatus === "failed" ||
-      paymentStatus === "failure" ||
-      paymentStatus === "expired"
-    ) {
-      console.log("❌ PAYMENT FAILED/EXPIRED — Marking pending");
-
-      await db.query(
-        `
-        UPDATE companies
-        SET subscription_status='pending',
-            updated_at=NOW()
-        WHERE id=?
-      `,
-        [company.id]
-      );
     }
 
     return res.json({ success: true });
