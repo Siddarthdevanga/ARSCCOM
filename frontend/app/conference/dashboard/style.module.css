@@ -39,7 +39,7 @@ body {
   gap: 14px;
 }
 
-/* Sidebar Trigger Next to Company Name */
+/* Sidebar Trigger */
 .leftMenuTrigger {
   width: 34px;
   height: 60px;
@@ -89,6 +89,7 @@ body {
   object-fit: contain;
 }
 
+/* Logout Button */
 .logoBtn {
   width: 44px;
   height: 44px;
@@ -138,6 +139,7 @@ body {
   word-break: break-all;
 }
 
+/* Book Button */
 .bookBtn {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
@@ -203,6 +205,7 @@ body {
 .roomList {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
 .roomList li {
@@ -236,12 +239,14 @@ body {
   font-weight: 700;
 }
 
-/* ================= LEFT SLIDE PANEL (30%) ================= */
+/* ================= LEFT SLIDE PANEL ================= */
 .leftPanel {
   position: fixed;
   top: 0;
   left: 0;
+
   width: 30%;
+  max-width: 420px;
   height: 100vh;
 
   background: linear-gradient(135deg, #3c007a, #7a00ff);
@@ -257,7 +262,7 @@ body {
 }
 
 @keyframes panelSlide {
-  from { left: -35%; opacity: .4; }
+  from { left: -40%; opacity: .4; }
   to { left: 0; opacity: 1; }
 }
 
