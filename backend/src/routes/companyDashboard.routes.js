@@ -45,7 +45,10 @@ const checkConferencePlan = async (companyId) => {
 
   // Count bookings
   const [[bookingCount]] = await db.query(
-    `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id = ?`,
+    `SELECT COUNT(*) AS cnt 
+     FROM conference_bookings 
+     WHERE company_id = ? 
+       AND status='BOOKED'`,
     [companyId]
   );
 
@@ -70,7 +73,15 @@ const checkConferencePlan = async (companyId) => {
     if (roomCount.cnt > 2) {
       return {
         ok: false,
-        message: "Upgrade required. Your trial allows only 2 conference rooms.",
+        message: "Plan limit exceeded. Please contact administrator",
+        remaining
+      };
+    }
+
+    if (bookingCount.cnt >= 100) {
+      return {
+        ok: false,
+        message: "Plan limit exceeded. Please contact administrator",
         remaining
       };
     }
@@ -85,12 +96,22 @@ const checkConferencePlan = async (companyId) => {
       return { ok: false, message: "Subscription expired", remaining };
 
     remaining.rooms_left = Math.max(0, 6 - roomCount.cnt);
-    remaining.conference_bookings_left = "unlimited";
+    remaining.conference_bookings_left = Math.max(0, 1000 - bookingCount.cnt);
 
+    // Rooms exceeded
     if (roomCount.cnt > 6) {
       return {
         ok: false,
-        message: "Upgrade required. Business plan allows maximum 6 rooms.",
+        message: "Plan limit exceeded. Please contact administrator",
+        remaining
+      };
+    }
+
+    // Booking exceeded
+    if (bookingCount.cnt >= 1000) {
+      return {
+        ok: false,
+        message: "Plan limit exceeded. Please contact administrator",
         remaining
       };
     }
@@ -215,13 +236,11 @@ router.put("/rooms/:id", async (req, res) => {
       return res.status(400).json({ message: "Room name is required" });
     }
 
-    /* -------- PLAN ENFORCEMENT HERE -------- */
     const planCheck = await checkConferencePlan(companyId);
 
     if (!planCheck.ok) {
       return res.status(403).json({
-        message: "Upgrade required. You have exceeded allowed rooms for your plan.",
-        upgrade_note: planCheck.message,
+        message: "Plan limit exceeded. Please contact administrator",
         remaining: planCheck.remaining
       });
     }
@@ -254,4 +273,3 @@ router.put("/rooms/:id", async (req, res) => {
 });
 
 export default router;
-
