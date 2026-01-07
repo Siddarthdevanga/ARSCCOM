@@ -4,8 +4,8 @@ import { upload } from "../middlewares/upload.middleware.js";
 
 import {
   createVisitor,
-  getVisitorPass,        // Secure - Admin
-  getPublicVisitorPass,  // Public via Email/QR
+  getVisitorPass,
+  getPublicVisitorPass,
   getVisitorDashboard,
   checkoutVisitor
 } from "../controllers/visitor.controller.js";
@@ -14,13 +14,11 @@ const router = express.Router();
 
 /* ======================================================
    🌐 PUBLIC VISITOR PASS (NO AUTH)
-   Safe public read only access
-   URL used in email + QR
+   - Safe public read-only access
+   - Used in Email + QR
 ====================================================== */
-router.get(
-  "/public/code/:visitorCode",
-  getPublicVisitorPass
-);
+router.get("/public/code/:visitorCode", getPublicVisitorPass);
+
 
 /* ======================================================
    👤 CREATE VISITOR
@@ -36,10 +34,10 @@ router.post(
   createVisitor
 );
 
+
 /* ======================================================
    📊 VISITOR DASHBOARD (ADMIN)
    GET /api/visitors/dashboard
-   Returns today, monthly count, plan usage etc.
 ====================================================== */
 router.get(
   "/dashboard",
@@ -47,17 +45,19 @@ router.get(
   getVisitorDashboard
 );
 
+
 /* ======================================================
    🔒 SECURE ADMIN VISITOR PASS
    GET /api/visitors/code/:visitorCode
    - Requires auth
-   - Must belong to same company
+   - Company isolated
 ====================================================== */
 router.get(
   "/code/:visitorCode",
   authenticate,
   getVisitorPass
 );
+
 
 /* ======================================================
    🚪 CHECKOUT VISITOR
