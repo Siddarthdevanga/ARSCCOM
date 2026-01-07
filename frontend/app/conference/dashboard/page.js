@@ -175,6 +175,13 @@ export default function ConferenceDashboard() {
   const planExceeded =
     remaining !== "unlimited" && remaining <= 0;
 
+  /* ================= ROOM PLAN LIMIT LOGIC ================= */
+  let allowedRooms = Infinity;
+
+  if (company.plan === "trial") allowedRooms = 2;
+  else if (company.plan === "business") allowedRooms = 6;
+  else allowedRooms = Infinity;
+
   return (
     <div className={styles.container}>
       {/* ================= HEADER ================= */}
@@ -254,37 +261,60 @@ export default function ConferenceDashboard() {
 
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
-              {rooms.map((r) => (
-                <li key={r.id}>
-                  <b>{r.room_name}</b> (#{r.room_number})
-                  {editingRoomId === r.id ? (
-                    <>
-                      <input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                      />
-                      <button onClick={() => saveRoomName(r.id)}>Save</button>
-                      <button
-                        onClick={() => {
-                          setEditingRoomId(null);
-                          setEditName("");
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setEditingRoomId(r.id);
-                        setEditName(r.room_name);
+              {rooms.map((r, index) => {
+
+                const locked = index >= allowedRooms;
+
+                return (
+                  <li key={r.id}>
+                    <b
+                      style={{
+                        color: locked ? "#aaa" : "#fff"
                       }}
                     >
-                      Rename
-                    </button>
-                  )}
-                </li>
-              ))}
+                      {r.room_name}
+                    </b>{" "}
+                    (#{r.room_number})
+
+                    {locked && (
+                      <span style={{ color: "red", marginLeft: 8 }}>
+                        — Locked (Plan Limit)
+                      </span>
+                    )}
+
+                    {editingRoomId === r.id ? (
+                      <>
+                        <input
+                          value={editName}
+                          disabled={locked}
+                          onChange={(e) => setEditName(e.target.value)}
+                        />
+                        <button disabled={locked} onClick={() => saveRoomName(r.id)}>
+                          Save
+                        </button>
+                        <button
+                          onClick={() => {
+                            setEditingRoomId(null);
+                            setEditName("");
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        disabled={locked}
+                        onClick={() => {
+                          setEditingRoomId(r.id);
+                          setEditName(r.room_name);
+                        }}
+                      >
+                        {locked ? "Locked" : "Rename"}
+                      </button>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
