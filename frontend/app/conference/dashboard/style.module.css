@@ -6,7 +6,6 @@ body {
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  background: #000;
 }
 
 *::-webkit-scrollbar {
@@ -20,6 +19,7 @@ body {
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
+
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -39,12 +39,12 @@ body {
   gap: 14px;
 }
 
-/* Sidebar Trigger */
+/* Sidebar Trigger Next to Company Name */
 .leftMenuTrigger {
-  width: 36px;
+  width: 34px;
   height: 60px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.4);
   background: rgba(255,255,255,0.18);
   display: flex;
   flex-direction: column;
@@ -52,12 +52,12 @@ body {
   gap: 7px;
   padding-left: 13px;
   cursor: pointer;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(10px);
   transition: .25s ease;
 }
 
 .leftMenuTrigger:hover {
-  transform: scale(1.08);
+  transform: scale(1.06);
 }
 
 .leftMenuTrigger span {
@@ -89,7 +89,6 @@ body {
   object-fit: contain;
 }
 
-/* Logout btn */
 .logoBtn {
   width: 44px;
   height: 44px;
@@ -104,18 +103,18 @@ body {
 }
 
 .logoBtn:hover {
-  transform: scale(1.1);
+  transform: scale(1.06);
 }
 
 /* ================= PUBLIC LINK ================= */
 .publicBox {
   background: rgba(255, 255, 255, 0.16);
   border-radius: 18px;
-  padding: 22px 24px;
+  padding: 20px 24px;
   margin-bottom: 34px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
 }
 
 .publicRow {
@@ -134,17 +133,16 @@ body {
 
 .publicLink {
   color: #ffffff;
-  font-weight: 800;
+  font-weight: 700;
   text-decoration: underline;
   word-break: break-all;
 }
 
-/* Book Button */
 .bookBtn {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
   border: none;
-  padding: 12px 30px;
+  padding: 12px 28px;
   border-radius: 999px;
   font-size: 14px;
   font-weight: 900;
@@ -154,7 +152,7 @@ body {
 }
 
 .bookBtn:hover {
-  transform: scale(1.08);
+  transform: scale(1.05);
 }
 
 /* ================= STATS ================= */
@@ -182,7 +180,6 @@ body {
 .statCard b {
   font-size: 32px;
   color: #5b00c9;
-  letter-spacing: 1px;
 }
 
 /* ================= SECTION ================= */
@@ -199,7 +196,7 @@ body {
 .section h3 {
   margin-bottom: 18px;
   font-size: 18px;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 /* ================= ROOM LIST ================= */
@@ -214,39 +211,6 @@ body {
   border-radius: 12px;
   margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-/* ===== ACTIVE ROOM ===== */
-.roomList li .activeRoomName {
-  color: #ffffff;
-  font-weight: 800;
-}
-
-/* ===== LOCKED ROOM (PLAN LIMIT) ===== */
-.roomLocked {
-  opacity: 0.55;
-  filter: grayscale(0.6);
-  pointer-events: none;
-}
-
-.lockBadge {
-  background: #ff4d4d;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 10px;
-  margin-left: 8px;
-  font-size: 11px;
-  font-weight: 900;
-}
-
-/* Disabled Rename Button */
-.roomList button:disabled {
-  background: #888 !important;
-  cursor: not-allowed !important;
-  opacity: 0.7;
 }
 
 /* ================= BOOKINGS ================= */
@@ -269,29 +233,31 @@ body {
 /* ================= ERROR ================= */
 .error {
   color: #ffb4b4;
-  font-weight: 800;
+  font-weight: 700;
 }
 
-/* ================= LEFT SLIDE PANEL ================= */
+/* ================= LEFT SLIDE PANEL (30%) ================= */
 .leftPanel {
   position: fixed;
   top: 0;
   left: 0;
   width: 30%;
-  max-width: 480px;
   height: 100vh;
+
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   color: white;
+
   border-right: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 8px 0 26px rgba(0,0,0,.35);
+  box-shadow: 6px 0 22px rgba(0,0,0,.35);
   padding: 22px;
   animation: panelSlide .3s ease-in-out;
+
   backdrop-filter: blur(8px);
   z-index: 100;
 }
 
 @keyframes panelSlide {
-  from { left: -40%; opacity: .3; }
+  from { left: -35%; opacity: .4; }
   to { left: 0; opacity: 1; }
 }
 
@@ -311,32 +277,26 @@ body {
 .leftCloseBtn {
   background: #ff4d4d;
   border: none;
-  padding: 9px 16px;
+  padding: 8px 16px;
   border-radius: 12px;
   color: white;
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 800;
   transition: .2s;
 }
 
 .leftCloseBtn:hover {
-  transform: scale(1.08);
+  transform: scale(1.05);
 }
 
 /* ================= PANEL BODY ================= */
 .leftPanelContent {
-  height: calc(100vh - 90px);
+  height: calc(100vh - 80px);
   overflow-y: auto;
   padding-right: 10px;
 }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width: 900px) {
-  .leftPanel {
-    width: 65%;
-  }
-}
-
 @media (max-width: 768px) {
   .container {
     padding: 20px;
@@ -356,9 +316,5 @@ body {
 
   .leftPanel {
     width: 85%;
-  }
-
-  .companyName {
-    font-size: 22px;
   }
 }
