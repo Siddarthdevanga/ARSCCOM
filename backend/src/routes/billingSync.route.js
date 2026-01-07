@@ -3,33 +3,10 @@ import { db } from "../config/db.js";
 
 const router = express.Router();
 
-const WEBHOOK_KEY = "PROMEET_SUPER_SECRET";
-
 /* =====================================================
-   SAFE JSON PARSER
+   SECURITY KEY (Zoho must send this header)
 ===================================================== */
-const safeParse = (val) => {
-  if (!val) return null;
-  if (typeof val === "object") return val;
-
-  let str = String(val).trim();
-
-  if (
-    (str.startsWith("'") && str.endsWith("'")) ||
-    (str.startsWith('"') && str.endsWith('"'))
-  ) {
-    str = str.substring(1, str.length - 1);
-  }
-
-  str = str.replace(/\\"/g, '"');
-
-  try {
-    return JSON.parse(str);
-  } catch (e) {
-    console.log("⚠ smartParse failed:", e?.message, "→", str);
-    return null;
-  }
-};
+const WEBHOOK_KEY = "PROMEET_SUPER_SECRET";
 
 /* =====================================================
    ZOHO PAYMENT PUSH WEBHOOK
@@ -50,40 +27,47 @@ router.post("/push", async (req, res) => {
 
     const event_type = (req.body?.event_type || "").toLowerCase();
 
-    let payment = safeParse(req.body?.payment);
-    let customer = safeParse(req.body?.customer);
+    /* ================================
+       ZOHO ALWAYS SENDS STRING JSON
+    ================================= */
+    let payment = null;
+    let customer = null;
 
-    /* ======================================================
-       CUSTOMER ID (Guaranteed)
-    ====================================================== */
-    let customerId =
+    try {
+      if (req.body?.payment) {
+        payment = JSON.parse(req.body.payment);
+      }
+    } catch (e) {
+      console.log("❌ Failed to parse payment JSON:", e?.message);
+    }
+
+    try {
+      if (req.body?.customer) {
+        customer = JSON.parse(req.body.customer);
+      }
+    } catch (e) {
+      console.log("❌ Failed to parse customer JSON:", e?.message);
+    }
+
+    /* ================================
+       FINAL CUSTOMER ID (GUARANTEED)
+    ================================= */
+    const customerId =
       customer?.customer_id ||
       req.body?.customer_id ||
       req.body?.customerId ||
       null;
 
-    if (!customerId) {
-      const raw = JSON.stringify(req.body);
-
-      let match = raw.match(/customer_id["']?\s*[:=]\s*["']?(\d{10,})/);
-      if (match) customerId = match[1];
-
-      if (!customerId) {
-        match = raw.match(/(\d{15,})/);
-        if (match) customerId = match[1];
-      }
-    }
-
     console.log("🧾 Final Extracted Customer ID:", customerId);
 
     if (!customerId) {
-      console.log("❌ Customer ID STILL missing — investigate payload!");
-      return res.status(400).json({ success: false });
+      console.log("❌ Customer ID missing — stopping");
+      return res.status(400).json({ success: false, message: "customer_id missing" });
     }
 
-    /* ======================================================
+    /* ================================
        PAYMENT STATUS
-    ====================================================== */
+    ================================= */
     const paymentStatus =
       payment?.payment_status?.toLowerCase() ||
       payment?.status?.toLowerCase() ||
@@ -93,9 +77,9 @@ router.post("/push", async (req, res) => {
     console.log("💳 Payment Status:", paymentStatus);
     console.log("📢 Event:", event_type);
 
-    /* ======================================================
+    /* ================================
        FETCH COMPANY
-    ====================================================== */
+    ================================= */
     const [[company]] = await db.query(
       `SELECT id, plan FROM companies WHERE zoho_customer_id=? LIMIT 1`,
       [customerId]
@@ -110,14 +94,14 @@ router.post("/push", async (req, res) => {
     console.log("🏷 PLAN:", plan);
 
     /* ======================================================
-       SUCCESS — ACTIVATE
+       PAYMENT SUCCESS → ACTIVATE
     ====================================================== */
     if (
       event_type === "payment_success" ||
       paymentStatus === "paid" ||
       paymentStatus === "success"
     ) {
-      console.log("🎯 PAYMENT SUCCESS — Activating...");
+      console.log("🎯 PAYMENT SUCCESS — Activating subscription...");
 
       const now = new Date();
       const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
@@ -131,10 +115,11 @@ router.post("/push", async (req, res) => {
         await db.query(
           `
           UPDATE companies
-          SET subscription_status='active',
-              trial_ends_at=?,
-              last_payment_created_at=?,
-              updated_at=NOW()
+          SET 
+            subscription_status='active',
+            trial_ends_at=?,
+            last_payment_created_at=?,
+            updated_at=NOW()
           WHERE id=?
         `,
           [endSQL, nowSQL, company.id]
@@ -143,17 +128,39 @@ router.post("/push", async (req, res) => {
         await db.query(
           `
           UPDATE companies
-          SET subscription_status='active',
-              subscription_ends_at=?,
-              last_payment_created_at=?,
-              updated_at=NOW()
+          SET 
+            subscription_status='active',
+            subscription_ends_at=?,
+            last_payment_created_at=?,
+            updated_at=NOW()
           WHERE id=?
         `,
           [endSQL, nowSQL, company.id]
         );
       }
 
-      console.log("🎉 Subscription Updated Successfully");
+      console.log("🎉 Subscription Activated Successfully");
+    }
+
+    /* ======================================================
+       FAILED / EXPIRED (Optional Handling)
+    ====================================================== */
+    else if (
+      paymentStatus === "failed" ||
+      paymentStatus === "failure" ||
+      paymentStatus === "expired"
+    ) {
+      console.log("❌ PAYMENT FAILED/EXPIRED — Marking pending");
+
+      await db.query(
+        `
+        UPDATE companies
+        SET subscription_status='pending',
+            updated_at=NOW()
+        WHERE id=?
+      `,
+        [company.id]
+      );
     }
 
     return res.json({ success: true });
