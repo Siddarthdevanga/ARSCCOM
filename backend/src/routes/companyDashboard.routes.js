@@ -7,6 +7,107 @@ const router = express.Router();
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
+/* ======================================================
+   PLAN CHECK + REMAINING QUOTA
+====================================================== */
+const checkConferencePlan = async (companyId) => {
+  const [[company]] = await db.query(
+    `
+    SELECT
+      plan,
+      trial_ends_at,
+      subscription_ends_at,
+      subscription_status
+    FROM companies
+    WHERE id = ?
+    LIMIT 1
+    `,
+    [companyId]
+  );
+
+  if (!company)
+    return { ok: false, message: "Company not found" };
+
+  const plan = (company.plan || "trial").toLowerCase();
+  const status = (company.subscription_status || "trial").toLowerCase();
+  const now = new Date();
+
+  let remaining = {
+    rooms_left: "unlimited",
+    conference_bookings_left: "unlimited"
+  };
+
+  // Count rooms
+  const [[roomCount]] = await db.query(
+    `SELECT COUNT(*) AS cnt FROM conference_rooms WHERE company_id = ?`,
+    [companyId]
+  );
+
+  // Count bookings
+  const [[bookingCount]] = await db.query(
+    `SELECT COUNT(*) AS cnt FROM conference_bookings WHERE company_id = ?`,
+    [companyId]
+  );
+
+  /* -------- TRIAL -------- */
+  if (plan === "trial") {
+    if (!company.trial_ends_at)
+      return { ok: false, message: "Trial not initialized" };
+
+    if (now > new Date(company.trial_ends_at))
+      return {
+        ok: false,
+        message: "Your trial expired. Please upgrade plan.",
+        remaining: {
+          rooms_left: 0,
+          conference_bookings_left: 0
+        }
+      };
+
+    remaining.rooms_left = Math.max(0, 2 - roomCount.cnt);
+    remaining.conference_bookings_left = Math.max(0, 100 - bookingCount.cnt);
+
+    if (roomCount.cnt > 2) {
+      return {
+        ok: false,
+        message: "Upgrade required. Your trial allows only 2 conference rooms.",
+        remaining
+      };
+    }
+  }
+
+  /* -------- BUSINESS -------- */
+  if (plan === "business") {
+    if (status !== "active")
+      return { ok: false, message: "Subscription not active", remaining };
+
+    if (!company.subscription_ends_at || now > new Date(company.subscription_ends_at))
+      return { ok: false, message: "Subscription expired", remaining };
+
+    remaining.rooms_left = Math.max(0, 6 - roomCount.cnt);
+    remaining.conference_bookings_left = "unlimited";
+
+    if (roomCount.cnt > 6) {
+      return {
+        ok: false,
+        message: "Upgrade required. Business plan allows maximum 6 rooms.",
+        remaining
+      };
+    }
+  }
+
+  /* -------- ENTERPRISE -------- */
+  if (plan === "enterprise") {
+    if (status !== "active")
+      return { ok: false, message: "Enterprise subscription not active" };
+
+    remaining.rooms_left = "unlimited";
+    remaining.conference_bookings_left = "unlimited";
+  }
+
+  return { ok: true, remaining };
+};
+
 /* ================= DASHBOARD STATS ================= */
 router.get("/dashboard", async (req, res) => {
   try {
@@ -77,6 +178,13 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
+    const planCheck = await checkConferencePlan(companyId);
+    if (!planCheck.ok)
+      return res.status(403).json({
+        message: planCheck.message,
+        remaining: planCheck.remaining || null
+      });
+
     await db.query(
       `
       INSERT INTO conference_rooms
@@ -86,7 +194,10 @@ router.post("/rooms", async (req, res) => {
       [companyId, room_number, room_name.trim()]
     );
 
-    res.status(201).json({ message: "Room created successfully" });
+    res.status(201).json({
+      message: "Room created successfully",
+      remaining: planCheck.remaining
+    });
   } catch (err) {
     console.error("[CONF CREATE ROOM]", err);
     res.status(500).json({ message: "Unable to create room" });
@@ -102,6 +213,17 @@ router.put("/rooms/:id", async (req, res) => {
 
     if (!room_name || !room_name.trim()) {
       return res.status(400).json({ message: "Room name is required" });
+    }
+
+    /* -------- PLAN ENFORCEMENT HERE -------- */
+    const planCheck = await checkConferencePlan(companyId);
+
+    if (!planCheck.ok) {
+      return res.status(403).json({
+        message: "Upgrade required. You have exceeded allowed rooms for your plan.",
+        upgrade_note: planCheck.message,
+        remaining: planCheck.remaining
+      });
     }
 
     const [result] = await db.query(
@@ -120,7 +242,11 @@ router.put("/rooms/:id", async (req, res) => {
       });
     }
 
-    res.json({ message: "Room renamed successfully" });
+    res.json({
+      message: "Room renamed successfully",
+      remaining: planCheck.remaining
+    });
+
   } catch (err) {
     console.error("[CONF RENAME ROOM]", err);
     res.status(500).json({ message: "Unable to rename room" });
@@ -128,3 +254,4 @@ router.put("/rooms/:id", async (req, res) => {
 });
 
 export default router;
+
