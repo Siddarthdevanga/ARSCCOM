@@ -13,7 +13,7 @@ router.use(authMiddleware);
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
     `
-    SELECT
+    SELECT 
       plan,
       trial_ends_at,
       subscription_ends_at,
@@ -28,13 +28,22 @@ const checkConferencePlan = async (companyId) => {
   if (!company)
     return { ok: false, message: "Company not found" };
 
-  const plan = (company.plan || "trial").toLowerCase();
-  const status = (company.subscription_status || "trial").toLowerCase();
+  /* ---- SAFE PLAN NORMALIZATION ---- */
+  let rawPlan = (company.plan || "trial").toLowerCase().trim();
+  let plan = "trial";
+
+  if (["trial"].includes(rawPlan)) plan = "trial";
+  else if (["business", "busniess", "bussiness"].includes(rawPlan))
+    plan = "business";
+  else if (["enterprise", "enterprice"].includes(rawPlan))
+    plan = "enterprise";
+
+  const status = (company.subscription_status || "").toLowerCase();
   const now = new Date();
 
   let remaining = {
-    rooms_left: "unlimited",
-    conference_bookings_left: "unlimited"
+    rooms_left: 0,
+    conference_bookings_left: 0
   };
 
   // Count rooms
@@ -45,82 +54,98 @@ const checkConferencePlan = async (companyId) => {
 
   // Count bookings
   const [[bookingCount]] = await db.query(
-    `SELECT COUNT(*) AS cnt 
-     FROM conference_bookings 
-     WHERE company_id = ? 
-       AND status='BOOKED'`,
+    `
+      SELECT COUNT(*) AS cnt
+      FROM conference_bookings
+      WHERE company_id = ?
+      AND status = 'BOOKED'
+    `,
     [companyId]
   );
 
-  /* -------- TRIAL -------- */
+  /* ================= TRIAL ================= */
   if (plan === "trial") {
     if (!company.trial_ends_at)
-      return { ok: false, message: "Trial not initialized" };
+      return {
+        ok: false,
+        message: "Trial not initialized",
+        remaining
+      };
 
     if (now > new Date(company.trial_ends_at))
       return {
         ok: false,
         message: "Your trial expired. Please upgrade plan.",
-        remaining: {
-          rooms_left: 0,
-          conference_bookings_left: 0
-        }
+        remaining: { rooms_left: 0, conference_bookings_left: 0 }
       };
 
-    remaining.rooms_left = Math.max(0, 2 - roomCount.cnt);
-    remaining.conference_bookings_left = Math.max(0, 100 - bookingCount.cnt);
+    const MAX_ROOMS = 2;
+    const MAX_BOOKINGS = 100;
 
-    if (roomCount.cnt > 2) {
+    remaining.rooms_left = Math.max(0, MAX_ROOMS - roomCount.cnt);
+    remaining.conference_bookings_left = Math.max(
+      0,
+      MAX_BOOKINGS - bookingCount.cnt
+    );
+
+    if (remaining.rooms_left === 0 || remaining.conference_bookings_left === 0)
       return {
         ok: false,
-        message: "Plan limit exceeded. Please contact administrator",
+        message: "Plan limit exceeded. Please upgrade plan.",
         remaining
       };
-    }
-
-    if (bookingCount.cnt >= 100) {
-      return {
-        ok: false,
-        message: "Plan limit exceeded. Please contact administrator",
-        remaining
-      };
-    }
   }
 
-  /* -------- BUSINESS -------- */
+  /* ================= BUSINESS ================= */
   if (plan === "business") {
     if (status !== "active")
-      return { ok: false, message: "Subscription not active", remaining };
-
-    if (!company.subscription_ends_at || now > new Date(company.subscription_ends_at))
-      return { ok: false, message: "Subscription expired", remaining };
-
-    remaining.rooms_left = Math.max(0, 6 - roomCount.cnt);
-    remaining.conference_bookings_left = Math.max(0, 1000 - bookingCount.cnt);
-
-    // Rooms exceeded
-    if (roomCount.cnt > 6) {
       return {
         ok: false,
-        message: "Plan limit exceeded. Please contact administrator",
+        message: "Subscription not active",
         remaining
       };
-    }
 
-    // Booking exceeded
-    if (bookingCount.cnt >= 1000) {
+    if (
+      !company.subscription_ends_at ||
+      now > new Date(company.subscription_ends_at)
+    )
       return {
         ok: false,
-        message: "Plan limit exceeded. Please contact administrator",
+        message: "Subscription expired",
         remaining
       };
-    }
+
+    const MAX_ROOMS = 6;
+    const MAX_BOOKINGS = 1000;
+
+    remaining.rooms_left = Math.max(0, MAX_ROOMS - roomCount.cnt);
+    remaining.conference_bookings_left = Math.max(
+      0,
+      MAX_BOOKINGS - bookingCount.cnt
+    );
+
+    if (roomCount.cnt >= MAX_ROOMS)
+      return {
+        ok: false,
+        message: "Conference room limit reached. Please upgrade plan.",
+        remaining
+      };
+
+    if (bookingCount.cnt >= MAX_BOOKINGS)
+      return {
+        ok: false,
+        message: "Conference booking limit reached. Please upgrade plan.",
+        remaining
+      };
   }
 
-  /* -------- ENTERPRISE -------- */
+  /* ================= ENTERPRISE ================= */
   if (plan === "enterprise") {
     if (status !== "active")
-      return { ok: false, message: "Enterprise subscription not active" };
+      return {
+        ok: false,
+        message: "Enterprise subscription not active"
+      };
 
     remaining.rooms_left = "unlimited";
     remaining.conference_bookings_left = "unlimited";
@@ -129,7 +154,7 @@ const checkConferencePlan = async (companyId) => {
   return { ok: true, remaining };
 };
 
-/* ================= DASHBOARD STATS ================= */
+/* ================= DASHBOARD ================= */
 router.get("/dashboard", async (req, res) => {
   try {
     const companyId = req.user.company_id;
@@ -159,6 +184,7 @@ router.get("/dashboard", async (req, res) => {
       totalBookings: bookings.total,
       todayBookings: today.total
     });
+
   } catch (err) {
     console.error("[CONF DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard" });
@@ -193,23 +219,21 @@ router.post("/rooms", async (req, res) => {
     const companyId = req.user.company_id;
     const { room_name, room_number } = req.body;
 
-    if (!room_name || !room_number) {
-      return res.status(400).json({
-        message: "Room name and room number are required"
-      });
-    }
+    if (!room_name || !room_number)
+      return res
+        .status(400)
+        .json({ message: "Room name and room number are required" });
 
     const planCheck = await checkConferencePlan(companyId);
+
     if (!planCheck.ok)
-      return res.status(403).json({
-        message: planCheck.message,
-        remaining: planCheck.remaining || null
-      });
+      return res
+        .status(403)
+        .json({ message: planCheck.message, remaining: planCheck.remaining });
 
     await db.query(
       `
-      INSERT INTO conference_rooms
-      (company_id, room_number, room_name)
+      INSERT INTO conference_rooms (company_id, room_number, room_name)
       VALUES (?, ?, ?)
       `,
       [companyId, room_number, room_name.trim()]
@@ -219,6 +243,7 @@ router.post("/rooms", async (req, res) => {
       message: "Room created successfully",
       remaining: planCheck.remaining
     });
+
   } catch (err) {
     console.error("[CONF CREATE ROOM]", err);
     res.status(500).json({ message: "Unable to create room" });
@@ -232,18 +257,15 @@ router.put("/rooms/:id", async (req, res) => {
     const roomId = req.params.id;
     const { room_name } = req.body;
 
-    if (!room_name || !room_name.trim()) {
+    if (!room_name?.trim())
       return res.status(400).json({ message: "Room name is required" });
-    }
 
     const planCheck = await checkConferencePlan(companyId);
 
-    if (!planCheck.ok) {
-      return res.status(403).json({
-        message: "Plan limit exceeded. Please contact administrator",
-        remaining: planCheck.remaining
-      });
-    }
+    if (!planCheck.ok)
+      return res
+        .status(403)
+        .json({ message: planCheck.message, remaining: planCheck.remaining });
 
     const [result] = await db.query(
       `
@@ -255,11 +277,10 @@ router.put("/rooms/:id", async (req, res) => {
       [room_name.trim(), roomId, companyId]
     );
 
-    if (!result.affectedRows) {
-      return res.status(404).json({
-        message: "Room not found or not authorized"
-      });
-    }
+    if (!result.affectedRows)
+      return res
+        .status(404)
+        .json({ message: "Room not found or not authorized" });
 
     res.json({
       message: "Room renamed successfully",
