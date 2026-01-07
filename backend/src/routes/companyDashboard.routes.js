@@ -11,6 +11,94 @@ router.use(express.urlencoded({ extended: true }));
 /* ================= AUTH ================= */
 router.use(authMiddleware);
 
+/* ======================================================
+   PLAN CHECKER
+====================================================== */
+const checkConferencePlan = async (companyId) => {
+  const [[company]] = await db.query(
+    `
+    SELECT 
+      plan,
+      subscription_status,
+      trial_ends_at,
+      subscription_ends_at
+    FROM companies
+    WHERE id = ?
+    LIMIT 1
+    `,
+    [companyId]
+  );
+
+  if (!company)
+    throw new Error("Plan validity exceeded. Contact Administrator");
+
+  const PLAN = (company.plan || "TRIAL").toUpperCase();
+  const STATUS = (company.subscription_status || "TRIAL").toUpperCase();
+  const now = new Date();
+
+  if (!["ACTIVE", "TRIAL"].includes(STATUS))
+    throw new Error("Plan validity exceeded. Contact Administrator");
+
+  /* ========= TRIAL ========= */
+  if (PLAN === "TRIAL") {
+    if (!company.trial_ends_at)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    if (new Date(company.trial_ends_at) < now)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    return { plan: PLAN, limit: 2 };
+  }
+
+  /* ========= BUSINESS ========= */
+  if (PLAN === "BUSINESS") {
+    if (!company.subscription_ends_at)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    if (new Date(company.subscription_ends_at) < now)
+      throw new Error("Plan validity exceeded. Contact Administrator");
+
+    return { plan: PLAN, limit: 6 };
+  }
+
+  /* ========= ENTERPRISE ========= */
+  return { plan: PLAN, limit: Infinity };
+};
+
+/* ======================================================
+   PLAN USAGE API  ⭐ (For Scroll Bar UI)
+====================================================== */
+router.get("/plan-usage", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    const { plan, limit } = await checkConferencePlan(companyId);
+
+    const [[countRow]] = await db.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM conference_rooms
+      WHERE company_id = ?
+      `,
+      [companyId]
+    );
+
+    const used = countRow.total;
+    const remaining = limit === Infinity ? null : Math.max(limit - used, 0);
+
+    res.json({
+      plan,
+      limit: limit === Infinity ? "UNLIMITED" : limit,
+      used,
+      remaining
+    });
+
+  } catch (err) {
+    console.error("[CONF PLAN USAGE]", err);
+    res.status(403).json({ message: err.message || "Plan error" });
+  }
+});
+
 /* ================= HEALTH TEST ================= */
 router.get("/health", (req, res) => {
   res.json({ ok: true, route: "conference router active" });
@@ -86,6 +174,19 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
+    const { limit } = await checkConferencePlan(companyId);
+
+    const [[countRow]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
+
+    if (limit !== Infinity && countRow.total >= limit) {
+      return res.status(403).json({
+        message: "Plan limit reached. Contact Administrator",
+      });
+    }
+
     await db.query(
       `
       INSERT INTO conference_rooms
@@ -103,7 +204,6 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ================= RENAME ROOM ================= */
-/* FINAL SAFE ROUTE — Works in all servers (no URL params needed) */
 router.post("/rooms/rename", async (req, res) => {
   try {
     const companyId = req.user.company_id;
@@ -118,16 +218,22 @@ router.post("/rooms/rename", async (req, res) => {
       return res.status(400).json({ message: "Room name is required" });
     }
 
+    const { limit } = await checkConferencePlan(companyId);
+
+    const [[countRow]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
+
+    // BLOCK rename if company has more rooms than plan allows
+    if (limit !== Infinity && countRow.total > limit) {
+      return res.status(403).json({
+        message: "Plan validity exceeded. Contact Administrator"
+      });
+    }
+
     const newName = room_name.trim();
 
-    console.log("[CONF RENAME HIT]", {
-      path: req.originalUrl,
-      companyId,
-      roomId,
-      newName
-    });
-
-    // Validate room belongs to company
     const [[room]] = await db.query(
       `
       SELECT id, room_name
@@ -142,7 +248,6 @@ router.post("/rooms/rename", async (req, res) => {
       return res.status(404).json({ message: "Room not found" });
     }
 
-    // No change
     if (room.room_name === newName) {
       return res.json({ message: "Room name unchanged", room });
     }
@@ -173,4 +278,3 @@ router.post("/rooms/rename", async (req, res) => {
 });
 
 export default router;
-
