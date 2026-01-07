@@ -2,24 +2,23 @@
 html, body {
   height: 100%;
   margin: 0;
-  overflow-y: auto;                  /* scrolling enabled */
-  -webkit-overflow-scrolling: touch; /* smooth mobile scroll */
-  scrollbar-width: none;             /* Firefox */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
 
 body::-webkit-scrollbar {
   width: 0;
-  height: 0;                         /* Chrome / Safari / Edge */
+  height: 0;
 }
 
 /* ================= ROOT ================= */
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
-  color: white;
+  color: #fff;
   font-family: "Segoe UI", Arial, sans-serif;
 
-  /* also hide scrollbar if container scrolls */
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -45,8 +44,8 @@ body::-webkit-scrollbar {
 
 .rightHeader {
   display: flex;
-  gap: 18px;
   align-items: center;
+  gap: 18px;
 }
 
 .companyLogo {
@@ -55,6 +54,7 @@ body::-webkit-scrollbar {
   object-fit: contain;
 }
 
+/* ================= LOGOUT BUTTON ================= */
 .logoutBtn {
   width: 52px;
   height: 52px;
@@ -63,9 +63,9 @@ body::-webkit-scrollbar {
   font-size: 22px;
   font-weight: 800;
   cursor: pointer;
-  background: white;
+  background: #fff;
   color: #3c007a;
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
 }
 
 .logoutBtn:hover {
@@ -88,6 +88,7 @@ body::-webkit-scrollbar {
   margin: 0;
 }
 
+/* ================= NEW BTN ================= */
 .newBtn {
   background: linear-gradient(135deg, #ffcc00, #f2b800);
   color: #3c007a;
@@ -98,6 +99,7 @@ body::-webkit-scrollbar {
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
+
   box-shadow: 0 8px 18px rgba(0,0,0,.25);
   transition: transform .2s ease, box-shadow .2s ease;
 }
@@ -116,7 +118,7 @@ body::-webkit-scrollbar {
 }
 
 .bigCard {
-  background: white;
+  background: #fff;
   color: #3c007a;
   border-radius: 22px;
   padding: 28px;
@@ -126,17 +128,18 @@ body::-webkit-scrollbar {
 
 .bigCard h4 {
   font-size: 14px;
-  margin-bottom: 12px;
+  margin: 0 0 12px;
   font-weight: 700;
   opacity: .85;
 }
 
 .bigCard p {
   font-size: 38px;
+  margin: 0;
   font-weight: 900;
 }
 
-/* ================= TABLES ================= */
+/* ================= TABLE WRAPPER ================= */
 .tablesRow {
   display: grid;
   grid-template-columns: 1.2fr 1fr;
@@ -145,7 +148,7 @@ body::-webkit-scrollbar {
 }
 
 .tableCard {
-  background: white;
+  background: #fff;
   color: #3c007a;
   border-radius: 22px;
   padding: 30px;
@@ -154,10 +157,11 @@ body::-webkit-scrollbar {
 
 .tableCard h3 {
   font-size: 22px;
-  margin-bottom: 20px;
+  margin: 0 0 20px;
   font-weight: 800;
 }
 
+/* ================= TABLE ================= */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -166,7 +170,7 @@ body::-webkit-scrollbar {
 .table th {
   text-align: left;
   font-size: 14px;
-  padding-bottom: 12px;
+  padding: 0 0 12px;
   border-bottom: 2px solid #ddd;
 }
 
@@ -179,7 +183,7 @@ body::-webkit-scrollbar {
 /* ================= CHECKOUT BUTTON ================= */
 .checkoutBtn {
   background: linear-gradient(135deg, #ff4d4d, #d93636);
-  color: white;
+  color: #fff;
   border: none;
   padding: 9px 18px;
   border-radius: 12px;
@@ -231,5 +235,10 @@ body::-webkit-scrollbar {
   .newBtn {
     width: 100%;
     text-align: center;
+  }
+
+  .companyLogo {
+    width: 90px;
+    height: 60px;
   }
 }
