@@ -22,15 +22,8 @@ app.set("trust proxy", 1);
 /* ================= SECURITY ================= */
 app.use(
   helmet({
-    crossOriginResourcePolicy: false
-  })
-);
-
-/* ================= COMPRESSION ================= */
-app.use(
-  compression({
-    level: 6,
-    threshold: 1024
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false // Zoho + Emails + iframes safe
   })
 );
 
@@ -40,7 +33,7 @@ const allowedOrigins = [
   "http://13.205.13.110",
   "http://13.205.13.110:3000",
   "https://wheelbrand.in",
-  "https://www.wheelbrand.in",
+  "https://www.wheelbrand.in"
 ];
 
 app.use(
@@ -56,9 +49,21 @@ app.use(
   })
 );
 
+// Handle OPTIONS preflight globally
+app.options("*", cors());
+
+/* ================= COMPRESSION ================= */
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024
+  })
+);
+
 /* ================= BODY PARSER ================= */
-app.use(express.json({ limit: "20mb" }));
-app.use(express.urlencoded({ extended: true, limit: "20mb" }));
+// MUST EXIST for Zoho webhook to work!
+app.use(express.json({ limit: "25mb", strict: false }));
+app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 /* ================= HEALTH ================= */
 app.get("/health", (req, res) => {
@@ -79,7 +84,10 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/billing/repair", billingRepair);
 app.use("/api/billing/cron", billingCron);
-app.use("/api/payment", zohoPushRoutes);
+
+// 🚨 keep push webhook separate + clear namespace
+app.use("/api/payment/zoho", zohoPushRoutes);
+
 app.use("/api/webhook", webhookRoutes);
 
 /* ================= 404 ================= */
