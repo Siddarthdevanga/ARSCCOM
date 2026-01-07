@@ -6,16 +6,14 @@ let isShuttingDown = false;
 let isReady = false;
 
 /* ======================================================
-   LOGGING HELPERS
+   LOGGING
 ====================================================== */
 function logFatal(label, error) {
   console.error(`\n❌ ${label}:`, error?.message || error);
   if (error?.stack) console.error(error.stack);
 }
 
-const safeExit = (code = 1) => {
-  setTimeout(() => process.exit(code), 300);
-};
+const safeExit = (code = 1) => setTimeout(() => process.exit(code), 300);
 
 /* ======================================================
    CRASH SAFETY
@@ -31,7 +29,7 @@ process.on("uncaughtException", (error) => {
 });
 
 /* ======================================================
-   REQUIRED ENV VALIDATION
+   REQUIRED ENV
 ====================================================== */
 const REQUIRED = [
   "PORT",
@@ -58,7 +56,6 @@ const REQUIRED = [
 
 function validateEnv() {
   const missing = REQUIRED.filter((v) => !process.env[v]);
-
   if (missing.length) {
     throw new Error(
       `Missing Required Environment Variables:\n${missing.join("\n")}`
@@ -66,9 +63,7 @@ function validateEnv() {
   }
 
   const port = Number(process.env.PORT);
-  if (Number.isNaN(port) || port <= 0) {
-    throw new Error("Invalid PORT value");
-  }
+  if (Number.isNaN(port) || port <= 0) throw new Error("Invalid PORT value");
 }
 
 /* ======================================================
@@ -76,16 +71,28 @@ function validateEnv() {
 ====================================================== */
 async function startServer() {
   try {
+    /* ========= AWS SECRETS ========= */
     console.log("🔐 Loading AWS Secrets...");
-    await loadSecrets().catch(async (e) => {
-      console.warn("⚠️ AWS Secrets load failed — retrying...");
-      await new Promise((r) => setTimeout(r, 1200));
-      await loadSecrets();
-    });
+
+    let loaded = false;
+    for (let i = 1; i <= 3 && !loaded; i++) {
+      try {
+        await loadSecrets();
+        loaded = true;
+      } catch {
+        console.warn(`⚠️ AWS Secrets load failed — retry ${i}`);
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    }
+
+    if (!loaded) throw new Error("AWS Secrets Load Failed");
+
     console.log("✅ AWS Secrets Loaded");
 
+    /* ========= ENV VALIDATION ========= */
     validateEnv();
 
+    /* ========= EXPRESS ========= */
     console.log("📦 Initializing Express App...");
     const { default: app } = await import("./app.js");
 
@@ -94,12 +101,13 @@ async function startServer() {
       return;
     }
 
-    /* ========= DB WARM CHECK ========= */
+    /* ========= DB READY ========= */
     console.log("🗄️ Checking database connection...");
     const { db } = await import("./config/db.js");
     await db.query("SELECT 1");
     console.log("🗄️ Database Connected");
 
+    /* ========= START ========= */
     server = app.listen(process.env.PORT, () => {
       console.log("=======================================");
       console.log(`🚀 Server Running on Port: ${process.env.PORT}`);
@@ -111,10 +119,8 @@ async function startServer() {
       isReady = true;
     });
 
-    // Protect against stuck long requests
+    // protect long requests
     server.setTimeout?.(120000);
-
-    // Node should not exit unexpectedly
     server.keepAliveTimeout = 65000;
 
   } catch (err) {
@@ -160,13 +166,13 @@ async function initiateShutdown(reason) {
 }
 
 /* ======================================================
-   SIGNAL HANDLERS
+   SIGNALS
 ====================================================== */
 process.on("SIGTERM", () => initiateShutdown("SIGTERM"));
 process.on("SIGINT", () => initiateShutdown("SIGINT"));
 
 /* ======================================================
-   HEALTH / READINESS (SAFE EXPORT)
+   HEALTH
 ====================================================== */
 export function isAppReady() {
   return isReady && !isShuttingDown;
