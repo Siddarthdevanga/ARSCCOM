@@ -57,7 +57,7 @@ const toAmPm = (time) => {
 };
 
 /* ======================================================
-   REQUIRED FOOTER ✔️ (EXACT AS YOU WANT)
+   REQUIRED FOOTER ✔️
 ====================================================== */
 const emailFooter = company => `
 <br/>
@@ -72,7 +72,7 @@ If you did not perform this action, please contact your administrator immediatel
 `;
 
 /* ======================================================
-   GET COMPANY INFO ALWAYS (GUARANTEED)
+   COMPANY INFO
 ====================================================== */
 const getCompanyInfo = async (companyId) => {
   const [[company]] = await db.query(
@@ -89,7 +89,94 @@ const getCompanyInfo = async (companyId) => {
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
-   SEND EMAIL TO ADMIN + USER
+   PLAN GUARDRAILS
+====================================================== */
+const checkConferencePlan = async (companyId) => {
+  const [[company]] = await db.query(
+    `
+    SELECT 
+      plan,
+      subscription_status,
+      trial_ends_at,
+      subscription_ends_at
+    FROM companies
+    WHERE id = ?
+    LIMIT 1
+    `,
+    [companyId]
+  );
+
+  if (!company) throw new Error("Company not found");
+
+  const PLAN = (company.plan || "TRIAL").toUpperCase();
+  const STATUS = (company.subscription_status || "PENDING").toUpperCase();
+  const now = new Date();
+
+  if (!["ACTIVE", "TRIAL"].includes(STATUS)) {
+    throw new Error("Subscription inactive. Please renew subscription.");
+  }
+
+  /* ================= TRIAL PLAN ================= */
+  if (PLAN === "TRIAL") {
+    if (!company.trial_ends_at) throw new Error("Trial not initialized");
+
+    const trialEnd = new Date(company.trial_ends_at);
+    if (trialEnd < now) throw new Error("Trial expired. Please upgrade plan.");
+
+    // Room Limit 2
+    const [[roomCount]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
+
+    const roomAllowed = roomCount.total < 2;
+
+    // Booking Limit 100
+    const [[bookingCount]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
+      [companyId]
+    );
+
+    if (bookingCount.total >= 100)
+      throw new Error("Trial limit reached. Max 100 bookings allowed.");
+
+    return { plan: PLAN, roomAllowed };
+  }
+
+  /* ================= BUSINESS PLAN ================= */
+  if (PLAN === "BUSINESS") {
+    if (!company.subscription_ends_at)
+      throw new Error("Subscription not initialized");
+
+    const end = new Date(company.subscription_ends_at);
+    if (end < now) throw new Error("Business plan expired. Please renew.");
+
+    // Room Limit 6
+    const [[roomCount]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
+
+    const roomAllowed = roomCount.total < 6;
+
+    // Booking Limit 1000
+    const [[bookingCount]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
+      [companyId]
+    );
+
+    if (bookingCount.total >= 1000)
+      throw new Error("Business plan booking limit reached (1000).");
+
+    return { plan: PLAN, roomAllowed };
+  }
+
+  /* ================= ENTERPRISE ================= */
+  return { plan: "ENTERPRISE", roomAllowed: true };
+};
+
+/* ======================================================
+   SEND BOOKING EMAIL
 ====================================================== */
 const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, booking, company }) => {
   const recipients = [];
@@ -97,33 +184,20 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
   if (isEmail(adminEmail)) recipients.push(adminEmail);
   if (isEmail(userEmail) && userEmail !== adminEmail) recipients.push(userEmail);
 
-  if (!recipients.length) {
-    console.log("🚫 No valid recipients — skipping email");
-    return;
-  }
+  if (!recipients.length) return;
 
   const safeCompany = company || { name: "", logo_url: "" };
 
-  try {
-    await sendEmail({
-      to: recipients,
-      subject,
-      html: `
+  await sendEmail({
+    to: recipients,
+    subject,
+    html: `
       <div style="font-family:Arial;padding:18px">
-
         <h2 style="color:#6c2bd9;margin-bottom:6px">${heading}</h2>
 
-        <p style="font-size:14px;color:#444">
-          Below are the meeting details:
-        </p>
+        <p style="font-size:14px;color:#444">Below are the meeting details:</p>
 
-        <div style="
-          background:#f7f7ff;
-          border-radius:12px;
-          border:1px solid #ddd;
-          padding:16px;
-          margin:12px 0">
-
+        <div style="background:#f7f7ff;border-radius:12px;border:1px solid #ddd;padding:16px;margin:12px 0">
           <p><b>Room:</b> ${booking.room_name}</p>
           <p><b>Date:</b> ${booking.booking_date}</p>
           <p><b>Time:</b> ${toAmPm(booking.start_time)} – ${toAmPm(booking.end_time)}</p>
@@ -134,13 +208,8 @@ const sendBookingMail = async ({ adminEmail, userEmail, subject, heading, bookin
 
         ${emailFooter(safeCompany)}
       </div>
-      `
-    });
-
-    console.log("📨 EMAIL SENT TO:", recipients.join(", "));
-  } catch (err) {
-    console.log("❌ EMAIL FAILED:", err.message);
-  }
+    `
+  });
 };
 
 /* ======================================================
@@ -155,11 +224,7 @@ router.get("/dashboard", async (req, res) => {
       SELECT
         (SELECT COUNT(*) FROM conference_rooms WHERE company_id = ?) AS rooms,
         (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ?) AS totalBookings,
-        (SELECT COUNT(*)
-         FROM conference_bookings
-         WHERE company_id = ?
-         AND booking_date = CURDATE()
-         AND status = 'BOOKED') AS todayBookings
+        (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ? AND booking_date = CURDATE() AND status = 'BOOKED') AS todayBookings
       `,
       [companyId, companyId, companyId]
     );
@@ -175,7 +240,9 @@ router.get("/dashboard", async (req, res) => {
       [companyId]
     );
 
-    res.json({ ...stats, departments });
+    const plan = await checkConferencePlan(companyId);
+
+    res.json({ ...stats, departments, plan });
   } catch (err) {
     console.error("[ADMIN][DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard stats" });
@@ -183,7 +250,7 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   ROOMS
+   GET ROOMS
 ====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
@@ -199,7 +266,7 @@ router.get("/rooms", async (req, res) => {
       [companyId]
     );
 
-    res.json(Array.isArray(rooms) ? rooms : []);
+    res.json(rooms || []);
   } catch (err) {
     console.error("[ADMIN][GET ROOMS]", err);
     res.status(500).json({ message: "Unable to fetch rooms" });
@@ -207,7 +274,7 @@ router.get("/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   BOOKINGS LIST
+   GET BOOKINGS
 ====================================================== */
 router.get("/bookings", async (req, res) => {
   try {
@@ -215,10 +282,7 @@ router.get("/bookings", async (req, res) => {
     const { roomId, date } = req.query;
 
     let sql = `
-      SELECT
-        b.*,
-        r.room_name,
-        r.room_number
+      SELECT b.*, r.room_name, r.room_number
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
       WHERE b.company_id = ?
@@ -239,7 +303,7 @@ router.get("/bookings", async (req, res) => {
     sql += " ORDER BY b.booking_date ASC, b.start_time ASC";
 
     const [rows] = await db.query(sql, params);
-    res.json(Array.isArray(rows) ? rows : []);
+    res.json(rows || []);
   } catch (err) {
     console.error("[ADMIN][GET BOOKINGS]", err);
     res.status(500).json({ message: "Unable to fetch bookings" });
@@ -255,15 +319,14 @@ router.post("/bookings", async (req, res) => {
   try {
     const { companyId, email: adminEmail } = req.user;
 
-    let {
-      room_id,
-      booked_by,
-      department,
-      purpose = "",
-      booking_date,
-      start_time,
-      end_time
-    } = req.body;
+    // PLAN CHECK
+    try {
+      await checkConferencePlan(companyId);
+    } catch (e) {
+      return res.status(403).json({ message: e.message });
+    }
+
+    let { room_id, booked_by, department, purpose = "", booking_date, start_time, end_time } = req.body;
 
     if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time)
       return res.status(400).json({ message: "Required fields missing" });
@@ -284,6 +347,12 @@ router.post("/bookings", async (req, res) => {
     if (!room) {
       await conn.rollback();
       return res.status(403).json({ message: "Invalid room" });
+    }
+
+    const planRoom = await checkConferencePlan(companyId);
+    if (!planRoom.roomAllowed) {
+      await conn.rollback();
+      return res.status(403).json({ message: "Your plan does not allow booking more rooms" });
     }
 
     const [[conflict]] = await conn.query(
@@ -311,16 +380,7 @@ router.post("/bookings", async (req, res) => {
       (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `,
-      [
-        companyId,
-        room_id,
-        booked_by,
-        department.trim(),
-        purpose.trim(),
-        booking_date,
-        start_time,
-        end_time
-      ]
+      [companyId, room_id, booked_by, department.trim(), purpose.trim(), booking_date, start_time, end_time]
     );
 
     await conn.commit();
@@ -423,12 +483,7 @@ router.patch("/bookings/:id", async (req, res) => {
       userEmail: booking.booked_by,
       subject: "Conference Room Booking Rescheduled",
       heading: "Meeting Rescheduled 🔄",
-      booking: {
-        ...booking,
-        start_time,
-        end_time,
-        status: "RESCHEDULED"
-      },
+      booking: { ...booking, start_time, end_time, status: "RESCHEDULED" },
       company: companyInfo
     });
 
@@ -473,10 +528,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       userEmail: booking.booked_by,
       subject: "Conference Room Booking Cancelled",
       heading: "Meeting Cancelled ❌",
-      booking: {
-        ...booking,
-        status: "CANCELLED"
-      },
+      booking: { ...booking, status: "CANCELLED" },
       company: companyInfo
     });
 
@@ -488,3 +540,4 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
+
