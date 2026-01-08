@@ -63,7 +63,6 @@ export default function ConferenceDashboard() {
 
   const [filterDay, setFilterDay] = useState("today");
 
-
   /* ================= DATE HELPERS ================= */
   const getDate = (offset) => {
     const d = new Date();
@@ -80,7 +79,6 @@ export default function ConferenceDashboard() {
     filterDay === "tomorrow" ? tomorrow :
     today;
 
-
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
@@ -96,7 +94,6 @@ export default function ConferenceDashboard() {
       setBookings(bookingsRes || []);
       setPlan(planRes);
 
-      // Booking Plan Calculation
       let bookingLimit =
         planRes?.plan === "TRIAL" ? 100 :
         planRes?.plan === "BUSINESS" ? 1000 :
@@ -118,7 +115,6 @@ export default function ConferenceDashboard() {
     }
   };
 
-
   /* ================= INIT ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -133,6 +129,12 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
+  /* ================= ADDITION: RENAME ELIGIBILITY ================= */
+  const canRenameRoom = (index) => {
+    if (!plan) return false;
+    if (plan.limit === "UNLIMITED") return true;
+    return index < plan.limit;
+  };
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
@@ -156,10 +158,9 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert(err?.message || "Failed to rename room");
+      alert(err?.message || "Upgrade your plan to rename this room");
     }
   };
-
 
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
@@ -172,7 +173,6 @@ export default function ConferenceDashboard() {
     });
   }, [bookings, selectedDate]);
 
-
   /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
@@ -183,117 +183,12 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
-
-  /* ================= LOADING ================= */
   if (loading || !company || !stats) return null;
 
-
-  /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
-
-  const roomPercentage =
-    plan?.limit === "UNLIMITED"
-      ? 100
-      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
-
-  const bookingPercentage =
-    bookingPlan?.limit === Infinity
-      ? 100
-      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
-
 
   return (
     <div className={styles.container}>
-
-      {/* ================= HEADER ================= */}
-      <header className={styles.header}>
-        <div className={styles.leftHeader}>
-          <div
-            className={styles.leftMenuTrigger}
-            onClick={() => setSidePanelOpen(true)}
-          >
-            <span></span><span></span><span></span>
-          </div>
-
-          <div>
-            <h2 className={styles.companyName}>{company.name}</h2>
-            <span className={styles.subText}>Conference Dashboard</span>
-          </div>
-        </div>
-
-        <div className={styles.headerRight}>
-          <img
-            src={company.logo_url || "/logo.png"}
-            className={styles.logo}
-            alt="Logo"
-          />
-
-          <button
-            className={styles.logoBtn}
-            title="Logout"
-            onClick={() => {
-              localStorage.clear();
-              router.replace("/auth/login");
-            }}
-          >
-            ⏻
-          </button>
-        </div>
-      </header>
-
-
-      {/* ================= PUBLIC LINK ================= */}
-      <div className={styles.publicBox}>
-        <div className={styles.publicRow}>
-          <div>
-            <p className={styles.publicTitle}>Public Booking URL</p>
-
-            <a href={publicURL} target="_blank" className={styles.publicLink}>
-              {publicURL}
-            </a>
-          </div>
-
-          <button
-            className={styles.bookBtn}
-            onClick={() => router.push("/conference/bookings")}
-          >
-            Book
-          </button>
-        </div>
-      </div>
-
-
-      {/* ================= BOOKING USAGE ================= */}
-      {bookingPlan && (
-        <div className={styles.section}>
-          <h3>Conference Booking Usage</h3>
-
-          {bookingPlan.limit === Infinity ? (
-            <p>Unlimited Bookings Available 🎉</p>
-          ) : (
-            <p>
-              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
-              Remaining: <b>{bookingPlan.remaining}</b>
-            </p>
-          )}
-
-          <div className={styles.barOuter}>
-            <div
-              className={styles.barInner}
-              style={{
-                width: bookingPercentage + "%",
-                background:
-                  bookingPercentage >= 90
-                    ? "#ff1744"
-                    : bookingPercentage >= 70
-                    ? "#ff9800"
-                    : "#00c853",
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
-
 
       {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
@@ -313,45 +208,9 @@ export default function ConferenceDashboard() {
             </button>
           </div>
 
-
-          {/* PLAN BAR INSIDE SLIDER */}
-          {plan && (
-            <div style={{ marginBottom: 20 }}>
-              <p>
-                Plan: <b>{plan.plan}</b>
-              </p>
-
-              {plan.limit === "UNLIMITED" ? (
-                <p>Unlimited Rooms 🎉</p>
-              ) : (
-                <p>
-                  Rooms: <b>{plan.used}</b> / {plan.limit} |
-                  Remaining: <b>{plan.remaining}</b>
-                </p>
-              )}
-
-              <div className={styles.barOuter}>
-                <div
-                  className={styles.barInner}
-                  style={{
-                    width: roomPercentage + "%",
-                    background:
-                      roomPercentage >= 90
-                        ? "#ff1744"
-                        : roomPercentage >= 70
-                        ? "#ff9800"
-                        : "#00c853",
-                  }}
-                ></div>
-              </div>
-            </div>
-          )}
-
-
-          {/* ROOM RENAME LIST */}
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
-              {rooms.map((r) => (
+              {rooms.map((r, index) => (
                 <li key={r.id}>
                   <b>{r.room_name}</b> (#{r.room_number})
 
@@ -372,20 +231,22 @@ export default function ConferenceDashboard() {
                         Cancel
                       </button>
                     </>
-                  ) : (
+                  ) : canRenameRoom(index) ? (
                     <button
-                      disabled={plan?.remaining === 0}
-                      style={{
-                        opacity: plan?.remaining === 0 ? 0.5 : 1,
-                        cursor:
-                          plan?.remaining === 0 ? "not-allowed" : "pointer",
-                      }}
                       onClick={() => {
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
                       }}
                     >
                       Rename
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      title="Upgrade your plan to rename this room"
+                      style={{ opacity: 0.5, cursor: "not-allowed" }}
+                    >
+                      🔒 Upgrade Plan
                     </button>
                   )}
                 </li>
@@ -394,90 +255,6 @@ export default function ConferenceDashboard() {
           </div>
         </div>
       )}
-
-
-      {/* ================= DATE FILTER ================= */}
-      <div className={styles.section}>
-        <h3>Bookings View</h3>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          {["yesterday", "today", "tomorrow"].map((d) => (
-            <button
-              key={d}
-              onClick={() => setFilterDay(d)}
-              style={{
-                background: filterDay === d ? "yellow" : "#ffffff",
-                color: "#000",
-                padding: "8px 18px",
-                borderRadius: 30,
-                border: "none",
-              }}
-            >
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-
-      {/* ================= KPIs ================= */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span>Conference Rooms</span>
-          <b>{stats.rooms}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Bookings ({filterDay.toUpperCase()})</span>
-          <b>{filteredBookings.length}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Departments Using Rooms</span>
-          <b>{departmentStats.length}</b>
-        </div>
-      </div>
-
-
-      {/* ================= DEPARTMENT ================= */}
-      <div className={styles.section}>
-        <h3>Department Wise Bookings</h3>
-
-        {departmentStats.length === 0 ? (
-          <p>No bookings</p>
-        ) : (
-          <ul className={styles.roomList}>
-            {departmentStats.map(([dep, count]) => (
-              <li key={dep}>
-                <b>{dep}</b> — {count} bookings
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-
-      {/* ================= BOOKINGS ================= */}
-      <div className={styles.section}>
-        <h3>Bookings List</h3>
-
-        {filteredBookings.length === 0 && <p>No bookings</p>}
-
-        {filteredBookings.slice(0, 6).map((b) => (
-          <div key={b.id} className={styles.bookingRow}>
-            <div>
-              <b>{b.room_name}</b> (#{b.room_number})
-              <p>{formatNiceDate(b.booking_date)}</p>
-            </div>
-
-            <div>
-              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
-            </div>
-
-            <div className={styles.status}>{b.status}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
