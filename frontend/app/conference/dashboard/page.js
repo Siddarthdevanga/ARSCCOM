@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= DATE ================= */
+/* ---------------- DATE ---------------- */
 const formatNiceDate = (value) => {
   if (!value) return "-";
   try {
@@ -14,14 +14,17 @@ const formatNiceDate = (value) => {
     if (str.includes(" ")) str = str.split(" ")[0];
 
     const [y, m, d] = str.split("-");
-    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const names = [
+      "Jan","Feb","Mar","Apr","May","Jun",
+      "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
     return value;
   }
 };
 
-/* ================= TIME ================= */
+/* ---------------- TIME ---------------- */
 const formatNiceTime = (value) => {
   if (!value) return "-";
   try {
@@ -51,15 +54,15 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [plan, setPlan] = useState(null);
+  const [plan, setPlan] = useState(null);              
   const [bookingPlan, setBookingPlan] = useState(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
-  const [savingRoom, setSavingRoom] = useState(false);
 
   const [filterDay, setFilterDay] = useState("today");
+
 
   /* ================= DATE HELPERS ================= */
   const getDate = (offset) => {
@@ -77,6 +80,7 @@ export default function ConferenceDashboard() {
     filterDay === "tomorrow" ? tomorrow :
     today;
 
+
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
@@ -92,7 +96,8 @@ export default function ConferenceDashboard() {
       setBookings(bookingsRes || []);
       setPlan(planRes);
 
-      const bookingLimit =
+      // Booking Plan Calculation
+      let bookingLimit =
         planRes?.plan === "TRIAL" ? 100 :
         planRes?.plan === "BUSINESS" ? 1000 :
         Infinity;
@@ -113,6 +118,7 @@ export default function ConferenceDashboard() {
     }
   };
 
+
   /* ================= INIT ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -127,29 +133,20 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= RENAME RULE ================= */
-  const renameAllowedRoomIds = useMemo(() => {
-    if (!plan || !rooms.length) return [];
-    if (plan.limit === "UNLIMITED") return rooms.map(r => r.id);
-    return rooms.slice(0, plan.limit).map(r => r.id);
-  }, [plan, rooms]);
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
-    const original = rooms.find(r => r.id === roomId)?.room_name;
+    const original = rooms.find((r) => r.id === roomId)?.room_name;
 
-    if (!newName) return alert("Room name required");
+    if (!newName) return alert("Room name is required");
     if (newName === original) {
       setEditingRoomId(null);
       return;
     }
 
-    if (savingRoom) return;
-    setSavingRoom(true);
-
     try {
-      await apiFetch("/api/conference/rooms/rename", {
+      await apiFetch(`/api/conference/rooms/rename`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: roomId, room_name: newName }),
@@ -159,15 +156,14 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert(err?.message || "Rename failed");
-    } finally {
-      setSavingRoom(false);
+      alert(err?.message || "Failed to rename room");
     }
   };
 
+
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
-    return bookings.filter(b => {
+    return bookings.filter((b) => {
       const date = b.booking_date?.includes("T")
         ? b.booking_date.split("T")[0]
         : b.booking_date;
@@ -176,32 +172,35 @@ export default function ConferenceDashboard() {
     });
   }, [bookings, selectedDate]);
 
+
   /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
-    filteredBookings.forEach(b => {
+    filteredBookings.forEach((b) => {
       const dep = b.department || "Unknown";
       map[dep] = (map[dep] || 0) + 1;
     });
     return Object.entries(map);
   }, [filteredBookings]);
 
-  if (loading) {
-    return <div className={styles.container}>Loading dashboard...</div>;
-  }
 
-  if (!company || !stats) return null;
+  /* ================= LOADING ================= */
+  if (loading || !company || !stats) return null;
 
+
+  /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
-  const percent = (used, limit) =>
-    !limit || limit === Infinity ? 100 : Math.min(100, Math.round((used / limit) * 100));
-
   const roomPercentage =
-    plan?.limit === "UNLIMITED" ? 100 : percent(plan?.used, plan?.limit);
+    plan?.limit === "UNLIMITED"
+      ? 100
+      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
 
   const bookingPercentage =
-    percent(bookingPlan?.used, bookingPlan?.limit);
+    bookingPlan?.limit === Infinity
+      ? 100
+      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
+
 
   return (
     <div className={styles.container}>
@@ -209,9 +208,13 @@ export default function ConferenceDashboard() {
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
+          <div
+            className={styles.leftMenuTrigger}
+            onClick={() => setSidePanelOpen(true)}
+          >
             <span></span><span></span><span></span>
           </div>
+
           <div>
             <h2 className={styles.companyName}>{company.name}</h2>
             <span className={styles.subText}>Conference Dashboard</span>
@@ -219,9 +222,15 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
-          <img src={company.logo_url || "/logo.png"} className={styles.logo} />
+          <img
+            src={company.logo_url || "/logo.png"}
+            className={styles.logo}
+            alt="Logo"
+          />
+
           <button
             className={styles.logoBtn}
+            title="Logout"
             onClick={() => {
               localStorage.clear();
               router.replace("/auth/login");
@@ -232,53 +241,145 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
+
       {/* ================= PUBLIC LINK ================= */}
       <div className={styles.publicBox}>
-        <p>Public Booking URL</p>
-        <a href={publicURL} target="_blank">{publicURL}</a>
-        <button onClick={() => navigator.clipboard.writeText(publicURL)}>
-          Copy
-        </button>
-      </div>
+        <div className={styles.publicRow}>
+          <div>
+            <p className={styles.publicTitle}>Public Booking URL</p>
 
-      {/* ================= BOOKING USAGE ================= */}
-      <div className={styles.section}>
-        <h3>Booking Usage</h3>
-        <p>
-          {bookingPlan.limit === Infinity
-            ? "Unlimited bookings"
-            : `Used ${bookingPlan.used} / ${bookingPlan.limit}`}
-        </p>
-        <div className={styles.barOuter}>
-          <div className={styles.barInner} style={{ width: bookingPercentage + "%" }} />
+            <a href={publicURL} target="_blank" className={styles.publicLink}>
+              {publicURL}
+            </a>
+          </div>
+
+          <button
+            className={styles.bookBtn}
+            onClick={() => router.push("/conference/bookings")}
+          >
+            Book
+          </button>
         </div>
       </div>
 
-      {/* ================= SIDE PANEL ================= */}
+
+      {/* ================= BOOKING USAGE ================= */}
+      {bookingPlan && (
+        <div className={styles.section}>
+          <h3>Conference Booking Usage</h3>
+
+          {bookingPlan.limit === Infinity ? (
+            <p>Unlimited Bookings Available 🎉</p>
+          ) : (
+            <p>
+              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
+              Remaining: <b>{bookingPlan.remaining}</b>
+            </p>
+          )}
+
+          <div className={styles.barOuter}>
+            <div
+              className={styles.barInner}
+              style={{
+                width: bookingPercentage + "%",
+                background:
+                  bookingPercentage >= 90
+                    ? "#ff1744"
+                    : bookingPercentage >= 70
+                    ? "#ff9800"
+                    : "#00c853",
+              }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+
+      {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
-          <h3>Room Rename</h3>
-          <button onClick={() => setSidePanelOpen(false)}>Close</button>
+          <div className={styles.leftPanelHeader}>
+            <h3>Conference Plan + Room Rename</h3>
 
-          <ul className={styles.roomList}>
-            {rooms.map(r => {
-              const canRename = renameAllowedRoomIds.includes(r.id);
+            <button
+              className={styles.leftCloseBtn}
+              onClick={() => {
+                setSidePanelOpen(false);
+                setEditingRoomId(null);
+                setEditName("");
+              }}
+            >
+              Close ✖
+            </button>
+          </div>
 
-              return (
+
+          {/* PLAN BAR INSIDE SLIDER */}
+          {plan && (
+            <div style={{ marginBottom: 20 }}>
+              <p>
+                Plan: <b>{plan.plan}</b>
+              </p>
+
+              {plan.limit === "UNLIMITED" ? (
+                <p>Unlimited Rooms 🎉</p>
+              ) : (
+                <p>
+                  Rooms: <b>{plan.used}</b> / {plan.limit} |
+                  Remaining: <b>{plan.remaining}</b>
+                </p>
+              )}
+
+              <div className={styles.barOuter}>
+                <div
+                  className={styles.barInner}
+                  style={{
+                    width: roomPercentage + "%",
+                    background:
+                      roomPercentage >= 90
+                        ? "#ff1744"
+                        : roomPercentage >= 70
+                        ? "#ff9800"
+                        : "#00c853",
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+
+          {/* ROOM RENAME LIST */}
+          <div className={styles.leftPanelContent}>
+            <ul className={styles.roomList}>
+              {rooms.map((r) => (
                 <li key={r.id}>
                   <b>{r.room_name}</b> (#{r.room_number})
 
                   {editingRoomId === r.id ? (
                     <>
-                      <input value={editName} onChange={e => setEditName(e.target.value)} />
-                      <button onClick={() => saveRoomName(r.id)} disabled={savingRoom}>
-                        {savingRoom ? "Saving..." : "Save"}
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
+                      />
+                      <button onClick={() => saveRoomName(r.id)}>Save</button>
+                      <button
+                        onClick={() => {
+                          setEditingRoomId(null);
+                          setEditName("");
+                        }}
+                      >
+                        Cancel
                       </button>
-                      <button onClick={() => setEditingRoomId(null)}>Cancel</button>
                     </>
                   ) : (
                     <button
-                      disabled={!canRename}
+                      disabled={plan?.remaining === 0}
+                      style={{
+                        opacity: plan?.remaining === 0 ? 0.5 : 1,
+                        cursor:
+                          plan?.remaining === 0 ? "not-allowed" : "pointer",
+                      }}
                       onClick={() => {
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
@@ -288,40 +389,95 @@ export default function ConferenceDashboard() {
                     </button>
                   )}
                 </li>
-              );
-            })}
-          </ul>
+              ))}
+            </ul>
+          </div>
         </div>
       )}
 
+
       {/* ================= DATE FILTER ================= */}
       <div className={styles.section}>
-        {["yesterday","today","tomorrow"].map(d => (
-          <button key={d} onClick={() => setFilterDay(d)}>
-            {d.toUpperCase()}
-          </button>
-        ))}
+        <h3>Bookings View</h3>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          {["yesterday", "today", "tomorrow"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setFilterDay(d)}
+              style={{
+                background: filterDay === d ? "yellow" : "#ffffff",
+                color: "#000",
+                padding: "8px 18px",
+                borderRadius: 30,
+                border: "none",
+              }}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
       </div>
+
 
       {/* ================= KPIs ================= */}
       <div className={styles.statsGrid}>
-        <div className={styles.statCard}><span>Rooms</span><b>{stats.rooms}</b></div>
-        <div className={styles.statCard}><span>Bookings</span><b>{filteredBookings.length}</b></div>
-        <div className={styles.statCard}><span>Departments</span><b>{departmentStats.length}</b></div>
+        <div className={styles.statCard}>
+          <span>Conference Rooms</span>
+          <b>{stats.rooms}</b>
+        </div>
+
+        <div className={styles.statCard}>
+          <span>Bookings ({filterDay.toUpperCase()})</span>
+          <b>{filteredBookings.length}</b>
+        </div>
+
+        <div className={styles.statCard}>
+          <span>Departments Using Rooms</span>
+          <b>{departmentStats.length}</b>
+        </div>
       </div>
+
+
+      {/* ================= DEPARTMENT ================= */}
+      <div className={styles.section}>
+        <h3>Department Wise Bookings</h3>
+
+        {departmentStats.length === 0 ? (
+          <p>No bookings</p>
+        ) : (
+          <ul className={styles.roomList}>
+            {departmentStats.map(([dep, count]) => (
+              <li key={dep}>
+                <b>{dep}</b> — {count} bookings
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
 
       {/* ================= BOOKINGS ================= */}
       <div className={styles.section}>
-        <h3>Bookings</h3>
-        {filteredBookings.map(b => (
+        <h3>Bookings List</h3>
+
+        {filteredBookings.length === 0 && <p>No bookings</p>}
+
+        {filteredBookings.slice(0, 6).map((b) => (
           <div key={b.id} className={styles.bookingRow}>
-            <b>{b.room_name}</b>
-            <p>{formatNiceDate(b.booking_date)}</p>
-            <p>{formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}</p>
+            <div>
+              <b>{b.room_name}</b> (#{b.room_number})
+              <p>{formatNiceDate(b.booking_date)}</p>
+            </div>
+
+            <div>
+              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
+            </div>
+
+            <div className={styles.status}>{b.status}</div>
           </div>
         ))}
       </div>
-
     </div>
   );
 }
