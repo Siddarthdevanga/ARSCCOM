@@ -54,8 +54,8 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [plan, setPlan] = useState(null);              // ROOM PLAN
-  const [bookingPlan, setBookingPlan] = useState(null); // BOOKING PLAN BAR
+  const [plan, setPlan] = useState(null);              
+  const [bookingPlan, setBookingPlan] = useState(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
@@ -136,11 +136,6 @@ export default function ConferenceDashboard() {
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
-    if (plan?.remaining === 0) {
-      alert("Plan limit reached. You cannot modify rooms. Contact Administrator.");
-      return;
-    }
-
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
 
