@@ -12,7 +12,7 @@ import webhookRoutes from "./routes/webhook.routes.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
 import billingRepair from "./routes/billingRepair.route.js";
 import billingCron from "./routes/billingCron.route.js";
-import billingSyncRoutes from "./routes/billingSync.route.js";   // ✅ Zoho webhook real-time billing
+import billingSyncRoutes from "./routes/billingSync.route.js";
 
 const app = express();
 
@@ -23,7 +23,7 @@ app.set("trust proxy", 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: false,
-    contentSecurityPolicy: false, // Needed for Zoho + emails + embeds
+    contentSecurityPolicy: false,
   })
 );
 
@@ -32,8 +32,14 @@ const allowedOrigins = [
   "http://localhost:3000",
   "http://13.205.13.110",
   "http://13.205.13.110:3000",
+
+  // OLD DOMAIN (keep)
   "https://wheelbrand.in",
   "https://www.wheelbrand.in",
+
+  // ✅ NEW DOMAIN (REQUIRED)
+  "https://promeet.zodopt.com",
+  "https://www.promeet.zodopt.com",
 ];
 
 app.use(
@@ -61,7 +67,6 @@ app.use(
 );
 
 /* ================= BODY PARSER ================= */
-// MUST exist for Zoho Webhook + API JSON parsing
 app.use(express.json({ limit: "25mb", strict: false }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
@@ -84,10 +89,7 @@ app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/billing/repair", billingRepair);
 app.use("/api/billing/cron", billingCron);
-
-// ✅ REAL-TIME ZOHO BILLING WEBHOOK
 app.use("/api/payment/zoho", billingSyncRoutes);
-
 app.use("/api/webhook", webhookRoutes);
 
 /* ================= 404 ================= */
