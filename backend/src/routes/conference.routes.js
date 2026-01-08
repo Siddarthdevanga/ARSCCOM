@@ -64,10 +64,10 @@ const toAmPm = (time) => {
 /* ======================================================
    EMAIL FOOTER
 ====================================================== */
-const emailFooter = company => `
+const emailFooter = (company = { name: "", logo_url: "" }) => `
 <br/>
 Regards,<br/>
-<b>${company.name}</b><br/>
+<b>${company.name || ""}</b><br/>
 ${company.logo_url ? `<img src="${company.logo_url}" height="55" />` : ""}
 <hr/>
 <p style="font-size:13px;color:#666">
@@ -76,15 +76,72 @@ If you did not perform this action, please contact your administrator immediatel
 </p>
 `;
 
+const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+
 /* ======================================================
-   SAFE MAIL FUNCTION (PREVENT 500 IF NOT CONFIGURED)
+   FINAL — SAFE + GUARANTEED EMAIL
 ====================================================== */
-const sendBookingMail = async (payload) => {
+const sendBookingMail = async ({
+  adminEmail,
+  userEmail,
+  subject,
+  heading,
+  booking,
+  company
+}) => {
   try {
-    if (!sendEmail) return;
-    await sendEmail(payload);
+    if (!sendEmail) {
+      console.warn("sendEmail not configured");
+      return;
+    }
+
+    const toEmail = isEmail(userEmail)
+      ? userEmail
+      : (isEmail(adminEmail) ? adminEmail : null);
+
+    if (!toEmail) {
+      console.warn("No valid recipient email found");
+      return;
+    }
+
+    if (!subject) subject = "Conference Room Notification";
+    if (!heading) heading = "Conference Room Update";
+
+    const html = `
+      <h2>${heading}</h2>
+
+      <p><b>Room:</b> ${booking?.room_name || ""}</p>
+      <p><b>Date:</b> ${booking?.booking_date || ""}</p>
+      <p><b>Time:</b> ${toAmPm(booking?.start_time)} — ${toAmPm(
+        booking?.end_time
+      )}</p>
+
+      ${
+        booking?.department
+          ? `<p><b>Department:</b> ${booking.department}</p>`
+          : ""
+      }
+      ${
+        booking?.purpose
+          ? `<p><b>Purpose:</b> ${booking.purpose}</p>`
+          : ""
+      }
+
+      <p><b>Status:</b> ${booking?.status || ""}</p>
+
+      ${emailFooter(company)}
+    `;
+
+    await sendEmail({
+      to: toEmail,
+      cc: isEmail(adminEmail) ? adminEmail : undefined,
+      subject,
+      html
+    });
+
+    console.log("MAIL SENT →", toEmail);
   } catch (err) {
-    console.error("MAIL ERROR → ignoring to prevent crash", err);
+    console.error("MAIL ERROR →", err?.message || err);
   }
 };
 
@@ -98,8 +155,6 @@ const getCompanyInfo = async (companyId) => {
   );
   return company || { name: "", logo_url: "" };
 };
-
-const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
    PLAN VALIDATION
@@ -128,7 +183,6 @@ const checkConferencePlan = async (companyId) => {
   if (!["ACTIVE", "TRIAL"].includes(STATUS))
     throw new Error("Subscription inactive. Please renew subscription.");
 
-  // ---------- TRIAL ----------
   if (PLAN === "TRIAL") {
     if (!company.trial_ends_at)
       throw new Error("Trial not initialized");
@@ -155,7 +209,6 @@ const checkConferencePlan = async (companyId) => {
     return { plan: PLAN, roomAllowed: true };
   }
 
-  // ---------- BUSINESS ----------
   if (PLAN === "BUSINESS") {
     if (!company.subscription_ends_at)
       throw new Error("Subscription not initialized");
