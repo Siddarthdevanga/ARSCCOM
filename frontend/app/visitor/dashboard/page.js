@@ -17,11 +17,9 @@ const formatISTTime = (value) => {
 
     if (str.includes(" ")) {
       const t = str.split(" ")[1];
-      if (!t) return "-";
       [hours, minutes] = t.split(":");
     } else if (str.includes("T")) {
       const t = str.split("T")[1];
-      if (!t) return "-";
       [hours, minutes] = t.split(":");
     }
 
@@ -60,10 +58,7 @@ export default function VisitorDashboard() {
         }
       );
 
-      if (!res.ok) {
-        console.error("Dashboard API failed");
-        return;
-      }
+      if (!res.ok) return;
 
       const data = await res.json();
 
@@ -78,7 +73,7 @@ export default function VisitorDashboard() {
     }
   }, []);
 
-  /* ================= AUTH + INITIAL LOAD ================= */
+  /* ================= AUTH + LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -113,10 +108,7 @@ export default function VisitorDashboard() {
         }
       );
 
-      if (!res.ok) {
-        console.error("Checkout failed");
-        return;
-      }
+      if (!res.ok) return;
 
       await loadDashboard(token);
     } catch (err) {
@@ -126,18 +118,18 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ================= LOGOUT ================= */
-  const handleLogout = () => {
-    localStorage.clear();
-    router.push("/auth/login");
+  /* ================= BACK ================= */
+  const handleBack = () => {
+    router.push("/");
   };
 
-  if (loading || !company)
+  if (loading || !company) {
     return (
       <div className={styles.container}>
         <div className={styles.loading}>Loading dashboard…</div>
       </div>
     );
+  }
 
   return (
     <div className={styles.container}>
@@ -152,8 +144,8 @@ export default function VisitorDashboard() {
             className={styles.companyLogo}
           />
 
-          <button className={styles.logoutBtn} onClick={handleLogout}>
-            ⏻
+          <button className={styles.backBtn} onClick={handleBack}>
+            ← Back
           </button>
         </div>
       </header>
@@ -170,12 +162,11 @@ export default function VisitorDashboard() {
         </button>
       </div>
 
-      {/* ================= PLAN BAR (TRIAL ONLY) ================= */}
+      {/* ================= PLAN BAR ================= */}
       {plan?.plan === "TRIAL" && (
         <section className={styles.planBarWrapper}>
           <div className={styles.planHeader}>
             <span className={styles.planName}>Trial Plan</span>
-
             <span className={styles.planRemaining}>
               {plan.remaining} Visitors Remaining
             </span>
@@ -184,17 +175,12 @@ export default function VisitorDashboard() {
           <div className={styles.planBarBg}>
             <div
               className={styles.planBarFill}
-              style={{
-                width: `${(plan.used / plan.limit) * 100}%`
-              }}
+              style={{ width: `${(plan.used / plan.limit) * 100}%` }}
             />
           </div>
 
           <div className={styles.planFooter}>
-            <span>
-              {plan.used} / {plan.limit} Used
-            </span>
-
+            <span>{plan.used} / {plan.limit} Used</span>
             {plan.trialEndsAt && (
               <span>
                 Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}
@@ -204,7 +190,7 @@ export default function VisitorDashboard() {
         </section>
       )}
 
-      {/* ================= KPI STATS ================= */}
+      {/* ================= KPI ================= */}
       <section className={styles.topStats}>
         <div className={styles.bigCard}>
           <h4>Visitors Today</h4>
@@ -224,7 +210,7 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        {/* ACTIVE VISITORS */}
+        {/* ACTIVE */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
 
