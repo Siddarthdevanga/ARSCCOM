@@ -12,7 +12,8 @@ router.use(express.urlencoded({ extended: true }));
 router.use(authMiddleware);
 
 /* ======================================================
-   PLAN CHECKER (Re-usable)
+   PLAN CHECKER
+   (Company rooms column will NOT restrict, only informative)
 ====================================================== */
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
@@ -21,7 +22,8 @@ const checkConferencePlan = async (companyId) => {
       plan,
       subscription_status,
       trial_ends_at,
-      subscription_ends_at
+      subscription_ends_at,
+      rooms AS company_registered_rooms
     FROM companies
     WHERE id = ?
     LIMIT 1
@@ -30,43 +32,51 @@ const checkConferencePlan = async (companyId) => {
   );
 
   if (!company)
-    throw new Error("Plan validity exceeded. Contact Administrator");
+    throw new Error("Company not found");
 
   const PLAN = (company.plan || "TRIAL").toUpperCase();
-  const STATUS = (company.subscription_status || "TRIAL").toUpperCase();
+  const STATUS = (company.subscription_status || "PENDING").toUpperCase();
   const now = new Date();
 
   if (!["ACTIVE", "TRIAL"].includes(STATUS))
-    throw new Error("Plan validity exceeded. Contact Administrator");
+    throw new Error("Subscription inactive. Please renew");
 
-  /* ---------- TRIAL ---------- */
+  let planLimit = 2;
+
   if (PLAN === "TRIAL") {
     if (!company.trial_ends_at || new Date(company.trial_ends_at) < now)
-      throw new Error("Plan validity exceeded. Contact Administrator");
+      throw new Error("Trial expired. Please upgrade");
 
-    return { plan: "TRIAL", limit: 2 };
+    planLimit = 2;
   }
 
-  /* ---------- BUSINESS ---------- */
-  if (PLAN === "BUSINESS") {
+  else if (PLAN === "BUSINESS") {
     if (!company.subscription_ends_at || new Date(company.subscription_ends_at) < now)
-      throw new Error("Plan validity exceeded. Contact Administrator");
+      throw new Error("Business plan expired. Please renew");
 
-    return { plan: "BUSINESS", limit: 6 };
+    planLimit = 6;
   }
 
-  /* ---------- ENTERPRISE ---------- */
-  return { plan: "ENTERPRISE", limit: Infinity };
+  else {
+    planLimit = Infinity;
+  }
+
+  return {
+    plan: PLAN,
+    limit: planLimit,
+    registeredRooms: company.company_registered_rooms || 0
+  };
 };
 
 /* ======================================================
-   PLAN USAGE  ⭐ (Used by Frontend Scroll Bar)
+   PLAN USAGE API
 ====================================================== */
 router.get("/plan-usage", async (req, res) => {
   try {
     const companyId = req.user.company_id;
 
-    const { plan, limit } = await checkConferencePlan(companyId);
+    const { plan, limit, registeredRooms } =
+      await checkConferencePlan(companyId);
 
     const [[countRow]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
@@ -74,28 +84,21 @@ router.get("/plan-usage", async (req, res) => {
     );
 
     const used = countRow.total;
-    const remaining = limit === Infinity ? null : Math.max(limit - used, 0);
+    const remaining =
+      limit === Infinity ? null : Math.max(limit - used, 0);
 
     res.json({
       plan,
-      limit: limit === Infinity ? "UNLIMITED" : limit,
+      plan_limit: limit === Infinity ? "UNLIMITED" : limit,
+      registered_during_signup: registeredRooms,
       used,
       remaining
     });
 
   } catch (err) {
     console.error("[CONF PLAN USAGE]", err);
-    res.status(403).json({
-      message: err.message || "Plan error"
-    });
+    res.status(403).json({ message: err.message || "Plan error" });
   }
-});
-
-/* ======================================================
-   HEALTH CHECK
-====================================================== */
-router.get("/health", (req, res) => {
-  res.json({ ok: true, route: "conference router active" });
 });
 
 /* ======================================================
@@ -110,10 +113,8 @@ router.get("/dashboard", async (req, res) => {
       SELECT
         (SELECT COUNT(*) FROM conference_rooms WHERE company_id = ?) AS rooms,
         (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ?) AS totalBookings,
-        (SELECT COUNT(*)
-         FROM conference_bookings
-         WHERE company_id = ?
-         AND booking_date = CURDATE()) AS todayBookings
+        (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ? 
+          AND booking_date = CURDATE()) AS todayBookings
       `,
       [companyId, companyId, companyId]
     );
@@ -150,31 +151,31 @@ router.get("/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   CREATE ROOM
+   CREATE ROOM (Allowed till Plan Limit)
 ====================================================== */
 router.post("/rooms", async (req, res) => {
   try {
     const companyId = req.user.company_id;
     const { room_name, room_number } = req.body;
 
-    if (!room_name || !room_number) {
+    if (!room_name || !room_number)
       return res.status(400).json({
-        message: "Room name and room number are required",
+        message: "Room name & number required"
       });
-    }
 
     const { limit } = await checkConferencePlan(companyId);
 
     const [[countRow]] = await db.query(
-      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      `SELECT COUNT(*) AS total 
+       FROM conference_rooms 
+       WHERE company_id = ?`,
       [companyId]
     );
 
-    if (limit !== Infinity && countRow.total >= limit) {
+    if (limit !== Infinity && countRow.total >= limit)
       return res.status(403).json({
-        message: "Plan limit reached. Contact Administrator",
+        message: `You can only create ${limit} rooms. Upgrade plan to add more.`,
       });
-    }
 
     await db.query(
       `
@@ -194,7 +195,7 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   RENAME ROOM
+   RENAME ROOM (Always Allowed if Exists)
 ====================================================== */
 router.post("/rooms/rename", async (req, res) => {
   try {
@@ -202,27 +203,11 @@ router.post("/rooms/rename", async (req, res) => {
     const roomId = Number(req.body.id);
     const { room_name } = req.body;
 
-    if (!roomId || isNaN(roomId)) {
+    if (!roomId || isNaN(roomId))
       return res.status(400).json({ message: "Invalid room id" });
-    }
 
-    if (!room_name || !room_name.trim()) {
-      return res.status(400).json({ message: "Room name is required" });
-    }
-
-    const { limit } = await checkConferencePlan(companyId);
-
-    const [[countRow]] = await db.query(
-      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // BLOCK rename if company has more rooms than plan allows
-    if (limit !== Infinity && countRow.total > limit) {
-      return res.status(403).json({
-        message: "Plan validity exceeded. Contact Administrator"
-      });
-    }
+    if (!room_name || !room_name.trim())
+      return res.status(400).json({ message: "Room name required" });
 
     const newName = room_name.trim();
 
@@ -237,13 +222,11 @@ router.post("/rooms/rename", async (req, res) => {
       [roomId, companyId]
     );
 
-    if (!room) {
+    if (!room)
       return res.status(404).json({ message: "Room not found" });
-    }
 
-    if (room.room_name === newName) {
-      return res.json({ message: "Room name unchanged", room });
-    }
+    if (room.room_name === newName)
+      return res.json({ message: "No change", room });
 
     const [result] = await db.query(
       `
@@ -255,9 +238,8 @@ router.post("/rooms/rename", async (req, res) => {
       [newName, roomId, companyId]
     );
 
-    if (!result.affectedRows) {
+    if (!result.affectedRows)
       return res.status(400).json({ message: "Rename failed" });
-    }
 
     res.json({
       message: "Room renamed successfully",
