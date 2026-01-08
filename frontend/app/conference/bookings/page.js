@@ -50,6 +50,10 @@ export default function ConferenceBookings() {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
+  /* ⭐ PLAN STATE ADDED */
+  const [plan, setPlan] = useState(null);
+  const [planBlocked, setPlanBlocked] = useState(false);
+
   const [date, setDate] = useState(today);
   const [roomId, setRoomId] = useState("");
 
@@ -66,20 +70,43 @@ export default function ConferenceBookings() {
   const [editEnd, setEditEnd] = useState("");
 
   /* ======================================================
-     LOAD DATA
+     LOAD DATA + PLAN
   ====================================================== */
   const loadAll = async () => {
     try {
       const stored = localStorage.getItem("company");
       if (stored) setCompany(JSON.parse(stored));
 
-      const [r, b] = await Promise.all([
+      const [r, b, planRes] = await Promise.all([
         apiFetch("/api/conference/rooms"),
         apiFetch("/api/conference/bookings"),
+        apiFetch("/api/conference/plan-usage"),
       ]);
 
-      setRooms(Array.isArray(r) ? r : []);
+      /* ---------- PLAN ---------- */
+      setPlan(planRes);
 
+      if (!planRes || planRes.message) {
+        setPlanBlocked(true);
+      } else if (
+        planRes.limit !== "UNLIMITED" &&
+        Number(planRes.remaining) <= 0
+      ) {
+        setPlanBlocked(true);
+      } else {
+        setPlanBlocked(false);
+      }
+
+      /* ---------- ROOMS (PLAN LIMITED) ---------- */
+      let allowedRooms = Array.isArray(r) ? r : [];
+
+      if (planRes?.limit !== "UNLIMITED") {
+        allowedRooms = allowedRooms.slice(0, Number(planRes.limit));
+      }
+
+      setRooms(allowedRooms);
+
+      /* ---------- BOOKINGS ---------- */
       setBookings(
         Array.isArray(b)
           ? b.map((x) => ({
@@ -154,11 +181,14 @@ export default function ConferenceBookings() {
   }, [startTime, blockedSlots]);
 
   /* ======================================================
-     CREATE
+     CREATE (NOW PLAN PROTECTED)
   ====================================================== */
   const createBooking = async () => {
     setError("");
     setSuccess("");
+
+    if (planBlocked)
+      return setError("🚫 Your plan does not allow more bookings. Upgrade plan.");
 
     if (!date || !roomId || !startTime || !endTime || !department)
       return setError("All fields are required");
@@ -187,7 +217,7 @@ export default function ConferenceBookings() {
       setPurpose("");
       loadAll();
     } catch (e) {
-      setError(e.message || "Failed to create booking");
+      setError(e.message || "Plan/Booking limit reached or slot conflict");
     }
   };
 
@@ -280,6 +310,12 @@ export default function ConferenceBookings() {
         <div className={styles.card}>
           <h2>Book Conference Room</h2>
 
+          {planBlocked && (
+            <p className={styles.error}>
+              🚫 Booking not allowed. Upgrade plan to continue.
+            </p>
+          )}
+
           {error && <p className={styles.error}>{error}</p>}
           {success && <p className={styles.success}>{success}</p>}
 
@@ -288,6 +324,7 @@ export default function ConferenceBookings() {
             type="date"
             value={date}
             min={today}
+            disabled={planBlocked}
             onChange={(e) => setDate(e.target.value)}
           />
 
@@ -295,6 +332,7 @@ export default function ConferenceBookings() {
           <select
             className={styles.dropdown}
             value={roomId}
+            disabled={planBlocked}
             onChange={(e) => setRoomId(e.target.value)}
           >
             <option value="">Select</option>
@@ -309,6 +347,7 @@ export default function ConferenceBookings() {
           <select
             className={styles.dropdown}
             value={startTime}
+            disabled={planBlocked}
             onChange={(e) => setStartTime(e.target.value)}
           >
             <option value="">Select</option>
@@ -323,6 +362,7 @@ export default function ConferenceBookings() {
           <select
             className={styles.dropdown}
             value={endTime}
+            disabled={planBlocked}
             onChange={(e) => setEndTime(e.target.value)}
           >
             <option value="">Select</option>
@@ -336,16 +376,20 @@ export default function ConferenceBookings() {
           <label>Department</label>
           <input
             value={department}
+            disabled={planBlocked}
             onChange={(e) => setDepartment(e.target.value)}
           />
 
           <label>Purpose</label>
           <input
             value={purpose}
+            disabled={planBlocked}
             onChange={(e) => setPurpose(e.target.value)}
           />
 
-          <button onClick={createBooking}>Confirm Booking</button>
+          <button disabled={planBlocked} onClick={createBooking}>
+            Confirm Booking
+          </button>
         </div>
 
         {/* RIGHT LIST */}
