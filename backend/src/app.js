@@ -33,30 +33,35 @@ const allowedOrigins = [
   "http://13.205.13.110",
   "http://13.205.13.110:3000",
 
-  // OLD DOMAIN (keep)
+  // Old domain (keep)
   "https://wheelbrand.in",
   "https://www.wheelbrand.in",
 
-  // ✅ NEW DOMAIN (REQUIRED)
+  // New domain
   "https://promeet.zodopt.com",
   "https://www.promeet.zodopt.com",
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Allow server-to-server, curl, same-origin
+    if (!origin) return callback(null, true);
 
-      console.warn("❌ BLOCKED CORS ORIGIN:", origin);
-      return callback(new Error("CORS Not Allowed"));
-    },
-    credentials: true,
-  })
-);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
 
-// Handle OPTIONS preflight globally
-app.options("*", cors());
+    console.warn("❌ BLOCKED CORS ORIGIN:", origin);
+    return callback(null, false); // IMPORTANT: do NOT throw error
+  },
+  credentials: true,
+};
+
+/* Apply CORS */
+app.use(cors(corsOptions));
+
+/* Handle OPTIONS preflight using SAME rules */
+app.options("*", cors(corsOptions));
 
 /* ================= COMPRESSION ================= */
 app.use(
