@@ -129,12 +129,24 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= ADDITION: RENAME ELIGIBILITY ================= */
-  const canRenameRoom = (index) => {
-    if (!plan) return false;
-    if (plan.limit === "UNLIMITED") return true;
-    return index < plan.limit;
-  };
+  /* ======================================================
+     RENAME PERMISSION (MATCHES BACKEND)
+     - First N rooms (ORDER BY room_number)
+     - TRIAL → 2
+     - BUSINESS → 6
+     - ENTERPRISE → ALL
+  ====================================================== */
+  const renameAllowedRoomIds = useMemo(() => {
+    if (!plan || !rooms.length) return [];
+
+    if (plan.plan_limit === "UNLIMITED") {
+      return rooms.map(r => r.id);
+    }
+
+    return rooms
+      .slice(0, plan.plan_limit)
+      .map(r => r.id);
+  }, [plan, rooms]);
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
@@ -158,7 +170,7 @@ export default function ConferenceDashboard() {
       setEditName("");
       loadDashboard();
     } catch (err) {
-      alert(err?.message || "Upgrade your plan to rename this room");
+      alert(err?.message || "Failed to rename room");
     }
   };
 
@@ -185,10 +197,57 @@ export default function ConferenceDashboard() {
 
   if (loading || !company || !stats) return null;
 
-  const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+  const publicURL =
+    `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+
+  const roomPercentage =
+    plan?.limit === "UNLIMITED"
+      ? 100
+      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
+
+  const bookingPercentage =
+    bookingPlan?.limit === Infinity
+      ? 100
+      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
 
   return (
     <div className={styles.container}>
+
+      {/* ================= HEADER ================= */}
+      <header className={styles.header}>
+        <div className={styles.leftHeader}>
+          <div
+            className={styles.leftMenuTrigger}
+            onClick={() => setSidePanelOpen(true)}
+          >
+            <span></span><span></span><span></span>
+          </div>
+
+          <div>
+            <h2 className={styles.companyName}>{company.name}</h2>
+            <span className={styles.subText}>Conference Dashboard</span>
+          </div>
+        </div>
+
+        <div className={styles.headerRight}>
+          <img
+            src={company.logo_url || "/logo.png"}
+            className={styles.logo}
+            alt="Logo"
+          />
+
+          <button
+            className={styles.logoBtn}
+            title="Logout"
+            onClick={() => {
+              localStorage.clear();
+              router.replace("/auth/login");
+            }}
+          >
+            ⏻
+          </button>
+        </div>
+      </header>
 
       {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
@@ -210,47 +269,54 @@ export default function ConferenceDashboard() {
 
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
-              {rooms.map((r, index) => (
-                <li key={r.id}>
-                  <b>{r.room_name}</b> (#{r.room_number})
+              {rooms.map((r) => {
+                const canRename = renameAllowedRoomIds.includes(r.id);
 
-                  {editingRoomId === r.id ? (
-                    <>
-                      <input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        autoFocus
-                      />
-                      <button onClick={() => saveRoomName(r.id)}>Save</button>
+                return (
+                  <li key={r.id}>
+                    <b>{r.room_name}</b> (#{r.room_number})
+
+                    {editingRoomId === r.id ? (
+                      <>
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          autoFocus
+                        />
+                        <button onClick={() => saveRoomName(r.id)}>Save</button>
+                        <button
+                          onClick={() => {
+                            setEditingRoomId(null);
+                            setEditName("");
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
                       <button
+                        disabled={!canRename}
+                        style={{
+                          opacity: canRename ? 1 : 0.5,
+                          cursor: canRename ? "pointer" : "not-allowed",
+                        }}
+                        title={
+                          canRename
+                            ? "Rename room"
+                            : "Upgrade plan to rename more rooms"
+                        }
                         onClick={() => {
-                          setEditingRoomId(null);
-                          setEditName("");
+                          if (!canRename) return;
+                          setEditingRoomId(r.id);
+                          setEditName(r.room_name);
                         }}
                       >
-                        Cancel
+                        Rename
                       </button>
-                    </>
-                  ) : canRenameRoom(index) ? (
-                    <button
-                      onClick={() => {
-                        setEditingRoomId(r.id);
-                        setEditName(r.room_name);
-                      }}
-                    >
-                      Rename
-                    </button>
-                  ) : (
-                    <button
-                      disabled
-                      title="Upgrade your plan to rename this room"
-                      style={{ opacity: 0.5, cursor: "not-allowed" }}
-                    >
-                      🔒 Upgrade Plan
-                    </button>
-                  )}
-                </li>
-              ))}
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
