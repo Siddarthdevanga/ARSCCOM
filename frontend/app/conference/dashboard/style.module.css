@@ -1,18 +1,27 @@
-/* ===== GLOBAL: Enable Scroll but Hide Scrollbars Everywhere ===== */
+/* ======================================================
+   GLOBAL — Enable Scroll, Hide Scrollbars
+====================================================== */
 html,
 body {
   height: 100%;
   margin: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  scrollbar-width: none; /* Firefox */
 }
 
 *::-webkit-scrollbar {
-  display: none;
+  display: none; /* Chrome / Safari */
 }
 
-/* ================= ROOT ================= */
+/* Prevent accidental horizontal scroll */
+* {
+  box-sizing: border-box;
+}
+
+/* ======================================================
+   ROOT CONTAINER
+====================================================== */
 .container {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
@@ -25,7 +34,9 @@ body {
   scrollbar-width: none;
 }
 
-/* ================= HEADER ================= */
+/* ======================================================
+   HEADER
+====================================================== */
 .header {
   display: flex;
   justify-content: space-between;
@@ -53,7 +64,7 @@ body {
   padding-left: 13px;
   cursor: pointer;
   backdrop-filter: blur(10px);
-  transition: .25s ease;
+  transition: transform .25s ease, background .25s ease;
 }
 
 .leftMenuTrigger:hover {
@@ -63,7 +74,7 @@ body {
 .leftMenuTrigger span {
   width: 6px;
   height: 6px;
-  background: white;
+  background: #ffffff;
   border-radius: 50%;
 }
 
@@ -100,14 +111,17 @@ body {
   font-size: 20px;
   font-weight: 800;
   cursor: pointer;
-  transition: .25s ease;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
 
 .logoBtn:hover {
   transform: scale(1.08);
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
 }
 
-/* ================= PUBLIC LINK ================= */
+/* ======================================================
+   PUBLIC LINK
+====================================================== */
 .publicBox {
   background: rgba(255, 255, 255, 0.16);
   border-radius: 18px;
@@ -150,14 +164,17 @@ body {
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
-  transition: .25s ease-in-out;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
 
 .bookBtn:hover {
   transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(0,0,0,.25);
 }
 
-/* ================= STATS ================= */
+/* ======================================================
+   STATS GRID
+====================================================== */
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -184,7 +201,9 @@ body {
   color: #5b00c9;
 }
 
-/* ================= SECTION ================= */
+/* ======================================================
+   SECTION
+====================================================== */
 .section {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 22px;
@@ -201,7 +220,9 @@ body {
   font-weight: 800;
 }
 
-/* ================= ROOM LIST ================= */
+/* ======================================================
+   ROOM LIST
+====================================================== */
 .roomList {
   list-style: none;
   padding: 0;
@@ -219,9 +240,10 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-/* Buttons inside room list */
+/* Buttons */
 .roomList button {
   padding: 6px 14px;
   border-radius: 10px;
@@ -229,10 +251,9 @@ body {
   font-weight: 800;
   font-size: 13px;
   cursor: pointer;
-  transition: .2s ease;
+  transition: transform .2s ease, box-shadow .2s ease;
 }
 
-/* Rename button */
 .roomList button:not([disabled]) {
   background: #ffffff;
   color: #3c007a;
@@ -240,9 +261,9 @@ body {
 
 .roomList button:not([disabled]):hover {
   transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(0,0,0,.2);
 }
 
-/* Locked / disabled */
 .roomList button[disabled] {
   background: rgba(255,255,255,0.4);
   color: #3c007a;
@@ -250,7 +271,9 @@ body {
   opacity: 0.6;
 }
 
-/* ================= BOOKINGS ================= */
+/* ======================================================
+   BOOKINGS
+====================================================== */
 .bookingRow {
   display: grid;
   grid-template-columns: 1.5fr 1fr 0.8fr;
@@ -267,13 +290,17 @@ body {
   color: #ffdf9a;
 }
 
-/* ================= ERROR ================= */
+/* ======================================================
+   ERROR
+====================================================== */
 .error {
   color: #ffb4b4;
   font-weight: 700;
 }
 
-/* ================= PROGRESS BAR ================= */
+/* ======================================================
+   PROGRESS BAR
+====================================================== */
 .barOuter {
   height: 16px;
   border-radius: 999px;
@@ -290,18 +317,19 @@ body {
   transition: width .35s ease-in-out;
 }
 
-/* ================= LEFT SLIDE PANEL ================= */
+/* ======================================================
+   LEFT SLIDE PANEL
+====================================================== */
 .leftPanel {
   position: fixed;
   top: 0;
   left: 0;
-
   width: 50%;
   max-width: 650px;
   height: 100vh;
 
   background: linear-gradient(140deg, #3c007a, #7a00ff);
-  color: white;
+  color: #ffffff;
 
   border-right: 1px solid rgba(255,255,255,0.35);
   box-shadow: 12px 0 35px rgba(0,0,0,.45);
@@ -317,7 +345,7 @@ body {
   to { left: 0; opacity: 1; }
 }
 
-/* ================= PANEL HEADER ================= */
+/* Panel Header */
 .leftPanelHeader {
   display: flex;
   justify-content: space-between;
@@ -338,14 +366,14 @@ body {
   color: white;
   cursor: pointer;
   font-weight: 800;
-  transition: .2s;
+  transition: transform .2s ease;
 }
 
 .leftCloseBtn:hover {
   transform: scale(1.05);
 }
 
-/* ================= PANEL BODY ================= */
+/* Panel Body */
 .leftPanelContent {
   height: calc(100vh - 90px);
   overflow-y: auto;
@@ -357,7 +385,9 @@ body {
   display: none;
 }
 
-/* ================= RESPONSIVE ================= */
+/* ======================================================
+   RESPONSIVE
+====================================================== */
 @media (max-width: 768px) {
   .container {
     padding: 20px;
