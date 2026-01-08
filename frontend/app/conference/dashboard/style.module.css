@@ -214,6 +214,40 @@ body {
   border-radius: 12px;
   margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.35);
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Buttons inside room list */
+.roomList button {
+  padding: 6px 14px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  transition: .2s ease;
+}
+
+/* Rename button */
+.roomList button:not([disabled]) {
+  background: #ffffff;
+  color: #3c007a;
+}
+
+.roomList button:not([disabled]):hover {
+  transform: scale(1.05);
+}
+
+/* Locked / disabled */
+.roomList button[disabled] {
+  background: rgba(255,255,255,0.4);
+  color: #3c007a;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* ================= BOOKINGS ================= */
