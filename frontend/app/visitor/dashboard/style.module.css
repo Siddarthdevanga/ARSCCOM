@@ -1,5 +1,8 @@
-/* ===== GLOBAL: Allow Scroll but Hide Scrollbars ===== */
-html, body {
+/* ======================================================
+   GLOBAL (CSS MODULE SAFE)
+====================================================== */
+:global(html),
+:global(body) {
   height: 100%;
   margin: 0;
   overflow-y: auto;
@@ -7,7 +10,7 @@ html, body {
   scrollbar-width: none;
 }
 
-body::-webkit-scrollbar {
+:global(body::-webkit-scrollbar) {
   width: 0;
   height: 0;
 }
@@ -53,23 +56,24 @@ body::-webkit-scrollbar {
   object-fit: contain;
 }
 
-/* ================= LOGOUT BUTTON ================= */
-.logoutBtn {
-  width: 52px;
-  height: 52px;
+/* ================= BACK BUTTON ================= */
+.backBtn {
+  padding: 12px 18px;
   border-radius: 14px;
-  border: none;
-  font-size: 22px;
+  border: 2px solid #fff;
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-  background: #fff;
-  color: #3c007a;
-  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  transition: all 0.2s ease;
 }
 
-.logoutBtn:hover {
+.backBtn:hover {
+  background: #fff;
+  color: #3c007a;
   transform: translateY(-2px);
-  box-shadow: 0 8px 18px rgba(0,0,0,.35);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
 /* ================= TITLE + ACTION ================= */
@@ -98,13 +102,13 @@ body::-webkit-scrollbar {
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 8px 18px rgba(0,0,0,.25);
-  transition: transform .2s ease, box-shadow .2s ease;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .newBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 26px rgba(0,0,0,.35);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
 }
 
 /* ================= PLAN BAR ================= */
@@ -126,14 +130,14 @@ body::-webkit-scrollbar {
 
 .planRemaining {
   font-size: 15px;
-  opacity: .9;
+  opacity: 0.9;
 }
 
 .planBarBg {
   width: 100%;
   height: 14px;
   border-radius: 10px;
-  background: rgba(255,255,255,.25);
+  background: rgba(255, 255, 255, 0.25);
   overflow: hidden;
 }
 
@@ -147,7 +151,7 @@ body::-webkit-scrollbar {
   justify-content: space-between;
   font-size: 13px;
   margin-top: 6px;
-  opacity: .9;
+  opacity: 0.9;
 }
 
 /* ================= KPI CARDS ================= */
@@ -164,14 +168,14 @@ body::-webkit-scrollbar {
   border-radius: 22px;
   padding: 28px;
   text-align: center;
-  box-shadow: 0 14px 36px rgba(0,0,0,.35);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
 }
 
 .bigCard h4 {
   font-size: 14px;
-  margin: 0 0 12px;
+  margin-bottom: 12px;
   font-weight: 700;
-  opacity: .85;
+  opacity: 0.85;
 }
 
 .bigCard p {
@@ -193,12 +197,12 @@ body::-webkit-scrollbar {
   color: #3c007a;
   border-radius: 22px;
   padding: 30px;
-  box-shadow: 0 14px 36px rgba(0,0,0,.35);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
 }
 
 .tableCard h3 {
   font-size: 22px;
-  margin: 0 0 20px;
+  margin-bottom: 20px;
   font-weight: 800;
 }
 
@@ -211,7 +215,7 @@ body::-webkit-scrollbar {
 .table th {
   text-align: left;
   font-size: 14px;
-  padding: 0 0 12px;
+  padding-bottom: 12px;
   border-bottom: 2px solid #ddd;
 }
 
@@ -230,16 +234,16 @@ body::-webkit-scrollbar {
   border-radius: 12px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform .2s ease, box-shadow .2s ease;
+  transition: all 0.2s ease;
 }
 
 .checkoutBtn:hover {
   transform: scale(1.05);
-  box-shadow: 0 8px 18px rgba(217,54,54,.4);
+  box-shadow: 0 8px 18px rgba(217, 54, 54, 0.4);
 }
 
 .checkoutBtn:disabled {
-  opacity: .6;
+  opacity: 0.6;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -264,26 +268,23 @@ body::-webkit-scrollbar {
     padding: 0 28px;
   }
 
-  .planBarWrapper {
-    padding: 0 28px;
-  }
-
-  .topStats {
-    grid-template-columns: 1fr;
-    padding: 20px 28px;
-  }
-
+  .planBarWrapper,
+  .topStats,
   .tablesRow {
     padding: 20px 28px;
   }
 
   .newBtn {
     width: 100%;
-    text-align: center;
   }
 
   .companyLogo {
     width: 90px;
     height: 60px;
+  }
+
+  .backBtn {
+    padding: 10px 14px;
+    font-size: 13px;
   }
 }
