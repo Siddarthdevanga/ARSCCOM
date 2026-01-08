@@ -120,7 +120,7 @@ export default function VisitorDashboard() {
 
   /* ================= BACK ================= */
   const handleBack = () => {
-    router.push("/");
+    router.push("/home");
   };
 
   if (loading || !company) {
