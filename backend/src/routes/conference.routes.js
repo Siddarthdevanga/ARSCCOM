@@ -6,6 +6,11 @@ import { sendEmail } from "../utils/mailer.js";
 const router = express.Router();
 
 /* ======================================================
+   FIX: ALWAYS GET CORRECT COMPANY ID
+====================================================== */
+const getCompanyId = (u) => u?.company_id || u?.companyId;
+
+/* ======================================================
    AUTH — COMPANY ADMIN ONLY
 ====================================================== */
 router.use(authenticate);
@@ -72,6 +77,18 @@ If you did not perform this action, please contact your administrator immediatel
 `;
 
 /* ======================================================
+   SAFE MAIL FUNCTION (PREVENT 500 IF NOT CONFIGURED)
+====================================================== */
+const sendBookingMail = async (payload) => {
+  try {
+    if (!sendEmail) return;
+    await sendEmail(payload);
+  } catch (err) {
+    console.error("MAIL ERROR → ignoring to prevent crash", err);
+  }
+};
+
+/* ======================================================
    COMPANY INFO
 ====================================================== */
 const getCompanyInfo = async (companyId) => {
@@ -85,7 +102,7 @@ const getCompanyInfo = async (companyId) => {
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
 /* ======================================================
-   PLAN VALIDATION (UNTOUCHED — JUST RELIABLE)
+   PLAN VALIDATION
 ====================================================== */
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
@@ -158,11 +175,11 @@ const checkConferencePlan = async (companyId) => {
 };
 
 /* ======================================================
-   ⭐ PLAN USAGE API (needed for frontend scroll bar)
+   PLAN USAGE
 ====================================================== */
 router.get("/plan-usage", async (req, res) => {
   try {
-    const companyId = req.user.companyId;
+    const companyId = getCompanyId(req.user);
 
     const [[company]] = await db.query(
       `SELECT plan FROM companies WHERE id = ? LIMIT 1`,
@@ -201,7 +218,7 @@ router.get("/plan-usage", async (req, res) => {
 ====================================================== */
 router.get("/dashboard", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const companyId = getCompanyId(req.user);
 
     const [[stats]] = await db.query(
       `
@@ -238,7 +255,7 @@ router.get("/dashboard", async (req, res) => {
 ====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const companyId = getCompanyId(req.user);
 
     const [rooms] = await db.query(
       `
@@ -262,7 +279,7 @@ router.get("/rooms", async (req, res) => {
 ====================================================== */
 router.get("/bookings", async (req, res) => {
   try {
-    const { companyId } = req.user;
+    const companyId = getCompanyId(req.user);
     const { roomId, date } = req.query;
 
     let sql = `
@@ -301,9 +318,9 @@ router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
   try {
-    const { companyId, email: adminEmail } = req.user;
+    const companyId = getCompanyId(req.user);
+    const { email: adminEmail } = req.user;
 
-    // PLAN CHECK
     try {
       await checkConferencePlan(companyId);
     } catch (e) {
@@ -403,7 +420,7 @@ router.post("/bookings", async (req, res) => {
 ====================================================== */
 router.patch("/bookings/:id", async (req, res) => {
   try {
-    const { companyId, email: adminEmail } = req.user;
+    const companyId = getCompanyId(req.user);
     const bookingId = Number(req.params.id);
 
     let { start_time, end_time } = req.body;
@@ -463,7 +480,7 @@ router.patch("/bookings/:id", async (req, res) => {
     const companyInfo = await getCompanyInfo(companyId);
 
     await sendBookingMail({
-      adminEmail,
+      adminEmail: req.user.email,
       userEmail: booking.booked_by,
       subject: "Conference Room Booking Rescheduled",
       heading: "Meeting Rescheduled 🔄",
@@ -483,7 +500,7 @@ router.patch("/bookings/:id", async (req, res) => {
 ====================================================== */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
-    const { companyId, email: adminEmail } = req.user;
+    const companyId = getCompanyId(req.user);
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
@@ -508,7 +525,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     const companyInfo = await getCompanyInfo(companyId);
 
     await sendBookingMail({
-      adminEmail,
+      adminEmail: req.user.email,
       userEmail: booking.booked_by,
       subject: "Conference Room Booking Cancelled",
       heading: "Meeting Cancelled ❌",
@@ -524,4 +541,3 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
 });
 
 export default router;
-
