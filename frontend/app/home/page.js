@@ -78,7 +78,9 @@ export default function Home() {
         <div
           className={styles.menuDots}
           onClick={handleOpenSubscription}
-          title="Subscription"
+          title="View subscription details"
+          role="button"
+          aria-label="Open subscription panel"
         >
           ⋮
         </div>
@@ -89,7 +91,7 @@ export default function Home() {
           {company.logo_url && (
             <img
               src={company.logo_url}
-              alt="Company Logo"
+              alt={`${company.name} logo`}
               className={styles.companyLogo}
             />
           )}
@@ -98,6 +100,7 @@ export default function Home() {
             className={styles.logoutBtn}
             onClick={handleLogout}
             title="Logout"
+            aria-label="Logout"
           >
             ⏻
           </button>
@@ -111,104 +114,123 @@ export default function Home() {
         <div
           className={styles.card}
           onClick={() => router.push("/visitor/dashboard")}
+          role="button"
+          aria-label="Open Visitor Management"
         >
-          <div className={styles.iconBox}>
+          <div className={styles.iconCircle}>
             <Users size={40} />
           </div>
           <h2>Visitor Management</h2>
           <p>Manage visitor entries, ID verification & passes.</p>
-          <span className={styles.cardCTA}>Open →</span>
         </div>
 
         {/* CONFERENCE BOOKING */}
         <div
           className={styles.card}
           onClick={() => router.push("/conference/dashboard")}
+          role="button"
+          aria-label="Open Conference Booking"
         >
-          <div className={styles.iconBox}>
+          <div className={styles.iconCircle}>
             <DoorOpen size={40} />
           </div>
           <h2>Conference Booking</h2>
           <p>Manage conference rooms & meetings.</p>
-          <span className={styles.cardCTA}>Open →</span>
         </div>
 
       </div>
 
       {/* ================= LEFT SLIDE SUBSCRIPTION PANEL ================= */}
-{showSub && (
-  <>
-    <div
-      className={styles.overlay}
-      onClick={() => setShowSub(false)}
-    />
+      {showSub && (
+        <>
+          <div
+            className={styles.overlay}
+            onClick={() => setShowSub(false)}
+            aria-hidden="true"
+          />
 
-    <div className={styles.subSlide}>
-      {/* HEADER */}
-      <div className={styles.subHeader}>
-        <h3>Subscription Details</h3>
-        <button onClick={() => setShowSub(false)}>✖</button>
-      </div>
-
-      {/* LOADING */}
-      {loadingSub && (
-        <p className={styles.subLoading}>Loading subscription...</p>
-      )}
-
-      {/* ERROR */}
-      {subError && (
-        <p className={styles.subError}>{subError}</p>
-      )}
-
-      {/* CONTENT */}
-      {subData && (
-        <div className={styles.subContent}>
-
-          <div className={styles.subRow}>
-            <span>Plan</span>
-            <strong>{subData.PLAN || "—"}</strong>
-          </div>
-
-          <div className={styles.subRow}>
-            <span>Status</span>
-            <strong>{subData.STATUS || "—"}</strong>
-          </div>
-
-          {subData.ZOHO_CUSTOMER_ID && (
-            <div className={styles.subRow}>
-              <span>Customer No</span>
-              <strong>{subData.ZOHO_CUSTOMER_ID}</strong>
+          <aside
+            className={styles.subSlide}
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* HEADER */}
+            <div className={styles.subHeader}>
+              <h3>Subscription Details</h3>
+              <button
+                onClick={() => setShowSub(false)}
+                aria-label="Close subscription panel"
+              >
+                ✖
+              </button>
             </div>
-          )}
 
-          {subData.TRIAL_ENDS_ON && (
-            <div className={styles.subRow}>
-              <span>Trial Ends</span>
-              <strong>
-                {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString()}
-              </strong>
-            </div>
-          )}
+            {/* LOADING */}
+            {loadingSub && (
+              <p className={styles.subLoading}>
+                Loading subscription…
+              </p>
+            )}
 
-          {subData.EXPIRES_ON && (
-            <div className={styles.subRow}>
-              <span>Subscription Expires</span>
-              <strong>
-                {new Date(subData.EXPIRES_ON).toLocaleDateString()}
-              </strong>
-            </div>
-          )}
+            {/* ERROR */}
+            {subError && (
+              <p className={styles.subError}>
+                {subError}
+              </p>
+            )}
 
-          {subData.LAST_PAID_ON && (
-            <div className={styles.subRow}>
-              <span>Last Paid</span>
-              <strong>
-                {new Date(subData.LAST_PAID_ON).toLocaleString()}
-              </strong>
-            </div>
-          )}
-        </div>
+            {/* CONTENT */}
+            {subData && (
+              <div className={styles.subContent}>
+
+                <div className={styles.subRow}>
+                  <span>Plan</span>
+                  <strong>{subData.PLAN || "—"}</strong>
+                </div>
+
+                <div className={styles.subRow}>
+                  <span>Status</span>
+                  <strong>{subData.STATUS || "—"}</strong>
+                </div>
+
+                {subData.ZOHO_CUSTOMER_ID && (
+                  <div className={styles.subRow}>
+                    <span>Customer No</span>
+                    <strong>{subData.ZOHO_CUSTOMER_ID}</strong>
+                  </div>
+                )}
+
+                {subData.TRIAL_ENDS_ON && (
+                  <div className={styles.subRow}>
+                    <span>Trial Ends</span>
+                    <strong>
+                      {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString()}
+                    </strong>
+                  </div>
+                )}
+
+                {subData.EXPIRES_ON && (
+                  <div className={styles.subRow}>
+                    <span>Subscription Expires</span>
+                    <strong>
+                      {new Date(subData.EXPIRES_ON).toLocaleDateString()}
+                    </strong>
+                  </div>
+                )}
+
+                {subData.LAST_PAID_ON && (
+                  <div className={styles.subRow}>
+                    <span>Last Paid</span>
+                    <strong>
+                      {new Date(subData.LAST_PAID_ON).toLocaleString()}
+                    </strong>
+                  </div>
+                )}
+              </div>
+            )}
+          </aside>
+        </>
       )}
     </div>
-  </>
-)}
+  );
+}
