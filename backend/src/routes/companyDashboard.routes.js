@@ -27,8 +27,20 @@ router.use(authMiddleware);
 ====================================================== */
 const isExpired = (date) => !date || new Date(date) < new Date();
 
+// ✅ NEW: Get active rooms based on plan limits
+const getActiveRooms = async (companyId, planLimit) => {
+  const [allRooms] = await db.query(
+    `SELECT id, room_number, room_name FROM conference_rooms WHERE company_id = ? ORDER BY room_number ASC`,
+    [companyId]
+  );
+  
+  if (planLimit === Infinity) return allRooms;
+  
+  return allRooms.slice(0, planLimit);
+};
+
 /* ======================================================
-   PLAN CHECKER
+   PLAN CHECKER - REFINED
 ====================================================== */
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
@@ -56,28 +68,32 @@ const checkConferencePlan = async (companyId) => {
     throw new Error("Business plan expired. Please renew");
 
   const limit = PLANS[PLAN]?.limit ?? Infinity;
-
   return { plan: PLAN, limit };
 };
 
 /* ======================================================
-   PLAN USAGE
+   PLAN USAGE - UPDATED ✅
 ====================================================== */
 router.get("/plan-usage", async (req, res) => {
   try {
     const companyId = req.user.company_id;
     const { plan, limit } = await checkConferencePlan(companyId);
 
-    const [[{ total }]] = await db.query(
+    const [[{ total: allRooms }]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
+    const [activeRooms] = await getActiveRooms(companyId, limit);
+    const activeCount = activeRooms.length;
+
     res.json({
       plan,
       plan_limit: limit === Infinity ? "UNLIMITED" : limit,
-      used: total,
-      remaining: limit === Infinity ? null : Math.max(limit - total, 0)
+      used: activeCount,           // ✅ Only active rooms count
+      total_rooms: allRooms,       // ✅ Total rooms company provided
+      remaining: limit === Infinity ? null : Math.max(limit - activeCount, 0),
+      inactive_rooms: Math.max(0, allRooms - activeCount)
     });
 
   } catch (err) {
@@ -87,12 +103,14 @@ router.get("/plan-usage", async (req, res) => {
 });
 
 /* ======================================================
-   DASHBOARD
+   DASHBOARD - UPDATED ✅
 ====================================================== */
 router.get("/dashboard", async (req, res) => {
   try {
     const companyId = req.user.company_id;
+    const { limit } = await checkConferencePlan(companyId);
 
+    // ✅ Only count bookings from ACTIVE rooms (first N based on plan)
     const [[stats]] = await db.query(
       `
       SELECT
@@ -100,15 +118,20 @@ router.get("/dashboard", async (req, res) => {
         COUNT(cb.id) AS totalBookings,
         SUM(cb.booking_date = CURDATE()) AS todayBookings
       FROM conference_rooms cr
-      LEFT JOIN conference_bookings cb
-        ON cb.company_id = cr.company_id
-      WHERE cr.company_id = ?
+      LEFT JOIN conference_bookings cb ON cb.room_id = cr.id
+      WHERE cr.company_id = ? AND cr.id IN (
+        SELECT id FROM (
+          SELECT id FROM conference_rooms 
+          WHERE company_id = ? 
+          ORDER BY room_number ASC 
+          LIMIT ?
+        ) active_rooms
+      )
       `,
-      [companyId]
+      [companyId, companyId, limit]
     );
 
     res.json(stats);
-
   } catch (err) {
     console.error("[CONF DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard" });
@@ -116,23 +139,15 @@ router.get("/dashboard", async (req, res) => {
 });
 
 /* ======================================================
-   GET ROOMS
+   GET ROOMS - UPDATED ✅ (Returns only ACTIVE rooms)
 ====================================================== */
 router.get("/rooms", async (req, res) => {
   try {
     const companyId = req.user.company_id;
+    const { limit } = await checkConferencePlan(companyId);
 
-    const [rooms] = await db.query(
-      `
-      SELECT id, room_number, room_name
-      FROM conference_rooms
-      WHERE company_id = ?
-      ORDER BY room_number ASC
-      `,
-      [companyId]
-    );
-
-    res.json(rooms || []);
+    const activeRooms = await getActiveRooms(companyId, limit);
+    res.json(activeRooms); // ✅ Only returns plan-limited rooms
 
   } catch (err) {
     console.error("[CONF GET ROOMS]", err);
@@ -153,12 +168,12 @@ router.post("/rooms", async (req, res) => {
 
     const { limit } = await checkConferencePlan(companyId);
 
-    const [[{ total }]] = await db.query(
+    const [[{ total: activeCount }]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
-    if (limit !== Infinity && total >= limit)
+    if (limit !== Infinity && activeCount >= limit)
       return res.status(403).json({
         message: `Your plan allows only ${limit} rooms. Upgrade to add more.`
       });
@@ -172,7 +187,6 @@ router.post("/rooms", async (req, res) => {
     );
 
     res.status(201).json({ message: "Room created successfully" });
-
   } catch (err) {
     console.error("[CONF CREATE ROOM]", err);
     res.status(500).json({ message: err.message });
@@ -180,7 +194,24 @@ router.post("/rooms", async (req, res) => {
 });
 
 /* ======================================================
-   RENAME ROOM (PLAN ENFORCED)
+   GET ALL ROOMS (Admin view - shows inactive ones too)
+====================================================== */
+router.get("/rooms/all", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+    const [rooms] = await db.query(
+      `SELECT id, room_number, room_name FROM conference_rooms WHERE company_id = ? ORDER BY room_number ASC`,
+      [companyId]
+    );
+    res.json(rooms);
+  } catch (err) {
+    console.error("[CONF GET ALL ROOMS]", err);
+    res.status(500).json({ message: "Unable to load all rooms" });
+  }
+});
+
+/* ======================================================
+   RENAME ROOM (Plan ENFORCED - only first N rooms)
 ====================================================== */
 router.post("/rooms/rename", async (req, res) => {
   try {
@@ -196,36 +227,26 @@ router.post("/rooms/rename", async (req, res) => {
 
     const { plan, limit } = await checkConferencePlan(companyId);
 
+    // ✅ Check if room is within active limit
     const [rooms] = await db.query(
-      `
-      SELECT id
-      FROM conference_rooms
-      WHERE company_id = ?
-      ORDER BY room_number ASC
-      `,
+      `SELECT id FROM conference_rooms WHERE company_id = ? ORDER BY room_number ASC`,
       [companyId]
     );
 
-    const allowedRoomIds =
-      limit === Infinity
-        ? rooms.map(r => r.id)
-        : rooms.slice(0, limit).map(r => r.id);
+    const allowedRoomIds = limit === Infinity 
+      ? rooms.map(r => r.id) 
+      : rooms.slice(0, limit).map(r => r.id);
 
     if (!allowedRoomIds.includes(roomId)) {
       return res.status(403).json({
-        message:
-          plan === "TRIAL"
-            ? "Trial plan allows renaming only first 2 rooms. Upgrade to rename more."
-            : `Your ${plan} plan allows renaming only first ${limit} rooms. Upgrade to rename more.`
+        message: plan === "TRIAL"
+          ? "Trial plan allows renaming only first 2 rooms. Upgrade to rename more."
+          : `Your ${plan} plan allows renaming only first ${limit} rooms. Upgrade to rename more.`
       });
     }
 
     const [[room]] = await db.query(
-      `
-      SELECT room_name
-      FROM conference_rooms
-      WHERE id = ? AND company_id = ?
-      `,
+      `SELECT room_name FROM conference_rooms WHERE id = ? AND company_id = ?`,
       [roomId, companyId]
     );
 
@@ -237,11 +258,7 @@ router.post("/rooms/rename", async (req, res) => {
       return res.json({ message: "No change", room });
 
     await db.query(
-      `
-      UPDATE conference_rooms
-      SET room_name = ?
-      WHERE id = ? AND company_id = ?
-      `,
+      `UPDATE conference_rooms SET room_name = ? WHERE id = ? AND company_id = ?`,
       [newName, roomId, companyId]
     );
 
@@ -249,7 +266,6 @@ router.post("/rooms/rename", async (req, res) => {
       message: "Room renamed successfully",
       room: { id: roomId, room_name: newName }
     });
-
   } catch (err) {
     console.error("[CONF RENAME ROOM]", err);
     res.status(500).json({ message: err.message });
