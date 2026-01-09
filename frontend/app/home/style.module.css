@@ -1,9 +1,10 @@
 /* ================= GLOBAL ================= */
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-  font-family: "Inter", Arial, sans-serif;
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -14,9 +15,9 @@ html, body {
   width: 100%;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   color: white;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 /* ================= HEADER ================= */
@@ -31,17 +32,18 @@ html, body {
 .menuDots {
   font-size: 30px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 12px;
-  transition: background .2s ease, transform .2s ease;
+  padding: 8px 14px;
+  border-radius: 14px;
   user-select: none;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .menuDots:hover {
-  background: rgba(255,255,255,.22);
+  background: rgba(255, 255, 255, 0.25);
   transform: translateY(-1px);
 }
 
+/* CENTER LOGO TEXT */
 .logoText {
   font-size: 30px;
   font-weight: 800;
@@ -73,14 +75,14 @@ html, body {
   place-items: center;
   cursor: pointer;
   font-size: 21px;
-  box-shadow: 0 8px 18px rgba(0,0,0,.22);
-  transition: transform .2s ease, box-shadow .2s ease, opacity .2s ease;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .logoutBtn:hover {
   transform: translateY(-3px);
-  opacity: .95;
-  box-shadow: 0 12px 28px rgba(0,0,0,.35);
+  opacity: 0.95;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
 }
 
 /* ================= CARD AREA ================= */
@@ -94,29 +96,30 @@ html, body {
 /* ================= CARD ================= */
 .card {
   width: 420px;
-  padding: 36px 26px;
+  padding: 38px 28px;
   background: white;
-  color: #333;
+  color: #2f2f2f;
   text-align: center;
   border-radius: 28px;
-  box-shadow: 0 14px 40px rgba(0,0,0,.26);
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  transition: transform .3s ease, box-shadow .3s ease;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+/* Soft gradient glow on hover */
 .card::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    120deg,
-    transparent 60%,
-    rgba(122,0,255,.06)
+  background: radial-gradient(
+    circle at top,
+    rgba(122, 0, 255, 0.12),
+    transparent 65%
   );
   opacity: 0;
-  transition: opacity .3s ease;
+  transition: opacity 0.3s ease;
 }
 
 .card:hover::after {
@@ -125,12 +128,12 @@ html, body {
 
 .card:hover {
   transform: translateY(-12px);
-  box-shadow: 0 18px 55px rgba(0,0,0,.35);
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.38);
 }
 
 /* ================= CARD CONTENT ================= */
 .card h2 {
-  margin-top: 18px;
+  margin-top: 20px;
   font-size: 24px;
   font-weight: 800;
   color: #5d00c7;
@@ -143,54 +146,58 @@ html, body {
   line-height: 1.6;
 }
 
-/* ================= ICON CIRCLE ================= */
+/* ================= ICON CIRCLE (Lucide) ================= */
 .iconCircle {
-  width: 86px;
-  height: 86px;
-  background: linear-gradient(135deg, #6a00ff, #8a2dff);
-  border-radius: 50%;
+  width: 88px;
+  height: 88px;
   margin: 0 auto;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  box-shadow: 0 8px 22px rgba(0,0,0,.32);
+  background: linear-gradient(135deg, #6a00ff, #8a2dff);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.35);
 }
 
 .iconCircle svg {
   width: 44px;
   height: 44px;
   stroke: white;
+  stroke-width: 2.2;
 }
 
 /* ================= OVERLAY ================= */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.55);
+  background: rgba(0, 0, 0, 0.55);
   z-index: 99;
 }
 
 /* ================= LEFT SLIDE PANEL ================= */
 .subSlide {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0 auto 0 0;
   width: 30vw;
   max-width: 480px;
   height: 100vh;
   background: white;
   color: #333;
   padding: 26px;
-  box-shadow: 6px 0 22px rgba(0,0,0,.3);
   z-index: 100;
-  animation: slideIn .25s ease forwards;
+  box-shadow: 6px 0 22px rgba(0, 0, 0, 0.3);
+  animation: slideIn 0.25s ease forwards;
 }
 
 @keyframes slideIn {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
 }
 
-/* HEADER INSIDE SLIDER */
+/* ================= SLIDE HEADER ================= */
 .subHeader {
   display: flex;
   justify-content: space-between;
@@ -212,8 +219,9 @@ html, body {
   cursor: pointer;
 }
 
+/* ================= SUB CONTENT ================= */
 .subContent {
-  margin-top: 20px;
+  margin-top: 22px;
   font-size: 15px;
   line-height: 1.7;
 }
@@ -225,7 +233,7 @@ html, body {
   }
 
   .cardWrapper {
-    gap: 40px;
+    gap: 42px;
   }
 
   .card {
