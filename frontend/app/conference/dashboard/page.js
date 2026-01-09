@@ -20,23 +20,6 @@ const formatNiceDate = (value) => {
   }
 };
 
-const formatNiceTime = (value) => {
-  if (!value) return "-";
-  try {
-    let str = String(value).trim();
-    if (str.includes("T")) str = str.split("T")[1];
-    if (str.includes(" ")) str = str.split(" ")[1];
-    const [hRaw, m] = str.split(":");
-    let h = parseInt(hRaw, 10);
-    if (isNaN(h)) return "-";
-    const suffix = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
-    return `${h}:${m} ${suffix}`;
-  } catch {
-    return "-";
-  }
-};
-
 export default function ConferenceDashboard() {
   const router = useRouter();
 
@@ -44,7 +27,7 @@ export default function ConferenceDashboard() {
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
-  const [filteredBookings, setFilteredBookings] = useState([]);
+  const [allRooms, setAllRooms] = useState([]);  // All rooms for panel
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -52,13 +35,9 @@ export default function ConferenceDashboard() {
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
-  
-  // Create Room Modal
-  const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoom, setNewRoom] = useState({ room_name: '', room_number: '' });
-  
-  const [filterDay, setFilterDay] = useState("today");
   const [searchRooms, setSearchRooms] = useState("");
+  const [filterDay, setFilterDay] = useState("today");
 
   /* ================= DATE HELPERS ================= */
   const getDate = (offset) => {
@@ -78,18 +57,16 @@ export default function ConferenceDashboard() {
       setLoading(true);
       setError(null);
       
-      const [statsRes, roomsRes, planRes] = await Promise.all([
+      const [statsRes, roomsRes, allRoomsRes, planRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
-        apiFetch("/api/conference/rooms"),
+        apiFetch("/api/conference/rooms"),        // Active rooms only
+        apiFetch("/api/conference/rooms/all"),    // All rooms for panel
         apiFetch("/api/conference/plan-usage"),
       ]);
 
       setStats(statsRes ?? {});
       setRooms(Array.isArray(roomsRes) ? roomsRes : []);
-      
-      // Client-side booking filter simulation using dashboard stats
-      setFilteredBookings(statsRes?.todayBookings || 0);
-      
+      setAllRooms(Array.isArray(allRoomsRes) ? allRoomsRes : []);
       setPlan(planRes ?? null);
     } catch (err) {
       console.error("[DASHBOARD ERROR]", err);
@@ -115,7 +92,6 @@ export default function ConferenceDashboard() {
         method: "POST",
         body: JSON.stringify(newRoom),
       });
-      setShowCreateModal(false);
       setNewRoom({ room_name: '', room_number: '' });
       loadDashboard();
     } catch (err) {
@@ -126,7 +102,7 @@ export default function ConferenceDashboard() {
   /* ================= SAVE ROOM NAME ================= */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
-    const original = rooms.find((r) => r.id === roomId)?.room_name;
+    const original = allRooms.find((r) => r.id === roomId)?.room_name;
 
     if (!newName) {
       alert("Room name is required");
@@ -153,17 +129,18 @@ export default function ConferenceDashboard() {
 
   /* ================= FILTER ROOMS ================= */
   const filteredRooms = useMemo(() => {
-    return rooms.filter(r => 
+    return allRooms.filter(r => 
       r.room_name.toLowerCase().includes(searchRooms.toLowerCase()) ||
       r.room_number.toString().includes(searchRooms)
     ).sort((a, b) => a.room_number - b.room_number);
-  }, [rooms, searchRooms]);
+  }, [allRooms, searchRooms]);
 
   /* ================= CALCULATIONS ================= */
   const roomPercentage = plan?.plan_limit === "UNLIMITED" 
     ? 100 
     : Math.min(100, Math.round((plan?.used / parseInt(plan?.plan_limit)) * 100 || 0));
 
+  const bookingPercentage = stats?.totalBookings ? Math.min(100, Math.round((stats.totalBookings / 1000) * 100)) : 0;
   const canCreateRoom = plan?.remaining > 0 || plan?.plan_limit === "UNLIMITED";
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company?.slug}`;
 
@@ -247,131 +224,7 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= PLAN USAGE ================= */}
-      {plan && (
-        <div className={styles.section}>
-          <h3>Conference Plan</h3>
-          <p>
-            <b>{plan.plan}</b> | Used <b>{plan.used}</b> / {plan.plan_limit} 
-            {plan.remaining !== null && ` | Remaining: <b>${plan.remaining}</b>`}
-          </p>
-          {plan.remaining === 0 && (
-            <p style={{ color: "#ff9800" }}>
-              Upgrade plan to add/rename more rooms
-            </p>
-          )}
-          <div className={styles.barOuter}>
-            <div 
-              className={styles.barInner}
-              style={{
-                width: `${roomPercentage}%`,
-                background: roomPercentage >= 90 ? "#ff1744" : roomPercentage >= 70 ? "#ff9800" : "#00c853",
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* ================= SIDE PANEL ================= */}
-      {sidePanelOpen && (
-        <div className={styles.leftPanel}>
-          <div className={styles.leftPanelHeader}>
-            <h3>Rooms Management</h3>
-            <button className={styles.leftCloseBtn} onClick={() => {
-              setSidePanelOpen(false);
-              setEditingRoomId(null);
-              setEditName("");
-            }}>
-              Close ✖
-            </button>
-          </div>
-
-          {/* Create Room Modal */}
-          <div style={{ marginBottom: 20, padding: "1rem", background: "#f5f5f5", borderRadius: 8 }}>
-            <h4>Create New Room</h4>
-            <input
-              placeholder="Room Name"
-              value={newRoom.room_name}
-              onChange={(e) => setNewRoom({...newRoom, room_name: e.target.value})}
-              style={{ width: "100%", marginBottom: 8, padding: 8 }}
-              disabled={!canCreateRoom}
-            />
-            <input
-              placeholder="Room Number"
-              value={newRoom.room_number}
-              onChange={(e) => setNewRoom({...newRoom, room_number: e.target.value})}
-              style={{ width: "100%", marginBottom: 8, padding: 8 }}
-              type="number"
-              disabled={!canCreateRoom}
-            />
-            <button 
-              onClick={createRoom}
-              disabled={!canCreateRoom}
-              style={{
-                width: "100%",
-                padding: "8px",
-                background: canCreateRoom ? "#00c853" : "#ccc",
-                color: "white",
-                border: "none",
-                borderRadius: 4
-              }}
-            >
-              {canCreateRoom ? "Create Room" : "Upgrade Required"}
-            </button>
-          </div>
-
-          {/* Room Search */}
-          <input
-            placeholder="Search rooms..."
-            value={searchRooms}
-            onChange={(e) => setSearchRooms(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginBottom: 16 }}
-          />
-
-          {/* Rooms List */}
-          <ul className={styles.roomList}>
-            {filteredRooms.map((r) => (
-              <li key={r.id}>
-                <b>{r.room_name}</b> (#{r.room_number})
-                {editingRoomId === r.id ? (
-                  <>
-                    <input
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      autoFocus
-                      style={{ marginLeft: 8, padding: 4 }}
-                    />
-                    <button onClick={() => saveRoomName(r.id)} style={{ marginLeft: 4 }}>Save</button>
-                    <button onClick={() => {setEditingRoomId(null); setEditName("");}} style={{ marginLeft: 4 }}>Cancel</button>
-                  </>
-                ) : (
-                  <button
-                    disabled={plan?.remaining === 0}
-                    onClick={() => {
-                      setEditingRoomId(r.id);
-                      setEditName(r.room_name);
-                    }}
-                    style={{
-                      marginLeft: 8,
-                      opacity: plan?.remaining === 0 ? 0.5 : 1,
-                      background: "#2196f3",
-                      color: "white",
-                      border: "none",
-                      padding: "4px 8px",
-                      borderRadius: 4,
-                      cursor: plan?.remaining === 0 ? "not-allowed" : "pointer"
-                    }}
-                  >
-                    Rename
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* ================= DATE FILTER ================= */}
+      {/* ================= MAIN DASHBOARD ================= */}
       <div className={styles.section}>
         <h3>Bookings Overview ({formatNiceDate(selectedDate)})</h3>
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
@@ -397,7 +250,7 @@ export default function ConferenceDashboard() {
       {/* ================= STATS GRID ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <span>Rooms</span>
+          <span>Active Rooms</span>
           <b>{stats?.rooms || 0}</b>
         </div>
         <div className={styles.statCard}>
@@ -410,7 +263,25 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= BOOKINGS ================= */}
+      {/* ================= BOOKINGS PROGRESS BAR ================= */}
+      {stats?.totalBookings > 0 && (
+        <div className={styles.section}>
+          <h3>Booking Usage</h3>
+          <p>Total: <b>{stats?.totalBookings || 0}</b> bookings</p>
+          <div className={styles.barOuter}>
+            <div 
+              className={styles.barInner}
+              style={{
+                width: `${bookingPercentage}%`,
+                background: bookingPercentage >= 90 ? "#ff1744" : bookingPercentage >= 70 ? "#ff9800" : "#00c853",
+              }}
+            />
+          </div>
+          <small>Max capacity: 1000 bookings</small>
+        </div>
+      )}
+
+      {/* ================= RECENT ACTIVITY ================= */}
       <div className={styles.section}>
         <h3>Recent Activity</h3>
         {stats?.todayBookings === 0 ? (
@@ -427,6 +298,145 @@ export default function ConferenceDashboard() {
           </div>
         )}
       </div>
+
+      {/* ================= SLIDING PANEL - ALL CONFERENCE DETAILS ================= */}
+      {sidePanelOpen && (
+        <div className={styles.leftPanel}>
+          <div className={styles.leftPanelHeader}>
+            <h3>Conference Management</h3>
+            <button 
+              className={styles.leftCloseBtn} 
+              onClick={() => {
+                setSidePanelOpen(false);
+                setEditingRoomId(null);
+                setEditName("");
+              }}
+            >
+              Close ✖
+            </button>
+          </div>
+
+          {/* ================= PLAN INFO ================= */}
+          {plan && (
+            <div className={styles.section} style={{ marginBottom: 20 }}>
+              <h4>Plan: <b>{plan.plan}</b></h4>
+              <p>
+                Active: <b>{plan.used}</b> / {plan.plan_limit} 
+                {plan.remaining !== null && ` | Remaining: <b>${plan.remaining}</b>`}
+                {plan.inactive_rooms > 0 && ` | Inactive: <b>${plan.inactive_rooms}</b>`}
+              </p>
+              {plan.remaining === 0 && (
+                <p style={{ color: "#ff9800" }}>Upgrade plan to add/rename more rooms</p>
+              )}
+              <div className={styles.barOuter}>
+                <div 
+                  className={styles.barInner}
+                  style={{
+                    width: `${roomPercentage}%`,
+                    background: roomPercentage >= 90 ? "#ff1744" : roomPercentage >= 70 ? "#ff9800" : "#00c853",
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* ================= RENAME ROOMS (FIRST) ================= */}
+          <div className={styles.section}>
+            <h4>🔄 Rename Rooms</h4>
+            <input
+              placeholder="Search all rooms..."
+              value={searchRooms}
+              onChange={(e) => setSearchRooms(e.target.value)}
+              style={{ width: "100%", padding: "8px", marginBottom: 16 }}
+            />
+            <ul className={styles.roomList}>
+              {filteredRooms.map((r) => (
+                <li key={r.id}>
+                  <b>{r.room_name}</b> (#{r.room_number})
+                  {editingRoomId === r.id ? (
+                    <>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
+                        style={{ marginLeft: 8, padding: 4, width: 120 }}
+                      />
+                      <button 
+                        onClick={() => saveRoomName(r.id)} 
+                        style={{ marginLeft: 4, background: "#00c853", color: "white" }}
+                      >
+                        Save
+                      </button>
+                      <button 
+                        onClick={() => {setEditingRoomId(null); setEditName("");}} 
+                        style={{ marginLeft: 4, background: "#ff9800", color: "white" }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      disabled={plan?.remaining === 0}
+                      onClick={() => {
+                        setEditingRoomId(r.id);
+                        setEditName(r.room_name);
+                      }}
+                      style={{
+                        marginLeft: 8,
+                        opacity: plan?.remaining === 0 ? 0.5 : 1,
+                        background: "#2196f3",
+                        color: "white",
+                        border: "none",
+                        padding: "4px 12px",
+                        borderRadius: 4,
+                        cursor: plan?.remaining === 0 ? "not-allowed" : "pointer"
+                      }}
+                    >
+                      Rename
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* ================= CREATE ROOM (SECOND) ================= */}
+          <div className={styles.section}>
+            <h4>➕ Create New Room</h4>
+            <input
+              placeholder="Room Name"
+              value={newRoom.room_name}
+              onChange={(e) => setNewRoom({...newRoom, room_name: e.target.value})}
+              style={{ width: "100%", marginBottom: 8, padding: 8 }}
+              disabled={!canCreateRoom}
+            />
+            <input
+              placeholder="Room Number"
+              value={newRoom.room_number}
+              onChange={(e) => setNewRoom({...newRoom, room_number: e.target.value})}
+              style={{ width: "100%", marginBottom: 8, padding: 8 }}
+              type="number"
+              disabled={!canCreateRoom}
+            />
+            <button 
+              onClick={createRoom}
+              disabled={!canCreateRoom || !newRoom.room_name?.trim() || !newRoom.room_number}
+              style={{
+                width: "100%",
+                padding: "10px",
+                background: canCreateRoom ? "#00c853" : "#ccc",
+                color: "white",
+                border: "none",
+                borderRadius: 6,
+                fontWeight: "bold"
+              }}
+            >
+              {canCreateRoom ? "Create Room" : "Upgrade Required"}
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
