@@ -17,12 +17,10 @@ body {
   min-height: 100vh;
   background: linear-gradient(135deg, #3c007a, #7a00ff);
   padding: 32px;
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #ffffff;
-
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
 }
 
 /* ================= HEADER ================= */
@@ -36,396 +34,340 @@ body {
 .leftHeader {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
-/* Sidebar Trigger */
+/* Sidebar Trigger Dots */
 .leftMenuTrigger {
-  width: 34px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.4);
-  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.1);
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 7px;
-  padding-left: 13px;
+  align-items: center;
+  gap: 5px;
   cursor: pointer;
   backdrop-filter: blur(10px);
-  transition: .25s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .leftMenuTrigger:hover {
-  transform: scale(1.08);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
 }
 
 .leftMenuTrigger span {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   background: white;
   border-radius: 50%;
 }
 
 .companyName {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 900;
-  letter-spacing: .5px;
+  letter-spacing: -0.5px;
+  margin: 0;
 }
 
 .subText {
   font-size: 13px;
-  opacity: 0.9;
+  opacity: 0.8;
+  display: block;
 }
 
 .headerRight {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .logo {
-  height: 50px;
+  height: 45px;
+  max-width: 120px;
   object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,0.2));
 }
 
-/* Logout Button */
+/* Back Button (was logoBtn) */
 .logoBtn {
   width: 44px;
   height: 44px;
   border-radius: 14px;
   border: none;
   background: #ffffff;
-  color: #000;
-  font-size: 20px;
-  font-weight: 800;
+  color: #3c007a;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: .25s ease;
+  transition: 0.2s ease;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
 .logoBtn:hover {
-  transform: scale(1.08);
+  transform: scale(1.1) rotate(-10deg);
+  background: #ffb703;
+  color: #000;
 }
 
-/* ================= PUBLIC LINK ================= */
+/* ================= PUBLIC LINK BOX ================= */
 .publicBox {
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 18px;
-  padding: 20px 24px;
-  margin-bottom: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.28);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
 }
 
 .publicRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .publicTitle {
-  font-size: 13px;
-  opacity: 0.9;
-  margin-bottom: 6px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.7;
+  margin-bottom: 8px;
 }
 
 .publicLink {
-  color: #ffffff;
-  font-weight: 700;
-  text-decoration: underline;
-  word-break: break-all;
+  color: #00ffcc;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0, 255, 204, 0.3);
+  transition: 0.2s;
 }
 
-/* Book Button */
+.publicLink:hover {
+  border-bottom-color: #00ffcc;
+}
+
 .bookBtn {
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   color: #3c007a;
   border: none;
-  padding: 12px 28px;
-  border-radius: 999px;
-  font-size: 14px;
-  font-weight: 900;
+  padding: 14px 32px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 800;
   cursor: pointer;
-  white-space: nowrap;
-  transition: .25s ease-in-out;
+  transition: 0.2s;
+  box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3);
 }
 
 .bookBtn:hover {
-  transform: scale(1.05);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(255, 140, 0, 0.4);
 }
 
-/* ================= STATS ================= */
+/* ================= DASHBOARD KPIs ================= */
 .statsGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 18px;
-  margin-bottom: 38px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 20px;
+  margin-bottom: 35px;
 }
 
 .statCard {
   background: #ffffff;
-  color: #333;
-  border-radius: 20px;
-  padding: 22px;
-  text-align: center;
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+  color: #2d3436;
+  border-radius: 24px;
+  padding: 28px;
+  text-align: left;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+  transition: 0.3s;
+}
+
+.statCard:hover {
+  transform: translateY(-5px);
 }
 
 .statCard span {
   font-size: 13px;
-  color: #777;
+  font-weight: 600;
+  color: #636e72;
+  text-transform: uppercase;
 }
 
 .statCard b {
-  font-size: 32px;
-  color: #5b00c9;
+  display: block;
+  font-size: 40px;
+  color: #7a00ff;
+  margin-top: 10px;
+  line-height: 1;
 }
 
-/* ================= SECTION ================= */
+/* ================= SECTION BLOCKS ================= */
 .section {
-  background: rgba(255, 255, 255, 0.14);
-  border-radius: 22px;
-  padding: 26px;
-  margin-bottom: 36px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(7px);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.30);
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  padding: 30px;
+  margin-bottom: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
 }
 
 .section h3 {
-  margin-bottom: 18px;
-  font-size: 18px;
-  font-weight: 800;
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* ================= ROOM LIST ================= */
-.roomList {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+/* ================= PROGRESS BARS ================= */
+.barOuter {
+  height: 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.roomList li {
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.18);
-  border-radius: 12px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+.barInner {
+  height: 100%;
+  border-radius: 10px;
+  transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
 }
 
-/* ================= BOOKINGS ================= */
+/* ================= ROOM & BOOKING ROWS ================= */
+.roomList li, .bookingRow {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  transition: 0.2s;
+}
+
 .bookingRow {
   display: grid;
   grid-template-columns: 1.5fr 1fr 0.8fr;
-  gap: 14px;
-  background: rgba(255, 255, 255, 0.18);
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  align-items: center;
+}
+
+.bookingRow:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .status {
   text-align: right;
   font-weight: 800;
-  color: #ffdf9a;
+  color: #00ffcc;
+  font-size: 14px;
 }
 
-/* ================= ERROR ================= */
-.error {
-  color: #ffb4b4;
-  font-weight: 700;
-}
-
-/* ================= PROGRESS BAR ================= */
-.barOuter {
-  height: 16px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.25);
-  margin-top: 8px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.4);
-}
-
-.barInner {
-  height: 100%;
-  width: 0%;
-  border-radius: 999px;
-  transition: width .35s ease-in-out;
-}
-
-/* ================= LEFT SLIDE PANEL ================= */
+/* ================= SLIDE-OUT PANEL ================= */
 .leftPanel {
   position: fixed;
   top: 0;
   left: 0;
-
-  width: 50%;
-  max-width: 650px;
+  width: 90%;
+  max-width: 480px;
   height: 100vh;
-
-  background: linear-gradient(140deg, #3c007a, #7a00ff);
+  background: #1a0033;
   color: white;
-
-  border-right: 1px solid rgba(255,255,255,0.35);
-  box-shadow: 12px 0 35px rgba(0,0,0,.45);
-  padding: 22px;
-
-  animation: panelSlide .32s ease-in-out;
-  backdrop-filter: blur(10px);
-  z-index: 100;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 30px 0 60px rgba(0, 0, 0, 0.6);
+  padding: 30px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: panelSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes panelSlide {
-  from { left: -55%; opacity: .3; }
-  to { left: 0; opacity: 1; }
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
 }
 
-/* ================= PANEL HEADER ================= */
 .leftPanelHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
-}
-
-.leftPanelHeader h3 {
-  font-size: 18px;
-  font-weight: 900;
+  margin-bottom: 30px;
 }
 
 .leftCloseBtn {
-  background: #ff4d4d;
-  border: none;
+  background: rgba(255, 77, 77, 0.15);
+  border: 1px solid rgba(255, 77, 77, 0.3);
   padding: 8px 16px;
   border-radius: 12px;
-  color: white;
+  color: #ff4d4d;
+  font-weight: 700;
   cursor: pointer;
-  font-weight: 800;
-  transition: .2s;
+  transition: 0.2s;
 }
 
 .leftCloseBtn:hover {
-  transform: scale(1.05);
+  background: #ff4d4d;
+  color: white;
 }
 
-/* ================= PANEL BODY ================= */
 .leftPanelContent {
-  height: calc(100vh - 90px);
+  flex: 1;
   overflow-y: auto;
-  padding-right: 8px;
-  scrollbar-width: none;
+  padding-right: 5px;
 }
 
-.leftPanelContent::-webkit-scrollbar {
-  display: none;
+/* ================= ROOM LIST BUTTONS ================= */
+.roomList button {
+  background: #ffffff;
+  color: #3c007a;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 10px;
+  transition: 0.2s;
+}
+
+.roomList button:hover:not(:disabled) {
+  background: #00ffcc;
+  transform: translateY(-1px);
+}
+
+.roomList input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 10px;
+  width: 140px;
+  outline: none;
+}
+
+/* ================= ROOM LOCK STATE ================= */
+.roomLocked {
+  opacity: 0.4;
+  filter: grayscale(1);
+  pointer-events: none;
+  background: rgba(0,0,0,0.2) !important;
 }
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 768px) {
-  .container {
-    padding: 20px;
-  }
-
-  .bookingRow {
-    grid-template-columns: 1fr;
-  }
-
-  .status {
-    text-align: left;
-  }
-
-  .publicRow {
-    gap: 10px;
-  }
-
-  .leftPanel {
-    width: 88%;
-  }
-}
-/* ================= LOCKED ROOM (PLAN CONTROLLED) ================= */
-.roomLocked {
-  opacity: 0.55;
-  position: relative;
-}
-
-.roomLocked::after {
-  content: "🔒 Locked";
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 11px;
-  font-weight: 800;
-  color: #ffcccb;
-  background: rgba(255, 0, 0, 0.15);
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 100, 100, 0.45);
-}
-
-/* ================= RENAME BUTTON ================= */
-.roomList button {
-  margin-left: 10px;
-  background: linear-gradient(135deg, #00ffcc, #00c3ff);
-  border: none;
-  padding: 6px 14px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 900;
-  cursor: pointer;
-  transition: 0.25s ease;
-}
-
-.roomList button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 6px 18px rgba(0, 195, 255, 0.35);
-}
-
-/* ================= DISABLED RENAME ================= */
-.roomList button:disabled {
-  background: rgba(255, 255, 255, 0.25);
-  color: rgba(255, 255, 255, 0.6);
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-
-/* ================= RENAME INPUT ================= */
-.roomList input {
-  margin-left: 10px;
-  padding: 6px 12px;
-  border-radius: 10px;
-  border: none;
-  outline: none;
-  font-size: 13px;
-  font-weight: 700;
-  width: 160px;
-}
-
-/* ================= SAVE / CANCEL ================= */
-.roomList button + button {
-  background: linear-gradient(135deg, #ff4d4d, #ff0000);
-  margin-left: 6px;
-}
-
-.roomList button + button:hover {
-  box-shadow: 0 6px 18px rgba(255, 0, 0, 0.4);
-}
-
-/* ================= TOOLTIP (LOCKED HOVER) ================= */
-.roomLocked:hover::before {
-  content: "Upgrade your plan to unlock this room";
-  position: absolute;
-  bottom: 110%;
-  left: 12px;
-  background: rgba(0, 0, 0, 0.85);
-  color: #fff;
-  font-size: 11px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  white-space: nowrap;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  .container { padding: 16px; }
+  .header { flex-direction: column; gap: 20px; align-items: flex-start; }
+  .headerRight { width: 100%; justify-content: space-between; }
+  .bookingRow { grid-template-columns: 1fr; gap: 8px; }
+  .status { text-align: left; margin-top: 5px; }
+  .publicRow { flex-direction: column; align-items: flex-start; }
+  .bookBtn { width: 100%; }
 }
