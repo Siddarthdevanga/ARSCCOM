@@ -6,8 +6,6 @@
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
   color: #ffffff;
   line-height: 1.6;
-
-  /* ENABLE SCROLL */
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -69,21 +67,7 @@
   backdrop-filter: blur(20px);
   position: relative;
   overflow: hidden;
-}
-
-.leftMenuTrigger::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s;
-}
-
-.leftMenuTrigger:hover::before {
-  left: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .leftMenuTrigger:hover {
@@ -265,7 +249,7 @@
   box-shadow: 0 8px 32px rgba(0,0,0,0.15);
 }
 
-.section h3 {
+.section h3, .section h4 {
   margin: 0 0 20px 0;
   font-size: 24px;
   font-weight: 800;
@@ -294,18 +278,6 @@
   overflow: hidden;
 }
 
-.barInner::after {
-  content: attr(data-label);
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.9);
-  white-space: nowrap;
-}
-
 /* ================= ROOM LIST ================= */
 .roomList {
   list-style: none;
@@ -331,31 +303,7 @@
   box-shadow: 0 8px 24px rgba(0,0,0,0.2);
 }
 
-/* ================= BUTTONS ================= */
-button {
-  border: none;
-  border-radius: 12px;
-  padding: 10px 20px;
-  font-weight: 700;
-  cursor: pointer;
-  font-size: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none !important;
-}
-
-button:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
-}
-
-/* ================= LEFT PANEL ================= */
+/* ================= PANEL SPECIFIC ================= */
 .leftPanel {
   position: fixed;
   top: 0;
@@ -390,21 +338,14 @@ button:not(:disabled):hover {
   border-bottom: 1px solid rgba(255,255,255,0.2);
 }
 
-.leftPanelHeader h3 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 900;
-  background: linear-gradient(135deg, #ffffff, #e0e7ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
 .leftCloseBtn {
   background: rgba(255,0,0,0.2);
   color: #ff6b6b;
   padding: 12px 20px;
   font-weight: 900;
   font-size: 16px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
 }
 
 .leftCloseBtn:hover {
@@ -413,8 +354,79 @@ button:not(:disabled):hover {
   transform: scale(1.05);
 }
 
-/* ================= INPUTS ================= */
-input {
+/* ================= INLINE STYLES REPLACED ================= */
+.btnPrimary {
+  background: linear-gradient(135deg, #00c853, #00b140);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 200, 83, 0.4);
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btnSecondary {
+  background: linear-gradient(135deg, #2196f3, #1976d2);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 8px;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btnSecondary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+.btnSecondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSuccess {
+  background: #00c853;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  margin-left: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.btnWarning {
+  background: #ff9800;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 700;
+  margin-left: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.inputField {
   width: 100%;
   padding: 14px 16px;
   border: 2px solid rgba(255,255,255,0.3);
@@ -428,20 +440,42 @@ input {
   box-sizing: border-box;
 }
 
-input::placeholder {
+.inputField::placeholder {
   color: rgba(255,255,255,0.6);
 }
 
-input:focus {
+.inputField:focus {
   outline: none;
   border-color: #ffb703;
   background: rgba(255,255,255,0.15);
   box-shadow: 0 0 0 4px rgba(255,183,3,0.2);
 }
 
-input:disabled {
+.inputField:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.inputEdit {
+  width: 140px;
+  padding: 8px 12px;
+  margin-left: 8px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.2);
+  color: white;
+  font-size: 14px;
+}
+
+.inputSearch {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  font-size: 16px;
+  margin-bottom: 20px;
 }
 
 /* ================= ANIMATIONS ================= */
@@ -497,4 +531,3 @@ input:disabled {
     padding: 24px 20px;
   }
 }
-
