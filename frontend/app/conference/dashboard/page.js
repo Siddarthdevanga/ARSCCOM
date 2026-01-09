@@ -14,10 +14,7 @@ const formatNiceDate = (value) => {
     if (str.includes(" ")) str = str.split(" ")[0];
 
     const [y, m, d] = str.split("-");
-    const names = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
+    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
     return value;
@@ -95,7 +92,6 @@ export default function ConferenceDashboard() {
       setBookings(Array.isArray(bookingsRes) ? bookingsRes : []);
       setPlan(planRes ?? null);
 
-      /* ---- Booking Plan ---- */
       const bookingLimit =
         planRes?.plan === "TRIAL" ? 100 :
         planRes?.plan === "BUSINESS" ? 1000 :
@@ -107,11 +103,8 @@ export default function ConferenceDashboard() {
         limit: bookingLimit,
         used: usedBookings,
         remaining:
-          bookingLimit === Infinity
-            ? null
-            : Math.max(bookingLimit - usedBookings, 0),
+          bookingLimit === Infinity ? null : Math.max(bookingLimit - usedBookings, 0),
       });
-
     } catch {
       router.replace("/auth/login");
     } finally {
@@ -137,6 +130,19 @@ export default function ConferenceDashboard() {
       router.replace("/auth/login");
     }
   }, [loadDashboard, router]);
+
+  /* ================= RENAME PERMISSION (FIX) ================= */
+  const renameAllowedRoomIds = useMemo(() => {
+    if (!plan || !rooms.length) return [];
+
+    if (plan.limit === "UNLIMITED") {
+      return rooms.map(r => r.id);
+    }
+
+    return rooms
+      .slice(0, plan.limit) // FIRST N ROOMS ONLY
+      .map(r => r.id);
+  }, [plan, rooms]);
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
@@ -171,7 +177,6 @@ export default function ConferenceDashboard() {
       const date = b.booking_date?.includes("T")
         ? b.booking_date.split("T")[0]
         : b.booking_date;
-
       return date === selectedDate && b.status === "BOOKED";
     });
   }, [bookings, selectedDate]);
@@ -186,120 +191,18 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
-  /* ================= LOADING ================= */
   if (loading || !company || !stats) return null;
 
-  /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
-
-  const roomPercentage =
-    plan?.limit === "UNLIMITED"
-      ? 100
-      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100 || 0));
-
-  const bookingPercentage =
-    bookingPlan?.limit === Infinity
-      ? 100
-      : Math.min(
-          100,
-          Math.round((bookingPlan?.used / bookingPlan?.limit) * 100 || 0)
-        );
 
   return (
     <div className={styles.container}>
-
-      {/* ================= HEADER ================= */}
-      <header className={styles.header}>
-        <div className={styles.leftHeader}>
-          <div
-            className={styles.leftMenuTrigger}
-            onClick={() => setSidePanelOpen(true)}
-          >
-            <span></span><span></span><span></span>
-          </div>
-
-          <div>
-            <h2 className={styles.companyName}>{company.name}</h2>
-            <span className={styles.subText}>Conference Dashboard</span>
-          </div>
-        </div>
-
-        <div className={styles.headerRight}>
-          <img
-            src={company.logo_url || "/logo.png"}
-            className={styles.logo}
-            alt="Logo"
-          />
-
-          <button
-            className={styles.logoBtn}
-            title="Logout"
-            onClick={() => {
-              localStorage.clear();
-              router.replace("/auth/login");
-            }}
-          >
-            ⏻
-          </button>
-        </div>
-      </header>
-
-      {/* ================= PUBLIC LINK ================= */}
-      <div className={styles.publicBox}>
-        <div className={styles.publicRow}>
-          <div>
-            <p className={styles.publicTitle}>Public Booking URL</p>
-            <a href={publicURL} target="_blank" className={styles.publicLink}>
-              {publicURL}
-            </a>
-          </div>
-
-          <button
-            className={styles.bookBtn}
-            onClick={() => router.push("/conference/bookings")}
-          >
-            Book
-          </button>
-        </div>
-      </div>
-
-      {/* ================= BOOKING USAGE ================= */}
-      {bookingPlan && (
-        <div className={styles.section}>
-          <h3>Conference Booking Usage</h3>
-
-          {bookingPlan.limit === Infinity ? (
-            <p>Unlimited Bookings Available 🎉</p>
-          ) : (
-            <p>
-              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
-              Remaining: <b>{bookingPlan.remaining}</b>
-            </p>
-          )}
-
-          <div className={styles.barOuter}>
-            <div
-              className={styles.barInner}
-              style={{
-                width: bookingPercentage + "%",
-                background:
-                  bookingPercentage >= 90
-                    ? "#ff1744"
-                    : bookingPercentage >= 70
-                    ? "#ff9800"
-                    : "#00c853",
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
             <h3>Conference Plan + Room Rename</h3>
-
             <button
               className={styles.leftCloseBtn}
               onClick={() => {
@@ -312,161 +215,48 @@ export default function ConferenceDashboard() {
             </button>
           </div>
 
-          {plan && (
-            <div style={{ marginBottom: 20 }}>
-              <p>Plan: <b>{plan.plan}</b></p>
-
-              {plan.limit === "UNLIMITED" ? (
-                <p>Unlimited Rooms 🎉</p>
-              ) : (
-                <p>
-                  Rooms: <b>{plan.used}</b> / {plan.limit} |
-                  Remaining: <b>{plan.remaining}</b>
-                </p>
-              )}
-
-              <div className={styles.barOuter}>
-                <div
-                  className={styles.barInner}
-                  style={{
-                    width: roomPercentage + "%",
-                    background:
-                      roomPercentage >= 90
-                        ? "#ff1744"
-                        : roomPercentage >= 70
-                        ? "#ff9800"
-                        : "#00c853",
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
-              {rooms.map((r) => (
-                <li key={r.id}>
-                  <b>{r.room_name}</b> (#{r.room_number})
+              {rooms.map((r) => {
+                const canRename = renameAllowedRoomIds.includes(r.id);
 
-                  {editingRoomId === r.id ? (
-                    <>
-                      <input
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        autoFocus
-                      />
-                      <button onClick={() => saveRoomName(r.id)}>Save</button>
+                return (
+                  <li key={r.id}>
+                    <b>{r.room_name}</b> (#{r.room_number})
+
+                    {editingRoomId === r.id ? (
+                      <>
+                        <input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          autoFocus
+                        />
+                        <button onClick={() => saveRoomName(r.id)}>Save</button>
+                        <button onClick={() => setEditingRoomId(null)}>Cancel</button>
+                      </>
+                    ) : (
                       <button
+                        disabled={!canRename}
+                        style={{
+                          opacity: canRename ? 1 : 0.4,
+                          cursor: canRename ? "pointer" : "not-allowed",
+                        }}
                         onClick={() => {
-                          setEditingRoomId(null);
-                          setEditName("");
+                          if (!canRename) return;
+                          setEditingRoomId(r.id);
+                          setEditName(r.room_name);
                         }}
                       >
-                        Cancel
+                        Rename
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      disabled={plan?.remaining === 0}
-                      style={{
-                        opacity: plan?.remaining === 0 ? 0.5 : 1,
-                        cursor:
-                          plan?.remaining === 0 ? "not-allowed" : "pointer",
-                      }}
-                      onClick={() => {
-                        setEditingRoomId(r.id);
-                        setEditName(r.room_name);
-                      }}
-                    >
-                      Rename
-                    </button>
-                  )}
-                </li>
-              ))}
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </div>
       )}
-
-      {/* ================= DATE FILTER ================= */}
-      <div className={styles.section}>
-        <h3>Bookings View</h3>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          {["yesterday", "today", "tomorrow"].map((d) => (
-            <button
-              key={d}
-              onClick={() => setFilterDay(d)}
-              style={{
-                background: filterDay === d ? "yellow" : "#ffffff",
-                color: "#000",
-                padding: "8px 18px",
-                borderRadius: 30,
-                border: "none",
-              }}
-            >
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* ================= KPIs ================= */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span>Conference Rooms</span>
-          <b>{stats.rooms}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Bookings ({filterDay.toUpperCase()})</span>
-          <b>{filteredBookings.length}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Departments Using Rooms</span>
-          <b>{departmentStats.length}</b>
-        </div>
-      </div>
-
-      {/* ================= DEPARTMENT ================= */}
-      <div className={styles.section}>
-        <h3>Department Wise Bookings</h3>
-
-        {departmentStats.length === 0 ? (
-          <p>No bookings</p>
-        ) : (
-          <ul className={styles.roomList}>
-            {departmentStats.map(([dep, count]) => (
-              <li key={dep}>
-                <b>{dep}</b> — {count} bookings
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* ================= BOOKINGS ================= */}
-      <div className={styles.section}>
-        <h3>Bookings List</h3>
-
-        {filteredBookings.length === 0 && <p>No bookings</p>}
-
-        {filteredBookings.slice(0, 6).map((b) => (
-          <div key={b.id} className={styles.bookingRow}>
-            <div>
-              <b>{b.room_name}</b> (#{b.room_number})
-              <p>{formatNiceDate(b.booking_date)}</p>
-            </div>
-
-            <div>
-              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
-            </div>
-
-            <div className={styles.status}>{b.status}</div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
