@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
@@ -48,13 +48,14 @@ const formatNiceTime = (value) => {
 export default function ConferenceDashboard() {
   const router = useRouter();
 
+  /* ================= STATE ================= */
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [plan, setPlan] = useState(null);              
+  const [plan, setPlan] = useState(null);
   const [bookingPlan, setBookingPlan] = useState(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -62,7 +63,6 @@ export default function ConferenceDashboard() {
   const [editName, setEditName] = useState("");
 
   const [filterDay, setFilterDay] = useState("today");
-
 
   /* ================= DATE HELPERS ================= */
   const getDate = (offset) => {
@@ -80,9 +80,8 @@ export default function ConferenceDashboard() {
     filterDay === "tomorrow" ? tomorrow :
     today;
 
-
   /* ================= LOAD DASHBOARD ================= */
-  const loadDashboard = async () => {
+  const loadDashboard = useCallback(async () => {
     try {
       const [statsRes, roomsRes, bookingsRes, planRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
@@ -91,24 +90,26 @@ export default function ConferenceDashboard() {
         apiFetch("/api/conference/plan-usage"),
       ]);
 
-      setStats(statsRes);
-      setRooms(roomsRes || []);
-      setBookings(bookingsRes || []);
-      setPlan(planRes);
+      setStats(statsRes ?? {});
+      setRooms(Array.isArray(roomsRes) ? roomsRes : []);
+      setBookings(Array.isArray(bookingsRes) ? bookingsRes : []);
+      setPlan(planRes ?? null);
 
-      // Booking Plan Calculation
-      let bookingLimit =
+      /* ---- Booking Plan ---- */
+      const bookingLimit =
         planRes?.plan === "TRIAL" ? 100 :
         planRes?.plan === "BUSINESS" ? 1000 :
         Infinity;
 
+      const usedBookings = statsRes?.totalBookings || 0;
+
       setBookingPlan({
         limit: bookingLimit,
-        used: statsRes.totalBookings || 0,
+        used: usedBookings,
         remaining:
           bookingLimit === Infinity
             ? null
-            : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
+            : Math.max(bookingLimit - usedBookings, 0),
       });
 
     } catch {
@@ -116,8 +117,7 @@ export default function ConferenceDashboard() {
     } finally {
       setLoading(false);
     }
-  };
-
+  }, [router]);
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -129,10 +129,14 @@ export default function ConferenceDashboard() {
       return;
     }
 
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard();
-  }, []);
-
+    try {
+      setCompany(JSON.parse(storedCompany));
+      loadDashboard();
+    } catch {
+      localStorage.clear();
+      router.replace("/auth/login");
+    }
+  }, [loadDashboard, router]);
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
@@ -142,6 +146,7 @@ export default function ConferenceDashboard() {
     if (!newName) return alert("Room name is required");
     if (newName === original) {
       setEditingRoomId(null);
+      setEditName("");
       return;
     }
 
@@ -160,7 +165,6 @@ export default function ConferenceDashboard() {
     }
   };
 
-
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
@@ -172,7 +176,6 @@ export default function ConferenceDashboard() {
     });
   }, [bookings, selectedDate]);
 
-
   /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
@@ -183,10 +186,8 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
-
   /* ================= LOADING ================= */
   if (loading || !company || !stats) return null;
-
 
   /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
@@ -194,13 +195,15 @@ export default function ConferenceDashboard() {
   const roomPercentage =
     plan?.limit === "UNLIMITED"
       ? 100
-      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
+      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100 || 0));
 
   const bookingPercentage =
     bookingPlan?.limit === Infinity
       ? 100
-      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
-
+      : Math.min(
+          100,
+          Math.round((bookingPlan?.used / bookingPlan?.limit) * 100 || 0)
+        );
 
   return (
     <div className={styles.container}>
@@ -241,13 +244,11 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-
       {/* ================= PUBLIC LINK ================= */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
             <p className={styles.publicTitle}>Public Booking URL</p>
-
             <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
@@ -261,7 +262,6 @@ export default function ConferenceDashboard() {
           </button>
         </div>
       </div>
-
 
       {/* ================= BOOKING USAGE ================= */}
       {bookingPlan && (
@@ -289,11 +289,10 @@ export default function ConferenceDashboard() {
                     ? "#ff9800"
                     : "#00c853",
               }}
-            ></div>
+            />
           </div>
         </div>
       )}
-
 
       {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
@@ -313,13 +312,9 @@ export default function ConferenceDashboard() {
             </button>
           </div>
 
-
-          {/* PLAN BAR INSIDE SLIDER */}
           {plan && (
             <div style={{ marginBottom: 20 }}>
-              <p>
-                Plan: <b>{plan.plan}</b>
-              </p>
+              <p>Plan: <b>{plan.plan}</b></p>
 
               {plan.limit === "UNLIMITED" ? (
                 <p>Unlimited Rooms 🎉</p>
@@ -342,13 +337,11 @@ export default function ConferenceDashboard() {
                         ? "#ff9800"
                         : "#00c853",
                   }}
-                ></div>
+                />
               </div>
             </div>
           )}
 
-
-          {/* ROOM RENAME LIST */}
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
               {rooms.map((r) => (
@@ -395,7 +388,6 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-
       {/* ================= DATE FILTER ================= */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
@@ -419,7 +411,6 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-
       {/* ================= KPIs ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
@@ -438,7 +429,6 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-
       {/* ================= DEPARTMENT ================= */}
       <div className={styles.section}>
         <h3>Department Wise Bookings</h3>
@@ -455,7 +445,6 @@ export default function ConferenceDashboard() {
           </ul>
         )}
       </div>
-
 
       {/* ================= BOOKINGS ================= */}
       <div className={styles.section}>
