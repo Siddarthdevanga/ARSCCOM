@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ---------------- DATE ---------------- */
+/* ================= DATE ================= */
 const formatNiceDate = (value) => {
   if (!value) return "-";
   try {
@@ -14,17 +14,14 @@ const formatNiceDate = (value) => {
     if (str.includes(" ")) str = str.split(" ")[0];
 
     const [y, m, d] = str.split("-");
-    const names = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
+    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     return `${names[Number(m) - 1]} ${d}, ${y}`;
   } catch {
     return value;
   }
 };
 
-/* ---------------- TIME ---------------- */
+/* ================= TIME ================= */
 const formatNiceTime = (value) => {
   if (!value) return "-";
   try {
@@ -38,7 +35,6 @@ const formatNiceTime = (value) => {
 
     const suffix = h >= 12 ? "PM" : "AM";
     h = h % 12 || 12;
-
     return `${h}:${m} ${suffix}`;
   } catch {
     return "-";
@@ -54,7 +50,7 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [plan, setPlan] = useState(null);              
+  const [plan, setPlan] = useState(null);
   const [bookingPlan, setBookingPlan] = useState(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -63,23 +59,20 @@ export default function ConferenceDashboard() {
 
   const [filterDay, setFilterDay] = useState("today");
 
-
   /* ================= DATE HELPERS ================= */
-  const getDate = (offset) => {
+  const getDate = useCallback((offset) => {
     const d = new Date();
     d.setDate(d.getDate() + offset);
     return d.toISOString().split("T")[0];
-  };
+  }, []);
 
-  const today = getDate(0);
-  const yesterday = getDate(-1);
-  const tomorrow = getDate(1);
+  const dates = useMemo(() => ({
+    today: getDate(0),
+    yesterday: getDate(-1),
+    tomorrow: getDate(1)
+  }), [getDate]);
 
-  const selectedDate =
-    filterDay === "yesterday" ? yesterday :
-    filterDay === "tomorrow" ? tomorrow :
-    today;
-
+  const selectedDate = dates[filterDay];
 
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
@@ -96,8 +89,7 @@ export default function ConferenceDashboard() {
       setBookings(bookingsRes || []);
       setPlan(planRes);
 
-      // Booking Plan Calculation
-      let bookingLimit =
+      const bookingLimit =
         planRes?.plan === "TRIAL" ? 100 :
         planRes?.plan === "BUSINESS" ? 1000 :
         Infinity;
@@ -111,13 +103,13 @@ export default function ConferenceDashboard() {
             : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
       });
 
-    } catch {
+    } catch (err) {
+      console.error(err);
       router.replace("/auth/login");
     } finally {
       setLoading(false);
     }
   };
-
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -133,20 +125,19 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
 
-    if (!newName) return alert("Room name is required");
+    if (!newName) return;
     if (newName === original) {
       setEditingRoomId(null);
       return;
     }
 
     try {
-      await apiFetch(`/api/conference/rooms/rename`, {
+      await apiFetch("/api/conference/rooms/rename", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: roomId, room_name: newName }),
@@ -160,18 +151,15 @@ export default function ConferenceDashboard() {
     }
   };
 
-
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const date = b.booking_date?.includes("T")
         ? b.booking_date.split("T")[0]
         : b.booking_date;
-
       return date === selectedDate && b.status === "BOOKED";
     });
   }, [bookings, selectedDate]);
-
 
   /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
@@ -183,10 +171,14 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
-
   /* ================= LOADING ================= */
-  if (loading || !company || !stats) return null;
+  if (loading) {
+    return <div className={styles.container}>Loading dashboard…</div>;
+  }
 
+  if (!company || !stats) {
+    return <div className={styles.container}>Unable to load dashboard</div>;
+  }
 
   /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
@@ -201,17 +193,13 @@ export default function ConferenceDashboard() {
       ? 100
       : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
 
-
+  /* ================= UI ================= */
   return (
     <div className={styles.container}>
-
-      {/* ================= HEADER ================= */}
+      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div
-            className={styles.leftMenuTrigger}
-            onClick={() => setSidePanelOpen(true)}
-          >
+          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
             <span></span><span></span><span></span>
           </div>
 
@@ -222,12 +210,7 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
-          <img
-            src={company.logo_url || "/logo.png"}
-            className={styles.logo}
-            alt="Logo"
-          />
-
+          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Logo" />
           <button
             className={styles.logoBtn}
             title="Logout"
@@ -241,29 +224,23 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
-
-      {/* ================= PUBLIC LINK ================= */}
+      {/* PUBLIC LINK */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
             <p className={styles.publicTitle}>Public Booking URL</p>
-
             <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
           </div>
 
-          <button
-            className={styles.bookBtn}
-            onClick={() => router.push("/conference/bookings")}
-          >
+          <button className={styles.bookBtn} onClick={() => router.push("/conference/bookings")}>
             Book
           </button>
         </div>
       </div>
 
-
-      {/* ================= BOOKING USAGE ================= */}
+     {/* ================= BOOKING USAGE ================= */}
       {bookingPlan && (
         <div className={styles.section}>
           <h3>Conference Booking Usage</h3>
