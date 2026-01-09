@@ -208,7 +208,7 @@ export default function ConferenceDashboard() {
           <button
             className={styles.logoBtn}
             title="Back to Home"
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/home")}
           >
             ↩
           </button>
