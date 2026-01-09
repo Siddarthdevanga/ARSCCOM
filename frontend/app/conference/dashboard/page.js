@@ -69,7 +69,7 @@ export default function ConferenceDashboard() {
   const dates = useMemo(() => ({
     today: getDate(0),
     yesterday: getDate(-1),
-    tomorrow: getDate(1)
+    tomorrow: getDate(1),
   }), [getDate]);
 
   const selectedDate = dates[filterDay];
@@ -84,7 +84,8 @@ export default function ConferenceDashboard() {
         apiFetch("/api/conference/plan-usage"),
       ]);
 
-      setStats(statsRes);
+      // ✅ Backward + forward compatible
+      setStats(statsRes?.summary || statsRes);
       setRooms(roomsRes || []);
       setBookings(bookingsRes || []);
       setPlan(planRes);
@@ -96,13 +97,18 @@ export default function ConferenceDashboard() {
 
       setBookingPlan({
         limit: bookingLimit,
-        used: statsRes.totalBookings || 0,
+        used: statsRes?.summary?.totalBookings || statsRes?.totalBookings || 0,
         remaining:
           bookingLimit === Infinity
             ? null
-            : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
+            : Math.max(
+                bookingLimit -
+                  (statsRes?.summary?.totalBookings ||
+                    statsRes?.totalBookings ||
+                    0),
+                0
+              ),
       });
-
     } catch (err) {
       console.error(err);
       router.replace("/auth/login");
@@ -184,9 +190,9 @@ export default function ConferenceDashboard() {
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
   const roomPercentage =
-    plan?.limit === "UNLIMITED"
+    plan?.plan_limit === "UNLIMITED"
       ? 100
-      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
+      : Math.min(100, Math.round((plan?.used / plan?.plan_limit) * 100));
 
   const bookingPercentage =
     bookingPlan?.limit === Infinity
@@ -199,7 +205,10 @@ export default function ConferenceDashboard() {
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
+          <div
+            className={styles.leftMenuTrigger}
+            onClick={() => setSidePanelOpen(true)}
+          >
             <span></span><span></span><span></span>
           </div>
 
@@ -210,7 +219,11 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
-          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Logo" />
+          <img
+            src={company.logo_url || "/logo.png"}
+            className={styles.logo}
+            alt="Logo"
+          />
           <button
             className={styles.logoBtn}
             title="Logout"
@@ -234,50 +247,20 @@ export default function ConferenceDashboard() {
             </a>
           </div>
 
-          <button className={styles.bookBtn} onClick={() => router.push("/conference/bookings")}>
+          <button
+            className={styles.bookBtn}
+            onClick={() => router.push("/conference/bookings")}
+          >
             Book
           </button>
         </div>
       </div>
-
-     {/* ================= BOOKING USAGE ================= */}
-      {bookingPlan && (
-        <div className={styles.section}>
-          <h3>Conference Booking Usage</h3>
-
-          {bookingPlan.limit === Infinity ? (
-            <p>Unlimited Bookings Available 🎉</p>
-          ) : (
-            <p>
-              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
-              Remaining: <b>{bookingPlan.remaining}</b>
-            </p>
-          )}
-
-          <div className={styles.barOuter}>
-            <div
-              className={styles.barInner}
-              style={{
-                width: bookingPercentage + "%",
-                background:
-                  bookingPercentage >= 90
-                    ? "#ff1744"
-                    : bookingPercentage >= 70
-                    ? "#ff9800"
-                    : "#00c853",
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
-
 
       {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
             <h3>Conference Plan + Room Rename</h3>
-
             <button
               className={styles.leftCloseBtn}
               onClick={() => {
@@ -289,41 +272,6 @@ export default function ConferenceDashboard() {
               Close ✖
             </button>
           </div>
-
-
-          {/* PLAN BAR INSIDE SLIDER */}
-          {plan && (
-            <div style={{ marginBottom: 20 }}>
-              <p>
-                Plan: <b>{plan.plan}</b>
-              </p>
-
-              {plan.limit === "UNLIMITED" ? (
-                <p>Unlimited Rooms 🎉</p>
-              ) : (
-                <p>
-                  Rooms: <b>{plan.used}</b> / {plan.limit} |
-                  Remaining: <b>{plan.remaining}</b>
-                </p>
-              )}
-
-              <div className={styles.barOuter}>
-                <div
-                  className={styles.barInner}
-                  style={{
-                    width: roomPercentage + "%",
-                    background:
-                      roomPercentage >= 90
-                        ? "#ff1744"
-                        : roomPercentage >= 70
-                        ? "#ff9800"
-                        : "#00c853",
-                  }}
-                ></div>
-              </div>
-            </div>
-          )}
-
 
           {/* ROOM RENAME LIST */}
           <div className={styles.leftPanelContent}>
@@ -351,13 +299,18 @@ export default function ConferenceDashboard() {
                     </>
                   ) : (
                     <button
-                      disabled={plan?.remaining === 0}
+                      disabled={!r.is_active}
+                      title={
+                        r.is_active
+                          ? "Rename room"
+                          : "Room locked. Upgrade plan to rename."
+                      }
                       style={{
-                        opacity: plan?.remaining === 0 ? 0.5 : 1,
-                        cursor:
-                          plan?.remaining === 0 ? "not-allowed" : "pointer",
+                        opacity: r.is_active ? 1 : 0.4,
+                        cursor: r.is_active ? "pointer" : "not-allowed",
                       }}
                       onClick={() => {
+                        if (!r.is_active) return;
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
                       }}
@@ -372,36 +325,11 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-
-      {/* ================= DATE FILTER ================= */}
-      <div className={styles.section}>
-        <h3>Bookings View</h3>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          {["yesterday", "today", "tomorrow"].map((d) => (
-            <button
-              key={d}
-              onClick={() => setFilterDay(d)}
-              style={{
-                background: filterDay === d ? "yellow" : "#ffffff",
-                color: "#000",
-                padding: "8px 18px",
-                borderRadius: 30,
-                border: "none",
-              }}
-            >
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-
       {/* ================= KPIs ================= */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Conference Rooms</span>
-          <b>{stats.rooms}</b>
+          <b>{stats.activeRooms ?? stats.rooms}</b>
         </div>
 
         <div className={styles.statCard}>
@@ -413,47 +341,6 @@ export default function ConferenceDashboard() {
           <span>Departments Using Rooms</span>
           <b>{departmentStats.length}</b>
         </div>
-      </div>
-
-
-      {/* ================= DEPARTMENT ================= */}
-      <div className={styles.section}>
-        <h3>Department Wise Bookings</h3>
-
-        {departmentStats.length === 0 ? (
-          <p>No bookings</p>
-        ) : (
-          <ul className={styles.roomList}>
-            {departmentStats.map(([dep, count]) => (
-              <li key={dep}>
-                <b>{dep}</b> — {count} bookings
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-
-      {/* ================= BOOKINGS ================= */}
-      <div className={styles.section}>
-        <h3>Bookings List</h3>
-
-        {filteredBookings.length === 0 && <p>No bookings</p>}
-
-        {filteredBookings.slice(0, 6).map((b) => (
-          <div key={b.id} className={styles.bookingRow}>
-            <div>
-              <b>{b.room_name}</b> (#{b.room_number})
-              <p>{formatNiceDate(b.booking_date)}</p>
-            </div>
-
-            <div>
-              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
-            </div>
-
-            <div className={styles.status}>{b.status}</div>
-          </div>
-        ))}
       </div>
     </div>
   );
