@@ -212,12 +212,14 @@ export default function LoginPage() {
       {/* LOGIN CARD */}
       <main className={styles.loginWrapper}>
         <div className={styles.loginCard}>
-          <h4>LOGIN TO YOUR ACCOUNT</h4>
+          {/* Changed text from WELCOME BACK. to LOGIN INTO YOUR ACCOUNT */}
+          <h4 style={{ textTransform: 'uppercase' }}>LOGIN INTO YOUR ACCOUNT</h4>
 
           <div className={styles.inputGroup}>
             <label>Email</label>
             <input
               type="email"
+              placeholder="Enter your email"
               disabled={loading}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -228,6 +230,7 @@ export default function LoginPage() {
             <label>Password</label>
             <input
               type="password"
+              placeholder="Enter your password"
               disabled={loading}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
