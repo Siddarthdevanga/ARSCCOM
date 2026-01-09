@@ -27,7 +27,7 @@ export default function ConferenceDashboard() {
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
-  const [allRooms, setAllRooms] = useState([]);  // All rooms for panel
+  const [allRooms, setAllRooms] = useState([]);
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,8 +59,8 @@ export default function ConferenceDashboard() {
       
       const [statsRes, roomsRes, allRoomsRes, planRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
-        apiFetch("/api/conference/rooms"),        // Active rooms only
-        apiFetch("/api/conference/rooms/all"),    // All rooms for panel
+        apiFetch("/api/conference/rooms"),      // Active rooms
+        apiFetch("/api/conference/rooms/all"),  // All rooms for panel
         apiFetch("/api/conference/plan-usage"),
       ]);
 
@@ -86,7 +86,6 @@ export default function ConferenceDashboard() {
       alert("Room name & number required");
       return;
     }
-
     try {
       await apiFetch("/api/conference/rooms", {
         method: "POST",
@@ -163,7 +162,7 @@ export default function ConferenceDashboard() {
     }
   }, [loadDashboard, router]);
 
-  /* ================= LOADING STATE ================= */
+  /* ================= LOADING ================= */
   if (loading) {
     return (
       <div className={styles.container}>
@@ -174,7 +173,6 @@ export default function ConferenceDashboard() {
     );
   }
 
-  /* ================= ERROR STATE ================= */
   if (error && !company) {
     return (
       <div className={styles.container}>
@@ -224,22 +222,15 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= MAIN DASHBOARD ================= */}
+      {/* ================= BOOKINGS OVERVIEW ================= */}
       <div className={styles.section}>
         <h3>Bookings Overview ({formatNiceDate(selectedDate)})</h3>
         <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
           {["yesterday", "today", "tomorrow"].map((d) => (
             <button
               key={d}
+              className={filterDay === d ? styles.btnPrimary : styles.btnSecondary}
               onClick={() => setFilterDay(d)}
-              style={{
-                background: filterDay === d ? "#ffeb3b" : "#f5f5f5",
-                color: "#000",
-                padding: "8px 16px",
-                borderRadius: 20,
-                border: "1px solid #ddd",
-                cursor: "pointer"
-              }}
             >
               {d.charAt(0).toUpperCase() + d.slice(1)}
             </button>
@@ -263,11 +254,11 @@ export default function ConferenceDashboard() {
         </div>
       </div>
 
-      {/* ================= BOOKINGS PROGRESS BAR ================= */}
+      {/* ================= BOOKING PROGRESS ================= */}
       {stats?.totalBookings > 0 && (
         <div className={styles.section}>
           <h3>Booking Usage</h3>
-          <p>Total: <b>{stats?.totalBookings || 0}</b> bookings</p>
+          <p>Total: <b>{stats?.totalBookings}</b> bookings</p>
           <div className={styles.barOuter}>
             <div 
               className={styles.barInner}
@@ -285,13 +276,13 @@ export default function ConferenceDashboard() {
       <div className={styles.section}>
         <h3>Recent Activity</h3>
         {stats?.todayBookings === 0 ? (
-          <p>No bookings today. <button onClick={loadDashboard}>Refresh</button></p>
+          <p>No bookings today. <button className={styles.btnPrimary} onClick={loadDashboard}>Refresh</button></p>
         ) : (
           <div>
             <p>{stats?.todayBookings} bookings recorded for today</p>
             <button 
+              className={styles.btnPrimary}
               onClick={() => router.push("/conference/bookings")}
-              style={{ marginTop: 10, padding: "8px 16px", background: "#2196f3", color: "white", border: "none", borderRadius: 4 }}
             >
               View All Bookings
             </button>
@@ -299,19 +290,16 @@ export default function ConferenceDashboard() {
         )}
       </div>
 
-      {/* ================= SLIDING PANEL - ALL CONFERENCE DETAILS ================= */}
+      {/* ================= SLIDING PANEL - ALL CONFERENCE MANAGEMENT ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
             <h3>Conference Management</h3>
-            <button 
-              className={styles.leftCloseBtn} 
-              onClick={() => {
-                setSidePanelOpen(false);
-                setEditingRoomId(null);
-                setEditName("");
-              }}
-            >
+            <button className={styles.leftCloseBtn} onClick={() => {
+              setSidePanelOpen(false);
+              setEditingRoomId(null);
+              setEditName("");
+            }}>
               Close ✖
             </button>
           </div>
@@ -340,14 +328,14 @@ export default function ConferenceDashboard() {
             </div>
           )}
 
-          {/* ================= RENAME ROOMS (FIRST) ================= */}
+          {/* ================= 1. RENAME ROOMS ================= */}
           <div className={styles.section}>
             <h4>🔄 Rename Rooms</h4>
             <input
+              className={styles.inputSearch}
               placeholder="Search all rooms..."
               value={searchRooms}
               onChange={(e) => setSearchRooms(e.target.value)}
-              style={{ width: "100%", padding: "8px", marginBottom: 16 }}
             />
             <ul className={styles.roomList}>
               {filteredRooms.map((r) => (
@@ -356,40 +344,28 @@ export default function ConferenceDashboard() {
                   {editingRoomId === r.id ? (
                     <>
                       <input
+                        className={styles.inputEdit}
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         autoFocus
-                        style={{ marginLeft: 8, padding: 4, width: 120 }}
                       />
-                      <button 
-                        onClick={() => saveRoomName(r.id)} 
-                        style={{ marginLeft: 4, background: "#00c853", color: "white" }}
-                      >
+                      <button className={styles.btnSuccess} onClick={() => saveRoomName(r.id)}>
                         Save
                       </button>
-                      <button 
-                        onClick={() => {setEditingRoomId(null); setEditName("");}} 
-                        style={{ marginLeft: 4, background: "#ff9800", color: "white" }}
-                      >
+                      <button className={styles.btnWarning} onClick={() => {
+                        setEditingRoomId(null);
+                        setEditName("");
+                      }}>
                         Cancel
                       </button>
                     </>
                   ) : (
                     <button
+                      className={styles.btnSecondary}
                       disabled={plan?.remaining === 0}
                       onClick={() => {
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
-                      }}
-                      style={{
-                        marginLeft: 8,
-                        opacity: plan?.remaining === 0 ? 0.5 : 1,
-                        background: "#2196f3",
-                        color: "white",
-                        border: "none",
-                        padding: "4px 12px",
-                        borderRadius: 4,
-                        cursor: plan?.remaining === 0 ? "not-allowed" : "pointer"
                       }}
                     >
                       Rename
@@ -400,43 +376,34 @@ export default function ConferenceDashboard() {
             </ul>
           </div>
 
-          {/* ================= CREATE ROOM (SECOND) ================= */}
+          {/* ================= 2. CREATE ROOM ================= */}
           <div className={styles.section}>
             <h4>➕ Create New Room</h4>
             <input
+              className={styles.inputField}
               placeholder="Room Name"
               value={newRoom.room_name}
               onChange={(e) => setNewRoom({...newRoom, room_name: e.target.value})}
-              style={{ width: "100%", marginBottom: 8, padding: 8 }}
               disabled={!canCreateRoom}
             />
             <input
+              className={styles.inputField}
               placeholder="Room Number"
               value={newRoom.room_number}
               onChange={(e) => setNewRoom({...newRoom, room_number: e.target.value})}
-              style={{ width: "100%", marginBottom: 8, padding: 8 }}
               type="number"
               disabled={!canCreateRoom}
             />
             <button 
-              onClick={createRoom}
+              className={styles.btnPrimary}
               disabled={!canCreateRoom || !newRoom.room_name?.trim() || !newRoom.room_number}
-              style={{
-                width: "100%",
-                padding: "10px",
-                background: canCreateRoom ? "#00c853" : "#ccc",
-                color: "white",
-                border: "none",
-                borderRadius: 6,
-                fontWeight: "bold"
-              }}
+              onClick={createRoom}
             >
               {canCreateRoom ? "Create Room" : "Upgrade Required"}
             </button>
           </div>
         </div>
       )}
-
     </div>
   );
 }
