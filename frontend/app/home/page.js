@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Users, DoorOpen } from "lucide-react";
 import styles from "./style.module.css";
 
 export default function Home() {
@@ -47,7 +48,6 @@ export default function Home() {
       });
 
       const data = await res.json();
-
       if (!res.ok) throw new Error(data?.MESSAGE || "Failed to load");
 
       setSubData(data);
@@ -75,22 +75,16 @@ export default function Home() {
 
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-
-        {/* LEFT — 3 DOT MENU */}
         <div
           className={styles.menuDots}
           onClick={handleOpenSubscription}
-          title="View Subscription Details"
+          title="Subscription"
         >
           ⋮
         </div>
 
-        {/* COMPANY NAME */}
-        <div className={styles.logoText}>
-          {company.name}
-        </div>
+        <div className={styles.logoText}>{company.name}</div>
 
-        {/* RIGHT SECTION */}
         <div className={styles.rightSection}>
           {company.logo_url && (
             <img
@@ -110,43 +104,50 @@ export default function Home() {
         </div>
       </header>
 
-
       {/* ================= MODULE CARDS ================= */}
       <div className={styles.cardWrapper}>
+
+        {/* VISITOR MANAGEMENT */}
         <div
           className={styles.card}
           onClick={() => router.push("/visitor/dashboard")}
         >
+          <div className={styles.iconBox}>
+            <Users size={40} />
+          </div>
           <h2>Visitor Management</h2>
           <p>Manage visitor entries, ID verification & passes.</p>
+          <span className={styles.cardCTA}>Open →</span>
         </div>
 
+        {/* CONFERENCE BOOKING */}
         <div
           className={styles.card}
           onClick={() => router.push("/conference/dashboard")}
         >
+          <div className={styles.iconBox}>
+            <DoorOpen size={40} />
+          </div>
           <h2>Conference Booking</h2>
           <p>Manage conference rooms & meetings.</p>
+          <span className={styles.cardCTA}>Open →</span>
         </div>
+
       </div>
 
-
-      {/* ================= LEFT SLIDE SUBSCRIPTION PANEL ================= */}
+      {/* ================= SUBSCRIPTION SLIDE ================= */}
       {showSub && (
         <>
           <div className={styles.overlay} onClick={() => setShowSub(false)} />
 
           <div className={styles.subSlide}>
             <div className={styles.subHeader}>
-              <h3>SUBSCRIPTION DETAILS</h3>
+              <h3>Subscription Details</h3>
               <button onClick={() => setShowSub(false)}>✖</button>
             </div>
 
             {loadingSub && <p>Loading subscription...</p>}
-
-            {subError && (
-              <p style={{ color: "red" }}>{subError}</p>
-            )}
+            {subError && <p className={styles.error}>{subError}</p>}
 
             {subData && (
               <div className={styles.subContent}>
@@ -157,25 +158,8 @@ export default function Home() {
                   <p><b>CUSTOMER NO:</b> {subData.ZOHO_CUSTOMER_ID}</p>
                 )}
 
-                {subData.TRIAL_ENDS_ON && (
-                  <p>
-                    <b>TRIAL ENDS:</b>{" "}
-                    {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString()}
-                  </p>
-                )}
-
                 {subData.EXPIRES_ON && (
-                  <p>
-                    <b>SUBSCRIPTION EXPIRES:</b>{" "}
-                    {new Date(subData.EXPIRES_ON).toLocaleDateString()}
-                  </p>
-                )}
-
-                {subData.LAST_PAID_ON && (
-                  <p>
-                    <b>LAST PAID:</b>{" "}
-                    {new Date(subData.LAST_PAID_ON).toLocaleString()}
-                  </p>
+                  <p><b>EXPIRES:</b> {new Date(subData.EXPIRES_ON).toLocaleDateString()}</p>
                 )}
               </div>
             )}
