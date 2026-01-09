@@ -17,7 +17,7 @@ export default function LoginPage() {
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-    "https://www.wheelbrand.in";
+    "https://www.promeet.zodopt.com";
 
   /* ======================================================
         LOGIN + STRICT SUBSCRIPTION RULE
@@ -68,21 +68,13 @@ export default function LoginPage() {
       localStorage.setItem("company", JSON.stringify(company));
 
       const status = company?.subscription_status?.toLowerCase() || "pending";
-      console.log("SUBSCRIPTION STATUS →", status);
 
-      /* ======================================================
-            STRICT RULE
-            Active / Trial  → /home
-            Everything else → /auth/subscription
-      ====================================================== */
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
       }
 
       router.replace("/auth/subscription");
-      return;
-
     } catch (err) {
       console.error("LOGIN ERROR:", err);
       setError("Unable to connect to server. Please try again.");
@@ -93,16 +85,16 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
+      {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.brandSection}>
-          <div className={styles.logoText}>
+          <div className={styles.tagline}>
             VISITOR MANAGEMENT PLATFORM
           </div>
 
           <Image
             src="/Brand Logo.png"
-            alt="promeet"
+            alt="Promeet Logo"
             width={420}
             height={140}
             priority
@@ -110,109 +102,102 @@ export default function LoginPage() {
           />
         </div>
 
-        {/* NAV BUTTONS */}
-        <div className={styles.nav}>
+        {/* NAV */}
+        <nav className={styles.nav}>
           <button onClick={() => setActiveTab("about")}>ABOUT</button>
           <button onClick={() => setActiveTab("plans")}>PLANS</button>
           <button onClick={() => setActiveTab("contact")}>CONTACT</button>
-        </div>
+        </nav>
       </header>
 
-      {/* ABOUT SECTION */}
-      {activeTab === "about" && (
+      {/* ================= DROPDOWN CONTENT ================= */}
+      {activeTab && (
         <div className={styles.dropdownBox}>
-          <h2>About Our Platform</h2>
-          <p>
-            Promeet is a secure Visitor & Conference Management Platform
-            designed to digitalize visitor flow, improve security, and enhance
-            organizational efficiency.
-          </p>
-          <p>
-            Manage visitors, schedule meetings, track conference rooms, and
-            maintain complete control — all in one place.
-          </p>
+          {activeTab === "about" && (
+            <>
+              <h2>About Our Platform</h2>
+              <p>
+                Promeet is a secure Visitor & Conference Management Platform
+                designed to digitalize visitor flow, improve security, and
+                enhance organizational efficiency.
+              </p>
+              <p>
+                Manage visitors, schedule meetings, track conference rooms, and
+                maintain complete control — all in one place.
+              </p>
+            </>
+          )}
 
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
+          {activeTab === "plans" && (
+            <>
+              <h2>Subscription Plans</h2>
+
+              <div className={styles.planContainer}>
+                <div className={styles.planCard}>
+                  <h3>TRIAL</h3>
+                  <h2>₹49 / 15 DAYS</h2>
+                  <ul>
+                    <li>✔ Valid 15 Days</li>
+                    <li>✔ 100 Visitor Bookings</li>
+                    <li>✔ 2 Conference Rooms</li>
+                    <li>✔ 100 Conference Bookings</li>
+                  </ul>
+                  <Link href="/auth/register">
+                    <button className={styles.planBtn}>Enroll Now</button>
+                  </Link>
+                </div>
+
+                <div className={styles.planCard}>
+                  <h3>BUSINESS</h3>
+                  <h2>₹500 / Month</h2>
+                  <ul>
+                    <li>✔ Unlimited Visitors</li>
+                    <li>✔ 6 Conference Rooms</li>
+                    <li>✔ Priority Support</li>
+                  </ul>
+                  <Link href="/auth/register">
+                    <button className={styles.planBtn}>Enroll Now</button>
+                  </Link>
+                </div>
+
+                <div className={styles.planCard}>
+                  <h3>ENTERPRISE</h3>
+                  <h2>Custom Pricing</h2>
+                  <ul>
+                    <li>✔ Tailored Solutions</li>
+                    <li>✔ Advanced Security</li>
+                    <li>✔ Premium Support</li>
+                  </ul>
+                  <Link href="/auth/contact-us">
+                    <button className={styles.planBtn}>Contact Us</button>
+                  </Link>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === "contact" && (
+            <>
+              <h2>Contact Us</h2>
+              <p>Email: admin@wheelbrand.in</p>
+              <p>Phone: 8647878785</p>
+              <p>We are happy to support you.</p>
+            </>
+          )}
+
+          <button
+            className={styles.closeBtn}
+            onClick={() => setActiveTab(null)}
+          >
             Close
           </button>
         </div>
       )}
 
-      {/* PLANS SECTION */}
-      {activeTab === "plans" && (
-        <div className={styles.dropdownBox}>
-          <h2>Subscription Plans</h2>
-
-          <div className={styles.planContainer}>
-            {/* FREE PLAN */}
-            <div className={styles.planCard}>
-              <h3>TRAIL</h3>
-              <h2>₹49 / 15 DAYS</h2>
-              <ul>
-                <li>✔ Valid 15 Days</li>
-                <li>✔ 100 Visitor Bookings</li>
-                <li>✔ 2 Conference Rooms</li>
-                <li>✔ 100 Conference Bookings</li>
-              </ul>
-              <Link href="/auth/register">
-                <button className={styles.planBtn}>Enroll Now</button>
-              </Link>
-            </div>
-
-            {/* BUSINESS PLAN */}
-            <div className={styles.planCard}>
-              <h3>BUSINESS</h3>
-              <h2>₹500 / Month</h2>
-              <ul>
-                <li>✔ Unlimited Visitors</li>
-                <li>✔ 1000 Conference Rooms</li>
-                <li>✔ 6 Conference Rooms</li>
-                <li>✔ Dedicated Support</li>
-              </ul>
-              <Link href="/auth/register">
-                <button className={styles.planBtn}>Enroll Now</button>
-              </Link>
-            </div>
-
-            {/* ENTERPRISE */}
-            <div className={styles.planCard}>
-              <h3>ENTERPRISE</h3>
-              <h2>Custom Pricing</h2>
-              <ul>
-                <li>✔ Tailored Solutions</li>
-                <li>✔ Advanced Security</li>
-                <li>✔ Premium Support</li>
-              </ul>
-              <Link href="/auth/contact-us">
-                <button className={styles.planBtn}>Contact Us</button>
-              </Link>
-            </div>
-          </div>
-
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
-            Close
-          </button>
-        </div>
-      )}
-
-      {/* CONTACT SECTION */}
-      {activeTab === "contact" && (
-        <div className={styles.dropdownBox}>
-          <h2>Contact Us</h2>
-          <p>Email: admin@wheelbrand.in</p>
-          <p>Phone: 8647878785</p>
-          <p>We are happy to support you.</p>
-
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
-            Close
-          </button>
-        </div>
-      )}
-
-      {/* LOGIN CARD */}
+      {/* ================= LOGIN CARD ================= */}
       <main className={styles.loginWrapper}>
         <div className={styles.loginCard}>
-          <h4>LOGIN TO YOUR ACCOUNT</h4>
+          <h4>LOGIN INTO YOUR ACCOUNT</h4>
 
           <div className={styles.inputGroup}>
             <label>Email</label>
@@ -235,19 +220,7 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p
-              style={{
-                color: "#ff3333",
-                background: "rgba(255,0,0,.15)",
-                padding: "8px",
-                borderRadius: "6px",
-                textAlign: "center",
-                marginTop: "6px",
-                fontSize: "13px",
-              }}
-            >
-              {error}
-            </p>
+            <div className={styles.errorBox}>{error}</div>
           )}
 
           <button
@@ -260,7 +233,7 @@ export default function LoginPage() {
 
           <div className={styles.extraLinks}>
             <Link href="/auth/forgot-password">Forgot Password?</Link>
-            <span> | </span>
+            <span>|</span>
             <Link href="/auth/register">New Registration</Link>
           </div>
         </div>
