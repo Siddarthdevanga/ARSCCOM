@@ -135,37 +135,80 @@ export default function Home() {
 
       </div>
 
-      {/* ================= SUBSCRIPTION SLIDE ================= */}
-      {showSub && (
-        <>
-          <div className={styles.overlay} onClick={() => setShowSub(false)} />
+      {/* ================= LEFT SLIDE SUBSCRIPTION PANEL ================= */}
+{showSub && (
+  <>
+    <div
+      className={styles.overlay}
+      onClick={() => setShowSub(false)}
+    />
 
-          <div className={styles.subSlide}>
-            <div className={styles.subHeader}>
-              <h3>Subscription Details</h3>
-              <button onClick={() => setShowSub(false)}>✖</button>
-            </div>
+    <div className={styles.subSlide}>
+      {/* HEADER */}
+      <div className={styles.subHeader}>
+        <h3>Subscription Details</h3>
+        <button onClick={() => setShowSub(false)}>✖</button>
+      </div>
 
-            {loadingSub && <p>Loading subscription...</p>}
-            {subError && <p className={styles.error}>{subError}</p>}
+      {/* LOADING */}
+      {loadingSub && (
+        <p className={styles.subLoading}>Loading subscription...</p>
+      )}
 
-            {subData && (
-              <div className={styles.subContent}>
-                <p><b>PLAN:</b> {subData.PLAN || "—"}</p>
-                <p><b>STATUS:</b> {subData.STATUS || "—"}</p>
+      {/* ERROR */}
+      {subError && (
+        <p className={styles.subError}>{subError}</p>
+      )}
 
-                {subData.ZOHO_CUSTOMER_ID && (
-                  <p><b>CUSTOMER NO:</b> {subData.ZOHO_CUSTOMER_ID}</p>
-                )}
+      {/* CONTENT */}
+      {subData && (
+        <div className={styles.subContent}>
 
-                {subData.EXPIRES_ON && (
-                  <p><b>EXPIRES:</b> {new Date(subData.EXPIRES_ON).toLocaleDateString()}</p>
-                )}
-              </div>
-            )}
+          <div className={styles.subRow}>
+            <span>Plan</span>
+            <strong>{subData.PLAN || "—"}</strong>
           </div>
-        </>
+
+          <div className={styles.subRow}>
+            <span>Status</span>
+            <strong>{subData.STATUS || "—"}</strong>
+          </div>
+
+          {subData.ZOHO_CUSTOMER_ID && (
+            <div className={styles.subRow}>
+              <span>Customer No</span>
+              <strong>{subData.ZOHO_CUSTOMER_ID}</strong>
+            </div>
+          )}
+
+          {subData.TRIAL_ENDS_ON && (
+            <div className={styles.subRow}>
+              <span>Trial Ends</span>
+              <strong>
+                {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString()}
+              </strong>
+            </div>
+          )}
+
+          {subData.EXPIRES_ON && (
+            <div className={styles.subRow}>
+              <span>Subscription Expires</span>
+              <strong>
+                {new Date(subData.EXPIRES_ON).toLocaleDateString()}
+              </strong>
+            </div>
+          )}
+
+          {subData.LAST_PAID_ON && (
+            <div className={styles.subRow}>
+              <span>Last Paid</span>
+              <strong>
+                {new Date(subData.LAST_PAID_ON).toLocaleString()}
+              </strong>
+            </div>
+          )}
+        </div>
       )}
     </div>
-  );
-}
+  </>
+)}
