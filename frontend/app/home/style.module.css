@@ -108,7 +108,6 @@ body {
   transition: transform 0.28s ease, box-shadow 0.28s ease;
 }
 
-/* Soft gradient highlight */
 .card::after {
   content: "";
   position: absolute;
@@ -224,8 +223,36 @@ body {
 /* ================= SUB CONTENT ================= */
 .subContent {
   margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
   font-size: 15px;
-  line-height: 1.7;
+  line-height: 1.6;
+}
+
+/* ================= SUB ROWS (FIXED FORMAT) ================= */
+.subRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  padding: 12px 14px;
+  background: #f7f4ff;
+  border-radius: 12px;
+}
+
+.subRow span {
+  color: #555;
+}
+
+.subRow span::after {
+  content: " :";
+  margin-left: 4px;
+}
+
+.subRow strong {
+  color: #5d00c7;
+  font-weight: 700;
+  text-align: right;
 }
 
 /* ================= RESPONSIVE ================= */
