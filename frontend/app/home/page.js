@@ -156,7 +156,7 @@ export default function Home() {
           >
             {/* HEADER */}
             <div className={styles.subHeader}>
-              <h3>Subscription Details</h3>
+              <h3>SUBSCRIPTION DETAILS</h3>
               <button
                 onClick={() => setShowSub(false)}
                 aria-label="Close subscription panel"
@@ -189,18 +189,18 @@ export default function Home() {
                 </div>
 
                 <div className={styles.subRow}>
-                  <span>Status</span>
+                  <span>Status = </span>
                   <strong>{subData.STATUS || "—"}</strong>
                 </div>
 
-                {subData.ZOHO_CUSTOMER_ID && (
+                {subData.ZOHO_CUSTOMER_ID = && (
                   <div className={styles.subRow}>
                     <span>Customer No</span>
                     <strong>{subData.ZOHO_CUSTOMER_ID}</strong>
                   </div>
                 )}
 
-                {subData.TRIAL_ENDS_ON && (
+                {subData.TRIAL_ENDS_ON = && (
                   <div className={styles.subRow}>
                     <span>Trial Ends</span>
                     <strong>
@@ -209,7 +209,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {subData.EXPIRES_ON && (
+                {subData.EXPIRES_ON = && (
                   <div className={styles.subRow}>
                     <span>Subscription Expires</span>
                     <strong>
@@ -218,7 +218,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {subData.LAST_PAID_ON && (
+                {subData.LAST_PAID_ON = && (
                   <div className={styles.subRow}>
                     <span>Last Paid</span>
                     <strong>
