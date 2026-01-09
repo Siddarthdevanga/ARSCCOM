@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -9,29 +9,21 @@ import styles from "./style.module.css";
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
-
   try {
     const str = String(value).trim();
-    let hours = null;
-    let minutes = null;
+    let h, m;
 
-    if (str.includes(" ")) {
-      const t = str.split(" ")[1];
-      [hours, minutes] = t.split(":");
-    } else if (str.includes("T")) {
-      const t = str.split("T")[1];
-      [hours, minutes] = t.split(":");
-    }
+    if (str.includes(" ")) [, h] = str.split(" ");
+    if (str.includes("T")) [, h] = str.split("T");
 
-    if (!hours || !minutes) return "-";
+    [h, m] = h.split(":");
+    h = parseInt(h, 10);
+    if (isNaN(h)) return "-";
 
-    hours = parseInt(hours, 10);
-    if (isNaN(hours)) return "-";
+    const suffix = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
 
-    const suffix = hours >= 12 ? "PM" : "AM";
-    hours = hours % 12 || 12;
-
-    return `${hours}:${minutes} ${suffix}`;
+    return `${h}:${m} ${suffix}`;
   } catch {
     return "-";
   }
@@ -53,9 +45,7 @@ export default function VisitorDashboard() {
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       if (!res.ok) return;
@@ -73,7 +63,7 @@ export default function VisitorDashboard() {
     }
   }, []);
 
-  /* ================= AUTH + LOAD ================= */
+  /* ================= AUTH ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -83,13 +73,8 @@ export default function VisitorDashboard() {
       return;
     }
 
-    try {
-      setCompany(JSON.parse(storedCompany));
-      loadDashboard(token);
-    } catch {
-      localStorage.clear();
-      router.replace("/auth/login");
-    }
+    setCompany(JSON.parse(storedCompany));
+    loadDashboard(token);
   }, [router, loadDashboard]);
 
   /* ================= CHECKOUT ================= */
@@ -108,20 +93,25 @@ export default function VisitorDashboard() {
         }
       );
 
-      if (!res.ok) return;
-
-      await loadDashboard(token);
-    } catch (err) {
-      console.error("Checkout error:", err);
+      if (res.ok) await loadDashboard(token);
     } finally {
       setCheckingOut(null);
     }
   };
 
-  /* ================= BACK ================= */
-  const handleBack = () => {
-    router.push("/home");
-  };
+  /* ================= PLAN HELPERS ================= */
+  const isTrial = plan?.plan === "TRIAL";
+  const limitReached = isTrial && plan?.remaining === 0;
+
+  const planPercentage = useMemo(() => {
+    if (!plan?.limit || plan.limit === 0) return 0;
+    return Math.min(100, Math.round((plan.used / plan.limit) * 100));
+  }, [plan]);
+
+  const planBarColor =
+    planPercentage >= 90 ? "#ff1744" :
+    planPercentage >= 70 ? "#ff9800" :
+    "#00c853";
 
   if (loading || !company) {
     return (
@@ -133,21 +123,10 @@ export default function VisitorDashboard() {
 
   return (
     <div className={styles.container}>
+
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div className={styles.logoText}>{company?.name}</div>
-
-        <div className={styles.rightHeader}>
-          <img
-            src={company?.logo_url || "/logo.png"}
-            alt="Company Logo"
-            className={styles.companyLogo}
-          />
-
-          <button className={styles.backBtn} onClick={handleBack}>
-            ← Back
-          </button>
-        </div>
+        <div className={styles.logoText}>{company.name}</div>
       </header>
 
       {/* ================= TITLE ================= */}
@@ -156,14 +135,26 @@ export default function VisitorDashboard() {
 
         <button
           className={styles.newBtn}
+          disabled={limitReached}
+          style={{
+            opacity: limitReached ? 0.5 : 1,
+            cursor: limitReached ? "not-allowed" : "pointer"
+          }}
           onClick={() => router.push("/visitor/primary_details")}
         >
           + New Visitor
         </button>
       </div>
 
+      {/* ================= UPGRADE MESSAGE ================= */}
+      {limitReached && (
+        <div className={styles.upgradeMsg}>
+          Trial limit reached. Please upgrade your plan to register more visitors.
+        </div>
+      )}
+
       {/* ================= PLAN BAR ================= */}
-      {plan?.plan === "TRIAL" && (
+      {isTrial && (
         <section className={styles.planBarWrapper}>
           <div className={styles.planHeader}>
             <span className={styles.planName}>Trial Plan</span>
@@ -175,7 +166,10 @@ export default function VisitorDashboard() {
           <div className={styles.planBarBg}>
             <div
               className={styles.planBarFill}
-              style={{ width: `${(plan.used / plan.limit) * 100}%` }}
+              style={{
+                width: `${planPercentage}%`,
+                background: planBarColor
+              }}
             />
           </div>
 
@@ -210,39 +204,26 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
-        {/* ACTIVE */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
-
           {activeVisitors.length === 0 ? (
             <p>No active visitors</p>
           ) : (
             <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Check-in</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
               <tbody>
                 {activeVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_in || v.checkIn)}</td>
+                    <td>{formatISTTime(v.check_in)}</td>
                     <td>
                       <button
                         className={styles.checkoutBtn}
                         disabled={checkingOut === v.visitor_code}
                         onClick={() => handleCheckout(v.visitor_code)}
                       >
-                        {checkingOut === v.visitor_code
-                          ? "Checking out..."
-                          : "Checkout"}
+                        Checkout
                       </button>
                     </td>
                   </tr>
@@ -252,29 +233,19 @@ export default function VisitorDashboard() {
           )}
         </div>
 
-        {/* CHECKED OUT */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
-
           {checkedOutVisitors.length === 0 ? (
             <p>No visitors checked out today</p>
           ) : (
             <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Check-out</th>
-                </tr>
-              </thead>
               <tbody>
                 {checkedOutVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_out || v.checkOut)}</td>
+                    <td>{formatISTTime(v.check_out)}</td>
                   </tr>
                 ))}
               </tbody>
