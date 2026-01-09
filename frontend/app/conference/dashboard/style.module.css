@@ -345,3 +345,87 @@ body {
     width: 88%;
   }
 }
+/* ================= LOCKED ROOM (PLAN CONTROLLED) ================= */
+.roomLocked {
+  opacity: 0.55;
+  position: relative;
+}
+
+.roomLocked::after {
+  content: "🔒 Locked";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffcccb;
+  background: rgba(255, 0, 0, 0.15);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 100, 100, 0.45);
+}
+
+/* ================= RENAME BUTTON ================= */
+.roomList button {
+  margin-left: 10px;
+  background: linear-gradient(135deg, #00ffcc, #00c3ff);
+  border: none;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: 0.25s ease;
+}
+
+.roomList button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 18px rgba(0, 195, 255, 0.35);
+}
+
+/* ================= DISABLED RENAME ================= */
+.roomList button:disabled {
+  background: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.6);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* ================= RENAME INPUT ================= */
+.roomList input {
+  margin-left: 10px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: none;
+  outline: none;
+  font-size: 13px;
+  font-weight: 700;
+  width: 160px;
+}
+
+/* ================= SAVE / CANCEL ================= */
+.roomList button + button {
+  background: linear-gradient(135deg, #ff4d4d, #ff0000);
+  margin-left: 6px;
+}
+
+.roomList button + button:hover {
+  box-shadow: 0 6px 18px rgba(255, 0, 0, 0.4);
+}
+
+/* ================= TOOLTIP (LOCKED HOVER) ================= */
+.roomLocked:hover::before {
+  content: "Upgrade your plan to unlock this room";
+  position: absolute;
+  bottom: 110%;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.85);
+  color: #fff;
+  font-size: 11px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
