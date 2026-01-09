@@ -5,6 +5,17 @@ import { authMiddleware } from "../middleware/auth.js";
 const router = express.Router();
 
 /* ======================================================
+   CONSTANTS
+====================================================== */
+const PLANS = {
+  TRIAL: { limit: 2 },
+  BUSINESS: { limit: 6 },
+  ENTERPRISE: { limit: Infinity }
+};
+
+const ACTIVE_STATUSES = ["ACTIVE", "TRIAL"];
+
+/* ======================================================
    MIDDLEWARE
 ====================================================== */
 router.use(express.json());
@@ -12,16 +23,17 @@ router.use(express.urlencoded({ extended: true }));
 router.use(authMiddleware);
 
 /* ======================================================
+   HELPERS
+====================================================== */
+const isExpired = (date) => !date || new Date(date) < new Date();
+
+/* ======================================================
    PLAN CHECKER
 ====================================================== */
 const checkConferencePlan = async (companyId) => {
   const [[company]] = await db.query(
     `
-    SELECT 
-      plan,
-      subscription_status,
-      trial_ends_at,
-      subscription_ends_at
+    SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
     FROM companies
     WHERE id = ?
     LIMIT 1
@@ -33,26 +45,17 @@ const checkConferencePlan = async (companyId) => {
 
   const PLAN = (company.plan || "TRIAL").toUpperCase();
   const STATUS = (company.subscription_status || "PENDING").toUpperCase();
-  const now = new Date();
 
-  if (!["ACTIVE", "TRIAL"].includes(STATUS))
+  if (!ACTIVE_STATUSES.includes(STATUS))
     throw new Error("Subscription inactive. Please upgrade");
 
-  let limit = 2;
+  if (PLAN === "TRIAL" && isExpired(company.trial_ends_at))
+    throw new Error("Trial expired. Please upgrade");
 
-  if (PLAN === "TRIAL") {
-    if (!company.trial_ends_at || new Date(company.trial_ends_at) < now)
-      throw new Error("Trial expired. Please upgrade");
-    limit = 2;
-  } 
-  else if (PLAN === "BUSINESS") {
-    if (!company.subscription_ends_at || new Date(company.subscription_ends_at) < now)
-      throw new Error("Business plan expired. Please renew");
-    limit = 6;
-  } 
-  else {
-    limit = Infinity;
-  }
+  if (PLAN === "BUSINESS" && isExpired(company.subscription_ends_at))
+    throw new Error("Business plan expired. Please renew");
+
+  const limit = PLANS[PLAN]?.limit ?? Infinity;
 
   return { plan: PLAN, limit };
 };
@@ -63,21 +66,18 @@ const checkConferencePlan = async (companyId) => {
 router.get("/plan-usage", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-
     const { plan, limit } = await checkConferencePlan(companyId);
 
-    const [[row]] = await db.query(
+    const [[{ total }]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
-    const used = row.total;
-
     res.json({
       plan,
       plan_limit: limit === Infinity ? "UNLIMITED" : limit,
-      used,
-      remaining: limit === Infinity ? null : Math.max(limit - used, 0)
+      used: total,
+      remaining: limit === Infinity ? null : Math.max(limit - total, 0)
     });
 
   } catch (err) {
@@ -96,15 +96,19 @@ router.get("/dashboard", async (req, res) => {
     const [[stats]] = await db.query(
       `
       SELECT
-        (SELECT COUNT(*) FROM conference_rooms WHERE company_id = ?) AS rooms,
-        (SELECT COUNT(*) FROM conference_bookings WHERE company_id = ?) AS totalBookings,
-        (SELECT COUNT(*) FROM conference_bookings 
-          WHERE company_id = ? AND booking_date = CURDATE()) AS todayBookings
+        COUNT(DISTINCT cr.id) AS rooms,
+        COUNT(cb.id) AS totalBookings,
+        SUM(cb.booking_date = CURDATE()) AS todayBookings
+      FROM conference_rooms cr
+      LEFT JOIN conference_bookings cb
+        ON cb.company_id = cr.company_id
+      WHERE cr.company_id = ?
       `,
-      [companyId, companyId, companyId]
+      [companyId]
     );
 
     res.json(stats);
+
   } catch (err) {
     console.error("[CONF DASHBOARD]", err);
     res.status(500).json({ message: "Failed to load dashboard" });
@@ -128,7 +132,8 @@ router.get("/rooms", async (req, res) => {
       [companyId]
     );
 
-    res.json(Array.isArray(rooms) ? rooms : []);
+    res.json(rooms || []);
+
   } catch (err) {
     console.error("[CONF GET ROOMS]", err);
     res.status(500).json({ message: "Unable to load rooms" });
@@ -143,25 +148,24 @@ router.post("/rooms", async (req, res) => {
     const companyId = req.user.company_id;
     const { room_name, room_number } = req.body;
 
-    if (!room_name || !room_number)
+    if (!room_name?.trim() || !room_number)
       return res.status(400).json({ message: "Room name & number required" });
 
     const { limit } = await checkConferencePlan(companyId);
 
-    const [[row]] = await db.query(
+    const [[{ total }]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
-    if (limit !== Infinity && row.total >= limit)
+    if (limit !== Infinity && total >= limit)
       return res.status(403).json({
         message: `Your plan allows only ${limit} rooms. Upgrade to add more.`
       });
 
     await db.query(
       `
-      INSERT INTO conference_rooms
-      (company_id, room_number, room_name)
+      INSERT INTO conference_rooms (company_id, room_number, room_name)
       VALUES (?, ?, ?)
       `,
       [companyId, room_number, room_name.trim()]
@@ -184,15 +188,14 @@ router.post("/rooms/rename", async (req, res) => {
     const roomId = Number(req.body.id);
     const { room_name } = req.body;
 
-    if (!roomId || isNaN(roomId))
+    if (!roomId)
       return res.status(400).json({ message: "Invalid room id" });
 
-    if (!room_name || !room_name.trim())
+    if (!room_name?.trim())
       return res.status(400).json({ message: "Room name required" });
 
     const { plan, limit } = await checkConferencePlan(companyId);
 
-    // Get rooms in deterministic order
     const [rooms] = await db.query(
       `
       SELECT id
@@ -203,12 +206,12 @@ router.post("/rooms/rename", async (req, res) => {
       [companyId]
     );
 
-    const allowedIds =
+    const allowedRoomIds =
       limit === Infinity
         ? rooms.map(r => r.id)
         : rooms.slice(0, limit).map(r => r.id);
 
-    if (!allowedIds.includes(roomId)) {
+    if (!allowedRoomIds.includes(roomId)) {
       return res.status(403).json({
         message:
           plan === "TRIAL"
@@ -219,10 +222,9 @@ router.post("/rooms/rename", async (req, res) => {
 
     const [[room]] = await db.query(
       `
-      SELECT id, room_name
+      SELECT room_name
       FROM conference_rooms
       WHERE id = ? AND company_id = ?
-      LIMIT 1
       `,
       [roomId, companyId]
     );
