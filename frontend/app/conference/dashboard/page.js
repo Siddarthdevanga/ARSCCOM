@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= DATE ================= */
+/* ================= DATE FORMATTER ================= */
 const formatNiceDate = (value) => {
   if (!value) return "-";
   try {
@@ -21,7 +21,7 @@ const formatNiceDate = (value) => {
   }
 };
 
-/* ================= TIME ================= */
+/* ================= TIME FORMATTER ================= */
 const formatNiceTime = (value) => {
   if (!value) return "-";
   try {
@@ -44,6 +44,7 @@ const formatNiceTime = (value) => {
 export default function ConferenceDashboard() {
   const router = useRouter();
 
+  /* ================= STATE ================= */
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -59,7 +60,7 @@ export default function ConferenceDashboard() {
 
   const [filterDay, setFilterDay] = useState("today");
 
-  /* ================= DATE HELPERS ================= */
+  /* ================= HELPERS ================= */
   const getDate = useCallback((offset) => {
     const d = new Date();
     d.setDate(d.getDate() + offset);
@@ -69,12 +70,12 @@ export default function ConferenceDashboard() {
   const dates = useMemo(() => ({
     today: getDate(0),
     yesterday: getDate(-1),
-    tomorrow: getDate(1),
+    tomorrow: getDate(1)
   }), [getDate]);
 
   const selectedDate = dates[filterDay];
 
-  /* ================= LOAD DASHBOARD ================= */
+  /* ================= API CALLS ================= */
   const loadDashboard = async () => {
     try {
       const [statsRes, roomsRes, bookingsRes, planRes] = await Promise.all([
@@ -84,8 +85,7 @@ export default function ConferenceDashboard() {
         apiFetch("/api/conference/plan-usage"),
       ]);
 
-      // ✅ Backward + forward compatible
-      setStats(statsRes?.summary || statsRes);
+      setStats(statsRes);
       setRooms(roomsRes || []);
       setBookings(bookingsRes || []);
       setPlan(planRes);
@@ -97,18 +97,13 @@ export default function ConferenceDashboard() {
 
       setBookingPlan({
         limit: bookingLimit,
-        used: statsRes?.summary?.totalBookings || statsRes?.totalBookings || 0,
+        used: statsRes.totalBookings || 0,
         remaining:
           bookingLimit === Infinity
             ? null
-            : Math.max(
-                bookingLimit -
-                  (statsRes?.summary?.totalBookings ||
-                    statsRes?.totalBookings ||
-                    0),
-                0
-              ),
+            : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
       });
+
     } catch (err) {
       console.error(err);
       router.replace("/auth/login");
@@ -117,7 +112,7 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= INIT ================= */
+  /* ================= LIFECYCLE ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -131,7 +126,7 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= SAVE ROOM ================= */
+  /* ================= ACTIONS ================= */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
     const original = rooms.find((r) => r.id === roomId)?.room_name;
@@ -157,7 +152,7 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= FILTER BOOKINGS ================= */
+  /* ================= COMPUTED DATA ================= */
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
       const date = b.booking_date?.includes("T")
@@ -167,7 +162,6 @@ export default function ConferenceDashboard() {
     });
   }, [bookings, selectedDate]);
 
-  /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
     filteredBookings.forEach((b) => {
@@ -177,38 +171,27 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
-  /* ================= LOADING ================= */
-  if (loading) {
-    return <div className={styles.container}>Loading dashboard…</div>;
-  }
+  if (loading) return <div className={styles.container}>Loading dashboard…</div>;
+  if (!company || !stats) return <div className={styles.container}>Unable to load dashboard</div>;
 
-  if (!company || !stats) {
-    return <div className={styles.container}>Unable to load dashboard</div>;
-  }
-
-  /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
   const roomPercentage =
-    plan?.plan_limit === "UNLIMITED"
+    plan?.limit === "UNLIMITED"
       ? 100
-      : Math.min(100, Math.round((plan?.used / plan?.plan_limit) * 100));
+      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
 
   const bookingPercentage =
     bookingPlan?.limit === Infinity
       ? 100
       : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
 
-  /* ================= UI ================= */
   return (
     <div className={styles.container}>
-      {/* HEADER */}
+      {/* HEADER SECTION */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div
-            className={styles.leftMenuTrigger}
-            onClick={() => setSidePanelOpen(true)}
-          >
+          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
             <span></span><span></span><span></span>
           </div>
 
@@ -219,25 +202,20 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
-          <img
-            src={company.logo_url || "/logo.png"}
-            className={styles.logo}
-            alt="Logo"
-          />
+          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Company Logo" />
+          
+          {/* BACK BUTTON REPLACING LOGOUT */}
           <button
             className={styles.logoBtn}
-            title="Logout"
-            onClick={() => {
-              localStorage.clear();
-              router.replace("/auth/login");
-            }}
+            title="Back to Home"
+            onClick={() => router.push("/")}
           >
-            ⏻
+            ↩
           </button>
         </div>
       </header>
 
-      {/* PUBLIC LINK */}
+      {/* PUBLIC URL SECTION */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
           <div>
@@ -247,20 +225,43 @@ export default function ConferenceDashboard() {
             </a>
           </div>
 
-          <button
-            className={styles.bookBtn}
-            onClick={() => router.push("/conference/bookings")}
-          >
+          <button className={styles.bookBtn} onClick={() => router.push("/conference/bookings")}>
             Book
           </button>
         </div>
       </div>
 
-      {/* ================= LEFT PANEL ================= */}
+      {/* BOOKING LIMITS / PROGRESS */}
+      {bookingPlan && (
+        <div className={styles.section}>
+          <h3>Conference Booking Usage</h3>
+          {bookingPlan.limit === Infinity ? (
+            <p>Unlimited Bookings Available 🎉</p>
+          ) : (
+            <p>
+              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
+              Remaining: <b>{bookingPlan.remaining}</b>
+            </p>
+          )}
+          <div className={styles.barOuter}>
+            <div
+              className={styles.barInner}
+              style={{
+                width: bookingPercentage + "%",
+                background:
+                  bookingPercentage >= 90 ? "#ff1744" : 
+                  bookingPercentage >= 70 ? "#ff9800" : "#00c853",
+              }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+      {/* SLIDE-OUT PANEL: ROOM MANAGEMENT */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
-            <h3>Conference Plan + Room Rename</h3>
+            <h3>Plan & Room Settings</h3>
             <button
               className={styles.leftCloseBtn}
               onClick={() => {
@@ -273,44 +274,49 @@ export default function ConferenceDashboard() {
             </button>
           </div>
 
-          {/* ROOM RENAME LIST */}
+          {plan && (
+            <div style={{ padding: "0 20px", marginBottom: 20 }}>
+              <p>Plan: <b>{plan.plan}</b></p>
+              {plan.limit === "UNLIMITED" ? (
+                <p>Unlimited Rooms 🎉</p>
+              ) : (
+                <p>Rooms: <b>{plan.used}</b> / {plan.limit}</p>
+              )}
+              <div className={styles.barOuter}>
+                <div
+                  className={styles.barInner}
+                  style={{
+                    width: roomPercentage + "%",
+                    background: roomPercentage >= 90 ? "#ff1744" : "#00c853",
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
+
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
               {rooms.map((r) => (
                 <li key={r.id}>
                   <b>{r.room_name}</b> (#{r.room_number})
-
                   {editingRoomId === r.id ? (
-                    <>
+                    <div style={{ marginTop: 5 }}>
                       <input
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         autoFocus
                       />
                       <button onClick={() => saveRoomName(r.id)}>Save</button>
-                      <button
-                        onClick={() => {
-                          setEditingRoomId(null);
-                          setEditName("");
-                        }}
-                      >
-                        Cancel
-                      </button>
-                    </>
+                      <button onClick={() => setEditingRoomId(null)}>Cancel</button>
+                    </div>
                   ) : (
                     <button
-                      disabled={!r.is_active}
-                      title={
-                        r.is_active
-                          ? "Rename room"
-                          : "Room locked. Upgrade plan to rename."
-                      }
+                      disabled={plan?.remaining === 0 && !r.is_active}
                       style={{
-                        opacity: r.is_active ? 1 : 0.4,
-                        cursor: r.is_active ? "pointer" : "not-allowed",
+                        opacity: !r.is_active && plan?.remaining === 0 ? 0.5 : 1,
+                        cursor: !r.is_active && plan?.remaining === 0 ? "not-allowed" : "pointer",
                       }}
                       onClick={() => {
-                        if (!r.is_active) return;
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
                       }}
@@ -325,22 +331,80 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* ================= KPIs ================= */}
+      {/* BOOKING FILTERS */}
+      <div className={styles.section}>
+        <h3>Bookings View</h3>
+        <div style={{ display: "flex", gap: 10 }}>
+          {["yesterday", "today", "tomorrow"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setFilterDay(d)}
+              style={{
+                background: filterDay === d ? "#7a00ff" : "#f0f0f0",
+                color: filterDay === d ? "#fff" : "#333",
+                padding: "8px 18px",
+                borderRadius: 30,
+                border: "none",
+                fontWeight: 600,
+                cursor: "pointer"
+              }}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* DASHBOARD KPIs */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <span>Conference Rooms</span>
-          <b>{stats.activeRooms ?? stats.rooms}</b>
+          <span>Active Rooms</span>
+          <b>{stats.rooms}</b>
         </div>
 
         <div className={styles.statCard}>
-          <span>Bookings ({filterDay.toUpperCase()})</span>
+          <span>{filterDay.toUpperCase()} Bookings</span>
           <b>{filteredBookings.length}</b>
         </div>
 
         <div className={styles.statCard}>
-          <span>Departments Using Rooms</span>
+          <span>Active Departments</span>
           <b>{departmentStats.length}</b>
         </div>
+      </div>
+
+      {/* ANALYTICS: DEPARTMENTS */}
+      <div className={styles.section}>
+        <h3>Department Usage</h3>
+        {departmentStats.length === 0 ? (
+          <p>No activity recorded for this period.</p>
+        ) : (
+          <ul className={styles.roomList}>
+            {departmentStats.map(([dep, count]) => (
+              <li key={dep}>
+                <b>{dep}</b> — {count} bookings
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {/* BOOKINGS LIST */}
+      <div className={styles.section}>
+        <h3>Daily Schedule</h3>
+        {filteredBookings.length === 0 && <p>No bookings scheduled.</p>}
+        {filteredBookings.slice(0, 10).map((b) => (
+          <div key={b.id} className={styles.bookingRow}>
+            <div>
+              <b>{b.room_name}</b> (#{b.room_number})
+              <p style={{ margin: 0, fontSize: 12, color: "#666" }}>{formatNiceDate(b.booking_date)}</p>
+            </div>
+            <div>
+              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
+            </div>
+            <div className={styles.status} style={{ fontWeight: 800, color: "#7a00ff" }}>{b.status}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
