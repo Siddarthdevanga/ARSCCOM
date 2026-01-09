@@ -6,18 +6,21 @@
   font-family: "Segoe UI", Arial, sans-serif;
   color: #ffffff;
 
-  /* SCROLL ENABLED */
+  /* ENABLE SCROLL */
   overflow-y: auto;
   overflow-x: hidden;
 
-  /* TOUCH SCROLL (iOS / Mobile) */
+  /* TOUCH / MOMENTUM SCROLL */
   -webkit-overflow-scrolling: touch;
 
-  /* HIDE SCROLLBAR (Firefox) */
+  /* FIREFOX: HIDE SCROLLBAR */
   scrollbar-width: none;
+
+  /* PREVENT SCROLL JUMP */
+  overscroll-behavior: contain;
 }
 
-/* HIDE SCROLLBAR (Chrome / Edge / Safari) */
+/* WEBKIT: HIDE SCROLLBAR */
 .container::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -52,11 +55,13 @@
   padding-left: 13px;
   cursor: pointer;
   backdrop-filter: blur(10px);
-  transition: transform .25s ease;
+
+  transition: transform .25s ease, box-shadow .25s ease;
 }
 
 .leftMenuTrigger:hover {
   transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,.25);
 }
 
 .leftMenuTrigger span {
@@ -100,11 +105,13 @@
   font-size: 20px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform .25s ease;
+
+  transition: transform .25s ease, box-shadow .25s ease;
 }
 
 .logoBtn:hover {
   transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0,0,0,.25);
 }
 
 /* ================= PUBLIC LINK ================= */
@@ -126,11 +133,11 @@
 
 .publicTitle {
   font-size: 13px;
-  opacity: .9;
+  opacity: 0.9;
 }
 
 .publicLink {
-  color: #fff;
+  color: #ffffff;
   font-weight: 700;
   text-decoration: underline;
   word-break: break-all;
@@ -145,11 +152,13 @@
   border-radius: 999px;
   font-weight: 900;
   cursor: pointer;
-  transition: transform .25s ease;
+
+  transition: transform .25s ease, box-shadow .25s ease;
 }
 
 .bookBtn:hover {
   transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
 }
 
 /* ================= STATS ================= */
@@ -161,7 +170,7 @@
 }
 
 .statCard {
-  background: #fff;
+  background: #ffffff;
   color: #333;
   border-radius: 20px;
   padding: 22px;
@@ -224,23 +233,30 @@
   color: white;
   padding: 22px;
 
+  /* SCROLL ENABLED */
   overflow-y: auto;
   overflow-x: hidden;
 
+  /* TOUCH SCROLL */
   -webkit-overflow-scrolling: touch;
+
+  /* HIDE SCROLLBAR */
   scrollbar-width: none;
+
+  overscroll-behavior: contain;
 
   animation: panelSlide .32s ease-in-out;
   z-index: 100;
 }
 
-/* HIDE SCROLLBAR FOR LEFT PANEL */
+/* WEBKIT SCROLLBAR HIDE */
 .leftPanel::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;
 }
 
+/* ================= PANEL ANIMATION ================= */
 @keyframes panelSlide {
   from { left: -55%; opacity: .3; }
   to   { left: 0; opacity: 1; }
