@@ -1,4 +1,10 @@
 /* ===== GLOBAL: Enable Scroll but Hide Scrollbars Everywhere ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
   height: 100%;
@@ -53,11 +59,13 @@ body {
   padding-left: 13px;
   cursor: pointer;
   backdrop-filter: blur(10px);
-  transition: .25s ease;
+  transition: transform .25s ease, box-shadow .25s ease;
+  user-select: none;
 }
 
 .leftMenuTrigger:hover {
   transform: scale(1.08);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
 }
 
 .leftMenuTrigger span {
@@ -100,11 +108,12 @@ body {
   font-size: 20px;
   font-weight: 800;
   cursor: pointer;
-  transition: .25s ease;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
 
 .logoBtn:hover {
   transform: scale(1.08);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
 }
 
 /* ================= PUBLIC LINK ================= */
@@ -150,11 +159,12 @@ body {
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
-  transition: .25s ease-in-out;
+  transition: transform .25s ease-in-out, box-shadow .25s ease;
 }
 
 .bookBtn:hover {
   transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,.25);
 }
 
 /* ================= STATS ================= */
@@ -214,6 +224,10 @@ body {
   border-radius: 12px;
   margin-bottom: 10px;
   border: 1px solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
 }
 
 /* ================= BOOKINGS ================= */
@@ -304,11 +318,12 @@ body {
   color: white;
   cursor: pointer;
   font-weight: 800;
-  transition: .2s;
+  transition: transform .2s ease, box-shadow .2s ease;
 }
 
 .leftCloseBtn:hover {
   transform: scale(1.05);
+  box-shadow: 0 6px 14px rgba(0,0,0,.25);
 }
 
 /* ================= PANEL BODY ================= */
@@ -321,6 +336,14 @@ body {
 
 .leftPanelContent::-webkit-scrollbar {
   display: none;
+}
+
+/* ================= ACCESSIBILITY ================= */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 3px;
 }
 
 /* ================= RESPONSIVE ================= */
