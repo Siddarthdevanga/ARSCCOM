@@ -54,7 +54,7 @@ export default function ConferenceDashboard() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [plan, setPlan] = useState(null);
+  const [plan, setPlan] = useState(null);              
   const [bookingPlan, setBookingPlan] = useState(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
@@ -62,6 +62,7 @@ export default function ConferenceDashboard() {
   const [editName, setEditName] = useState("");
 
   const [filterDay, setFilterDay] = useState("today");
+
 
   /* ================= DATE HELPERS ================= */
   const getDate = (offset) => {
@@ -79,6 +80,7 @@ export default function ConferenceDashboard() {
     filterDay === "tomorrow" ? tomorrow :
     today;
 
+
   /* ================= LOAD DASHBOARD ================= */
   const loadDashboard = async () => {
     try {
@@ -94,6 +96,7 @@ export default function ConferenceDashboard() {
       setBookings(bookingsRes || []);
       setPlan(planRes);
 
+      // Booking Plan Calculation
       let bookingLimit =
         planRes?.plan === "TRIAL" ? 100 :
         planRes?.plan === "BUSINESS" ? 1000 :
@@ -101,18 +104,20 @@ export default function ConferenceDashboard() {
 
       setBookingPlan({
         limit: bookingLimit,
-        used: statsRes?.totalBookings || 0,
+        used: statsRes.totalBookings || 0,
         remaining:
           bookingLimit === Infinity
             ? null
-            : Math.max(bookingLimit - (statsRes?.totalBookings || 0), 0),
+            : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
       });
+
     } catch {
       router.replace("/auth/login");
     } finally {
       setLoading(false);
     }
   };
+
 
   /* ================= INIT ================= */
   useEffect(() => {
@@ -128,17 +133,6 @@ export default function ConferenceDashboard() {
     loadDashboard();
   }, []);
 
-  /* ================= RENAME PERMISSION (ADDED) ================= */
-  const renameAllowedRoomIds = useMemo(() => {
-    if (!plan || !rooms.length) return [];
-
-    if (plan.limit === "UNLIMITED") {
-      return rooms.map(r => r.id);
-    }
-
-    // TRIAL / BUSINESS → first N rooms only
-    return rooms.slice(0, plan.limit).map(r => r.id);
-  }, [plan, rooms]);
 
   /* ================= SAVE ROOM ================= */
   const saveRoomName = async (roomId) => {
@@ -166,6 +160,7 @@ export default function ConferenceDashboard() {
     }
   };
 
+
   /* ================= FILTER BOOKINGS ================= */
   const filteredBookings = useMemo(() => {
     return bookings.filter((b) => {
@@ -177,6 +172,7 @@ export default function ConferenceDashboard() {
     });
   }, [bookings, selectedDate]);
 
+
   /* ================= DEPARTMENT STATS ================= */
   const departmentStats = useMemo(() => {
     const map = {};
@@ -187,8 +183,12 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
+
+  /* ================= LOADING ================= */
   if (loading || !company || !stats) return null;
 
+
+  /* ================= VALUES ================= */
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
   const roomPercentage =
@@ -200,6 +200,7 @@ export default function ConferenceDashboard() {
     bookingPlan?.limit === Infinity
       ? 100
       : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
+
 
   return (
     <div className={styles.container}>
@@ -240,6 +241,60 @@ export default function ConferenceDashboard() {
         </div>
       </header>
 
+
+      {/* ================= PUBLIC LINK ================= */}
+      <div className={styles.publicBox}>
+        <div className={styles.publicRow}>
+          <div>
+            <p className={styles.publicTitle}>Public Booking URL</p>
+
+            <a href={publicURL} target="_blank" className={styles.publicLink}>
+              {publicURL}
+            </a>
+          </div>
+
+          <button
+            className={styles.bookBtn}
+            onClick={() => router.push("/conference/bookings")}
+          >
+            Book
+          </button>
+        </div>
+      </div>
+
+
+      {/* ================= BOOKING USAGE ================= */}
+      {bookingPlan && (
+        <div className={styles.section}>
+          <h3>Conference Booking Usage</h3>
+
+          {bookingPlan.limit === Infinity ? (
+            <p>Unlimited Bookings Available 🎉</p>
+          ) : (
+            <p>
+              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
+              Remaining: <b>{bookingPlan.remaining}</b>
+            </p>
+          )}
+
+          <div className={styles.barOuter}>
+            <div
+              className={styles.barInner}
+              style={{
+                width: bookingPercentage + "%",
+                background:
+                  bookingPercentage >= 90
+                    ? "#ff1744"
+                    : bookingPercentage >= 70
+                    ? "#ff9800"
+                    : "#00c853",
+              }}
+            ></div>
+          </div>
+        </div>
+      )}
+
+
       {/* ================= LEFT PANEL ================= */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
@@ -258,55 +313,171 @@ export default function ConferenceDashboard() {
             </button>
           </div>
 
+
+          {/* PLAN BAR INSIDE SLIDER */}
+          {plan && (
+            <div style={{ marginBottom: 20 }}>
+              <p>
+                Plan: <b>{plan.plan}</b>
+              </p>
+
+              {plan.limit === "UNLIMITED" ? (
+                <p>Unlimited Rooms 🎉</p>
+              ) : (
+                <p>
+                  Rooms: <b>{plan.used}</b> / {plan.limit} |
+                  Remaining: <b>{plan.remaining}</b>
+                </p>
+              )}
+
+              <div className={styles.barOuter}>
+                <div
+                  className={styles.barInner}
+                  style={{
+                    width: roomPercentage + "%",
+                    background:
+                      roomPercentage >= 90
+                        ? "#ff1744"
+                        : roomPercentage >= 70
+                        ? "#ff9800"
+                        : "#00c853",
+                  }}
+                ></div>
+              </div>
+            </div>
+          )}
+
+
+          {/* ROOM RENAME LIST */}
           <div className={styles.leftPanelContent}>
             <ul className={styles.roomList}>
-              {rooms.map((r) => {
-                const canRename = renameAllowedRoomIds.includes(r.id);
+              {rooms.map((r) => (
+                <li key={r.id}>
+                  <b>{r.room_name}</b> (#{r.room_number})
 
-                return (
-                  <li key={r.id}>
-                    <b>{r.room_name}</b> (#{r.room_number})
-
-                    {editingRoomId === r.id ? (
-                      <>
-                        <input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          autoFocus
-                        />
-                        <button onClick={() => saveRoomName(r.id)}>Save</button>
-                        <button
-                          onClick={() => {
-                            setEditingRoomId(null);
-                            setEditName("");
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
+                  {editingRoomId === r.id ? (
+                    <>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        autoFocus
+                      />
+                      <button onClick={() => saveRoomName(r.id)}>Save</button>
                       <button
-                        disabled={!canRename}
-                        style={{
-                          opacity: canRename ? 1 : 0.4,
-                          cursor: canRename ? "pointer" : "not-allowed",
-                        }}
                         onClick={() => {
-                          if (!canRename) return;
-                          setEditingRoomId(r.id);
-                          setEditName(r.room_name);
+                          setEditingRoomId(null);
+                          setEditName("");
                         }}
                       >
-                        Rename
+                        Cancel
                       </button>
-                    )}
-                  </li>
-                );
-              })}
+                    </>
+                  ) : (
+                    <button
+                      disabled={plan?.remaining === 0}
+                      style={{
+                        opacity: plan?.remaining === 0 ? 0.5 : 1,
+                        cursor:
+                          plan?.remaining === 0 ? "not-allowed" : "pointer",
+                      }}
+                      onClick={() => {
+                        setEditingRoomId(r.id);
+                        setEditName(r.room_name);
+                      }}
+                    >
+                      Rename
+                    </button>
+                  )}
+                </li>
+              ))}
             </ul>
           </div>
         </div>
       )}
+
+
+      {/* ================= DATE FILTER ================= */}
+      <div className={styles.section}>
+        <h3>Bookings View</h3>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          {["yesterday", "today", "tomorrow"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setFilterDay(d)}
+              style={{
+                background: filterDay === d ? "yellow" : "#ffffff",
+                color: "#000",
+                padding: "8px 18px",
+                borderRadius: 30,
+                border: "none",
+              }}
+            >
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+
+      {/* ================= KPIs ================= */}
+      <div className={styles.statsGrid}>
+        <div className={styles.statCard}>
+          <span>Conference Rooms</span>
+          <b>{stats.rooms}</b>
+        </div>
+
+        <div className={styles.statCard}>
+          <span>Bookings ({filterDay.toUpperCase()})</span>
+          <b>{filteredBookings.length}</b>
+        </div>
+
+        <div className={styles.statCard}>
+          <span>Departments Using Rooms</span>
+          <b>{departmentStats.length}</b>
+        </div>
+      </div>
+
+
+      {/* ================= DEPARTMENT ================= */}
+      <div className={styles.section}>
+        <h3>Department Wise Bookings</h3>
+
+        {departmentStats.length === 0 ? (
+          <p>No bookings</p>
+        ) : (
+          <ul className={styles.roomList}>
+            {departmentStats.map(([dep, count]) => (
+              <li key={dep}>
+                <b>{dep}</b> — {count} bookings
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+
+      {/* ================= BOOKINGS ================= */}
+      <div className={styles.section}>
+        <h3>Bookings List</h3>
+
+        {filteredBookings.length === 0 && <p>No bookings</p>}
+
+        {filteredBookings.slice(0, 6).map((b) => (
+          <div key={b.id} className={styles.bookingRow}>
+            <div>
+              <b>{b.room_name}</b> (#{b.room_number})
+              <p>{formatNiceDate(b.booking_date)}</p>
+            </div>
+
+            <div>
+              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
+            </div>
+
+            <div className={styles.status}>{b.status}</div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
