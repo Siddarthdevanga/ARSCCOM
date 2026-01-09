@@ -11,12 +11,14 @@ const formatISTTime = (value) => {
   if (!value) return "-";
   try {
     const str = String(value).trim();
-    let h, m;
+    let timePart;
 
-    if (str.includes(" ")) [, h] = str.split(" ");
-    if (str.includes("T")) [, h] = str.split("T");
+    if (str.includes(" ")) timePart = str.split(" ")[1];
+    if (str.includes("T")) timePart = str.split("T")[1];
 
-    [h, m] = h.split(":");
+    if (!timePart) return "-";
+
+    let [h, m] = timePart.split(":");
     h = parseInt(h, 10);
     if (isNaN(h)) return "-";
 
@@ -45,7 +47,9 @@ export default function VisitorDashboard() {
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/dashboard`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
 
       if (!res.ok) return;
@@ -63,7 +67,7 @@ export default function VisitorDashboard() {
     }
   }, []);
 
-  /* ================= AUTH ================= */
+  /* ================= AUTH + INIT ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -73,8 +77,13 @@ export default function VisitorDashboard() {
       return;
     }
 
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard(token);
+    try {
+      setCompany(JSON.parse(storedCompany));
+      loadDashboard(token);
+    } catch {
+      localStorage.clear();
+      router.replace("/auth/login");
+    }
   }, [router, loadDashboard]);
 
   /* ================= CHECKOUT ================= */
@@ -94,6 +103,8 @@ export default function VisitorDashboard() {
       );
 
       if (res.ok) await loadDashboard(token);
+    } catch (err) {
+      console.error("Checkout error:", err);
     } finally {
       setCheckingOut(null);
     }
@@ -113,6 +124,7 @@ export default function VisitorDashboard() {
     planPercentage >= 70 ? "#ff9800" :
     "#00c853";
 
+  /* ================= LOADING ================= */
   if (loading || !company) {
     return (
       <div className={styles.container}>
@@ -126,7 +138,24 @@ export default function VisitorDashboard() {
 
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div className={styles.logoText}>{company.name}</div>
+        <div className={styles.logoText}>
+          {company.name}
+        </div>
+
+        <div className={styles.rightHeader}>
+          <img
+            src={company.logo_url || "/logo.png"}
+            alt="Company Logo"
+            className={styles.companyLogo}
+          />
+
+          <button
+            className={styles.backBtn}
+            onClick={() => router.push("/home")}
+          >
+            ← Back
+          </button>
+        </div>
       </header>
 
       {/* ================= TITLE ================= */}
@@ -204,26 +233,39 @@ export default function VisitorDashboard() {
 
       {/* ================= TABLES ================= */}
       <section className={styles.tablesRow}>
+        {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
           <h3>Active Visitors</h3>
+
           {activeVisitors.length === 0 ? (
             <p>No active visitors</p>
           ) : (
             <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Check-in</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
               <tbody>
                 {activeVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_in)}</td>
+                    <td>{formatISTTime(v.check_in || v.checkIn)}</td>
                     <td>
                       <button
                         className={styles.checkoutBtn}
                         disabled={checkingOut === v.visitor_code}
                         onClick={() => handleCheckout(v.visitor_code)}
                       >
-                        Checkout
+                        {checkingOut === v.visitor_code
+                          ? "Checking out..."
+                          : "Checkout"}
                       </button>
                     </td>
                   </tr>
@@ -233,19 +275,29 @@ export default function VisitorDashboard() {
           )}
         </div>
 
+        {/* CHECKED OUT VISITORS */}
         <div className={styles.tableCard}>
           <h3>Checked-Out Visitors</h3>
+
           {checkedOutVisitors.length === 0 ? (
             <p>No visitors checked out today</p>
           ) : (
             <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Check-out</th>
+                </tr>
+              </thead>
               <tbody>
                 {checkedOutVisitors.map((v) => (
                   <tr key={v.visitor_code}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_out)}</td>
+                    <td>{formatISTTime(v.check_out || v.checkOut)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -256,3 +308,4 @@ export default function VisitorDashboard() {
     </div>
   );
 }
+
