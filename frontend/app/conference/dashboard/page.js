@@ -1,659 +1,483 @@
-"use client";
+import express from "express";
+import { db } from "../config/db.js";
+import { authMiddleware } from "../middleware/auth.js";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { apiFetch } from "../../utils/api";
-import styles from "./style.module.css";
+const router = express.Router();
 
-/* ================= DATE FORMATTER ================= */
-const formatNiceDate = (value) => {
-  if (!value) return "-";
-  try {
-    let str = String(value).trim();
-    if (str.includes("T")) str = str.split("T")[0];
-    if (str.includes(" ")) str = str.split(" ")[0];
-
-    const [y, m, d] = str.split("-");
-    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${names[Number(m) - 1]} ${d}, ${y}`;
-  } catch {
-    return value;
-  }
+/* ======================================================
+   PLAN CONFIGURATION
+====================================================== */
+const PLANS = {
+  TRIAL: 2,
+  BUSINESS: 6,
+  ENTERPRISE: Infinity,
 };
 
-/* ================= TIME FORMATTER ================= */
-const formatNiceTime = (value) => {
-  if (!value) return "-";
-  try {
-    let str = String(value).trim();
-    if (str.includes("T")) str = str.split("T")[1];
-    if (str.includes(" ")) str = str.split(" ")[1];
+const ACTIVE_STATUSES = ["ACTIVE", "TRIAL"];
 
-    const [hRaw, m] = str.split(":");
-    let h = parseInt(hRaw, 10);
-    if (isNaN(h)) return "-";
+/* ======================================================
+   MIDDLEWARE
+====================================================== */
+router.use(express.json());
+router.use(express.urlencoded({ extended: true }));
+router.use(authMiddleware);
 
-    const suffix = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
-    return `${h}:${m} ${suffix}`;
-  } catch {
-    return "-";
-  }
+/* ======================================================
+   UTILITY FUNCTIONS
+====================================================== */
+
+/**
+ * Check if a date has expired
+ */
+const isExpired = (date) => {
+  if (!date) return true;
+  return new Date(date).getTime() < Date.now();
 };
 
-export default function ConferenceDashboard() {
-  const router = useRouter();
+/**
+ * Normalize plan name to uppercase
+ */
+const normalizePlan = (plan) => (plan || "TRIAL").toUpperCase();
 
-  /* ================= STATE ================= */
-  const [company, setCompany] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [rooms, setRooms] = useState([]);
-  const [allRooms, setAllRooms] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
+/**
+ * Normalize subscription status to uppercase
+ */
+const normalizeStatus = (status) => (status || "PENDING").toUpperCase();
 
-  const [plan, setPlan] = useState(null);
-  const [bookingPlan, setBookingPlan] = useState(null);
+/* ======================================================
+   CORE BUSINESS LOGIC
+====================================================== */
 
-  const [sidePanelOpen, setSidePanelOpen] = useState(false);
-  const [editingRoomId, setEditingRoomId] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editCapacity, setEditCapacity] = useState(0);
-
-  // Add room modal state
-  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
-  const [newRoomName, setNewRoomName] = useState("");
-  const [newRoomNumber, setNewRoomNumber] = useState("");
-  const [newRoomCapacity, setNewRoomCapacity] = useState("");
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
-
-  const [filterDay, setFilterDay] = useState("today");
-
-  /* ================= HELPERS ================= */
-  const getDate = useCallback((offset) => {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().split("T")[0];
-  }, []);
-
-  const dates = useMemo(() => ({
-    today: getDate(0),
-    yesterday: getDate(-1),
-    tomorrow: getDate(1)
-  }), [getDate]);
-
-  const selectedDate = dates[filterDay];
-
-  /* ================= API CALLS ================= */
-  const loadDashboard = async () => {
-    try {
-      const [statsRes, roomsRes, allRoomsRes, bookingsRes, planRes] = await Promise.all([
-        apiFetch("/api/conference/dashboard"),
-        apiFetch("/api/conference/rooms"),
-        apiFetch("/api/conference/rooms/all"),
-        apiFetch("/api/conference/bookings"),
-        apiFetch("/api/conference/plan-usage"),
-      ]);
-
-      setStats(statsRes);
-      setRooms(roomsRes || []);
-      setAllRooms(allRoomsRes?.rooms || []);
-      setBookings(bookingsRes || []);
-      setPlan(planRes);
-
-      const bookingLimit =
-        planRes?.plan === "TRIAL" ? 100 :
-        planRes?.plan === "BUSINESS" ? 1000 :
-        Infinity;
-
-      setBookingPlan({
-        limit: bookingLimit,
-        used: statsRes.totalBookings || 0,
-        remaining:
-          bookingLimit === Infinity
-            ? null
-            : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
-      });
-
-    } catch (err) {
-      console.error(err);
-      router.replace("/auth/login");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ================= LIFECYCLE ================= */
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedCompany = localStorage.getItem("company");
-
-    if (!token || !storedCompany) {
-      router.replace("/auth/login");
-      return;
-    }
-
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard();
-  }, []);
-
-  /* ================= ACTIONS ================= */
-  const saveRoomName = async (roomId) => {
-    const newName = editName.trim();
-    const original = allRooms.find((r) => r.id === roomId);
-
-    if (!newName) {
-      alert("Room name cannot be empty");
-      return;
-    }
-    
-    if (newName === original?.room_name && editCapacity === original?.capacity) {
-      setEditingRoomId(null);
-      return;
-    }
-
-    try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          room_name: newName,
-          capacity: editCapacity || 0
-        }),
-      });
-
-      setEditingRoomId(null);
-      setEditName("");
-      setEditCapacity(0);
-      loadDashboard();
-    } catch (err) {
-      alert(err?.message || "Failed to update room. This room may be locked under your current plan.");
-    }
-  };
-
-  const createNewRoom = async () => {
-    const name = newRoomName.trim();
-    const number = newRoomNumber.trim();
-    const capacity = parseInt(newRoomCapacity) || 0;
-
-    if (!name || !number) {
-      alert("Room name and number are required");
-      return;
-    }
-
-    // Check if room number already exists
-    if (allRooms.some(r => r.room_number === number)) {
-      alert("Room number already exists. Please use a different number.");
-      return;
-    }
-
-    setIsCreatingRoom(true);
-
-    try {
-      await apiFetch("/api/conference/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          room_name: name,
-          room_number: number,
-          capacity: capacity,
-        }),
-      });
-
-      // Reset form
-      setNewRoomName("");
-      setNewRoomNumber("");
-      setNewRoomCapacity("");
-      setShowAddRoomModal(false);
-      
-      // Reload dashboard
-      await loadDashboard();
-      
-      alert("Room created successfully! Activation depends on your current plan.");
-    } catch (err) {
-      alert(err?.message || "Failed to create room");
-    } finally {
-      setIsCreatingRoom(false);
-    }
-  };
-
-  /* ================= COMPUTED DATA ================= */
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
-      const date = b.booking_date?.includes("T")
-        ? b.booking_date.split("T")[0]
-        : b.booking_date;
-      return date === selectedDate && b.status === "BOOKED";
-    });
-  }, [bookings, selectedDate]);
-
-  const departmentStats = useMemo(() => {
-    const map = {};
-    filteredBookings.forEach((b) => {
-      const dep = b.department || "Unknown";
-      map[dep] = (map[dep] || 0) + 1;
-    });
-    return Object.entries(map);
-  }, [filteredBookings]);
-
-  // Calculate plan usage
-  const planUsage = useMemo(() => {
-    if (!plan) return null;
-    
-    const limit = plan.limit === "Unlimited" ? Infinity : parseInt(plan.limit);
-    const total = plan.totalRooms || 0;
-    const active = plan.activeRooms || 0;
-    const locked = plan.lockedRooms || 0;
-    const canAddMore = limit === Infinity || total < limit;
-    
-    return {
-      limit,
-      total,
-      active,
-      locked,
-      canAddMore,
-      slotsAvailable: limit === Infinity ? Infinity : Math.max(0, limit - total)
-    };
-  }, [plan]);
-
-  if (loading) return <div className={styles.container}>Loading dashboard…</div>;
-  if (!company || !stats) return <div className={styles.container}>Unable to load dashboard</div>;
-
-  const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
-
-  const roomPercentage =
-    plan?.limit === "Unlimited"
-      ? 100
-      : Math.min(100, Math.round((plan?.activeRooms / parseInt(plan?.limit)) * 100));
-
-  const bookingPercentage =
-    bookingPlan?.limit === Infinity
-      ? 100
-      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
-
-  return (
-    <div className={styles.container}>
-      {/* ADD ROOM MODAL */}
-      {showAddRoomModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowAddRoomModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>Add New Conference Room</h3>
-              <button 
-                className={styles.closeBtn}
-                onClick={() => setShowAddRoomModal(false)}
-              >
-                ✖
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              {planUsage && !planUsage.canAddMore && (
-                <div className={styles.warningBox}>
-                  ⚠️ You've reached your plan limit of {planUsage.limit} rooms.
-                  Upgrade your plan to add more rooms.
-                </div>
-              )}
-
-              {planUsage && planUsage.locked > 0 && (
-                <div className={styles.infoBox}>
-                  ℹ️ You have {planUsage.locked} locked room(s). 
-                  New rooms may be created but will remain inactive until you upgrade.
-                </div>
-              )}
-
-              <div className={styles.formGroup}>
-                <label>Room Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Board Room"
-                  value={newRoomName}
-                  onChange={(e) => setNewRoomName(e.target.value)}
-                  maxLength={100}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Room Number *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., 101, A1, CR-01"
-                  value={newRoomNumber}
-                  onChange={(e) => setNewRoomNumber(e.target.value)}
-                  maxLength={20}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Capacity (Optional)</label>
-                <input
-                  type="number"
-                  placeholder="e.g., 10"
-                  value={newRoomCapacity}
-                  onChange={(e) => setNewRoomCapacity(e.target.value)}
-                  min="0"
-                  max="1000"
-                />
-              </div>
-
-              <div className={styles.modalActions}>
-                <button
-                  className={styles.cancelBtn}
-                  onClick={() => setShowAddRoomModal(false)}
-                  disabled={isCreatingRoom}
-                >
-                  Cancel
-                </button>
-                <button
-                  className={styles.primaryBtn}
-                  onClick={createNewRoom}
-                  disabled={isCreatingRoom || !newRoomName.trim() || !newRoomNumber.trim()}
-                >
-                  {isCreatingRoom ? "Creating..." : "Create Room"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* HEADER SECTION */}
-      <header className={styles.header}>
-        <div className={styles.leftHeader}>
-          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
-            <span></span><span></span><span></span>
-          </div>
-
-          <div>
-            <h2 className={styles.companyName}>{company.name}</h2>
-            <span className={styles.subText}>Conference Dashboard</span>
-          </div>
-        </div>
-
-        <div className={styles.headerRight}>
-          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Company Logo" />
-          
-          <button
-            className={styles.logoBtn}
-            title="Back to Home"
-            onClick={() => router.push("/home")}
-          >
-            ↩
-          </button>
-        </div>
-      </header>
-
-      {/* PUBLIC URL SECTION */}
-      <div className={styles.publicBox}>
-        <div className={styles.publicRow}>
-          <div>
-            <p className={styles.publicTitle}>Public Booking URL</p>
-            <a href={publicURL} target="_blank" className={styles.publicLink}>
-              {publicURL}
-            </a>
-          </div>
-
-          <button className={styles.bookBtn} onClick={() => router.push("/conference/bookings")}>
-            Book
-          </button>
-        </div>
-      </div>
-
-      {/* BOOKING LIMITS / PROGRESS */}
-      {bookingPlan && (
-        <div className={styles.section}>
-          <h3>Conference Booking Usage</h3>
-          {bookingPlan.limit === Infinity ? (
-            <p>Unlimited Bookings Available 🎉</p>
-          ) : (
-            <p>
-              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
-              Remaining: <b>{bookingPlan.remaining}</b>
-            </p>
-          )}
-          <div className={styles.barOuter}>
-            <div
-              className={styles.barInner}
-              style={{
-                width: bookingPercentage + "%",
-                background:
-                  bookingPercentage >= 90 ? "#ff1744" : 
-                  bookingPercentage >= 70 ? "#ff9800" : "#00c853",
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
-
-      {/* SLIDE-OUT PANEL: ROOM MANAGEMENT */}
-      {sidePanelOpen && (
-        <div className={styles.leftPanel}>
-          <div className={styles.leftPanelHeader}>
-            <h3>Plan & Room Settings</h3>
-            <button
-              className={styles.leftCloseBtn}
-              onClick={() => {
-                setSidePanelOpen(false);
-                setEditingRoomId(null);
-                setEditName("");
-                setEditCapacity(0);
-              }}
-            >
-              Close ✖
-            </button>
-          </div>
-
-          {plan && (
-            <div style={{ padding: "0 20px", marginBottom: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <div>
-                  <p style={{ margin: 0 }}>Plan: <b>{plan.plan}</b></p>
-                  {plan.limit === "Unlimited" ? (
-                    <p style={{ margin: "5px 0 0 0" }}>Unlimited Rooms 🎉</p>
-                  ) : (
-                    <>
-                      <p style={{ margin: "5px 0 0 0" }}>
-                        Active: <b>{plan.activeRooms}</b> / {plan.limit}
-                      </p>
-                      {plan.lockedRooms > 0 && (
-                        <p style={{ margin: "5px 0 0 0", color: "#ff9800" }}>
-                          🔒 Locked: <b>{plan.lockedRooms}</b>
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                
-                <button
-                  className={styles.addRoomBtn}
-                  onClick={() => setShowAddRoomModal(true)}
-                  title={planUsage && !planUsage.canAddMore ? "Upgrade plan to add more rooms" : "Add new room"}
-                >
-                  + Add Room
-                </button>
-              </div>
-
-              <div className={styles.barOuter}>
-                <div
-                  className={styles.barInner}
-                  style={{
-                    width: roomPercentage + "%",
-                    background: roomPercentage >= 90 ? "#ff1744" : "#00c853",
-                  }}
-                ></div>
-              </div>
-
-              {planUsage && planUsage.slotsAvailable !== Infinity && (
-                <p style={{ margin: "10px 0 0 0", fontSize: 12, color: "#666" }}>
-                  {planUsage.slotsAvailable} slot(s) available
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className={styles.leftPanelContent}>
-            <h4 style={{ padding: "0 20px", margin: "10px 0" }}>All Rooms</h4>
-            <ul className={styles.roomList}>
-              {allRooms.map((r) => (
-                <li 
-                  key={r.id}
-                  className={!r.is_active ? styles.lockedRoom : ""}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <b>{r.room_name}</b>
-                      {!r.is_active && <span className={styles.lockBadge}>🔒 Locked</span>}
-                    </div>
-                    <small style={{ color: "#666" }}>
-                      #{r.room_number} • Capacity: {r.capacity || "N/A"}
-                    </small>
-                  </div>
-
-                  {editingRoomId === r.id ? (
-                    <div style={{ marginTop: 10, width: "100%" }}>
-                      <input
-                        style={{ width: "100%", marginBottom: 5 }}
-                        placeholder="Room name"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        autoFocus
-                      />
-                      <input
-                        style={{ width: "100%", marginBottom: 5 }}
-                        type="number"
-                        placeholder="Capacity"
-                        value={editCapacity}
-                        onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
-                      />
-                      <div style={{ display: "flex", gap: 5 }}>
-                        <button 
-                          onClick={() => saveRoomName(r.id)}
-                          style={{ flex: 1 }}
-                        >
-                          Save
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setEditingRoomId(null);
-                            setEditName("");
-                            setEditCapacity(0);
-                          }}
-                          style={{ flex: 1 }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      disabled={!r.is_active}
-                      style={{
-                        opacity: !r.is_active ? 0.5 : 1,
-                        cursor: !r.is_active ? "not-allowed" : "pointer",
-                      }}
-                      onClick={() => {
-                        setEditingRoomId(r.id);
-                        setEditName(r.room_name);
-                        setEditCapacity(r.capacity || 0);
-                      }}
-                      title={!r.is_active ? "Upgrade plan to edit this room" : "Edit room"}
-                    >
-                      Edit
-                    </button>
-                  )}
-                </li>
-              ))}
-
-              {allRooms.length === 0 && (
-                <li style={{ textAlign: "center", color: "#999" }}>
-                  No rooms yet. Click "Add Room" to create one.
-                </li>
-              )}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* BOOKING FILTERS */}
-      <div className={styles.section}>
-        <h3>Bookings View</h3>
-        <div style={{ display: "flex", gap: 10 }}>
-          {["yesterday", "today", "tomorrow"].map((d) => (
-            <button
-              key={d}
-              onClick={() => setFilterDay(d)}
-              style={{
-                background: filterDay === d ? "#7a00ff" : "#f0f0f0",
-                color: filterDay === d ? "#fff" : "#333",
-                padding: "8px 18px",
-                borderRadius: 30,
-                border: "none",
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
-            >
-              {d.charAt(0).toUpperCase() + d.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* DASHBOARD KPIs */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span>Active Rooms</span>
-          <b>{plan?.activeRooms || 0}</b>
-          {plan && plan.lockedRooms > 0 && (
-            <small style={{ color: "#ff9800", fontSize: 11 }}>
-              +{plan.lockedRooms} locked
-            </small>
-          )}
-        </div>
-
-        <div className={styles.statCard}>
-          <span>{filterDay.toUpperCase()} Bookings</span>
-          <b>{filteredBookings.length}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Active Departments</span>
-          <b>{departmentStats.length}</b>
-        </div>
-      </div>
-
-      {/* ANALYTICS: DEPARTMENTS */}
-      <div className={styles.section}>
-        <h3>Department Usage</h3>
-        {departmentStats.length === 0 ? (
-          <p>No activity recorded for this period.</p>
-        ) : (
-          <ul className={styles.roomList}>
-            {departmentStats.map(([dep, count]) => (
-              <li key={dep}>
-                <b>{dep}</b> — {count} bookings
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* BOOKINGS LIST */}
-      <div className={styles.section}>
-        <h3>Daily Schedule</h3>
-        {filteredBookings.length === 0 && <p>No bookings scheduled.</p>}
-        {filteredBookings.slice(0, 10).map((b) => (
-          <div key={b.id} className={styles.bookingRow}>
-            <div>
-              <b>{b.room_name}</b> (#{b.room_number})
-              <p style={{ margin: 0, fontSize: 12, color: "#666" }}>{formatNiceDate(b.booking_date)}</p>
-            </div>
-            <div>
-              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
-            </div>
-            <div className={styles.status} style={{ fontWeight: 800, color: "#7a00ff" }}>{b.status}</div>
-          </div>
-        ))}
-      </div>
-    </div>
+/**
+ * Validates company subscription and returns plan details
+ * @throws {Error} if subscription is invalid or expired
+ */
+const validateCompanySubscription = async (companyId) => {
+  const [[company]] = await db.query(
+    `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
+     FROM companies
+     WHERE id = ?
+     LIMIT 1`,
+    [companyId]
   );
-}
+
+  if (!company) {
+    throw new Error("Company not found");
+  }
+
+  const plan = normalizePlan(company.plan);
+  const status = normalizeStatus(company.subscription_status);
+
+  // Check subscription status
+  if (!ACTIVE_STATUSES.includes(status)) {
+    throw new Error("Subscription inactive. Please upgrade your plan.");
+  }
+
+  // Check trial expiration
+  if (plan === "TRIAL" && isExpired(company.trial_ends_at)) {
+    throw new Error("Trial period has expired. Please upgrade to continue.");
+  }
+
+  // Check paid subscription expiration
+  if (plan !== "TRIAL" && isExpired(company.subscription_ends_at)) {
+    throw new Error("Subscription has expired. Please renew to continue.");
+  }
+
+  return {
+    plan,
+    limit: PLANS[plan] ?? 0,
+    isUnlimited: PLANS[plan] === Infinity,
+  };
+};
+
+/**
+ * Synchronizes room activation status based on plan limits
+ * Rooms are activated in order of room_number (ascending)
+ */
+export const syncRoomActivationByPlan = async (companyId, plan) => {
+  const limit = PLANS[plan] ?? 0;
+
+  // First, deactivate all rooms
+  await db.query(
+    `UPDATE conference_rooms 
+     SET is_active = 0 
+     WHERE company_id = ?`,
+    [companyId]
+  );
+
+  // If unlimited plan, activate all rooms
+  if (limit === Infinity) {
+    await db.query(
+      `UPDATE conference_rooms 
+       SET is_active = 1 
+       WHERE company_id = ?`,
+      [companyId]
+    );
+    return;
+  }
+
+  // Activate first N rooms (by room_number ascending)
+  if (limit > 0) {
+    await db.query(
+      `UPDATE conference_rooms
+       SET is_active = 1
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id
+           FROM conference_rooms
+           WHERE company_id = ?
+           ORDER BY room_number ASC, id ASC
+           LIMIT ?
+         ) AS temp
+       )`,
+      [companyId, limit]
+    );
+  }
+};
+
+/**
+ * Get room statistics for a company
+ */
+const getRoomStats = async (companyId) => {
+  const [[stats]] = await db.query(
+    `SELECT 
+       COUNT(*) AS total,
+       SUM(is_active) AS active
+     FROM conference_rooms
+     WHERE company_id = ?`,
+    [companyId]
+  );
+
+  return {
+    total: stats?.total || 0,
+    active: stats?.active || 0,
+    locked: (stats?.total || 0) - (stats?.active || 0),
+  };
+};
+
+/**
+ * Verify room ownership and active status
+ */
+const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
+  const [[room]] = await db.query(
+    `SELECT id, is_active, room_name, room_number
+     FROM conference_rooms
+     WHERE id = ? AND company_id = ?`,
+    [roomId, companyId]
+  );
+
+  if (!room) {
+    throw new Error("Room not found or access denied");
+  }
+
+  if (requireActive && !room.is_active) {
+    throw new Error("This room is locked under your current plan. Please upgrade to edit.");
+  }
+
+  return room;
+};
+
+/* ======================================================
+   API ROUTES
+====================================================== */
+
+/**
+ * GET /api/conference/rooms
+ * Returns only active rooms for the company
+ */
+router.get("/rooms", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+    
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    const [rooms] = await db.query(
+      `SELECT id, room_number, room_name, capacity
+       FROM conference_rooms
+       WHERE company_id = ? AND is_active = 1
+       ORDER BY room_number ASC`,
+      [companyId]
+    );
+
+    res.json(rooms);
+  } catch (err) {
+    console.error("[GET /rooms]", err.message);
+    res.status(err.message.includes("not found") ? 404 : 403).json({
+      message: err.message,
+    });
+  }
+});
+
+/**
+ * GET /api/conference/rooms/all
+ * Returns all rooms (active + locked) for admin view
+ */
+router.get("/rooms/all", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    const [rooms] = await db.query(
+      `SELECT id, room_number, room_name, capacity, is_active
+       FROM conference_rooms
+       WHERE company_id = ?
+       ORDER BY room_number ASC, id ASC`,
+      [companyId]
+    );
+
+    // Return just the rooms array (not wrapped in an object)
+    res.json(rooms);
+  } catch (err) {
+    console.error("[GET /rooms/all]", err.message);
+    res.status(500).json({
+      message: "Unable to load rooms. Please try again.",
+    });
+  }
+});
+
+/**
+ * POST /api/conference/rooms
+ * Creates a new conference room (initially inactive)
+ */
+router.post("/rooms", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+    const { room_name, room_number, capacity } = req.body;
+
+    // Validate input
+    if (!room_name?.trim()) {
+      return res.status(400).json({ message: "Room name is required" });
+    }
+
+    if (!room_number) {
+      return res.status(400).json({ message: "Room number is required" });
+    }
+
+    // Validate subscription
+    const { plan } = await validateCompanySubscription(companyId);
+
+    // Check for duplicate room number
+    const [[existing]] = await db.query(
+      `SELECT id FROM conference_rooms 
+       WHERE company_id = ? AND room_number = ?`,
+      [companyId, room_number]
+    );
+
+    if (existing) {
+      return res.status(409).json({
+        message: "Room number already exists. Please use a different number.",
+      });
+    }
+
+    // Create room (initially inactive)
+    const [result] = await db.query(
+      `INSERT INTO conference_rooms
+       (company_id, room_number, room_name, capacity, is_active)
+       VALUES (?, ?, ?, ?, 0)`,
+      [companyId, room_number, room_name.trim(), capacity || 0]
+    );
+
+    // Sync room activation based on plan
+    await syncRoomActivationByPlan(companyId, plan);
+
+    res.status(201).json({
+      message: "Room created successfully. Activation depends on your current plan.",
+      roomId: result.insertId,
+    });
+  } catch (err) {
+    console.error("[POST /rooms]", err.message);
+    res.status(err.message.includes("expired") ? 403 : 500).json({
+      message: err.message,
+    });
+  }
+});
+
+/**
+ * PATCH /api/conference/rooms/:id
+ * Updates room details (only for active rooms)
+ */
+router.patch("/rooms/:id", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+    const roomId = parseInt(req.params.id);
+    const { room_name, capacity } = req.body;
+
+    // Validate input
+    if (isNaN(roomId) || roomId <= 0) {
+      return res.status(400).json({ message: "Invalid room ID" });
+    }
+
+    if (!room_name?.trim()) {
+      return res.status(400).json({ message: "Room name is required" });
+    }
+
+    // Validate subscription and room access
+    await validateCompanySubscription(companyId);
+    await verifyRoomAccess(roomId, companyId, true);
+
+    // Update room
+    await db.query(
+      `UPDATE conference_rooms
+       SET room_name = ?, capacity = ?
+       WHERE id = ? AND company_id = ?`,
+      [room_name.trim(), capacity || 0, roomId, companyId]
+    );
+
+    res.json({
+      message: "Room updated successfully",
+    });
+  } catch (err) {
+    console.error("[PATCH /rooms/:id]", err.message);
+    
+    const statusCode = err.message.includes("not found")
+      ? 404
+      : err.message.includes("locked")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      message: err.message,
+    });
+  }
+});
+
+/**
+ * DELETE /api/conference/rooms/:id
+ * Deletes a conference room (soft delete or hard delete)
+ */
+router.delete("/rooms/:id", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+    const roomId = parseInt(req.params.id);
+
+    if (isNaN(roomId) || roomId <= 0) {
+      return res.status(400).json({ message: "Invalid room ID" });
+    }
+
+    // Verify room exists
+    await verifyRoomAccess(roomId, companyId, false);
+
+    // Check if room has any bookings
+    const [[bookingCheck]] = await db.query(
+      `SELECT COUNT(*) AS count
+       FROM conference_bookings
+       WHERE room_id = ?`,
+      [roomId]
+    );
+
+    if (bookingCheck.count > 0) {
+      return res.status(409).json({
+        message: "Cannot delete room with existing bookings. Please cancel all bookings first.",
+      });
+    }
+
+    // Delete room
+    await db.query(
+      `DELETE FROM conference_rooms
+       WHERE id = ? AND company_id = ?`,
+      [roomId, companyId]
+    );
+
+    res.json({
+      message: "Room deleted successfully",
+    });
+  } catch (err) {
+    console.error("[DELETE /rooms/:id]", err.message);
+    res.status(err.message.includes("not found") ? 404 : 500).json({
+      message: err.message,
+    });
+  }
+});
+
+/**
+ * GET /api/conference/dashboard
+ * Returns dashboard statistics (active rooms only)
+ */
+router.get("/dashboard", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    const [[stats]] = await db.query(
+      `SELECT
+         COUNT(DISTINCT cr.id) AS rooms,
+         COUNT(cb.id) AS totalBookings,
+         SUM(CASE WHEN DATE(cb.booking_date) = CURDATE() THEN 1 ELSE 0 END) AS todayBookings
+       FROM conference_rooms cr
+       LEFT JOIN conference_bookings cb ON cb.room_id = cr.id AND cb.status = 'BOOKED'
+       WHERE cr.company_id = ? AND cr.is_active = 1`,
+      [companyId]
+    );
+
+    res.json({
+      rooms: stats?.rooms || 0,
+      totalBookings: stats?.totalBookings || 0,
+      todayBookings: stats?.todayBookings || 0,
+    });
+  } catch (err) {
+    console.error("[GET /dashboard]", err.message);
+    res.status(500).json({
+      message: "Failed to load dashboard statistics",
+    });
+  }
+});
+
+/**
+ * GET /api/conference/plan-usage
+ * Returns plan usage information for UI display
+ */
+router.get("/plan-usage", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    // Validate subscription and get plan details
+    const { plan, limit, isUnlimited } = await validateCompanySubscription(companyId);
+
+    // Get room statistics
+    const roomStats = await getRoomStats(companyId);
+
+    res.json({
+      plan,
+      limit: isUnlimited ? "Unlimited" : limit,
+      totalRooms: roomStats.total,
+      activeRooms: roomStats.active,
+      lockedRooms: roomStats.locked,
+      slotsAvailable: isUnlimited ? null : Math.max(0, limit - roomStats.total),
+      upgradeRequired: !isUnlimited && roomStats.total >= limit,
+    });
+  } catch (err) {
+    console.error("[GET /plan-usage]", err.message);
+    res.status(403).json({
+      message: err.message,
+    });
+  }
+});
+
+/**
+ * POST /api/conference/sync-rooms
+ * Manually triggers room sync (admin endpoint)
+ */
+router.post("/sync-rooms", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    // Validate subscription and get plan
+    const { plan } = await validateCompanySubscription(companyId);
+
+    // Sync room activation
+    await syncRoomActivationByPlan(companyId, plan);
+
+    res.json({
+      message: "Room activation synced successfully",
+    });
+  } catch (err) {
+    console.error("[POST /sync-rooms]", err.message);
+    res.status(500).json({
+      message: "Failed to sync room activation",
+    });
+  }
+});
+
+export default router;
