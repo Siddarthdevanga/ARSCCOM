@@ -164,7 +164,24 @@ export default function ConferenceDashboard() {
     }
   };
 
-  const saveRoomName = async (roomId) => {
+  const startEditRoom = (room) => {
+    if (!room.is_active) {
+      alert("This room is locked under your current plan. Please upgrade to edit.");
+      return;
+    }
+    
+    setEditingRoomId(room.id);
+    setEditName(room.room_name);
+    setEditCapacity(room.capacity || 0);
+  };
+
+  const cancelEdit = () => {
+    setEditingRoomId(null);
+    setEditName("");
+    setEditCapacity(0);
+  };
+
+  const saveRoomChanges = async (roomId) => {
     const newName = editName.trim();
     const original = allRooms.find((r) => r.id === roomId);
 
@@ -173,15 +190,16 @@ export default function ConferenceDashboard() {
       return;
     }
     
+    // Check if nothing changed
     if (newName === original?.room_name && editCapacity === original?.capacity) {
-      setEditingRoomId(null);
+      cancelEdit();
       return;
     }
 
-    // Check if room is active before allowing edit
+    // Verify room is still active
     if (!original?.is_active) {
       alert("This room is locked under your current plan. Please upgrade to edit.");
-      setEditingRoomId(null);
+      cancelEdit();
       return;
     }
 
@@ -195,12 +213,14 @@ export default function ConferenceDashboard() {
         }),
       });
 
-      setEditingRoomId(null);
-      setEditName("");
-      setEditCapacity(0);
+      // Success - cancel edit mode and reload
+      cancelEdit();
       await loadDashboard();
+      
     } catch (err) {
+      console.error("Update error:", err);
       alert(err?.message || "Failed to update room. This room may be locked under your current plan.");
+      cancelEdit();
     }
   };
 
@@ -212,7 +232,7 @@ export default function ConferenceDashboard() {
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete "${room.room_name}"?`)) {
+    if (!confirm(`Are you sure you want to delete "${room.room_name}"?\n\nThis action cannot be undone.`)) {
       return;
     }
 
@@ -222,9 +242,10 @@ export default function ConferenceDashboard() {
       });
 
       await loadDashboard();
-      alert("Room deleted successfully");
+      
     } catch (err) {
-      alert(err?.message || "Failed to delete room");
+      console.error("Delete error:", err);
+      alert(err?.message || "Failed to delete room. The room may have existing bookings.");
     }
   };
 
@@ -496,9 +517,7 @@ export default function ConferenceDashboard() {
               className={styles.leftCloseBtn}
               onClick={() => {
                 setSidePanelOpen(false);
-                setEditingRoomId(null);
-                setEditName("");
-                setEditCapacity(0);
+                cancelEdit();
               }}
             >
               Close ✖
@@ -582,94 +601,72 @@ export default function ConferenceDashboard() {
                   className={!r.is_active ? styles.lockedRoom : ""}
                   style={{
                     opacity: !r.is_active ? 0.6 : 1,
-                    background: !r.is_active ? "#f5f5f5" : "#fff"
+                    background: !r.is_active ? "rgba(100, 100, 100, 0.15)" : "rgba(255, 255, 255, 0.08)"
                   }}
                 >
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                      <b style={{ color: !r.is_active ? "#999" : "#333" }}>{r.room_name}</b>
+                  <div style={{ flex: 1, width: "100%" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
+                      <b style={{ color: !r.is_active ? "#999" : "#fff" }}>{r.room_name}</b>
                       {!r.is_active && (
-                        <span className={styles.lockBadge} style={{
-                          background: "#ff9800",
-                          color: "#fff",
-                          padding: "2px 8px",
-                          borderRadius: 12,
-                          fontSize: 11,
-                          fontWeight: 600
-                        }}>
+                        <span className={styles.lockBadge}>
                           🔒 Locked
                         </span>
                       )}
                       {r.is_active && (
-                        <span style={{
-                          background: "#00c853",
-                          color: "#fff",
-                          padding: "2px 8px",
-                          borderRadius: 12,
-                          fontSize: 11,
-                          fontWeight: 600
-                        }}>
+                        <span className={styles.activeBadge}>
                           ✓ Active
                         </span>
                       )}
                     </div>
-                    <small style={{ color: !r.is_active ? "#999" : "#666" }}>
+                    <small style={{ color: !r.is_active ? "#999" : "#ccc" }}>
                       #{r.room_number} • Capacity: {r.capacity || "N/A"}
                     </small>
+
+                    {editingRoomId === r.id && (
+                      <div style={{ marginTop: 12, width: "100%" }}>
+                        <input
+                          style={{ width: "100%", marginBottom: 8 }}
+                          placeholder="Room name"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          autoFocus
+                        />
+                        <input
+                          style={{ width: "100%", marginBottom: 8 }}
+                          type="number"
+                          placeholder="Capacity"
+                          value={editCapacity}
+                          onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
+                        />
+                        <div style={{ display: "flex", gap: 8 }}>
+                          <button 
+                            onClick={() => saveRoomChanges(r.id)}
+                            style={{ flex: 1 }}
+                          >
+                            Save
+                          </button>
+                          <button 
+                            onClick={cancelEdit}
+                            style={{ flex: 1 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  {editingRoomId === r.id ? (
-                    <div style={{ marginTop: 10, width: "100%" }}>
-                      <input
-                        style={{ width: "100%", marginBottom: 5 }}
-                        placeholder="Room name"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        autoFocus
-                      />
-                      <input
-                        style={{ width: "100%", marginBottom: 5 }}
-                        type="number"
-                        placeholder="Capacity"
-                        value={editCapacity}
-                        onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
-                      />
-                      <div style={{ display: "flex", gap: 5 }}>
-                        <button 
-                          onClick={() => saveRoomName(r.id)}
-                          style={{ flex: 1 }}
-                        >
-                          Save
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setEditingRoomId(null);
-                            setEditName("");
-                            setEditCapacity(0);
-                          }}
-                          style={{ flex: 1 }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div style={{ display: "flex", gap: 5 }}>
+                  {editingRoomId !== r.id && (
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
                       <button
                         disabled={!r.is_active}
                         style={{
                           opacity: !r.is_active ? 0.5 : 1,
                           cursor: !r.is_active ? "not-allowed" : "pointer",
-                          padding: "6px 12px",
+                          padding: "8px 16px",
                           fontSize: 12
                         }}
-                        onClick={() => {
-                          if (r.is_active) {
-                            setEditingRoomId(r.id);
-                            setEditName(r.room_name);
-                            setEditCapacity(r.capacity || 0);
-                          }
-                        }}
+                        onClick={() => startEditRoom(r)}
                         title={!r.is_active ? "Upgrade plan to edit this room" : "Edit room"}
                       >
                         Edit
@@ -677,15 +674,14 @@ export default function ConferenceDashboard() {
                       
                       <button
                         disabled={!r.is_active}
+                        className={styles.deleteBtn}
                         style={{
                           opacity: !r.is_active ? 0.5 : 1,
                           cursor: !r.is_active ? "not-allowed" : "pointer",
-                          padding: "6px 12px",
-                          fontSize: 12,
-                          background: "#ff1744",
-                          color: "#fff"
+                          padding: "8px 16px",
+                          fontSize: 12
                         }}
-                        onClick={() => r.is_active && deleteRoom(r.id)}
+                        onClick={() => deleteRoom(r.id)}
                         title={!r.is_active ? "Upgrade plan to delete this room" : "Delete room"}
                       >
                         Delete
@@ -708,7 +704,7 @@ export default function ConferenceDashboard() {
       {/* BOOKING FILTERS */}
       <div className={styles.section}>
         <h3>Bookings View</h3>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           {["yesterday", "today", "tomorrow"].map((d) => (
             <button
               key={d}
