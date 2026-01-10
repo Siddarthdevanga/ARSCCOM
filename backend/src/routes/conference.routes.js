@@ -27,32 +27,18 @@ router.use(authenticate);
    UTILITY FUNCTIONS
 ====================================================== */
 
-/**
- * Get company ID from user object
- */
 const getCompanyId = (user) => user?.company_id || user?.companyId;
 
-/**
- * Get current time in HH:MM format
- */
 const nowTime = () => {
   const d = new Date();
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
-/**
- * Check if date has expired
- */
 const isExpired = (date) => {
   if (!date) return true;
   return new Date(date).getTime() < Date.now();
 };
 
-/**
- * Normalize time to 24-hour HH:MM format from 12-hour AM/PM format
- * @param {string} t - Time in format "11:30 AM" or "2:45 PM"
- * @returns {string} Time in 24-hour format "HH:MM"
- */
 const normalizeTime = (t) => {
   if (!t) throw new Error("Time is required");
 
@@ -70,18 +56,12 @@ const normalizeTime = (t) => {
   if (h < 1 || h > 12) throw new Error("Invalid hour (must be 1-12)");
   if (m < 0 || m > 59) throw new Error("Invalid minutes (must be 0-59)");
 
-  // Convert to 24-hour format
   if (ampm === "PM" && h !== 12) h += 12;
   if (ampm === "AM" && h === 12) h = 0;
 
   return `${String(h).padStart(2, "0")}:${mm.padStart(2, "0")}`;
 };
 
-/**
- * Convert 24-hour time to 12-hour AM/PM format
- * @param {string} time - Time in 24-hour format "HH:MM"
- * @returns {string} Time in 12-hour format "H:MM AM/PM"
- */
 const toAmPm = (time) => {
   if (!time) return "";
   const [h, m] = time.split(":").map(Number);
@@ -90,28 +70,16 @@ const toAmPm = (time) => {
   return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
-/**
- * Validate email format
- */
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-/**
- * Normalize plan name to uppercase
- */
 const normalizePlan = (plan) => (plan || "TRIAL").toUpperCase();
 
-/**
- * Normalize subscription status to uppercase
- */
 const normalizeStatus = (status) => (status || "PENDING").toUpperCase();
 
 /* ======================================================
    EMAIL FUNCTIONS
 ====================================================== */
 
-/**
- * Generate email footer with company branding
- */
 const emailFooter = (company = { name: "", logo_url: "" }) => `
 <br/>
 Regards,<br/>
@@ -124,9 +92,6 @@ If you did not perform this action, please contact your administrator immediatel
 </p>
 `;
 
-/**
- * Send booking notification email
- */
 const sendBookingMail = async ({
   adminEmail,
   userEmail,
@@ -141,7 +106,6 @@ const sendBookingMail = async ({
       return;
     }
 
-    // Determine recipient
     const toEmail = isEmail(userEmail)
       ? userEmail
       : isEmail(adminEmail)
@@ -153,11 +117,9 @@ const sendBookingMail = async ({
       return;
     }
 
-    // Default values
     subject = subject || "Conference Room Notification";
     heading = heading || "Conference Room Update";
 
-    // Build email HTML
     const html = `
       <h2>${heading}</h2>
 
@@ -190,9 +152,6 @@ const sendBookingMail = async ({
    CORE BUSINESS LOGIC
 ====================================================== */
 
-/**
- * Get company information
- */
 const getCompanyInfo = async (companyId) => {
   try {
     const [[company]] = await db.query(
@@ -206,16 +165,11 @@ const getCompanyInfo = async (companyId) => {
   }
 };
 
-/**
- * Validate company subscription and return plan details
- */
 const validateCompanySubscription = async (companyId) => {
   try {
     const [[company]] = await db.query(
       `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
-       FROM companies
-       WHERE id = ?
-       LIMIT 1`,
+       FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
 
@@ -226,17 +180,14 @@ const validateCompanySubscription = async (companyId) => {
     const plan = normalizePlan(company.plan);
     const status = normalizeStatus(company.subscription_status);
 
-    // Check subscription status
     if (!ACTIVE_STATUSES.includes(status)) {
       throw new Error("Subscription inactive. Please upgrade your plan.");
     }
 
-    // Check trial expiration
     if (plan === "TRIAL" && isExpired(company.trial_ends_at)) {
       throw new Error("Trial period has expired. Please upgrade to continue.");
     }
 
-    // Check paid subscription expiration
     if (plan !== "TRIAL" && isExpired(company.subscription_ends_at)) {
       throw new Error("Subscription has expired. Please renew to continue.");
     }
@@ -255,9 +206,6 @@ const validateCompanySubscription = async (companyId) => {
   }
 };
 
-/**
- * Check if company can add more rooms
- */
 const canAddRoom = async (companyId, roomLimit) => {
   if (roomLimit === Infinity) return true;
 
@@ -269,9 +217,6 @@ const canAddRoom = async (companyId, roomLimit) => {
   return count.total < roomLimit;
 };
 
-/**
- * Check if company can add more bookings
- */
 const canAddBooking = async (companyId, bookingLimit) => {
   if (bookingLimit === Infinity) return true;
 
@@ -283,17 +228,11 @@ const canAddBooking = async (companyId, bookingLimit) => {
   return count.total < bookingLimit;
 };
 
-/**
- * Get room statistics for a company
- */
 const getRoomStats = async (companyId) => {
   try {
     const [[stats]] = await db.query(
-      `SELECT 
-         COUNT(*) AS total,
-         SUM(is_active) AS active
-       FROM conference_rooms
-       WHERE company_id = ?`,
+      `SELECT COUNT(*) AS total, SUM(is_active) AS active
+       FROM conference_rooms WHERE company_id = ?`,
       [companyId]
     );
 
@@ -308,21 +247,16 @@ const getRoomStats = async (companyId) => {
   }
 };
 
-/**
- * Synchronize room activation based on plan limits
- */
 export const syncRoomActivationByPlan = async (companyId, plan) => {
   try {
     const limits = PLANS[plan] || PLANS.TRIAL;
     const limit = limits.rooms;
 
-    // Deactivate all rooms first
     await db.query(
       `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
       [companyId]
     );
 
-    // If unlimited, activate all
     if (limit === Infinity) {
       await db.query(
         `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
@@ -331,15 +265,12 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
       return;
     }
 
-    // Activate first N rooms by room_number
     if (limit > 0) {
       await db.query(
-        `UPDATE conference_rooms
-         SET is_active = 1
+        `UPDATE conference_rooms SET is_active = 1
          WHERE id IN (
            SELECT id FROM (
-             SELECT id
-             FROM conference_rooms
+             SELECT id FROM conference_rooms
              WHERE company_id = ?
              ORDER BY room_number ASC, id ASC
              LIMIT ?
@@ -354,15 +285,11 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
   }
 };
 
-/**
- * Verify room ownership and active status
- */
 const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
   try {
     const [[room]] = await db.query(
       `SELECT id, is_active, room_name, room_number, capacity
-       FROM conference_rooms
-       WHERE id = ? AND company_id = ?`,
+       FROM conference_rooms WHERE id = ? AND company_id = ?`,
       [roomId, companyId]
     );
 
@@ -385,21 +312,12 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
    API ROUTES
 ====================================================== */
 
-/**
- * GET /api/conference/plan-usage
- * Returns plan usage information
- */
 router.get("/plan-usage", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
-
-    // Validate subscription and get plan details
     const { plan, roomLimit, bookingLimit, isUnlimited } = await validateCompanySubscription(companyId);
-
-    // Get room statistics
     const roomStats = await getRoomStats(companyId);
 
-    // Get booking count
     const [[bookingCount]] = await db.query(
       `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
       [companyId]
@@ -422,15 +340,9 @@ router.get("/plan-usage", async (req, res) => {
   }
 });
 
-/**
- * GET /api/conference/dashboard
- * Returns dashboard statistics
- */
 router.get("/dashboard", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
-
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
     const [[stats]] = await db.query(
@@ -443,10 +355,8 @@ router.get("/dashboard", async (req, res) => {
 
     const [departments] = await db.query(
       `SELECT department, COUNT(*) AS total
-       FROM conference_bookings
-       WHERE company_id = ?
-       GROUP BY department
-       ORDER BY total DESC`,
+       FROM conference_bookings WHERE company_id = ?
+       GROUP BY department ORDER BY total DESC`,
       [companyId]
     );
 
@@ -462,21 +372,14 @@ router.get("/dashboard", async (req, res) => {
   }
 });
 
-/**
- * GET /api/conference/rooms
- * Returns active rooms only
- */
 router.get("/rooms", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
-
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
     const [rooms] = await db.query(
       `SELECT id, room_number, room_name, capacity
-       FROM conference_rooms
-       WHERE company_id = ? AND is_active = 1
+       FROM conference_rooms WHERE company_id = ? AND is_active = 1
        ORDER BY room_number ASC`,
       [companyId]
     );
@@ -490,18 +393,13 @@ router.get("/rooms", async (req, res) => {
   }
 });
 
-/**
- * GET /api/conference/rooms/all
- * Returns all rooms (active + locked)
- */
 router.get("/rooms/all", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
 
     const [rooms] = await db.query(
       `SELECT id, room_number, room_name, capacity, is_active
-       FROM conference_rooms
-       WHERE company_id = ?
+       FROM conference_rooms WHERE company_id = ?
        ORDER BY room_number ASC, id ASC`,
       [companyId]
     );
@@ -513,16 +411,11 @@ router.get("/rooms/all", async (req, res) => {
   }
 });
 
-/**
- * POST /api/conference/rooms
- * Creates a new conference room
- */
 router.post("/rooms", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
     const { room_name, room_number, capacity } = req.body;
 
-    // Validate input
     if (!room_name?.trim()) {
       return res.status(400).json({ message: "Room name is required" });
     }
@@ -531,10 +424,8 @@ router.post("/rooms", async (req, res) => {
       return res.status(400).json({ message: "Room number is required" });
     }
 
-    // Validate subscription
     const { plan, roomLimit } = await validateCompanySubscription(companyId);
 
-    // Check if can add more rooms
     const canAdd = await canAddRoom(companyId, roomLimit);
     if (!canAdd) {
       return res.status(403).json({
@@ -542,7 +433,6 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
-    // Check for duplicate room number
     const [[existing]] = await db.query(
       `SELECT id FROM conference_rooms WHERE company_id = ? AND room_number = ?`,
       [companyId, room_number]
@@ -554,7 +444,6 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
-    // Create room (initially inactive)
     const [result] = await db.query(
       `INSERT INTO conference_rooms
        (company_id, room_number, room_name, capacity, is_active)
@@ -562,7 +451,6 @@ router.post("/rooms", async (req, res) => {
       [companyId, room_number, room_name.trim(), capacity || 0]
     );
 
-    // Sync room activation
     await syncRoomActivationByPlan(companyId, plan);
 
     res.status(201).json({
@@ -577,17 +465,12 @@ router.post("/rooms", async (req, res) => {
   }
 });
 
-/**
- * PATCH /api/conference/rooms/:id
- * Updates room details
- */
 router.patch("/rooms/:id", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
     const roomId = parseInt(req.params.id);
     const { room_name, capacity } = req.body;
 
-    // Validate input
     if (isNaN(roomId) || roomId <= 0) {
       return res.status(400).json({ message: "Invalid room ID" });
     }
@@ -596,16 +479,11 @@ router.patch("/rooms/:id", async (req, res) => {
       return res.status(400).json({ message: "Room name is required" });
     }
 
-    // Validate subscription
     await validateCompanySubscription(companyId);
-
-    // Verify room access
     await verifyRoomAccess(roomId, companyId, true);
 
-    // Update room
     await db.query(
-      `UPDATE conference_rooms
-       SET room_name = ?, capacity = ?
+      `UPDATE conference_rooms SET room_name = ?, capacity = ?
        WHERE id = ? AND company_id = ?`,
       [room_name.trim(), capacity || 0, roomId, companyId]
     );
@@ -624,10 +502,6 @@ router.patch("/rooms/:id", async (req, res) => {
   }
 });
 
-/**
- * DELETE /api/conference/rooms/:id
- * Deletes a conference room
- */
 router.delete("/rooms/:id", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
@@ -637,10 +511,8 @@ router.delete("/rooms/:id", async (req, res) => {
       return res.status(400).json({ message: "Invalid room ID" });
     }
 
-    // Verify room exists
     await verifyRoomAccess(roomId, companyId, false);
 
-    // Check for existing bookings
     const [[bookingCheck]] = await db.query(
       `SELECT COUNT(*) AS count FROM conference_bookings WHERE room_id = ?`,
       [roomId]
@@ -652,7 +524,6 @@ router.delete("/rooms/:id", async (req, res) => {
       });
     }
 
-    // Delete room
     await db.query(
       `DELETE FROM conference_rooms WHERE id = ? AND company_id = ?`,
       [roomId, companyId]
@@ -667,10 +538,6 @@ router.delete("/rooms/:id", async (req, res) => {
   }
 });
 
-/**
- * GET /api/conference/bookings
- * Returns bookings with optional filters
- */
 router.get("/bookings", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
@@ -705,10 +572,6 @@ router.get("/bookings", async (req, res) => {
   }
 });
 
-/**
- * POST /api/conference/bookings
- * Creates a new booking
- */
 router.post("/bookings", async (req, res) => {
   const conn = await db.getConnection();
 
@@ -716,10 +579,8 @@ router.post("/bookings", async (req, res) => {
     const companyId = getCompanyId(req.user);
     const { email: adminEmail } = req.user;
 
-    // Validate subscription
     const { plan, bookingLimit } = await validateCompanySubscription(companyId);
 
-    // Check booking limit
     const canBook = await canAddBooking(companyId, bookingLimit);
     if (!canBook) {
       return res.status(403).json({
@@ -729,12 +590,10 @@ router.post("/bookings", async (req, res) => {
 
     let { room_id, booked_by, department, purpose = "", booking_date, start_time, end_time } = req.body;
 
-    // Validate required fields
     if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time) {
       return res.status(400).json({ message: "All required fields must be provided" });
     }
 
-    // Normalize times
     start_time = normalizeTime(start_time);
     end_time = normalizeTime(end_time);
 
@@ -744,7 +603,6 @@ router.post("/bookings", async (req, res) => {
 
     await conn.beginTransaction();
 
-    // Verify room exists and belongs to company
     const [[room]] = await conn.query(
       `SELECT id, room_name FROM conference_rooms WHERE id = ? AND company_id = ? LIMIT 1`,
       [room_id, companyId]
@@ -755,10 +613,8 @@ router.post("/bookings", async (req, res) => {
       return res.status(403).json({ message: "Invalid room or access denied" });
     }
 
-    // Check for time conflicts
     const [[conflict]] = await conn.query(
-      `SELECT COUNT(*) AS cnt
-       FROM conference_bookings
+      `SELECT COUNT(*) AS cnt FROM conference_bookings
        WHERE company_id = ? AND room_id = ? AND booking_date = ? AND status = 'BOOKED'
        AND start_time < ? AND end_time > ?`,
       [companyId, room_id, booking_date, end_time, start_time]
@@ -769,7 +625,6 @@ router.post("/bookings", async (req, res) => {
       return res.status(409).json({ message: "Time slot already booked for this room" });
     }
 
-    // Create booking
     await conn.query(
       `INSERT INTO conference_bookings
        (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time)
@@ -779,7 +634,6 @@ router.post("/bookings", async (req, res) => {
 
     await conn.commit();
 
-    // Send email notification
     const companyInfo = await getCompanyInfo(companyId);
 
     await sendBookingMail({
@@ -809,10 +663,6 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
-/**
- * PATCH /api/conference/bookings/:id
- * Updates booking time
- */
 router.patch("/bookings/:id", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
@@ -824,7 +674,6 @@ router.patch("/bookings/:id", async (req, res) => {
       return res.status(400).json({ message: "Start and end times are required" });
     }
 
-    // Normalize times
     start_time = normalizeTime(start_time);
     end_time = normalizeTime(end_time);
 
@@ -832,13 +681,10 @@ router.patch("/bookings/:id", async (req, res) => {
       return res.status(400).json({ message: "End time must be after start time" });
     }
 
-    // Get booking details
     const [[booking]] = await db.query(
-      `SELECT b.*, r.room_name
-       FROM conference_bookings b
+      `SELECT b.*, r.room_name FROM conference_bookings b
        JOIN conference_rooms r ON r.id = b.room_id
-       WHERE b.id = ? AND b.company_id = ?
-       LIMIT 1`,
+       WHERE b.id = ? AND b.company_id = ? LIMIT 1`,
       [bookingId, companyId]
     );
 
@@ -846,16 +692,13 @@ router.patch("/bookings/:id", async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Prevent moving to past time for today's bookings
     const today = new Date().toISOString().slice(0, 10);
     if (booking.booking_date === today && start_time <= nowTime()) {
       return res.status(400).json({ message: "Cannot schedule booking in the past" });
     }
 
-    // Check for conflicts
     const [[conflict]] = await db.query(
-      `SELECT COUNT(*) AS cnt
-       FROM conference_bookings
+      `SELECT COUNT(*) AS cnt FROM conference_bookings
        WHERE company_id = ? AND room_id = ? AND booking_date = ? AND id <> ? AND status = 'BOOKED'
        AND start_time < ? AND end_time > ?`,
       [companyId, booking.room_id, booking.booking_date, bookingId, end_time, start_time]
@@ -865,13 +708,11 @@ router.patch("/bookings/:id", async (req, res) => {
       return res.status(409).json({ message: "Time slot already booked" });
     }
 
-    // Update booking
     await db.query(
       `UPDATE conference_bookings SET start_time = ?, end_time = ? WHERE id = ?`,
       [start_time, end_time, bookingId]
     );
 
-    // Send email notification
     const companyInfo = await getCompanyInfo(companyId);
 
     await sendBookingMail({
@@ -883,57 +724,22 @@ router.patch("/bookings/:id", async (req, res) => {
       company: companyInfo,
     });
 
-    res.json({ message: "Booking cancelled successfully" });
-  } catch (err) {
-    console.error("[PATCH /bookings/:id/cancel]", err.message);
-    res.status(500).json({ message: err.message || "Unable to cancel booking" });
-  }
-});
-
-/**
- * POST /api/conference/sync-rooms
- * Manually sync room activation (admin utility)
- */
-router.post("/sync-rooms", async (req, res) => {
-  try {
-    const companyId = getCompanyId(req.user);
-
-    // Validate subscription and get plan
-    const { plan } = await validateCompanySubscription(companyId);
-
-    // Sync room activation
-    await syncRoomActivationByPlan(companyId, plan);
-
-    res.json({ message: "Room activation synced successfully" });
-  } catch (err) {
-    console.error("[POST /sync-rooms]", err.message);
-    res.status(500).json({ message: "Failed to sync room activation" });
-  }
-});
-
-export default router; updated successfully" });
+    res.json({ message: "Booking updated successfully" });
   } catch (err) {
     console.error("[PATCH /bookings/:id]", err.message);
     res.status(500).json({ message: err.message || "Unable to update booking" });
   }
 });
 
-/**
- * PATCH /api/conference/bookings/:id/cancel
- * Cancels a booking
- */
 router.patch("/bookings/:id/cancel", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
     const bookingId = Number(req.params.id);
 
-    // Get booking details
     const [[booking]] = await db.query(
-      `SELECT b.*, r.room_name
-       FROM conference_bookings b
+      `SELECT b.*, r.room_name FROM conference_bookings b
        JOIN conference_rooms r ON r.id = b.room_id
-       WHERE b.id = ? AND b.company_id = ?
-       LIMIT 1`,
+       WHERE b.id = ? AND b.company_id = ? LIMIT 1`,
       [bookingId, companyId]
     );
 
@@ -941,13 +747,11 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
-    // Cancel booking
     await db.query(
       `UPDATE conference_bookings SET status = 'CANCELLED' WHERE id = ?`,
       [bookingId]
     );
 
-    // Send email notification
     const companyInfo = await getCompanyInfo(companyId);
 
     await sendBookingMail({
@@ -959,11 +763,24 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       company: companyInfo,
     });
 
-    
     res.json({ message: "Booking cancelled successfully" });
   } catch (err) {
-    console.error("[ADMIN][CANCEL BOOKING]", err);
-    res.status(500).json({ message: "Unable to cancel booking" });
+    console.error("[PATCH /bookings/:id/cancel]", err.message);
+    res.status(500).json({ message: err.message || "Unable to cancel booking" });
+  }
+});
+
+router.post("/sync-rooms", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const { plan } = await validateCompanySubscription(companyId);
+
+    await syncRoomActivationByPlan(companyId, plan);
+
+    res.json({ message: "Room activation synced successfully" });
+  } catch (err) {
+    console.error("[POST /sync-rooms]", err.message);
+    res.status(500).json({ message: "Failed to sync room activation" });
   }
 });
 
