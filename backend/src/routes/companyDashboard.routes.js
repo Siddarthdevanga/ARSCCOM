@@ -189,8 +189,9 @@ router.get("/rooms", async (req, res) => {
   try {
     const companyId = req.user.company_id;
     
-    // Validate subscription
-    await validateCompanySubscription(companyId);
+    // Validate subscription and sync rooms
+    const { plan } = await validateCompanySubscription(companyId);
+    await syncRoomActivationByPlan(companyId, plan);
 
     const [rooms] = await db.query(
       `SELECT id, room_number, room_name, capacity
@@ -203,7 +204,14 @@ router.get("/rooms", async (req, res) => {
     res.json(rooms);
   } catch (err) {
     console.error("[GET /rooms]", err.message);
-    res.status(err.message.includes("not found") ? 404 : 403).json({
+    
+    const statusCode = err.message.includes("not found") 
+      ? 404 
+      : err.message.includes("expired") || err.message.includes("inactive")
+      ? 403
+      : 500;
+      
+    res.status(statusCode).json({
       message: err.message,
     });
   }
@@ -212,11 +220,20 @@ router.get("/rooms", async (req, res) => {
 /**
  * GET /api/conference/rooms/all
  * Returns all rooms (active + locked) for admin view
+ * NOW INCLUDES: Subscription validation and automatic room sync
  */
 router.get("/rooms/all", async (req, res) => {
   try {
     const companyId = req.user.company_id;
 
+    // Validate subscription and get current plan
+    const { plan } = await validateCompanySubscription(companyId);
+    
+    // Auto-sync room activation based on current plan
+    // This ensures the first N rooms (by room_number) are active
+    await syncRoomActivationByPlan(companyId, plan);
+
+    // Fetch all rooms with updated activation status
     const [rooms] = await db.query(
       `SELECT id, room_number, room_name, capacity, is_active
        FROM conference_rooms
@@ -225,12 +242,17 @@ router.get("/rooms/all", async (req, res) => {
       [companyId]
     );
 
-    // Return just the rooms array (not wrapped in an object)
     res.json(rooms);
   } catch (err) {
     console.error("[GET /rooms/all]", err.message);
-    res.status(500).json({
-      message: "Unable to load rooms. Please try again.",
+    
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive") 
+      ? 403 
+      : 500;
+    
+    res.status(statusCode).json({
+      message: err.message || "Unable to load rooms. Please try again.",
     });
   }
 });
@@ -280,13 +302,28 @@ router.post("/rooms", async (req, res) => {
     // Sync room activation based on plan
     await syncRoomActivationByPlan(companyId, plan);
 
+    // Get the newly created room's status
+    const [[newRoom]] = await db.query(
+      `SELECT is_active FROM conference_rooms WHERE id = ?`,
+      [result.insertId]
+    );
+
     res.status(201).json({
-      message: "Room created successfully. Activation depends on your current plan.",
+      message: newRoom.is_active 
+        ? "Room created and activated successfully" 
+        : "Room created successfully. Upgrade your plan to activate this room.",
       roomId: result.insertId,
+      isActive: Boolean(newRoom.is_active),
     });
   } catch (err) {
     console.error("[POST /rooms]", err.message);
-    res.status(err.message.includes("expired") ? 403 : 500).json({
+    
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403 
+      : 500;
+      
+    res.status(statusCode).json({
       message: err.message,
     });
   }
@@ -331,7 +368,9 @@ router.patch("/rooms/:id", async (req, res) => {
     
     const statusCode = err.message.includes("not found")
       ? 404
-      : err.message.includes("locked")
+      : err.message.includes("locked") || 
+        err.message.includes("expired") ||
+        err.message.includes("inactive")
       ? 403
       : 500;
 
@@ -343,7 +382,7 @@ router.patch("/rooms/:id", async (req, res) => {
 
 /**
  * DELETE /api/conference/rooms/:id
- * Deletes a conference room (soft delete or hard delete)
+ * Deletes a conference room and re-syncs activation
  */
 router.delete("/rooms/:id", async (req, res) => {
   try {
@@ -353,6 +392,9 @@ router.delete("/rooms/:id", async (req, res) => {
     if (isNaN(roomId) || roomId <= 0) {
       return res.status(400).json({ message: "Invalid room ID" });
     }
+
+    // Validate subscription
+    const { plan } = await validateCompanySubscription(companyId);
 
     // Verify room exists
     await verifyRoomAccess(roomId, companyId, false);
@@ -378,12 +420,23 @@ router.delete("/rooms/:id", async (req, res) => {
       [roomId, companyId]
     );
 
+    // Re-sync room activation after deletion
+    // This may activate a previously locked room if slots are available
+    await syncRoomActivationByPlan(companyId, plan);
+
     res.json({
       message: "Room deleted successfully",
     });
   } catch (err) {
     console.error("[DELETE /rooms/:id]", err.message);
-    res.status(err.message.includes("not found") ? 404 : 500).json({
+    
+    const statusCode = err.message.includes("not found")
+      ? 404
+      : err.message.includes("expired") || err.message.includes("inactive")
+      ? 403
+      : 500;
+      
+    res.status(statusCode).json({
       message: err.message,
     });
   }
@@ -418,8 +471,14 @@ router.get("/dashboard", async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /dashboard]", err.message);
-    res.status(500).json({
-      message: "Failed to load dashboard statistics",
+    
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403
+      : 500;
+      
+    res.status(statusCode).json({
+      message: err.message || "Failed to load dashboard statistics",
     });
   }
 });
@@ -435,6 +494,9 @@ router.get("/plan-usage", async (req, res) => {
     // Validate subscription and get plan details
     const { plan, limit, isUnlimited } = await validateCompanySubscription(companyId);
 
+    // Sync rooms before calculating stats
+    await syncRoomActivationByPlan(companyId, plan);
+
     // Get room statistics
     const roomStats = await getRoomStats(companyId);
 
@@ -449,7 +511,13 @@ router.get("/plan-usage", async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /plan-usage]", err.message);
-    res.status(403).json({
+    
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403
+      : 500;
+      
+    res.status(statusCode).json({
       message: err.message,
     });
   }
@@ -469,13 +537,25 @@ router.post("/sync-rooms", async (req, res) => {
     // Sync room activation
     await syncRoomActivationByPlan(companyId, plan);
 
+    // Get updated stats
+    const roomStats = await getRoomStats(companyId);
+
     res.json({
       message: "Room activation synced successfully",
+      activeRooms: roomStats.active,
+      lockedRooms: roomStats.locked,
+      totalRooms: roomStats.total,
     });
   } catch (err) {
     console.error("[POST /sync-rooms]", err.message);
-    res.status(500).json({
-      message: "Failed to sync room activation",
+    
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403
+      : 500;
+      
+    res.status(statusCode).json({
+      message: err.message || "Failed to sync room activation",
     });
   }
 });
