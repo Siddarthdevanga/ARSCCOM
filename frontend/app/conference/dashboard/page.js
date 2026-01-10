@@ -61,7 +61,6 @@ export default function ConferenceDashboard() {
   const [editName, setEditName] = useState("");
   const [editCapacity, setEditCapacity] = useState(0);
 
-  // Add room modal state
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomNumber, setNewRoomNumber] = useState("");
@@ -69,6 +68,10 @@ export default function ConferenceDashboard() {
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   const [filterDay, setFilterDay] = useState("today");
+  
+  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState(null);
 
   /* ================= HELPERS ================= */
   const getDate = useCallback((offset) => {
@@ -85,6 +88,12 @@ export default function ConferenceDashboard() {
 
   const selectedDate = dates[filterDay];
 
+  /* ================= NOTIFICATION HELPER ================= */
+  const showNotification = (message, type = "info") => {
+    setNotification({ show: true, message, type });
+    setTimeout(() => setNotification({ show: false, message: "", type: "" }), 5000);
+  };
+
   /* ================= API CALLS ================= */
   const loadDashboard = async () => {
     try {
@@ -99,7 +108,6 @@ export default function ConferenceDashboard() {
       setStats(statsRes);
       setRooms(roomsRes || []);
       
-      // Handle both array response and {rooms: [...]} response
       const roomsData = Array.isArray(allRoomsRes) ? allRoomsRes : (allRoomsRes?.rooms || []);
       setAllRooms(roomsData);
       
@@ -123,7 +131,7 @@ export default function ConferenceDashboard() {
     } catch (err) {
       console.error("Dashboard load error:", err);
       if (err?.message?.includes("expired") || err?.message?.includes("inactive")) {
-        alert(err.message);
+        showNotification(err.message, "error");
       } else {
         router.replace("/auth/login");
       }
@@ -156,9 +164,9 @@ export default function ConferenceDashboard() {
       });
       
       await loadDashboard();
-      alert("Rooms synchronized successfully!");
+      showNotification("Rooms synchronized successfully!", "success");
     } catch (err) {
-      alert(err?.message || "Failed to sync rooms");
+      showNotification(err?.message || "Failed to sync rooms", "error");
     } finally {
       setSyncing(false);
     }
@@ -166,7 +174,7 @@ export default function ConferenceDashboard() {
 
   const startEditRoom = (room) => {
     if (!room.is_active) {
-      alert("This room is locked under your current plan. Please upgrade to edit.");
+      showNotification("This room is locked under your current plan. Please upgrade to edit.", "warning");
       return;
     }
     
@@ -186,19 +194,17 @@ export default function ConferenceDashboard() {
     const original = allRooms.find((r) => r.id === roomId);
 
     if (!newName) {
-      alert("Room name cannot be empty");
+      showNotification("Room name cannot be empty", "error");
       return;
     }
     
-    // Check if nothing changed
     if (newName === original?.room_name && editCapacity === original?.capacity) {
       cancelEdit();
       return;
     }
 
-    // Verify room is still active
     if (!original?.is_active) {
-      alert("This room is locked under your current plan. Please upgrade to edit.");
+      showNotification("This room is locked under your current plan. Please upgrade to edit.", "warning");
       cancelEdit();
       return;
     }
@@ -213,40 +219,45 @@ export default function ConferenceDashboard() {
         }),
       });
 
-      // Success - cancel edit mode and reload
       cancelEdit();
       await loadDashboard();
+      showNotification("Room updated successfully!", "success");
       
     } catch (err) {
       console.error("Update error:", err);
-      alert(err?.message || "Failed to update room. This room may be locked under your current plan.");
+      showNotification(err?.message || "Failed to update room. This room may be locked under your current plan.", "error");
       cancelEdit();
     }
   };
 
-  const deleteRoom = async (roomId) => {
-    const room = allRooms.find((r) => r.id === roomId);
-    
-    if (!room?.is_active) {
-      alert("Cannot delete locked rooms. Please upgrade your plan first.");
-      return;
-    }
-
-    if (!confirm(`Are you sure you want to delete "${room.room_name}"?\n\nThis action cannot be undone.`)) {
-      return;
-    }
+  const deleteRoom = async () => {
+    if (!roomToDelete) return;
 
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
+      await apiFetch(`/api/conference/rooms/${roomToDelete.id}`, {
         method: "DELETE",
       });
 
       await loadDashboard();
+      showNotification("Room deleted successfully!", "success");
       
     } catch (err) {
       console.error("Delete error:", err);
-      alert(err?.message || "Failed to delete room. The room may have existing bookings.");
+      showNotification(err?.message || "Failed to delete room. The room may have existing bookings.", "error");
+    } finally {
+      setShowDeleteConfirm(false);
+      setRoomToDelete(null);
     }
+  };
+
+  const confirmDeleteRoom = (room) => {
+    if (!room?.is_active) {
+      showNotification("Cannot delete locked rooms. Please upgrade your plan first.", "warning");
+      return;
+    }
+    
+    setRoomToDelete(room);
+    setShowDeleteConfirm(true);
   };
 
   const createNewRoom = async () => {
@@ -255,13 +266,12 @@ export default function ConferenceDashboard() {
     const capacity = parseInt(newRoomCapacity) || 0;
 
     if (!name || !number) {
-      alert("Room name and number are required");
+      showNotification("Room name and number are required", "error");
       return;
     }
 
-    // Check if room number already exists
     if (allRooms.some(r => String(r.room_number) === String(number))) {
-      alert("Room number already exists. Please use a different number.");
+      showNotification("Room number already exists. Please use a different number.", "error");
       return;
     }
 
@@ -278,23 +288,20 @@ export default function ConferenceDashboard() {
         }),
       });
 
-      // Reset form
       setNewRoomName("");
       setNewRoomNumber("");
       setNewRoomCapacity("");
       setShowAddRoomModal(false);
       
-      // Reload dashboard to get updated room list
       await loadDashboard();
       
-      // Show appropriate message based on whether room was activated
       if (response?.isActive) {
-        alert("Room created and activated successfully!");
+        showNotification("Room created and activated successfully!", "success");
       } else {
-        alert("Room created successfully! This room is locked. Upgrade your plan to activate it.");
+        showNotification("Room created successfully! This room is locked. Upgrade your plan to activate it.", "warning");
       }
     } catch (err) {
-      alert(err?.message || "Failed to create room");
+      showNotification(err?.message || "Failed to create room", "error");
     } finally {
       setIsCreatingRoom(false);
     }
@@ -319,7 +326,11 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
-  // Calculate plan usage
+  const isPlanExpired = useMemo(() => {
+    if (!plan) return false;
+    return plan.plan === "EXPIRED" || plan.status === "EXPIRED";
+  }, [plan]);
+
   const planUsage = useMemo(() => {
     if (!plan) return null;
     
@@ -356,6 +367,93 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
+      {/* NOTIFICATION BANNER */}
+      {notification.show && (
+        <div 
+          style={{
+            position: "fixed",
+            top: "20px",
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 10000,
+            maxWidth: "90%",
+            width: "auto",
+            minWidth: "300px"
+          }}
+        >
+          <div
+            style={{
+              background: 
+                notification.type === "success" ? "#00c853" :
+                notification.type === "error" ? "#ff1744" :
+                notification.type === "warning" ? "#ff9800" :
+                "#2196F3",
+              color: "#fff",
+              padding: "15px 25px",
+              borderRadius: "8px",
+              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              textAlign: "center",
+              fontWeight: 600,
+              fontSize: "14px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "10px",
+              animation: "slideDown 0.3s ease-out"
+            }}
+          >
+            <span style={{ fontSize: "18px" }}>
+              {notification.type === "success" ? "✓" :
+               notification.type === "error" ? "✕" :
+               notification.type === "warning" ? "⚠" : "ℹ"}
+            </span>
+            {notification.message}
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRMATION MODAL */}
+      {showDeleteConfirm && roomToDelete && (
+        <div className={styles.modalOverlay} onClick={() => setShowDeleteConfirm(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}>
+            <div className={styles.modalHeader}>
+              <h3>Confirm Delete</h3>
+              <button 
+                className={styles.closeBtn}
+                onClick={() => setShowDeleteConfirm(false)}
+              >
+                ✖
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              <p style={{ marginBottom: "20px", fontSize: "15px" }}>
+                Are you sure you want to delete <strong>"{roomToDelete.room_name}"</strong>?
+              </p>
+              <p style={{ marginBottom: "25px", color: "#ff1744", fontSize: "14px" }}>
+                ⚠️ This action cannot be undone.
+              </p>
+
+              <div className={styles.modalActions}>
+                <button
+                  className={styles.cancelBtn}
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={styles.deleteBtn}
+                  onClick={deleteRoom}
+                  style={{ background: "#ff1744" }}
+                >
+                  Delete Room
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ADD ROOM MODAL */}
       {showAddRoomModal && (
         <div className={styles.modalOverlay} onClick={() => setShowAddRoomModal(false)}>
@@ -476,10 +574,43 @@ export default function ConferenceDashboard() {
             </a>
           </div>
 
-          <button className={styles.bookBtn} onClick={() => router.push("/conference/bookings")}>
-            Book
+          <button 
+            className={styles.bookBtn} 
+            onClick={() => {
+              if (isPlanExpired) {
+                showNotification("Your plan has expired. Please upgrade to continue booking.", "warning");
+              } else {
+                router.push("/conference/bookings");
+              }
+            }}
+            disabled={isPlanExpired}
+            style={{
+              opacity: isPlanExpired ? 0.5 : 1,
+              cursor: isPlanExpired ? "not-allowed" : "pointer",
+              background: isPlanExpired ? "#666" : undefined
+            }}
+          >
+            {isPlanExpired ? "Plan Expired" : "Book"}
           </button>
         </div>
+        
+        {isPlanExpired && (
+          <div style={{
+            marginTop: "12px",
+            padding: "12px 16px",
+            background: "rgba(255, 152, 0, 0.15)",
+            borderLeft: "4px solid #ff9800",
+            borderRadius: "6px",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px"
+          }}>
+            <span style={{ fontSize: "20px" }}>⚠️</span>
+            <span style={{ color: "#ff9800", fontWeight: 600, fontSize: "14px" }}>
+              Your plan has expired. Please upgrade to continue using booking features.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* BOOKING LIMITS / PROGRESS */}
@@ -681,7 +812,7 @@ export default function ConferenceDashboard() {
                           padding: "8px 16px",
                           fontSize: 12
                         }}
-                        onClick={() => deleteRoom(r.id)}
+                        onClick={() => confirmDeleteRoom(r)}
                         title={!r.is_active ? "Upgrade plan to delete this room" : "Delete room"}
                       >
                         Delete
