@@ -225,7 +225,8 @@ router.get("/rooms/all", async (req, res) => {
       [companyId]
     );
 
-    res.json({ rooms });
+    // Return just the rooms array (not wrapped in an object)
+    res.json(rooms);
   } catch (err) {
     console.error("[GET /rooms/all]", err.message);
     res.status(500).json({
