@@ -25,15 +25,20 @@ router.use(authMiddleware);
 /* ======================================================
    HELPERS
 ====================================================== */
-const isExpired = (date) => !date || new Date(date).getTime() < Date.now();
+const isExpired = (date) =>
+  !date || new Date(date).getTime() < Date.now();
 
 /**
- * Validates company subscription and returns the current plan limit.
+ * Validates company subscription & returns plan context
  */
 const getPlanContext = async (companyId) => {
   const [[company]] = await db.query(
-    `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at 
-     FROM companies WHERE id = ? LIMIT 1`,
+    `
+    SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
+    FROM companies
+    WHERE id = ?
+    LIMIT 1
+    `,
     [companyId]
   );
 
@@ -43,40 +48,51 @@ const getPlanContext = async (companyId) => {
   const status = (company.subscription_status || "PENDING").toUpperCase();
 
   if (!ACTIVE_STATUSES.includes(status))
-    throw new Error("Subscription inactive. Please upgrade to manage rooms.");
+    throw new Error("Subscription inactive. Please upgrade.");
 
   if (plan === "TRIAL" && isExpired(company.trial_ends_at))
-    throw new Error("Trial period expired. Please upgrade to a paid plan.");
+    throw new Error("Trial expired. Please upgrade.");
 
   if (plan !== "TRIAL" && isExpired(company.subscription_ends_at))
-    throw new Error("Subscription expired. Please renew your plan.");
+    throw new Error("Subscription expired. Please renew.");
 
   return { plan, limit: PLANS[plan] ?? 0 };
 };
 
 /**
- * CORE LOGIC: Automatically syncs 'is_active' based on plan limits.
- * Sorting by 'room_number' ensures the first N rooms created are the ones activated.
+ * CORE: Sync room activation strictly by plan limit
+ * - First N rooms (by room_number, id) stay active
+ * - Others are locked
  */
-const autoSyncRooms = async (companyId, limit) => {
-  // 1. Deactivate everything first
-  await db.query(`UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`, [companyId]);
+const syncRoomsWithPlan = async (companyId, limit) => {
+  await db.query(
+    `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
+    [companyId]
+  );
 
-  // 2. Activate based on limit
   if (limit === Infinity) {
-    await db.query(`UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`, [companyId]);
-  } else if (limit > 0) {
     await db.query(
-      `UPDATE conference_rooms 
-       SET is_active = 1 
-       WHERE id IN (
-         SELECT id FROM (
-           SELECT id FROM conference_rooms 
-           WHERE company_id = ? 
-           ORDER BY room_number ASC, id ASC 
-           LIMIT ?
-         ) tmp
-       )`,
+      `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
+      [companyId]
+    );
+    return;
+  }
+
+  if (limit > 0) {
+    await db.query(
+      `
+      UPDATE conference_rooms
+      SET is_active = 1
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id
+          FROM conference_rooms
+          WHERE company_id = ?
+          ORDER BY room_number ASC, id ASC
+          LIMIT ?
+        ) t
+      )
+      `,
       [companyId, limit]
     );
   }
@@ -87,22 +103,23 @@ const autoSyncRooms = async (companyId, limit) => {
 ====================================================== */
 
 /**
- * GET ROOMS: Returns only active rooms for standard users/display.
+ * GET ACTIVE ROOMS (FOR USERS)
  */
 router.get("/rooms", async (req, res) => {
   try {
     const { limit } = await getPlanContext(req.user.company_id);
-    
-    // Always sync before fetching to ensure data integrity
-    await autoSyncRooms(req.user.company_id, limit);
+    await syncRoomsWithPlan(req.user.company_id, limit);
 
     const [rooms] = await db.query(
-      `SELECT id, room_number, room_name, capacity 
-       FROM conference_rooms 
-       WHERE company_id = ? AND is_active = 1 
-       ORDER BY room_number ASC`,
+      `
+      SELECT id, room_number, room_name, capacity
+      FROM conference_rooms
+      WHERE company_id = ? AND is_active = 1
+      ORDER BY room_number ASC
+      `,
       [req.user.company_id]
     );
+
     res.json(rooms);
   } catch (err) {
     res.status(403).json({ message: err.message });
@@ -110,56 +127,68 @@ router.get("/rooms", async (req, res) => {
 });
 
 /**
- * GET ALL ROOMS: For admin management, showing which are locked.
+ * GET ALL ROOMS (ADMIN VIEW)
  */
 router.get("/rooms/all", async (req, res) => {
   try {
     const { limit } = await getPlanContext(req.user.company_id);
-    await autoSyncRooms(req.user.company_id, limit);
+    await syncRoomsWithPlan(req.user.company_id, limit);
 
     const [rooms] = await db.query(
-      `SELECT id, room_number, room_name, capacity, is_active 
-       FROM conference_rooms 
-       WHERE company_id = ? 
-       ORDER BY room_number ASC`,
+      `
+      SELECT id, room_number, room_name, capacity, is_active
+      FROM conference_rooms
+      WHERE company_id = ?
+      ORDER BY room_number ASC
+      `,
       [req.user.company_id]
     );
-    res.json({ rooms, limit: limit === Infinity ? "Unlimited" : limit });
+
+    res.json({
+      limit: limit === Infinity ? "Unlimited" : limit,
+      rooms,
+    });
   } catch (err) {
     res.status(403).json({ message: err.message });
   }
 });
 
 /**
- * CREATE ROOM: Automatically checks if new room can be active.
+ * CREATE ROOM (ADMIN)
+ * - Always created as inactive
+ * - Auto-sync decides activation
  */
 router.post("/rooms", async (req, res) => {
   try {
-    const companyId = req.user.company_id;
     const { room_name, room_number, capacity } = req.body;
 
     if (!room_name?.trim() || !room_number)
-      return res.status(400).json({ message: "Room name and number are required" });
+      return res.status(400).json({ message: "Room name and number required" });
 
+    const companyId = req.user.company_id;
     const { limit } = await getPlanContext(companyId);
 
     await db.query(
-      `INSERT INTO conference_rooms (company_id, room_number, room_name, capacity, is_active) 
-       VALUES (?, ?, ?, ?, 0)`,
+      `
+      INSERT INTO conference_rooms
+      (company_id, room_number, room_name, capacity, is_active)
+      VALUES (?, ?, ?, ?, 0)
+      `,
       [companyId, room_number, room_name.trim(), capacity || 0]
     );
 
-    // Re-sync rooms: if this room fits in the limit, it will activate
-    await autoSyncRooms(companyId, limit);
+    await syncRoomsWithPlan(companyId, limit);
 
-    res.status(201).json({ message: "Room added and synced with your current plan." });
+    res.status(201).json({
+      message: "Room created. Activation depends on your current plan.",
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
 /**
- * RENAME/UPDATE ROOM: Only allowed if room is active under current plan.
+ * UPDATE / RENAME ROOM (ONLY IF ACTIVE)
  */
 router.patch("/rooms/:id", async (req, res) => {
   try {
@@ -168,24 +197,33 @@ router.patch("/rooms/:id", async (req, res) => {
     const { room_name, capacity } = req.body;
 
     const { limit } = await getPlanContext(companyId);
-    await autoSyncRooms(companyId, limit); // Ensure state is fresh
+    await syncRoomsWithPlan(companyId, limit);
 
     const [[room]] = await db.query(
-      `SELECT is_active FROM conference_rooms WHERE id = ? AND company_id = ?`,
+      `
+      SELECT is_active
+      FROM conference_rooms
+      WHERE id = ? AND company_id = ?
+      `,
       [roomId, companyId]
     );
 
-    if (!room) return res.status(404).json({ message: "Room not found" });
-    
-    if (!room.is_active) {
-      return res.status(403).json({ 
-        message: "This room is locked under your current plan. Please upgrade to edit or use it." 
+    if (!room)
+      return res.status(404).json({ message: "Room not found" });
+
+    if (!room.is_active)
+      return res.status(403).json({
+        message:
+          "This room is locked under your current plan. Upgrade to edit.",
       });
-    }
 
     await db.query(
-      `UPDATE conference_rooms SET room_name = ?, capacity = ? WHERE id = ?`,
-      [room_name.trim(), capacity, roomId]
+      `
+      UPDATE conference_rooms
+      SET room_name = ?, capacity = ?
+      WHERE id = ?
+      `,
+      [room_name.trim(), capacity || 0, roomId]
     );
 
     res.json({ message: "Room updated successfully" });
@@ -195,7 +233,7 @@ router.patch("/rooms/:id", async (req, res) => {
 });
 
 /**
- * PLAN USAGE: UI helper to show progress bars or upgrade prompts.
+ * PLAN USAGE (UI HELPER)
  */
 router.get("/plan-usage", async (req, res) => {
   try {
@@ -215,10 +253,10 @@ router.get("/plan-usage", async (req, res) => {
     res.json({
       plan,
       limit: limit === Infinity ? "Unlimited" : limit,
-      activeCount: active,
-      totalCount: total,
-      isOverLimit: total > limit,
-      upgradeRequired: total > limit
+      totalRooms: total,
+      activeRooms: active,
+      lockedRooms: Math.max(0, total - active),
+      upgradeRequired: limit !== Infinity && total > limit,
     });
   } catch (err) {
     res.status(403).json({ message: err.message });
