@@ -63,10 +63,22 @@ export default function Home() {
     fetchSubscription();
   };
 
+  const handleUpgrade = () => {
+    setShowSub(false);
+    router.push("/auth/subscription");
+  };
+
   const handleLogout = () => {
     localStorage.clear();
     router.replace("/auth/login");
   };
+
+  // Check if user can upgrade (not on enterprise or if plan is expired)
+  const canUpgrade = subData && (
+    subData.PLAN?.toLowerCase() !== "enterprise" ||
+    subData.STATUS?.toLowerCase() === "expired" ||
+    subData.STATUS?.toLowerCase() === "cancelled"
+  );
 
   if (!company) return null;
 
@@ -190,7 +202,17 @@ export default function Home() {
 
                 <div className={styles.subRow}>
                   <span>Status</span>
-                  <strong>{subData.STATUS || "—"}</strong>
+                  <strong 
+                    style={{
+                      color: 
+                        subData.STATUS?.toLowerCase() === "active" ? "#00c853" :
+                        subData.STATUS?.toLowerCase() === "expired" ? "#ff1744" :
+                        subData.STATUS?.toLowerCase() === "trial" ? "#ff9800" :
+                        "inherit"
+                    }}
+                  >
+                    {subData.STATUS || "—"}
+                  </strong>
                 </div>
 
                 {subData.ZOHO_CUSTOMER_ID && (
@@ -224,6 +246,68 @@ export default function Home() {
                     <strong>
                       {new Date(subData.LAST_PAID_ON).toLocaleString()}
                     </strong>
+                  </div>
+                )}
+
+                {/* UPGRADE BUTTON */}
+                {canUpgrade && (
+                  <div style={{ marginTop: "30px" }}>
+                    <button
+                      className={styles.upgradeBtn}
+                      onClick={handleUpgrade}
+                    >
+                      {subData.STATUS?.toLowerCase() === "expired" || 
+                       subData.STATUS?.toLowerCase() === "cancelled"
+                        ? "Renew Subscription"
+                        : "Upgrade Plan"}
+                    </button>
+                    
+                    {subData.PLAN?.toLowerCase() === "trial" && (
+                      <p style={{ 
+                        fontSize: "12px", 
+                        color: "#999", 
+                        marginTop: "10px",
+                        textAlign: "center"
+                      }}>
+                        Upgrade to Business or Enterprise for more features
+                      </p>
+                    )}
+
+                    {(subData.STATUS?.toLowerCase() === "expired" || 
+                      subData.STATUS?.toLowerCase() === "cancelled") && (
+                      <p style={{ 
+                        fontSize: "12px", 
+                        color: "#ff1744", 
+                        marginTop: "10px",
+                        textAlign: "center",
+                        fontWeight: 600
+                      }}>
+                        ⚠️ Your subscription has expired. Renew to continue using PROMEET.
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* MESSAGE FOR ENTERPRISE USERS */}
+                {subData && 
+                 subData.PLAN?.toLowerCase() === "enterprise" && 
+                 subData.STATUS?.toLowerCase() === "active" && (
+                  <div style={{ 
+                    marginTop: "30px",
+                    padding: "15px",
+                    background: "linear-gradient(135deg, #e3f2fd, #e1f5fe)",
+                    borderRadius: "12px",
+                    borderLeft: "4px solid #2196f3"
+                  }}>
+                    <p style={{ 
+                      fontSize: "13px", 
+                      color: "#0d47a1",
+                      margin: 0,
+                      lineHeight: 1.5
+                    }}>
+                      ℹ️ You're on the Enterprise plan with full access to all features. 
+                      Contact support for any custom requirements.
+                    </p>
                   </div>
                 )}
               </div>
