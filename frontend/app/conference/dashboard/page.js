@@ -48,6 +48,7 @@ export default function ConferenceDashboard() {
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [allRooms, setAllRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,6 +58,14 @@ export default function ConferenceDashboard() {
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
+  const [editCapacity, setEditCapacity] = useState(0);
+
+  // Add room modal state
+  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
+  const [newRoomName, setNewRoomName] = useState("");
+  const [newRoomNumber, setNewRoomNumber] = useState("");
+  const [newRoomCapacity, setNewRoomCapacity] = useState("");
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   const [filterDay, setFilterDay] = useState("today");
 
@@ -78,15 +87,17 @@ export default function ConferenceDashboard() {
   /* ================= API CALLS ================= */
   const loadDashboard = async () => {
     try {
-      const [statsRes, roomsRes, bookingsRes, planRes] = await Promise.all([
+      const [statsRes, roomsRes, allRoomsRes, bookingsRes, planRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
         apiFetch("/api/conference/rooms"),
+        apiFetch("/api/conference/rooms/all"),
         apiFetch("/api/conference/bookings"),
         apiFetch("/api/conference/plan-usage"),
       ]);
 
       setStats(statsRes);
       setRooms(roomsRes || []);
+      setAllRooms(allRoomsRes?.rooms || []);
       setBookings(bookingsRes || []);
       setPlan(planRes);
 
@@ -129,26 +140,80 @@ export default function ConferenceDashboard() {
   /* ================= ACTIONS ================= */
   const saveRoomName = async (roomId) => {
     const newName = editName.trim();
-    const original = rooms.find((r) => r.id === roomId)?.room_name;
+    const original = allRooms.find((r) => r.id === roomId);
 
-    if (!newName) return;
-    if (newName === original) {
+    if (!newName) {
+      alert("Room name cannot be empty");
+      return;
+    }
+    
+    if (newName === original?.room_name && editCapacity === original?.capacity) {
       setEditingRoomId(null);
       return;
     }
 
     try {
-      await apiFetch("/api/conference/rooms/rename", {
-        method: "POST",
+      await apiFetch(`/api/conference/rooms/${roomId}`, {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: roomId, room_name: newName }),
+        body: JSON.stringify({ 
+          room_name: newName,
+          capacity: editCapacity || 0
+        }),
       });
 
       setEditingRoomId(null);
       setEditName("");
+      setEditCapacity(0);
       loadDashboard();
     } catch (err) {
-      alert(err?.message || "Failed to rename room");
+      alert(err?.message || "Failed to update room. This room may be locked under your current plan.");
+    }
+  };
+
+  const createNewRoom = async () => {
+    const name = newRoomName.trim();
+    const number = newRoomNumber.trim();
+    const capacity = parseInt(newRoomCapacity) || 0;
+
+    if (!name || !number) {
+      alert("Room name and number are required");
+      return;
+    }
+
+    // Check if room number already exists
+    if (allRooms.some(r => r.room_number === number)) {
+      alert("Room number already exists. Please use a different number.");
+      return;
+    }
+
+    setIsCreatingRoom(true);
+
+    try {
+      await apiFetch("/api/conference/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room_name: name,
+          room_number: number,
+          capacity: capacity,
+        }),
+      });
+
+      // Reset form
+      setNewRoomName("");
+      setNewRoomNumber("");
+      setNewRoomCapacity("");
+      setShowAddRoomModal(false);
+      
+      // Reload dashboard
+      await loadDashboard();
+      
+      alert("Room created successfully! Activation depends on your current plan.");
+    } catch (err) {
+      alert(err?.message || "Failed to create room");
+    } finally {
+      setIsCreatingRoom(false);
     }
   };
 
@@ -171,15 +236,35 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
+  // Calculate plan usage
+  const planUsage = useMemo(() => {
+    if (!plan) return null;
+    
+    const limit = plan.limit === "Unlimited" ? Infinity : parseInt(plan.limit);
+    const total = plan.totalRooms || 0;
+    const active = plan.activeRooms || 0;
+    const locked = plan.lockedRooms || 0;
+    const canAddMore = limit === Infinity || total < limit;
+    
+    return {
+      limit,
+      total,
+      active,
+      locked,
+      canAddMore,
+      slotsAvailable: limit === Infinity ? Infinity : Math.max(0, limit - total)
+    };
+  }, [plan]);
+
   if (loading) return <div className={styles.container}>Loading dashboard…</div>;
   if (!company || !stats) return <div className={styles.container}>Unable to load dashboard</div>;
 
   const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
   const roomPercentage =
-    plan?.limit === "UNLIMITED"
+    plan?.limit === "Unlimited"
       ? 100
-      : Math.min(100, Math.round((plan?.used / plan?.limit) * 100));
+      : Math.min(100, Math.round((plan?.activeRooms / parseInt(plan?.limit)) * 100));
 
   const bookingPercentage =
     bookingPlan?.limit === Infinity
@@ -188,6 +273,90 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
+      {/* ADD ROOM MODAL */}
+      {showAddRoomModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowAddRoomModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Add New Conference Room</h3>
+              <button 
+                className={styles.closeBtn}
+                onClick={() => setShowAddRoomModal(false)}
+              >
+                ✖
+              </button>
+            </div>
+
+            <div className={styles.modalBody}>
+              {planUsage && !planUsage.canAddMore && (
+                <div className={styles.warningBox}>
+                  ⚠️ You've reached your plan limit of {planUsage.limit} rooms.
+                  Upgrade your plan to add more rooms.
+                </div>
+              )}
+
+              {planUsage && planUsage.locked > 0 && (
+                <div className={styles.infoBox}>
+                  ℹ️ You have {planUsage.locked} locked room(s). 
+                  New rooms may be created but will remain inactive until you upgrade.
+                </div>
+              )}
+
+              <div className={styles.formGroup}>
+                <label>Room Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., Board Room"
+                  value={newRoomName}
+                  onChange={(e) => setNewRoomName(e.target.value)}
+                  maxLength={100}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Room Number *</label>
+                <input
+                  type="text"
+                  placeholder="e.g., 101, A1, CR-01"
+                  value={newRoomNumber}
+                  onChange={(e) => setNewRoomNumber(e.target.value)}
+                  maxLength={20}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Capacity (Optional)</label>
+                <input
+                  type="number"
+                  placeholder="e.g., 10"
+                  value={newRoomCapacity}
+                  onChange={(e) => setNewRoomCapacity(e.target.value)}
+                  min="0"
+                  max="1000"
+                />
+              </div>
+
+              <div className={styles.modalActions}>
+                <button
+                  className={styles.cancelBtn}
+                  onClick={() => setShowAddRoomModal(false)}
+                  disabled={isCreatingRoom}
+                >
+                  Cancel
+                </button>
+                <button
+                  className={styles.primaryBtn}
+                  onClick={createNewRoom}
+                  disabled={isCreatingRoom || !newRoomName.trim() || !newRoomNumber.trim()}
+                >
+                  {isCreatingRoom ? "Creating..." : "Create Room"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
@@ -204,7 +373,6 @@ export default function ConferenceDashboard() {
         <div className={styles.headerRight}>
           <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Company Logo" />
           
-          {/* BACK BUTTON REPLACING LOGOUT */}
           <button
             className={styles.logoBtn}
             title="Back to Home"
@@ -268,6 +436,7 @@ export default function ConferenceDashboard() {
                 setSidePanelOpen(false);
                 setEditingRoomId(null);
                 setEditName("");
+                setEditCapacity(0);
               }}
             >
               Close ✖
@@ -276,12 +445,34 @@ export default function ConferenceDashboard() {
 
           {plan && (
             <div style={{ padding: "0 20px", marginBottom: 20 }}>
-              <p>Plan: <b>{plan.plan}</b></p>
-              {plan.limit === "UNLIMITED" ? (
-                <p>Unlimited Rooms 🎉</p>
-              ) : (
-                <p>Rooms: <b>{plan.used}</b> / {plan.limit}</p>
-              )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div>
+                  <p style={{ margin: 0 }}>Plan: <b>{plan.plan}</b></p>
+                  {plan.limit === "Unlimited" ? (
+                    <p style={{ margin: "5px 0 0 0" }}>Unlimited Rooms 🎉</p>
+                  ) : (
+                    <>
+                      <p style={{ margin: "5px 0 0 0" }}>
+                        Active: <b>{plan.activeRooms}</b> / {plan.limit}
+                      </p>
+                      {plan.lockedRooms > 0 && (
+                        <p style={{ margin: "5px 0 0 0", color: "#ff9800" }}>
+                          🔒 Locked: <b>{plan.lockedRooms}</b>
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+                
+                <button
+                  className={styles.addRoomBtn}
+                  onClick={() => setShowAddRoomModal(true)}
+                  title={planUsage && !planUsage.canAddMore ? "Upgrade plan to add more rooms" : "Add new room"}
+                >
+                  + Add Room
+                </button>
+              </div>
+
               <div className={styles.barOuter}>
                 <div
                   className={styles.barInner}
@@ -291,41 +482,93 @@ export default function ConferenceDashboard() {
                   }}
                 ></div>
               </div>
+
+              {planUsage && planUsage.slotsAvailable !== Infinity && (
+                <p style={{ margin: "10px 0 0 0", fontSize: 12, color: "#666" }}>
+                  {planUsage.slotsAvailable} slot(s) available
+                </p>
+              )}
             </div>
           )}
 
           <div className={styles.leftPanelContent}>
+            <h4 style={{ padding: "0 20px", margin: "10px 0" }}>All Rooms</h4>
             <ul className={styles.roomList}>
-              {rooms.map((r) => (
-                <li key={r.id}>
-                  <b>{r.room_name}</b> (#{r.room_number})
+              {allRooms.map((r) => (
+                <li 
+                  key={r.id}
+                  className={!r.is_active ? styles.lockedRoom : ""}
+                >
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <b>{r.room_name}</b>
+                      {!r.is_active && <span className={styles.lockBadge}>🔒 Locked</span>}
+                    </div>
+                    <small style={{ color: "#666" }}>
+                      #{r.room_number} • Capacity: {r.capacity || "N/A"}
+                    </small>
+                  </div>
+
                   {editingRoomId === r.id ? (
-                    <div style={{ marginTop: 5 }}>
+                    <div style={{ marginTop: 10, width: "100%" }}>
                       <input
+                        style={{ width: "100%", marginBottom: 5 }}
+                        placeholder="Room name"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         autoFocus
                       />
-                      <button onClick={() => saveRoomName(r.id)}>Save</button>
-                      <button onClick={() => setEditingRoomId(null)}>Cancel</button>
+                      <input
+                        style={{ width: "100%", marginBottom: 5 }}
+                        type="number"
+                        placeholder="Capacity"
+                        value={editCapacity}
+                        onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
+                      />
+                      <div style={{ display: "flex", gap: 5 }}>
+                        <button 
+                          onClick={() => saveRoomName(r.id)}
+                          style={{ flex: 1 }}
+                        >
+                          Save
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingRoomId(null);
+                            setEditName("");
+                            setEditCapacity(0);
+                          }}
+                          style={{ flex: 1 }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <button
-                      disabled={plan?.remaining === 0 && !r.is_active}
+                      disabled={!r.is_active}
                       style={{
-                        opacity: !r.is_active && plan?.remaining === 0 ? 0.5 : 1,
-                        cursor: !r.is_active && plan?.remaining === 0 ? "not-allowed" : "pointer",
+                        opacity: !r.is_active ? 0.5 : 1,
+                        cursor: !r.is_active ? "not-allowed" : "pointer",
                       }}
                       onClick={() => {
                         setEditingRoomId(r.id);
                         setEditName(r.room_name);
+                        setEditCapacity(r.capacity || 0);
                       }}
+                      title={!r.is_active ? "Upgrade plan to edit this room" : "Edit room"}
                     >
-                      Rename
+                      Edit
                     </button>
                   )}
                 </li>
               ))}
+
+              {allRooms.length === 0 && (
+                <li style={{ textAlign: "center", color: "#999" }}>
+                  No rooms yet. Click "Add Room" to create one.
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -359,7 +602,12 @@ export default function ConferenceDashboard() {
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <span>Active Rooms</span>
-          <b>{stats.rooms}</b>
+          <b>{plan?.activeRooms || 0}</b>
+          {plan && plan.lockedRooms > 0 && (
+            <small style={{ color: "#ff9800", fontSize: 11 }}>
+              +{plan.lockedRooms} locked
+            </small>
+          )}
         </div>
 
         <div className={styles.statCard}>
