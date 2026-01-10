@@ -23,6 +23,18 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* ================= NOTIFICATION BANNER ================= */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -30px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 /* ================= HEADER ================= */
 .header {
   display: flex;
@@ -173,14 +185,22 @@
   font-size: clamp(13px, 2.5vw, 15px);
   font-weight: 800;
   cursor: pointer;
-  transition: 0.2s;
+  transition: all 0.3s ease;
   box-shadow: 0 10px 20px rgba(255, 140, 0, 0.3);
   white-space: nowrap;
 }
 
-.bookBtn:hover {
+.bookBtn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 12px 25px rgba(255, 140, 0, 0.4);
+}
+
+.bookBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #666;
+  transform: none;
+  box-shadow: none;
 }
 
 /* ================= DASHBOARD KPIs ================= */
@@ -331,6 +351,11 @@
   flex-direction: column;
   animation: panelSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.leftPanel::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes panelSlide {
@@ -381,6 +406,11 @@
   flex: 1;
   overflow-y: auto;
   padding-right: 5px;
+  scrollbar-width: none;
+}
+
+.leftPanelContent::-webkit-scrollbar {
+  display: none;
 }
 
 /* ================= ROOM LIST BUTTONS ================= */
@@ -574,6 +604,11 @@
   overflow-y: auto;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  scrollbar-width: none;
+}
+
+.modal::-webkit-scrollbar {
+  display: none;
 }
 
 @keyframes slideUp {
