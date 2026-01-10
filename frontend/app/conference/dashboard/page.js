@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { Users, Calendar, DoorOpen, LayoutDashboard, Lock, ArrowLeft, ExternalLink, ShieldAlert, X } from "lucide-react";
 
@@ -183,7 +185,7 @@ export default function App() {
           </div>
           <div>
             <h2 className="text-xl font-bold text-slate-800 leading-tight">{company.name}</h2>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Conference Dashboard</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-[10px]">Conference Dashboard</p>
           </div>
         </div>
 
@@ -340,7 +342,7 @@ export default function App() {
                     </div>
                     <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-indigo-500 transition-all duration-700" 
+                        className="h-full transition-all duration-700" 
                         style={{ width: `${roomPercentage}%`, background: roomPercentage >= 90 ? "#ff1744" : "#00c853" }} 
                       />
                     </div>
