@@ -331,6 +331,32 @@ export default function ConferenceDashboard() {
     return plan.plan === "EXPIRED" || plan.status === "EXPIRED";
   }, [plan]);
 
+  // Check if booking limit is exceeded
+  const isBookingLimitExceeded = useMemo(() => {
+    if (!bookingPlan) return false;
+    if (bookingPlan.limit === Infinity) return false;
+    return bookingPlan.remaining !== null && bookingPlan.remaining <= 0;
+  }, [bookingPlan]);
+
+  // Check if there are no active rooms
+  const hasNoActiveRooms = useMemo(() => {
+    if (!plan) return false;
+    return plan.activeRooms === 0;
+  }, [plan]);
+
+  // Determine if booking should be disabled
+  const isBookingDisabled = useMemo(() => {
+    return isPlanExpired || isBookingLimitExceeded || hasNoActiveRooms;
+  }, [isPlanExpired, isBookingLimitExceeded, hasNoActiveRooms]);
+
+  // Get the appropriate message for disabled booking
+  const getBookingDisabledMessage = () => {
+    if (isPlanExpired) return "Your plan has expired. Please upgrade to continue booking.";
+    if (isBookingLimitExceeded) return "Booking limit exceeded. Please upgrade your plan to continue booking.";
+    if (hasNoActiveRooms) return "No active rooms available. Please add and activate rooms to start booking.";
+    return "";
+  };
+
   const planUsage = useMemo(() => {
     if (!plan) return null;
     
@@ -577,37 +603,46 @@ export default function ConferenceDashboard() {
           <button 
             className={styles.bookBtn} 
             onClick={() => {
-              if (isPlanExpired) {
-                showNotification("Your plan has expired. Please upgrade to continue booking.", "warning");
+              if (isBookingDisabled) {
+                showNotification(getBookingDisabledMessage(), "warning");
               } else {
                 router.push("/conference/bookings");
               }
             }}
-            disabled={isPlanExpired}
+            disabled={isBookingDisabled}
             style={{
-              opacity: isPlanExpired ? 0.5 : 1,
-              cursor: isPlanExpired ? "not-allowed" : "pointer",
-              background: isPlanExpired ? "#666" : undefined
+              opacity: isBookingDisabled ? 0.5 : 1,
+              cursor: isBookingDisabled ? "not-allowed" : "pointer",
+              background: isBookingDisabled ? "#666" : undefined
             }}
+            title={isBookingDisabled ? getBookingDisabledMessage() : "Book a conference room"}
           >
-            {isPlanExpired ? "Plan Expired" : "Book"}
+            {isPlanExpired ? "Plan Expired" : 
+             isBookingLimitExceeded ? "Limit Exceeded" :
+             hasNoActiveRooms ? "No Active Rooms" : "Book"}
           </button>
         </div>
         
-        {isPlanExpired && (
+        {isBookingDisabled && (
           <div style={{
             marginTop: "12px",
             padding: "12px 16px",
-            background: "rgba(255, 152, 0, 0.15)",
-            borderLeft: "4px solid #ff9800",
+            background: isPlanExpired || isBookingLimitExceeded ? "rgba(255, 152, 0, 0.15)" : "rgba(33, 150, 243, 0.15)",
+            borderLeft: `4px solid ${isPlanExpired || isBookingLimitExceeded ? "#ff9800" : "#2196f3"}`,
             borderRadius: "6px",
             display: "flex",
             alignItems: "center",
             gap: "10px"
           }}>
-            <span style={{ fontSize: "20px" }}>⚠️</span>
-            <span style={{ color: "#ff9800", fontWeight: 600, fontSize: "14px" }}>
-              Your plan has expired. Please upgrade to continue using booking features.
+            <span style={{ fontSize: "20px" }}>
+              {isPlanExpired || isBookingLimitExceeded ? "⚠️" : "ℹ️"}
+            </span>
+            <span style={{ 
+              color: isPlanExpired || isBookingLimitExceeded ? "#ff9800" : "#2196f3", 
+              fontWeight: 600, 
+              fontSize: "14px" 
+            }}>
+              {getBookingDisabledMessage()}
             </span>
           </div>
         )}
@@ -622,7 +657,14 @@ export default function ConferenceDashboard() {
           ) : (
             <p>
               Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
-              Remaining: <b>{bookingPlan.remaining}</b>
+              Remaining: <b style={{ color: isBookingLimitExceeded ? "#ff1744" : "#00c853" }}>
+                {bookingPlan.remaining}
+              </b>
+              {isBookingLimitExceeded && (
+                <span style={{ color: "#ff1744", marginLeft: "10px", fontWeight: 700 }}>
+                  ⚠️ Limit Exceeded
+                </span>
+              )}
             </p>
           )}
           <div className={styles.barOuter}>
@@ -631,8 +673,9 @@ export default function ConferenceDashboard() {
               style={{
                 width: bookingPercentage + "%",
                 background:
-                  bookingPercentage >= 90 ? "#ff1744" : 
-                  bookingPercentage >= 70 ? "#ff9800" : "#00c853",
+                  bookingPercentage >= 100 ? "#ff1744" :
+                  bookingPercentage >= 90 ? "#ff9800" : 
+                  bookingPercentage >= 70 ? "#ffc107" : "#00c853",
               }}
             ></div>
           </div>
