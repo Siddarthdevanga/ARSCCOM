@@ -1,294 +1,740 @@
-/* ================= GLOBAL ================= */
+/* ================= MODERN PROFESSIONAL LOGIN PAGE CSS ================= */
+
+/* Global Styles */
 html,
 body {
   height: 100%;
-  overflow: hidden; /* Prevent page scroll */
+  overflow: hidden;
   margin: 0;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* ================= CONTAINER ================= */
 .container {
   height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
-  font-family: "Segoe UI", Arial, sans-serif;
+  width: 100%;
+  background: linear-gradient(135deg, #380076 0%, #5d00c7 50%, #7a00ff 100%);
   color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Animated background overlay */
+.container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 15% 20%, rgba(138, 43, 226, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 85% 80%, rgba(106, 0, 221, 0.3) 0%, transparent 50%);
+  animation: backgroundPulse 10s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes backgroundPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
 }
 
 /* ================= HEADER ================= */
 .header {
   position: relative;
-  padding: 24px 60px;
+  padding: clamp(1.25rem, 2.5vw, 2rem) clamp(2rem, 5vw, 4rem);
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .brandSection {
   display: flex;
   flex-direction: column;
+  gap: clamp(0.75rem, 1.5vw, 1.25rem);
+  animation: fadeInDown 0.6s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .logoText {
-  font-size: 26px;
+  font-size: clamp(1.125rem, 2.5vw, 1.75rem);
   font-weight: 900;
   letter-spacing: 2px;
-  margin-bottom: 18px;
+  text-transform: uppercase;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #ffffff, #e0e0e0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .brandLogo {
-  width: 340px;
+  width: clamp(200px, 25vw, 360px);
   max-width: 100%;
   height: auto;
-  margin-left: 40px;   /* adjust value as needed */
+  margin-left: clamp(1rem, 3vw, 2.5rem);
+  filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.4)) brightness(1.05);
+  transition: transform 0.3s ease;
 }
 
+.brandLogo:hover {
+  transform: scale(1.02);
+}
 
-/* ================= NAV ================= */
+/* ================= NAVIGATION ================= */
 .nav {
   position: absolute;
-  top: 30px;
-  right: 60px;
+  top: clamp(1.5rem, 3vw, 2rem);
+  right: clamp(2rem, 5vw, 4rem);
   display: flex;
-  gap: 35px;
+  gap: clamp(1.5rem, 3vw, 2.5rem);
+  animation: fadeInRight 0.6s ease-out 0.2s both;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .nav button {
-  background: none;
-  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: white;
-  font-size: 15px;
+  font-size: clamp(0.813rem, 1.5vw, 0.938rem);
   font-weight: 800;
   letter-spacing: 1px;
+  padding: clamp(0.5rem, 1vw, 0.75rem) clamp(1rem, 2vw, 1.5rem);
+  border-radius: 0.75rem;
   cursor: pointer;
-  transition: 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .nav button:hover {
-  opacity: 0.75;
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
-/* ================= INFO DROPDOWN ================= */
+.nav button:active {
+  transform: translateY(0);
+}
+
+/* ================= DROPDOWN BOX (PLANS) ================= */
 .dropdownBox {
   position: absolute;
-  top: 90px;
-  right: 60px;
-
-  width: 55vw;
-  min-width: 600px;
-  max-width: 900px;
-
-  background: #ffffff;
+  top: clamp(5rem, 10vw, 7rem);
+  right: clamp(2rem, 5vw, 4rem);
+  width: clamp(320px, 60vw, 920px);
+  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
   color: #222;
-
-  border-radius: 18px;
-  padding: 26px;
-
-  border: 1px solid rgba(0,0,0,0.18);
-  box-shadow: 0 25px 60px rgba(0,0,0,.35);
-
+  border-radius: 1.5rem;
+  padding: clamp(1.5rem, 3vw, 2rem);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 
+    0 30px 80px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.1);
   z-index: 100;
+  animation: slideInDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 80vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(122, 0, 255, 0.3) transparent;
+}
+
+.dropdownBox::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdownBox::-webkit-scrollbar-thumb {
+  background: rgba(122, 0, 255, 0.3);
+  border-radius: 4px;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .dropdownBox h2 {
-  margin: 0 0 10px 0;
-  font-size: 22px;
+  margin: 0 0 clamp(0.75rem, 1.5vw, 1rem) 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
   font-weight: 900;
-  color: #3c007a;
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
 }
 
 .dropdownBox p {
-  font-size: 15px;
-  color: #333;
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
+  color: #555;
+  line-height: 1.6;
+  margin: 0 0 clamp(1rem, 2vw, 1.5rem) 0;
 }
 
-/* ================= PLANS ================= */
+/* ================= PLAN CARDS ================= */
 .planContainer {
-  display: flex;
-  gap: 18px;
-  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: clamp(1rem, 2vw, 1.5rem);
+  margin-top: clamp(1rem, 2vw, 1.5rem);
 }
 
 .planCard {
-  flex: 1;
-  padding: 16px;
-  border-radius: 14px;
-
-  background: #f7f7ff;
-  border: 1px solid rgba(0,0,0,0.18);
+  padding: clamp(1.25rem, 2.5vw, 1.75rem);
+  border-radius: 1.25rem;
+  background: linear-gradient(135deg, #f7f4ff 0%, #faf8ff 100%);
+  border: 2px solid rgba(122, 0, 255, 0.15);
   color: #222;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
-  transition: 0.25s ease-in-out;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.planCard::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(122, 0, 255, 0.08) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.planCard:hover::before {
+  opacity: 1;
 }
 
 .planCard:hover {
-  transform: translateY(-3px);
+  transform: translateY(-6px);
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.2),
+    0 0 0 2px rgba(122, 0, 255, 0.3);
 }
 
 .planCard h3 {
-  margin: 0;
-  font-size: 16px;
+  margin: 0 0 clamp(0.5rem, 1vw, 0.75rem) 0;
+  font-size: clamp(0.938rem, 1.75vw, 1.125rem);
   font-weight: 800;
   color: #5c00c8;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .planCard h2 {
-  margin: 6px 0 8px 0;
-  font-size: 20px;
+  margin: 0 0 clamp(0.75rem, 1.5vw, 1rem) 0;
+  font-size: clamp(1.375rem, 2.5vw, 1.75rem);
   font-weight: 900;
   color: #000;
+  background: linear-gradient(135deg, #3c007a, #5c00c8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .planCard ul {
   list-style: none;
   padding: 0;
+  margin: 0 0 clamp(1rem, 2vw, 1.25rem) 0;
 }
 
 .planCard li {
-  font-size: 14px;
-  margin-bottom: 4px;
-  color: #333;
+  font-size: clamp(0.813rem, 1.5vw, 0.938rem);
+  margin-bottom: clamp(0.375rem, 0.75vw, 0.5rem);
+  color: #444;
+  padding-left: 1.5rem;
+  position: relative;
+  line-height: 1.5;
 }
 
-/* ================= PLAN BUTTONS ================= */
+.planCard li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #00c853;
+  font-weight: 900;
+  font-size: 1rem;
+}
+
+/* ================= PLAN BUTTON ================= */
 .planBtn {
-  margin-top: 12px;
-  padding: 10px 18px;
-  border-radius: 10px;
+  margin-top: clamp(0.75rem, 1.5vw, 1rem);
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1rem, 2vw, 1.5rem);
+  border-radius: 0.875rem;
   border: none;
-  background: linear-gradient(135deg, #4d00ff, #9a00ff);
+  background: linear-gradient(135deg, #5d00c7, #7a00ff);
   color: #fff;
   font-weight: 800;
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
   cursor: pointer;
   width: 100%;
-  transition: 0.25s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(93, 0, 199, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .planBtn:hover {
-  transform: scale(1.05);
+  background: linear-gradient(135deg, #7a00ff, #9500ff);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(93, 0, 199, 0.45);
+}
+
+.planBtn:active {
+  transform: translateY(0);
 }
 
 /* ================= CLOSE BUTTON ================= */
 .closeBtn {
-  margin-top: 16px;
-  padding: 10px 28px;
-  border-radius: 30px;
+  margin-top: clamp(1rem, 2vw, 1.5rem);
+  padding: clamp(0.75rem, 1.5vw, 1rem) clamp(1.5rem, 3vw, 2rem);
+  border-radius: 2rem;
   border: none;
-  background: linear-gradient(135deg,#7a00ff,#5c00c8);
+  background: linear-gradient(135deg, #7a00ff, #5c00c8);
   color: white;
-  font-size: 14px;
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
   font-weight: 800;
   cursor: pointer;
-  transition: 0.25s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(122, 0, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .closeBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+  background: linear-gradient(135deg, #9500ff, #7a00ff);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(122, 0, 255, 0.45);
 }
 
-/* ================= LOGIN ================= */
+.closeBtn:active {
+  transform: translateY(0);
+}
+
+/* ================= LOGIN SECTION ================= */
 .loginWrapper {
   position: absolute;
-  top: 110px;
-  right: 100px;
+  top: 50%;
+  right: clamp(2rem, 8vw, 6rem);
+  transform: translateY(-50%);
+  animation: fadeInUp 0.6s ease-out 0.3s both;
+  z-index: 50;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) translateY(0);
+  }
 }
 
 .loginCard {
-  width: 420px;
-  background: white;
+  width: clamp(320px, 90vw, 480px);
+  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
   color: #333;
-  padding: 36px 38px;
-  border-radius: 20px;
-  box-shadow: 0 18px 40px rgba(0,0,0,0.30);
+  padding: clamp(2rem, 4vw, 2.75rem) clamp(1.75rem, 3.5vw, 2.5rem);
+  border-radius: 1.75rem;
+  box-shadow: 
+    0 30px 80px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+}
+
+.loginCard::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(122, 0, 255, 0.05) 0%, transparent 70%);
+  pointer-events: none;
 }
 
 .loginCard h4 {
   text-align: center;
-  color: #4b008f;
-  margin-top: 0;
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #4b008f, #7a00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0 0 clamp(1.5rem, 3vw, 2rem) 0;
+  letter-spacing: -0.5px;
+  position: relative;
 }
 
+/* ================= INPUT GROUPS ================= */
 .inputGroup {
-  margin-bottom: 16px;
+  margin-bottom: clamp(1.25rem, 2.5vw, 1.5rem);
+  position: relative;
 }
 
 .inputGroup label {
-  font-size: 13px;
+  display: block;
+  font-size: clamp(0.813rem, 1.5vw, 0.938rem);
   font-weight: 700;
   color: #555;
+  margin-bottom: clamp(0.5rem, 1vw, 0.625rem);
+  letter-spacing: 0.3px;
 }
 
 .inputGroup input {
   width: 100%;
-  padding: 11px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  margin-top: 6px;
-  font-size: 14px;
+  padding: clamp(0.875rem, 1.75vw, 1.125rem) clamp(1rem, 2vw, 1.25rem);
+  border-radius: 0.875rem;
+  border: 2px solid #e0e0e0;
+  margin-top: clamp(0.375rem, 0.75vw, 0.5rem);
+  font-size: clamp(0.938rem, 1.75vw, 1.063rem);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #fafafa;
+  color: #333;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.inputGroup input:hover {
+  background: #fff;
+  border-color: #c0c0c0;
 }
 
 .inputGroup input:focus {
   border-color: #7a00ff;
+  background: #fff;
   outline: none;
+  box-shadow: 0 0 0 4px rgba(122, 0, 255, 0.1);
 }
 
+.inputGroup input::placeholder {
+  color: #999;
+}
+
+/* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
-  padding: 13px;
-  background: #7a00ff;
+  padding: clamp(1rem, 2vw, 1.25rem);
+  background: linear-gradient(135deg, #7a00ff, #5d00c7);
   color: white;
-  border-radius: 10px;
-  font-size: 16px;
+  border-radius: 0.875rem;
+  font-size: clamp(1rem, 2vw, 1.125rem);
+  font-weight: 800;
   border: none;
   cursor: pointer;
-  margin-top: 8px;
-  transition: 0.25s ease;
+  margin-top: clamp(0.75rem, 1.5vw, 1rem);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(122, 0, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .loginBtn:hover {
-  background: #5c00c7;
+  background: linear-gradient(135deg, #9500ff, #7a00ff);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(122, 0, 255, 0.5);
 }
 
+.loginBtn:active {
+  transform: translateY(0);
+}
+
+.loginBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ================= EXTRA LINKS ================= */
 .extraLinks {
-  margin-top: 14px;
+  margin-top: clamp(1.25rem, 2.5vw, 1.75rem);
   text-align: center;
-  font-size: 14px;
+  font-size: clamp(0.875rem, 1.5vw, 0.938rem);
+  padding-top: clamp(1rem, 2vw, 1.25rem);
+  border-top: 1px solid #e0e0e0;
 }
 
 .extraLinks a {
   color: #5c00c7;
   text-decoration: none;
-  margin: 0 8px;
+  margin: 0 clamp(0.5rem, 1vw, 0.75rem);
   font-weight: 700;
+  transition: all 0.2s ease;
+  position: relative;
+  padding: 0.25rem 0;
+}
+
+.extraLinks a::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: linear-gradient(135deg, #5c00c7, #7a00ff);
+  transition: width 0.3s ease;
 }
 
 .extraLinks a:hover {
-  text-decoration: underline;
+  color: #7a00ff;
 }
 
-/* ================= RESPONSIVE ================= */
-@media (max-width: 1024px) {
-  .dropdownBox {
-    width: 80vw;
-  }
+.extraLinks a:hover::after {
+  width: 100%;
+}
 
+/* ================= RESPONSIVE BREAKPOINTS ================= */
+
+/* Large Tablets & Small Desktops (1024px - 1280px) */
+@media (max-width: 1280px) {
   .loginWrapper {
-    right: 40px;
+    right: clamp(2rem, 5vw, 4rem);
+  }
+  
+  .dropdownBox {
+    width: clamp(320px, 70vw, 800px);
+    right: clamp(2rem, 4vw, 3rem);
   }
 }
 
-@media (max-width: 820px) {
+/* Tablets (768px - 1024px) */
+@media (max-width: 1024px) {
+  .nav {
+    gap: clamp(1rem, 2vw, 1.5rem);
+  }
+  
   .planContainer {
-    flex-direction: column;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
-
+  
   .dropdownBox {
-    min-width: auto;
-    width: 85vw;
+    width: clamp(320px, 80vw, 700px);
   }
+  
+  .loginWrapper {
+    right: clamp(1.5rem, 4vw, 3rem);
+  }
+}
 
+/* Large Mobile & Small Tablets (640px - 768px) */
+@media (max-width: 768px) {
+  .header {
+    padding: clamp(1rem, 2vw, 1.5rem) clamp(1.5rem, 3vw, 2rem);
+  }
+  
+  .nav {
+    position: static;
+    justify-content: flex-end;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  
+  .planContainer {
+    grid-template-columns: 1fr;
+  }
+  
+  .dropdownBox {
+    position: static;
+    width: calc(100% - 3rem);
+    margin: 2rem 1.5rem;
+  }
+  
   .loginWrapper {
     position: static;
+    transform: none;
+    margin: 2rem auto;
     display: flex;
     justify-content: center;
-    margin-top: 20px;
+    padding: 0 1.5rem;
+  }
+  
+  .loginCard {
+    width: 100%;
+    max-width: 480px;
+  }
+}
+
+/* Mobile Portrait (up to 640px) */
+@media (max-width: 640px) {
+  .header {
+    padding: 1rem 1.25rem;
+  }
+  
+  .brandSection {
+    gap: 0.75rem;
+  }
+  
+  .brandLogo {
+    margin-left: 0.75rem;
+    width: clamp(160px, 50vw, 240px);
+  }
+  
+  .nav {
+    gap: 0.75rem;
+  }
+  
+  .nav button {
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+  }
+  
+  .dropdownBox {
+    width: calc(100% - 2rem);
+    margin: 1.5rem 1rem;
+    padding: 1.5rem;
+  }
+  
+  .loginWrapper {
+    padding: 0 1rem;
+  }
+  
+  .loginCard {
+    padding: 2rem 1.5rem;
+  }
+}
+
+/* Small Mobile (up to 375px) */
+@media (max-width: 375px) {
+  .header {
+    padding: 0.875rem 1rem;
+  }
+  
+  .brandLogo {
+    width: clamp(140px, 60vw, 200px);
+  }
+  
+  .nav button {
+    font-size: 0.688rem;
+    padding: 0.5rem 0.875rem;
+  }
+  
+  .dropdownBox {
+    padding: 1.25rem;
+  }
+  
+  .loginCard {
+    padding: 1.75rem 1.25rem;
+  }
+}
+
+/* Landscape Orientation on Mobile */
+@media (max-height: 600px) and (orientation: landscape) {
+  .header {
+    padding: 0.75rem 1.5rem;
+  }
+  
+  .loginWrapper {
+    position: static;
+    transform: none;
+    margin: 1.5rem auto;
+  }
+  
+  .loginCard {
+    padding: 1.5rem;
+  }
+  
+  .inputGroup {
+    margin-bottom: 1rem;
+  }
+}
+
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .nav button,
+  .planBtn,
+  .closeBtn,
+  .loginBtn {
+    min-height: 44px;
+  }
+  
+  .inputGroup input {
+    min-height: 44px;
+  }
+}
+
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .container::before,
+  .brandSection,
+  .nav,
+  .loginWrapper,
+  .dropdownBox {
+    animation: none !important;
+  }
+  
+  .container,
+  .container *,
+  .planCard,
+  .loginCard,
+  .nav button,
+  .inputGroup input,
+  .loginBtn,
+  .planBtn,
+  .closeBtn {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .container {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .container::before,
+  .nav,
+  .dropdownBox {
+    display: none !important;
+  }
+  
+  .loginCard {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
   }
 }
