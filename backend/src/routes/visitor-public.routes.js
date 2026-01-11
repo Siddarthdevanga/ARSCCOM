@@ -3,423 +3,312 @@ import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
 import multer from "multer";
 import QRCode from "qrcode";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
 
 const router = express.Router();
 
-/* ================= MULTER CONFIGURATION ================= */
+/* ======================================================
+   HARD-CODED OTP RULES (AS REQUESTED)
+====================================================== */
+const OTP_EXPIRY_MINUTES = 5;   // ⏱️ OTP valid for 5 minutes
+const OTP_RESEND_SECONDS = 30;  // 🔁 Resend allowed after 30 seconds
+
+/* ======================================================
+   MULTER (PHOTO UPLOAD)
+====================================================== */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
-  }
+    file.mimetype.startsWith("image/")
+      ? cb(null, true)
+      : cb(new Error("Only image files allowed"));
+  },
 });
 
-/* ================= CONSTANTS ================= */
-const ERROR_MESSAGES = {
-  INVALID_SLUG: "Invalid visitor registration link",
-  COMPANY_NOT_FOUND: "Company not found",
-  MISSING_FIELDS: "Missing required fields",
-  INVALID_EMAIL: "Invalid email address",
-  INVALID_PHONE: "Invalid phone number",
-  PHOTO_REQUIRED: "Visitor photo is required",
-  PLAN_EXCEEDED: "Visitor limit exceeded. Please contact administrator",
-  SERVER_ERROR: "Server error occurred"
-};
+/* ======================================================
+   MAIL CONFIG (FROM SECRETS MANAGER)
+====================================================== */
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: 465,
+  secure: true,
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+});
 
-/* ================= UTILITY FUNCTIONS ================= */
-const normalizeSlug = (value) => String(value || "").trim().toLowerCase();
-const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
+/* ======================================================
+   UTILITIES
+====================================================== */
+const normalizeSlug = (v) => String(v || "").trim().toLowerCase();
+const normalizeEmail = (v) => String(v || "").trim().toLowerCase();
 
-const isValidEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
+const isValidEmail = (email) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const isValidPhone = (phone) => {
-  const phoneRegex = /^\+?[\d\s\-()]{10,}$/;
-  return phoneRegex.test(phone);
-};
+const generateOTP = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
-/* ================= DATABASE HELPERS ================= */
-/**
- * Fetches company by slug with plan validation
- */
+const hashOTP = (otp) =>
+  crypto.createHash("sha256").update(otp).digest("hex");
+
+/* ======================================================
+   COMPANY FETCH
+====================================================== */
 const getCompanyBySlug = async (slug) => {
   const [[company]] = await db.query(
-    `SELECT 
-      id, name, slug, logo_url, 
-      plan, subscription_status, 
-      trial_ends_at, subscription_ends_at
-     FROM companies 
-     WHERE slug = ? 
+    `SELECT id, name, slug, logo_url
+     FROM companies
+     WHERE slug = ?
      LIMIT 1`,
     [slug]
   );
   return company;
 };
 
-/**
- * Validates company plan and limits
- */
-const validateVisitorPlan = async (company) => {
-  if (!company) {
-    throw new Error(ERROR_MESSAGES.COMPANY_NOT_FOUND);
-  }
-
-  const plan = (company.plan || "TRIAL").toUpperCase();
-  const status = (company.subscription_status || "PENDING").toUpperCase();
-  const now = new Date();
-
-  // Check subscription status
-  if (!["ACTIVE", "TRIAL"].includes(status)) {
-    throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
-  }
-
-  // Handle TRIAL plan
-  if (plan === "TRIAL") {
-    if (!company.trial_ends_at || new Date(company.trial_ends_at) < now) {
-      throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
-    }
-
-    // Check visitor limit for trial (100 visitors)
-    const [[{ total }]] = await db.query(
-      `SELECT COUNT(*) AS total FROM visitors WHERE company_id = ?`,
-      [company.id]
-    );
-
-    if (total >= 100) {
-      throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
-    }
-  }
-
-  // Handle BUSINESS/ENTERPRISE plans
-  if (["BUSINESS", "ENTERPRISE"].includes(plan)) {
-    if (!company.subscription_ends_at || new Date(company.subscription_ends_at) < now) {
-      throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
-    }
-  }
-
-  return true;
+/* ======================================================
+   SEND OTP EMAIL
+====================================================== */
+const sendOtpMail = async (email, otp, companyName) => {
+  await transporter.sendMail({
+    from: `"${companyName}" <${process.env.SMTP_USER}>`,
+    to: email,
+    subject: "Your Visitor Verification Code",
+    html: `
+      <h2>${companyName} – Visitor Verification</h2>
+      <p>Your OTP is:</p>
+      <h1 style="letter-spacing:4px">${otp}</h1>
+      <p>This OTP is valid for ${OTP_EXPIRY_MINUTES} minutes.</p>
+    `,
+  });
 };
 
-/* ================= ROUTE HANDLERS ================= */
+/* ======================================================
+   SEND VISITOR PASS EMAIL
+====================================================== */
+const sendVisitorPassMail = async (visitor, company) => {
+  await transporter.sendMail({
+    from: `"${company.name}" <${process.env.SMTP_USER}>`,
+    to: visitor.email,
+    subject: "Your Visitor Pass",
+    html: `
+      <h2>Welcome to ${company.name}</h2>
+      <p><b>Name:</b> ${visitor.name}</p>
+      <p><b>Visitor Code:</b> ${visitor.visitor_code}</p>
+      <p><b>Check-in:</b> ${visitor.check_in}</p>
+      <p>Please show this email at reception.</p>
+    `,
+  });
+};
 
-/**
- * GET /visitor/:slug/info - Get company info and QR code
- */
+/* ======================================================
+   QR CODE (PUBLIC URL)
+====================================================== */
 router.get("/visitor/:slug/info", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
     const company = await getCompanyBySlug(slug);
 
     if (!company) {
-      return res.status(404).json({ 
-        success: false,
-        message: ERROR_MESSAGES.INVALID_SLUG 
-      });
+      return res.status(404).json({ success: false, message: "Invalid link" });
     }
 
-    // Validate plan
-    try {
-      await validateVisitorPlan(company);
-    } catch (error) {
-      return res.status(403).json({ 
-        success: false,
-        message: error.message 
-      });
-    }
+    const publicUrl = `${process.env.PUBLIC_BASE_URL}/api/public/visitor/${slug}`;
 
-    // Generate QR code for the registration URL
-    const registrationUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
-    const qrCodeDataUrl = await QRCode.toDataURL(registrationUrl, {
+    const qrCode = await QRCode.toDataURL(publicUrl, {
       width: 400,
       margin: 2,
-      color: {
-        dark: "#3c007a",
-        light: "#ffffff"
-      }
+      color: { dark: "#3c007a", light: "#ffffff" },
     });
 
     res.json({
       success: true,
       company: {
-        id: company.id,
         name: company.name,
-        slug: company.slug,
-        logo_url: company.logo_url
+        logo_url: company.logo_url,
       },
-      qrCode: qrCodeDataUrl,
-      registrationUrl
+      qrCode,
+      publicUrl,
     });
-  } catch (error) {
-    console.error("[PUBLIC][VISITOR_INFO]", error);
-    res.status(500).json({ 
-      success: false,
-      message: ERROR_MESSAGES.SERVER_ERROR 
-    });
+  } catch (err) {
+    console.error("[QR_INFO]", err);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 
-/**
- * GET /visitor/:slug/validate - Validate company and plan
- */
-router.get("/visitor/:slug/validate", async (req, res) => {
+/* ======================================================
+   SEND OTP (WELCOME PAGE)
+====================================================== */
+router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
+    const email = normalizeEmail(req.body.email);
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: "Invalid email" });
+    }
+
     const company = await getCompanyBySlug(slug);
-
     if (!company) {
-      return res.status(404).json({ 
-        success: false,
-        message: ERROR_MESSAGES.INVALID_SLUG 
-      });
+      return res.status(404).json({ success: false, message: "Invalid link" });
     }
 
-    // Validate plan
-    try {
-      await validateVisitorPlan(company);
-    } catch (error) {
-      return res.status(403).json({ 
-        success: false,
-        message: error.message,
-        planExpired: true
-      });
-    }
-
-    res.json({
-      success: true,
-      company: {
-        name: company.name,
-        logo_url: company.logo_url
-      }
-    });
-  } catch (error) {
-    console.error("[PUBLIC][VALIDATE]", error);
-    res.status(500).json({ 
-      success: false,
-      message: ERROR_MESSAGES.SERVER_ERROR 
-    });
-  }
-});
-
-/**
- * POST /visitor/:slug/register - Register a new visitor
- */
-router.post("/visitor/:slug/register", upload.single("photo"), async (req, res) => {
-  try {
-    const slug = normalizeSlug(req.params.slug);
-    const company = await getCompanyBySlug(slug);
-
-    if (!company) {
-      return res.status(404).json({ 
-        success: false,
-        message: ERROR_MESSAGES.INVALID_SLUG 
-      });
-    }
-
-    // Validate plan
-    try {
-      await validateVisitorPlan(company);
-    } catch (error) {
-      return res.status(403).json({ 
-        success: false,
-        message: error.message 
-      });
-    }
-
-    // Validate required fields
-    const {
-      name,
-      phone,
-      email,
-      fromCompany,
-      department,
-      designation,
-      address,
-      city,
-      state,
-      postalCode,
-      country,
-      personToMeet,
-      purpose,
-      belongings,
-      idType,
-      idNumber
-    } = req.body;
-
-    if (!name?.trim()) {
-      return res.status(400).json({ 
-        success: false,
-        message: "Visitor name is required" 
-      });
-    }
-
-    if (!phone?.trim() || !isValidPhone(phone)) {
-      return res.status(400).json({ 
-        success: false,
-        message: ERROR_MESSAGES.INVALID_PHONE 
-      });
-    }
-
-    if (email && !isValidEmail(email)) {
-      return res.status(400).json({ 
-        success: false,
-        message: ERROR_MESSAGES.INVALID_EMAIL 
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ 
-        success: false,
-        message: ERROR_MESSAGES.PHOTO_REQUIRED 
-      });
-    }
-
-    // Prepare visitor data
-    const visitorData = {
-      name: name.trim(),
-      phone: phone.trim(),
-      email: email ? normalizeEmail(email) : null,
-      fromCompany: fromCompany?.trim() || null,
-      department: department?.trim() || null,
-      designation: designation?.trim() || null,
-      address: address?.trim() || null,
-      city: city?.trim() || null,
-      state: state?.trim() || null,
-      postalCode: postalCode?.trim() || null,
-      country: country?.trim() || null,
-      personToMeet: personToMeet?.trim() || null,
-      purpose: purpose?.trim() || null,
-      belongings: belongings || null,
-      idType: idType?.trim() || null,
-      idNumber: idNumber?.trim() || null
-    };
-
-    // Convert multer file to expected format
-    const file = {
-      buffer: req.file.buffer,
-      originalname: req.file.originalname,
-      mimetype: req.file.mimetype
-    };
-
-    // Save visitor using existing service
-    const visitor = await saveVisitor(company.id, visitorData, file);
-
-    res.json({
-      success: true,
-      message: "Visitor registered successfully",
-      visitor: {
-        id: visitor.id,
-        visitorCode: visitor.visitorCode,
-        name: visitor.name,
-        phone: visitor.phone,
-        email: visitor.email,
-        photoUrl: visitor.photoUrl,
-        checkIn: visitor.checkInIST
-      }
-    });
-  } catch (error) {
-    console.error("[PUBLIC][REGISTER_VISITOR]", error);
-    
-    // Handle specific error messages
-    if (error.message.includes("Trial") || error.message.includes("limit")) {
-      return res.status(403).json({ 
-        success: false,
-        message: error.message 
-      });
-    }
-
-    res.status(500).json({ 
-      success: false,
-      message: error.message || ERROR_MESSAGES.SERVER_ERROR 
-    });
-  }
-});
-
-/**
- * GET /visitor/:slug/stats - Get visitor statistics (optional)
- */
-router.get("/visitor/:slug/stats", async (req, res) => {
-  try {
-    const slug = normalizeSlug(req.params.slug);
-    const company = await getCompanyBySlug(slug);
-
-    if (!company) {
-      return res.status(404).json({ 
-        success: false,
-        message: ERROR_MESSAGES.INVALID_SLUG 
-      });
-    }
-
-    // Get today's visitor count
-    const [[todayStats]] = await db.query(
-      `SELECT COUNT(*) AS total 
-       FROM visitors 
-       WHERE company_id = ? 
-       AND DATE(check_in) = CURDATE()`,
-      [company.id]
+    // ⏱️ Resend throttle
+    const [[last]] = await db.query(
+      `SELECT otp_last_sent_at
+       FROM visitors
+       WHERE email = ? AND company_id = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+      [email, company.id]
     );
 
-    // Get total visitor count
-    const [[totalStats]] = await db.query(
-      `SELECT COUNT(*) AS total 
-       FROM visitors 
-       WHERE company_id = ?`,
-      [company.id]
+    if (last?.otp_last_sent_at) {
+      const diff =
+        (Date.now() - new Date(last.otp_last_sent_at).getTime()) / 1000;
+
+      if (diff < OTP_RESEND_SECONDS) {
+        return res.status(429).json({
+          success: false,
+          message: `Wait ${Math.ceil(
+            OTP_RESEND_SECONDS - diff
+          )} seconds to resend OTP`,
+        });
+      }
+    }
+
+    const otp = generateOTP();
+
+    await db.query(
+      `INSERT INTO visitors
+       (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at)
+       VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())`,
+      [company.id, email, hashOTP(otp), OTP_EXPIRY_MINUTES]
+    );
+
+    await sendOtpMail(email, otp, company.name);
+
+    res.json({
+      success: true,
+      message: "OTP sent to email",
+      resendAfter: OTP_RESEND_SECONDS,
+    });
+  } catch (err) {
+    console.error("[OTP_SEND]", err);
+    res.status(500).json({ success: false, message: "OTP send failed" });
+  }
+});
+
+/* ======================================================
+   VERIFY OTP
+====================================================== */
+router.post("/visitor/:slug/otp/verify", async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body.email);
+    const { otp } = req.body;
+
+    const [[visitor]] = await db.query(
+      `SELECT id, otp_hash, otp_expires_at
+       FROM visitors
+       WHERE email = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+      [email]
+    );
+
+    if (!visitor) {
+      return res.status(404).json({ success: false, message: "OTP not found" });
+    }
+
+    if (new Date(visitor.otp_expires_at) < new Date()) {
+      return res.status(400).json({ success: false, message: "OTP expired" });
+    }
+
+    if (hashOTP(otp) !== visitor.otp_hash) {
+      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    }
+
+    const sessionToken = crypto.randomBytes(32).toString("hex");
+
+    await db.query(
+      `UPDATE visitors
+       SET otp_verified_at = NOW(),
+           otp_session_token = ?
+       WHERE id = ?`,
+      [sessionToken, visitor.id]
     );
 
     res.json({
       success: true,
-      stats: {
-        today: todayStats.total,
-        total: totalStats.total
-      }
+      otpToken: sessionToken,
     });
-  } catch (error) {
-    console.error("[PUBLIC][VISITOR_STATS]", error);
-    res.status(500).json({ 
-      success: false,
-      message: ERROR_MESSAGES.SERVER_ERROR 
-    });
+  } catch (err) {
+    console.error("[OTP_VERIFY]", err);
+    res.status(500).json({ success: false, message: "Verification failed" });
   }
 });
 
-/**
- * GET /visitor/qr/:slug - Generate QR code image (PNG)
- */
-router.get("/visitor/qr/:slug", async (req, res) => {
-  try {
-    const slug = normalizeSlug(req.params.slug);
-    const company = await getCompanyBySlug(slug);
+/* ======================================================
+   REGISTER VISITOR (AFTER OTP)
+====================================================== */
+router.post(
+  "/visitor/:slug/register",
+  upload.single("photo"),
+  async (req, res) => {
+    try {
+      const otpToken = req.headers["otp-token"];
+      if (!otpToken) {
+        return res.status(401).json({ success: false, message: "OTP required" });
+      }
 
-    if (!company) {
-      return res.status(404).send("Company not found");
+      const [[visitor]] = await db.query(
+        `SELECT id, company_id, email
+         FROM visitors
+         WHERE otp_session_token = ?`,
+        [otpToken]
+      );
+
+      if (!visitor) {
+        return res.status(401).json({ success: false, message: "Invalid session" });
+      }
+
+      if (!req.file) {
+        return res.status(400).json({ success: false, message: "Photo required" });
+      }
+
+      const updatedVisitor = await saveVisitor(
+        visitor.company_id,
+        {
+          name: req.body.name?.trim(),
+          phone: req.body.phone?.trim(),
+          fromCompany: req.body.fromCompany?.trim(),
+          purpose: req.body.purpose?.trim(),
+        },
+        req.file,
+        visitor.id
+      );
+
+      const [[company]] = await db.query(
+        `SELECT name FROM companies WHERE id = ?`,
+        [visitor.company_id]
+      );
+
+      await sendVisitorPassMail(updatedVisitor, company);
+
+      res.json({
+        success: true,
+        message: "Visitor registered & pass sent",
+        visitorCode: updatedVisitor.visitor_code,
+      });
+    } catch (err) {
+      console.error("[REGISTER]", err);
+      res.status(500).json({ success: false, message: "Registration failed" });
     }
-
-    const registrationUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
-    
-    // Generate QR code as buffer
-    const qrCodeBuffer = await QRCode.toBuffer(registrationUrl, {
-      width: 400,
-      margin: 2,
-      color: {
-        dark: "#3c007a",
-        light: "#ffffff"
-      }
-    });
-
-    res.setHeader("Content-Type", "image/png");
-    res.setHeader("Content-Disposition", `inline; filename="visitor-qr-${slug}.png"`);
-    res.send(qrCodeBuffer);
-  } catch (error) {
-    console.error("[PUBLIC][QR_IMAGE]", error);
-    res.status(500).send("Failed to generate QR code");
   }
-});
+);
 
 export default router;
+
