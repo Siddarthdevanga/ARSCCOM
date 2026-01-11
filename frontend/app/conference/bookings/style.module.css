@@ -1,34 +1,33 @@
-/* ===== GLOBAL: Allow Scroll but Hide Scrollbars ===== */
-html,
-body {
+/* ===== GLOBAL RESET & SCROLLBAR ===== */
+:global(*) {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:global(html),
+:global(body) {
   height: 100%;
   margin: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none !important;
+  scrollbar-width: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
-body::-webkit-scrollbar,
-html::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
+:global(body::-webkit-scrollbar),
+.page::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ================= PAGE ================= */
 .page {
   min-height: 100vh;
   background: linear-gradient(135deg, #380076, #8a2be2);
-  padding: 32px;
-  font-family: "Segoe UI", Arial, sans-serif;
-  box-sizing: border-box;
+  padding: 2rem;
   overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none !important;
-}
-
-.page::-webkit-scrollbar {
-  width: 0 !important;
-  height: 0 !important;
+  scrollbar-width: none;
 }
 
 /* ================= HEADER ================= */
