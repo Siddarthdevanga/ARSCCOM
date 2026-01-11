@@ -1,10 +1,13 @@
-/* ================= GLOBAL ================= */
+/* ================= MODERN PROFESSIONAL HOME PAGE CSS ================= */
+
+/* Global Styles */
 html,
 body {
   height: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scrollbar-width: none;
@@ -15,15 +18,37 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-/* ================= MAIN BACKGROUND ================= */
+/* ================= CONTAINER ================= */
 .container {
   height: 100vh;
   width: 100%;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  background: linear-gradient(135deg, #380076 0%, #6a00dd 50%, #8a2be2 100%);
   color: #ffffff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+/* Animated background overlay */
+.container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 20%, rgba(138, 43, 226, 0.4) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(106, 0, 221, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(56, 0, 118, 0.2) 0%, transparent 70%);
+  animation: gradientShift 15s ease infinite;
+  pointer-events: none;
+}
+
+@keyframes gradientShift {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
 /* ================= HEADER ================= */
@@ -31,167 +56,273 @@ body::-webkit-scrollbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 22px 55px;
+  padding: clamp(1rem, 2vw, 1.5rem) clamp(2rem, 5vw, 3.5rem);
+  position: relative;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* LEFT - 3 DOT MENU */
+/* Menu Dots */
 .menuDots {
-  font-size: 28px;
+  font-size: clamp(1.5rem, 3vw, 1.875rem);
   cursor: pointer;
-  padding: 8px 14px;
-  border-radius: 14px;
+  padding: clamp(0.5rem, 1vw, 0.75rem) clamp(0.75rem, 1.5vw, 1rem);
+  border-radius: 1rem;
   user-select: none;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .menuDots:hover {
-  background: rgba(255, 255, 255, 0.22);
-  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
 .menuDots:active {
-  transform: scale(0.95);
+  transform: translateY(0) scale(0.98);
 }
 
-/* CENTER LOGO TEXT */
+/* Logo Text */
 .logoText {
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: clamp(1.25rem, 3vw, 1.875rem);
+  font-weight: 900;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
+  text-align: center;
+  text-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #ffffff, #e0e0e0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-/* ================= RIGHT HEADER ================= */
+/* Right Section */
 .rightSection {
   display: flex;
   align-items: center;
-  gap: 18px;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
 }
 
 .companyLogo {
-  width: 120px;
-  height: 80px;
+  width: clamp(80px, 10vw, 140px);
+  height: clamp(50px, 7vw, 85px);
   object-fit: contain;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.3)) brightness(1.1);
+  transition: transform 0.3s ease;
 }
 
-/* ================= LOGOUT BUTTON ================= */
+.companyLogo:hover {
+  transform: scale(1.05);
+}
+
+/* Logout Button */
 .logoutBtn {
-  width: 48px;
-  height: 48px;
-  background: #ffffff;
+  width: clamp(2.5rem, 5vw, 3rem);
+  height: clamp(2.5rem, 5vw, 3rem);
+  background: linear-gradient(135deg, #ffffff, #f5f5f5);
   border: none;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  font-size: 20px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #5d00c7;
+  font-weight: 800;
 }
 
 .logoutBtn:hover {
-  transform: translateY(-2px);
-  opacity: 0.96;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+  transform: translateY(-3px) rotate(-5deg);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #ffb703, #ff8c00);
+  color: #000;
 }
 
 .logoutBtn:active {
-  transform: translateY(0);
+  transform: translateY(-1px) rotate(-3deg);
 }
 
 /* ================= CARD AREA ================= */
 .cardWrapper {
-  margin-top: 72px;
+  flex: 1;
   display: flex;
   justify-content: center;
-  gap: 72px;
+  align-items: center;
+  gap: clamp(2rem, 5vw, 4.5rem);
+  padding: clamp(2rem, 4vw, 3rem);
+  position: relative;
+  z-index: 1;
+  flex-wrap: wrap;
 }
 
-/* ================= CARD ================= */
+/* ================= CARDS ================= */
 .card {
-  width: 420px;
-  padding: 40px 30px;
-  background: #ffffff;
+  width: clamp(280px, 40vw, 460px);
+  max-width: 90%;
+  padding: clamp(2rem, 4vw, 2.75rem) clamp(1.5rem, 3vw, 2rem);
+  background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
   color: #2e2e2e;
   text-align: center;
-  border-radius: 28px;
+  border-radius: 2rem;
   cursor: pointer;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.26);
-  transition: transform 0.28s ease, box-shadow 0.28s ease;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(0, 0, 0, 0.05);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.card::after {
+/* Card gradient overlay */
+.card::before {
   content: "";
   position: absolute;
-  inset: 0;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
   background: radial-gradient(
-    circle at top,
-    rgba(122, 0, 255, 0.14),
+    circle,
+    rgba(122, 0, 255, 0.08) 0%,
     transparent 70%
   );
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease, transform 0.6s ease;
+  pointer-events: none;
+}
+
+.card:hover::before {
+  opacity: 1;
+  transform: translate(10%, 10%);
+}
+
+/* Card shine effect */
+.card::after {
+  content: "";
+  position: absolute;
+  top: -100%;
+  left: -100%;
+  width: 300%;
+  height: 300%;
+  background: linear-gradient(
+    45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 50%,
+    transparent 60%
+  );
+  opacity: 0;
+  transition: all 0.6s ease;
   pointer-events: none;
 }
 
 .card:hover::after {
   opacity: 1;
+  transform: translate(30%, 30%);
 }
 
 .card:hover {
-  transform: translateY(-10px);
-  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.36);
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 
+    0 28px 80px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(122, 0, 255, 0.2),
+    0 0 40px rgba(122, 0, 255, 0.1);
 }
 
 .card:active {
-  transform: translateY(-5px);
+  transform: translateY(-8px) scale(1.01);
 }
 
-/* ================= CARD CONTENT ================= */
+/* Card Content */
 .card h2 {
-  margin-top: 22px;
-  font-size: 23px;
-  font-weight: 800;
-  color: #5d00c7;
+  margin: clamp(1rem, 2vw, 1.5rem) 0 clamp(0.5rem, 1vw, 0.75rem);
+  font-size: clamp(1.25rem, 2.5vw, 1.625rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #5d00c7, #7a00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: -0.5px;
 }
 
 .card p {
-  margin-top: 12px;
-  font-size: 15px;
-  color: #6b6b6b;
+  margin: 0;
+  font-size: clamp(0.875rem, 1.8vw, 1rem);
+  color: #666;
   line-height: 1.6;
+  font-weight: 500;
 }
 
-/* ================= ICON CIRCLE ================= */
+/* Icon Circle */
 .iconCircle {
-  width: 86px;
-  height: 86px;
+  width: clamp(70px, 10vw, 95px);
+  height: clamp(70px, 10vw, 95px);
   margin: 0 auto;
   border-radius: 50%;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: linear-gradient(135deg, #6a00ff, #8a2dff);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.32);
+  box-shadow: 
+    0 10px 30px rgba(106, 0, 255, 0.4),
+    0 0 0 3px rgba(255, 255, 255, 0.1),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.iconCircle::before {
+  content: "";
+  position: absolute;
+  top: 5%;
+  left: 10%;
+  right: 10%;
+  height: 30%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent);
+  border-radius: 50% 50% 0 0;
+  pointer-events: none;
+}
+
+.card:hover .iconCircle {
+  transform: translateY(-8px) scale(1.1);
+  box-shadow: 
+    0 15px 40px rgba(106, 0, 255, 0.6),
+    0 0 0 4px rgba(255, 255, 255, 0.15),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.2);
 }
 
 .iconCircle svg {
-  width: 42px;
-  height: 42px;
+  width: clamp(2rem, 5vw, 2.5rem);
+  height: clamp(2rem, 5vw, 2.5rem);
   stroke: #ffffff;
-  stroke-width: 2.2;
+  stroke-width: 2.5;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 /* ================= OVERLAY ================= */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 99;
-  animation: fadeIn 0.25s ease;
+  animation: fadeIn 0.3s ease;
+  cursor: pointer;
 }
 
 @keyframes fadeIn {
@@ -199,25 +330,40 @@ body::-webkit-scrollbar {
   to { opacity: 1; }
 }
 
-/* ================= LEFT SLIDE PANEL ================= */
+/* ================= SUBSCRIPTION SLIDE PANEL ================= */
 .subSlide {
   position: fixed;
   inset: 0 auto 0 0;
-  width: 30vw;
-  max-width: 480px;
+  width: clamp(320px, 35vw, 480px);
   height: 100vh;
-  background: #ffffff;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   color: #333;
-  padding: 28px;
+  padding: clamp(1.5rem, 3vw, 2rem);
   z-index: 100;
-  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.32);
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  box-shadow: 
+    8px 0 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.1);
+  animation: slideIn 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(122, 0, 255, 0.3) transparent;
 }
 
 .subSlide::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.subSlide::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.subSlide::-webkit-scrollbar-thumb {
+  background: rgba(122, 0, 255, 0.3);
+  border-radius: 4px;
+}
+
+.subSlide::-webkit-scrollbar-thumb:hover {
+  background: rgba(122, 0, 255, 0.5);
 }
 
 @keyframes slideIn {
@@ -231,49 +377,58 @@ body::-webkit-scrollbar {
   }
 }
 
-/* ================= SLIDE HEADER ================= */
+/* Slide Header */
 .subHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: clamp(1.25rem, 2.5vw, 1.75rem);
+  padding-bottom: clamp(1rem, 2vw, 1.25rem);
+  border-bottom: 2px solid #f0f0f0;
 }
 
 .subHeader h3 {
   margin: 0;
-  font-size: 20px;
-  color: #5d00c7;
-  font-weight: 800;
+  font-size: clamp(1.125rem, 2.5vw, 1.375rem);
+  background: linear-gradient(135deg, #5d00c7, #7a00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+  letter-spacing: -0.3px;
 }
 
 .subHeader button {
   border: none;
-  background: #5d00c7;
+  background: linear-gradient(135deg, #5d00c7, #7a00ff);
   color: #ffffff;
-  padding: 8px 14px;
-  border-radius: 10px;
+  padding: clamp(0.5rem, 1vw, 0.625rem) clamp(0.875rem, 1.5vw, 1rem);
+  border-radius: 0.75rem;
   cursor: pointer;
-  font-size: 16px;
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
   font-weight: 700;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(93, 0, 199, 0.3);
 }
 
 .subHeader button:hover {
-  background: #7a00ff;
+  background: linear-gradient(135deg, #7a00ff, #9500ff);
   transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(93, 0, 199, 0.4);
 }
 
 .subHeader button:active {
   transform: scale(0.98);
 }
 
-/* ================= LOADING & ERROR STATES ================= */
+/* Loading & Error States */
 .subLoading {
   text-align: center;
   color: #999;
-  font-size: 15px;
-  padding: 20px;
+  font-size: clamp(0.875rem, 1.5vw, 1rem);
+  padding: clamp(1.25rem, 2.5vw, 1.5rem);
   animation: pulse 1.5s ease-in-out infinite;
+  font-weight: 500;
 }
 
 @keyframes pulse {
@@ -284,276 +439,272 @@ body::-webkit-scrollbar {
 .subError {
   text-align: center;
   color: #ff1744;
-  font-size: 14px;
-  padding: 16px;
-  background: rgba(255, 23, 68, 0.1);
-  border-radius: 12px;
+  font-size: clamp(0.813rem, 1.5vw, 0.938rem);
+  padding: clamp(1rem, 2vw, 1.25rem);
+  background: linear-gradient(135deg, rgba(255, 23, 68, 0.1), rgba(255, 23, 68, 0.05));
+  border-radius: 1rem;
   border-left: 4px solid #ff1744;
   font-weight: 600;
+  box-shadow: 0 2px 8px rgba(255, 23, 68, 0.15);
 }
 
-/* ================= SUB CONTENT ================= */
+/* Subscription Content */
 .subContent {
-  margin-top: 24px;
+  margin-top: clamp(1.25rem, 2.5vw, 1.75rem);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  font-size: 15px;
-  line-height: 1.6;
+  gap: clamp(0.75rem, 1.5vw, 1rem);
 }
 
-/* ================= SUB ROWS (FIXED FORMAT) ================= */
+/* Subscription Rows */
 .subRow {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
-  padding: 14px 16px;
-  background: #f7f4ff;
-  border-radius: 12px;
-  transition: all 0.2s ease;
+  gap: 1rem;
+  padding: clamp(0.875rem, 1.75vw, 1.125rem) clamp(1rem, 2vw, 1.25rem);
+  background: linear-gradient(135deg, #f7f4ff, #faf8ff);
+  border-radius: 1rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(122, 0, 255, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .subRow:hover {
-  background: #ede7ff;
-  transform: translateX(2px);
+  background: linear-gradient(135deg, #ede7ff, #f0ebff);
+  transform: translateX(4px);
+  box-shadow: 0 4px 12px rgba(122, 0, 255, 0.15);
+  border-color: rgba(122, 0, 255, 0.2);
 }
 
 .subRow span {
   color: #555;
   font-weight: 600;
-  font-size: 14px;
+  font-size: clamp(0.813rem, 1.5vw, 0.938rem);
 }
 
 .subRow span::after {
   content: " :";
-  margin-left: 4px;
+  margin-left: 2px;
 }
 
 .subRow strong {
   color: #5d00c7;
   font-weight: 700;
   text-align: right;
-  font-size: 14px;
+  font-size: clamp(0.813rem, 1.5vw, 0.938rem);
 }
 
-/* ================= UPGRADE BUTTON ================= */
+/* Upgrade Button */
 .upgradeBtn {
   width: 100%;
-  padding: 16px 24px;
+  padding: clamp(0.875rem, 2vw, 1.125rem) clamp(1.25rem, 2.5vw, 1.75rem);
   background: linear-gradient(135deg, #7a00ff, #9500ff);
   color: white;
   border: none;
-  border-radius: 14px;
-  font-size: 15px;
+  border-radius: 1rem;
+  font-size: clamp(0.875rem, 1.75vw, 1rem);
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 20px rgba(122, 0, 255, 0.35);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 8px 24px rgba(122, 0, 255, 0.4);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 24px;
+  letter-spacing: 1px;
+  margin-top: clamp(1.25rem, 2.5vw, 1.75rem);
 }
 
 .upgradeBtn:hover {
   background: linear-gradient(135deg, #9500ff, #b000ff);
   transform: translateY(-3px);
-  box-shadow: 0 12px 28px rgba(122, 0, 255, 0.45);
+  box-shadow: 0 12px 32px rgba(122, 0, 255, 0.5);
 }
 
 .upgradeBtn:active {
   transform: translateY(-1px);
 }
 
-/* For expired/cancelled subscriptions */
-.upgradeBtn.danger {
-  background: linear-gradient(135deg, #ff1744, #d50000);
-  box-shadow: 0 8px 20px rgba(255, 23, 68, 0.35);
-}
+/* ================= RESPONSIVE BREAKPOINTS ================= */
 
-.upgradeBtn.danger:hover {
-  background: linear-gradient(135deg, #ff5252, #ff1744);
-  box-shadow: 0 12px 28px rgba(255, 23, 68, 0.45);
-}
-
-/* ================= RESPONSIVE ================= */
+/* Large Tablets & Small Desktops */
 @media (max-width: 1024px) {
-  .header {
-    padding: 22px 36px;
-  }
-
   .cardWrapper {
-    gap: 42px;
+    gap: clamp(1.5rem, 4vw, 3rem);
   }
-
+  
   .card {
-    width: 360px;
-    padding: 36px 26px;
+    width: clamp(260px, 42vw, 400px);
   }
-
+  
   .subSlide {
-    width: 40vw;
+    width: clamp(320px, 45vw, 520px);
   }
 }
 
+/* Tablets */
 @media (max-width: 768px) {
   .header {
-    padding: 18px 22px;
+    padding: clamp(1rem, 2vw, 1.25rem) clamp(1.5rem, 3vw, 2rem);
   }
-
-  .logoText {
-    font-size: 24px;
-  }
-
-  .companyLogo {
-    width: 100px;
-    height: 65px;
-  }
-
-  .logoutBtn {
-    width: 44px;
-    height: 44px;
-    font-size: 18px;
-  }
-
+  
   .cardWrapper {
-    margin-top: 40px;
     flex-direction: column;
-    align-items: center;
-    gap: 26px;
+    gap: clamp(1.5rem, 3vw, 2rem);
+    padding: clamp(1.5rem, 3vw, 2rem);
   }
-
+  
   .card {
-    width: 320px;
-    padding: 32px 24px;
+    width: clamp(280px, 85vw, 400px);
   }
-
-  .card h2 {
-    font-size: 21px;
-  }
-
-  .card p {
-    font-size: 14px;
-  }
-
-  .iconCircle {
-    width: 76px;
-    height: 76px;
-  }
-
-  .iconCircle svg {
-    width: 38px;
-    height: 38px;
-  }
-
+  
   .subSlide {
-    width: 60vw;
-    padding: 24px;
-  }
-
-  .subHeader h3 {
-    font-size: 18px;
-  }
-
-  .upgradeBtn {
-    padding: 14px 20px;
-    font-size: 14px;
+    width: clamp(320px, 65vw, 560px);
   }
 }
 
-@media (max-width: 450px) {
+/* Mobile Landscape & Small Tablets */
+@media (max-width: 640px) {
   .header {
-    padding: 16px 18px;
+    padding: 1rem 1.5rem;
   }
-
-  .logoText {
-    font-size: 20px;
+  
+  .rightSection {
+    gap: 0.75rem;
   }
-
-  .companyLogo {
-    width: 80px;
-    height: 55px;
-  }
-
-  .logoutBtn {
-    width: 40px;
-    height: 40px;
-    font-size: 16px;
-  }
-
-  .menuDots {
-    font-size: 24px;
-    padding: 6px 12px;
-  }
-
+  
   .card {
-    width: 90%;
-    padding: 28px 20px;
+    width: min(90vw, 360px);
   }
-
-  .card h2 {
-    font-size: 19px;
+  
+  .subSlide {
+    width: min(85vw, 400px);
   }
+}
 
-  .card p {
-    font-size: 13px;
+/* Mobile Portrait */
+@media (max-width: 480px) {
+  .header {
+    padding: 0.875rem 1.25rem;
   }
-
+  
+  .menuDots {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .logoText {
+    font-size: 1.125rem;
+  }
+  
+  .companyLogo {
+    width: 70px;
+    height: 45px;
+  }
+  
+  .logoutBtn {
+    width: 2.25rem;
+    height: 2.25rem;
+    font-size: 1rem;
+  }
+  
+  .cardWrapper {
+    padding: 1.25rem;
+    gap: 1.5rem;
+  }
+  
+  .card {
+    width: min(92vw, 340px);
+    padding: 1.75rem 1.25rem;
+  }
+  
   .iconCircle {
     width: 70px;
     height: 70px;
   }
-
+  
   .iconCircle svg {
-    width: 34px;
-    height: 34px;
+    width: 2rem;
+    height: 2rem;
   }
-
+  
   .subSlide {
-    width: 85vw;
-    padding: 20px;
+    width: 90vw;
+    padding: 1.5rem;
   }
+}
 
-  .subHeader h3 {
-    font-size: 16px;
+/* Small Mobile */
+@media (max-width: 375px) {
+  .header {
+    padding: 0.75rem 1rem;
   }
-
-  .subHeader button {
-    padding: 6px 12px;
-    font-size: 14px;
+  
+  .logoText {
+    font-size: 1rem;
   }
-
-  .subRow {
-    padding: 12px 14px;
+  
+  .card {
+    width: 95vw;
+    padding: 1.5rem 1rem;
   }
-
-  .subRow span,
-  .subRow strong {
-    font-size: 13px;
+  
+  .subSlide {
+    width: 95vw;
+    padding: 1.25rem;
   }
+}
 
+/* Touch Device Optimizations */
+@media (hover: none) and (pointer: coarse) {
+  .menuDots,
+  .logoutBtn,
+  .subHeader button,
   .upgradeBtn {
-    padding: 12px 18px;
-    font-size: 13px;
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  .card:hover {
+    transform: none;
+  }
+  
+  .card:active {
+    transform: scale(0.98);
   }
 }
 
-/* ================= ANIMATION UTILITIES ================= */
-@keyframes slideUpFade {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+/* Reduced Motion Support */
+@media (prefers-reduced-motion: reduce) {
+  .container,
+  .container::before,
+  .card,
+  .card::before,
+  .card::after,
+  .iconCircle,
+  .overlay,
+  .subSlide,
+  .subLoading {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-.subContent > * {
-  animation: slideUpFade 0.4s ease forwards;
-  animation-delay: calc(var(--index, 0) * 0.05s);
+/* Print Styles */
+@media print {
+  .container {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .container::before,
+  .menuDots,
+  .logoutBtn,
+  .overlay,
+  .subSlide {
+    display: none !important;
+  }
+  
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #ddd !important;
+  }
 }
