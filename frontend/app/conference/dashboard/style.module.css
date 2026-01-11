@@ -1188,14 +1188,22 @@
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  .container,
+  .container *,
+  .header,
+  .leftPanel,
+  .modal,
+  .statCard,
+  .section,
+  .publicBox,
+  .bookingRow,
+  .roomList li {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }
+
 
 /* Print */
 @media print {
