@@ -8,7 +8,6 @@ body {
   scrollbar-width: none !important;
 }
 
-/* Hide scrollbar (Chrome / Safari / Edge) */
 body::-webkit-scrollbar,
 html::-webkit-scrollbar {
   width: 0 !important;
@@ -22,11 +21,11 @@ html::-webkit-scrollbar {
   padding: 32px;
   font-family: "Segoe UI", Arial, sans-serif;
   box-sizing: border-box;
-
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none !important;
 }
+
 .page::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
@@ -37,11 +36,12 @@ html::-webkit-scrollbar {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
+  gap: 16px;
   margin-bottom: 32px;
   color: #fff;
 }
 
-.header h1 {
+.companyName {
   text-align: center;
   font-size: 26px;
   font-weight: 900;
@@ -49,13 +49,18 @@ html::-webkit-scrollbar {
   margin: 0;
 }
 
-.header img {
+.headerRight {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.headerRight img {
   height: 44px;
   width: auto;
   object-fit: contain;
 }
 
-/* BACK BUTTON */
 .backBtn {
   background: rgba(255, 255, 255, 0.18);
   border: none;
@@ -66,17 +71,91 @@ html::-webkit-scrollbar {
   font-size: 20px;
   font-weight: 800;
   cursor: pointer;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   transition: all 0.2s ease;
 }
 
 .backBtn:hover {
   background: rgba(255, 255, 255, 0.32);
   transform: translateX(-2px);
+}
+
+/* ================= BANNER ================= */
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  backdrop-filter: blur(10px);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bannerWarning {
+  background: rgba(255, 193, 7, 0.25);
+  border: 2px solid rgba(255, 193, 7, 0.6);
+}
+
+.bannerError {
+  background: rgba(244, 67, 54, 0.25);
+  border: 2px solid rgba(244, 67, 54, 0.6);
+}
+
+.bannerInfo {
+  background: rgba(33, 150, 243, 0.25);
+  border: 2px solid rgba(33, 150, 243, 0.6);
+}
+
+.bannerContent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.bannerIcon {
+  font-size: 24px;
+}
+
+.bannerContent p {
+  margin: 0;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bannerClose {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.bannerClose:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.1);
 }
 
 /* ================= LAYOUT ================= */
@@ -91,76 +170,244 @@ html::-webkit-scrollbar {
 .card {
   background: #ffffff;
   border-radius: 24px;
-  padding: 36px 36px;
+  padding: 36px;
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.1);
 }
 
 .card h2 {
   font-size: 22px;
   font-weight: 900;
-  margin-bottom: 18px;
+  margin: 0 0 24px 0;
   color: #3c007a;
 }
 
-/* ================= FORM ================= */
-.card label {
+/* ================= FORM GROUPS ================= */
+.formGroup {
+  margin-bottom: 20px;
+}
+
+.formGroup label {
   display: block;
-  margin-top: 16px;
+  margin-bottom: 8px;
   font-weight: 700;
   font-size: 14px;
   color: #333;
 }
 
-.card input {
+.input {
   width: 100%;
   padding: 12px 14px;
-  margin-top: 6px;
   border-radius: 12px;
   border: 1px solid #c9c9c9;
   font-size: 14px;
   background: #fafafa;
   transition: border 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
 }
 
-.card input:focus {
+.input:focus {
   outline: none;
   border-color: #7a00ff;
   box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.18);
 }
 
-/* ================= DROPDOWN (PURE SAFE) ================= */
-.dropdown {
+.input:disabled {
+  background: #e8e8e8;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.select {
   width: 100%;
   padding: 12px 14px;
-  margin-top: 6px;
   border-radius: 12px;
   border: 1px solid #c9c9c9;
   font-size: 14px;
   font-weight: 600;
-  background: rgba(255,255,255,0.95);
-  transition: all .25s ease;
+  background: #fafafa;
+  transition: all 0.25s ease;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.dropdown:hover {
+.select:hover {
   background: white;
 }
 
-.dropdown:focus {
+.select:focus {
   outline: none;
   border-color: #7a00ff;
-  box-shadow: 0 0 0 3px rgba(122,0,255,0.25);
+  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.25);
 }
 
-.dropdown:disabled {
-  background: #eee !important;
-  color: #777;
+.select:disabled {
+  background: #e8e8e8;
+  color: #999;
   cursor: not-allowed;
 }
 
-/* MAIN ACTION BUTTON */
-.card button {
-  margin-top: 28px;
+/* ================= TIME SCROLLER ================= */
+.timeScroller {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.timeScroller label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  color: #333;
+}
+
+.timeInput {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #c9c9c9;
+  font-size: 14px;
+  background: #fafafa;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.timeInput:hover {
+  background: white;
+  border-color: #7a00ff;
+}
+
+.timeInputDisabled {
+  background: #e8e8e8 !important;
+  color: #999;
+  cursor: not-allowed !important;
+  border-color: #ddd !important;
+}
+
+.timeSelected {
+  font-weight: 600;
+  color: #333;
+}
+
+.timePlaceholder {
+  color: #999;
+}
+
+.timeIcon {
+  font-size: 18px;
+}
+
+.timeDropdownBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+
+.timeDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.timeDropdownHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f8f8;
+}
+
+.timeDropdownHeader span {
+  font-weight: 700;
+  font-size: 14px;
+  color: #333;
+}
+
+.timeDropdownHeader button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.timeDropdownHeader button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.timeList {
+  overflow-y: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+}
+
+.timeList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.timeList::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.timeList::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.timeList::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.timeOption {
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.timeOption:hover {
+  background: #f5f5ff;
+}
+
+.timeOptionSelected {
+  background: #7a00ff;
+  color: white;
+  font-weight: 700;
+}
+
+.timeOptionSelected:hover {
+  background: #6600dd;
+}
+
+/* ================= BUTTONS ================= */
+.primaryBtn {
   width: 100%;
   padding: 16px;
   border-radius: 999px;
@@ -168,128 +415,399 @@ html::-webkit-scrollbar {
   font-weight: 900;
   font-size: 15px;
   color: #000;
-
   background: linear-gradient(135deg, #ffb703, #ff8c00);
   cursor: pointer;
-
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.card button:hover {
+.primaryBtn:hover:not(:disabled) {
   transform: translateY(-1px);
   box-shadow: 0 10px 26px rgba(255, 140, 0, 0.35);
+}
+
+.primaryBtn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 2px solid rgba(122, 0, 255, 0.3);
+  font-weight: 700;
+  font-size: 14px;
+  color: #7a00ff;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondaryBtn:hover:not(:disabled) {
+  background: rgba(122, 0, 255, 0.05);
+  border-color: #7a00ff;
+}
+
+.dangerBtn {
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  color: white;
+  background: linear-gradient(135deg, #ff4d4d, #d50000);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dangerBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(213, 0, 0, 0.3);
+}
+
+.editBtn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  color: #000;
+  background: linear-gradient(135deg, #00ffa6, #00c853);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.editBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 200, 83, 0.3);
+}
+
+.cancelBtn {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  background: linear-gradient(135deg, #ff4d4d, #d50000);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.cancelBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(213, 0, 0, 0.3);
+}
+
+/* ================= MESSAGES ================= */
+.errorMsg {
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  color: #d32f2f;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.successMsg {
+  background: rgba(76, 175, 80, 0.1);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+  color: #2e7d32;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 14px;
+  margin-bottom: 20px;
 }
 
 /* ================= BOOKINGS PANEL ================= */
 .side {
   background: rgba(255, 255, 255, 0.14);
   border-radius: 22px;
-  padding: 24px;
+  padding: 28px 24px;
   color: white;
   backdrop-filter: blur(12px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .side h2 {
-  margin-top: 0;
-  margin-bottom: 16px;
+  margin: 0 0 20px 0;
+  font-size: 20px;
+  font-weight: 900;
 }
 
-/* INDIVIDUAL BOOKING */
-.booking {
+.emptyState {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.bookingsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ================= BOOKING ITEMS ================= */
+.bookingItem {
   background: rgba(255, 255, 255, 0.16);
   border-radius: 16px;
-  padding: 16px 14px;
-  margin-bottom: 12px;
-  border: 1px solid rgba(255,255,255,0.22);
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.booking:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 26px rgba(0,0,0,0.25);
-}
-
-.booking b {
-  display: block;
-  font-weight: 900;
-  margin-bottom: 6px;
-}
-
-.booking p {
-  margin: 0 0 8px 0;
-}
-
-/* EDIT STATE */
-.booking.editing {
-  border: 2px solid rgba(255,255,255,0.6);
-  background: rgba(255,255,255,0.22);
   padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* ================= BOOKING ACTION BUTTONS ================= */
-.inlineButtons,
+.bookingItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+}
+
+.bookingHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.bookingHeader h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.bookingTime {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bookingTime strong {
+  font-size: 15px;
+}
+
+.bookingDetails {
+  margin-bottom: 14px;
+}
+
+.bookingDetails p {
+  margin: 6px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.bookingDetails strong {
+  font-weight: 700;
+  margin-right: 6px;
+}
+
+.bookedBy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 13px;
+  opacity: 0.9;
+}
+
 .bookingActions {
   display: flex;
   gap: 10px;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
-.inlineButtons button,
 .bookingActions button {
   flex: 1;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: none;
-  cursor: pointer;
-  font-weight: 800;
-  font-size: 13px;
-
-  background: rgba(255,255,255,0.25);
-  color: #000;
-
-  backdrop-filter: blur(10px);
-  transition: all 0.2s ease-in-out;
 }
 
-.inlineButtons button:hover,
-.bookingActions button:hover {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 8px 22px rgba(0,0,0,0.18);
+/* ================= MODALS ================= */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
 }
 
-.primaryBtn {
-  background: linear-gradient(135deg, #ffd54f, #ff9800);
-  color: #000;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
-.saveBtn {
-  background: linear-gradient(135deg, #00ffa6, #00c853);
-  color: #000;
+.modal {
+  background: white;
+  border-radius: 20px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+  overflow: hidden;
 }
 
-.dangerBtn,
-.redBtn,
-.cancelBtn {
-  background: linear-gradient(135deg, #ff4d4d, #d50000);
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.modalHeader h3 {
+  margin: 0;
+  flex: 1;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.modalInfo {
+  background: #7a00ff;
   color: white;
 }
 
-.inlineButtons button:active,
-.bookingActions button:active {
-  transform: scale(0.97);
+.modalSuccess {
+  background: #00c853;
+  color: white;
 }
 
-/* ================= MESSAGES ================= */
-.success {
-  color: #2e7d32;
-  font-weight: 800;
-  margin-bottom: 10px;
+.modalWarning {
+  background: #ff9800;
+  color: white;
 }
 
-.error {
-  color: #d32f2f;
-  font-weight: 800;
-  margin-bottom: 10px;
+.modalError {
+  background: #d50000;
+  color: white;
+}
+
+.modalIcon {
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.modalClose {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  color: inherit;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.modalClose:hover {
+  background: rgba(0, 0, 0, 0.2);
+  transform: scale(1.1);
+}
+
+.modalBody {
+  padding: 24px;
+}
+
+.modalInfo p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.modalInfo strong {
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.modalWarning {
+  color: #d84315;
+  font-weight: 700;
+  margin-bottom: 16px;
+  font-size: 15px;
+}
+
+.modalTimeComparison {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 16px;
+  background: #f8f8f8;
+  border-radius: 12px;
+}
+
+.modalTimeOld,
+.modalTimeNew {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modalTimeLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modalTimeOld span:last-child {
+  font-weight: 700;
+  color: #666;
+  text-decoration: line-through;
+}
+
+.modalTimeNew span:last-child {
+  font-weight: 900;
+  color: #00c853;
+}
+
+.modalTimeArrow {
+  font-size: 20px;
+  color: #999;
+  font-weight: 900;
+}
+
+.modalActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.modalActions button {
+  flex: 1;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -298,11 +816,11 @@ html::-webkit-scrollbar {
     grid-template-columns: 1fr;
   }
 
-  .header h1 {
+  .companyName {
     font-size: 22px;
   }
 
-  .header img {
+  .headerRight img {
     height: 36px;
   }
 }
@@ -313,15 +831,37 @@ html::-webkit-scrollbar {
   }
 
   .card {
-    padding: 28px;
+    padding: 24px;
   }
 
   .side {
-    padding: 18px;
+    padding: 20px;
   }
 
   .backBtn {
     width: 36px;
     height: 36px;
+    font-size: 18px;
+  }
+
+  .companyName {
+    font-size: 18px;
+  }
+
+  .modalTimeComparison {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modalTimeArrow {
+    transform: rotate(90deg);
+  }
+
+  .modalActions {
+    flex-direction: column;
+  }
+
+  .bookingActions {
+    flex-direction: column;
   }
 }
