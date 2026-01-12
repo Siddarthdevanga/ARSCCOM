@@ -23,11 +23,321 @@
   font-family: "Segoe UI", Arial, sans-serif;
   overflow-y: auto;
   scrollbar-width: none;
+  position: relative;
 }
 
 .container::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* ================= SLIDING PANEL ================= */
+.slidingPanel {
+  position: fixed;
+  top: 0;
+  left: -420px;
+  width: 420px;
+  height: 100vh;
+  background: #ffffff;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.slidingPanel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.slidingPanel::-webkit-scrollbar-track {
+  background: #f0f0f0;
+}
+
+.slidingPanel::-webkit-scrollbar-thumb {
+  background: #667eea;
+  border-radius: 3px;
+}
+
+.panelOpen {
+  left: 0;
+}
+
+.panelHeader {
+  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  color: #fff;
+  padding: 1.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.panelHeader h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.panelCloseBtn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-weight: 700;
+}
+
+.panelCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: rotate(90deg) scale(1.1);
+}
+
+.panelContent {
+  padding: 2rem;
+}
+
+.panelLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1.25rem;
+}
+
+.spinner {
+  width: 45px;
+  height: 45px;
+  border: 4px solid #f0f0f0;
+  border-top-color: #7a00ff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.panelLoading p {
+  color: #666;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* QR Section */
+.qrSection {
+  text-align: center;
+  margin-bottom: 2.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #f8f9ff, #ffffff);
+  border-radius: 1.25rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.qrImage {
+  width: 300px;
+  height: 300px;
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 28px rgba(60, 0, 122, 0.2);
+  margin-bottom: 1.25rem;
+  border: 4px solid #fff;
+}
+
+.qrHint {
+  color: #7a00ff;
+  font-size: 1rem;
+  margin: 0;
+  font-weight: 700;
+}
+
+/* URL Section */
+.urlSection {
+  margin-bottom: 2rem;
+}
+
+.urlSection label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #3c007a;
+  margin-bottom: 0.875rem;
+  letter-spacing: 0.3px;
+}
+
+.urlBox {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.urlInput {
+  flex: 1;
+  padding: 1rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 0.875rem;
+  font-size: 0.875rem;
+  background: #f8f9ff;
+  color: #333;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s ease;
+}
+
+.urlInput:focus {
+  outline: none;
+  border-color: #7a00ff;
+  background: #fff;
+}
+
+.copyBtn {
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #7a00ff, #3c007a);
+  color: #fff;
+  border: none;
+  border-radius: 0.875rem;
+  cursor: pointer;
+  font-size: 1.35rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);
+}
+
+.copyBtn:hover {
+  background: linear-gradient(135deg, #6800e6, #2d0059);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(122, 0, 255, 0.4);
+}
+
+.copyBtn:active {
+  transform: translateY(0);
+}
+
+/* Download PDF Button */
+.downloadPdfBtn {
+  width: 100%;
+  padding: 1.25rem 1.75rem;
+  background: linear-gradient(135deg, #ffcc00, #f2b800);
+  color: #3c007a;
+  border: none;
+  border-radius: 0.875rem;
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(255, 204, 0, 0.4);
+  margin-bottom: 2rem;
+  letter-spacing: 0.3px;
+}
+
+.downloadPdfBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 22px rgba(255, 204, 0, 0.5);
+  background: linear-gradient(135deg, #ffd633, #ffb800);
+}
+
+.downloadPdfBtn:active {
+  transform: translateY(-1px);
+}
+
+/* Instructions */
+.panelInstructions {
+  background: linear-gradient(135deg, #f8f9ff, #e8eaff);
+  border-radius: 0.875rem;
+  padding: 1.5rem;
+  border-left: 5px solid #7a00ff;
+}
+
+.panelInstructions h4 {
+  margin: 0 0 1.25rem 0;
+  color: #3c007a;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.panelInstructions ol {
+  margin: 0;
+  padding-left: 1.5rem;
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.9;
+}
+
+.panelInstructions li {
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.panelInstructions li:last-child {
+  margin-bottom: 0;
+}
+
+/* Panel Toggle Button */
+.panelToggleBtn {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(135deg, #ffcc00, #f2b800);
+  color: #3c007a;
+  border: none;
+  padding: 1.25rem 0.85rem;
+  border-radius: 0 1rem 1rem 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 4px 0 16px rgba(0, 0, 0, 0.25);
+  z-index: 999;
+  transition: all 0.3s ease;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  letter-spacing: 1px;
+}
+
+.panelToggleBtn:hover {
+  padding-left: 1.25rem;
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(135deg, #ffd633, #ffb800);
+}
+
+/* Panel Overlay */
+.panelOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 999;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(2px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ================= HEADER ================= */
@@ -54,6 +364,7 @@
   width: 120px;
   height: 80px;
   object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
 }
 
 /* ================= BACK BUTTON ================= */
@@ -106,9 +417,43 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.newBtn:hover {
+.newBtn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 12px 26px rgba(0, 0, 0, 0.35);
+}
+
+.newBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================= UPGRADE MESSAGE ================= */
+.upgradeMsg {
+  margin: 12px 60px 0;
+  padding: 14px 20px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ff1744, #ff5252);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 10px 26px rgba(255, 23, 68, 0.45);
+  animation: pulseUpgrade 1.8s infinite;
+}
+
+@keyframes pulseUpgrade {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 10px 26px rgba(255, 23, 68, 0.45);
+  }
+  50% {
+    transform: scale(1.02);
+    box-shadow: 0 16px 34px rgba(255, 23, 68, 0.65);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 26px rgba(255, 23, 68, 0.45);
+  }
 }
 
 /* ================= PLAN BAR ================= */
@@ -144,6 +489,7 @@
 .planBarFill {
   height: 100%;
   background: linear-gradient(135deg, #00ff8a, #16c47f);
+  transition: width 0.3s ease;
 }
 
 .planFooter {
@@ -169,6 +515,12 @@
   padding: 28px;
   text-align: center;
   box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bigCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.45);
 }
 
 .bigCard h4 {
@@ -189,7 +541,7 @@
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: 30px;
-  padding: 30px 60px;
+  padding: 30px 60px 60px;
 }
 
 .tableCard {
@@ -206,6 +558,12 @@
   font-weight: 800;
 }
 
+.tableCard p {
+  color: #666;
+  font-size: 14px;
+  font-style: italic;
+}
+
 /* ================= TABLE ================= */
 .table {
   width: 100%;
@@ -217,12 +575,17 @@
   font-size: 14px;
   padding-bottom: 12px;
   border-bottom: 2px solid #ddd;
+  font-weight: 800;
 }
 
 .table td {
   padding: 14px 0;
   border-bottom: 1px solid #eee;
   font-size: 15px;
+}
+
+.table tbody tr:hover {
+  background: #f8f9ff;
 }
 
 /* ================= CHECKOUT BUTTON ================= */
@@ -235,9 +598,10 @@
   font-weight: 800;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 13px;
 }
 
-.checkoutBtn:hover {
+.checkoutBtn:hover:not(:disabled) {
   transform: scale(1.05);
   box-shadow: 0 8px 18px rgba(217, 54, 54, 0.4);
 }
@@ -250,13 +614,35 @@
 }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width: 1024px) {
+@media (max-width: 1200px) {
   .tablesRow {
     grid-template-columns: 1fr;
   }
 }
 
+@media (max-width: 1024px) {
+  .topStats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+}
+
 @media (max-width: 768px) {
+  .slidingPanel {
+    width: 100%;
+    left: -100%;
+  }
+
+  .panelToggleBtn {
+    font-size: 0.85rem;
+    padding: 1rem 0.65rem;
+  }
+
+  .qrImage {
+    width: 240px;
+    height: 240px;
+  }
+
   .header {
     padding: 20px 28px;
   }
@@ -268,14 +654,28 @@
     padding: 0 28px;
   }
 
+  .pageTitle {
+    font-size: 26px;
+  }
+
   .planBarWrapper,
   .topStats,
   .tablesRow {
     padding: 20px 28px;
   }
 
+  .upgradeMsg {
+    margin: 10px 28px 0;
+    font-size: 14px;
+    padding: 12px 16px;
+  }
+
   .newBtn {
     width: 100%;
+  }
+
+  .topStats {
+    grid-template-columns: 1fr;
   }
 
   .companyLogo {
@@ -287,42 +687,52 @@
     padding: 10px 14px;
     font-size: 13px;
   }
-}
-/* ================= UPGRADE MESSAGE ================= */
-.upgradeMsg {
-  margin: 12px 60px 0;
-  padding: 14px 20px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #ff1744, #ff5252);
-  color: #fff;
-  font-size: 15px;
-  font-weight: 800;
-  text-align: center;
-  box-shadow: 0 10px 26px rgba(255, 23, 68, 0.45);
-  animation: pulseUpgrade 1.8s infinite;
-}
 
-/* Subtle pulse animation to draw attention */
-@keyframes pulseUpgrade {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 10px 26px rgba(255, 23, 68, 0.45);
+  .table {
+    font-size: 13px;
   }
-  50% {
-    transform: scale(1.02);
-    box-shadow: 0 16px 34px rgba(255, 23, 68, 0.65);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 10px 26px rgba(255, 23, 68, 0.45);
+
+  .table th,
+  .table td {
+    padding: 10px 0;
   }
 }
 
-/* ================= MOBILE ================= */
-@media (max-width: 768px) {
-  .upgradeMsg {
-    margin: 10px 28px 0;
-    font-size: 14px;
-    padding: 12px 16px;
+@media (max-width: 480px) {
+  .header {
+    padding: 16px 20px;
+  }
+
+  .logoText {
+    font-size: 22px;
+  }
+
+  .titleRow,
+  .planBarWrapper,
+  .topStats,
+  .tablesRow {
+    padding: 16px 20px;
+  }
+
+  .pageTitle {
+    font-size: 22px;
+  }
+
+  .qrImage {
+    width: 200px;
+    height: 200px;
+  }
+
+  .panelContent {
+    padding: 1.5rem;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .bigCard p {
+    font-size: 32px;
   }
 }
