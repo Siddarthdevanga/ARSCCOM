@@ -10,22 +10,27 @@ export default function PublicVisitorRegistration() {
   const slug = params?.slug;
 
   /* ================= STATE ================= */
-  const [step, setStep] = useState(0); // 0: Intro, 1: Primary, 2: Secondary, 3: Identity, 4: Thank You
+  const [step, setStep] = useState(0); // 0: Welcome/OTP, 1: Primary, 2: Secondary, 3: Identity, 4: Thank You
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [company, setCompany] = useState(null);
-  const [qrCode, setQrCode] = useState("");
   const [error, setError] = useState("");
   const [visitorCode, setVisitorCode] = useState("");
 
+  /* ================= OTP STATE ================= */
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpToken, setOtpToken] = useState("");
+  const [resendTimer, setResendTimer] = useState(0);
+
   /* ================= FORM DATA ================= */
-  const [primaryData, setPrimaryData] = useState({
+  const [formData, setFormData] = useState({
+    // Primary Details
     name: "",
     phone: "",
-    email: ""
-  });
-
-  const [secondaryData, setSecondaryData] = useState({
+    
+    // Secondary Details
     fromCompany: "",
     department: "",
     designation: "",
@@ -36,10 +41,9 @@ export default function PublicVisitorRegistration() {
     country: "",
     personToMeet: "",
     purpose: "",
-    belongings: []
-  });
-
-  const [identityData, setIdentityData] = useState({
+    belongings: [],
+    
+    // Identity
     idType: "",
     idNumber: ""
   });
@@ -67,7 +71,6 @@ export default function PublicVisitorRegistration() {
         }
 
         setCompany(data.company);
-        setQrCode(data.qrCode);
       } catch (err) {
         console.error("Failed to load company info:", err);
         setError("Failed to load registration page");
@@ -78,6 +81,14 @@ export default function PublicVisitorRegistration() {
 
     fetchCompanyInfo();
   }, [slug]);
+
+  /* ================= RESEND TIMER ================= */
+  useEffect(() => {
+    if (resendTimer > 0) {
+      const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendTimer]);
 
   /* ================= CLEANUP CAMERA ================= */
   useEffect(() => {
@@ -96,25 +107,82 @@ export default function PublicVisitorRegistration() {
   }, [stream]);
 
   /* ================= HANDLERS ================= */
-  const updatePrimary = (key, value) => {
-    setPrimaryData(prev => ({ ...prev, [key]: value }));
-  };
-
-  const updateSecondary = (key, value) => {
-    setSecondaryData(prev => ({ ...prev, [key]: value }));
-  };
-
-  const updateIdentity = (key, value) => {
-    setIdentityData(prev => ({ ...prev, [key]: value }));
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const toggleBelonging = (item) => {
-    setSecondaryData(prev => ({
+    setFormData(prev => ({
       ...prev,
       belongings: prev.belongings.includes(item)
         ? prev.belongings.filter(b => b !== item)
         : [...prev.belongings, item]
     }));
+  };
+
+  /* ================= OTP FUNCTIONS ================= */
+  const handleSendOTP = async () => {
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Valid email address required");
+      return;
+    }
+
+    try {
+      setError("");
+      setSubmitting(true);
+
+      const res = await fetch(`/api/public/visitor/${slug}/otp/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Failed to send OTP");
+      }
+
+      setOtpSent(true);
+      setResendTimer(data.resendAfter || 30);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp.trim() || otp.length !== 6) {
+      setError("Please enter 6-digit OTP");
+      return;
+    }
+
+    try {
+      setError("");
+      setSubmitting(true);
+
+      const res = await fetch(`/api/public/visitor/${slug}/otp/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, otp })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Invalid OTP");
+      }
+
+      setOtpToken(data.otpToken);
+      setStep(1); // Move to primary details
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   /* ================= CAMERA FUNCTIONS ================= */
@@ -157,22 +225,18 @@ export default function PublicVisitorRegistration() {
   const validateStep = () => {
     switch (step) {
       case 1: // Primary Details
-        if (!primaryData.name.trim()) {
-          setError("Name is required");
+        if (!formData.name.trim()) {
+          setError("Visitor name is required");
           return false;
         }
-        if (!primaryData.phone.trim() || !/^\+?[\d\s\-()]{10,}$/.test(primaryData.phone)) {
+        if (!formData.phone.trim() || !/^\+?[\d\s\-()]{10,}$/.test(formData.phone)) {
           setError("Valid phone number is required");
-          return false;
-        }
-        if (primaryData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(primaryData.email)) {
-          setError("Invalid email address");
           return false;
         }
         break;
 
       case 2: // Secondary Details
-        if (!secondaryData.personToMeet.trim()) {
+        if (!formData.personToMeet.trim()) {
           setError("Person to meet is required");
           return false;
         }
@@ -180,7 +244,7 @@ export default function PublicVisitorRegistration() {
 
       case 3: // Identity
         if (!photo) {
-          setError("Photo is required");
+          setError("Visitor photo is required");
           return false;
         }
         break;
@@ -213,32 +277,31 @@ export default function PublicVisitorRegistration() {
       const blob = await fetch(photo).then(r => r.blob());
       const file = new File([blob], "visitor.jpg", { type: "image/jpeg" });
 
-      const formData = new FormData();
+      const formDataToSend = new FormData();
       
-      // Primary
-      formData.append("name", primaryData.name);
-      formData.append("phone", primaryData.phone);
-      formData.append("email", primaryData.email || "");
-
-      // Secondary
-      Object.entries(secondaryData).forEach(([key, value]) => {
-        if (key === "belongings") {
-          secondaryData.belongings.forEach(item => formData.append("belongings", item));
-        } else {
-          formData.append(key, value || "");
-        }
-      });
-
-      // Identity
-      formData.append("idType", identityData.idType);
-      formData.append("idNumber", identityData.idNumber);
-
-      // Photo
-      formData.append("photo", file);
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("phone", formData.phone);
+      formDataToSend.append("fromCompany", formData.fromCompany || "");
+      formDataToSend.append("department", formData.department || "");
+      formDataToSend.append("designation", formData.designation || "");
+      formDataToSend.append("address", formData.address || "");
+      formDataToSend.append("city", formData.city || "");
+      formDataToSend.append("state", formData.state || "");
+      formDataToSend.append("postalCode", formData.postalCode || "");
+      formDataToSend.append("country", formData.country || "");
+      formDataToSend.append("personToMeet", formData.personToMeet || "");
+      formDataToSend.append("purpose", formData.purpose || "");
+      formDataToSend.append("belongings", formData.belongings.join(", "));
+      formDataToSend.append("idType", formData.idType || "");
+      formDataToSend.append("idNumber", formData.idNumber || "");
+      formDataToSend.append("photo", file);
 
       const res = await fetch(`/api/public/visitor/${slug}/register`, {
         method: "POST",
-        body: formData
+        headers: {
+          "otp-token": otpToken
+        },
+        body: formDataToSend
       });
 
       const data = await res.json();
@@ -247,13 +310,51 @@ export default function PublicVisitorRegistration() {
         throw new Error(data.message || "Registration failed");
       }
 
-      setVisitorCode(data.visitor.visitorCode);
+      setVisitorCode(data.visitorCode);
       setStep(4); // Thank you screen
     } catch (err) {
       console.error("Registration error:", err);
       setError(err.message || "Failed to register. Please try again.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /* ================= LOGOUT ================= */
+  const handleLogout = () => {
+    // Clear all state
+    setStep(0);
+    setEmail("");
+    setOtp("");
+    setOtpSent(false);
+    setOtpToken("");
+    setResendTimer(0);
+    setFormData({
+      name: "",
+      phone: "",
+      fromCompany: "",
+      department: "",
+      designation: "",
+      address: "",
+      city: "",
+      state: "",
+      postalCode: "",
+      country: "",
+      personToMeet: "",
+      purpose: "",
+      belongings: [],
+      idType: "",
+      idNumber: ""
+    });
+    setPhoto(null);
+    setVisitorCode("");
+    setError("");
+    
+    // Stop camera if active
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+      setCameraActive(false);
     }
   };
 
@@ -286,7 +387,7 @@ export default function PublicVisitorRegistration() {
   /* ================= RENDER ================= */
   return (
     <div className={styles.page}>
-      {/* ================= STEP 0: INTRO ================= */}
+      {/* ================= STEP 0: WELCOME + EMAIL VERIFICATION ================= */}
       {step === 0 && (
         <div className={styles.container}>
           <header className={styles.header}>
@@ -299,30 +400,95 @@ export default function PublicVisitorRegistration() {
           <div className={styles.authCard}>
             <div className={styles.authHeader}>
               <h2>Welcome to {company?.name}!</h2>
-              <p>Please register yourself to receive your digital visitor pass.</p>
+              <p>Please verify your email to start visitor registration.</p>
             </div>
 
-            {qrCode && (
-              <div style={{ textAlign: "center", margin: "2rem 0" }}>
-                <img 
-                  src={qrCode} 
-                  alt="QR Code" 
-                  style={{ 
-                    width: "200px", 
-                    height: "200px", 
-                    borderRadius: "1rem",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.15)"
-                  }} 
-                />
-                <p style={{ marginTop: "1rem", fontSize: "0.9rem", color: "#666" }}>
-                  Scan to register on your phone
-                </p>
-              </div>
-            )}
+            {error && <div className={styles.errorMsg}>{error}</div>}
 
-            <button className={styles.primaryBtn} onClick={() => setStep(1)}>
-              Register
-            </button>
+            {!otpSent ? (
+              <>
+                <div className={styles.formGroup}>
+                  <label>Email Address *</label>
+                  <input
+                    className={styles.input}
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your.email@example.com"
+                    disabled={submitting}
+                    onKeyPress={(e) => e.key === "Enter" && handleSendOTP()}
+                  />
+                </div>
+
+                <button 
+                  className={styles.primaryBtn} 
+                  onClick={handleSendOTP}
+                  disabled={submitting}
+                >
+                  {submitting ? "Sending..." : "Send Verification Code"}
+                </button>
+              </>
+            ) : (
+              <>
+                <div className={styles.formGroup}>
+                  <label>Enter 6-Digit Verification Code</label>
+                  <input
+                    className={styles.input}
+                    type="text"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    placeholder="123456"
+                    maxLength={6}
+                    disabled={submitting}
+                    onKeyPress={(e) => e.key === "Enter" && otp.length === 6 && handleVerifyOTP()}
+                    style={{ 
+                      letterSpacing: "8px", 
+                      fontSize: "1.25rem", 
+                      textAlign: "center",
+                      fontWeight: "700"
+                    }}
+                  />
+                </div>
+
+                <button 
+                  className={styles.primaryBtn} 
+                  onClick={handleVerifyOTP}
+                  disabled={submitting || otp.length !== 6}
+                >
+                  {submitting ? "Verifying..." : "Verify Code"}
+                </button>
+
+                <button 
+                  className={styles.secondaryBtn} 
+                  onClick={handleSendOTP}
+                  disabled={resendTimer > 0 || submitting}
+                >
+                  {resendTimer > 0 
+                    ? `Resend Code in ${resendTimer}s` 
+                    : "Resend Code"}
+                </button>
+
+                <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.9rem", color: "#666" }}>
+                  Code sent to: <strong>{email}</strong>
+                  <br />
+                  <span 
+                    onClick={() => {
+                      setOtpSent(false);
+                      setOtp("");
+                      setError("");
+                    }}
+                    style={{ 
+                      color: "#667eea", 
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      fontSize: "0.85rem"
+                    }}
+                  >
+                    Change email
+                  </span>
+                </p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -338,7 +504,7 @@ export default function PublicVisitorRegistration() {
           </header>
 
           <main className={styles.card}>
-            <h2 className={styles.title}>Visitor Primary Details</h2>
+            <h2 className={styles.title}>Primary Details</h2>
 
             {error && <div className={styles.errorMsg}>{error}</div>}
 
@@ -347,8 +513,9 @@ export default function PublicVisitorRegistration() {
               <input
                 className={styles.input}
                 type="text"
-                value={primaryData.name}
-                onChange={(e) => updatePrimary("name", e.target.value)}
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
                 placeholder="Enter your full name"
               />
             </div>
@@ -358,20 +525,21 @@ export default function PublicVisitorRegistration() {
               <input
                 className={styles.input}
                 type="tel"
-                value={primaryData.phone}
-                onChange={(e) => updatePrimary("phone", e.target.value)}
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
                 placeholder="+1234567890"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label>Email Address</label>
+              <label>Email Address (Verified)</label>
               <input
                 className={styles.input}
                 type="email"
-                value={primaryData.email}
-                onChange={(e) => updatePrimary("email", e.target.value)}
-                placeholder="your.email@example.com"
+                value={email}
+                disabled
+                style={{ background: "#f5f5f5", cursor: "not-allowed" }}
               />
             </div>
 
@@ -398,88 +566,93 @@ export default function PublicVisitorRegistration() {
           </header>
 
           <main className={styles.card}>
-            <h2 className={styles.title}>Visitor Secondary Details</h2>
+            <h2 className={styles.title}>Secondary Details</h2>
 
             {error && <div className={styles.errorMsg}>{error}</div>}
 
-            {/* Row 1: 3 columns */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
               <input
                 className={styles.input}
-                value={secondaryData.fromCompany}
-                onChange={(e) => updateSecondary("fromCompany", e.target.value)}
+                name="fromCompany"
+                value={formData.fromCompany}
+                onChange={handleInputChange}
                 placeholder="From Company"
               />
               <input
                 className={styles.input}
-                value={secondaryData.department}
-                onChange={(e) => updateSecondary("department", e.target.value)}
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
                 placeholder="Department"
               />
               <input
                 className={styles.input}
-                value={secondaryData.designation}
-                onChange={(e) => updateSecondary("designation", e.target.value)}
+                name="designation"
+                value={formData.designation}
+                onChange={handleInputChange}
                 placeholder="Designation"
               />
             </div>
 
-            {/* Address */}
             <div className={styles.formGroup}>
               <input
                 className={styles.input}
-                value={secondaryData.address}
-                onChange={(e) => updateSecondary("address", e.target.value)}
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
                 placeholder="Organization Address"
               />
             </div>
 
-            {/* Location: 3 columns */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
               <input
                 className={styles.input}
-                value={secondaryData.city}
-                onChange={(e) => updateSecondary("city", e.target.value)}
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
                 placeholder="City"
               />
               <input
                 className={styles.input}
-                value={secondaryData.state}
-                onChange={(e) => updateSecondary("state", e.target.value)}
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
                 placeholder="State"
               />
               <input
                 className={styles.input}
-                value={secondaryData.postalCode}
-                onChange={(e) => updateSecondary("postalCode", e.target.value)}
+                name="postalCode"
+                value={formData.postalCode}
+                onChange={handleInputChange}
                 placeholder="Postal Code"
               />
             </div>
 
-            {/* Visit details: 3 columns */}
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
               <input
                 className={styles.input}
-                value={secondaryData.country}
-                onChange={(e) => updateSecondary("country", e.target.value)}
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
                 placeholder="Country"
               />
               <input
                 className={styles.input}
-                value={secondaryData.personToMeet}
-                onChange={(e) => updateSecondary("personToMeet", e.target.value)}
+                name="personToMeet"
+                value={formData.personToMeet}
+                onChange={handleInputChange}
                 placeholder="Person to Meet *"
               />
               <input
                 className={styles.input}
-                value={secondaryData.purpose}
-                onChange={(e) => updateSecondary("purpose", e.target.value)}
+                name="purpose"
+                value={formData.purpose}
+                onChange={handleInputChange}
                 placeholder="Purpose of Visit"
               />
             </div>
 
-            {/* Belongings */}
-            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "2rem" }}>
+            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "2rem", flexWrap: "wrap" }}>
               {["Laptop", "Bag", "Documents"].map(item => (
                 <label 
                   key={item}
@@ -493,7 +666,7 @@ export default function PublicVisitorRegistration() {
                 >
                   <input
                     type="checkbox"
-                    checked={secondaryData.belongings.includes(item)}
+                    checked={formData.belongings.includes(item)}
                     onChange={() => toggleBelonging(item)}
                     style={{ cursor: "pointer", width: "18px", height: "18px" }}
                   />
@@ -525,12 +698,11 @@ export default function PublicVisitorRegistration() {
           </header>
 
           <main className={styles.card}>
-            <h2 className={styles.title}>Visitor Identity Verification</h2>
+            <h2 className={styles.title}>Identity Verification</h2>
 
             {error && <div className={styles.errorMsg}>{error}</div>}
 
             <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "2rem", alignItems: "start" }}>
-              {/* LEFT: Camera */}
               <div>
                 <div style={{ 
                   border: "2px dashed #e0e0e0", 
@@ -602,14 +774,14 @@ export default function PublicVisitorRegistration() {
                 </div>
               </div>
 
-              {/* RIGHT: ID Details */}
               <div>
                 <div className={styles.formGroup}>
                   <label>ID Proof Type</label>
                   <select
                     className={styles.select}
-                    value={identityData.idType}
-                    onChange={(e) => updateIdentity("idType", e.target.value)}
+                    name="idType"
+                    value={formData.idType}
+                    onChange={handleInputChange}
                   >
                     <option value="">Select ID Proof (Optional)</option>
                     <option value="aadhaar">Aadhaar</option>
@@ -622,8 +794,9 @@ export default function PublicVisitorRegistration() {
                   <label>ID Number</label>
                   <input
                     className={styles.input}
-                    value={identityData.idNumber}
-                    onChange={(e) => updateIdentity("idNumber", e.target.value)}
+                    name="idNumber"
+                    value={formData.idNumber}
+                    onChange={handleInputChange}
                     placeholder="ID Number (Optional)"
                   />
                 </div>
@@ -643,7 +816,7 @@ export default function PublicVisitorRegistration() {
                     disabled={!photo || submitting}
                     style={{ width: "auto", flex: 1 }}
                   >
-                    {submitting ? "Generating..." : "Generate Pass"}
+                    {submitting ? "Submitting..." : "Submit"}
                   </button>
                 </div>
               </div>
@@ -676,19 +849,19 @@ export default function PublicVisitorRegistration() {
 
               <div className={styles.successMsg} style={{ textAlign: "center", marginBottom: "2rem" }}>
                 <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600 }}>Visitor ID</p>
-                <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.75rem", fontWeight: 800", color: "#667eea" }}>
+                <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.75rem", fontWeight: "800", color: "#667eea" }}>
                   {visitorCode}
                 </p>
               </div>
 
               <p style={{ fontSize: "0.9rem", color: "#888", lineHeight: 1.6, marginBottom: "2rem" }}>
                 Please show this ID at the reception desk.<br />
-                Check your email for the digital pass.
+                Check your email ({email}) for the digital pass.
               </p>
 
               <button 
                 className={styles.primaryBtn}
-                onClick={() => window.location.href = "/"}
+                onClick={handleLogout}
               >
                 Done
               </button>
