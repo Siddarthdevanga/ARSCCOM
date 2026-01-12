@@ -27,27 +27,19 @@ const upload = multer({
   },
 });
 
-/* ======================================================
-   EMAIL FOOTER (MATCHING AUTH SERVICE)
-====================================================== */
-const emailFooter = (companyName) => `
+/* ================= EMAIL TEMPLATES ================= */
+const emailFooter = (company) => `
+<br/>
 <br/>
 Regards,<br/>
-<b>${companyName}</b><br/>
-
-<img 
-  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
-  alt="PROMEET Logo"
-  style="height:65px;margin:10px 0;display:block"
-/>
-
-<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
-
-<p style="font-size:13px;color:#666">
-This email was automatically sent from the PROMEET
-Conference & Visitor Management Platform.
-If this was not you, please contact your administrator immediately.
-</p>`;
+<b>${company.name}</b><br/>
+${company.logo_url ? `<img src="${company.logo_url}" alt="${company.name} Logo" height="55" />` : ""}
+<hr/>
+<p style="font-size:13px;color:#666;margin-top:15px;">
+This email was automatically sent from the Conference Room Booking Platform.
+If you did not perform this action, please contact your administrator immediately.
+</p>
+`;
 
 /* ======================================================
    UTILITIES
