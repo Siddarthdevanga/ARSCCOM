@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -33,6 +33,7 @@ const formatISTTime = (value) => {
 
 export default function VisitorDashboard() {
   const router = useRouter();
+  const qrCanvasRef = useRef(null);
 
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState({ today: 0, inside: 0, out: 0 });
@@ -41,6 +42,12 @@ export default function VisitorDashboard() {
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
   const [plan, setPlan] = useState(null);
+  
+  /* ================= SLIDING PANEL STATE ================= */
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [publicUrl, setPublicUrl] = useState("");
+  const [qrCodeImage, setQrCodeImage] = useState("");
+  const [loadingQR, setLoadingQR] = useState(false);
 
   /* ================= FETCH DASHBOARD ================= */
   const loadDashboard = useCallback(async (token) => {
@@ -67,6 +74,30 @@ export default function VisitorDashboard() {
     }
   }, []);
 
+  /* ================= LOAD QR CODE ================= */
+  const loadQRCode = useCallback(async (companySlug) => {
+    if (!companySlug) return;
+    
+    try {
+      setLoadingQR(true);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/public/visitor/${companySlug}/info`
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+      if (data.success) {
+        setPublicUrl(data.publicUrl);
+        setQrCodeImage(data.qrCode);
+      }
+    } catch (err) {
+      console.error("QR Code fetch error:", err);
+    } finally {
+      setLoadingQR(false);
+    }
+  }, []);
+
   /* ================= AUTH + INIT ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -78,13 +109,15 @@ export default function VisitorDashboard() {
     }
 
     try {
-      setCompany(JSON.parse(storedCompany));
+      const companyData = JSON.parse(storedCompany);
+      setCompany(companyData);
       loadDashboard(token);
+      loadQRCode(companyData.slug);
     } catch {
       localStorage.clear();
       router.replace("/auth/login");
     }
-  }, [router, loadDashboard]);
+  }, [router, loadDashboard, loadQRCode]);
 
   /* ================= CHECKOUT ================= */
   const handleCheckout = async (visitorCode) => {
@@ -108,6 +141,123 @@ export default function VisitorDashboard() {
     } finally {
       setCheckingOut(null);
     }
+  };
+
+  /* ================= DOWNLOAD PDF ================= */
+  const downloadPDF = async () => {
+    if (!qrCodeImage || !company) return;
+
+    try {
+      // Create a canvas to generate PDF content
+      const canvas = document.createElement('canvas');
+      canvas.width = 800;
+      canvas.height = 1000;
+      const ctx = canvas.getContext('2d');
+
+      // Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, 800, 1000);
+
+      // Header background
+      ctx.fillStyle = '#667eea';
+      ctx.fillRect(0, 0, 800, 120);
+
+      // Company Logo (if available)
+      if (company.logo_url) {
+        try {
+          const logoImg = new Image();
+          logoImg.crossOrigin = 'anonymous';
+          logoImg.src = company.logo_url;
+          await new Promise((resolve) => {
+            logoImg.onload = () => {
+              ctx.drawImage(logoImg, 50, 30, 80, 60);
+              resolve();
+            };
+            logoImg.onerror = resolve;
+          });
+        } catch (e) {
+          console.log('Logo load error:', e);
+        }
+      }
+
+      // Company Name in Header
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px Arial';
+      ctx.fillText(company.name, 160, 70);
+
+      // Title
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 28px Arial';
+      ctx.fillText('Visitor Registration', 50, 180);
+
+      // Public URL Label
+      ctx.font = '18px Arial';
+      ctx.fillStyle = '#666666';
+      ctx.fillText('Scan QR Code or Visit:', 50, 230);
+
+      // Public URL
+      ctx.font = 'bold 16px Arial';
+      ctx.fillStyle = '#667eea';
+      ctx.fillText(publicUrl, 50, 260);
+
+      // QR Code
+      const qrImg = new Image();
+      qrImg.src = qrCodeImage;
+      await new Promise((resolve) => {
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, 250, 300, 300, 300);
+          resolve();
+        };
+      });
+
+      // Instructions
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#333333';
+      ctx.fillText('Instructions for Visitors:', 50, 650);
+      
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#666666';
+      ctx.fillText('1. Scan the QR code with your phone camera', 70, 685);
+      ctx.fillText('2. Or visit the URL above in your browser', 70, 715);
+      ctx.fillText('3. Enter your email to receive verification code', 70, 745);
+      ctx.fillText('4. Complete the registration form', 70, 775);
+      ctx.fillText('5. Capture your photo', 70, 805);
+      ctx.fillText('6. Receive your digital visitor pass via email', 70, 835);
+
+      // Footer background
+      ctx.fillStyle = '#f5f5f5';
+      ctx.fillRect(0, 900, 800, 100);
+
+      // Footer text
+      ctx.fillStyle = '#667eea';
+      ctx.font = 'bold 20px Arial';
+      ctx.fillText('PROMEET', 320, 940);
+      
+      ctx.fillStyle = '#666666';
+      ctx.font = '14px Arial';
+      ctx.fillText('Visitor and Conference Booking Platform', 240, 970);
+
+      // Convert canvas to blob and download
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${company.slug}-visitor-registration.png`;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  /* ================= COPY URL ================= */
+  const copyURL = () => {
+    if (!publicUrl) return;
+    navigator.clipboard.writeText(publicUrl);
+    alert('URL copied to clipboard!');
   };
 
   /* ================= PLAN HELPERS ================= */
@@ -135,6 +285,101 @@ export default function VisitorDashboard() {
 
   return (
     <div className={styles.container}>
+      {/* ================= SLIDING PANEL ================= */}
+      <div className={`${styles.slidingPanel} ${panelOpen ? styles.panelOpen : ''}`}>
+        <div className={styles.panelHeader}>
+          <h3>Public Registration</h3>
+          <button 
+            className={styles.panelCloseBtn}
+            onClick={() => setPanelOpen(false)}
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className={styles.panelContent}>
+          {loadingQR ? (
+            <div className={styles.panelLoading}>
+              <div className={styles.spinner} />
+              <p>Loading QR Code...</p>
+            </div>
+          ) : (
+            <>
+              {/* QR Code */}
+              {qrCodeImage && (
+                <div className={styles.qrSection}>
+                  <img 
+                    src={qrCodeImage} 
+                    alt="QR Code" 
+                    className={styles.qrImage}
+                  />
+                  <p className={styles.qrHint}>Scan to register</p>
+                </div>
+              )}
+
+              {/* Public URL */}
+              {publicUrl && (
+                <div className={styles.urlSection}>
+                  <label>Public Registration URL</label>
+                  <div className={styles.urlBox}>
+                    <input 
+                      type="text" 
+                      value={publicUrl} 
+                      readOnly 
+                      className={styles.urlInput}
+                    />
+                    <button 
+                      className={styles.copyBtn}
+                      onClick={copyURL}
+                      title="Copy URL"
+                    >
+                      📋
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Download Button */}
+              <button 
+                className={styles.downloadPdfBtn}
+                onClick={downloadPDF}
+              >
+                📄 Download as Image
+              </button>
+
+              {/* Instructions */}
+              <div className={styles.panelInstructions}>
+                <h4>How to use:</h4>
+                <ol>
+                  <li>Share QR code or URL with visitors</li>
+                  <li>Visitors scan QR or visit URL</li>
+                  <li>Complete online registration</li>
+                  <li>Receive digital pass via email</li>
+                </ol>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ================= PANEL TOGGLE BUTTON ================= */}
+      {!panelOpen && (
+        <button 
+          className={styles.panelToggleBtn}
+          onClick={() => setPanelOpen(true)}
+          title="Show Public Registration"
+        >
+          📱 QR Code
+        </button>
+      )}
+
+      {/* ================= OVERLAY ================= */}
+      {panelOpen && (
+        <div 
+          className={styles.panelOverlay}
+          onClick={() => setPanelOpen(false)}
+        />
+      )}
 
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
@@ -305,7 +550,8 @@ export default function VisitorDashboard() {
           )}
         </div>
       </section>
+
+      <canvas ref={qrCanvasRef} style={{ display: 'none' }} />
     </div>
   );
 }
-
