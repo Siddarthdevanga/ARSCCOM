@@ -181,7 +181,7 @@ export default function LoginPage() {
               <ul>
                 <li>✔ Unlimited Visitors</li>
                 <li>✔ Unlimited Conference Bookings</li>
-                <li>✔ Unmilited Conferece Rooms</li>
+                <li>✔ Unmilited Conference Rooms</li>
                 <li>✔ Dedicated Support</li>
               </ul>
               <Link href="/auth/contact-us">
