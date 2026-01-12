@@ -132,7 +132,7 @@ export const registerCompany = async (data, file) => {
 
     await conn.commit();
 
-    /* ================= UPDATED PROFESSIONAL EMAIL ================= */
+    /* ================= WELCOME EMAIL ================= */
     sendEmail({
       to: email,
       subject: `Welcome ${companyName} — Activate Your PROMEET Subscription`,
@@ -261,7 +261,16 @@ export const forgotPassword = async (email) => {
   if (!cleanEmail) return;
 
   const [rows] = await db.execute(
-    "SELECT id, reset_last_sent FROM users WHERE email=? LIMIT 1",
+    `
+    SELECT 
+      u.id, 
+      u.reset_last_sent,
+      c.name AS companyName
+    FROM users u
+    JOIN companies c ON c.id = u.company_id
+    WHERE u.email = ? 
+    LIMIT 1
+    `,
     [cleanEmail]
   );
 
@@ -297,14 +306,44 @@ export const forgotPassword = async (email) => {
     [resetCode, user.id]
   );
 
+  /* ================= PROFESSIONAL PASSWORD RESET EMAIL ================= */
   sendEmail({
     to: cleanEmail,
-    subject: "PROMEET Password Reset Code",
+    subject: "PROMEET — Secure Password Reset Code",
     html: `
-      <p>Hello,</p>
-      <p>Your password reset code is:</p>
-      <h2 style="color:#6c2bd9">${resetCode}</h2>
-      <p>This code is valid for <b>10 minutes</b>.</p>
+      <p>Hello <b>${user.companyName}</b>,</p>
+
+      <p>
+        We received a request to reset your PROMEET account password. 
+        To proceed, please use the secure verification code below:
+      </p>
+
+      <div style="background:#f8f9ff;border-left:4px solid #6c2bd9;padding:20px;margin:20px 0;text-align:center;">
+        <h2 style="color:#6c2bd9;margin:0;letter-spacing:4px;font-size:32px;">
+          ${resetCode}
+        </h2>
+      </div>
+
+      <p>
+        <b>Important Security Information:</b>
+      </p>
+
+      <ul style="font-size:14px;line-height:1.8;">
+        <li>This code is valid for <b>10 minutes</b> only.</li>
+        <li>Enter this code in the PROMEET password reset page.</li>
+        <li>If you did not request this reset, please ignore this email and contact your administrator immediately.</li>
+        <li>Never share this code with anyone, including PROMEET support staff.</li>
+      </ul>
+
+      <p>
+        For security reasons, password reset codes expire quickly. 
+        If your code has expired, simply request a new one from the login page.
+      </p>
+
+      <p style="color:#666;font-size:13px;margin-top:30px;">
+        <b>Note:</b> You can request a new code every 30 seconds if needed.
+      </p>
+
       ${emailFooter()}
     `
   }).catch(() => {});
@@ -325,10 +364,14 @@ export const resetPassword = async ({ email, code, password }) => {
 
   const [rows] = await db.execute(
     `
-    SELECT id, reset_code
-    FROM users
-    WHERE email = ?
-      AND reset_expires > NOW()
+    SELECT 
+      u.id, 
+      u.reset_code,
+      c.name AS companyName
+    FROM users u
+    JOIN companies c ON c.id = u.company_id
+    WHERE u.email = ?
+      AND u.reset_expires > NOW()
     LIMIT 1
     `,
     [cleanEmail]
@@ -338,6 +381,7 @@ export const resetPassword = async ({ email, code, password }) => {
     throw new Error("Invalid or expired reset code");
   }
 
+  const user = rows[0];
   const newHash = await bcrypt.hash(password, 10);
 
   await db.execute(
@@ -348,15 +392,67 @@ export const resetPassword = async ({ email, code, password }) => {
         reset_expires=NULL
     WHERE id=?
     `,
-    [newHash, rows[0].id]
+    [newHash, user.id]
   );
 
+  /* ================= PROFESSIONAL PASSWORD CHANGED EMAIL ================= */
   sendEmail({
     to: cleanEmail,
-    subject: "Your PROMEET Password Has Been Reset",
+    subject: "PROMEET — Password Successfully Changed",
     html: `
-      <p>Hello,</p>
-      <p>Your PROMEET account password has been successfully reset.</p>
+      <p>Hello <b>${user.companyName}</b>,</p>
+
+      <p>
+        This email confirms that your PROMEET account password has been 
+        <b style="color:#00c853;">successfully changed</b>.
+      </p>
+
+      <div style="background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;">
+        <p style="margin:0;color:#2e7d32;font-weight:600;">
+          ✓ Your password has been updated securely
+        </p>
+      </div>
+
+      <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
+        What This Means
+      </h3>
+
+      <ul style="font-size:14px;line-height:1.8;">
+        <li>You can now login to PROMEET using your new password.</li>
+        <li>Your account security has been enhanced with password encryption.</li>
+        <li>All active sessions remain valid — no need to re-login immediately.</li>
+      </ul>
+
+      <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
+        Important Security Notice
+      </h3>
+
+      <p>
+        <b style="color:#ff1744;">Did you make this change?</b>
+      </p>
+
+      <ul style="font-size:14px;line-height:1.8;">
+        <li>
+          <b>If yes:</b> No further action required. Your account is secure.
+        </li>
+        <li>
+          <b>If no:</b> Someone may have unauthorized access to your account. 
+          Please contact your administrator <b>immediately</b> and reset your password again.
+        </li>
+      </ul>
+
+      <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:20px 0;">
+        <p style="margin:0;color:#e65100;font-weight:600;">
+          ⚠️ Security Tip: Use a strong, unique password for PROMEET. 
+          Never share your password with anyone.
+        </p>
+      </div>
+
+      <p>
+        Thank you for using PROMEET to manage your organization's visitor and 
+        conference room operations securely.
+      </p>
+
       ${emailFooter()}
     `
   }).catch(() => {});
