@@ -151,8 +151,8 @@ export default function LoginPage() {
               <ul>
                 <li>✔ Valid 15 Days</li>
                 <li>✔ 100 Visitor Bookings</li>
-                <li>✔ 2 Conference Rooms</li>
                 <li>✔ 100 Conference Bookings</li>
+                <li>✔ 100 Conference Rooms</li>
               </ul>
               <Link href="/auth/register">
                 <button className={styles.planBtn}>Enroll Now</button>
@@ -165,7 +165,7 @@ export default function LoginPage() {
               <h2>₹500 / Month</h2>
               <ul>
                 <li>✔ Unlimited Visitors</li>
-                <li>✔ 1000 Conference Rooms</li>
+                <li>✔ 1000 Conference bookings</li>
                 <li>✔ 6 Conference Rooms</li>
                 <li>✔ Dedicated Support</li>
               </ul>
@@ -179,9 +179,10 @@ export default function LoginPage() {
               <h3>ENTERPRISE</h3>
               <h2>Custom Pricing</h2>
               <ul>
-                <li>✔ Tailored Solutions</li>
-                <li>✔ Advanced Security</li>
-                <li>✔ Premium Support</li>
+                <li>✔ Unlimited Visitors</li>
+                <li>✔ Unlimited Conference Bookings</li>
+                <li>✔ Unmilited Conferece Rooms</li>
+                <li>✔ Dedicated Support</li>
               </ul>
               <Link href="/auth/contact-us">
                 <button className={styles.planBtn}>Contact Us</button>
