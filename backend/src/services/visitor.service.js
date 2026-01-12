@@ -22,7 +22,7 @@ const formatISTDateKey = (date) => {
 };
 
 /* ======================================================
-   SAVE VISITOR (HARD GUARDED)
+   SAVE VISITOR (FIXED TRANSACTION)
 ====================================================== */
 export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
@@ -55,15 +55,20 @@ export const saveVisitor = async (companyId, data, file) => {
     throw new Error("Invalid IST datetime");
 
   /* ======================================================
-     TRANSACTION START
+     GET CONNECTION FOR TRANSACTION
   ======================================================= */
-  await db.beginTransaction();
+  const conn = await db.getConnection();
 
   try {
     /* ======================================================
+       START TRANSACTION
+    ======================================================= */
+    await conn.beginTransaction();
+
+    /* ======================================================
        LOCK COMPANY (PREVENT PARALLEL INSERTS)
     ======================================================= */
-    const [[company]] = await db.execute(
+    const [[company]] = await conn.execute(
       `
       SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
       FROM companies
@@ -91,7 +96,7 @@ export const saveVisitor = async (companyId, data, file) => {
       if (new Date(company.trial_ends_at) < checkInIST)
         throw new Error("Trial expired. Please upgrade.");
 
-      const [[{ total }]] = await db.execute(
+      const [[{ total }]] = await conn.execute(
         `
         SELECT COUNT(*) AS total
         FROM visitors
@@ -116,7 +121,7 @@ export const saveVisitor = async (companyId, data, file) => {
     /* ======================================================
        INSERT VISITOR
     ======================================================= */
-    const [insertResult] = await db.execute(
+    const [insertResult] = await conn.execute(
       `
       INSERT INTO visitors (
         company_id, name, phone, email, from_company, department, designation,
@@ -158,7 +163,7 @@ export const saveVisitor = async (companyId, data, file) => {
     ======================================================= */
     const dateKey = formatISTDateKey(checkInIST);
 
-    const [[{ count }]] = await db.execute(
+    const [[{ count }]] = await conn.execute(
       `
       SELECT COUNT(*) AS count
       FROM visitors
@@ -178,7 +183,7 @@ export const saveVisitor = async (companyId, data, file) => {
       `companies/${companyId}/visitors/${visitorCode}.jpg`
     );
 
-    await db.execute(
+    await conn.execute(
       `
       UPDATE visitors
       SET visitor_code = ?, photo_url = ?
@@ -190,7 +195,7 @@ export const saveVisitor = async (companyId, data, file) => {
     /* ======================================================
        COMMIT TRANSACTION
     ======================================================= */
-    await db.commit();
+    await conn.commit();
 
     /* ======================================================
        SEND MAIL (NON-BLOCKING)
@@ -242,7 +247,9 @@ export const saveVisitor = async (companyId, data, file) => {
     };
 
   } catch (err) {
-    await db.rollback();
+    await conn.rollback();
     throw err;
+  } finally {
+    conn.release();
   }
 };
