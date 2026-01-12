@@ -163,7 +163,8 @@ export const registerCompany = async (data, file) => {
         </h3>
 
         <ul style="font-size:14px;">
-          <li><b>Instant Digital Visitor Pass</b> – Visitors can self-register instantly by scanning a dedicated QR code.Secure virtual passes via Email / WhatsApp.</li>
+          <li><b>Dedicated QR Code</b> – Visitors can self-register instantly by scanning a dedicated QR code.</li>
+          <li><b>Instant Digital Visitor Pass</b> – Secure virtual passes via Email / WhatsApp.</li>
           <li><b>Powerful Live Dashboard</b> – Real-time check-ins, check-outs & analytics.</li>
           <li><b>Conference Room Booking</b> – Quick booking with automatic email alerts.</li>
           <li><b>Dedicated Company Access Link</b> – Employees login via OTP. Zero HR dependency.</li>
