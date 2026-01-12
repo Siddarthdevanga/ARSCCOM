@@ -152,7 +152,7 @@ export default function LoginPage() {
                 <li>✔ Valid 15 Days</li>
                 <li>✔ 100 Visitor Bookings</li>
                 <li>✔ 100 Conference Bookings</li>
-                <li>✔ 100 Conference Rooms</li>
+                <li>✔ 2 Conference Rooms</li>
               </ul>
               <Link href="/auth/register">
                 <button className={styles.planBtn}>Enroll Now</button>
