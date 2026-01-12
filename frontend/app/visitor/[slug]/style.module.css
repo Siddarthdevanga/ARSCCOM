@@ -54,8 +54,9 @@
 
 /* ================= HEADER ================= */
 .header {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-radius: 1rem;
   padding: 1.5rem 2rem;
   margin-bottom: 2rem;
@@ -63,6 +64,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .logoText {
@@ -70,12 +72,14 @@
   font-weight: 800;
   color: #fff;
   letter-spacing: -0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .logo {
   height: 50px;
   max-width: 180px;
   object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 /* ================= CONTAINER ================= */
@@ -88,65 +92,80 @@
 .card {
   background: #ffffff;
   border-radius: 1.25rem;
-  padding: 2rem;
+  padding: 2.5rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  animation: fadeInUp 0.4s ease;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .title {
-  font-size: 1.5rem;
+  font-size: 1.75rem;
   font-weight: 800;
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
   color: #667eea;
+  text-align: center;
 }
 
 /* ================= AUTH CARD ================= */
 .authCard {
-  max-width: 480px;
+  max-width: 500px;
   margin: 4rem auto;
   background: #ffffff;
   border-radius: 1.25rem;
-  padding: 2.5rem;
+  padding: 3rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: fadeInUp 0.4s ease;
 }
 
 .authHeader {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 2.5rem;
 }
 
 .authHeader h2 {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 800;
   color: #667eea;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
 }
 
 .authHeader p {
   color: #666;
-  font-size: 0.95rem;
-  line-height: 1.5;
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
 /* ================= FORM GROUP ================= */
 .formGroup {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .formGroup label {
   display: block;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   color: #333;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.65rem;
 }
 
 .input,
 .select {
   width: 100%;
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   border-radius: 0.75rem;
   border: 2px solid #e0e0e0;
-  font-size: 0.95rem;
+  font-size: 1rem;
   outline: none;
   background: #fff;
   transition: all 0.2s ease;
@@ -160,6 +179,12 @@
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
 }
 
+.input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .input::placeholder {
   color: #999;
 }
@@ -169,18 +194,18 @@
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
   background-repeat: no-repeat;
-  background-position: right 0.75rem center;
+  background-position: right 1rem center;
   background-size: 1.25rem;
-  padding-right: 2.5rem;
+  padding-right: 3rem;
 }
 
 /* ================= BUTTONS ================= */
 .primaryBtn {
   width: 100%;
-  padding: 1rem 1.5rem;
+  padding: 1.125rem 1.75rem;
   border-radius: 0.75rem;
   border: none;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
@@ -188,6 +213,7 @@
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   font-family: inherit;
+  letter-spacing: 0.3px;
 }
 
 .primaryBtn:hover:not(:disabled) {
@@ -195,17 +221,22 @@
   box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
 }
 
+.primaryBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .primaryBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none;
 }
 
 .secondaryBtn {
   width: 100%;
-  padding: 1rem 1.5rem;
+  padding: 1.125rem 1.75rem;
   border-radius: 0.75rem;
   border: 2px solid #667eea;
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   background: #fff;
   color: #667eea;
@@ -213,37 +244,155 @@
   transition: all 0.2s ease;
   margin-top: 0.75rem;
   font-family: inherit;
+  letter-spacing: 0.3px;
 }
 
 .secondaryBtn:hover:not(:disabled) {
   background: #f8f9ff;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.secondaryBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.secondaryBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ================= MESSAGES ================= */
 .errorMsg {
   background: linear-gradient(135deg, #ffebee, #ffcdd2);
   color: #c62828;
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   border-radius: 0.75rem;
   font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
   border-left: 4px solid #f44336;
+  line-height: 1.5;
+  animation: slideIn 0.3s ease;
 }
 
 .successMsg {
   background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
   color: #2e7d32;
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   border-radius: 0.75rem;
   font-weight: 600;
-  font-size: 0.9rem;
-  margin-bottom: 1rem;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
   border-left: 4px solid #4caf50;
+  line-height: 1.5;
+  animation: slideIn 0.3s ease;
 }
 
-/* ================= RESPONSIVE ================= */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ================= CAMERA SECTION ================= */
+.cameraContainer {
+  border: 2px dashed #e0e0e0;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  min-height: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  background: #fafafa;
+  transition: all 0.3s ease;
+}
+
+.cameraContainer:hover {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+/* ================= GRID LAYOUTS ================= */
+.gridRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.75rem;
+}
+
+/* ================= CHECKBOX GROUP ================= */
+.checkboxGroup {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin: 1.5rem 0 2rem 0;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.checkboxLabel:hover {
+  color: #667eea;
+}
+
+.checkboxLabel input[type="checkbox"] {
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+  accent-color: #667eea;
+}
+
+/* ================= BUTTON ROW ================= */
+.buttonRow {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 2.5rem;
+}
+
+.buttonRow button {
+  flex: 1;
+}
+
+/* ================= TWO COLUMN LAYOUT ================= */
+.twoColumnLayout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 2.5rem;
+  align-items: start;
+}
+
+/* ================= RESPONSIVE DESIGN ================= */
+
+/* Tablets (768px - 1024px) */
+@media (max-width: 1024px) {
+  .container {
+    max-width: 900px;
+  }
+
+  .twoColumnLayout {
+    grid-template-columns: 280px 1fr;
+    gap: 2rem;
+  }
+}
+
+/* Tablet Portrait & Mobile Landscape (640px - 768px) */
 @media (max-width: 768px) {
   .page {
     padding: 1.5rem;
@@ -264,21 +413,45 @@
     height: 42px;
   }
 
-  .card,
+  .card {
+    padding: 2rem;
+  }
+
   .authCard {
-    padding: 1.5rem;
+    padding: 2.5rem;
+    margin: 3rem auto;
   }
 
   .title,
   .authHeader h2 {
-    font-size: 1.25rem;
+    font-size: 1.5rem;
   }
 
-  .card > div[style*="grid-template-columns"] {
-    grid-template-columns: 1fr !important;
+  .twoColumnLayout {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+
+  .gridRow {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .checkboxGroup {
+    gap: 1.5rem;
+  }
+
+  .buttonRow {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .buttonRow button {
+    width: 100%;
   }
 }
 
+/* Mobile Portrait (up to 640px) */
 @media (max-width: 640px) {
   .page {
     padding: 1rem;
@@ -286,6 +459,7 @@
 
   .header {
     padding: 1rem;
+    margin-bottom: 1.5rem;
   }
 
   .logoText {
@@ -296,9 +470,84 @@
     height: 36px;
   }
 
-  .card,
+  .card {
+    padding: 1.5rem;
+  }
+
   .authCard {
+    padding: 2rem;
+    margin: 2rem auto;
+  }
+
+  .title {
+    font-size: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .authHeader h2 {
+    font-size: 1.5rem;
+  }
+
+  .authHeader p {
+    font-size: 0.9rem;
+  }
+
+  .input,
+  .select {
+    padding: 0.875rem 1rem;
+    font-size: 0.95rem;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+  }
+
+  .formGroup {
+    margin-bottom: 1.5rem;
+  }
+
+  .cameraContainer {
+    min-height: 320px;
     padding: 1.25rem;
+  }
+
+  .checkboxGroup {
+    gap: 1.25rem;
+    flex-direction: column;
+  }
+
+  .checkboxLabel {
+    font-size: 0.95rem;
+  }
+}
+
+/* Small Mobile (up to 375px) */
+@media (max-width: 375px) {
+  .page {
+    padding: 0.75rem;
+  }
+
+  .header {
+    padding: 0.875rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .authCard {
+    padding: 1.75rem;
+    margin: 1.5rem auto;
+  }
+
+  .title {
+    font-size: 1.125rem;
+  }
+
+  .authHeader h2 {
+    font-size: 1.375rem;
   }
 
   .input,
@@ -309,7 +558,68 @@
 
   .primaryBtn,
   .secondaryBtn {
-    padding: 0.875rem 1.25rem;
+    padding: 0.875rem 1rem;
     font-size: 0.95rem;
+  }
+}
+
+/* ================= UTILITY CLASSES ================= */
+.textCenter {
+  text-align: center;
+}
+
+.mt1 { margin-top: 1rem; }
+.mt2 { margin-top: 2rem; }
+.mb1 { margin-bottom: 1rem; }
+.mb2 { margin-bottom: 2rem; }
+
+/* ================= PRINT STYLES ================= */
+@media print {
+  .page {
+    background: white;
+    padding: 0;
+  }
+
+  .header,
+  .primaryBtn,
+  .secondaryBtn {
+    display: none;
+  }
+
+  .card,
+  .authCard {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+}
+
+/* ================= ACCESSIBILITY ================= */
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .card,
+  .authCard,
+  .errorMsg,
+  .successMsg {
+    animation: none;
+  }
+
+  .primaryBtn,
+  .secondaryBtn,
+  .input,
+  .select {
+    transition: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .input,
+  .select {
+    border-width: 3px;
+  }
+
+  .primaryBtn,
+  .secondaryBtn {
+    border: 3px solid currentColor;
   }
 }
