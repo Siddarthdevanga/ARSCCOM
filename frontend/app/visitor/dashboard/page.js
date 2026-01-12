@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -47,7 +47,7 @@ export default function VisitorDashboard() {
   const [publicUrl, setPublicUrl] = useState("");
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [loadingQR, setLoadingQR] = useState(false);
-  
+
   /* ================= TOAST STATE ================= */
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
@@ -153,37 +153,6 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ================= LOAD IMAGE (S3 Compatible) ================= */
-  const loadImageAsync = (url) => {
-    return new Promise((resolve) => {
-      if (!url) {
-        resolve(null);
-        return;
-      }
-
-      const img = new Image();
-      img.crossOrigin = 'anonymous'; // For S3 CORS
-      
-      img.onload = () => {
-        console.log('[LOGO] Successfully loaded:', url);
-        resolve(img);
-      };
-      
-      img.onerror = (error) => {
-        console.warn('[LOGO] Failed to load:', url, error);
-        resolve(null); // Continue without logo
-      };
-      
-      img.src = url;
-      
-      // Timeout after 8 seconds
-      setTimeout(() => {
-        console.warn('[LOGO] Timeout loading:', url);
-        resolve(null);
-      }, 8000);
-    });
-  };
-
   /* ================= DOWNLOAD IMAGE WITH LOGO ================= */
   const downloadImage = async () => {
     if (!qrCodeImage || !company) return;
@@ -210,67 +179,68 @@ export default function VisitorDashboard() {
 
       // Company Name (Left side)
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 32px Arial, sans-serif';
+      ctx.font = 'bold 32px Arial';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(company.name, 50, 60);
+      ctx.fillText(company.name, 50, 70);
 
-      // Company Logo (Right side) - Same method as header
+      // Company Logo (Right side)
       if (company.logo_url) {
         try {
-          console.log('[DOWNLOAD] Loading company logo:', company.logo_url);
-          const logoImg = await loadImageAsync(company.logo_url);
+          const logoImg = new Image();
+          logoImg.crossOrigin = 'anonymous';
+          logoImg.src = company.logo_url;
           
-          if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
-            console.log('[DOWNLOAD] Logo loaded successfully');
+          await new Promise((resolve, reject) => {
+            logoImg.onload = () => {
+              // Calculate logo dimensions (max 120x80, maintain aspect ratio)
+              const maxWidth = 120;
+              const maxHeight = 80;
+              let width = logoImg.width;
+              let height = logoImg.height;
+              
+              if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+              }
+              
+              if (height > maxHeight) {
+                width = (maxHeight / height) * width;
+                height = maxHeight;
+              }
+              
+              // Position logo on right side (750 - width, centered vertically)
+              const x = 750 - width;
+              const y = 20 + (80 - height) / 2;
+              
+              ctx.drawImage(logoImg, x, y, width, height);
+              resolve();
+            };
+            logoImg.onerror = () => {
+              console.log('Logo load failed');
+              resolve(); // Continue even if logo fails
+            };
             
-            // Calculate logo dimensions (max 120x80, maintain aspect ratio)
-            const maxWidth = 120;
-            const maxHeight = 80;
-            let width = logoImg.naturalWidth || logoImg.width;
-            let height = logoImg.naturalHeight || logoImg.height;
-            
-            // Scale proportionally
-            if (width > maxWidth) {
-              const scale = maxWidth / width;
-              width = maxWidth;
-              height = height * scale;
-            }
-            
-            if (height > maxHeight) {
-              const scale = maxHeight / height;
-              height = maxHeight;
-              width = width * scale;
-            }
-            
-            // Position logo on right side
-            const x = 750 - width;
-            const y = 20 + (80 - height) / 2;
-            
-            console.log('[DOWNLOAD] Drawing logo at:', { x, y, width, height });
-            ctx.drawImage(logoImg, x, y, width, height);
-          } else {
-            console.warn('[DOWNLOAD] Logo image invalid or empty');
-          }
+            // Timeout after 5 seconds
+            setTimeout(() => resolve(), 5000);
+          });
         } catch (e) {
-          console.error('[DOWNLOAD] Logo loading error:', e);
+          console.log('Logo error:', e);
         }
       }
 
       // Title
       ctx.fillStyle = '#3c007a';
-      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.font = 'bold 28px Arial';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
       ctx.fillText('Visitor Registration', 50, 180);
 
       // Public URL Label
-      ctx.font = '18px Arial, sans-serif';
+      ctx.font = '18px Arial';
       ctx.fillStyle = '#666666';
       ctx.fillText('Scan QR Code or Visit:', 50, 230);
 
       // Public URL
-      ctx.font = 'bold 16px Arial, sans-serif';
+      ctx.font = 'bold 16px Arial';
       ctx.fillStyle = '#7a00ff';
       ctx.fillText(publicUrl, 50, 260);
 
@@ -282,19 +252,14 @@ export default function VisitorDashboard() {
           ctx.drawImage(qrImg, 250, 300, 300, 300);
           resolve();
         };
-        qrImg.onerror = () => {
-          console.error('[DOWNLOAD] Failed to load QR code');
-          resolve();
-        };
       });
 
       // Instructions
-      ctx.font = '16px Arial, sans-serif';
+      ctx.font = '16px Arial';
       ctx.fillStyle = '#3c007a';
-      ctx.textAlign = 'left';
       ctx.fillText('Instructions for Visitors:', 50, 650);
       
-      ctx.font = '14px Arial, sans-serif';
+      ctx.font = '14px Arial';
       ctx.fillStyle = '#666666';
       ctx.fillText('1. Scan the QR code with your phone camera', 70, 685);
       ctx.fillText('2. Or visit the URL above in your browser', 70, 715);
@@ -309,12 +274,12 @@ export default function VisitorDashboard() {
 
       // Footer text
       ctx.fillStyle = '#7a00ff';
-      ctx.font = 'bold 20px Arial, sans-serif';
+      ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('PROMEET', 400, 940);
       
       ctx.fillStyle = '#666666';
-      ctx.font = '14px Arial, sans-serif';
+      ctx.font = '14px Arial';
       ctx.fillText('Visitor and Conference Booking Platform', 400, 970);
 
       // Convert canvas to blob and download
@@ -323,16 +288,14 @@ export default function VisitorDashboard() {
         const link = document.createElement('a');
         link.href = url;
         link.download = `${company.slug}-visitor-qr-code.png`;
-        document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
         URL.revokeObjectURL(url);
         
-        showToast('✓ QR code image downloaded successfully!', 'success');
-      }, 'image/png', 1.0);
+        showToast('✓ QR code downloaded successfully!', 'success');
+      });
 
     } catch (err) {
-      console.error('[DOWNLOAD] Image generation error:', err);
+      console.error('Image generation error:', err);
       showToast('✗ Failed to generate image', 'error');
     }
   };
@@ -345,8 +308,7 @@ export default function VisitorDashboard() {
       .then(() => {
         showToast('✓ URL copied to clipboard!', 'success');
       })
-      .catch((err) => {
-        console.error('[COPY] Failed:', err);
+      .catch(() => {
         showToast('✗ Failed to copy URL', 'error');
       });
   };
@@ -486,14 +448,11 @@ export default function VisitorDashboard() {
         </div>
 
         <div className={styles.rightHeader}>
-          {company.logo_url && (
-            <img
-              src={company.logo_url}
-              alt="Company Logo"
-              className={styles.companyLogo}
-              crossOrigin="anonymous"
-            />
-          )}
+          <img
+            src={company.logo_url || "/logo.png"}
+            alt="Company Logo"
+            className={styles.companyLogo}
+          />
 
           <button
             className={styles.backBtn}
