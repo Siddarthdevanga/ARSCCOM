@@ -687,7 +687,7 @@ export default function PublicVisitorRegistration() {
         </div>
       )}
 
-      {/* ================= STEP 3: IDENTITY + PHOTO ================= */}
+      {/* ================= STEP 3: IDENTITY + PHOTO (REFINED LAYOUT) ================= */}
       {step === 3 && (
         <div className={styles.container}>
           <header className={styles.header}>
@@ -702,124 +702,126 @@ export default function PublicVisitorRegistration() {
 
             {error && <div className={styles.errorMsg}>{error}</div>}
 
-            <div style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: "2rem", alignItems: "start" }}>
-              <div>
-                <div style={{ 
-                  border: "2px dashed #e0e0e0", 
-                  borderRadius: "1rem", 
-                  padding: "1rem",
-                  minHeight: "350px",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "1rem"
-                }}>
-                  {!cameraActive && !photo && (
-                    <button 
-                      type="button"
-                      className={styles.primaryBtn} 
-                      onClick={startCamera}
-                      style={{ width: "100%" }}
-                    >
-                      Start Camera
-                    </button>
-                  )}
+            {/* Camera Section */}
+            <div style={{ 
+              border: "2px dashed #e0e0e0", 
+              borderRadius: "1rem", 
+              padding: "1.5rem",
+              minHeight: "350px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "1rem",
+              marginBottom: "2rem"
+            }}>
+              {!cameraActive && !photo && (
+                <button 
+                  type="button"
+                  className={styles.primaryBtn} 
+                  onClick={startCamera}
+                  style={{ maxWidth: "300px" }}
+                >
+                  Start Camera
+                </button>
+              )}
 
-                  {cameraActive && (
-                    <>
-                      <video 
-                        ref={videoRef} 
-                        autoPlay 
-                        playsInline
-                        muted
-                        style={{
-                          width: "100%",
-                          borderRadius: "0.75rem",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                        }}
-                      />
-                      <button 
-                        type="button"
-                        className={styles.primaryBtn} 
-                        onClick={capturePhoto}
-                        style={{ width: "100%" }}
-                      >
-                        Capture Photo
-                      </button>
-                    </>
-                  )}
-
-                  {photo && (
-                    <>
-                      <img 
-                        src={photo} 
-                        alt="Preview" 
-                        style={{
-                          width: "100%",
-                          borderRadius: "0.75rem",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
-                        }}
-                      />
-                      <button 
-                        type="button"
-                        className={styles.secondaryBtn} 
-                        onClick={() => setPhoto(null)}
-                        style={{ width: "100%", marginTop: 0 }}
-                      >
-                        Retake Photo
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <div className={styles.formGroup}>
-                  <label>ID Proof Type</label>
-                  <select
-                    className={styles.select}
-                    name="idType"
-                    value={formData.idType}
-                    onChange={handleInputChange}
-                  >
-                    <option value="">Select ID Proof (Optional)</option>
-                    <option value="aadhaar">Aadhaar</option>
-                    <option value="pan">PAN Card</option>
-                    <option value="passport">Passport</option>
-                  </select>
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>ID Number</label>
-                  <input
-                    className={styles.input}
-                    name="idNumber"
-                    value={formData.idNumber}
-                    onChange={handleInputChange}
-                    placeholder="ID Number (Optional)"
+              {cameraActive && (
+                <>
+                  <video 
+                    ref={videoRef} 
+                    autoPlay 
+                    playsInline
+                    muted
+                    style={{
+                      width: "100%",
+                      maxWidth: "400px",
+                      borderRadius: "0.75rem",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                    }}
                   />
-                </div>
-
-                <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
                   <button 
-                    className={styles.secondaryBtn} 
-                    onClick={handleBack}
-                    disabled={submitting}
-                    style={{ width: "auto", flex: 1, marginTop: 0 }}
-                  >
-                    ← Previous
-                  </button>
-                  <button 
+                    type="button"
                     className={styles.primaryBtn} 
-                    onClick={handleSubmit}
-                    disabled={!photo || submitting}
-                    style={{ width: "auto", flex: 1 }}
+                    onClick={capturePhoto}
+                    style={{ maxWidth: "300px" }}
                   >
-                    {submitting ? "Submitting..." : "Submit"}
+                    Capture Photo
                   </button>
-                </div>
+                </>
+              )}
+
+              {photo && (
+                <>
+                  <img 
+                    src={photo} 
+                    alt="Preview" 
+                    style={{
+                      width: "100%",
+                      maxWidth: "400px",
+                      borderRadius: "0.75rem",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+                    }}
+                  />
+                  <button 
+                    type="button"
+                    className={styles.secondaryBtn} 
+                    onClick={() => setPhoto(null)}
+                    style={{ maxWidth: "300px", marginTop: 0 }}
+                  >
+                    Retake Photo
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Identity Details Section */}
+            <div style={{ marginBottom: "2rem" }}>
+              <div className={styles.formGroup}>
+                <label>ID Proof Type</label>
+                <select
+                  className={styles.select}
+                  name="idType"
+                  value={formData.idType}
+                  onChange={handleInputChange}
+                >
+                  <option value="">Select ID Proof (Optional)</option>
+                  <option value="aadhaar">Aadhaar</option>
+                  <option value="pan">PAN Card</option>
+                  <option value="passport">Passport</option>
+                </select>
               </div>
+
+              <div className={styles.formGroup}>
+                <label>ID Number</label>
+                <input
+                  className={styles.input}
+                  name="idNumber"
+                  value={formData.idNumber}
+                  onChange={handleInputChange}
+                  placeholder="ID Number (Optional)"
+                />
+              </div>
+            </div>
+
+            {/* Buttons Section */}
+            <div style={{ display: "flex", gap: "1rem" }}>
+              <button 
+                className={styles.secondaryBtn} 
+                onClick={handleBack}
+                disabled={submitting}
+                style={{ width: "auto", flex: 1, marginTop: 0 }}
+              >
+                ← Previous
+              </button>
+              <button 
+                className={styles.primaryBtn} 
+                onClick={handleSubmit}
+                disabled={!photo || submitting}
+                style={{ width: "auto", flex: 1 }}
+              >
+                {submitting ? "Submitting..." : "Submit"}
+              </button>
             </div>
 
             <canvas ref={canvasRef} style={{ display: "none" }} />
