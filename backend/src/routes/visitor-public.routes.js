@@ -27,18 +27,23 @@ const upload = multer({
   },
 });
 
-/* ================= EMAIL TEMPLATES ================= */
-const emailFooter = (company) => `
-<br/>
-<br/>
-Regards,<br/>
-<b>${company.name}</b><br/>
-${company.logo_url ? `<img src="${company.logo_url}" alt="${company.name} Logo" height="55" />` : ""}
-<hr/>
-<p style="font-size:13px;color:#666;margin-top:15px;">
-This email was automatically sent from the Conference Room Booking Platform.
-If you did not perform this action, please contact your administrator immediately.
-</p>
+/* ======================================================
+   EMAIL TEMPLATES
+====================================================== */
+const emailFooter = (company = {}) => `
+  <br/><br/>
+  Regards,<br/>
+  <strong>${company.name || "ProMeet Team"}</strong><br/>
+  ${
+    company.logo_url
+      ? `<img src="${company.logo_url}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
+      : ""
+  }
+  <hr style="margin-top:20px;"/>
+  <p style="font-size:13px;color:#666;margin-top:15px;line-height:1.5;">
+    This email was automatically sent from the Conference Room Booking Platform.<br/>
+    If you did not perform this action, please contact your administrator immediately.
+  </p>
 `;
 
 /* ======================================================
@@ -70,51 +75,24 @@ const getCompanyBySlug = async (slug) => {
   return company;
 };
 
-//* ======================================================
-   SEND OTP EMAIL
+/* ======================================================
+   SEND OTP EMAIL (USING AUTH SERVICE PATTERN)
 ====================================================== */
-const sendOtpMail = async ({ email, otp, company }) => {
-  if (!email || !otp) return;
-
+const sendOtpMail = async (email, otp, company) => {
   await sendEmail({
-    to: normalizeEmail(email),
-    subject: `Your Visitor Verification Code - ${company?.name || "ProMeet"}`,
+    to: email,
+    subject: `Your Visitor Verification Code - ${company.name}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color:#6c2bd9;">
-          ${company?.name || "ProMeet"} – Visitor Verification
-        </h2>
-
-        <p style="font-size:16px;">
-          Your verification code is:
-        </p>
-
-        <div style="
-          background:#f7f7f7;
-          padding:20px;
-          text-align:center;
-          border-radius:8px;
-          margin:20px 0;
-        ">
-          <h1 style="
-            letter-spacing:8px;
-            color:#6c2bd9;
-            margin:0;
-            font-size:36px;
-          ">
-            ${otp}
-          </h1>
+        <h2 style="color:#6c2bd9;">${company.name} – Visitor Verification</h2>
+        <p style="font-size: 16px;">Your verification code is:</p>
+        <div style="background: #f7f7f7; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <h1 style="letter-spacing: 8px; color: #6c2bd9; margin: 0; font-size: 36px;">${otp}</h1>
         </div>
-
-        <p style="color:#666;">
-          This OTP is valid for
-          <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.
+        <p style="color: #666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+          If you didn't request this code, please ignore this email.
         </p>
-
-        <p style="color:#999;font-size:12px;margin-top:30px;">
-          If you didn't request this code, you can safely ignore this email.
-        </p>
-
         ${emailFooter(company)}
       </div>
     `,
@@ -255,7 +233,7 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     );
 
     // Send OTP email (using auth service pattern)
-    await sendOtpMail(email, otp, company.name);
+    await sendOtpMail(email, otp, company);
 
     res.json({
       success: true,
