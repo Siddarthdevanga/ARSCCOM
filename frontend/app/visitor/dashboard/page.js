@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -47,6 +47,9 @@ export default function VisitorDashboard() {
   const [publicUrl, setPublicUrl] = useState("");
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [loadingQR, setLoadingQR] = useState(false);
+  
+  /* ================= TOAST NOTIFICATION ================= */
+  const [toast, setToast] = useState({ show: false, message: "" });
 
   /* ================= FETCH DASHBOARD ================= */
   const loadDashboard = useCallback(async (token) => {
@@ -142,11 +145,47 @@ export default function VisitorDashboard() {
     }
   };
 
+  /* ================= SHOW TOAST ================= */
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => {
+      setToast({ show: false, message: "" });
+    }, 3000);
+  };
+
+  /* ================= LOAD IMAGE WITH CORS PROXY ================= */
+  const loadImageWithProxy = (url) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      
+      // Try direct load first
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        // If direct load fails, try via backend proxy
+        const proxyUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/proxy-image?url=${encodeURIComponent(url)}`;
+        const proxyImg = new Image();
+        proxyImg.onload = () => resolve(proxyImg);
+        proxyImg.onerror = () => {
+          console.log('Image load failed:', url);
+          resolve(null);
+        };
+        proxyImg.src = proxyUrl;
+      };
+      img.src = url;
+      
+      // Timeout after 10 seconds
+      setTimeout(() => resolve(null), 10000);
+    });
+  };
+
   /* ================= DOWNLOAD IMAGE WITH LOGO ================= */
   const downloadImage = async () => {
     if (!qrCodeImage || !company) return;
 
     try {
+      showToast('Generating QR code image...');
+
       // Create canvas
       const canvas = document.createElement('canvas');
       canvas.width = 800;
@@ -170,46 +209,34 @@ export default function VisitorDashboard() {
       ctx.textAlign = 'left';
       ctx.fillText(company.name, 50, 70);
 
-      // Company Logo (Right side)
+      // Company Logo (Right side) - with CORS handling
       if (company.logo_url) {
         try {
-          const logoImg = new Image();
-          logoImg.crossOrigin = 'anonymous';
-          logoImg.src = company.logo_url;
+          const logoImg = await loadImageWithProxy(company.logo_url);
           
-          await new Promise((resolve, reject) => {
-            logoImg.onload = () => {
-              // Calculate logo dimensions (max 120x80, maintain aspect ratio)
-              const maxWidth = 120;
-              const maxHeight = 80;
-              let width = logoImg.width;
-              let height = logoImg.height;
-              
-              if (width > maxWidth) {
-                height = (maxWidth / width) * height;
-                width = maxWidth;
-              }
-              
-              if (height > maxHeight) {
-                width = (maxHeight / height) * width;
-                height = maxHeight;
-              }
-              
-              // Position logo on right side (750 - width, centered vertically)
-              const x = 750 - width;
-              const y = 20 + (80 - height) / 2;
-              
-              ctx.drawImage(logoImg, x, y, width, height);
-              resolve();
-            };
-            logoImg.onerror = () => {
-              console.log('Logo load failed');
-              resolve(); // Continue even if logo fails
-            };
+          if (logoImg) {
+            // Calculate logo dimensions (max 120x80, maintain aspect ratio)
+            const maxWidth = 120;
+            const maxHeight = 80;
+            let width = logoImg.width;
+            let height = logoImg.height;
             
-            // Timeout after 5 seconds
-            setTimeout(() => resolve(), 5000);
-          });
+            if (width > maxWidth) {
+              height = (maxWidth / width) * height;
+              width = maxWidth;
+            }
+            
+            if (height > maxHeight) {
+              width = (maxHeight / height) * width;
+              height = maxHeight;
+            }
+            
+            // Position logo on right side
+            const x = 750 - width;
+            const y = 20 + (80 - height) / 2;
+            
+            ctx.drawImage(logoImg, x, y, width, height);
+          }
         } catch (e) {
           console.log('Logo error:', e);
         }
@@ -277,19 +304,25 @@ export default function VisitorDashboard() {
         link.download = `${company.slug}-visitor-qr-code.png`;
         link.click();
         URL.revokeObjectURL(url);
+        
+        showToast('✓ QR code downloaded successfully!');
       });
 
     } catch (err) {
       console.error('Image generation error:', err);
-      alert('Failed to generate image. Please try again.');
+      showToast('✗ Failed to generate image');
     }
   };
 
   /* ================= COPY URL ================= */
   const copyURL = () => {
     if (!publicUrl) return;
-    navigator.clipboard.writeText(publicUrl);
-    alert('URL copied to clipboard!');
+    
+    navigator.clipboard.writeText(publicUrl).then(() => {
+      showToast('✓ URL copied to clipboard!');
+    }).catch(() => {
+      showToast('✗ Failed to copy URL');
+    });
   };
 
   /* ================= PLAN HELPERS ================= */
@@ -317,6 +350,13 @@ export default function VisitorDashboard() {
 
   return (
     <div className={styles.container}>
+      {/* ================= TOAST NOTIFICATION ================= */}
+      {toast.show && (
+        <div className={styles.toast}>
+          {toast.message}
+        </div>
+      )}
+
       {/* ================= SLIDING PANEL ================= */}
       <div className={`${styles.slidingPanel} ${panelOpen ? styles.panelOpen : ''}`}>
         <div className={styles.panelHeader}>
