@@ -88,7 +88,7 @@ const sendOtpMail = async (email, otp, companyName) => {
         <p style="color: #999; font-size: 12px; margin-top: 30px;">
           If you didn't request this code, please ignore this email.
         </p>
-        ${emailFooter(companyName)}
+        ${emailFooter(company)}
       </div>
     `,
   });
