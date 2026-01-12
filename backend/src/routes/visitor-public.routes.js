@@ -1,21 +1,21 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
+import { sendEmail } from "../utils/mailer.js";
 import multer from "multer";
 import QRCode from "qrcode";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 
 const router = express.Router();
 
 /* ======================================================
-   HARD-CODED OTP RULES (AS REQUESTED)
+   CONSTANTS
 ====================================================== */
-const OTP_EXPIRY_MINUTES = 5;   // ⏱️ OTP valid for 5 minutes
-const OTP_RESEND_SECONDS = 30;  // 🔁 Resend allowed after 30 seconds
+const OTP_EXPIRY_MINUTES = 5;
+const OTP_RESEND_SECONDS = 30;
 
 /* ======================================================
-   MULTER (PHOTO UPLOAD)
+   MULTER CONFIGURATION
 ====================================================== */
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -28,17 +28,26 @@ const upload = multer({
 });
 
 /* ======================================================
-   MAIL CONFIG (FROM SECRETS MANAGER)
+   EMAIL FOOTER (MATCHING AUTH SERVICE)
 ====================================================== */
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: 465,
-  secure: true,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const emailFooter = (companyName) => `
+<br/>
+Regards,<br/>
+<b>${companyName}</b><br/>
+
+<img 
+  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
+  alt="PROMEET Logo"
+  style="height:65px;margin:10px 0;display:block"
+/>
+
+<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
+
+<p style="font-size:13px;color:#666">
+This email was automatically sent from the PROMEET
+Conference & Visitor Management Platform.
+If this was not you, please contact your administrator immediately.
+</p>`;
 
 /* ======================================================
    UTILITIES
@@ -70,42 +79,31 @@ const getCompanyBySlug = async (slug) => {
 };
 
 /* ======================================================
-   SEND OTP EMAIL
+   SEND OTP EMAIL (USING AUTH SERVICE PATTERN)
 ====================================================== */
 const sendOtpMail = async (email, otp, companyName) => {
-  await transporter.sendMail({
-    from: `"${companyName}" <${process.env.SMTP_USER}>`,
+  await sendEmail({
     to: email,
-    subject: "Your Visitor Verification Code",
+    subject: `Your Visitor Verification Code - ${companyName}`,
     html: `
-      <h2>${companyName} – Visitor Verification</h2>
-      <p>Your OTP is:</p>
-      <h1 style="letter-spacing:4px">${otp}</h1>
-      <p>This OTP is valid for ${OTP_EXPIRY_MINUTES} minutes.</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color:#6c2bd9;">${companyName} – Visitor Verification</h2>
+        <p style="font-size: 16px;">Your verification code is:</p>
+        <div style="background: #f7f7f7; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
+          <h1 style="letter-spacing: 8px; color: #6c2bd9; margin: 0; font-size: 36px;">${otp}</h1>
+        </div>
+        <p style="color: #666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+        <p style="color: #999; font-size: 12px; margin-top: 30px;">
+          If you didn't request this code, please ignore this email.
+        </p>
+        ${emailFooter(companyName)}
+      </div>
     `,
   });
 };
 
 /* ======================================================
-   SEND VISITOR PASS EMAIL
-====================================================== */
-const sendVisitorPassMail = async (visitor, company) => {
-  await transporter.sendMail({
-    from: `"${company.name}" <${process.env.SMTP_USER}>`,
-    to: visitor.email,
-    subject: "Your Visitor Pass",
-    html: `
-      <h2>Welcome to ${company.name}</h2>
-      <p><b>Name:</b> ${visitor.name}</p>
-      <p><b>Visitor Code:</b> ${visitor.visitor_code}</p>
-      <p><b>Check-in:</b> ${visitor.check_in}</p>
-      <p>Please show this email at reception.</p>
-    `,
-  });
-};
-
-/* ======================================================
-   QR CODE (PUBLIC URL)
+   GET COMPANY INFO & QR CODE
 ====================================================== */
 router.get("/visitor/:slug/info", async (req, res) => {
   try {
@@ -113,11 +111,16 @@ router.get("/visitor/:slug/info", async (req, res) => {
     const company = await getCompanyBySlug(slug);
 
     if (!company) {
-      return res.status(404).json({ success: false, message: "Invalid link" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Invalid registration link" 
+      });
     }
 
-    const publicUrl = `${process.env.PUBLIC_BASE_URL}/api/public/visitor/${slug}`;
+    // Generate public URL (from AWS Secrets Manager env var)
+    const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
 
+    // Generate QR code
     const qrCode = await QRCode.toDataURL(publicUrl, {
       width: 400,
       margin: 2,
@@ -134,13 +137,48 @@ router.get("/visitor/:slug/info", async (req, res) => {
       publicUrl,
     });
   } catch (err) {
-    console.error("[QR_INFO]", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    console.error("[VISITOR_PUBLIC][INFO]", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Server error" 
+    });
   }
 });
 
 /* ======================================================
-   SEND OTP (WELCOME PAGE)
+   DOWNLOAD QR CODE AS PNG
+====================================================== */
+router.get("/visitor/qr/:slug", async (req, res) => {
+  try {
+    const slug = normalizeSlug(req.params.slug);
+    const company = await getCompanyBySlug(slug);
+
+    if (!company) {
+      return res.status(404).send("Company not found");
+    }
+
+    const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
+
+    const qrBuffer = await QRCode.toBuffer(publicUrl, {
+      width: 400,
+      margin: 2,
+      color: { dark: "#3c007a", light: "#ffffff" },
+    });
+
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="visitor-qr-${slug}.png"`
+    );
+    res.send(qrBuffer);
+  } catch (err) {
+    console.error("[VISITOR_PUBLIC][QR_DOWNLOAD]", err);
+    res.status(500).send("Failed to generate QR code");
+  }
+});
+
+/* ======================================================
+   SEND OTP
 ====================================================== */
 router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
@@ -148,18 +186,24 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     const email = normalizeEmail(req.body.email);
 
     if (!isValidEmail(email)) {
-      return res.status(400).json({ success: false, message: "Invalid email" });
+      return res.status(400).json({ 
+        success: false, 
+        message: "Valid email address required" 
+      });
     }
 
     const company = await getCompanyBySlug(slug);
     if (!company) {
-      return res.status(404).json({ success: false, message: "Invalid link" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Invalid registration link" 
+      });
     }
 
-    // ⏱️ Resend throttle
+    // Check resend throttle
     const [[last]] = await db.query(
       `SELECT otp_last_sent_at
-       FROM visitors
+       FROM visitor_otp
        WHERE email = ? AND company_id = ?
        ORDER BY id DESC
        LIMIT 1`,
@@ -173,32 +217,38 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
       if (diff < OTP_RESEND_SECONDS) {
         return res.status(429).json({
           success: false,
-          message: `Wait ${Math.ceil(
+          message: `Please wait ${Math.ceil(
             OTP_RESEND_SECONDS - diff
-          )} seconds to resend OTP`,
+          )} seconds before requesting a new OTP`,
         });
       }
     }
 
     const otp = generateOTP();
+    const otpHash = hashOTP(otp);
 
+    // Store OTP
     await db.query(
-      `INSERT INTO visitors
-       (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at)
-       VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())`,
-      [company.id, email, hashOTP(otp), OTP_EXPIRY_MINUTES]
+      `INSERT INTO visitor_otp
+       (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at, verified)
+       VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW(), 0)`,
+      [company.id, email, otpHash, OTP_EXPIRY_MINUTES]
     );
 
+    // Send OTP email (using auth service pattern)
     await sendOtpMail(email, otp, company.name);
 
     res.json({
       success: true,
-      message: "OTP sent to email",
+      message: "OTP sent successfully",
       resendAfter: OTP_RESEND_SECONDS,
     });
   } catch (err) {
-    console.error("[OTP_SEND]", err);
-    res.status(500).json({ success: false, message: "OTP send failed" });
+    console.error("[VISITOR_PUBLIC][OTP_SEND]", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to send OTP" 
+    });
   }
 });
 
@@ -207,108 +257,202 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
 ====================================================== */
 router.post("/visitor/:slug/otp/verify", async (req, res) => {
   try {
+    const slug = normalizeSlug(req.params.slug);
     const email = normalizeEmail(req.body.email);
     const { otp } = req.body;
 
-    const [[visitor]] = await db.query(
+    if (!otp || otp.length !== 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please enter 6-digit OTP" 
+      });
+    }
+
+    const company = await getCompanyBySlug(slug);
+    if (!company) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Invalid registration link" 
+      });
+    }
+
+    const otpHash = hashOTP(otp);
+
+    const [[otpRecord]] = await db.query(
       `SELECT id, otp_hash, otp_expires_at
-       FROM visitors
-       WHERE email = ?
+       FROM visitor_otp
+       WHERE email = ? AND company_id = ? AND verified = 0
        ORDER BY id DESC
        LIMIT 1`,
-      [email]
+      [email, company.id]
     );
 
-    if (!visitor) {
-      return res.status(404).json({ success: false, message: "OTP not found" });
+    if (!otpRecord) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "OTP not found. Please request a new one." 
+      });
     }
 
-    if (new Date(visitor.otp_expires_at) < new Date()) {
-      return res.status(400).json({ success: false, message: "OTP expired" });
+    if (new Date(otpRecord.otp_expires_at) < new Date()) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "OTP expired. Please request a new one." 
+      });
     }
 
-    if (hashOTP(otp) !== visitor.otp_hash) {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    if (otpHash !== otpRecord.otp_hash) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid OTP. Please check and try again." 
+      });
     }
 
+    // Generate session token
     const sessionToken = crypto.randomBytes(32).toString("hex");
 
     await db.query(
-      `UPDATE visitors
-       SET otp_verified_at = NOW(),
-           otp_session_token = ?
+      `UPDATE visitor_otp
+       SET verified = 1,
+           otp_session_token = ?,
+           verified_at = NOW()
        WHERE id = ?`,
-      [sessionToken, visitor.id]
+      [sessionToken, otpRecord.id]
     );
 
     res.json({
       success: true,
       otpToken: sessionToken,
+      message: "OTP verified successfully"
     });
   } catch (err) {
-    console.error("[OTP_VERIFY]", err);
-    res.status(500).json({ success: false, message: "Verification failed" });
+    console.error("[VISITOR_PUBLIC][OTP_VERIFY]", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Verification failed" 
+    });
   }
 });
 
 /* ======================================================
-   REGISTER VISITOR (AFTER OTP)
+   REGISTER VISITOR
 ====================================================== */
 router.post(
   "/visitor/:slug/register",
   upload.single("photo"),
   async (req, res) => {
     try {
+      const slug = normalizeSlug(req.params.slug);
       const otpToken = req.headers["otp-token"];
+
       if (!otpToken) {
-        return res.status(401).json({ success: false, message: "OTP required" });
+        return res.status(401).json({ 
+          success: false, 
+          message: "OTP verification required" 
+        });
       }
 
-      const [[visitor]] = await db.query(
+      // Verify OTP session
+      const [[otpSession]] = await db.query(
         `SELECT id, company_id, email
-         FROM visitors
-         WHERE otp_session_token = ?`,
+         FROM visitor_otp
+         WHERE otp_session_token = ? AND verified = 1
+         LIMIT 1`,
         [otpToken]
       );
 
-      if (!visitor) {
-        return res.status(401).json({ success: false, message: "Invalid session" });
+      if (!otpSession) {
+        return res.status(401).json({ 
+          success: false, 
+          message: "Invalid or expired session" 
+        });
+      }
+
+      const company = await getCompanyBySlug(slug);
+      if (!company || company.id !== otpSession.company_id) {
+        return res.status(404).json({ 
+          success: false, 
+          message: "Invalid company" 
+        });
+      }
+
+      // Validate required fields
+      if (!req.body.name?.trim()) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Visitor name is required" 
+        });
+      }
+
+      if (!req.body.phone?.trim()) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Phone number is required" 
+        });
       }
 
       if (!req.file) {
-        return res.status(400).json({ success: false, message: "Photo required" });
+        return res.status(400).json({ 
+          success: false, 
+          message: "Visitor photo is required" 
+        });
       }
 
-      const updatedVisitor = await saveVisitor(
-        visitor.company_id,
-        {
-          name: req.body.name?.trim(),
-          phone: req.body.phone?.trim(),
-          fromCompany: req.body.fromCompany?.trim(),
-          purpose: req.body.purpose?.trim(),
-        },
-        req.file,
-        visitor.id
+      // Prepare visitor data (matching visitor service structure)
+      const visitorData = {
+        name: req.body.name?.trim(),
+        phone: req.body.phone?.trim(),
+        email: otpSession.email,
+        fromCompany: req.body.fromCompany?.trim() || null,
+        department: req.body.department?.trim() || null,
+        designation: req.body.designation?.trim() || null,
+        address: req.body.address?.trim() || null,
+        city: req.body.city?.trim() || null,
+        state: req.body.state?.trim() || null,
+        postalCode: req.body.postalCode?.trim() || null,
+        country: req.body.country?.trim() || null,
+        personToMeet: req.body.personToMeet?.trim() || null,
+        purpose: req.body.purpose?.trim() || null,
+        belongings: req.body.belongings || null,
+        idType: req.body.idType?.trim() || null,
+        idNumber: req.body.idNumber?.trim() || null,
+      };
+
+      // Save visitor using existing service
+      const visitor = await saveVisitor(
+        otpSession.company_id,
+        visitorData,
+        req.file
       );
 
-      const [[company]] = await db.query(
-        `SELECT name FROM companies WHERE id = ?`,
-        [visitor.company_id]
+      // Invalidate OTP session
+      await db.query(
+        `UPDATE visitor_otp SET otp_session_token = NULL WHERE id = ?`,
+        [otpSession.id]
       );
-
-      await sendVisitorPassMail(updatedVisitor, company);
 
       res.json({
         success: true,
-        message: "Visitor registered & pass sent",
-        visitorCode: updatedVisitor.visitor_code,
+        message: "Visitor registered successfully. Pass sent to email.",
+        visitorCode: visitor.visitorCode,
       });
     } catch (err) {
-      console.error("[REGISTER]", err);
-      res.status(500).json({ success: false, message: "Registration failed" });
+      console.error("[VISITOR_PUBLIC][REGISTER]", err);
+      
+      // Return user-friendly error messages
+      const message = err.message?.includes("Trial") || 
+                     err.message?.includes("limit") ||
+                     err.message?.includes("expired") ||
+                     err.message?.includes("subscription")
+        ? err.message
+        : "Registration failed. Please try again.";
+
+      res.status(500).json({ 
+        success: false, 
+        message 
+      });
     }
   }
 );
 
 export default router;
-
