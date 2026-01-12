@@ -78,7 +78,7 @@ const formatIST = (value) => {
 };
 
 /* ======================================================
-   EMAIL FOOTER — PROFESSIONAL WITH PROMEET LOGO
+   EMAIL FOOTER — COMPANY BRANDING ONLY
 ====================================================== */
 export const emailFooter = (company = {}) => {
   const companyName = company?.name || "Promeet";
@@ -102,14 +102,7 @@ ${companyLogo
   : ""
 }
 
-<br/>
-<img 
-  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
-  alt="PROMEET Logo"
-  style="height:65px;margin:10px 0;display:block"
-/>
-
-<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
+<hr style="border:0;border-top:1px solid #ddd;margin:20px 0 10px 0;" />
 
 <p style="font-size:13px;color:#666;margin:0;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">
   This email was automatically sent from the <b>PROMEET Visitor Management Platform</b>.
