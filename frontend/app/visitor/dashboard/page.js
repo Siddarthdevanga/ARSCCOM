@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -47,9 +47,6 @@ export default function VisitorDashboard() {
   const [publicUrl, setPublicUrl] = useState("");
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [loadingQR, setLoadingQR] = useState(false);
-  
-  /* ================= TOAST NOTIFICATION ================= */
-  const [toast, setToast] = useState({ show: false, message: "" });
 
   /* ================= FETCH DASHBOARD ================= */
   const loadDashboard = useCallback(async (token) => {
@@ -145,52 +142,11 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ================= SHOW TOAST ================= */
-  const showToast = (message) => {
-    setToast({ show: true, message });
-    setTimeout(() => {
-      setToast({ show: false, message: "" });
-    }, 3000);
-  };
-
-  /* ================= LOAD IMAGE (S3 Compatible) ================= */
-  const loadImage = (url) => {
-    return new Promise((resolve, reject) => {
-      if (!url) {
-        resolve(null);
-        return;
-      }
-
-      const img = new Image();
-      
-      // Set crossOrigin for S3 images
-      img.crossOrigin = 'anonymous';
-      
-      img.onload = () => resolve(img);
-      
-      img.onerror = (error) => {
-        console.warn('[IMAGE_LOAD] Failed to load image:', url);
-        // Resolve with null instead of rejecting to continue execution
-        resolve(null);
-      };
-      
-      img.src = url;
-      
-      // Timeout after 8 seconds
-      setTimeout(() => {
-        console.warn('[IMAGE_LOAD] Timeout loading image:', url);
-        resolve(null);
-      }, 8000);
-    });
-  };
-
   /* ================= DOWNLOAD IMAGE WITH LOGO ================= */
   const downloadImage = async () => {
     if (!qrCodeImage || !company) return;
 
     try {
-      showToast('Generating QR code image...');
-
       // Create canvas
       const canvas = document.createElement('canvas');
       canvas.width = 800;
@@ -210,93 +166,70 @@ export default function VisitorDashboard() {
 
       // Company Name (Left side)
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 32px Arial, sans-serif';
+      ctx.font = 'bold 32px Arial';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(company.name, 50, 60);
+      ctx.fillText(company.name, 50, 70);
 
-      // Company Logo (Right side) - S3 compatible loading
+      // Company Logo (Right side)
       if (company.logo_url) {
         try {
-          console.log('[LOGO] Attempting to load:', company.logo_url);
-          const logoImg = await loadImage(company.logo_url);
+          const logoImg = new Image();
+          logoImg.crossOrigin = 'anonymous';
+          logoImg.src = company.logo_url;
           
-          if (logoImg && logoImg.complete && logoImg.naturalWidth > 0) {
-            console.log('[LOGO] Successfully loaded');
+          await new Promise((resolve, reject) => {
+            logoImg.onload = () => {
+              // Calculate logo dimensions (max 120x80, maintain aspect ratio)
+              const maxWidth = 120;
+              const maxHeight = 80;
+              let width = logoImg.width;
+              let height = logoImg.height;
+              
+              if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+              }
+              
+              if (height > maxHeight) {
+                width = (maxHeight / height) * width;
+                height = maxHeight;
+              }
+              
+              // Position logo on right side (750 - width, centered vertically)
+              const x = 750 - width;
+              const y = 20 + (80 - height) / 2;
+              
+              ctx.drawImage(logoImg, x, y, width, height);
+              resolve();
+            };
+            logoImg.onerror = () => {
+              console.log('Logo load failed');
+              resolve(); // Continue even if logo fails
+            };
             
-            // Calculate logo dimensions (max 120x80, maintain aspect ratio)
-            const maxWidth = 120;
-            const maxHeight = 80;
-            let width = logoImg.naturalWidth || logoImg.width;
-            let height = logoImg.naturalHeight || logoImg.height;
-            
-            // Scale down if needed
-            if (width > maxWidth) {
-              const scale = maxWidth / width;
-              width = maxWidth;
-              height = height * scale;
-            }
-            
-            if (height > maxHeight) {
-              const scale = maxHeight / height;
-              height = maxHeight;
-              width = width * scale;
-            }
-            
-            // Position logo on right side
-            const x = 750 - width;
-            const y = 20 + (80 - height) / 2;
-            
-            console.log('[LOGO] Drawing at:', { x, y, width, height });
-            ctx.drawImage(logoImg, x, y, width, height);
-          } else {
-            console.warn('[LOGO] Image loaded but invalid or empty');
-          }
+            // Timeout after 5 seconds
+            setTimeout(() => resolve(), 5000);
+          });
         } catch (e) {
-          console.error('[LOGO] Error loading logo:', e);
+          console.log('Logo error:', e);
         }
       }
 
       // Title
       ctx.fillStyle = '#3c007a';
-      ctx.font = 'bold 28px Arial, sans-serif';
+      ctx.font = 'bold 28px Arial';
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'alphabetic';
       ctx.fillText('Visitor Registration', 50, 180);
 
       // Public URL Label
-      ctx.font = '18px Arial, sans-serif';
+      ctx.font = '18px Arial';
       ctx.fillStyle = '#666666';
       ctx.fillText('Scan QR Code or Visit:', 50, 230);
 
       // Public URL
-      ctx.font = 'bold 16px Arial, sans-serif';
+      ctx.font = 'bold 16px Arial';
       ctx.fillStyle = '#7a00ff';
-      
-      // Word wrap URL if too long
-      const maxUrlWidth = 700;
-      if (ctx.measureText(publicUrl).width > maxUrlWidth) {
-        const words = publicUrl.split('/');
-        let line = '';
-        let y = 260;
-        
-        words.forEach((word, i) => {
-          const testLine = line + (i > 0 ? '/' : '') + word;
-          if (ctx.measureText(testLine).width > maxUrlWidth && line) {
-            ctx.fillText(line, 50, y);
-            line = word;
-            y += 25;
-          } else {
-            line = testLine;
-          }
-        });
-        
-        if (line) {
-          ctx.fillText(line, 50, y);
-        }
-      } else {
-        ctx.fillText(publicUrl, 50, 260);
-      }
+      ctx.fillText(publicUrl, 50, 260);
 
       // QR Code
       const qrImg = new Image();
@@ -306,33 +239,21 @@ export default function VisitorDashboard() {
           ctx.drawImage(qrImg, 250, 300, 300, 300);
           resolve();
         };
-        qrImg.onerror = () => {
-          console.error('[QR] Failed to load QR code');
-          resolve();
-        };
       });
 
       // Instructions
-      ctx.font = '16px Arial, sans-serif';
+      ctx.font = '16px Arial';
       ctx.fillStyle = '#3c007a';
-      ctx.textAlign = 'left';
       ctx.fillText('Instructions for Visitors:', 50, 650);
       
-      ctx.font = '14px Arial, sans-serif';
+      ctx.font = '14px Arial';
       ctx.fillStyle = '#666666';
-      
-      const instructions = [
-        '1. Scan the QR code with your phone camera',
-        '2. Or visit the URL above in your browser',
-        '3. Enter your email to receive verification code',
-        '4. Complete the registration form',
-        '5. Capture your photo',
-        '6. Receive your digital visitor pass via email'
-      ];
-      
-      instructions.forEach((instruction, index) => {
-        ctx.fillText(instruction, 70, 685 + (index * 30));
-      });
+      ctx.fillText('1. Scan the QR code with your phone camera', 70, 685);
+      ctx.fillText('2. Or visit the URL above in your browser', 70, 715);
+      ctx.fillText('3. Enter your email to receive verification code', 70, 745);
+      ctx.fillText('4. Complete the registration form', 70, 775);
+      ctx.fillText('5. Capture your photo', 70, 805);
+      ctx.fillText('6. Receive your digital visitor pass via email', 70, 835);
 
       // Footer background
       ctx.fillStyle = '#f5f5f5';
@@ -340,12 +261,12 @@ export default function VisitorDashboard() {
 
       // Footer text
       ctx.fillStyle = '#7a00ff';
-      ctx.font = 'bold 20px Arial, sans-serif';
+      ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('PROMEET', 400, 940);
       
       ctx.fillStyle = '#666666';
-      ctx.font = '14px Arial, sans-serif';
+      ctx.font = '14px Arial';
       ctx.fillText('Visitor and Conference Booking Platform', 400, 970);
 
       // Convert canvas to blob and download
@@ -354,30 +275,21 @@ export default function VisitorDashboard() {
         const link = document.createElement('a');
         link.href = url;
         link.download = `${company.slug}-visitor-qr-code.png`;
-        document.body.appendChild(link);
         link.click();
-        document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
-        showToast('✓ QR code downloaded successfully!');
-      }, 'image/png', 1.0);
+      });
 
     } catch (err) {
-      console.error('[DOWNLOAD] Image generation error:', err);
-      showToast('✗ Failed to generate image');
+      console.error('Image generation error:', err);
+      alert('Failed to generate image. Please try again.');
     }
   };
 
   /* ================= COPY URL ================= */
   const copyURL = () => {
     if (!publicUrl) return;
-    
-    navigator.clipboard.writeText(publicUrl).then(() => {
-      showToast('✓ URL copied to clipboard!');
-    }).catch((err) => {
-      console.error('[COPY] Failed to copy:', err);
-      showToast('✗ Failed to copy URL');
-    });
+    navigator.clipboard.writeText(publicUrl);
+    alert('URL copied to clipboard!');
   };
 
   /* ================= PLAN HELPERS ================= */
@@ -405,13 +317,6 @@ export default function VisitorDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* ================= TOAST NOTIFICATION ================= */}
-      {toast.show && (
-        <div className={styles.toast}>
-          {toast.message}
-        </div>
-      )}
-
       {/* ================= SLIDING PANEL ================= */}
       <div className={`${styles.slidingPanel} ${panelOpen ? styles.panelOpen : ''}`}>
         <div className={styles.panelHeader}>
@@ -515,14 +420,11 @@ export default function VisitorDashboard() {
         </div>
 
         <div className={styles.rightHeader}>
-          {company.logo_url && (
-            <img
-              src={company.logo_url}
-              alt="Company Logo"
-              className={styles.companyLogo}
-              crossOrigin="anonymous"
-            />
-          )}
+          <img
+            src={company.logo_url || "/logo.png"}
+            alt="Company Logo"
+            className={styles.companyLogo}
+          />
 
           <button
             className={styles.backBtn}
