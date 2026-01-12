@@ -33,7 +33,6 @@ const formatISTTime = (value) => {
 
 export default function VisitorDashboard() {
   const router = useRouter();
-  const qrCanvasRef = useRef(null);
 
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState({ today: 0, inside: 0, out: 0 });
@@ -143,12 +142,12 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ================= DOWNLOAD PDF ================= */
-  const downloadPDF = async () => {
+  /* ================= DOWNLOAD IMAGE WITH LOGO ================= */
+  const downloadImage = async () => {
     if (!qrCodeImage || !company) return;
 
     try {
-      // Create a canvas to generate PDF content
+      // Create canvas
       const canvas = document.createElement('canvas');
       canvas.width = 800;
       canvas.height = 1000;
@@ -158,36 +157,68 @@ export default function VisitorDashboard() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, 800, 1000);
 
-      // Header background
-      ctx.fillStyle = '#667eea';
+      // Header background (purple gradient)
+      const gradient = ctx.createLinearGradient(0, 0, 800, 120);
+      gradient.addColorStop(0, '#3c007a');
+      gradient.addColorStop(1, '#7a00ff');
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 800, 120);
 
-      // Company Logo (if available)
+      // Company Name (Left side)
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 32px Arial';
+      ctx.textAlign = 'left';
+      ctx.fillText(company.name, 50, 70);
+
+      // Company Logo (Right side)
       if (company.logo_url) {
         try {
           const logoImg = new Image();
           logoImg.crossOrigin = 'anonymous';
           logoImg.src = company.logo_url;
-          await new Promise((resolve) => {
+          
+          await new Promise((resolve, reject) => {
             logoImg.onload = () => {
-              ctx.drawImage(logoImg, 50, 30, 80, 60);
+              // Calculate logo dimensions (max 120x80, maintain aspect ratio)
+              const maxWidth = 120;
+              const maxHeight = 80;
+              let width = logoImg.width;
+              let height = logoImg.height;
+              
+              if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+              }
+              
+              if (height > maxHeight) {
+                width = (maxHeight / height) * width;
+                height = maxHeight;
+              }
+              
+              // Position logo on right side (750 - width, centered vertically)
+              const x = 750 - width;
+              const y = 20 + (80 - height) / 2;
+              
+              ctx.drawImage(logoImg, x, y, width, height);
               resolve();
             };
-            logoImg.onerror = resolve;
+            logoImg.onerror = () => {
+              console.log('Logo load failed');
+              resolve(); // Continue even if logo fails
+            };
+            
+            // Timeout after 5 seconds
+            setTimeout(() => resolve(), 5000);
           });
         } catch (e) {
-          console.log('Logo load error:', e);
+          console.log('Logo error:', e);
         }
       }
 
-      // Company Name in Header
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 32px Arial';
-      ctx.fillText(company.name, 160, 70);
-
       // Title
-      ctx.fillStyle = '#333333';
+      ctx.fillStyle = '#3c007a';
       ctx.font = 'bold 28px Arial';
+      ctx.textAlign = 'left';
       ctx.fillText('Visitor Registration', 50, 180);
 
       // Public URL Label
@@ -197,7 +228,7 @@ export default function VisitorDashboard() {
 
       // Public URL
       ctx.font = 'bold 16px Arial';
-      ctx.fillStyle = '#667eea';
+      ctx.fillStyle = '#7a00ff';
       ctx.fillText(publicUrl, 50, 260);
 
       // QR Code
@@ -212,7 +243,7 @@ export default function VisitorDashboard() {
 
       // Instructions
       ctx.font = '16px Arial';
-      ctx.fillStyle = '#333333';
+      ctx.fillStyle = '#3c007a';
       ctx.fillText('Instructions for Visitors:', 50, 650);
       
       ctx.font = '14px Arial';
@@ -229,27 +260,28 @@ export default function VisitorDashboard() {
       ctx.fillRect(0, 900, 800, 100);
 
       // Footer text
-      ctx.fillStyle = '#667eea';
+      ctx.fillStyle = '#7a00ff';
       ctx.font = 'bold 20px Arial';
-      ctx.fillText('PROMEET', 320, 940);
+      ctx.textAlign = 'center';
+      ctx.fillText('PROMEET', 400, 940);
       
       ctx.fillStyle = '#666666';
       ctx.font = '14px Arial';
-      ctx.fillText('Visitor and Conference Booking Platform', 240, 970);
+      ctx.fillText('Visitor and Conference Booking Platform', 400, 970);
 
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${company.slug}-visitor-registration.png`;
+        link.download = `${company.slug}-visitor-qr-code.png`;
         link.click();
         URL.revokeObjectURL(url);
       });
 
     } catch (err) {
-      console.error('PDF generation error:', err);
-      alert('Failed to generate PDF. Please try again.');
+      console.error('Image generation error:', err);
+      alert('Failed to generate image. Please try again.');
     }
   };
 
@@ -342,9 +374,9 @@ export default function VisitorDashboard() {
               {/* Download Button */}
               <button 
                 className={styles.downloadPdfBtn}
-                onClick={downloadPDF}
+                onClick={downloadImage}
               >
-                📄 Download as Image
+                📄 Download QR Code Image
               </button>
 
               {/* Instructions */}
@@ -550,8 +582,6 @@ export default function VisitorDashboard() {
           )}
         </div>
       </section>
-
-      <canvas ref={qrCanvasRef} style={{ display: 'none' }} />
     </div>
   );
 }
