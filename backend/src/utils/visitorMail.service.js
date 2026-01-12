@@ -78,104 +78,202 @@ const formatIST = (value) => {
 };
 
 /* ======================================================
-   EMAIL FOOTER — WITH LOGO BELOW NAME
+   EMAIL FOOTER — PROFESSIONAL WITH PROMEET LOGO
 ====================================================== */
 export const emailFooter = (company = {}) => {
   const companyName = company?.name || "Promeet";
-  const logo =
-    company?.logo_url ||
-    company?.logo ||
-    null;
+  const companyLogo = company?.logo_url || company?.logo || null;
 
   return `
 <br/>
-
-<p style="
-  font-family:Arial, Helvetica, sans-serif;
-  font-size:14px;
-  color:#222;
-  margin:0;
-">
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;margin:10px 0 0 0;">
   Regards,<br/>
   <b>${companyName}</b>
 </p>
 
-${logo
+${companyLogo
   ? `
   <img
-    src="${logo}"
+    src="${companyLogo}"
     alt="${companyName} Logo"
-    style="
-      margin-top:10px;
-      height:60px;
-      border-radius:10px;
-      border:1px solid #eee;
-      background:#fff;
-      padding:6px;
-      display:block;
-    "
+    style="margin-top:10px;height:60px;border-radius:8px;border:1px solid #eee;background:#fff;padding:6px;display:block;"
   />
 `
   : ""
 }
 
-<p style="
-  font-size:12px;
-  color:#666;
-  margin-top:16px;
-  line-height:1.6;
-  font-family:Arial, Helvetica, sans-serif;
-">
-  This is an auto-generated email from the Promeet Visitor Management Platform.
-  If you did not perform this action, please contact your administrator immediately.
+<br/>
+<img 
+  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
+  alt="PROMEET Logo"
+  style="height:65px;margin:10px 0;display:block"
+/>
+
+<hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
+
+<p style="font-size:13px;color:#666;margin:0;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">
+  This email was automatically sent from the <b>PROMEET Visitor Management Platform</b>.
+  If you did not perform this action, please contact ${companyName} administrator immediately.
 </p>
 `;
 };
 
 /* ======================================================
-   SEND VISITOR PASS EMAIL
+   SEND VISITOR PASS EMAIL — PROFESSIONAL VERSION
 ====================================================== */
 export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
   if (!visitor.email) return;
+
+  const companyName = company.name || "Promeet";
+  const visitorName = visitor.name || "Visitor";
+  const visitorCode = visitor.visitorCode || "-";
+  const checkInTime = formatIST(visitor.checkIn);
+  const personToMeet = visitor.personToMeet || "Reception";
+  const purpose = visitor.purpose || "Visit";
 
   let imageBuffer = null;
 
   try {
     imageBuffer = await generateVisitorPassImage({ company, visitor });
   } catch (err) {
-    console.error("VISITOR PASS IMAGE ERROR:", err.message);
+    console.error("[VISITOR_PASS_IMAGE] Error:", err.message);
   }
 
   try {
     await sendEmail({
       to: visitor.email,
-      subject: `Your Visitor Pass – ${company.name || "Promeet"}`,
+      subject: `Welcome to ${companyName} — Your Digital Visitor Pass`,
       html: `
-        <p>Hello <b>${visitor.name || "Visitor"}</b>,</p>
-
-        <p>Your visitor pass has been generated successfully.</p>
+        <p>Hello <b>${visitorName}</b>,</p>
 
         <p>
-          <b>Visitor ID:</b> ${visitor.visitorCode || "-"}<br/>
-          <b>Company:</b> ${company.name || "Promeet"}<br/>
-          <b>Check-in:</b> ${formatIST(visitor.checkIn)} (IST)
+          Welcome to <b>${companyName}</b>! Your visitor registration has been successfully processed, 
+          and your digital visitor pass is ready.
         </p>
 
-        <p>Please show the attached visitor pass at the reception.</p>
+        <div style="background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;">
+          <p style="margin:0;color:#2e7d32;font-weight:600;">
+            ✓ Registration Confirmed — Check-in Completed
+          </p>
+        </div>
+
+        <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
+          Visit Details
+        </h3>
+
+        <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px;margin-bottom:20px;">
+          <tr style="background:#f8f9ff;">
+            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;width:35%;">
+              Visitor ID
+            </td>
+            <td style="padding:12px;border:1px solid #e0e0e0;">
+              <b style="color:#222;font-size:15px;">${visitorCode}</b>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
+              Visitor Name
+            </td>
+            <td style="padding:12px;border:1px solid #e0e0e0;">
+              ${visitorName}
+            </td>
+          </tr>
+          <tr style="background:#f8f9ff;">
+            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
+              Company
+            </td>
+            <td style="padding:12px;border:1px solid #e0e0e0;">
+              ${companyName}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
+              Check-in Time
+            </td>
+            <td style="padding:12px;border:1px solid #e0e0e0;">
+              ${checkInTime} <span style="color:#666;font-size:12px;">(IST)</span>
+            </td>
+          </tr>
+          <tr style="background:#f8f9ff;">
+            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
+              Person to Meet
+            </td>
+            <td style="padding:12px;border:1px solid #e0e0e0;">
+              ${personToMeet}
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
+              Purpose of Visit
+            </td>
+            <td style="padding:12px;border:1px solid #e0e0e0;">
+              ${purpose}
+            </td>
+          </tr>
+        </table>
+
+        <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
+          Your Digital Visitor Pass
+        </h3>
+
+        <p>
+          Your visitor pass is attached to this email as an image. 
+          Please <b>show this pass at the reception</b> or security checkpoint when requested.
+        </p>
+
+        <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:20px 0;">
+          <p style="margin:0;color:#e65100;font-weight:600;">
+            📱 Keep this email handy on your mobile device for easy access
+          </p>
+        </div>
+
+        <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
+          Important Guidelines
+        </h3>
+
+        <ul style="font-size:14px;line-height:1.8;color:#333;">
+          <li>
+            <b>Display your visitor pass</b> when entering the premises or when requested by security.
+          </li>
+          <li>
+            <b>Check-out is mandatory</b> — Please inform reception when leaving the premises.
+          </li>
+          <li>
+            <b>Follow company policies</b> — Adhere to all security protocols and visitor guidelines.
+          </li>
+          <li>
+            <b>Report any issues</b> — Contact reception immediately if you face any difficulties.
+          </li>
+        </ul>
+
+        <div style="background:#f8f9ff;border-left:4px solid #6c2bd9;padding:16px;margin:30px 0;">
+          <p style="margin:0;color:#6c2bd9;font-weight:600;">
+            📧 Need help? Contact ${companyName} reception or administrator for assistance.
+          </p>
+        </div>
+
+        <p>
+          Thank you for visiting <b>${companyName}</b>. 
+          We hope you have a productive and pleasant experience.
+        </p>
 
         ${emailFooter(company)}
       `,
       attachments: imageBuffer
         ? [
             {
-              filename: "visitor-pass.png",
+              filename: `${visitorCode}-visitor-pass.png`,
               content: imageBuffer,
               contentType: "image/png"
             }
           ]
         : []
     });
+
+    console.log(`[VISITOR_MAIL] Pass sent successfully to ${visitor.email}`);
+
   } catch (err) {
-    console.error("VISITOR MAIL ERROR:", err.message);
+    console.error("[VISITOR_MAIL] Error sending email:", err.message);
+    throw err;
   }
 };
