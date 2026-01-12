@@ -154,6 +154,7 @@ export default function SubscriptionPage() {
           <ul className={styles.features}>
             <li>• 100 Visitor Bookings</li>
             <li>• 100 Conference Bookings</li>
+            <li>•  2 Conference Rooms</li>
             <li>• Email Support</li>
           </ul>
 
@@ -179,6 +180,7 @@ export default function SubscriptionPage() {
           <ul className={styles.features}>
             <li>• Unlimited Visitors</li>
             <li>• 1000 Conference Bookings</li>
+            <li>• 6 Conference Rooms</li>
             <li>• Priority Support</li>
           </ul>
 
@@ -202,9 +204,10 @@ export default function SubscriptionPage() {
           </p>
 
           <ul className={styles.features}>
-            <li>• Custom Solutions</li>
+            <li>• Unlimited Visitors</li>
+            <li>• Unlimited Conference Bookings</li>
+            <li>• Unmimited Conference Rooms</li>
             <li>• Dedicated Support</li>
-            <li>• Advanced Controls</li>
           </ul>
 
           <button
