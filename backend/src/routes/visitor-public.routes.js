@@ -70,24 +70,51 @@ const getCompanyBySlug = async (slug) => {
   return company;
 };
 
-/* ======================================================
-   SEND OTP EMAIL (USING AUTH SERVICE PATTERN)
+//* ======================================================
+   SEND OTP EMAIL
 ====================================================== */
-const sendOtpMail = async (email, otp, companyName) => {
+const sendOtpMail = async ({ email, otp, company }) => {
+  if (!email || !otp) return;
+
   await sendEmail({
-    to: email,
-    subject: `Your Visitor Verification Code - ${companyName}`,
+    to: normalizeEmail(email),
+    subject: `Your Visitor Verification Code - ${company?.name || "ProMeet"}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color:#6c2bd9;">${companyName} – Visitor Verification</h2>
-        <p style="font-size: 16px;">Your verification code is:</p>
-        <div style="background: #f7f7f7; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-          <h1 style="letter-spacing: 8px; color: #6c2bd9; margin: 0; font-size: 36px;">${otp}</h1>
-        </div>
-        <p style="color: #666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
-        <p style="color: #999; font-size: 12px; margin-top: 30px;">
-          If you didn't request this code, please ignore this email.
+        <h2 style="color:#6c2bd9;">
+          ${company?.name || "ProMeet"} – Visitor Verification
+        </h2>
+
+        <p style="font-size:16px;">
+          Your verification code is:
         </p>
+
+        <div style="
+          background:#f7f7f7;
+          padding:20px;
+          text-align:center;
+          border-radius:8px;
+          margin:20px 0;
+        ">
+          <h1 style="
+            letter-spacing:8px;
+            color:#6c2bd9;
+            margin:0;
+            font-size:36px;
+          ">
+            ${otp}
+          </h1>
+        </div>
+
+        <p style="color:#666;">
+          This OTP is valid for
+          <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.
+        </p>
+
+        <p style="color:#999;font-size:12px;margin-top:30px;">
+          If you didn't request this code, you can safely ignore this email.
+        </p>
+
         ${emailFooter(company)}
       </div>
     `,
