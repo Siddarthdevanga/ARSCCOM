@@ -920,64 +920,136 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* SLIDE-OUT PANEL: QR CODE (RIGHT) - VERTICAL LAYOUT */}
+      {/* SLIDE-OUT PANEL: QR CODE (RIGHT) - HORIZONTAL PANEL */}
       {qrPanelOpen && (
-        <div className={styles.rightPanelVertical}>
-          <button
-            className={styles.verticalCloseBtn}
-            onClick={() => setQrPanelOpen(false)}
-            title="Close"
-          >
-            ✖
-          </button>
+        <div className={styles.rightPanel}>
+          {/* Purple Header */}
+          <div className={styles.rightPanelHeader}>
+            <h3>Public Registration</h3>
+            <button
+              className={styles.rightCloseBtn}
+              onClick={() => setQrPanelOpen(false)}
+              title="Close"
+            >
+              ✖
+            </button>
+          </div>
 
-          <div className={styles.verticalContent}>
+          <div className={styles.rightPanelContent}>
             {loadingQR ? (
-              <div className={styles.qrLoadingVertical}>
+              <div className={styles.qrLoading}>
                 <div className={styles.spinner}></div>
+                <p style={{ marginTop: 16, color: "#999" }}>Loading QR Code...</p>
               </div>
             ) : publicBookingInfo ? (
               <>
-                <div className={styles.qrIconBox}>
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 14h8v-8H3v8zm2-6h4v4H5v-4zm8-10v8h8V3h-8zm6 6h-4V5h4v4zm-6 4h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm6-4h2v2h-2v-2zm0 4h2v2h-2v-2zm-4 0h2v2h-2v-2z"/>
-                  </svg>
-                </div>
-                
-                <div className={styles.qrImageWrapper}>
+                {/* QR Code Display */}
+                <div className={styles.qrCodeContainer}>
                   <img 
                     src={publicBookingInfo.qrCode} 
-                    alt="QR" 
-                    className={styles.qrImageVertical}
+                    alt="Conference Booking QR Code" 
+                    className={styles.qrCodeImage}
                   />
-                </div>
-                
-                <div className={styles.qrLabelVertical}>
-                  QR Code
+                  <p className={styles.qrDescription} style={{ 
+                    color: "#7a00ff", 
+                    fontWeight: 700, 
+                    fontSize: 18,
+                    marginTop: 16
+                  }}>
+                    Scan to register
+                  </p>
                 </div>
 
-                <div className={styles.qrActionsVertical}>
+                {/* Public URL Section */}
+                <div className={styles.publicUrlInfo}>
+                  <label className={styles.urlLabel}>Public Registration URL</label>
+                  <div className={styles.urlDisplay}>
+                    <code style={{ fontSize: 14 }}>{publicBookingInfo.publicUrl}</code>
+                  </div>
                   <button
-                    className={styles.qrActionBtn}
-                    onClick={handleDownloadQR}
-                    title="Download QR Code"
-                  >
-                    ⬇
-                  </button>
-
-                  <button
-                    className={styles.qrActionBtn}
                     onClick={handleShareURL}
-                    title="Share Link"
+                    style={{
+                      marginTop: 12,
+                      padding: "12px 20px",
+                      background: "#7a00ff",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      fontSize: 14,
+                      transition: "all 0.3s ease"
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = "#6200cc"}
+                    onMouseOut={(e) => e.currentTarget.style.background = "#7a00ff"}
                   >
-                    🔗
+                    📋 Copy Link
                   </button>
+                </div>
+
+                {/* Download Button */}
+                <div className={styles.qrActions}>
+                  <button
+                    className={styles.downloadQrBtn}
+                    onClick={handleDownloadQR}
+                    style={{
+                      background: "linear-gradient(135deg, #ffb703, #ff8c00)",
+                      color: "#000",
+                      fontWeight: 800,
+                      fontSize: 16,
+                      padding: "16px 24px"
+                    }}
+                  >
+                    💾 Download QR Code Image
+                  </button>
+                </div>
+
+                {/* Instructions Section */}
+                <div style={{
+                  background: "linear-gradient(135deg, #f0f0ff, #f8f8ff)",
+                  padding: 24,
+                  borderRadius: 16,
+                  borderLeft: "4px solid #7a00ff",
+                  marginTop: 24
+                }}>
+                  <h4 style={{ 
+                    color: "#7a00ff", 
+                    margin: "0 0 16px 0",
+                    fontSize: 18,
+                    fontWeight: 800
+                  }}>
+                    How to use:
+                  </h4>
+                  <ol style={{ 
+                    margin: 0, 
+                    paddingLeft: 20,
+                    color: "#2d3436",
+                    fontSize: 14,
+                    lineHeight: 1.8
+                  }}>
+                    <li style={{ marginBottom: 10 }}>
+                      <strong>Share QR code or URL with visitors</strong>
+                    </li>
+                    <li style={{ marginBottom: 10 }}>
+                      <strong>Visitors scan QR or visit URL</strong>
+                    </li>
+                    <li>
+                      <strong>Complete online registration</strong>
+                    </li>
+                  </ol>
                 </div>
               </>
             ) : (
-              <div className={styles.qrErrorVertical}>
-                <p>Error</p>
-                <button onClick={loadPublicBookingInfo}>↻</button>
+              <div className={styles.qrError}>
+                <p>Failed to load QR code</p>
+                <button onClick={loadPublicBookingInfo}>
+                  ↻ Retry
+                </button>
               </div>
             )}
           </div>
