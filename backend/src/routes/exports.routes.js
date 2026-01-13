@@ -100,8 +100,7 @@ const generateVisitorsExcel = async (companyId, companyName) => {
       id_number,
       check_in,
       check_out,
-      status,
-      created_at
+      status
     FROM visitors
     WHERE company_id = ?
     ORDER BY check_in DESC`,
@@ -116,7 +115,7 @@ const generateVisitorsExcel = async (companyId, companyName) => {
   worksheet.properties.defaultRowHeight = 20;
 
   // Add company header
-  worksheet.mergeCells("A1:U1");
+  worksheet.mergeCells("A1:T1");
   const titleCell = worksheet.getCell("A1");
   titleCell.value = `${companyName} - Visitor Records`;
   titleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
@@ -129,7 +128,7 @@ const generateVisitorsExcel = async (companyId, companyName) => {
   worksheet.getRow(1).height = 30;
 
   // Add metadata row
-  worksheet.mergeCells("A2:U2");
+  worksheet.mergeCells("A2:T2");
   const metaCell = worksheet.getCell("A2");
   metaCell.value = `Generated on: ${formatDateTime(new Date())} | Total Visitors: ${visitors.length}`;
   metaCell.font = { size: 11, italic: true };
@@ -161,7 +160,6 @@ const generateVisitorsExcel = async (companyId, companyName) => {
     "Check In",
     "Check Out",
     "Status",
-    "Created At",
   ];
 
   // Add headers row
@@ -197,7 +195,6 @@ const generateVisitorsExcel = async (companyId, companyName) => {
     { width: 20 }, // Check In
     { width: 20 }, // Check Out
     { width: 10 }, // Status
-    { width: 20 }, // Created At
   ];
 
   // Add data rows
@@ -223,7 +220,6 @@ const generateVisitorsExcel = async (companyId, companyName) => {
       formatDateTime(visitor.check_in),
       visitor.check_out ? formatDateTime(visitor.check_out) : "Still In",
       visitor.status || "-",
-      formatDateTime(visitor.created_at),
     ]);
 
     // Alternate row colors
@@ -274,7 +270,6 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
   // Fetch bookings data
   const [bookings] = await db.query(
     `SELECT 
-      b.id,
       b.booked_by,
       b.department,
       b.purpose,
@@ -282,10 +277,7 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
       b.start_time,
       b.end_time,
       b.status,
-      b.created_at,
-      r.room_name,
-      r.room_number,
-      r.capacity
+      r.room_name
     FROM conference_bookings b
     JOIN conference_rooms r ON b.room_id = r.id
     WHERE b.company_id = ?
@@ -301,7 +293,7 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
   worksheet.properties.defaultRowHeight = 20;
 
   // Add company header
-  worksheet.mergeCells("A1:L1");
+  worksheet.mergeCells("A1:H1");
   const titleCell = worksheet.getCell("A1");
   titleCell.value = `${companyName} - Conference Room Bookings`;
   titleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
@@ -314,7 +306,7 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
   worksheet.getRow(1).height = 30;
 
   // Add metadata row
-  worksheet.mergeCells("A2:L2");
+  worksheet.mergeCells("A2:H2");
   const metaCell = worksheet.getCell("A2");
   metaCell.value = `Generated on: ${formatDateTime(new Date())} | Total Bookings: ${bookings.length}`;
   metaCell.font = { size: 11, italic: true };
@@ -326,10 +318,7 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
 
   // Define column headers
   const headers = [
-    "Booking ID",
     "Room Name",
-    "Room Number",
-    "Room Capacity",
     "Booked By",
     "Department",
     "Purpose",
@@ -337,7 +326,6 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
     "Start Time",
     "End Time",
     "Status",
-    "Created At",
   ];
 
   // Add headers row
@@ -353,10 +341,7 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
 
   // Set column widths
   worksheet.columns = [
-    { width: 12 }, // Booking ID
     { width: 25 }, // Room Name
-    { width: 12 }, // Room Number
-    { width: 15 }, // Room Capacity
     { width: 25 }, // Booked By
     { width: 20 }, // Department
     { width: 35 }, // Purpose
@@ -364,16 +349,12 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
     { width: 15 }, // Start Time
     { width: 15 }, // End Time
     { width: 12 }, // Status
-    { width: 20 }, // Created At
   ];
 
   // Add data rows
   bookings.forEach((booking, index) => {
     const row = worksheet.addRow([
-      booking.id,
       booking.room_name || "-",
-      booking.room_number || "-",
-      booking.capacity || "-",
       booking.booked_by || "-",
       booking.department || "-",
       booking.purpose || "-",
@@ -381,7 +362,6 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
       formatTime(booking.start_time),
       formatTime(booking.end_time),
       booking.status || "-",
-      formatDateTime(booking.created_at),
     ]);
 
     // Alternate row colors
@@ -393,17 +373,14 @@ const generateConferenceBookingsExcel = async (companyId, companyName) => {
       };
     }
 
-    // Center align certain columns
-    row.getCell(1).alignment = { horizontal: "center" }; // Booking ID
-    row.getCell(3).alignment = { horizontal: "center" }; // Room Number
-    row.getCell(4).alignment = { horizontal: "center" }; // Capacity
-    row.getCell(11).alignment = { horizontal: "center" }; // Status
+    // Center align status column
+    row.getCell(8).alignment = { horizontal: "center" }; // Status
 
     // Color code status
     if (booking.status === "BOOKED") {
-      row.getCell(11).font = { bold: true, color: { argb: "FF00c853" } }; // Green
+      row.getCell(8).font = { bold: true, color: { argb: "FF00c853" } }; // Green
     } else if (booking.status === "CANCELLED") {
-      row.getCell(11).font = { bold: true, color: { argb: "FFff1744" } }; // Red
+      row.getCell(8).font = { bold: true, color: { argb: "FFff1744" } }; // Red
     }
   });
 
@@ -437,7 +414,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
     `SELECT 
       visitor_code, name, phone, email, from_company, department, designation,
       address, city, state, postal_code, country, person_to_meet, purpose,
-      belongings, id_type, id_number, check_in, check_out, status, created_at
+      belongings, id_type, id_number, check_in, check_out, status
     FROM visitors
     WHERE company_id = ?
     ORDER BY check_in DESC`,
@@ -446,9 +423,9 @@ const generateCombinedExcel = async (companyId, companyName) => {
 
   const [bookings] = await db.query(
     `SELECT 
-      b.id, b.booked_by, b.department, b.purpose, b.booking_date,
-      b.start_time, b.end_time, b.status, b.created_at,
-      r.room_name, r.room_number, r.capacity
+      b.booked_by, b.department, b.purpose, b.booking_date,
+      b.start_time, b.end_time, b.status,
+      r.room_name
     FROM conference_bookings b
     JOIN conference_rooms r ON b.room_id = r.id
     WHERE b.company_id = ?
@@ -464,7 +441,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
   visitorsSheet.properties.defaultRowHeight = 20;
 
   // Visitors: Company header
-  visitorsSheet.mergeCells("A1:U1");
+  visitorsSheet.mergeCells("A1:T1");
   const vTitleCell = visitorsSheet.getCell("A1");
   vTitleCell.value = `${companyName} - Visitor Records`;
   vTitleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
@@ -477,7 +454,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
   visitorsSheet.getRow(1).height = 30;
 
   // Visitors: Metadata
-  visitorsSheet.mergeCells("A2:U2");
+  visitorsSheet.mergeCells("A2:T2");
   const vMetaCell = visitorsSheet.getCell("A2");
   vMetaCell.value = `Generated on: ${formatDateTime(new Date())} | Total Visitors: ${visitors.length}`;
   vMetaCell.font = { size: 11, italic: true };
@@ -490,7 +467,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
   const vHeaders = [
     "Visitor Code", "Name", "Phone", "Email", "From Company", "Department", "Designation",
     "Address", "City", "State", "Postal Code", "Country", "Person to Meet", "Purpose",
-    "Belongings", "ID Type", "ID Number", "Check In", "Check Out", "Status", "Created At",
+    "Belongings", "ID Type", "ID Number", "Check In", "Check Out", "Status",
   ];
 
   const vHeaderRow = visitorsSheet.addRow(vHeaders);
@@ -504,7 +481,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
     { width: 15 }, { width: 25 }, { width: 15 }, { width: 30 }, { width: 25 },
     { width: 20 }, { width: 20 }, { width: 35 }, { width: 15 }, { width: 15 },
     { width: 12 }, { width: 15 }, { width: 25 }, { width: 35 }, { width: 25 },
-    { width: 15 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 10 }, { width: 20 },
+    { width: 15 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 10 },
   ];
 
   // Visitors: Data rows
@@ -517,7 +494,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
       visitor.person_to_meet || "-", visitor.purpose || "-", visitor.belongings || "-",
       visitor.id_type || "-", visitor.id_number || "-", formatDateTime(visitor.check_in),
       visitor.check_out ? formatDateTime(visitor.check_out) : "Still In",
-      visitor.status || "-", formatDateTime(visitor.created_at),
+      visitor.status || "-",
     ]);
 
     if (index % 2 === 0) {
@@ -553,7 +530,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
   bookingsSheet.properties.defaultRowHeight = 20;
 
   // Bookings: Company header
-  bookingsSheet.mergeCells("A1:L1");
+  bookingsSheet.mergeCells("A1:H1");
   const bTitleCell = bookingsSheet.getCell("A1");
   bTitleCell.value = `${companyName} - Conference Room Bookings`;
   bTitleCell.font = { size: 16, bold: true, color: { argb: "FFFFFFFF" } };
@@ -562,7 +539,7 @@ const generateCombinedExcel = async (companyId, companyName) => {
   bookingsSheet.getRow(1).height = 30;
 
   // Bookings: Metadata
-  bookingsSheet.mergeCells("A2:L2");
+  bookingsSheet.mergeCells("A2:H2");
   const bMetaCell = bookingsSheet.getCell("A2");
   bMetaCell.value = `Generated on: ${formatDateTime(new Date())} | Total Bookings: ${bookings.length}`;
   bMetaCell.font = { size: 11, italic: true };
@@ -573,8 +550,8 @@ const generateCombinedExcel = async (companyId, companyName) => {
 
   // Bookings: Headers
   const bHeaders = [
-    "Booking ID", "Room Name", "Room Number", "Room Capacity", "Booked By",
-    "Department", "Purpose", "Booking Date", "Start Time", "End Time", "Status", "Created At",
+    "Room Name", "Booked By", "Department", "Purpose", 
+    "Booking Date", "Start Time", "End Time", "Status",
   ];
 
   const bHeaderRow = bookingsSheet.addRow(bHeaders);
@@ -585,34 +562,29 @@ const generateCombinedExcel = async (companyId, companyName) => {
 
   // Bookings: Column widths
   bookingsSheet.columns = [
-    { width: 12 }, { width: 25 }, { width: 12 }, { width: 15 }, { width: 25 },
-    { width: 20 }, { width: 35 }, { width: 15 }, { width: 15 }, { width: 15 },
-    { width: 12 }, { width: 20 },
+    { width: 25 }, { width: 25 }, { width: 20 }, { width: 35 },
+    { width: 15 }, { width: 15 }, { width: 15 }, { width: 12 },
   ];
 
   // Bookings: Data rows
   bookings.forEach((booking, index) => {
     const row = bookingsSheet.addRow([
-      booking.id, booking.room_name || "-", booking.room_number || "-",
-      booking.capacity || "-", booking.booked_by || "-", booking.department || "-",
+      booking.room_name || "-", booking.booked_by || "-", booking.department || "-",
       booking.purpose || "-", formatDate(booking.booking_date),
       formatTime(booking.start_time), formatTime(booking.end_time),
-      booking.status || "-", formatDateTime(booking.created_at),
+      booking.status || "-",
     ]);
 
     if (index % 2 === 0) {
       row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F5F5" } };
     }
 
-    row.getCell(1).alignment = { horizontal: "center" };
-    row.getCell(3).alignment = { horizontal: "center" };
-    row.getCell(4).alignment = { horizontal: "center" };
-    row.getCell(11).alignment = { horizontal: "center" };
+    row.getCell(8).alignment = { horizontal: "center" };
 
     if (booking.status === "BOOKED") {
-      row.getCell(11).font = { bold: true, color: { argb: "FF00c853" } };
+      row.getCell(8).font = { bold: true, color: { argb: "FF00c853" } };
     } else if (booking.status === "CANCELLED") {
-      row.getCell(11).font = { bold: true, color: { argb: "FFff1744" } };
+      row.getCell(8).font = { bold: true, color: { argb: "FFff1744" } };
     }
   });
 
