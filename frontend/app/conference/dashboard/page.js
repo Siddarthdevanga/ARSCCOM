@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { apiFetch } from "../../utils/api";
+import { apiFetch, downloadQRCode, shareURL, fetchPublicBookingInfo } from "../../utils/api";
 import styles from "./style.module.css";
 
 /* ================= DATE FORMATTER ================= */
@@ -103,7 +103,7 @@ export default function ConferenceDashboard() {
   const loadPublicBookingInfo = async () => {
     try {
       setLoadingQR(true);
-      const response = await apiFetch("/api/conference/public-booking-info");
+      const response = await fetchPublicBookingInfo();
       setPublicBookingInfo(response);
     } catch (err) {
       console.error("Failed to load QR code:", err);
@@ -115,76 +115,32 @@ export default function ConferenceDashboard() {
 
   const handleDownloadQR = async () => {
     try {
-      const response = await fetch("/api/conference/qr-code/download", {
-        headers: {
-          "Authorization": `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (!response.ok) throw new Error("Download failed");
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${company?.name || "conference"}-booking-qr.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
-      
+      await downloadQRCode(company?.name || "conference");
       showNotification("QR code downloaded successfully!", "success");
     } catch (err) {
       console.error("Download error:", err);
-      showNotification("Failed to download QR code", "error");
+      showNotification(err.message || "Failed to download QR code", "error");
     }
   };
 
   const handleShareURL = async () => {
-    const url = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+    const url = publicBookingInfo?.publicUrl || 
+                `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
     
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${company?.name} - Conference Room Booking`,
-          text: "Book a conference room",
-          url: url,
-        });
-        showNotification("Shared successfully!", "success");
-      } catch (err) {
-        if (err.name !== "AbortError") {
-          copyToClipboard(url);
+    try {
+      const result = await shareURL(url, `${company?.name} - Conference Room Booking`);
+      
+      if (result.success) {
+        if (result.method === "share") {
+          showNotification("Shared successfully!", "success");
+        } else {
+          showNotification("Link copied to clipboard!", "success");
         }
       }
-    } else {
-      copyToClipboard(url);
-    }
-  };
-
-  const copyToClipboard = (text) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text)
-        .then(() => showNotification("Link copied to clipboard!", "success"))
-        .catch(() => fallbackCopy(text));
-    } else {
-      fallbackCopy(text);
-    }
-  };
-
-  const fallbackCopy = (text) => {
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    try {
-      document.execCommand("copy");
-      showNotification("Link copied to clipboard!", "success");
     } catch (err) {
-      showNotification("Failed to copy link", "error");
+      console.error("Share error:", err);
+      showNotification(err.message || "Failed to share link", "error");
     }
-    document.body.removeChild(textarea);
   };
 
   const openQRPanel = () => {
@@ -431,25 +387,21 @@ export default function ConferenceDashboard() {
     return plan.plan === "EXPIRED" || plan.status === "EXPIRED";
   }, [plan]);
 
-  // Check if booking limit is exceeded
   const isBookingLimitExceeded = useMemo(() => {
     if (!bookingPlan) return false;
     if (bookingPlan.limit === Infinity) return false;
     return bookingPlan.remaining !== null && bookingPlan.remaining <= 0;
   }, [bookingPlan]);
 
-  // Check if there are no active rooms
   const hasNoActiveRooms = useMemo(() => {
     if (!plan) return false;
     return plan.activeRooms === 0;
   }, [plan]);
 
-  // Determine if booking should be disabled
   const isBookingDisabled = useMemo(() => {
     return isPlanExpired || isBookingLimitExceeded || hasNoActiveRooms;
   }, [isPlanExpired, isBookingLimitExceeded, hasNoActiveRooms]);
 
-  // Get the appropriate message for disabled booking
   const getBookingDisabledMessage = () => {
     if (isPlanExpired) return "Your plan has expired. Please upgrade to continue booking.";
     if (isBookingLimitExceeded) return "Booking limit exceeded. Please upgrade your plan to continue booking.";
@@ -968,67 +920,64 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* SLIDE-OUT PANEL: QR CODE (RIGHT) */}
+      {/* SLIDE-OUT PANEL: QR CODE (RIGHT) - VERTICAL LAYOUT */}
       {qrPanelOpen && (
-        <div className={styles.rightPanel}>
-          <div className={styles.rightPanelHeader}>
-            <h3>QR Code & Sharing</h3>
-            <button
-              className={styles.rightCloseBtn}
-              onClick={() => setQrPanelOpen(false)}
-            >
-              Close ✖
-            </button>
-          </div>
+        <div className={styles.rightPanelVertical}>
+          <button
+            className={styles.verticalCloseBtn}
+            onClick={() => setQrPanelOpen(false)}
+            title="Close"
+          >
+            ✖
+          </button>
 
-          <div className={styles.rightPanelContent}>
+          <div className={styles.verticalContent}>
             {loadingQR ? (
-              <div className={styles.qrLoading}>
+              <div className={styles.qrLoadingVertical}>
                 <div className={styles.spinner}></div>
-                <p>Loading QR Code...</p>
               </div>
             ) : publicBookingInfo ? (
               <>
-                <div className={styles.qrCodeContainer}>
+                <div className={styles.qrIconBox}>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M3 11h8V3H3v8zm2-6h4v4H5V5zm-2 14h8v-8H3v8zm2-6h4v4H5v-4zm8-10v8h8V3h-8zm6 6h-4V5h4v4zm-6 4h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm6-4h2v2h-2v-2zm0 4h2v2h-2v-2zm-4 0h2v2h-2v-2z"/>
+                  </svg>
+                </div>
+                
+                <div className={styles.qrImageWrapper}>
                   <img 
                     src={publicBookingInfo.qrCode} 
-                    alt="Booking QR Code" 
-                    className={styles.qrCodeImage}
+                    alt="QR" 
+                    className={styles.qrImageVertical}
                   />
-                  <p className={styles.qrDescription}>
-                    Scan this QR code to access the public booking page
-                  </p>
+                </div>
+                
+                <div className={styles.qrLabelVertical}>
+                  QR Code
                 </div>
 
-                <div className={styles.qrActions}>
+                <div className={styles.qrActionsVertical}>
                   <button
-                    className={styles.downloadQrBtn}
+                    className={styles.qrActionBtn}
                     onClick={handleDownloadQR}
+                    title="Download QR Code"
                   >
-                    ⬇️ Download QR Code
+                    ⬇
                   </button>
 
                   <button
-                    className={styles.shareUrlBtn}
+                    className={styles.qrActionBtn}
                     onClick={handleShareURL}
+                    title="Share Link"
                   >
-                    🔗 Share Link
+                    🔗
                   </button>
-                </div>
-
-                <div className={styles.publicUrlInfo}>
-                  <p className={styles.urlLabel}>Public Booking URL:</p>
-                  <div className={styles.urlDisplay}>
-                    <code>{publicBookingInfo.publicUrl}</code>
-                  </div>
                 </div>
               </>
             ) : (
-              <div className={styles.qrError}>
-                <p>Failed to load QR code</p>
-                <button onClick={loadPublicBookingInfo}>
-                  Retry
-                </button>
+              <div className={styles.qrErrorVertical}>
+                <p>Error</p>
+                <button onClick={loadPublicBookingInfo}>↻</button>
               </div>
             )}
           </div>
