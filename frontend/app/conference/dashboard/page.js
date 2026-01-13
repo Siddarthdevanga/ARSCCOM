@@ -57,6 +57,7 @@ export default function ConferenceDashboard() {
   const [bookingPlan, setBookingPlan] = useState(null);
 
   const [sidePanelOpen, setSidePanelOpen] = useState(false);
+  const [qrPanelOpen, setQrPanelOpen] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState(null);
   const [editName, setEditName] = useState("");
   const [editCapacity, setEditCapacity] = useState(0);
@@ -72,6 +73,10 @@ export default function ConferenceDashboard() {
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [roomToDelete, setRoomToDelete] = useState(null);
+
+  // QR Code state
+  const [publicBookingInfo, setPublicBookingInfo] = useState(null);
+  const [loadingQR, setLoadingQR] = useState(false);
 
   /* ================= HELPERS ================= */
   const getDate = useCallback((offset) => {
@@ -92,6 +97,101 @@ export default function ConferenceDashboard() {
   const showNotification = (message, type = "info") => {
     setNotification({ show: true, message, type });
     setTimeout(() => setNotification({ show: false, message: "", type: "" }), 5000);
+  };
+
+  /* ================= QR CODE FUNCTIONS ================= */
+  const loadPublicBookingInfo = async () => {
+    try {
+      setLoadingQR(true);
+      const response = await apiFetch("/api/conference/public-booking-info");
+      setPublicBookingInfo(response);
+    } catch (err) {
+      console.error("Failed to load QR code:", err);
+      showNotification("Failed to load QR code", "error");
+    } finally {
+      setLoadingQR(false);
+    }
+  };
+
+  const handleDownloadQR = async () => {
+    try {
+      const response = await fetch("/api/conference/qr-code/download", {
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Download failed");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${company?.name || "conference"}-booking-qr.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      showNotification("QR code downloaded successfully!", "success");
+    } catch (err) {
+      console.error("Download error:", err);
+      showNotification("Failed to download QR code", "error");
+    }
+  };
+
+  const handleShareURL = async () => {
+    const url = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${company?.name} - Conference Room Booking`,
+          text: "Book a conference room",
+          url: url,
+        });
+        showNotification("Shared successfully!", "success");
+      } catch (err) {
+        if (err.name !== "AbortError") {
+          copyToClipboard(url);
+        }
+      }
+    } else {
+      copyToClipboard(url);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text)
+        .then(() => showNotification("Link copied to clipboard!", "success"))
+        .catch(() => fallbackCopy(text));
+    } else {
+      fallbackCopy(text);
+    }
+  };
+
+  const fallbackCopy = (text) => {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+      showNotification("Link copied to clipboard!", "success");
+    } catch (err) {
+      showNotification("Failed to copy link", "error");
+    }
+    document.body.removeChild(textarea);
+  };
+
+  const openQRPanel = () => {
+    if (!publicBookingInfo) {
+      loadPublicBookingInfo();
+    }
+    setQrPanelOpen(true);
   };
 
   /* ================= API CALLS ================= */
@@ -379,7 +479,7 @@ export default function ConferenceDashboard() {
   if (loading) return <div className={styles.container}>Loading dashboard…</div>;
   if (!company || !stats) return <div className={styles.container}>Unable to load dashboard</div>;
 
-  const publicURL = `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+  const publicURL = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
 
   const roomPercentage =
     plan?.limit === "Unlimited"
@@ -393,47 +493,22 @@ export default function ConferenceDashboard() {
 
   return (
     <div className={styles.container}>
-      {/* NOTIFICATION BANNER */}
+      {/* NOTIFICATION POPUP */}
       {notification.show && (
-        <div 
-          style={{
-            position: "fixed",
-            top: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 10000,
-            maxWidth: "90%",
-            width: "auto",
-            minWidth: "300px"
-          }}
-        >
-          <div
-            style={{
-              background: 
-                notification.type === "success" ? "#00c853" :
-                notification.type === "error" ? "#ff1744" :
-                notification.type === "warning" ? "#ff9800" :
-                "#2196F3",
-              color: "#fff",
-              padding: "15px 25px",
-              borderRadius: "8px",
-              boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
-              textAlign: "center",
-              fontWeight: 600,
-              fontSize: "14px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "10px",
-              animation: "slideDown 0.3s ease-out"
-            }}
-          >
-            <span style={{ fontSize: "18px" }}>
+        <div className={styles.notificationPopup}>
+          <div className={`${styles.notificationContent} ${styles[`notification${notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}`]}`}>
+            <span className={styles.notificationIcon}>
               {notification.type === "success" ? "✓" :
                notification.type === "error" ? "✕" :
                notification.type === "warning" ? "⚠" : "ℹ"}
             </span>
-            {notification.message}
+            <span className={styles.notificationMessage}>{notification.message}</span>
+            <button 
+              className={styles.notificationClose}
+              onClick={() => setNotification({ show: false, message: "", type: "" })}
+            >
+              ×
+            </button>
           </div>
         </div>
       )}
@@ -578,6 +653,14 @@ export default function ConferenceDashboard() {
         </div>
 
         <div className={styles.headerRight}>
+          <button
+            className={styles.qrBtn}
+            onClick={openQRPanel}
+            title="View QR Code & Share"
+          >
+            📱 QR Code
+          </button>
+
           <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Company Logo" />
           
           <button
@@ -593,34 +676,44 @@ export default function ConferenceDashboard() {
       {/* PUBLIC URL SECTION */}
       <div className={styles.publicBox}>
         <div className={styles.publicRow}>
-          <div>
+          <div style={{ flex: 1 }}>
             <p className={styles.publicTitle}>Public Booking URL</p>
             <a href={publicURL} target="_blank" className={styles.publicLink}>
               {publicURL}
             </a>
           </div>
 
-          <button 
-            className={styles.bookBtn} 
-            onClick={() => {
-              if (isBookingDisabled) {
-                showNotification(getBookingDisabledMessage(), "warning");
-              } else {
-                router.push("/conference/bookings");
-              }
-            }}
-            disabled={isBookingDisabled}
-            style={{
-              opacity: isBookingDisabled ? 0.5 : 1,
-              cursor: isBookingDisabled ? "not-allowed" : "pointer",
-              background: isBookingDisabled ? "#666" : undefined
-            }}
-            title={isBookingDisabled ? getBookingDisabledMessage() : "Book a conference room"}
-          >
-            {isPlanExpired ? "Plan Expired" : 
-             isBookingLimitExceeded ? "Limit Exceeded" :
-             hasNoActiveRooms ? "No Active Rooms" : "Book"}
-          </button>
+          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+            <button 
+              className={styles.shareBtn}
+              onClick={handleShareURL}
+              title="Share booking link"
+            >
+              🔗 Share
+            </button>
+
+            <button 
+              className={styles.bookBtn} 
+              onClick={() => {
+                if (isBookingDisabled) {
+                  showNotification(getBookingDisabledMessage(), "warning");
+                } else {
+                  router.push("/conference/bookings");
+                }
+              }}
+              disabled={isBookingDisabled}
+              style={{
+                opacity: isBookingDisabled ? 0.5 : 1,
+                cursor: isBookingDisabled ? "not-allowed" : "pointer",
+                background: isBookingDisabled ? "#666" : undefined
+              }}
+              title={isBookingDisabled ? getBookingDisabledMessage() : "Book a conference room"}
+            >
+              {isPlanExpired ? "Plan Expired" : 
+               isBookingLimitExceeded ? "Limit Exceeded" :
+               hasNoActiveRooms ? "No Active Rooms" : "Book"}
+            </button>
+          </div>
         </div>
         
         {isBookingDisabled && (
@@ -682,7 +775,7 @@ export default function ConferenceDashboard() {
         </div>
       )}
 
-      {/* SLIDE-OUT PANEL: ROOM MANAGEMENT */}
+      {/* SLIDE-OUT PANEL: ROOM MANAGEMENT (LEFT) */}
       {sidePanelOpen && (
         <div className={styles.leftPanel}>
           <div className={styles.leftPanelHeader}>
@@ -871,6 +964,73 @@ export default function ConferenceDashboard() {
                 </li>
               )}
             </ul>
+          </div>
+        </div>
+      )}
+
+      {/* SLIDE-OUT PANEL: QR CODE (RIGHT) */}
+      {qrPanelOpen && (
+        <div className={styles.rightPanel}>
+          <div className={styles.rightPanelHeader}>
+            <h3>QR Code & Sharing</h3>
+            <button
+              className={styles.rightCloseBtn}
+              onClick={() => setQrPanelOpen(false)}
+            >
+              Close ✖
+            </button>
+          </div>
+
+          <div className={styles.rightPanelContent}>
+            {loadingQR ? (
+              <div className={styles.qrLoading}>
+                <div className={styles.spinner}></div>
+                <p>Loading QR Code...</p>
+              </div>
+            ) : publicBookingInfo ? (
+              <>
+                <div className={styles.qrCodeContainer}>
+                  <img 
+                    src={publicBookingInfo.qrCode} 
+                    alt="Booking QR Code" 
+                    className={styles.qrCodeImage}
+                  />
+                  <p className={styles.qrDescription}>
+                    Scan this QR code to access the public booking page
+                  </p>
+                </div>
+
+                <div className={styles.qrActions}>
+                  <button
+                    className={styles.downloadQrBtn}
+                    onClick={handleDownloadQR}
+                  >
+                    ⬇️ Download QR Code
+                  </button>
+
+                  <button
+                    className={styles.shareUrlBtn}
+                    onClick={handleShareURL}
+                  >
+                    🔗 Share Link
+                  </button>
+                </div>
+
+                <div className={styles.publicUrlInfo}>
+                  <p className={styles.urlLabel}>Public Booking URL:</p>
+                  <div className={styles.urlDisplay}>
+                    <code>{publicBookingInfo.publicUrl}</code>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className={styles.qrError}>
+                <p>Failed to load QR code</p>
+                <button onClick={loadPublicBookingInfo}>
+                  Retry
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
