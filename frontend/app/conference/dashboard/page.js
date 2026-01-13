@@ -107,7 +107,7 @@ export default function ConferenceDashboard() {
       setPublicBookingInfo(response);
     } catch (err) {
       console.error("Failed to load QR code:", err);
-      showNotification("Failed to load QR code", "error");
+      showNotification(err?.message || "Failed to load QR code", "error");
     } finally {
       setLoadingQR(false);
     }
@@ -119,7 +119,7 @@ export default function ConferenceDashboard() {
       showNotification("QR code downloaded successfully!", "success");
     } catch (err) {
       console.error("Download error:", err);
-      showNotification(err.message || "Failed to download QR code", "error");
+      showNotification(err?.message || "Failed to download QR code", "error");
     }
   };
 
@@ -139,7 +139,7 @@ export default function ConferenceDashboard() {
       }
     } catch (err) {
       console.error("Share error:", err);
-      showNotification(err.message || "Failed to share link", "error");
+      showNotification(err?.message || "Failed to share link", "error");
     }
   };
 
@@ -222,6 +222,7 @@ export default function ConferenceDashboard() {
       await loadDashboard();
       showNotification("Rooms synchronized successfully!", "success");
     } catch (err) {
+      console.error("Sync error:", err);
       showNotification(err?.message || "Failed to sync rooms", "error");
     } finally {
       setSyncing(false);
@@ -281,7 +282,7 @@ export default function ConferenceDashboard() {
       
     } catch (err) {
       console.error("Update error:", err);
-      showNotification(err?.message || "Failed to update room. This room may be locked under your current plan.", "error");
+      showNotification(err?.message || "Failed to update room", "error");
       cancelEdit();
     }
   };
@@ -299,7 +300,7 @@ export default function ConferenceDashboard() {
       
     } catch (err) {
       console.error("Delete error:", err);
-      showNotification(err?.message || "Failed to delete room. The room may have existing bookings.", "error");
+      showNotification(err?.message || "Failed to delete room", "error");
     } finally {
       setShowDeleteConfirm(false);
       setRoomToDelete(null);
@@ -351,12 +352,14 @@ export default function ConferenceDashboard() {
       
       await loadDashboard();
       
+      // Show appropriate notification based on activation status
       if (response?.isActive) {
         showNotification("Room created and activated successfully!", "success");
       } else {
         showNotification("Room created successfully! This room is locked. Upgrade your plan to activate it.", "warning");
       }
     } catch (err) {
+      console.error("Create room error:", err);
       showNotification(err?.message || "Failed to create room", "error");
     } finally {
       setIsCreatingRoom(false);
@@ -524,8 +527,7 @@ export default function ConferenceDashboard() {
             <div className={styles.modalBody}>
               {planUsage && !planUsage.canAddMore && (
                 <div className={styles.warningBox}>
-                  ⚠️ You've reached your plan limit of {planUsage.limit} rooms.
-                  The room will be created but will remain locked until you upgrade.
+                  ⚠️ You've reached your plan limit of {planUsage.limit} rooms. Please upgrade to add more rooms.
                 </div>
               )}
 
@@ -783,7 +785,7 @@ export default function ConferenceDashboard() {
                   <button
                     className={styles.addRoomBtn}
                     onClick={() => setShowAddRoomModal(true)}
-                    title={planUsage && !planUsage.canAddMore ? "You can still create rooms, but they will be locked" : "Add new room"}
+                    title={planUsage && !planUsage.canAddMore ? "Plan limit reached" : "Add new room"}
                     style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
                   >
                     + Add Room
@@ -1036,7 +1038,7 @@ export default function ConferenceDashboard() {
                       <strong>Share QR code or URL with Employees</strong>
                     </li>
                     <li style={{ marginBottom: 10 }}>
-                      <strong>Authenticate with OPT</strong>
+                      <strong>Authenticate with OTP</strong>
                     </li>
                     <li>
                       <strong>Go ahead and Book the Conference Room</strong>
