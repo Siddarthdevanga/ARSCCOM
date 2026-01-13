@@ -104,6 +104,20 @@ const validateCompanySubscription = async (companyId) => {
 };
 
 /**
+ * Check if company can add more rooms
+ */
+const canAddRoom = async (companyId, roomLimit) => {
+  if (roomLimit === Infinity) return true;
+
+  const [[count]] = await db.query(
+    `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+    [companyId]
+  );
+
+  return count.total < roomLimit;
+};
+
+/**
  * Synchronizes room activation status based on plan limits
  * Rooms are activated in order of room_number (ascending)
  */
@@ -316,7 +330,7 @@ router.get("/rooms/all", async (req, res) => {
 
 /**
  * POST /api/conference/rooms
- * Creates a new conference room (initially inactive)
+ * Creates a new conference room with plan limit checking
  */
 router.post("/rooms", async (req, res) => {
   try {
@@ -332,8 +346,16 @@ router.post("/rooms", async (req, res) => {
       return res.status(400).json({ message: "Room number is required" });
     }
 
-    // Validate subscription
-    const { plan } = await validateCompanySubscription(companyId);
+    // Validate subscription and get plan limits
+    const { plan, limit } = await validateCompanySubscription(companyId);
+
+    // Check if company can add more rooms
+    const canAdd = await canAddRoom(companyId, limit);
+    if (!canAdd) {
+      return res.status(403).json({
+        message: `Your ${plan.toUpperCase()} plan allows only ${limit} room(s). Please upgrade to add more.`,
+      });
+    }
 
     // Check for duplicate room number
     const [[existing]] = await db.query(
@@ -366,9 +388,7 @@ router.post("/rooms", async (req, res) => {
     );
 
     res.status(201).json({
-      message: newRoom.is_active 
-        ? "Room created and activated successfully" 
-        : "Room created successfully. Upgrade your plan to activate this room.",
+      message: "Room created successfully. Activation depends on your current plan.",
       roomId: result.insertId,
       isActive: Boolean(newRoom.is_active),
     });
