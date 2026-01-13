@@ -83,24 +83,47 @@ const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
 /* ======================================================
    TIME SCROLLER COMPONENT
 ====================================================== */
-const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false }) => {
+const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false, currentDate = null, today = null }) => {
   const [isOpen, setIsOpen] = useState(false);
   const scrollContainerRef = useRef(null);
 
+  // Get current time in minutes (rounded up to next 15-min slot)
+  const getCurrentMinutes = () => {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // Round up to next 15-minute slot
+    return Math.ceil(currentMinutes / 15) * 15;
+  };
+
   const filteredOptions = useMemo(() => {
+    let options = TIME_OPTIONS;
+
+    // Filter based on current time if it's today's date
+    if (currentDate === today && !minTime) {
+      const nowMinutes = getCurrentMinutes();
+      options = options.filter(t => t.minutes >= nowMinutes);
+    }
+
+    // Filter based on minTime (for end time)
     if (minTime) {
       const minMinutes = ampmToMinutes(minTime);
-      return TIME_OPTIONS.filter(t => t.minutes > minMinutes);
+      options = options.filter(t => t.minutes > minMinutes);
     }
-    return TIME_OPTIONS;
-  }, [minTime]);
+
+    return options;
+  }, [minTime, currentDate, today]);
 
   useEffect(() => {
     if (isOpen && scrollContainerRef.current && value) {
       const selectedIndex = filteredOptions.findIndex(t => t.value === value);
       if (selectedIndex !== -1) {
         const itemHeight = 40;
-        scrollContainerRef.current.scrollTop = selectedIndex * itemHeight - 80;
+        // Use requestAnimationFrame to avoid flickering
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = selectedIndex * itemHeight - 80;
+          }
+        });
       }
     }
   }, [isOpen, value, filteredOptions]);
@@ -182,7 +205,6 @@ export default function PublicConferenceBooking() {
   const { slug } = useParams();
 
   const today = new Date().toISOString().split("T")[0];
-  const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -271,13 +293,18 @@ export default function PublicConferenceBooking() {
     loadBookings();
   }, [roomId, date, slug, otpVerified]);
 
-  /* ================= AVAILABLE STARTS ================= */
-  const availableStartTimes = useMemo(() => {
-    return TIME_OPTIONS.filter(t => {
-      if (date === today && t.minutes <= nowMinutes) return false;
-      return true;
-    });
-  }, [date, today, nowMinutes]);
+  // Clear start and end times when date changes to today
+  useEffect(() => {
+    if (date === today && startTime) {
+      const nowMinutes = Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15;
+      const startMinutes = ampmToMinutes(startTime);
+      
+      if (startMinutes < nowMinutes) {
+        setStartTime("");
+        setEndTime("");
+      }
+    }
+  }, [date, today]);
 
   const isSlotFree = (s, e, ignore = null) =>
     !bookings.some(
@@ -772,6 +799,8 @@ export default function PublicConferenceBooking() {
                 onChange={setStartTime}
                 label="Start Time"
                 disabled={!roomId || !date}
+                currentDate={date}
+                today={today}
               />
 
               <TimeScroller
@@ -780,6 +809,8 @@ export default function PublicConferenceBooking() {
                 label="End Time"
                 minTime={startTime}
                 disabled={!startTime}
+                currentDate={date}
+                today={today}
               />
 
               <div className={styles.formGroup}>
@@ -839,6 +870,8 @@ export default function PublicConferenceBooking() {
                             value={editStart}
                             onChange={setEditStart}
                             label="New Start Time"
+                            currentDate={b.booking_date}
+                            today={today}
                           />
 
                           <TimeScroller
@@ -846,6 +879,8 @@ export default function PublicConferenceBooking() {
                             onChange={setEditEnd}
                             label="New End Time"
                             minTime={editStart}
+                            currentDate={b.booking_date}
+                            today={today}
                           />
 
                           <div className={styles.bookingActions}>
