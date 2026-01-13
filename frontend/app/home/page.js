@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, DoorOpen } from "lucide-react";
+import { Users, DoorOpen, Download, FileSpreadsheet, CheckCircle, X } from "lucide-react";
 import styles from "./style.module.css";
 
 export default function Home() {
@@ -13,6 +13,14 @@ export default function Home() {
   const [subData, setSubData] = useState(null);
   const [loadingSub, setLoadingSub] = useState(false);
   const [subError, setSubError] = useState("");
+
+  // Download panel states
+  const [showDownload, setShowDownload] = useState(false);
+  const [exportStats, setExportStats] = useState(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [downloadError, setDownloadError] = useState("");
 
   /* ================= AUTH CHECK ================= */
   useEffect(() => {
@@ -58,6 +66,101 @@ export default function Home() {
     }
   };
 
+  /* ================= FETCH EXPORT STATISTICS ================= */
+  const fetchExportStats = async () => {
+    try {
+      setLoadingStats(true);
+      setDownloadError("");
+      setExportStats(null);
+
+      const res = await fetch("/api/exports/stats", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Failed to load stats");
+
+      setExportStats(data);
+    } catch (err) {
+      setDownloadError(err?.message || "Unable to fetch export statistics");
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  /* ================= DOWNLOAD FUNCTIONS ================= */
+  const handleDownload = async (type) => {
+    try {
+      setDownloading(true);
+      setDownloadError("");
+      setDownloadSuccess(false);
+
+      let endpoint = "";
+      switch (type) {
+        case "visitors":
+          endpoint = "/api/exports/visitors";
+          break;
+        case "bookings":
+          endpoint = "/api/exports/conference-bookings";
+          break;
+        case "all":
+          endpoint = "/api/exports/all";
+          break;
+        default:
+          throw new Error("Invalid download type");
+      }
+
+      const res = await fetch(endpoint, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error?.message || "Download failed");
+      }
+
+      // Get the blob and filename
+      const blob = await res.blob();
+      const contentDisposition = res.headers.get("content-disposition");
+      let filename = `report-${Date.now()}.xlsx`;
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Show success message
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+
+      // Optionally close panel after download
+      // setTimeout(() => setShowDownload(false), 2000);
+    } catch (err) {
+      setDownloadError(err?.message || "Download failed");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  const handleOpenDownload = () => {
+    setShowDownload(true);
+    fetchExportStats();
+  };
+
   const handleOpenSubscription = () => {
     setShowSub(true);
     fetchSubscription();
@@ -73,7 +176,6 @@ export default function Home() {
     router.replace("/auth/login");
   };
 
-  // Check if user can upgrade (not on enterprise or if plan is expired)
   const canUpgrade = subData && (
     subData.PLAN?.toLowerCase() !== "enterprise" ||
     subData.STATUS?.toLowerCase() === "expired" ||
@@ -100,6 +202,16 @@ export default function Home() {
         <div className={styles.logoText}>{company.name}</div>
 
         <div className={styles.rightSection}>
+          {/* Download Button */}
+          <button
+            className={styles.downloadBtn}
+            onClick={handleOpenDownload}
+            title="Download Reports"
+            aria-label="Download Reports"
+          >
+            <Download size={20} />
+          </button>
+
           {company.logo_url && (
             <img
               src={company.logo_url}
@@ -166,7 +278,6 @@ export default function Home() {
             role="dialog"
             aria-modal="true"
           >
-            {/* HEADER */}
             <div className={styles.subHeader}>
               <h3>Subscription Details</h3>
               <button
@@ -177,21 +288,18 @@ export default function Home() {
               </button>
             </div>
 
-            {/* LOADING */}
             {loadingSub && (
               <p className={styles.subLoading}>
                 Loading subscription…
               </p>
             )}
 
-            {/* ERROR */}
             {subError && (
               <p className={styles.subError}>
                 {subError}
               </p>
             )}
 
-            {/* CONTENT */}
             {subData && (
               <div className={styles.subContent}>
 
@@ -249,7 +357,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* UPGRADE BUTTON */}
                 {canUpgrade && (
                   <div style={{ marginTop: "30px" }}>
                     <button
@@ -288,7 +395,6 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* MESSAGE FOR ENTERPRISE USERS */}
                 {subData && 
                  subData.PLAN?.toLowerCase() === "enterprise" && 
                  subData.STATUS?.toLowerCase() === "active" && (
@@ -310,6 +416,152 @@ export default function Home() {
                     </p>
                   </div>
                 )}
+              </div>
+            )}
+          </aside>
+        </>
+      )}
+
+      {/* ================= RIGHT SLIDE DOWNLOAD PANEL ================= */}
+      {showDownload && (
+        <>
+          <div
+            className={styles.overlay}
+            onClick={() => setShowDownload(false)}
+            aria-hidden="true"
+          />
+
+          <aside
+            className={styles.downloadSlide}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className={styles.downloadHeader}>
+              <h3>Download Reports</h3>
+              <button
+                onClick={() => setShowDownload(false)}
+                aria-label="Close download panel"
+              >
+                ✖
+              </button>
+            </div>
+
+            {/* Success Message */}
+            {downloadSuccess && (
+              <div className={styles.successMessage}>
+                <CheckCircle size={20} />
+                <span>Report downloaded successfully!</span>
+              </div>
+            )}
+
+            {/* Error Message */}
+            {downloadError && (
+              <div className={styles.errorMessage}>
+                <X size={20} />
+                <span>{downloadError}</span>
+              </div>
+            )}
+
+            {/* Loading Stats */}
+            {loadingStats && (
+              <p className={styles.downloadLoading}>
+                Loading statistics…
+              </p>
+            )}
+
+            {/* Download Options */}
+            {exportStats && (
+              <div className={styles.downloadContent}>
+                
+                {/* Visitors Report */}
+                <div className={styles.downloadCard}>
+                  <div className={styles.downloadCardHeader}>
+                    <FileSpreadsheet size={24} color="#7a00ff" />
+                    <h4>Visitor Records</h4>
+                  </div>
+                  <div className={styles.downloadCardStats}>
+                    <div className={styles.statItem}>
+                      <span>Total Visitors:</span>
+                      <strong>{exportStats.visitors?.total || 0}</strong>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span>Currently Active:</span>
+                      <strong style={{ color: "#00c853" }}>
+                        {exportStats.visitors?.active || 0}
+                      </strong>
+                    </div>
+                  </div>
+                  <button
+                    className={styles.downloadCardBtn}
+                    onClick={() => handleDownload("visitors")}
+                    disabled={downloading}
+                  >
+                    {downloading ? "Downloading..." : "Download Visitors"}
+                  </button>
+                </div>
+
+                {/* Conference Bookings Report */}
+                <div className={styles.downloadCard}>
+                  <div className={styles.downloadCardHeader}>
+                    <FileSpreadsheet size={24} color="#7a00ff" />
+                    <h4>Conference Bookings</h4>
+                  </div>
+                  <div className={styles.downloadCardStats}>
+                    <div className={styles.statItem}>
+                      <span>Total Bookings:</span>
+                      <strong>{exportStats.bookings?.total || 0}</strong>
+                    </div>
+                    <div className={styles.statItem}>
+                      <span>Upcoming:</span>
+                      <strong style={{ color: "#ff9800" }}>
+                        {exportStats.bookings?.upcoming || 0}
+                      </strong>
+                    </div>
+                  </div>
+                  <button
+                    className={styles.downloadCardBtn}
+                    onClick={() => handleDownload("bookings")}
+                    disabled={downloading}
+                  >
+                    {downloading ? "Downloading..." : "Download Bookings"}
+                  </button>
+                </div>
+
+                {/* Complete Report */}
+                <div className={styles.downloadCard} style={{ borderColor: "#6a1b9a" }}>
+                  <div className={styles.downloadCardHeader}>
+                    <FileSpreadsheet size={24} color="#6a1b9a" />
+                    <h4>Complete Report</h4>
+                  </div>
+                  <p style={{ 
+                    fontSize: "13px", 
+                    color: "#666", 
+                    marginBottom: "15px",
+                    lineHeight: 1.4
+                  }}>
+                    Download both visitors and conference bookings data in a single Excel file with multiple sheets.
+                  </p>
+                  <button
+                    className={styles.downloadCardBtn}
+                    style={{ 
+                      background: "linear-gradient(135deg, #6a1b9a, #7a00ff)",
+                      fontWeight: 600
+                    }}
+                    onClick={() => handleDownload("all")}
+                    disabled={downloading}
+                  >
+                    {downloading ? "Downloading..." : "Download Complete Report"}
+                  </button>
+                </div>
+
+                {/* Info Note */}
+                <div className={styles.downloadNote}>
+                  <p>
+                    📊 Reports are generated in Excel format (.xlsx) with professional formatting, 
+                    including headers, borders, and color-coded status indicators.
+                  </p>
+                </div>
+
               </div>
             )}
           </aside>
