@@ -94,6 +94,32 @@
   50% { opacity: 0.6; }
 }
 
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* ================= HEADER ================= */
 .header {
   display: flex;
@@ -224,6 +250,144 @@
 
 .logoBtn:active {
   transform: scale(0.95);
+}
+
+/* ================= NOTIFICATION POPUP ================= */
+.notificationPopup {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 10000;
+  max-width: 400px;
+  animation: slideInRight 0.3s ease-out;
+}
+
+.notificationContent {
+  background: #2196F3;
+  color: #fff;
+  padding: 16px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+  font-size: 14px;
+  position: relative;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.notificationSuccess {
+  background: linear-gradient(135deg, #00c853, #00e676);
+  box-shadow: 0 8px 32px rgba(0, 200, 83, 0.4);
+}
+
+.notificationError {
+  background: linear-gradient(135deg, #ff1744, #f50057);
+  box-shadow: 0 8px 32px rgba(255, 23, 68, 0.4);
+}
+
+.notificationWarning {
+  background: linear-gradient(135deg, #ff9800, #ff6f00);
+  box-shadow: 0 8px 32px rgba(255, 152, 0, 0.4);
+}
+
+.notificationIcon {
+  font-size: 22px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.notificationMessage {
+  flex: 1;
+  line-height: 1.5;
+}
+
+.notificationClose {
+  background: rgba(0, 0, 0, 0.2);
+  border: none;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.notificationClose:hover {
+  opacity: 1;
+  background: rgba(0, 0, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.notificationClose:active {
+  transform: scale(0.95);
+}
+
+/* ================= QR CODE BUTTON ================= */
+.qrBtn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 1rem;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.qrBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.qrBtn:active {
+  transform: translateY(0);
+}
+
+/* ================= SHARE BUTTON ================= */
+.shareBtn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 1rem;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(245, 87, 108, 0.4);
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shareBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 87, 108, 0.5);
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+}
+
+.shareBtn:active {
+  transform: translateY(0);
 }
 
 /* ================= PUBLIC LINK BOX ================= */
@@ -493,7 +657,7 @@
   text-shadow: 0 2px 8px rgba(0, 255, 204, 0.3);
 }
 
-/* ================= SLIDE-OUT PANEL ================= */
+/* ================= SLIDE-OUT PANEL (LEFT) ================= */
 .leftPanel {
   position: fixed;
   top: 0;
@@ -572,6 +736,261 @@
 
 .leftPanelContent::-webkit-scrollbar {
   display: none;
+}
+
+/* ================= RIGHT PANEL (QR CODE SLIDER) ================= */
+.rightPanel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  max-width: 90vw;
+  height: 100vh;
+  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  animation: slideInFromRight 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow-y: auto;
+  scrollbar-width: none;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rightPanel::-webkit-scrollbar {
+  display: none;
+}
+
+.rightPanelHeader {
+  padding: 1.75rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+}
+
+.rightPanelHeader h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.rightCloseBtn {
+  background: rgba(255, 77, 77, 0.2);
+  border: 1px solid rgba(255, 77, 77, 0.4);
+  color: #ff4d4d;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(255, 77, 77, 0.2);
+}
+
+.rightCloseBtn:hover {
+  background: linear-gradient(135deg, #ff4d4d, #d50000);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 16px rgba(255, 77, 77, 0.4);
+}
+
+.rightCloseBtn:active {
+  transform: scale(0.95);
+}
+
+.rightPanelContent {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2rem 1.5rem;
+  scrollbar-width: none;
+}
+
+.rightPanelContent::-webkit-scrollbar {
+  display: none;
+}
+
+/* ================= QR CODE STYLES ================= */
+.qrLoading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #ccc;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #7a00ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+.qrCodeContainer {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  padding: 2rem;
+  border-radius: 1.25rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.qrCodeImage {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  border-radius: 1rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.qrDescription {
+  margin-top: 1.5rem;
+  color: #636e72;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  font-weight: 500;
+}
+
+.qrActions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.downloadQrBtn,
+.shareUrlBtn {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 1rem;
+  font-weight: 700;
+  font-size: 0.938rem;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.downloadQrBtn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+}
+
+.downloadQrBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+.downloadQrBtn:active {
+  transform: translateY(0);
+}
+
+.shareUrlBtn {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(245, 87, 108, 0.4);
+}
+
+.shareUrlBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(245, 87, 108, 0.5);
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+}
+
+.shareUrlBtn:active {
+  transform: translateY(0);
+}
+
+.publicUrlInfo {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1.5rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.urlLabel {
+  color: #b8c5d0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.75rem;
+  display: block;
+}
+
+.urlDisplay {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.urlDisplay code {
+  color: #00ffcc;
+  font-size: 0.813rem;
+  word-break: break-all;
+  font-family: 'Courier New', 'Monaco', monospace;
+  line-height: 1.6;
+  display: block;
+  text-shadow: 0 0 8px rgba(0, 255, 204, 0.3);
+}
+
+.qrError {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  color: #ff4d4d;
+  text-align: center;
+}
+
+.qrError p {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+}
+
+.qrError button {
+  padding: 0.875rem 2rem;
+  background: linear-gradient(135deg, #7a00ff, #9500ff);
+  color: #fff;
+  border: none;
+  border-radius: 0.875rem;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.938rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(122, 0, 255, 0.4);
+}
+
+.qrError button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(122, 0, 255, 0.5);
+}
+
+.qrError button:active {
+  transform: translateY(0);
 }
 
 /* ================= BUTTONS ================= */
@@ -765,8 +1184,8 @@
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -985,6 +1404,10 @@
   .leftPanel {
     max-width: 420px;
   }
+
+  .rightPanel {
+    width: 380px;
+  }
 }
 
 /* Tablets */
@@ -1028,13 +1451,19 @@
     align-items: flex-start;
   }
 
-  .bookBtn {
+  .bookBtn,
+  .shareBtn {
     width: 100%;
   }
 
   .leftPanel {
     max-width: 100%;
     width: 100%;
+  }
+
+  .rightPanel {
+    width: 100%;
+    max-width: 100%;
   }
 
   .modalActions {
@@ -1056,6 +1485,20 @@
     margin-left: 0;
     margin-top: 0.625rem;
     width: 100%;
+  }
+
+  .notificationPopup {
+    right: 10px;
+    left: 10px;
+    max-width: calc(100% - 20px);
+  }
+
+  .qrCodeContainer {
+    padding: 1.5rem;
+  }
+
+  .qrCodeImage {
+    max-width: 240px;
   }
 }
 
@@ -1086,6 +1529,11 @@
     font-size: 1.25rem;
   }
 
+  .qrBtn {
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
   .statsGrid {
     grid-template-columns: 1fr;
     gap: 1rem;
@@ -1102,6 +1550,10 @@
 
   .modal {
     max-height: 95vh;
+  }
+
+  .qrCodeImage {
+    max-width: 200px;
   }
 }
 
@@ -1153,12 +1605,17 @@
   .leftMenuTrigger,
   .logoBtn,
   .bookBtn,
+  .shareBtn,
+  .qrBtn,
   .closeBtn,
   .leftCloseBtn,
+  .rightCloseBtn,
   .roomList button,
   .syncBtn,
   .addRoomBtn,
-  .deleteBtn {
+  .deleteBtn,
+  .downloadQrBtn,
+  .shareUrlBtn {
     min-height: 44px;
   }
 
@@ -1179,9 +1636,14 @@
 .syncBtn:focus-visible,
 .addRoomBtn:focus-visible,
 .bookBtn:focus-visible,
+.shareBtn:focus-visible,
+.qrBtn:focus-visible,
 .logoBtn:focus-visible,
 .closeBtn:focus-visible,
-.leftCloseBtn:focus-visible {
+.leftCloseBtn:focus-visible,
+.rightCloseBtn:focus-visible,
+.downloadQrBtn:focus-visible,
+.shareUrlBtn:focus-visible {
   outline: 2px solid #7a00ff;
   outline-offset: 2px;
 }
@@ -1192,7 +1654,9 @@
   .container *,
   .header,
   .leftPanel,
+  .rightPanel,
   .modal,
+  .notificationPopup,
   .statCard,
   .section,
   .publicBox,
@@ -1204,7 +1668,6 @@
   }
 }
 
-
 /* Print */
 @media print {
   .container {
@@ -1215,9 +1678,13 @@
   .container::before,
   .header,
   .logoBtn,
+  .qrBtn,
+  .shareBtn,
   .leftMenuTrigger,
   .modalOverlay,
-  .leftPanel {
+  .leftPanel,
+  .rightPanel,
+  .notificationPopup {
     display: none;
   }
 
@@ -1229,350 +1696,5 @@
 
   .statsGrid {
     grid-template-columns: repeat(3, 1fr) !important;
-  }
-}
-/* ================= NOTIFICATION POPUP ================= */
-.notificationPopup {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 10000;
-  max-width: 400px;
-  animation: slideInRight 0.3s ease-out;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-.notificationContent {
-  background: #2196F3;
-  color: #fff;
-  padding: 16px 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-  font-size: 14px;
-  position: relative;
-}
-
-.notificationSuccess {
-  background: #00c853;
-}
-
-.notificationError {
-  background: #ff1744;
-}
-
-.notificationWarning {
-  background: #ff9800;
-}
-
-.notificationIcon {
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.notificationMessage {
-  flex: 1;
-}
-
-.notificationClose {
-  background: transparent;
-  border: none;
-  color: #fff;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-  flex-shrink: 0;
-}
-
-.notificationClose:hover {
-  opacity: 1;
-}
-
-/* ================= QR CODE BUTTON ================= */
-.qrBtn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
-
-.qrBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-}
-
-/* ================= SHARE BUTTON ================= */
-.shareBtn {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(245, 87, 108, 0.3);
-}
-
-.shareBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.4);
-}
-
-/* ================= RIGHT PANEL (QR CODE SLIDER) ================= */
-.rightPanel {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 400px;
-  max-width: 90vw;
-  height: 100vh;
-  background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
-  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-  z-index: 999;
-  display: flex;
-  flex-direction: column;
-  animation: slideInFromRight 0.3s ease-out;
-}
-
-@keyframes slideInFromRight {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-
-.rightPanelHeader {
-  padding: 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: rgba(0, 0, 0, 0.2);
-}
-
-.rightPanelHeader h3 {
-  margin: 0;
-  color: #fff;
-  font-size: 18px;
-}
-
-.rightCloseBtn {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.rightCloseBtn:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.rightPanelContent {
-  flex: 1;
-  overflow-y: auto;
-  padding: 30px 20px;
-}
-
-/* ================= QR CODE STYLES ================= */
-.qrLoading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #ccc;
-}
-
-.spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid rgba(255, 255, 255, 0.1);
-  border-top-color: #7a00ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-bottom: 20px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.qrCodeContainer {
-  background: #fff;
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
-  margin-bottom: 30px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-}
-
-.qrCodeImage {
-  width: 100%;
-  max-width: 280px;
-  height: auto;
-  border-radius: 8px;
-}
-
-.qrDescription {
-  margin-top: 20px;
-  color: #666;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.qrActions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 30px;
-}
-
-.downloadQrBtn,
-.shareUrlBtn {
-  width: 100%;
-  padding: 14px 20px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s;
-  text-align: center;
-}
-
-.downloadQrBtn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-}
-
-.downloadQrBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
-}
-
-.shareUrlBtn {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
-}
-
-.shareUrlBtn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(245, 87, 108, 0.4);
-}
-
-.publicUrlInfo {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.urlLabel {
-  color: #ccc;
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 10px;
-}
-
-.urlDisplay {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.urlDisplay code {
-  color: #00c853;
-  font-size: 13px;
-  word-break: break-all;
-  font-family: 'Courier New', monospace;
-}
-
-.qrError {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 60px 20px;
-  color: #ff1744;
-  text-align: center;
-}
-
-.qrError button {
-  margin-top: 20px;
-  padding: 10px 24px;
-  background: #7a00ff;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-/* ================= RESPONSIVE ================= */
-@media (max-width: 768px) {
-  .notificationPopup {
-    right: 10px;
-    left: 10px;
-    max-width: calc(100% - 20px);
-  }
-
-  .rightPanel {
-    width: 100vw;
-    max-width: 100vw;
-  }
-
-  .qrBtn,
-  .shareBtn {
-    padding: 8px 16px;
-    font-size: 13px;
-  }
-
-  .qrCodeContainer {
-    padding: 20px;
-  }
-
-  .qrCodeImage {
-    max-width: 220px;
   }
 }
