@@ -3,6 +3,7 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
 import QRCode from "qrcode";
+import { createCanvas, loadImage, registerFont } from "canvas";
 
 const router = express.Router();
 
@@ -76,6 +77,140 @@ const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 const normalizePlan = (plan) => (plan || "trial").toLowerCase();
 
 const normalizeStatus = (status) => (status || "pending").toLowerCase();
+
+/* ======================================================
+   BRANDED QR CODE GENERATION
+====================================================== */
+
+/**
+ * Generate a branded QR code image with company branding
+ * Similar to the reference design with company name header
+ */
+const generateBrandedQRCode = async (url, companyName, isConference = true) => {
+  try {
+    // Canvas dimensions
+    const width = 800;
+    const height = 1000;
+    
+    // Create canvas
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+
+    // Background - White
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillRect(0, 0, width, height);
+
+    // Header - Purple gradient
+    const gradient = ctx.createLinearGradient(0, 0, width, 120);
+    gradient.addColorStop(0, "#6a1b9a");
+    gradient.addColorStop(1, "#8e24aa");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, 120);
+
+    // Company Name in header
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 48px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(companyName.toUpperCase(), width / 2, 75);
+
+    // Title
+    ctx.fillStyle = "#6a1b9a";
+    ctx.font = "bold 36px Arial, sans-serif";
+    const title = isConference ? "Conference Room Booking" : "Visitor Registration";
+    ctx.fillText(title, width / 2, 180);
+
+    // Subtitle
+    ctx.fillStyle = "#666666";
+    ctx.font = "20px Arial, sans-serif";
+    ctx.fillText("Scan QR Code or Visit:", width / 2, 230);
+
+    // URL
+    ctx.fillStyle = "#7a00ff";
+    ctx.font = "bold 18px Arial, sans-serif";
+    const maxUrlWidth = width - 100;
+    let displayUrl = url;
+    let urlMetrics = ctx.measureText(displayUrl);
+    
+    // Truncate URL if too long
+    if (urlMetrics.width > maxUrlWidth) {
+      while (ctx.measureText(displayUrl + "...").width > maxUrlWidth && displayUrl.length > 20) {
+        displayUrl = displayUrl.substring(0, displayUrl.length - 1);
+      }
+      displayUrl += "...";
+    }
+    ctx.fillText(displayUrl, width / 2, 265);
+
+    // Generate QR code
+    const qrSize = 400;
+    const qrCodeDataUrl = await QRCode.toDataURL(url, {
+      errorCorrectionLevel: "M",
+      type: "image/png",
+      width: qrSize,
+      margin: 0,
+      color: {
+        dark: "#6a1b9a",  // Purple QR code
+        light: "#FFFFFF",
+      },
+    });
+
+    // Load and draw QR code
+    const qrImage = await loadImage(qrCodeDataUrl);
+    const qrX = (width - qrSize) / 2;
+    const qrY = 300;
+    ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+
+    // Instructions section
+    const instructionsY = qrY + qrSize + 50;
+    
+    ctx.fillStyle = "#6a1b9a";
+    ctx.font = "bold 24px Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("Instructions for " + (isConference ? "Employees:" : "Visitors:"), 80, instructionsY);
+
+    // Instruction items
+    ctx.fillStyle = "#333333";
+    ctx.font = "18px Arial, sans-serif";
+    const instructions = isConference ? [
+      "1. Scan the QR code with your phone camera",
+      "2. Or visit the URL above in your browser",
+      "3. Authenticate with OTP",
+      "4. Select available room and time slot",
+      "5. Complete the booking form",
+      "6. Receive booking confirmation via email"
+    ] : [
+      "1. Scan the QR code with your phone camera",
+      "2. Or visit the URL above in your browser",
+      "3. Enter your email to receive verification code",
+      "4. Complete the registration form",
+      "5. Capture your photo",
+      "6. Receive your digital visitor pass via email"
+    ];
+
+    let instructionY = instructionsY + 35;
+    instructions.forEach(instruction => {
+      ctx.fillText(instruction, 80, instructionY);
+      instructionY += 30;
+    });
+
+    // Footer
+    ctx.fillStyle = "#e0e0e0";
+    ctx.fillRect(0, height - 80, width, 80);
+    
+    ctx.fillStyle = "#7a00ff";
+    ctx.font = "bold 28px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("PROMEET", width / 2, height - 45);
+    
+    ctx.fillStyle = "#666666";
+    ctx.font = "16px Arial, sans-serif";
+    ctx.fillText(isConference ? "Conference Booking Platform" : "Visitor and Conference Booking Platform", width / 2, height - 20);
+
+    return canvas.toBuffer("image/png");
+  } catch (error) {
+    console.error("[generateBrandedQRCode]", error);
+    throw error;
+  }
+};
 
 /* ======================================================
    EMAIL FUNCTIONS
@@ -476,7 +611,7 @@ router.post("/rooms", async (req, res) => {
     const canAdd = await canAddRoom(companyId, roomLimit);
     if (!canAdd) {
       return res.status(403).json({
-        message: `Your ${plan} plan allows only ${roomLimit} room(s). Please upgrade to add more.`,
+        message: `Your ${plan.toUpperCase()} plan allows only ${roomLimit} room(s). Please upgrade to add more.`,
       });
     }
 
@@ -500,9 +635,16 @@ router.post("/rooms", async (req, res) => {
 
     await syncRoomActivationByPlan(companyId, plan);
 
+    // Get the newly created room's activation status
+    const [[newRoom]] = await db.query(
+      `SELECT is_active FROM conference_rooms WHERE id = ?`,
+      [result.insertId]
+    );
+
     res.status(201).json({
       message: "Room created successfully. Activation depends on your current plan.",
       roomId: result.insertId,
+      isActive: Boolean(newRoom.is_active),
     });
   } catch (err) {
     console.error("[POST /rooms]", err.message);
@@ -631,7 +773,7 @@ router.post("/bookings", async (req, res) => {
     const canBook = await canAddBooking(companyId, bookingLimit);
     if (!canBook) {
       return res.status(403).json({
-        message: `Your ${plan} plan allows only ${bookingLimit} booking(s). Please upgrade.`,
+        message: `Your ${plan.toUpperCase()} plan allows only ${bookingLimit} booking(s). Please upgrade.`,
       });
     }
 
@@ -832,7 +974,7 @@ router.post("/sync-rooms", async (req, res) => {
 });
 
 /* ======================================================
-   QR CODE ROUTES (NEW)
+   QR CODE ROUTES
 ====================================================== */
 
 /**
@@ -845,6 +987,16 @@ router.get("/public-booking-info", async (req, res) => {
 
     // Validate subscription
     await validateCompanySubscription(companyId);
+
+    // Get company info
+    const [[company]] = await db.query(
+      `SELECT name, slug FROM companies WHERE id = ? LIMIT 1`,
+      [companyId]
+    );
+
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
 
     // Get or create public slug (transaction-safe)
     const slug = await getOrCreatePublicSlug(companyId);
@@ -860,7 +1012,7 @@ router.get("/public-booking-info", async (req, res) => {
       width: 512,
       margin: 2,
       color: {
-        dark: "#000000",
+        dark: "#6a1b9a",
         light: "#FFFFFF",
       },
     });
@@ -869,6 +1021,7 @@ router.get("/public-booking-info", async (req, res) => {
       publicUrl,
       slug,
       qrCode: qrCodeDataUrl,
+      companyName: company.name,
     });
   } catch (error) {
     console.error("[GET /public-booking-info]", error.message);
@@ -886,58 +1039,51 @@ router.get("/public-booking-info", async (req, res) => {
 
 /**
  * GET /api/conference/qr-code/download
- * Downloads QR code as PNG file
+ * Downloads branded QR code as PNG file
  */
 router.get("/qr-code/download", async (req, res) => {
-  const conn = await db.getConnection();
-  
   try {
     const companyId = getCompanyId(req.user);
 
     // Validate subscription
     await validateCompanySubscription(companyId);
 
-    await conn.beginTransaction();
-
-    // Lock and get company info
-    const [[company]] = await conn.execute(
-      `SELECT name, slug FROM companies WHERE id = ? FOR UPDATE`,
+    // Get company info
+    const [[company]] = await db.query(
+      `SELECT name, slug FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
 
     if (!company) {
-      await conn.rollback();
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Get or generate slug
+    // Get or create slug
     let slug = company.slug;
-    
     if (!slug) {
-      slug = `${company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${companyId}`;
-      await conn.execute(
-        `UPDATE companies SET slug = ? WHERE id = ?`,
-        [slug, companyId]
-      );
+      const conn = await db.getConnection();
+      try {
+        await conn.beginTransaction();
+        slug = `${company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${companyId}`;
+        await conn.execute(
+          `UPDATE companies SET slug = ? WHERE id = ?`,
+          [slug, companyId]
+        );
+        await conn.commit();
+      } catch (err) {
+        await conn.rollback();
+        throw err;
+      } finally {
+        conn.release();
+      }
     }
-
-    await conn.commit();
 
     // Construct public URL
     const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.promeet.zodopt.com";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
-    // Generate QR code as buffer
-    const qrCodeBuffer = await QRCode.toBuffer(publicUrl, {
-      errorCorrectionLevel: "M",
-      type: "png",
-      width: 1024,
-      margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF",
-      },
-    });
+    // Generate branded QR code image
+    const qrCodeBuffer = await generateBrandedQRCode(publicUrl, company.name, true);
 
     // Create safe filename
     const safeFileName = company.name
@@ -948,13 +1094,12 @@ router.get("/qr-code/download", async (req, res) => {
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${safeFileName}-booking-qr.png"`
+      `attachment; filename="${safeFileName}-conference-qr.png"`
     );
 
     res.send(qrCodeBuffer);
 
   } catch (error) {
-    await conn.rollback();
     console.error("[GET /qr-code/download]", error.message);
 
     const statusCode = error.message.includes("expired") || 
@@ -965,8 +1110,6 @@ router.get("/qr-code/download", async (req, res) => {
     res.status(statusCode).json({
       message: error.message || "Failed to download QR code",
     });
-  } finally {
-    conn.release();
   }
 });
 
