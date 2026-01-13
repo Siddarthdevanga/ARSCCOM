@@ -99,12 +99,26 @@ const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
 /* ======================================================
    TIME SCROLLER COMPONENT
 ====================================================== */
-const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false, excludedSlots = new Set() }) => {
+const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false, excludedSlots = new Set(), currentDate = null, today = null }) => {
   const [isOpen, setIsOpen] = useState(false);
   const scrollContainerRef = useRef(null);
 
+  // Get current time in minutes (rounded up to next 15-min slot)
+  const getCurrentMinutes = () => {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // Round up to next 15-minute slot
+    return Math.ceil(currentMinutes / 15) * 15;
+  };
+
   const filteredOptions = useMemo(() => {
     let options = TIME_OPTIONS;
+    
+    // Filter based on current time if it's today's date
+    if (currentDate === today && !minTime) {
+      const nowMinutes = getCurrentMinutes();
+      options = options.filter(t => t.minutes >= nowMinutes);
+    }
     
     if (minTime) {
       const minMinutes = minTime.includes(":")
@@ -117,7 +131,7 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
     options = options.filter(t => !excludedSlots.has(t.value));
     
     return options;
-  }, [minTime, excludedSlots]);
+  }, [minTime, excludedSlots, currentDate, today]);
 
   useEffect(() => {
     if (isOpen && scrollContainerRef.current && value) {
@@ -126,7 +140,12 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
       );
       if (selectedIndex !== -1) {
         const itemHeight = 40;
-        scrollContainerRef.current.scrollTop = selectedIndex * itemHeight - 80;
+        // Use requestAnimationFrame to avoid flickering
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = selectedIndex * itemHeight - 80;
+          }
+        });
       }
     }
   }, [isOpen, value, filteredOptions]);
@@ -337,8 +356,20 @@ export default function ConferenceBookings() {
     return set;
   };
 
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  // Clear start and end times when date changes to today
+  useEffect(() => {
+    if (date === today && startTime) {
+      const nowMinutes = Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15;
+      const startMins = startTime.includes(":") && !startTime.includes("M")
+        ? parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1])
+        : ampmToMinutes(startTime);
+      
+      if (startMins < nowMinutes) {
+        setStartTime("");
+        setEndTime("");
+      }
+    }
+  }, [date, today]);
 
   const isSlotFree = (s, e, ignore = null) => {
     const startMins = s.includes(":") && !s.includes("M")
@@ -651,6 +682,8 @@ export default function ConferenceBookings() {
             label="Start Time"
             disabled={planBlocked || !roomId || !date}
             excludedSlots={blockedSlots}
+            currentDate={date}
+            today={today}
           />
 
           <TimeScroller
@@ -660,6 +693,8 @@ export default function ConferenceBookings() {
             minTime={startTime}
             disabled={planBlocked || !startTime}
             excludedSlots={blockedSlots}
+            currentDate={date}
+            today={today}
           />
 
           <div className={styles.formGroup}>
@@ -723,6 +758,8 @@ export default function ConferenceBookings() {
                           onChange={setEditStart}
                           label="New Start Time"
                           excludedSlots={blocked}
+                          currentDate={normalizeDate(b.booking_date)}
+                          today={today}
                         />
 
                         <TimeScroller
@@ -731,6 +768,8 @@ export default function ConferenceBookings() {
                           label="New End Time"
                           minTime={editStart}
                           excludedSlots={blocked}
+                          currentDate={normalizeDate(b.booking_date)}
+                          today={today}
                         />
 
                         <div className={styles.bookingActions}>
