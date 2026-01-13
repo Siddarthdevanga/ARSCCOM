@@ -1033,13 +1033,13 @@ export default function ConferenceDashboard() {
                     lineHeight: 1.8
                   }}>
                     <li style={{ marginBottom: 10 }}>
-                      <strong>Share QR code or URL with visitors</strong>
+                      <strong>Share QR code or URL with Employees</strong>
                     </li>
                     <li style={{ marginBottom: 10 }}>
-                      <strong>Visitors scan QR or visit URL</strong>
+                      <strong>Authenticate with OPT</strong>
                     </li>
                     <li>
-                      <strong>Complete online registration</strong>
+                      <strong>Go ahead and Book the Conference Room</strong>
                     </li>
                   </ol>
                 </div>
