@@ -6,15 +6,15 @@ import QRCode from "qrcode";
 const router = express.Router();
 
 /* ======================================================
-   PLAN CONFIGURATION
+   PLAN CONFIGURATION (matches database enum)
 ====================================================== */
 const PLANS = {
-  TRIAL: 2,
-  BUSINESS: 6,
-  ENTERPRISE: Infinity,
+  trial: 2,
+  business: 6,
+  enterprise: Infinity,
 };
 
-const ACTIVE_STATUSES = ["ACTIVE", "TRIAL"];
+const ACTIVE_STATUSES = ["active", "trial"];
 
 /* ======================================================
    MIDDLEWARE
@@ -36,17 +36,18 @@ const isExpired = (date) => {
 };
 
 /**
- * Normalize plan name to uppercase
+ * Normalize plan name to lowercase (matches database enum)
  */
-const normalizePlan = (plan) => (plan || "TRIAL").toUpperCase();
+const normalizePlan = (plan) => (plan || "trial").toLowerCase();
 
 /**
- * Normalize subscription status to uppercase
+ * Normalize subscription status to lowercase (matches database enum)
  */
-const normalizeStatus = (status) => (status || "PENDING").toUpperCase();
+const normalizeStatus = (status) => (status || "pending").toLowerCase();
 
 /**
  * Generate public booking URL slug for a company
+ * Uses existing slug if present, otherwise generates new one
  */
 const generatePublicSlug = (companyName, companyId) => {
   const normalized = companyName
@@ -86,12 +87,12 @@ const validateCompanySubscription = async (companyId) => {
   }
 
   // Check trial expiration
-  if (plan === "TRIAL" && isExpired(company.trial_ends_at)) {
+  if (status === "trial" && isExpired(company.trial_ends_at)) {
     throw new Error("Trial period has expired. Please upgrade to continue.");
   }
 
   // Check paid subscription expiration
-  if (plan !== "TRIAL" && isExpired(company.subscription_ends_at)) {
+  if (status === "active" && isExpired(company.subscription_ends_at)) {
     throw new Error("Subscription has expired. Please renew to continue.");
   }
 
@@ -191,6 +192,7 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
 
 /**
  * Get or create public booking slug for a company (TRANSACTION SAFE)
+ * Uses existing 'slug' column from companies table
  */
 const getOrCreatePublicSlug = async (companyId) => {
   const conn = await db.getConnection();
@@ -198,9 +200,9 @@ const getOrCreatePublicSlug = async (companyId) => {
   try {
     await conn.beginTransaction();
 
-    // Lock company row
+    // Lock company row and get existing slug
     const [[company]] = await conn.execute(
-      `SELECT public_booking_slug, name FROM companies WHERE id = ? FOR UPDATE`,
+      `SELECT slug, name FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
 
@@ -209,9 +211,9 @@ const getOrCreatePublicSlug = async (companyId) => {
     }
 
     // If slug exists, return it
-    if (company.public_booking_slug) {
+    if (company.slug) {
       await conn.commit();
-      return company.public_booking_slug;
+      return company.slug;
     }
 
     // Generate new slug
@@ -219,7 +221,7 @@ const getOrCreatePublicSlug = async (companyId) => {
 
     // Update company with new slug
     await conn.execute(
-      `UPDATE companies SET public_booking_slug = ? WHERE id = ?`,
+      `UPDATE companies SET slug = ? WHERE id = ?`,
       [slug, companyId]
     );
 
@@ -251,7 +253,7 @@ router.get("/rooms", async (req, res) => {
     await syncRoomActivationByPlan(companyId, plan);
 
     const [rooms] = await db.query(
-      `SELECT id, room_number, room_name, capacity
+      `SELECT id, room_number, room_name, capacity, is_active
        FROM conference_rooms
        WHERE company_id = ? AND is_active = 1
        ORDER BY room_number ASC`,
@@ -555,7 +557,7 @@ router.get("/plan-usage", async (req, res) => {
     const roomStats = await getRoomStats(companyId);
 
     res.json({
-      plan,
+      plan: plan.toUpperCase(), // Return uppercase for frontend display
       limit: isUnlimited ? "Unlimited" : limit,
       totalRooms: roomStats.total,
       activeRooms: roomStats.active,
@@ -617,6 +619,7 @@ router.post("/sync-rooms", async (req, res) => {
 /**
  * GET /api/conference/public-booking-info
  * Returns public booking URL and generates QR code (TRANSACTION SAFE)
+ * Uses existing 'slug' column from companies table
  */
 router.get("/public-booking-info", async (req, res) => {
   try {
@@ -630,7 +633,7 @@ router.get("/public-booking-info", async (req, res) => {
 
     // Construct public URL
     const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
-    const publicUrl = `${baseUrl}/public/conference/${slug}`;
+    const publicUrl = `${baseUrl}/book/${slug}`;
 
     // Generate QR code as data URL
     const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
@@ -665,7 +668,8 @@ router.get("/public-booking-info", async (req, res) => {
 
 /**
  * GET /api/conference/qr-code/download
- * Downloads QR code as PNG file
+ * Downloads QR code as PNG file (TRANSACTION SAFE)
+ * Uses existing 'slug' column from companies table
  */
 router.get("/qr-code/download", async (req, res) => {
   const conn = await db.getConnection();
@@ -680,7 +684,7 @@ router.get("/qr-code/download", async (req, res) => {
 
     // Lock and get company info
     const [[company]] = await conn.execute(
-      `SELECT name, public_booking_slug FROM companies WHERE id = ? FOR UPDATE`,
+      `SELECT name, slug FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
 
@@ -689,12 +693,12 @@ router.get("/qr-code/download", async (req, res) => {
     }
 
     // Get or generate slug
-    let slug = company.public_booking_slug;
+    let slug = company.slug;
     
     if (!slug) {
       slug = generatePublicSlug(company.name, companyId);
       await conn.execute(
-        `UPDATE companies SET public_booking_slug = ? WHERE id = ?`,
+        `UPDATE companies SET slug = ? WHERE id = ?`,
         [slug, companyId]
       );
     }
@@ -703,7 +707,7 @@ router.get("/qr-code/download", async (req, res) => {
 
     // Construct public URL
     const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
-    const publicUrl = `${baseUrl}/public/conference/${slug}`;
+    const publicUrl = `${baseUrl}/book/${slug}`;
 
     // Generate QR code as buffer
     const qrCodeBuffer = await QRCode.toBuffer(publicUrl, {
@@ -745,6 +749,51 @@ router.get("/qr-code/download", async (req, res) => {
     });
   } finally {
     conn.release();
+  }
+});
+
+/**
+ * GET /api/conference/bookings
+ * Returns all bookings for the company
+ */
+router.get("/bookings", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    const [bookings] = await db.query(
+      `SELECT 
+        cb.id,
+        cb.room_id,
+        cb.booking_date,
+        cb.start_time,
+        cb.end_time,
+        cb.status,
+        cb.department,
+        cb.created_at,
+        cr.room_name,
+        cr.room_number
+       FROM conference_bookings cb
+       JOIN conference_rooms cr ON cb.room_id = cr.id
+       WHERE cb.company_id = ?
+       ORDER BY cb.booking_date DESC, cb.start_time DESC`,
+      [companyId]
+    );
+
+    res.json(bookings);
+  } catch (err) {
+    console.error("[GET /bookings]", err.message);
+
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      message: err.message || "Failed to fetch bookings",
+    });
   }
 });
 
