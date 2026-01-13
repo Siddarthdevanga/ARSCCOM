@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { authMiddleware } from "../middleware/auth.js";
+import QRCode from "qrcode";
 
 const router = express.Router();
 
@@ -175,6 +176,48 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
   }
 
   return room;
+};
+
+/**
+ * Generate public booking URL slug for a company
+ */
+const generatePublicSlug = (companyName, companyId) => {
+  const normalized = companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${normalized}-${companyId}`;
+};
+
+/**
+ * Get or create public booking slug for a company
+ */
+const getOrCreatePublicSlug = async (companyId) => {
+  // Check if slug already exists
+  const [[company]] = await db.query(
+    `SELECT public_booking_slug, name FROM companies WHERE id = ?`,
+    [companyId]
+  );
+
+  if (!company) {
+    throw new Error("Company not found");
+  }
+
+  // If slug exists, return it
+  if (company.public_booking_slug) {
+    return company.public_booking_slug;
+  }
+
+  // Generate new slug
+  const slug = generatePublicSlug(company.name, companyId);
+
+  // Update company with new slug
+  await db.query(
+    `UPDATE companies SET public_booking_slug = ? WHERE id = ?`,
+    [slug, companyId]
+  );
+
+  return slug;
 };
 
 /* ======================================================
@@ -556,6 +599,122 @@ router.post("/sync-rooms", async (req, res) => {
       
     res.status(statusCode).json({
       message: err.message || "Failed to sync room activation",
+    });
+  }
+});
+
+/**
+ * GET /api/conference/public-booking-info
+ * Returns public booking URL and generates QR code
+ */
+router.get("/public-booking-info", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    // Get or create public slug
+    const slug = await getOrCreatePublicSlug(companyId);
+
+    // Construct public URL (adjust the domain based on your environment)
+    const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+    const publicUrl = `${baseUrl}/public/conference/${slug}`;
+
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
+      errorCorrectionLevel: "M",
+      type: "image/png",
+      width: 512,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    res.json({
+      publicUrl,
+      slug,
+      qrCode: qrCodeDataUrl,
+    });
+  } catch (err) {
+    console.error("[GET /public-booking-info]", err.message);
+
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      message: err.message || "Failed to generate public booking information",
+    });
+  }
+});
+
+/**
+ * GET /api/conference/qr-code/download
+ * Downloads QR code as PNG file
+ */
+router.get("/qr-code/download", async (req, res) => {
+  try {
+    const companyId = req.user.company_id;
+
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    // Get company name for filename
+    const [[company]] = await db.query(
+      `SELECT name FROM companies WHERE id = ?`,
+      [companyId]
+    );
+
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Get or create public slug
+    const slug = await getOrCreatePublicSlug(companyId);
+
+    // Construct public URL
+    const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+    const publicUrl = `${baseUrl}/public/conference/${slug}`;
+
+    // Generate QR code as buffer
+    const qrCodeBuffer = await QRCode.toBuffer(publicUrl, {
+      errorCorrectionLevel: "M",
+      type: "png",
+      width: 1024,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    // Create safe filename
+    const safeFileName = company.name
+      .replace(/[^a-z0-9]/gi, "-")
+      .toLowerCase();
+
+    // Set headers for download
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${safeFileName}-booking-qr.png"`
+    );
+
+    res.send(qrCodeBuffer);
+  } catch (err) {
+    console.error("[GET /qr-code/download]", err.message);
+
+    const statusCode = err.message.includes("expired") || 
+                       err.message.includes("inactive")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      message: err.message || "Failed to download QR code",
     });
   }
 });
