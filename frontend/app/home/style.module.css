@@ -75,6 +75,32 @@ body::-webkit-scrollbar {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
+/* ================= DOWNLOAD BUTTON ================= */
+.downloadBtn {
+  width: 48px;
+  height: 48px;
+  background: #ffffff;
+  border: none;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  color: #5d00c7;
+}
+
+.downloadBtn:hover {
+  transform: translateY(-2px);
+  opacity: 0.96;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
+.downloadBtn:active {
+  transform: translateY(0);
+}
+
 /* ================= LOGOUT BUTTON ================= */
 .logoutBtn {
   width: 48px;
@@ -199,7 +225,7 @@ body::-webkit-scrollbar {
   to { opacity: 1; }
 }
 
-/* ================= LEFT SLIDE PANEL ================= */
+/* ================= LEFT SLIDE PANEL (SUBSCRIPTION) ================= */
 .subSlide {
   position: fixed;
   inset: 0 auto 0 0;
@@ -211,7 +237,7 @@ body::-webkit-scrollbar {
   padding: 28px;
   z-index: 100;
   box-shadow: 6px 0 24px rgba(0, 0, 0, 0.32);
-  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   overflow-y: auto;
   scrollbar-width: none;
 }
@@ -220,7 +246,7 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-@keyframes slideIn {
+@keyframes slideInLeft {
   from { 
     transform: translateX(-100%);
     opacity: 0;
@@ -368,15 +394,267 @@ body::-webkit-scrollbar {
   transform: translateY(-1px);
 }
 
-/* For expired/cancelled subscriptions */
-.upgradeBtn.danger {
-  background: linear-gradient(135deg, #ff1744, #d50000);
-  box-shadow: 0 8px 20px rgba(255, 23, 68, 0.35);
+/* ================= RIGHT SLIDE PANEL (DOWNLOAD) ================= */
+.downloadSlide {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: 30vw;
+  max-width: 520px;
+  height: 100vh;
+  background: #ffffff;
+  color: #333;
+  padding: 28px;
+  z-index: 100;
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.32);
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  overflow-y: auto;
+  scrollbar-width: none;
 }
 
-.upgradeBtn.danger:hover {
-  background: linear-gradient(135deg, #ff5252, #ff1744);
-  box-shadow: 0 12px 28px rgba(255, 23, 68, 0.45);
+.downloadSlide::-webkit-scrollbar {
+  display: none;
+}
+
+@keyframes slideInRight {
+  from { 
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to { 
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ================= DOWNLOAD HEADER ================= */
+.downloadHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.downloadHeader h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #5d00c7;
+  font-weight: 800;
+}
+
+.downloadHeader button {
+  border: none;
+  background: #5d00c7;
+  color: #ffffff;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.downloadHeader button:hover {
+  background: #7a00ff;
+  transform: scale(1.05);
+}
+
+.downloadHeader button:active {
+  transform: scale(0.98);
+}
+
+/* ================= SUCCESS MESSAGE ================= */
+.successMessage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+  border-left: 4px solid #00c853;
+  border-radius: 12px;
+  color: #1b5e20;
+  font-weight: 700;
+  font-size: 14px;
+  animation: slideDown 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 200, 83, 0.2);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ================= ERROR MESSAGE ================= */
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: rgba(255, 23, 68, 0.1);
+  border-left: 4px solid #ff1744;
+  border-radius: 12px;
+  color: #c62828;
+  font-weight: 700;
+  font-size: 14px;
+  animation: slideDown 0.3s ease;
+  box-shadow: 0 4px 12px rgba(255, 23, 68, 0.2);
+}
+
+/* ================= DOWNLOAD LOADING ================= */
+.downloadLoading {
+  text-align: center;
+  color: #999;
+  font-size: 15px;
+  padding: 20px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* ================= DOWNLOAD CONTENT ================= */
+.downloadContent {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ================= DOWNLOAD CARD ================= */
+.downloadCard {
+  background: #ffffff;
+  border: 2px solid #e0e0e0;
+  border-radius: 16px;
+  padding: 22px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.downloadCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #6a00ff, #8a2dff);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.downloadCard:hover {
+  border-color: #7a00ff;
+  box-shadow: 0 8px 24px rgba(122, 0, 255, 0.2);
+  transform: translateY(-4px);
+}
+
+.downloadCard:hover::before {
+  opacity: 1;
+}
+
+/* ================= DOWNLOAD CARD HEADER ================= */
+.downloadCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.downloadCardHeader h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #5d00c7;
+}
+
+/* ================= DOWNLOAD CARD STATS ================= */
+.downloadCardStats {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.statItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #f7f4ff;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.statItem:hover {
+  background: #ede7ff;
+  transform: translateX(2px);
+}
+
+.statItem span {
+  color: #555;
+  font-weight: 600;
+}
+
+.statItem strong {
+  font-size: 16px;
+  font-weight: 800;
+  color: #5d00c7;
+}
+
+/* ================= DOWNLOAD CARD BUTTON ================= */
+.downloadCardBtn {
+  width: 100%;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #7a00ff, #9500ff);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 18px rgba(122, 0, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.downloadCardBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9500ff, #b000ff);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(122, 0, 255, 0.45);
+}
+
+.downloadCardBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.downloadCardBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* ================= DOWNLOAD NOTE ================= */
+.downloadNote {
+  background: linear-gradient(135deg, #e3f2fd, #e1f5fe);
+  border-left: 4px solid #2196f3;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 10px;
+}
+
+.downloadNote p {
+  margin: 0;
+  font-size: 13px;
+  color: #0d47a1;
+  line-height: 1.6;
+  font-weight: 600;
 }
 
 /* ================= RESPONSIVE ================= */
@@ -394,7 +672,8 @@ body::-webkit-scrollbar {
     padding: 36px 26px;
   }
 
-  .subSlide {
+  .subSlide,
+  .downloadSlide {
     width: 40vw;
   }
 }
@@ -413,6 +692,7 @@ body::-webkit-scrollbar {
     height: 65px;
   }
 
+  .downloadBtn,
   .logoutBtn {
     width: 44px;
     height: 44px;
@@ -449,16 +729,19 @@ body::-webkit-scrollbar {
     height: 38px;
   }
 
-  .subSlide {
+  .subSlide,
+  .downloadSlide {
     width: 60vw;
     padding: 24px;
   }
 
-  .subHeader h3 {
+  .subHeader h3,
+  .downloadHeader h3 {
     font-size: 18px;
   }
 
-  .upgradeBtn {
+  .upgradeBtn,
+  .downloadCardBtn {
     padding: 14px 20px;
     font-size: 14px;
   }
@@ -478,6 +761,7 @@ body::-webkit-scrollbar {
     height: 55px;
   }
 
+  .downloadBtn,
   .logoutBtn {
     width: 40px;
     height: 40px;
@@ -512,16 +796,19 @@ body::-webkit-scrollbar {
     height: 34px;
   }
 
-  .subSlide {
+  .subSlide,
+  .downloadSlide {
     width: 85vw;
     padding: 20px;
   }
 
-  .subHeader h3 {
+  .subHeader h3,
+  .downloadHeader h3 {
     font-size: 16px;
   }
 
-  .subHeader button {
+  .subHeader button,
+  .downloadHeader button {
     padding: 6px 12px;
     font-size: 14px;
   }
@@ -535,9 +822,27 @@ body::-webkit-scrollbar {
     font-size: 13px;
   }
 
-  .upgradeBtn {
+  .upgradeBtn,
+  .downloadCardBtn {
     padding: 12px 18px;
     font-size: 13px;
+  }
+
+  .downloadCard {
+    padding: 18px;
+  }
+
+  .downloadCardHeader h4 {
+    font-size: 16px;
+  }
+
+  .statItem {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .statItem strong {
+    font-size: 14px;
   }
 }
 
@@ -553,7 +858,8 @@ body::-webkit-scrollbar {
   }
 }
 
-.subContent > * {
+.subContent > *,
+.downloadContent > * {
   animation: slideUpFade 0.4s ease forwards;
   animation-delay: calc(var(--index, 0) * 0.05s);
 }
