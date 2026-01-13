@@ -45,6 +45,17 @@ const normalizePlan = (plan) => (plan || "TRIAL").toUpperCase();
  */
 const normalizeStatus = (status) => (status || "PENDING").toUpperCase();
 
+/**
+ * Generate public booking URL slug for a company
+ */
+const generatePublicSlug = (companyName, companyId) => {
+  const normalized = companyName
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${normalized}-${companyId}`;
+};
+
 /* ======================================================
    CORE BUSINESS LOGIC
 ====================================================== */
@@ -179,45 +190,48 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
 };
 
 /**
- * Generate public booking URL slug for a company
- */
-const generatePublicSlug = (companyName, companyId) => {
-  const normalized = companyName
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return `${normalized}-${companyId}`;
-};
-
-/**
- * Get or create public booking slug for a company
+ * Get or create public booking slug for a company (TRANSACTION SAFE)
  */
 const getOrCreatePublicSlug = async (companyId) => {
-  // Check if slug already exists
-  const [[company]] = await db.query(
-    `SELECT public_booking_slug, name FROM companies WHERE id = ?`,
-    [companyId]
-  );
+  const conn = await db.getConnection();
+  
+  try {
+    await conn.beginTransaction();
 
-  if (!company) {
-    throw new Error("Company not found");
+    // Lock company row
+    const [[company]] = await conn.execute(
+      `SELECT public_booking_slug, name FROM companies WHERE id = ? FOR UPDATE`,
+      [companyId]
+    );
+
+    if (!company) {
+      throw new Error("Company not found");
+    }
+
+    // If slug exists, return it
+    if (company.public_booking_slug) {
+      await conn.commit();
+      return company.public_booking_slug;
+    }
+
+    // Generate new slug
+    const slug = generatePublicSlug(company.name, companyId);
+
+    // Update company with new slug
+    await conn.execute(
+      `UPDATE companies SET public_booking_slug = ? WHERE id = ?`,
+      [slug, companyId]
+    );
+
+    await conn.commit();
+    return slug;
+
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
   }
-
-  // If slug exists, return it
-  if (company.public_booking_slug) {
-    return company.public_booking_slug;
-  }
-
-  // Generate new slug
-  const slug = generatePublicSlug(company.name, companyId);
-
-  // Update company with new slug
-  await db.query(
-    `UPDATE companies SET public_booking_slug = ? WHERE id = ?`,
-    [slug, companyId]
-  );
-
-  return slug;
 };
 
 /* ======================================================
@@ -263,7 +277,6 @@ router.get("/rooms", async (req, res) => {
 /**
  * GET /api/conference/rooms/all
  * Returns all rooms (active + locked) for admin view
- * NOW INCLUDES: Subscription validation and automatic room sync
  */
 router.get("/rooms/all", async (req, res) => {
   try {
@@ -273,7 +286,6 @@ router.get("/rooms/all", async (req, res) => {
     const { plan } = await validateCompanySubscription(companyId);
     
     // Auto-sync room activation based on current plan
-    // This ensures the first N rooms (by room_number) are active
     await syncRoomActivationByPlan(companyId, plan);
 
     // Fetch all rooms with updated activation status
@@ -464,7 +476,6 @@ router.delete("/rooms/:id", async (req, res) => {
     );
 
     // Re-sync room activation after deletion
-    // This may activate a previously locked room if slots are available
     await syncRoomActivationByPlan(companyId, plan);
 
     res.json({
@@ -605,7 +616,7 @@ router.post("/sync-rooms", async (req, res) => {
 
 /**
  * GET /api/conference/public-booking-info
- * Returns public booking URL and generates QR code
+ * Returns public booking URL and generates QR code (TRANSACTION SAFE)
  */
 router.get("/public-booking-info", async (req, res) => {
   try {
@@ -614,11 +625,11 @@ router.get("/public-booking-info", async (req, res) => {
     // Validate subscription
     await validateCompanySubscription(companyId);
 
-    // Get or create public slug
+    // Get or create public slug (transaction-safe)
     const slug = await getOrCreatePublicSlug(companyId);
 
-    // Construct public URL (adjust the domain based on your environment)
-    const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+    // Construct public URL
+    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
     const publicUrl = `${baseUrl}/public/conference/${slug}`;
 
     // Generate QR code as data URL
@@ -657,27 +668,41 @@ router.get("/public-booking-info", async (req, res) => {
  * Downloads QR code as PNG file
  */
 router.get("/qr-code/download", async (req, res) => {
+  const conn = await db.getConnection();
+  
   try {
     const companyId = req.user.company_id;
 
     // Validate subscription
     await validateCompanySubscription(companyId);
 
-    // Get company name for filename
-    const [[company]] = await db.query(
-      `SELECT name FROM companies WHERE id = ?`,
+    await conn.beginTransaction();
+
+    // Lock and get company info
+    const [[company]] = await conn.execute(
+      `SELECT name, public_booking_slug FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
 
     if (!company) {
-      return res.status(404).json({ message: "Company not found" });
+      throw new Error("Company not found");
     }
 
-    // Get or create public slug
-    const slug = await getOrCreatePublicSlug(companyId);
+    // Get or generate slug
+    let slug = company.public_booking_slug;
+    
+    if (!slug) {
+      slug = generatePublicSlug(company.name, companyId);
+      await conn.execute(
+        `UPDATE companies SET public_booking_slug = ? WHERE id = ?`,
+        [slug, companyId]
+      );
+    }
+
+    await conn.commit();
 
     // Construct public URL
-    const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
     const publicUrl = `${baseUrl}/public/conference/${slug}`;
 
     // Generate QR code as buffer
@@ -705,7 +730,9 @@ router.get("/qr-code/download", async (req, res) => {
     );
 
     res.send(qrCodeBuffer);
+
   } catch (err) {
+    await conn.rollback();
     console.error("[GET /qr-code/download]", err.message);
 
     const statusCode = err.message.includes("expired") || 
@@ -716,6 +743,8 @@ router.get("/qr-code/download", async (req, res) => {
     res.status(statusCode).json({
       message: err.message || "Failed to download QR code",
     });
+  } finally {
+    conn.release();
   }
 });
 
