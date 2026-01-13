@@ -2,19 +2,20 @@ import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
+import QRCode from "qrcode";
 
 const router = express.Router();
 
 /* ======================================================
-   PLAN CONFIGURATION
+   PLAN CONFIGURATION (matches database enum: lowercase)
 ====================================================== */
 const PLANS = {
-  TRIAL: { rooms: 2, bookings: 100 },
-  BUSINESS: { rooms: 6, bookings: 1000 },
-  ENTERPRISE: { rooms: Infinity, bookings: Infinity },
+  trial: { rooms: 2, bookings: 100 },
+  business: { rooms: 6, bookings: 1000 },
+  enterprise: { rooms: Infinity, bookings: Infinity },
 };
 
-const ACTIVE_STATUSES = ["ACTIVE", "TRIAL"];
+const ACTIVE_STATUSES = ["active", "trial"];
 
 /* ======================================================
    MIDDLEWARE
@@ -72,9 +73,9 @@ const toAmPm = (time) => {
 
 const isEmail = (v = "") => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-const normalizePlan = (plan) => (plan || "TRIAL").toUpperCase();
+const normalizePlan = (plan) => (plan || "trial").toLowerCase();
 
-const normalizeStatus = (status) => (status || "PENDING").toUpperCase();
+const normalizeStatus = (status) => (status || "pending").toLowerCase();
 
 /* ======================================================
    EMAIL FUNCTIONS
@@ -184,15 +185,15 @@ const validateCompanySubscription = async (companyId) => {
       throw new Error("Subscription inactive. Please upgrade your plan.");
     }
 
-    if (plan === "TRIAL" && isExpired(company.trial_ends_at)) {
+    if (status === "trial" && isExpired(company.trial_ends_at)) {
       throw new Error("Trial period has expired. Please upgrade to continue.");
     }
 
-    if (plan !== "TRIAL" && isExpired(company.subscription_ends_at)) {
+    if (status === "active" && isExpired(company.subscription_ends_at)) {
       throw new Error("Subscription has expired. Please renew to continue.");
     }
 
-    const limits = PLANS[plan] || PLANS.TRIAL;
+    const limits = PLANS[plan] || PLANS.trial;
 
     return {
       plan,
@@ -249,7 +250,7 @@ const getRoomStats = async (companyId) => {
 
 export const syncRoomActivationByPlan = async (companyId, plan) => {
   try {
-    const limits = PLANS[plan] || PLANS.TRIAL;
+    const limits = PLANS[plan] || PLANS.trial;
     const limit = limits.rooms;
 
     await db.query(
@@ -308,6 +309,52 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
   }
 };
 
+/**
+ * Get or create public booking slug (TRANSACTION SAFE)
+ * Uses existing 'slug' column from companies table
+ */
+const getOrCreatePublicSlug = async (companyId) => {
+  const conn = await db.getConnection();
+  
+  try {
+    await conn.beginTransaction();
+
+    // Lock company row and get slug
+    const [[company]] = await conn.execute(
+      `SELECT slug, name FROM companies WHERE id = ? FOR UPDATE`,
+      [companyId]
+    );
+
+    if (!company) {
+      throw new Error("Company not found");
+    }
+
+    // If slug exists, return it
+    if (company.slug) {
+      await conn.commit();
+      return company.slug;
+    }
+
+    // Generate new slug
+    const slug = `${company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${companyId}`;
+
+    // Update company with new slug
+    await conn.execute(
+      `UPDATE companies SET slug = ? WHERE id = ?`,
+      [slug, companyId]
+    );
+
+    await conn.commit();
+    return slug;
+
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
 /* ======================================================
    API ROUTES
 ====================================================== */
@@ -324,7 +371,7 @@ router.get("/plan-usage", async (req, res) => {
     );
 
     res.json({
-      plan,
+      plan: plan.toUpperCase(), // Return uppercase for frontend display
       limit: isUnlimited ? "Unlimited" : roomLimit,
       totalRooms: roomStats.total,
       activeRooms: roomStats.active,
@@ -781,6 +828,145 @@ router.post("/sync-rooms", async (req, res) => {
   } catch (err) {
     console.error("[POST /sync-rooms]", err.message);
     res.status(500).json({ message: "Failed to sync room activation" });
+  }
+});
+
+/* ======================================================
+   QR CODE ROUTES (NEW)
+====================================================== */
+
+/**
+ * GET /api/conference/public-booking-info
+ * Returns public booking URL and generates QR code
+ */
+router.get("/public-booking-info", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    // Get or create public slug (transaction-safe)
+    const slug = await getOrCreatePublicSlug(companyId);
+
+    // Construct public URL
+    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.promeet.zodopt.com";
+    const publicUrl = `${baseUrl}/book/${slug}`;
+
+    // Generate QR code as data URL
+    const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
+      errorCorrectionLevel: "M",
+      type: "image/png",
+      width: 512,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    res.json({
+      publicUrl,
+      slug,
+      qrCode: qrCodeDataUrl,
+    });
+  } catch (error) {
+    console.error("[GET /public-booking-info]", error.message);
+
+    const statusCode = error.message.includes("expired") || 
+                       error.message.includes("inactive")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      message: error.message || "Failed to generate public booking information",
+    });
+  }
+});
+
+/**
+ * GET /api/conference/qr-code/download
+ * Downloads QR code as PNG file
+ */
+router.get("/qr-code/download", async (req, res) => {
+  const conn = await db.getConnection();
+  
+  try {
+    const companyId = getCompanyId(req.user);
+
+    // Validate subscription
+    await validateCompanySubscription(companyId);
+
+    await conn.beginTransaction();
+
+    // Lock and get company info
+    const [[company]] = await conn.execute(
+      `SELECT name, slug FROM companies WHERE id = ? FOR UPDATE`,
+      [companyId]
+    );
+
+    if (!company) {
+      await conn.rollback();
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    // Get or generate slug
+    let slug = company.slug;
+    
+    if (!slug) {
+      slug = `${company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${companyId}`;
+      await conn.execute(
+        `UPDATE companies SET slug = ? WHERE id = ?`,
+        [slug, companyId]
+      );
+    }
+
+    await conn.commit();
+
+    // Construct public URL
+    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.promeet.zodopt.com";
+    const publicUrl = `${baseUrl}/book/${slug}`;
+
+    // Generate QR code as buffer
+    const qrCodeBuffer = await QRCode.toBuffer(publicUrl, {
+      errorCorrectionLevel: "M",
+      type: "png",
+      width: 1024,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    });
+
+    // Create safe filename
+    const safeFileName = company.name
+      .replace(/[^a-z0-9]/gi, "-")
+      .toLowerCase();
+
+    // Set headers for download
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${safeFileName}-booking-qr.png"`
+    );
+
+    res.send(qrCodeBuffer);
+
+  } catch (error) {
+    await conn.rollback();
+    console.error("[GET /qr-code/download]", error.message);
+
+    const statusCode = error.message.includes("expired") || 
+                       error.message.includes("inactive")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({
+      message: error.message || "Failed to download QR code",
+    });
+  } finally {
+    conn.release();
   }
 });
 
