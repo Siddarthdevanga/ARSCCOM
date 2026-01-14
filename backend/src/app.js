@@ -12,7 +12,7 @@ import conferencePublicRoutes from "./routes/conference.public.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
-import upgradeRoutes from "./routes/upgrade.routes.js";
+import upgradeRoutes from "./routes/upgrade.route.js";
 import billingRepair from "./routes/billingRepair.route.js";
 import billingCron from "./routes/billingCron.route.js";
 import billingSyncRoutes from "./routes/billingSync.route.js";
