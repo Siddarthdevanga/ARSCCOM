@@ -3,17 +3,15 @@ import cron from "node-cron";
 import axios from "axios";
 import { db } from "../config/db.js";
 import { getZohoAccessToken } from "../services/zohoToken.service.js";
-import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
-/* ======================================================
-   HELPERS
-====================================================== */
-
-const normalizeStatus = (status) => {
+/* ================= STATUS NORMALIZER ================= */
+function normalizeStatus(status) {
   if (!status) return null;
-  return {
+  status = status.toLowerCase();
+
+  const map = {
     generated: "pending",
     created: "pending",
     initiated: "pending",
@@ -23,199 +21,179 @@ const normalizeStatus = (status) => {
     failed: "failed",
     expired: "expired",
     cancelled: "expired",
-    canceled: "expired",
-  }[status.toLowerCase()] || status.toLowerCase();
-};
+    canceled: "expired"
+  };
 
-const toMysqlDate = (d) =>
-  new Date(d).toISOString().slice(0, 19).replace("T", " ");
+  return map[status] || status;
+}
 
-const safeSendEmail = async (to, subject, html) => {
-  if (!to || !subject || !html) return;
-  try {
-    await sendEmail(to, subject, html);
-    console.log(`📧 Email sent → ${to}`);
-  } catch (err) {
-    console.error("❌ Email failed:", err.message);
-  }
-};
-
-/* ======================================================
-   EMAIL TEMPLATES (SHORT + SAFE)
-====================================================== */
-
-const emailTemplates = {
-  activated: (name, plan, endsAt) => ({
-    subject: "🎉 PROMEET Subscription Activated",
-    html: `
-      <p>Hi <b>${name}</b>,</p>
-      <p>Your <b>${plan.toUpperCase()}</b> plan is now active.</p>
-      <p><b>Valid till:</b> ${new Date(endsAt).toDateString()}</p>
-      <p><a href="${process.env.FRONTEND_URL}">Open Dashboard</a></p>
-    `,
-  }),
-
-  upgraded: (name, from, to, endsAt) => ({
-    subject: "🚀 PROMEET Plan Upgraded",
-    html: `
-      <p>Hi <b>${name}</b>,</p>
-      <p>Your plan was upgraded from <b>${from}</b> → <b>${to}</b></p>
-      <p>Valid till: ${new Date(endsAt).toDateString()}</p>
-    `,
-  }),
-
-  expiring: (name, days) => ({
-    subject: `⚠️ PROMEET expires in ${days} day(s)`,
-    html: `<p>Your subscription expires in <b>${days} days</b>.</p>`,
-  }),
-
-  expired: (name) => ({
-    subject: "🔴 PROMEET Subscription Expired",
-    html: `<p>Your subscription has expired. Please renew.</p>`,
-  }),
-};
-
-/* ======================================================
-   MAIN CRON
-====================================================== */
-
+/* ================= MAIN CRON ================= */
 async function repairBilling() {
-  console.log("⏳ BILLING CRON STARTED");
+  console.log("⏳ CRON: Checking companies for billing repair...");
 
-  const [companies] = await db.query(`
-    SELECT
-      c.id,
-      c.name,
-      c.plan,
-      c.subscription_status,
-      c.subscription_ends_at,
-      c.trial_ends_at,
-      c.last_payment_link_id,
-      c.pending_upgrade_plan,
-      (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) AS company_email
-    FROM companies c
-    WHERE c.last_payment_link_id IS NOT NULL
-  `);
+  const [companies] = await db.query(
+    `
+      SELECT 
+        id,
+        name,
+        plan,
+        zoho_customer_id,
+        last_payment_link_id
+      FROM companies 
+      WHERE 
+        zoho_customer_id IS NOT NULL
+      AND last_payment_link_id IS NOT NULL
+      AND (
+          subscription_status IN ('pending','trial')
+          OR (
+            subscription_status='active'
+            AND (
+              (plan='trial' AND trial_ends_at IS NULL)
+              OR
+              (plan='business' AND subscription_ends_at IS NULL)
+            )
+          )
+      )
+    `
+  );
 
   if (!companies.length) {
-    console.log("✅ Nothing to process");
+    console.log("✅ No companies need processing");
     return;
   }
 
   const token = await getZohoAccessToken();
   if (!token) {
-    console.error("❌ Zoho token missing");
+    console.log("❌ Zoho Token Missing");
     return;
   }
 
-  for (const c of companies) {
-    console.log(`\n🏢 ${c.name} (${c.id})`);
+  for (const company of companies) {
+    const { id, name, plan, zoho_customer_id, last_payment_link_id } = company;
+
+    console.log(`\n🏢 Checking Company → ${name} (${id})`);
 
     try {
-      const { data } = await axios.get(
-        `https://www.zohoapis.in/billing/v1/paymentlinks/${c.last_payment_link_id}`,
-        { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
+      const payRes = await axios.get(
+        `https://www.zohoapis.in/billing/v1/paymentlinks/${last_payment_link_id}`,
+        {
+          headers: { Authorization: `Zoho-oauthtoken ${token}` }
+        }
       );
 
-      const status = normalizeStatus(data?.payment_link?.status);
-      console.log("💳 Zoho Status:", status);
+      const payment = payRes?.data?.payment_link;
+      if (!payment) {
+        console.log("⚠ Payment link not found → skipping");
+        continue;
+      }
 
+      const status = normalizeStatus(payment.status);
+      console.log("🔍 Zoho Payment Status:", status);
+
+      /* ================== PAYMENT SUCCESS ================== */
       if (status === "paid") {
-        const paidAt =
-          data.payment_link.paid_at ||
-          data.payment_link.updated_time ||
-          new Date();
+        console.log("🎯 Payment Success — Activating company");
 
-        const plan = c.pending_upgrade_plan || c.plan;
-        const duration = plan === "business" ? 30 : 15;
+        let paidAt =
+          payment?.paid_at ||
+          payment?.updated_time ||
+          payment?.created_time ||
+          new Date().toISOString();
 
-        const endsAt = new Date(
-          new Date(paidAt).getTime() + duration * 86400000
+        let paidDate = new Date(paidAt);
+        if (isNaN(paidDate.getTime())) {
+          console.log("⚠ Invalid paid date, fallback → NOW");
+          paidDate = new Date();
+        }
+
+        // Convert to MySQL DATETIME (YYYY-MM-DD HH:mm:ss)
+        const mysqlPaid =
+          paidDate.toISOString().slice(0, 19).replace("T", " ");
+
+        const durationDays = plan === "business" ? 30 : 15;
+
+        const endsAtDate = new Date(
+          paidDate.getTime() + durationDays * 24 * 60 * 60 * 1000
         );
+        const mysqlEnds =
+          endsAtDate.toISOString().slice(0, 19).replace("T", " ");
+
+        console.log("💰 Paid At:", mysqlPaid);
+        console.log("📅 Ends At:", mysqlEnds);
+
+        if (plan === "business") {
+          await db.query(
+            `
+              UPDATE companies
+              SET 
+                subscription_status='active',
+                plan='business',
+                last_payment_created_at=?,
+                subscription_ends_at=?,
+                updated_at = NOW()
+              WHERE id=?
+            `,
+            [mysqlPaid, mysqlEnds, id]
+          );
+        } else {
+          await db.query(
+            `
+              UPDATE companies
+              SET 
+                subscription_status='active',
+                plan='trial',
+                last_payment_created_at=?,
+                trial_ends_at=?,
+                updated_at = NOW()
+              WHERE id=?
+            `,
+            [mysqlPaid, mysqlEnds, id]
+          );
+        }
+
+        console.log("🎉 ACTIVATION + VALIDITY UPDATED SUCCESSFULLY");
+        continue;
+      }
+
+      /* ================= FAILED / EXPIRED ================= */
+      if (status === "expired" || status === "failed") {
+        console.log("❌ Payment expired/failed — marking pending");
 
         await db.query(
           `
-          UPDATE companies
-          SET
-            subscription_status='active',
-            plan=?,
-            pending_upgrade_plan=NULL,
-            subscription_ends_at=?,
-            trial_ends_at=NULL,
-            updated_at=NOW()
-          WHERE id=?
-        `,
-          [plan, toMysqlDate(endsAt), c.id]
+            UPDATE companies 
+            SET subscription_status='pending',
+                updated_at = NOW()
+            WHERE id=?
+          `,
+          [id]
         );
 
-        const mail = c.pending_upgrade_plan
-          ? emailTemplates.upgraded(c.name, c.plan, plan, endsAt)
-          : emailTemplates.activated(c.name, plan, endsAt);
-
-        await safeSendEmail(c.company_email, mail.subject, mail.html);
+        continue;
       }
+
+      console.log("⏳ Payment still pending — retry later...");
     } catch (err) {
-      console.error("❌ Company error:", err.message);
+      console.error(
+        "❌ CRON ERROR FOR COMPANY",
+        name,
+        err?.response?.data || err
+      );
     }
   }
 
-  await checkExpiry();
-  console.log("✅ BILLING CRON FINISHED\n");
+  console.log("\n✅ CRON Billing Repair Completed\n");
 }
 
-/* ======================================================
-   EXPIRY CHECK
-====================================================== */
+/* ================= CRON SCHEDULE ================= */
+cron.schedule("*/3 * * * *", () => {
+  repairBilling();
+});
 
-async function checkExpiry() {
-  const now = new Date();
-
-  // Expiring in 3 days
-  const [expiring] = await db.query(`
-    SELECT id,name,subscription_ends_at,
-    (SELECT email FROM users WHERE company_id=companies.id LIMIT 1) email
-    FROM companies
-    WHERE subscription_status='active'
-    AND subscription_ends_at BETWEEN NOW() AND DATE_ADD(NOW(), INTERVAL 3 DAY)
-  `);
-
-  for (const c of expiring) {
-    const days = Math.ceil(
-      (new Date(c.subscription_ends_at) - now) / 86400000
-    );
-    const mail = emailTemplates.expiring(c.name, days);
-    await safeSendEmail(c.email, mail.subject, mail.html);
-  }
-
-  // Expired
-  const [expired] = await db.query(`
-    SELECT id,name,
-    (SELECT email FROM users WHERE company_id=companies.id LIMIT 1) email
-    FROM companies
-    WHERE subscription_status='active'
-    AND subscription_ends_at < NOW()
-  `);
-
-  for (const c of expired) {
-    await db.query(
-      `UPDATE companies SET subscription_status='expired', updated_at=NOW() WHERE id=?`,
-      [c.id]
-    );
-
-    const mail = emailTemplates.expired(c.name);
-    await safeSendEmail(c.email, mail.subject, mail.html);
-  }
-}
-
-/* ======================================================
-   SCHEDULE + MANUAL TRIGGER
-====================================================== */
-
-cron.schedule("*/3 * * * *", repairBilling);
-
+/* ================= MANUAL TRIGGER ================= */
 router.get("/run", async (req, res) => {
   await repairBilling();
-  res.json({ success: true, message: "Billing cron executed" });
+  res.json({ success: true, message: "Billing cron executed manually" });
 });
 
 export default router;
