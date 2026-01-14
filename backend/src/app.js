@@ -305,4 +305,3 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 export default app;
-```
