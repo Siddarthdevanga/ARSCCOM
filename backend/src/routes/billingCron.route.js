@@ -7,10 +7,11 @@ import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
-/* ================= STATUS NORMALIZER ================= */
+/* ======================================================
+   STATUS NORMALIZER
+====================================================== */
 function normalizeStatus(status) {
   if (!status) return null;
-  status = status.toLowerCase();
 
   const map = {
     generated: "pending",
@@ -25,15 +26,17 @@ function normalizeStatus(status) {
     canceled: "expired",
   };
 
-  return map[status] || status;
+  return map[String(status).toLowerCase()] || status.toLowerCase();
 }
 
-/* ================= EMAIL TEMPLATES ================= */
+/* ======================================================
+   EMAIL TEMPLATES
+====================================================== */
 const emailTemplates = {
-  subscriptionActivated: (companyName, plan, expiresAt) => ({
+  subscriptionActivated: (company, plan, expiresAt) => ({
     subject: "🎉 Your PROMEET Subscription is Now Active!",
     html: `
-      <p>Dear <b>${companyName}</b> Team,</p>
+      <p>Dear <b>${company}</b> Team,</p>
       <p>Your <b>${plan.toUpperCase()}</b> plan is now active.</p>
       <p><b>Valid until:</b> ${new Date(expiresAt).toDateString()}</p>
       <p>
@@ -44,30 +47,30 @@ const emailTemplates = {
     `,
   }),
 
-  upgradeCompleted: (companyName, fromPlan, toPlan, expiresAt) => ({
+  upgradeCompleted: (company, fromPlan, toPlan, expiresAt) => ({
     subject: "🚀 PROMEET Plan Upgrade Successful",
     html: `
-      <p>Dear <b>${companyName}</b> Team,</p>
+      <p>Dear <b>${company}</b> Team,</p>
       <p>Your plan has been upgraded:</p>
       <p><b>${fromPlan.toUpperCase()}</b> → <b>${toPlan.toUpperCase()}</b></p>
       <p><b>Valid until:</b> ${new Date(expiresAt).toDateString()}</p>
     `,
   }),
 
-  subscriptionExpiring: (companyName, plan, expiresAt, daysLeft) => ({
-    subject: `⚠️ PROMEET Subscription Expires in ${daysLeft} Days`,
+  subscriptionExpiring: (company, plan, expiresAt, daysLeft) => ({
+    subject: `⚠️ PROMEET Subscription Expires in ${daysLeft} Day${daysLeft === 1 ? "" : "s"}`,
     html: `
-      <p>Dear <b>${companyName}</b> Team,</p>
+      <p>Dear <b>${company}</b> Team,</p>
       <p>Your <b>${plan.toUpperCase()}</b> plan expires on:</p>
       <p><b>${new Date(expiresAt).toDateString()}</b></p>
       <p>Please renew to avoid service interruption.</p>
     `,
   }),
 
-  subscriptionExpired: (companyName, plan, expiredAt) => ({
+  subscriptionExpired: (company, plan, expiredAt) => ({
     subject: "🔴 PROMEET Subscription Expired",
     html: `
-      <p>Dear <b>${companyName}</b> Team,</p>
+      <p>Dear <b>${company}</b> Team,</p>
       <p>Your <b>${plan.toUpperCase()}</b> subscription expired on:</p>
       <p><b>${new Date(expiredAt).toDateString()}</b></p>
       <p>Please renew to regain access.</p>
@@ -75,12 +78,14 @@ const emailTemplates = {
   }),
 };
 
-/* ================= MAIN CRON ================= */
+/* ======================================================
+   MAIN BILLING CRON
+====================================================== */
 async function repairBilling() {
   console.log("⏳ CRON: Billing repair started");
 
   const [companies] = await db.query(`
-    SELECT 
+    SELECT
       c.id,
       c.name,
       c.plan,
@@ -91,14 +96,14 @@ async function repairBilling() {
       c.trial_ends_at,
       c.subscription_status,
       (
-        SELECT u.email 
-        FROM users u 
-        WHERE u.company_id = c.id 
-        ORDER BY u.id ASC 
+        SELECT u.email
+        FROM users u
+        WHERE u.company_id = c.id
+        ORDER BY u.id ASC
         LIMIT 1
       ) AS company_email
     FROM companies c
-    WHERE 
+    WHERE
       c.zoho_customer_id IS NOT NULL
       AND c.last_payment_link_id IS NOT NULL
       AND (
@@ -116,13 +121,13 @@ async function repairBilling() {
   `);
 
   if (!companies.length) {
-    console.log("✅ No companies to process");
+    console.log("✅ No companies require billing repair");
     return;
   }
 
   const token = await getZohoAccessToken();
   if (!token) {
-    console.error("❌ Zoho token missing");
+    console.error("❌ Zoho access token missing");
     return;
   }
 
@@ -136,9 +141,9 @@ async function repairBilling() {
       company_email,
     } = company;
 
-    console.log(`🏢 Processing ${name}`);
-
     try {
+      console.log(`🏢 Processing ${name}`);
+
       const { data } = await axios.get(
         `https://www.zohoapis.in/billing/v1/paymentlinks/${last_payment_link_id}`,
         { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
@@ -148,22 +153,23 @@ async function repairBilling() {
       if (!payment) continue;
 
       const status = normalizeStatus(payment.status);
-      console.log("💳 Payment status:", status);
+      console.log("💳 Zoho payment status:", status);
 
-      /* ===== PAYMENT SUCCESS ===== */
+      /* ================= PAYMENT SUCCESS ================= */
       if (status === "paid") {
-        const paidDate = new Date(
+        const paidAt =
           payment.paid_at ||
           payment.updated_time ||
           payment.created_time ||
-          Date.now()
-        );
+          new Date().toISOString();
 
+        const paidDate = new Date(paidAt);
         const mysqlPaid = paidDate.toISOString().slice(0, 19).replace("T", " ");
-        const activePlan = pending_upgrade_plan || plan;
-        const duration = activePlan === "business" ? 30 : 15;
 
-        const endDate = new Date(paidDate.getTime() + duration * 86400000);
+        const activePlan = pending_upgrade_plan || plan;
+        const durationDays = activePlan === "business" ? 30 : 15;
+
+        const endDate = new Date(paidDate.getTime() + durationDays * 86400000);
         const mysqlEnd = endDate.toISOString().slice(0, 19).replace("T", " ");
 
         await db.query(
@@ -188,9 +194,11 @@ async function repairBilling() {
 
           await sendEmail(company_email, mail.subject, mail.html);
         }
+
+        continue;
       }
 
-      /* ===== FAILED / EXPIRED ===== */
+      /* ================= FAILED / EXPIRED ================= */
       if (status === "expired" || status === "failed") {
         await db.query(
           `
@@ -205,7 +213,7 @@ async function repairBilling() {
         );
       }
     } catch (err) {
-      console.error("❌ Billing cron error:", name, err.message);
+      console.error(`❌ Billing cron error for ${name}:`, err.message);
     }
   }
 
@@ -213,13 +221,15 @@ async function repairBilling() {
   console.log("✅ Billing cron completed");
 }
 
-/* ================= CHECK EXPIRY ================= */
+/* ======================================================
+   EXPIRY CHECKS
+====================================================== */
 async function checkExpiringSubscriptions() {
   const now = new Date();
   const warnDate = new Date(now.getTime() + 3 * 86400000);
   const mysqlWarn = warnDate.toISOString().slice(0, 19).replace("T", " ");
 
-  /* ===== EXPIRING SOON ===== */
+  /* ================= EXPIRING SOON ================= */
   const [expiring] = await db.query(
     `
     SELECT
@@ -229,7 +239,8 @@ async function checkExpiringSubscriptions() {
       c.subscription_ends_at,
       c.trial_ends_at,
       (
-        SELECT u.email FROM users u
+        SELECT u.email
+        FROM users u
         WHERE u.company_id = c.id
         LIMIT 1
       ) AS company_email
@@ -250,9 +261,7 @@ async function checkExpiringSubscriptions() {
     const expiresAt =
       c.plan === "business" ? c.subscription_ends_at : c.trial_ends_at;
 
-    const daysLeft = Math.ceil(
-      (new Date(expiresAt) - now) / 86400000
-    );
+    const daysLeft = Math.ceil((new Date(expiresAt) - now) / 86400000);
 
     const mail = emailTemplates.subscriptionExpiring(
       c.name,
@@ -264,7 +273,7 @@ async function checkExpiringSubscriptions() {
     await sendEmail(c.company_email, mail.subject, mail.html);
   }
 
-  /* ===== EXPIRED ===== */
+  /* ================= EXPIRED ================= */
   const [expired] = await db.query(`
     SELECT
       c.id,
@@ -273,7 +282,8 @@ async function checkExpiringSubscriptions() {
       c.subscription_ends_at,
       c.trial_ends_at,
       (
-        SELECT u.email FROM users u
+        SELECT u.email
+        FROM users u
         WHERE u.company_id = c.id
         LIMIT 1
       ) AS company_email
@@ -306,13 +316,18 @@ async function checkExpiringSubscriptions() {
   }
 }
 
-/* ================= CRON SCHEDULE ================= */
+/* ======================================================
+   CRON SCHEDULE
+====================================================== */
 cron.schedule("*/3 * * * *", repairBilling);
 
-/* ================= MANUAL TRIGGER ================= */
+/* ======================================================
+   MANUAL TRIGGER (POSTMAN)
+====================================================== */
 router.get("/run", async (req, res) => {
   await repairBilling();
   res.json({ success: true, message: "Billing cron executed manually" });
 });
 
 export default router;
+
