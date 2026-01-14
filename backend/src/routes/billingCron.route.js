@@ -38,13 +38,15 @@ async function repairBilling() {
         name,
         plan,
         zoho_customer_id,
-        last_payment_link_id
+        last_payment_link_id,
+        pending_upgrade_plan
       FROM companies 
       WHERE 
         zoho_customer_id IS NOT NULL
       AND last_payment_link_id IS NOT NULL
       AND (
           subscription_status IN ('pending','trial')
+          OR pending_upgrade_plan IS NOT NULL
           OR (
             subscription_status='active'
             AND (
@@ -69,9 +71,12 @@ async function repairBilling() {
   }
 
   for (const company of companies) {
-    const { id, name, plan, zoho_customer_id, last_payment_link_id } = company;
+    const { id, name, plan, zoho_customer_id, last_payment_link_id, pending_upgrade_plan } = company;
 
     console.log(`\n🏢 Checking Company → ${name} (${id})`);
+    if (pending_upgrade_plan) {
+      console.log(`📋 Pending Upgrade: ${plan} → ${pending_upgrade_plan}`);
+    }
 
     try {
       const payRes = await axios.get(
@@ -110,7 +115,9 @@ async function repairBilling() {
         const mysqlPaid =
           paidDate.toISOString().slice(0, 19).replace("T", " ");
 
-        const durationDays = plan === "business" ? 30 : 15;
+        // Determine the plan to activate
+        const activePlan = pending_upgrade_plan || plan;
+        const durationDays = activePlan === "business" ? 30 : 15;
 
         const endsAtDate = new Date(
           paidDate.getTime() + durationDays * 24 * 60 * 60 * 1000
@@ -120,14 +127,16 @@ async function repairBilling() {
 
         console.log("💰 Paid At:", mysqlPaid);
         console.log("📅 Ends At:", mysqlEnds);
+        console.log("📦 Activating Plan:", activePlan);
 
-        if (plan === "business") {
+        if (activePlan === "business") {
           await db.query(
             `
               UPDATE companies
               SET 
                 subscription_status='active',
                 plan='business',
+                pending_upgrade_plan=NULL,
                 last_payment_created_at=?,
                 subscription_ends_at=?,
                 updated_at = NOW()
@@ -142,6 +151,7 @@ async function repairBilling() {
               SET 
                 subscription_status='active',
                 plan='trial',
+                pending_upgrade_plan=NULL,
                 last_payment_created_at=?,
                 trial_ends_at=?,
                 updated_at = NOW()
@@ -151,23 +161,43 @@ async function repairBilling() {
           );
         }
 
-        console.log("🎉 ACTIVATION + VALIDITY UPDATED SUCCESSFULLY");
+        if (pending_upgrade_plan) {
+          console.log(`✅ UPGRADE COMPLETED: ${plan} → ${pending_upgrade_plan}`);
+        } else {
+          console.log("🎉 ACTIVATION + VALIDITY UPDATED SUCCESSFULLY");
+        }
         continue;
       }
 
       /* ================= FAILED / EXPIRED ================= */
       if (status === "expired" || status === "failed") {
-        console.log("❌ Payment expired/failed — marking pending");
+        console.log("❌ Payment expired/failed");
 
-        await db.query(
-          `
-            UPDATE companies 
-            SET subscription_status='pending',
-                updated_at = NOW()
-            WHERE id=?
-          `,
-          [id]
-        );
+        // If there was a pending upgrade, clear it but keep current plan active
+        if (pending_upgrade_plan) {
+          console.log("🔄 Clearing pending upgrade, keeping current plan");
+          await db.query(
+            `
+              UPDATE companies 
+              SET pending_upgrade_plan=NULL,
+                  updated_at = NOW()
+              WHERE id=?
+            `,
+            [id]
+          );
+        } else {
+          // If no pending upgrade, mark as pending
+          console.log("⚠️ Marking subscription as pending");
+          await db.query(
+            `
+              UPDATE companies 
+              SET subscription_status='pending',
+                  updated_at = NOW()
+              WHERE id=?
+            `,
+            [id]
+          );
+        }
 
         continue;
       }
