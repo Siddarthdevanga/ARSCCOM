@@ -14,6 +14,10 @@ export default function Home() {
   const [loadingSub, setLoadingSub] = useState(false);
   const [subError, setSubError] = useState("");
 
+  // Upgrade states
+  const [upgradingBusiness, setUpgradingBusiness] = useState(false);
+  const [upgradingEnterprise, setUpgradingEnterprise] = useState(false);
+
   // Reports panel states
   const [showReports, setShowReports] = useState(false);
   const [exportStats, setExportStats] = useState(null);
@@ -153,6 +157,72 @@ export default function Home() {
     }
   };
 
+  /* ================= UPGRADE FUNCTIONS ================= */
+  const handleUpgradeBusiness = async () => {
+    try {
+      setUpgradingBusiness(true);
+      
+      const res = await fetch("/api/upgrade", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ plan: "business" })
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.message || "Upgrade failed");
+      }
+
+      if (data.success && data.redirectTo) {
+        // Redirect to Zoho payment page
+        window.location.href = data.redirectTo;
+      } else {
+        throw new Error(data.message || "No redirect URL provided");
+      }
+    } catch (err) {
+      console.error("Business upgrade error:", err);
+      alert(err.message || "Failed to process Business upgrade");
+      setUpgradingBusiness(false);
+    }
+  };
+
+  const handleUpgradeEnterprise = async () => {
+    try {
+      setUpgradingEnterprise(true);
+      
+      const res = await fetch("/api/upgrade", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${localStorage.getItem("token")}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ plan: "enterprise" })
+      });
+
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data?.message || "Upgrade failed");
+      }
+
+      if (data.success && data.redirectTo) {
+        // Close subscription panel and redirect to contact form
+        setShowSub(false);
+        router.push(data.redirectTo);
+      } else {
+        throw new Error(data.message || "No redirect URL provided");
+      }
+    } catch (err) {
+      console.error("Enterprise upgrade error:", err);
+      alert(err.message || "Failed to process Enterprise upgrade");
+      setUpgradingEnterprise(false);
+    }
+  };
+
   const handleOpenReports = () => {
     setShowReports(true);
     fetchExportStats();
@@ -161,16 +231,6 @@ export default function Home() {
   const handleOpenSubscription = () => {
     setShowSub(true);
     fetchSubscription();
-  };
-
-  const handleUpgradeBusiness = () => {
-    setShowSub(false);
-    router.push("/upgrade?plan=business");
-  };
-
-  const handleUpgradeEnterprise = () => {
-    setShowSub(false);
-    router.push("/upgrade?plan=enterprise");
   };
 
   const handleRenew = () => {
@@ -408,16 +468,17 @@ export default function Home() {
                           </div>
                         </div>
                         <ul className={styles.planFeatures}>
-                          <li>✓ Unlimited visitors</li>
-                          <li>✓ Unlimited conference bookings</li>
-                          <li>✓ Advanced reporting</li>
-                          <li>✓ Priority support</li>
+                          <li>Unlimited visitors</li>
+                          <li>Unlimited conference bookings</li>
+                          <li>Advanced reporting</li>
+                          <li>Priority support</li>
                         </ul>
                         <button
                           className={styles.upgradeBusinessBtn}
                           onClick={handleUpgradeBusiness}
+                          disabled={upgradingBusiness}
                         >
-                          Upgrade to Business
+                          {upgradingBusiness ? "Processing..." : "Upgrade to Business"}
                         </button>
                       </div>
                     )}
@@ -435,17 +496,18 @@ export default function Home() {
                           </div>
                         </div>
                         <ul className={styles.planFeatures}>
-                          <li>✓ Everything in Business</li>
-                          <li>✓ Custom integrations</li>
-                          <li>✓ Dedicated account manager</li>
-                          <li>✓ Custom branding</li>
-                          <li>✓ SLA guarantee</li>
+                          <li>Everything in Business</li>
+                          <li>Custom integrations</li>
+                          <li>Dedicated account manager</li>
+                          <li>Custom branding</li>
+                          <li>SLA guarantee</li>
                         </ul>
                         <button
                           className={styles.upgradeEnterpriseBtn}
                           onClick={handleUpgradeEnterprise}
+                          disabled={upgradingEnterprise}
                         >
-                          Contact Sales
+                          {upgradingEnterprise ? "Processing..." : "Contact Sales"}
                         </button>
                       </div>
                     )}
