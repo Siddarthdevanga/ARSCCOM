@@ -12,7 +12,7 @@ const SUCCESS_STATUSES = ["paid", "success", "completed"];
 
 /* =====================================================
    ZOHO PAYMENT PUSH WEBHOOK
-   URL → /api/payment/zoho/push
+   URL → /api/webhook/zoho/push
 ===================================================== */
 router.post("/push", async (req, res) => {
   try {
@@ -100,7 +100,8 @@ router.post("/push", async (req, res) => {
       SELECT 
         id,
         plan,
-        subscription_status
+        subscription_status,
+        pending_upgrade_plan
       FROM companies
       WHERE zoho_customer_id = ?
       LIMIT 1
@@ -113,11 +114,18 @@ router.post("/push", async (req, res) => {
       return res.json({ success: true });
     }
 
+    console.log("🏢 Company ID:", company.id);
+    console.log("📋 Current Plan:", company.plan);
+    console.log("📊 Current Status:", company.subscription_status);
+    if (company.pending_upgrade_plan) {
+      console.log("🔄 Pending Upgrade:", company.pending_upgrade_plan);
+    }
+
     /* ================================
        PREVENT DOUBLE ACTIVATION
     ================================= */
-    if (company.subscription_status === "active") {
-      console.log("🔁 Subscription already active — skipping");
+    if (company.subscription_status === "active" && !company.pending_upgrade_plan) {
+      console.log("🔁 Subscription already active and no pending upgrade — skipping");
       return res.json({ success: true });
     }
 
@@ -134,25 +142,35 @@ router.post("/push", async (req, res) => {
     }
 
     /* ================================
+       DETERMINE PLAN TO ACTIVATE
+    ================================= */
+    const planToActivate = company.pending_upgrade_plan || company.plan || "trial";
+    console.log("🎯 Plan to Activate:", planToActivate);
+
+    /* ================================
        ACTIVATE SUBSCRIPTION
     ================================= */
-    console.log("🎯 Activating subscription...");
+    console.log("✨ Activating subscription...");
 
     const now = new Date();
     const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
 
-    const durationDays =
-      (company.plan || "trial").toLowerCase() === "trial" ? 15 : 30;
+    const durationDays = planToActivate.toLowerCase() === "business" ? 30 : 15;
 
     const end = new Date(now.getTime() + durationDays * 86400000);
     const endSQL = end.toISOString().slice(0, 19).replace("T", " ");
 
-    if ((company.plan || "").toLowerCase() === "trial") {
+    console.log("💰 Payment Date:", nowSQL);
+    console.log("📅 Expires On:", endSQL);
+
+    if (planToActivate.toLowerCase() === "trial") {
       await db.query(
         `
         UPDATE companies
         SET
           subscription_status = 'active',
+          plan = 'trial',
+          pending_upgrade_plan = NULL,
           trial_ends_at = ?,
           last_payment_created_at = ?,
           updated_at = NOW()
@@ -160,12 +178,14 @@ router.post("/push", async (req, res) => {
         `,
         [endSQL, nowSQL, company.id]
       );
-    } else {
+    } else if (planToActivate.toLowerCase() === "business") {
       await db.query(
         `
         UPDATE companies
         SET
           subscription_status = 'active',
+          plan = 'business',
+          pending_upgrade_plan = NULL,
           subscription_ends_at = ?,
           last_payment_created_at = ?,
           updated_at = NOW()
@@ -173,9 +193,29 @@ router.post("/push", async (req, res) => {
         `,
         [endSQL, nowSQL, company.id]
       );
+    } else {
+      // Enterprise or other plans
+      await db.query(
+        `
+        UPDATE companies
+        SET
+          subscription_status = 'active',
+          plan = ?,
+          pending_upgrade_plan = NULL,
+          last_payment_created_at = ?,
+          updated_at = NOW()
+        WHERE id = ?
+        `,
+        [planToActivate, nowSQL, company.id]
+      );
     }
 
-    console.log("🎉 Subscription activated successfully");
+    if (company.pending_upgrade_plan) {
+      console.log(`🎉 UPGRADE COMPLETED: ${company.plan} → ${planToActivate}`);
+    } else {
+      console.log("🎉 SUBSCRIPTION ACTIVATED:", planToActivate);
+    }
+
     return res.json({ success: true });
   } catch (err) {
     console.error("❌ ZOHO WEBHOOK ERROR:", err);
