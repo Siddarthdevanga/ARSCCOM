@@ -75,30 +75,36 @@ body::-webkit-scrollbar {
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
 }
 
-/* ================= DOWNLOAD BUTTON ================= */
-.downloadBtn {
-  width: 48px;
-  height: 48px;
+/* ================= REPORTS BUTTON ================= */
+.reportsBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
   background: #ffffff;
   border: none;
   border-radius: 14px;
-  display: grid;
-  place-items: center;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #5d00c7;
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.22);
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
-  color: #5d00c7;
 }
 
-.downloadBtn:hover {
+.reportsBtn:hover {
   transform: translateY(-2px);
   opacity: 0.96;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.32);
 }
 
-.downloadBtn:active {
+.reportsBtn:active {
   transform: translateY(0);
+}
+
+.reportsBtn span {
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 
 /* ================= LOGOUT BUTTON ================= */
@@ -394,8 +400,8 @@ body::-webkit-scrollbar {
   transform: translateY(-1px);
 }
 
-/* ================= RIGHT SLIDE PANEL (DOWNLOAD) ================= */
-.downloadSlide {
+/* ================= RIGHT SLIDE PANEL (REPORTS) ================= */
+.reportsSlide {
   position: fixed;
   inset: 0 0 0 auto;
   width: 30vw;
@@ -411,7 +417,7 @@ body::-webkit-scrollbar {
   scrollbar-width: none;
 }
 
-.downloadSlide::-webkit-scrollbar {
+.reportsSlide::-webkit-scrollbar {
   display: none;
 }
 
@@ -426,22 +432,22 @@ body::-webkit-scrollbar {
   }
 }
 
-/* ================= DOWNLOAD HEADER ================= */
-.downloadHeader {
+/* ================= REPORTS HEADER ================= */
+.reportsHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.downloadHeader h3 {
+.reportsHeader h3 {
   margin: 0;
   font-size: 20px;
   color: #5d00c7;
   font-weight: 800;
 }
 
-.downloadHeader button {
+.reportsHeader button {
   border: none;
   background: #5d00c7;
   color: #ffffff;
@@ -453,12 +459,12 @@ body::-webkit-scrollbar {
   transition: all 0.2s ease;
 }
 
-.downloadHeader button:hover {
+.reportsHeader button:hover {
   background: #7a00ff;
   transform: scale(1.05);
 }
 
-.downloadHeader button:active {
+.reportsHeader button:active {
   transform: scale(0.98);
 }
 
@@ -507,8 +513,8 @@ body::-webkit-scrollbar {
   box-shadow: 0 4px 12px rgba(255, 23, 68, 0.2);
 }
 
-/* ================= DOWNLOAD LOADING ================= */
-.downloadLoading {
+/* ================= REPORTS LOADING ================= */
+.reportsLoading {
   text-align: center;
   color: #999;
   font-size: 15px;
@@ -516,16 +522,16 @@ body::-webkit-scrollbar {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-/* ================= DOWNLOAD CONTENT ================= */
-.downloadContent {
+/* ================= REPORTS CONTENT ================= */
+.reportsContent {
   margin-top: 24px;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* ================= DOWNLOAD CARD ================= */
-.downloadCard {
+/* ================= REPORT CARD ================= */
+.reportCard {
   background: #ffffff;
   border: 2px solid #e0e0e0;
   border-radius: 16px;
@@ -535,7 +541,7 @@ body::-webkit-scrollbar {
   overflow: hidden;
 }
 
-.downloadCard::before {
+.reportCard::before {
   content: "";
   position: absolute;
   top: 0;
@@ -547,33 +553,33 @@ body::-webkit-scrollbar {
   transition: opacity 0.3s ease;
 }
 
-.downloadCard:hover {
+.reportCard:hover {
   border-color: #7a00ff;
   box-shadow: 0 8px 24px rgba(122, 0, 255, 0.2);
   transform: translateY(-4px);
 }
 
-.downloadCard:hover::before {
+.reportCard:hover::before {
   opacity: 1;
 }
 
-/* ================= DOWNLOAD CARD HEADER ================= */
-.downloadCardHeader {
+/* ================= REPORT CARD HEADER ================= */
+.reportCardHeader {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
 }
 
-.downloadCardHeader h4 {
+.reportCardHeader h4 {
   margin: 0;
   font-size: 18px;
   font-weight: 800;
   color: #5d00c7;
 }
 
-/* ================= DOWNLOAD CARD STATS ================= */
-.downloadCardStats {
+/* ================= REPORT CARD STATS ================= */
+.reportCardStats {
   margin-bottom: 16px;
   display: flex;
   flex-direction: column;
@@ -607,8 +613,8 @@ body::-webkit-scrollbar {
   color: #5d00c7;
 }
 
-/* ================= DOWNLOAD CARD BUTTON ================= */
-.downloadCardBtn {
+/* ================= REPORT CARD BUTTON ================= */
+.reportCardBtn {
   width: 100%;
   padding: 14px 20px;
   background: linear-gradient(135deg, #7a00ff, #9500ff);
@@ -624,24 +630,24 @@ body::-webkit-scrollbar {
   letter-spacing: 0.5px;
 }
 
-.downloadCardBtn:hover:not(:disabled) {
+.reportCardBtn:hover:not(:disabled) {
   background: linear-gradient(135deg, #9500ff, #b000ff);
   transform: translateY(-2px);
   box-shadow: 0 8px 22px rgba(122, 0, 255, 0.45);
 }
 
-.downloadCardBtn:active:not(:disabled) {
+.reportCardBtn:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.downloadCardBtn:disabled {
+.reportCardBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   box-shadow: none;
 }
 
-/* ================= DOWNLOAD NOTE ================= */
-.downloadNote {
+/* ================= REPORT NOTE ================= */
+.reportNote {
   background: linear-gradient(135deg, #e3f2fd, #e1f5fe);
   border-left: 4px solid #2196f3;
   border-radius: 12px;
@@ -649,7 +655,7 @@ body::-webkit-scrollbar {
   margin-top: 10px;
 }
 
-.downloadNote p {
+.reportNote p {
   margin: 0;
   font-size: 13px;
   color: #0d47a1;
@@ -673,7 +679,7 @@ body::-webkit-scrollbar {
   }
 
   .subSlide,
-  .downloadSlide {
+  .reportsSlide {
     width: 40vw;
   }
 }
@@ -692,7 +698,12 @@ body::-webkit-scrollbar {
     height: 65px;
   }
 
-  .downloadBtn,
+  .reportsBtn {
+    padding: 10px 16px;
+    font-size: 14px;
+    gap: 6px;
+  }
+
   .logoutBtn {
     width: 44px;
     height: 44px;
@@ -730,18 +741,18 @@ body::-webkit-scrollbar {
   }
 
   .subSlide,
-  .downloadSlide {
+  .reportsSlide {
     width: 60vw;
     padding: 24px;
   }
 
   .subHeader h3,
-  .downloadHeader h3 {
+  .reportsHeader h3 {
     font-size: 18px;
   }
 
   .upgradeBtn,
-  .downloadCardBtn {
+  .reportCardBtn {
     padding: 14px 20px;
     font-size: 14px;
   }
@@ -761,7 +772,12 @@ body::-webkit-scrollbar {
     height: 55px;
   }
 
-  .downloadBtn,
+  .reportsBtn {
+    padding: 8px 12px;
+    font-size: 13px;
+    gap: 4px;
+  }
+
   .logoutBtn {
     width: 40px;
     height: 40px;
@@ -797,18 +813,18 @@ body::-webkit-scrollbar {
   }
 
   .subSlide,
-  .downloadSlide {
+  .reportsSlide {
     width: 85vw;
     padding: 20px;
   }
 
   .subHeader h3,
-  .downloadHeader h3 {
+  .reportsHeader h3 {
     font-size: 16px;
   }
 
   .subHeader button,
-  .downloadHeader button {
+  .reportsHeader button {
     padding: 6px 12px;
     font-size: 14px;
   }
@@ -823,16 +839,16 @@ body::-webkit-scrollbar {
   }
 
   .upgradeBtn,
-  .downloadCardBtn {
+  .reportCardBtn {
     padding: 12px 18px;
     font-size: 13px;
   }
 
-  .downloadCard {
+  .reportCard {
     padding: 18px;
   }
 
-  .downloadCardHeader h4 {
+  .reportCardHeader h4 {
     font-size: 16px;
   }
 
@@ -859,7 +875,7 @@ body::-webkit-scrollbar {
 }
 
 .subContent > *,
-.downloadContent > * {
+.reportsContent > * {
   animation: slideUpFade 0.4s ease forwards;
   animation-delay: calc(var(--index, 0) * 0.05s);
 }
