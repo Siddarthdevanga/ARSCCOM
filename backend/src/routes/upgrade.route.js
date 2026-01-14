@@ -308,8 +308,8 @@ router.get("/options", authenticate, async (req, res) => {
           isPending: pendingUpgrade === "business",
           features: [
             "Unlimited visitors",
-            "Unlimited conference bookings",
-            "Advanced reporting",
+            "1000 conference bookings",
+            "6 Conference Rooms",
             "Email notifications",
             "Priority support"
           ]
