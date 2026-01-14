@@ -12,6 +12,7 @@ import conferencePublicRoutes from "./routes/conference.public.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
+import upgradeRoutes from "./routes/upgrade.routes.js";
 import billingRepair from "./routes/billingRepair.route.js";
 import billingCron from "./routes/billingCron.route.js";
 import billingSyncRoutes from "./routes/billingSync.route.js";
@@ -158,6 +159,7 @@ app.get("/", (req, res) => {
         "/api/exports",
         "/api/payment",
         "/api/subscription",
+        "/api/upgrade",
       ],
     },
   });
@@ -188,6 +190,7 @@ app.use("/api/exports", exportsRoutes);
 // Payment & Subscription Management
 app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription", subscriptionRoutes);
+app.use("/api/upgrade", upgradeRoutes);
 app.use("/api/payment/zoho", billingSyncRoutes);
 
 // Billing Management
@@ -213,6 +216,7 @@ app.use((req, res) => {
       "/api/exports",
       "/api/payment",
       "/api/subscription",
+      "/api/upgrade",
     ],
   });
 });
@@ -301,3 +305,4 @@ process.on("unhandledRejection", (reason, promise) => {
 });
 
 export default app;
+```
