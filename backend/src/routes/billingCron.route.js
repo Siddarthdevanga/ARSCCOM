@@ -3,6 +3,7 @@ import cron from "node-cron";
 import axios from "axios";
 import { db } from "../config/db.js";
 import { getZohoAccessToken } from "../services/zohoToken.service.js";
+import { sendEmail } from "../utils/mailer.js";
 
 
 const router = express.Router();
