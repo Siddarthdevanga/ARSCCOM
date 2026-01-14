@@ -6,24 +6,18 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 const router = express.Router();
 
 /**
- * UPGRADE FLOW
+ * UPGRADE FLOW - CRITICAL FIX
  *
- * PLANS:
- * - BUSINESS  → ₹500 / Month (Redirect to Zoho payment)
- * - ENTERPRISE → Contact Sales (Redirect to contact form)
- *
- * UPGRADE PATHS:
- * - Trial → Business (Generate payment link, return URL)
- * - Trial → Enterprise (Return contact form URL)
- * - Business → Enterprise (Return contact form URL)
- *
- * KEY BEHAVIOR:
- * - If user clicks upgrade but doesn't pay, they continue with current plan
- * - Status changes to "pending_upgrade" instead of "pending"
- * - Current plan remains active until expiry
- * - Once payment is completed (via webhook), new plan activates
- *
- * Activation happens ONLY via Zoho Webhook after payment success
+ * ISSUE: Users clicking "upgrade" but not paying were losing access
+ * SOLUTION: Never touch subscription_status when creating upgrade payment link
+ * 
+ * RULES:
+ * 1. Clicking "Upgrade" → Only set pending_upgrade_plan
+ * 2. subscription_status stays "active" or "trial" (unchanged)
+ * 3. User continues with current plan until:
+ *    - Payment succeeds (webhook activates new plan)
+ *    - Current plan expires naturally
+ * 4. Abandoned upgrades don't affect access
  */
 
 /* ================= UPGRADE ENDPOINT ================= */
@@ -60,7 +54,9 @@ router.post("/", authenticate, async (req, res) => {
         zoho_customer_id,
         last_payment_link,
         last_payment_link_id,
-        pending_upgrade_plan
+        pending_upgrade_plan,
+        trial_ends_at,
+        subscription_ends_at
       FROM companies
       WHERE id=? LIMIT 1
       `,
@@ -75,15 +71,15 @@ router.post("/", authenticate, async (req, res) => {
     const currentPlan = (company.plan || "").toLowerCase();
     const status = (company.subscription_status || "").toLowerCase();
 
-    console.log(`🔄 Upgrade Request: Company ${companyId} | Current: ${currentPlan} | Requested: ${plan}`);
+    console.log(`🔄 Upgrade Request: Company ${companyId} | Current: ${currentPlan} (${status}) | Requested: ${plan}`);
 
     /* ================= ENTERPRISE UPGRADE (REDIRECT TO CONTACT FORM) ================= */
     if (plan === "enterprise") {
       console.log(`📧 Redirecting Company ${companyId} to contact form for Enterprise upgrade`);
 
-      // Mark that they're interested in Enterprise upgrade
+      // CRITICAL: Only update pending_upgrade_plan, NOT subscription_status
       await db.query(
-        `UPDATE companies SET pending_upgrade_plan = 'enterprise' WHERE id = ?`,
+        `UPDATE companies SET pending_upgrade_plan = 'enterprise', updated_at = NOW() WHERE id = ?`,
         [companyId]
       );
 
@@ -91,10 +87,11 @@ router.post("/", authenticate, async (req, res) => {
         success: true,
         requiresContact: true,
         redirectTo: "/auth/contact-us",
-        message: "Please fill out the contact form to discuss Enterprise plan options.",
+        message: "Please fill out the contact form to discuss Enterprise plan options. Your current plan remains active.",
         data: {
           plan: "enterprise",
-          currentPlan: currentPlan
+          currentPlan: currentPlan,
+          currentPlanContinues: true
         }
       });
     }
@@ -102,7 +99,7 @@ router.post("/", authenticate, async (req, res) => {
     /* ================= BUSINESS UPGRADE (GENERATE PAYMENT LINK) ================= */
     if (plan === "business") {
       // Check if already on Business or Enterprise
-      if (currentPlan === "business" && ["active", "trial"].includes(status)) {
+      if (currentPlan === "business" && ["active"].includes(status)) {
         return res.status(403).json({
           success: false,
           message: "Already on Business plan"
@@ -145,11 +142,12 @@ router.post("/", authenticate, async (req, res) => {
               success: true,
               reused: true,
               redirectTo: data.payment_link.url,
-              message: "Existing Business upgrade payment link still valid",
+              message: "Existing Business upgrade payment link still valid. Your current plan remains active until payment.",
               data: {
                 plan: "business",
                 amount: "500.00",
-                currency: "INR"
+                currency: "INR",
+                currentPlanContinues: true
               }
             });
           }
@@ -177,7 +175,7 @@ router.post("/", authenticate, async (req, res) => {
         if (!customerId) throw new Error("Zoho failed to create customer");
 
         await db.query(
-          `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
+          `UPDATE companies SET zoho_customer_id=?, updated_at=NOW() WHERE id=?`,
           [customerId, companyId]
         );
 
@@ -228,9 +226,9 @@ router.post("/", authenticate, async (req, res) => {
 
       console.log(`✅ Payment link created: ${link.payment_link_id}`);
 
-      /* ================= UPDATE DB - MARK AS PENDING UPGRADE ================= */
-      // IMPORTANT: Keep current subscription_status active
-      // Only mark pending_upgrade_plan so user can continue current plan
+      /* ================= UPDATE DB - CRITICAL FIX ================= */
+      // ONLY UPDATE: pending_upgrade_plan, payment link fields
+      // DO NOT TOUCH: subscription_status (keeps current access)
       await db.query(
         `
         UPDATE companies
@@ -238,13 +236,15 @@ router.post("/", authenticate, async (req, res) => {
           pending_upgrade_plan = 'business',
           last_payment_link = ?,
           last_payment_link_id = ?,
-          last_payment_created_at = NOW()
+          last_payment_created_at = NOW(),
+          updated_at = NOW()
         WHERE id=?
         `,
         [link.url, link.payment_link_id, companyId]
       );
 
-      console.log(`✅ Database updated: Company ${companyId} → Pending Business upgrade (current plan still active)`);
+      console.log(`✅ Database updated: Company ${companyId} → Pending Business upgrade`);
+      console.log(`✅ IMPORTANT: subscription_status unchanged (${status}) - User keeps access`);
 
       return res.json({
         success: true,
@@ -254,7 +254,8 @@ router.post("/", authenticate, async (req, res) => {
           plan: "business",
           amount: "500.00",
           currency: "INR",
-          currentPlanContinues: true
+          currentPlanContinues: true,
+          currentStatus: status
         }
       });
     }
@@ -310,8 +311,7 @@ router.get("/options", authenticate, async (req, res) => {
             "Unlimited visitors",
             "1000 conference bookings",
             "6 Conference Rooms",
-            "Email notifications",
-            "Priority support"
+            "Dedicated Support"
           ]
         },
         {
@@ -322,12 +322,10 @@ router.get("/options", authenticate, async (req, res) => {
           requiresContact: true,
           isPending: pendingUpgrade === "enterprise",
           features: [
-            "Everything in Business",
-            "Custom integrations",
-            "Dedicated account manager",
-            "Custom branding",
-            "SLA guarantee",
-            "On-premise deployment option"
+            "Unlimited Visitors",
+            "Unlimited Conference Bookings",
+            "Unlimited Conference Rooms",
+            "Dedicated Support"
           ]
         }
       );
@@ -340,12 +338,10 @@ router.get("/options", authenticate, async (req, res) => {
         requiresContact: true,
         isPending: pendingUpgrade === "enterprise",
         features: [
-          "Everything in Business",
-          "Custom integrations",
-          "Dedicated account manager",
-          "Custom branding",
-          "SLA guarantee",
-          "On-premise deployment option"
+          "Unlimited Visitors",
+          "Unlimited Conference Bookings",
+          "Unlimited Conference Rooms",
+          "Dedicated Support"
         ]
       });
     }
