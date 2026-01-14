@@ -9,13 +9,13 @@ const router = express.Router();
  * UPGRADE FLOW
  *
  * PLANS:
- * - BUSINESS  → ₹500 / Month (Recurring)
- * - ENTERPRISE → Contact Sales (Custom Pricing)
+ * - BUSINESS  → ₹500 / Month (Redirect to Zoho payment)
+ * - ENTERPRISE → Contact Sales (Redirect to contact form)
  *
  * UPGRADE PATHS:
- * - Trial → Business (Direct payment)
- * - Trial → Enterprise (Contact form submission)
- * - Business → Enterprise (Contact form submission)
+ * - Trial → Business (Generate payment link, return URL)
+ * - Trial → Enterprise (Return contact form URL)
+ * - Business → Enterprise (Return contact form URL)
  *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
@@ -23,7 +23,7 @@ const router = express.Router();
 /* ================= UPGRADE ENDPOINT ================= */
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { plan, contactInfo } = req.body;
+    const { plan } = req.body;
     const email = req.user?.email;
     const companyId = req.user?.companyId;
 
@@ -70,49 +70,23 @@ router.post("/", authenticate, async (req, res) => {
 
     console.log(`🔄 Upgrade Request: Company ${companyId} | Current: ${currentPlan} | Requested: ${plan}`);
 
-    /* ================= ENTERPRISE UPGRADE (CONTACT SALES) ================= */
+    /* ================= ENTERPRISE UPGRADE (REDIRECT TO CONTACT FORM) ================= */
     if (plan === "enterprise") {
-      // Validate contact info for enterprise
-      if (!contactInfo || !contactInfo.name || !contactInfo.phone || !contactInfo.message) {
-        return res.status(400).json({
-          success: false,
-          message: "Contact information required for Enterprise plan (name, phone, message)"
-        });
-      }
-
-      // Store upgrade request in database
-      await db.query(
-        `
-        INSERT INTO upgrade_requests 
-        (company_id, current_plan, requested_plan, contact_name, contact_phone, message, status, created_at)
-        VALUES (?, ?, 'enterprise', ?, ?, ?, 'pending', NOW())
-        `,
-        [
-          companyId,
-          currentPlan || 'trial',
-          contactInfo.name,
-          contactInfo.phone,
-          contactInfo.message
-        ]
-      );
-
-      console.log(`📧 Enterprise upgrade request stored for Company ${companyId}`);
-
-      // TODO: Send email notification to sales team
-      // TODO: Send confirmation email to customer
+      console.log(`📧 Redirecting Company ${companyId} to contact form for Enterprise upgrade`);
 
       return res.json({
         success: true,
         requiresContact: true,
-        message: "Enterprise upgrade request submitted. Our sales team will contact you within 24 hours.",
+        redirectTo: "/auth/contact-us",
+        message: "Please fill out the contact form to discuss Enterprise plan options.",
         data: {
           plan: "enterprise",
-          status: "pending_contact"
+          currentPlan: currentPlan
         }
       });
     }
 
-    /* ================= BUSINESS UPGRADE (PAYMENT REQUIRED) ================= */
+    /* ================= BUSINESS UPGRADE (GENERATE PAYMENT LINK) ================= */
     if (plan === "business") {
       // Check if already on Business or Enterprise
       if (currentPlan === "business" && ["active", "trial"].includes(status)) {
@@ -157,8 +131,13 @@ router.post("/", authenticate, async (req, res) => {
             return res.json({
               success: true,
               reused: true,
+              redirectTo: data.payment_link.url,
               message: "Existing Business upgrade payment link still valid",
-              url: data.payment_link.url
+              data: {
+                plan: "business",
+                amount: "500.00",
+                currency: "INR"
+              }
             });
           }
 
@@ -255,8 +234,8 @@ router.post("/", authenticate, async (req, res) => {
 
       return res.json({
         success: true,
+        redirectTo: link.url,
         message: "Business upgrade payment link generated successfully",
-        url: link.url,
         data: {
           plan: "business",
           amount: "500.00",
