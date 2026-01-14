@@ -434,38 +434,36 @@ async function repairBilling() {
   console.log("⏳ CRON: Checking companies for billing repair...");
 
   const [companies] = await db.query(
-    `
-      SELECT 
-        c.id,
-        c.name,
-        c.plan,
-        c.zoho_customer_id,
-        c.last_payment_link_id,
-        c.pending_upgrade_plan,
-        c.subscription_ends_at,
-        c.trial_ends_at,
-        c.subscription_status,
-        u.email as company_email
-      FROM companies c
-      LEFT JOIN users u ON c.id = u.company_id AND u.role = 'admin'
-      WHERE 
-        c.zoho_customer_id IS NOT NULL
-      AND c.last_payment_link_id IS NOT NULL
-      AND (
-          c.subscription_status IN ('pending','trial')
-          OR c.pending_upgrade_plan IS NOT NULL
-          OR (
-            c.subscription_status='active'
-            AND (
-              (c.plan='trial' AND c.trial_ends_at IS NULL)
-              OR
-              (c.plan='business' AND c.subscription_ends_at IS NULL)
-            )
+  `
+    SELECT 
+      c.id,
+      c.name,
+      c.plan,
+      c.zoho_customer_id,
+      c.last_payment_link_id,
+      c.pending_upgrade_plan,
+      c.subscription_ends_at,
+      c.trial_ends_at,
+      c.subscription_status,
+      (SELECT email FROM users WHERE company_id = c.id ORDER BY id ASC LIMIT 1) as company_email
+    FROM companies c
+    WHERE 
+      c.zoho_customer_id IS NOT NULL
+    AND c.last_payment_link_id IS NOT NULL
+    AND (
+        c.subscription_status IN ('pending','trial')
+        OR c.pending_upgrade_plan IS NOT NULL
+        OR (
+          c.subscription_status='active'
+          AND (
+            (c.plan='trial' AND c.trial_ends_at IS NULL)
+            OR
+            (c.plan='business' AND c.subscription_ends_at IS NULL)
           )
-      )
-    `
-  );
-
+        )
+    )
+  `
+);
   if (!companies.length) {
     console.log("✅ No companies need processing");
   }
