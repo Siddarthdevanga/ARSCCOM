@@ -469,8 +469,8 @@ export default function Home() {
                         </div>
                         <ul className={styles.planFeatures}>
                           <li>Unlimited visitors</li>
-                          <li>Unlimited conference bookings</li>
-                          <li>Advanced reporting</li>
+                          <li>1000 Conference Bookings</li>
+                          <li>6 Conference Rooms</li>
                           <li>Priority support</li>
                         </ul>
                         <button
@@ -500,7 +500,6 @@ export default function Home() {
                           <li>Custom integrations</li>
                           <li>Dedicated account manager</li>
                           <li>Custom branding</li>
-                          <li>SLA guarantee</li>
                         </ul>
                         <button
                           className={styles.upgradeEnterpriseBtn}
