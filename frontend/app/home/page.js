@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, DoorOpen, Download, FileSpreadsheet, CheckCircle, X } from "lucide-react";
+import { Users, DoorOpen, FileSpreadsheet, CheckCircle, X } from "lucide-react";
 import styles from "./style.module.css";
 
 export default function Home() {
@@ -14,8 +14,8 @@ export default function Home() {
   const [loadingSub, setLoadingSub] = useState(false);
   const [subError, setSubError] = useState("");
 
-  // Download panel states
-  const [showDownload, setShowDownload] = useState(false);
+  // Reports panel states
+  const [showReports, setShowReports] = useState(false);
   const [exportStats, setExportStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -146,9 +146,6 @@ export default function Home() {
       // Show success message
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 3000);
-
-      // Optionally close panel after download
-      // setTimeout(() => setShowDownload(false), 2000);
     } catch (err) {
       setDownloadError(err?.message || "Download failed");
     } finally {
@@ -156,8 +153,8 @@ export default function Home() {
     }
   };
 
-  const handleOpenDownload = () => {
-    setShowDownload(true);
+  const handleOpenReports = () => {
+    setShowReports(true);
     fetchExportStats();
   };
 
@@ -202,14 +199,15 @@ export default function Home() {
         <div className={styles.logoText}>{company.name}</div>
 
         <div className={styles.rightSection}>
-          {/* Download Button */}
+          {/* Reports Button - Unique Design */}
           <button
-            className={styles.downloadBtn}
-            onClick={handleOpenDownload}
-            title="Download Reports"
-            aria-label="Download Reports"
+            className={styles.reportsBtn}
+            onClick={handleOpenReports}
+            title="View Reports"
+            aria-label="Open Reports"
           >
-            <Download size={20} />
+            <FileSpreadsheet size={18} />
+            <span>Reports</span>
           </button>
 
           {company.logo_url && (
@@ -422,25 +420,25 @@ export default function Home() {
         </>
       )}
 
-      {/* ================= RIGHT SLIDE DOWNLOAD PANEL ================= */}
-      {showDownload && (
+      {/* ================= RIGHT SLIDE REPORTS PANEL ================= */}
+      {showReports && (
         <>
           <div
             className={styles.overlay}
-            onClick={() => setShowDownload(false)}
+            onClick={() => setShowReports(false)}
             aria-hidden="true"
           />
 
           <aside
-            className={styles.downloadSlide}
+            className={styles.reportsSlide}
             role="dialog"
             aria-modal="true"
           >
-            <div className={styles.downloadHeader}>
-              <h3>Download Reports</h3>
+            <div className={styles.reportsHeader}>
+              <h3>Reports</h3>
               <button
-                onClick={() => setShowDownload(false)}
-                aria-label="Close download panel"
+                onClick={() => setShowReports(false)}
+                aria-label="Close reports panel"
               >
                 ✖
               </button>
@@ -464,22 +462,22 @@ export default function Home() {
 
             {/* Loading Stats */}
             {loadingStats && (
-              <p className={styles.downloadLoading}>
+              <p className={styles.reportsLoading}>
                 Loading statistics…
               </p>
             )}
 
             {/* Download Options */}
             {exportStats && (
-              <div className={styles.downloadContent}>
+              <div className={styles.reportsContent}>
                 
                 {/* Visitors Report */}
-                <div className={styles.downloadCard}>
-                  <div className={styles.downloadCardHeader}>
+                <div className={styles.reportCard}>
+                  <div className={styles.reportCardHeader}>
                     <FileSpreadsheet size={24} color="#7a00ff" />
                     <h4>Visitor Records</h4>
                   </div>
-                  <div className={styles.downloadCardStats}>
+                  <div className={styles.reportCardStats}>
                     <div className={styles.statItem}>
                       <span>Total Visitors:</span>
                       <strong>{exportStats.visitors?.total || 0}</strong>
@@ -492,7 +490,7 @@ export default function Home() {
                     </div>
                   </div>
                   <button
-                    className={styles.downloadCardBtn}
+                    className={styles.reportCardBtn}
                     onClick={() => handleDownload("visitors")}
                     disabled={downloading}
                   >
@@ -501,12 +499,12 @@ export default function Home() {
                 </div>
 
                 {/* Conference Bookings Report */}
-                <div className={styles.downloadCard}>
-                  <div className={styles.downloadCardHeader}>
+                <div className={styles.reportCard}>
+                  <div className={styles.reportCardHeader}>
                     <FileSpreadsheet size={24} color="#7a00ff" />
                     <h4>Conference Bookings</h4>
                   </div>
-                  <div className={styles.downloadCardStats}>
+                  <div className={styles.reportCardStats}>
                     <div className={styles.statItem}>
                       <span>Total Bookings:</span>
                       <strong>{exportStats.bookings?.total || 0}</strong>
@@ -519,7 +517,7 @@ export default function Home() {
                     </div>
                   </div>
                   <button
-                    className={styles.downloadCardBtn}
+                    className={styles.reportCardBtn}
                     onClick={() => handleDownload("bookings")}
                     disabled={downloading}
                   >
@@ -528,8 +526,8 @@ export default function Home() {
                 </div>
 
                 {/* Complete Report */}
-                <div className={styles.downloadCard} style={{ borderColor: "#6a1b9a" }}>
-                  <div className={styles.downloadCardHeader}>
+                <div className={styles.reportCard} style={{ borderColor: "#6a1b9a" }}>
+                  <div className={styles.reportCardHeader}>
                     <FileSpreadsheet size={24} color="#6a1b9a" />
                     <h4>Complete Report</h4>
                   </div>
@@ -542,7 +540,7 @@ export default function Home() {
                     Download both visitors and conference bookings data in a single Excel file with multiple sheets.
                   </p>
                   <button
-                    className={styles.downloadCardBtn}
+                    className={styles.reportCardBtn}
                     style={{ 
                       background: "linear-gradient(135deg, #6a1b9a, #7a00ff)",
                       fontWeight: 600
@@ -555,7 +553,7 @@ export default function Home() {
                 </div>
 
                 {/* Info Note */}
-                <div className={styles.downloadNote}>
+                <div className={styles.reportNote}>
                   <p>
                     📊 Reports are generated in Excel format (.xlsx) with professional formatting, 
                     including headers, borders, and color-coded status indicators.
