@@ -1,303 +1,371 @@
 import express from "express";
-import cors from "cors";
-import helmet from "helmet";
-import compression from "compression";
+import { db } from "../config/db.js";
+import { zohoClient } from "../services/zohoAuth.service.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 
-/* ================= ROUTE IMPORTS ================= */
-import authRoutes from "./routes/auth.routes.js";
-import visitorRoutes from "./routes/visitor.routes.js";
-import visitorPublicRouter from "./routes/visitor-public.routes.js";
-import conferenceRoutes from "./routes/conference.routes.js";
-import conferencePublicRoutes from "./routes/conference.public.routes.js";
-import paymentRoutes from "./routes/payment.routes.js";
-import webhookRoutes from "./routes/webhook.routes.js";
-import subscriptionRoutes from "./routes/subscription.route.js";
-import billingRepair from "./routes/billingRepair.route.js";
-import billingCron from "./routes/billingCron.route.js";
-import billingSyncRoutes from "./routes/billingSync.route.js";
-import exportsRoutes from "./routes/exports.routes.js";
+const router = express.Router();
 
-const app = express();
+/**
+ * UPGRADE FLOW
+ *
+ * PLANS:
+ * - BUSINESS  → ₹500 / Month (Recurring)
+ * - ENTERPRISE → Contact Sales (Custom Pricing)
+ *
+ * UPGRADE PATHS:
+ * - Trial → Business (Direct payment)
+ * - Trial → Enterprise (Contact form submission)
+ * - Business → Enterprise (Contact form submission)
+ *
+ * Activation happens ONLY via Zoho Webhook after payment success
+ */
 
-/* ================= ENV ================= */
-const NODE_ENV = process.env.NODE_ENV || "development";
-const IS_PRODUCTION = NODE_ENV === "production";
+/* ================= UPGRADE ENDPOINT ================= */
+router.post("/", authenticate, async (req, res) => {
+  try {
+    const { plan, contactInfo } = req.body;
+    const email = req.user?.email;
+    const companyId = req.user?.companyId;
 
-/* ================= TRUST PROXY ================= */
-app.set("trust proxy", 1);
-
-/* ================= SECURITY ================= */
-app.use(
-  helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: IS_PRODUCTION
-      ? {
-          directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'"],
-            imgSrc: ["'self'", "data:", "https:"],
-          },
-        }
-      : false,
-    hsts: IS_PRODUCTION
-      ? {
-          maxAge: 31536000,
-          includeSubDomains: true,
-          preload: true,
-        }
-      : false,
-  })
-);
-
-/* ================= CORS ================= */
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://127.0.0.1:3000",
-  "http://13.205.13.110",
-  "http://13.205.13.110:3000",
-  "https://wheelbrand.in",
-  "https://www.wheelbrand.in",
-  "https://promeet.zodopt.com",
-  "https://www.promeet.zodopt.com",
-];
-
-const corsOptions = {
-  origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is allowed
-    if (allowedOrigins.includes(origin)) return callback(null, true);
-
-    // Log blocked origins in development
-    if (!IS_PRODUCTION) {
-      console.warn(`⚠️ CORS blocked: ${origin}`);
+    /* ================= VALIDATION ================= */
+    if (!plan) {
+      return res.status(400).json({ success: false, message: "Plan is required" });
     }
-    
-    return callback(new Error("CORS policy violation"), false);
-  },
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Content-Type",
-    "Authorization",
-    "X-Requested-With",
-    "Accept",
-    "Origin",
-  ],
-  exposedHeaders: [
-    "Content-Range", 
-    "X-Content-Range",
-    "Content-Disposition", // Important for file downloads
-  ],
-  maxAge: 600,
-};
 
-app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+    if (!["business", "enterprise"].includes(plan)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid plan. Choose 'business' or 'enterprise'" 
+      });
+    }
 
-/* ================= COMPRESSION ================= */
-app.use(
-  compression({
-    level: 6,
-    threshold: 1024,
-    filter: (req, res) => {
-      // Don't compress file downloads
-      if (res.getHeader("Content-Type")?.includes("spreadsheet")) {
-        return false;
+    if (!email || !companyId) {
+      return res.status(401).json({ success: false, message: "Authentication failed" });
+    }
+
+    /* ================= FETCH COMPANY ================= */
+    const [[company]] = await db.query(
+      `
+      SELECT 
+        id,
+        name,
+        subscription_status,
+        plan,
+        zoho_customer_id,
+        last_payment_link,
+        last_payment_link_id
+      FROM companies
+      WHERE id=? LIMIT 1
+      `,
+      [companyId]
+    );
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+
+    const companyName = company.name || "Customer";
+    const currentPlan = (company.plan || "").toLowerCase();
+    const status = (company.subscription_status || "").toLowerCase();
+
+    console.log(`🔄 Upgrade Request: Company ${companyId} | Current: ${currentPlan} | Requested: ${plan}`);
+
+    /* ================= ENTERPRISE UPGRADE (CONTACT SALES) ================= */
+    if (plan === "enterprise") {
+      // Validate contact info for enterprise
+      if (!contactInfo || !contactInfo.name || !contactInfo.phone || !contactInfo.message) {
+        return res.status(400).json({
+          success: false,
+          message: "Contact information required for Enterprise plan (name, phone, message)"
+        });
       }
-      return compression.filter(req, res);
-    },
-  })
-);
 
-/* ================= BODY PARSER ================= */
-app.use(express.json({ limit: "25mb", strict: false }));
-app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+      // Store upgrade request in database
+      await db.query(
+        `
+        INSERT INTO upgrade_requests 
+        (company_id, current_plan, requested_plan, contact_name, contact_phone, message, status, created_at)
+        VALUES (?, ?, 'enterprise', ?, ?, ?, 'pending', NOW())
+        `,
+        [
+          companyId,
+          currentPlan || 'trial',
+          contactInfo.name,
+          contactInfo.phone,
+          contactInfo.message
+        ]
+      );
 
-/* ================= LOGGING ================= */
-if (!IS_PRODUCTION) {
-  app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.path}`);
-    next();
-  });
-}
+      console.log(`📧 Enterprise upgrade request stored for Company ${companyId}`);
 
-/* ================= HEALTH CHECK ================= */
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    environment: NODE_ENV,
-    uptime: process.uptime(),
-    timestamp: new Date().toISOString(),
-    memory: {
-      used: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
-      total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
-    },
-  });
-});
+      // TODO: Send email notification to sales team
+      // TODO: Send confirmation email to customer
 
-/* ================= API INFO ================= */
-app.get("/", (req, res) => {
-  res.json({
-    name: "ProMeet API",
-    version: "1.0.0",
-    status: "running",
-    environment: NODE_ENV,
-    endpoints: {
-      public: [
-        "/api/public",
-        "/api/public/conference",
-      ],
-      protected: [
-        "/api/auth",
-        "/api/visitors",
-        "/api/conference",
-        "/api/exports",
-        "/api/payment",
-        "/api/subscription",
-      ],
-    },
-  });
-});
+      return res.json({
+        success: true,
+        requiresContact: true,
+        message: "Enterprise upgrade request submitted. Our sales team will contact you within 24 hours.",
+        data: {
+          plan: "enterprise",
+          status: "pending_contact"
+        }
+      });
+    }
 
-/* =====================================================
-   PUBLIC ROUTES (NO AUTH)
-===================================================== */
-app.use("/api/public", visitorPublicRouter);
-app.use("/api/public/conference", conferencePublicRoutes);
+    /* ================= BUSINESS UPGRADE (PAYMENT REQUIRED) ================= */
+    if (plan === "business") {
+      // Check if already on Business or Enterprise
+      if (currentPlan === "business" && ["active", "trial"].includes(status)) {
+        return res.status(403).json({
+          success: false,
+          message: "Already on Business plan"
+        });
+      }
 
-/* =====================================================
-   PROTECTED ROUTES (REQUIRE AUTH)
-===================================================== */
+      if (currentPlan === "enterprise") {
+        return res.status(403).json({
+          success: false,
+          message: "Cannot downgrade from Enterprise to Business. Please contact support."
+        });
+      }
 
-// Authentication
-app.use("/api/auth", authRoutes);
+      /**
+       * ======================================================
+       * CHECK FOR EXISTING PENDING BUSINESS UPGRADE
+       * ======================================================
+       */
+      if (
+        status === "pending" &&
+        company.last_payment_link &&
+        company.last_payment_link_id
+      ) {
+        let client = await zohoClient();
+        
+        try {
+          const { data } = await client.get(
+            `/paymentlinks/${company.last_payment_link_id}`
+          );
 
-// Visitor Management
-app.use("/api/visitors", visitorRoutes);
+          const linkStatus = data?.payment_link?.status?.toLowerCase();
+          console.log("🔍 Existing payment link status:", linkStatus);
 
-// Conference Room Management
-app.use("/api/conference", conferenceRoutes);
+          // Check if it's a business upgrade link (₹500)
+          const linkAmount = parseFloat(data?.payment_link?.payment_amount || "0");
+          
+          if (["created", "sent"].includes(linkStatus) && linkAmount === 500.00) {
+            console.log("♻️ Reusing existing Business payment link");
+            return res.json({
+              success: true,
+              reused: true,
+              message: "Existing Business upgrade payment link still valid",
+              url: data.payment_link.url
+            });
+          }
 
-// Data Exports (Excel downloads)
-app.use("/api/exports", exportsRoutes);
+          console.log("⚠ Old payment link expired/different amount → generating new");
+        } catch (err) {
+          console.log("⚠ Could not verify old link → generating new", err.message);
+        }
+      }
 
-// Payment & Subscription Management
-app.use("/api/payment", paymentRoutes);
-app.use("/api/subscription", subscriptionRoutes);
-app.use("/api/payment/zoho", billingSyncRoutes);
+      /* ================= ENSURE ZOHO CUSTOMER ================= */
+      let customerId = company.zoho_customer_id;
 
-// Billing Management
-app.use("/api/billing/repair", billingRepair);
-app.use("/api/billing/cron", billingCron);
+      if (!customerId) {
+        console.log("🧾 Creating Zoho Customer…");
 
-// Webhooks
-app.use("/api/webhook", webhookRoutes);
+        let client = await zohoClient();
+        const { data } = await client.post("/customers", {
+          display_name: companyName,
+          company_name: companyName,
+          email
+        });
 
-/* ================= 404 HANDLER ================= */
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Not Found",
-    message: `Route ${req.originalUrl} does not exist`,
-    availableRoutes: [
-      "/health",
-      "/api/public",
-      "/api/public/conference",
-      "/api/auth",
-      "/api/visitors",
-      "/api/conference",
-      "/api/exports",
-      "/api/payment",
-      "/api/subscription",
-    ],
-  });
-});
+        customerId = data?.customer?.customer_id;
+        if (!customerId) throw new Error("Zoho failed to create customer");
 
-/* ================= ERROR HANDLER ================= */
-app.use((err, req, res, next) => {
-  // Log error details
-  console.error("❌ ERROR:", err.message);
-  
-  if (!IS_PRODUCTION) {
+        await db.query(
+          `UPDATE companies SET zoho_customer_id=? WHERE id=?`,
+          [customerId, companyId]
+        );
+
+        console.log(`✅ Zoho Customer created: ${customerId}`);
+      }
+
+      /* ================= BUSINESS PLAN PRICING ================= */
+      const payment_amount = "500.00";
+      const description = "PROMEET Business Plan Upgrade";
+
+      console.log(
+        `💳 Creating Business Upgrade Payment Link → ₹${payment_amount} for Company ${companyId}`
+      );
+
+      const payload = {
+        customer_id: customerId,
+        customer_name: companyName,
+        currency_code: "INR",
+        payment_amount,
+        description,
+        is_partial_payment: false,
+        reference_id: `BIZ-UPGRADE-${companyId}-${Date.now()}`
+      };
+
+      console.log("📤 ZOHO PAYMENT PAYLOAD:", JSON.stringify(payload, null, 2));
+
+      /* ================= CREATE PAYMENT LINK ================= */
+      let client = await zohoClient();
+      let data;
+
+      try {
+        ({ data } = await client.post("/paymentlinks", payload));
+      } catch (err) {
+        if (err?.response?.status === 401) {
+          console.warn("🔄 Zoho token expired — retrying…");
+          client = await zohoClient();
+          ({ data } = await client.post("/paymentlinks", payload));
+        } else {
+          console.error("❌ Zoho payment link creation failed:", err?.response?.data || err.message);
+          throw err;
+        }
+      }
+
+      const link = data?.payment_link;
+      if (!link?.url || !link?.payment_link_id) {
+        throw new Error("Zoho did not return payment link");
+      }
+
+      console.log(`✅ Payment link created: ${link.payment_link_id}`);
+
+      /* ================= UPDATE DB ================= */
+      await db.query(
+        `
+        UPDATE companies
+        SET 
+          subscription_status='pending',
+          plan = 'business',
+          last_payment_link = ?,
+          last_payment_link_id = ?,
+          last_payment_created_at = NOW()
+        WHERE id=?
+        `,
+        [link.url, link.payment_link_id, companyId]
+      );
+
+      console.log(`✅ Database updated: Company ${companyId} → Business (pending)`);
+
+      return res.json({
+        success: true,
+        message: "Business upgrade payment link generated successfully",
+        url: link.url,
+        data: {
+          plan: "business",
+          amount: "500.00",
+          currency: "INR"
+        }
+      });
+    }
+
+  } catch (err) {
+    console.error("❌ UPGRADE ERROR →", err?.response?.data || err.message);
     console.error("Stack:", err.stack);
-  }
 
-  // Handle CORS errors
-  if (err.message?.includes("CORS")) {
-    return res.status(403).json({
+    return res.status(500).json({
       success: false,
-      error: "CORS policy violation",
-      message: "Origin not allowed",
+      message:
+        err?.response?.data?.message ||
+        err?.message ||
+        "Upgrade failed"
     });
   }
-
-  // Handle validation errors
-  if (err.name === "ValidationError") {
-    return res.status(400).json({
-      success: false,
-      error: "Validation Error",
-      message: err.message,
-    });
-  }
-
-  // Handle JWT errors
-  if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
-    return res.status(401).json({
-      success: false,
-      error: "Authentication Error",
-      message: "Invalid or expired token",
-    });
-  }
-
-  // Handle database errors
-  if (err.code === "ER_DUP_ENTRY") {
-    return res.status(409).json({
-      success: false,
-      error: "Duplicate Entry",
-      message: "Resource already exists",
-    });
-  }
-
-  // Default error response
-  res.status(err.status || 500).json({
-    success: false,
-    error: IS_PRODUCTION ? "Internal Server Error" : err.name || "Error",
-    message: IS_PRODUCTION
-      ? "Something went wrong"
-      : err.message || "An unexpected error occurred",
-  });
 });
 
-/* ================= GRACEFUL SHUTDOWN ================= */
-const shutdown = (signal) => {
-  console.log(`\n🛑 ${signal} received. Shutting down gracefully...`);
-  
-  // Close server and cleanup
-  setTimeout(() => {
-    console.log("✅ Cleanup completed. Exiting...");
-    process.exit(0);
-  }, 1000);
-};
+/* ================= GET AVAILABLE UPGRADE OPTIONS ================= */
+router.get("/options", authenticate, async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+    if (!companyId) {
+      return res.status(401).json({ success: false, message: "Authentication failed" });
+    }
 
-// Handle uncaught exceptions
-process.on("uncaughtException", (err) => {
-  console.error("💥 UNCAUGHT EXCEPTION:", err);
-  console.error("Stack:", err.stack);
-  process.exit(1);
+    const [[company]] = await db.query(
+      `SELECT plan, subscription_status FROM companies WHERE id=? LIMIT 1`,
+      [companyId]
+    );
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+
+    const currentPlan = (company.plan || "trial").toLowerCase();
+    const status = (company.subscription_status || "").toLowerCase();
+
+    // Determine available upgrade options
+    const availableUpgrades = [];
+
+    if (currentPlan === "trial") {
+      availableUpgrades.push(
+        {
+          plan: "business",
+          name: "Business Plan",
+          price: "₹500/month",
+          requiresPayment: true,
+          features: [
+            "Unlimited visitors",
+            "Unlimited conference bookings",
+            "Advanced reporting",
+            "Email notifications",
+            "Priority support"
+          ]
+        },
+        {
+          plan: "enterprise",
+          name: "Enterprise Plan",
+          price: "Custom Pricing",
+          requiresPayment: false,
+          requiresContact: true,
+          features: [
+            "Everything in Business",
+            "Custom integrations",
+            "Dedicated account manager",
+            "Custom branding",
+            "SLA guarantee",
+            "On-premise deployment option"
+          ]
+        }
+      );
+    } else if (currentPlan === "business") {
+      availableUpgrades.push({
+        plan: "enterprise",
+        name: "Enterprise Plan",
+        price: "Custom Pricing",
+        requiresPayment: false,
+        requiresContact: true,
+        features: [
+          "Everything in Business",
+          "Custom integrations",
+          "Dedicated account manager",
+          "Custom branding",
+          "SLA guarantee",
+          "On-premise deployment option"
+        ]
+      });
+    }
+
+    return res.json({
+      success: true,
+      currentPlan,
+      status,
+      availableUpgrades
+    });
+
+  } catch (err) {
+    console.error("❌ GET UPGRADE OPTIONS ERROR →", err.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch upgrade options"
+    });
+  }
 });
 
-// Handle unhandled promise rejections
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("💥 UNHANDLED REJECTION at:", promise);
-  console.error("Reason:", reason);
-  process.exit(1);
-});
-
-export default app;
+export default router;
