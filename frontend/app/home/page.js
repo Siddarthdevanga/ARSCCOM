@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, DoorOpen, FileSpreadsheet, CheckCircle, X } from "lucide-react";
+import { Users, DoorOpen, FileSpreadsheet, CheckCircle, X, Zap, Crown } from "lucide-react";
 import styles from "./style.module.css";
 
 export default function Home() {
@@ -163,7 +163,17 @@ export default function Home() {
     fetchSubscription();
   };
 
-  const handleUpgrade = () => {
+  const handleUpgradeBusiness = () => {
+    setShowSub(false);
+    router.push("/upgrade?plan=business");
+  };
+
+  const handleUpgradeEnterprise = () => {
+    setShowSub(false);
+    router.push("/upgrade?plan=enterprise");
+  };
+
+  const handleRenew = () => {
     setShowSub(false);
     router.push("/auth/subscription");
   };
@@ -173,11 +183,17 @@ export default function Home() {
     router.replace("/auth/login");
   };
 
-  const canUpgrade = subData && (
-    subData.PLAN?.toLowerCase() !== "enterprise" ||
-    subData.STATUS?.toLowerCase() === "expired" ||
-    subData.STATUS?.toLowerCase() === "cancelled"
-  );
+  // Determine upgrade options based on current plan and status
+  const currentPlan = subData?.PLAN?.toLowerCase() || "";
+  const currentStatus = subData?.STATUS?.toLowerCase() || "";
+  
+  const canUpgradeBusiness = currentPlan === "trial" && 
+    ["active", "trial"].includes(currentStatus);
+  
+  const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan) && 
+    ["active", "trial"].includes(currentStatus);
+  
+  const needsRenewal = ["expired", "cancelled"].includes(currentStatus);
 
   if (!company) return null;
 
@@ -355,60 +371,91 @@ export default function Home() {
                   </div>
                 )}
 
-                {canUpgrade && (
-                  <div style={{ marginTop: "30px" }}>
-                    <button
-                      className={styles.upgradeBtn}
-                      onClick={handleUpgrade}
-                    >
-                      {subData.STATUS?.toLowerCase() === "expired" || 
-                       subData.STATUS?.toLowerCase() === "cancelled"
-                        ? "Renew Subscription"
-                        : "Upgrade Plan"}
-                    </button>
-                    
-                    {subData.PLAN?.toLowerCase() === "trial" && (
-                      <p style={{ 
-                        fontSize: "12px", 
-                        color: "#999", 
-                        marginTop: "10px",
-                        textAlign: "center"
-                      }}>
-                        Upgrade to Business or Enterprise for more features
-                      </p>
-                    )}
-
-                    {(subData.STATUS?.toLowerCase() === "expired" || 
-                      subData.STATUS?.toLowerCase() === "cancelled") && (
-                      <p style={{ 
-                        fontSize: "12px", 
-                        color: "#ff1744", 
-                        marginTop: "10px",
-                        textAlign: "center",
-                        fontWeight: 600
-                      }}>
+                {/* ================= UPGRADE/RENEW SECTION ================= */}
+                {needsRenewal && (
+                  <div className={styles.upgradeSection}>
+                    <div className={styles.renewalAlert}>
+                      <p>
                         ⚠️ Your subscription has expired. Renew to continue using PROMEET.
                       </p>
+                    </div>
+                    <button
+                      className={styles.renewBtn}
+                      onClick={handleRenew}
+                    >
+                      Renew Subscription
+                    </button>
+                  </div>
+                )}
+
+                {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
+                  <div className={styles.upgradeSection}>
+                    <div className={styles.upgradeHeader}>
+                      <h4>Upgrade Your Plan</h4>
+                      <p>Get more features and unlock your full potential</p>
+                    </div>
+
+                    {/* Business Plan Card */}
+                    {canUpgradeBusiness && (
+                      <div className={styles.planCard}>
+                        <div className={styles.planCardHeader}>
+                          <div className={styles.planIcon}>
+                            <Zap size={20} />
+                          </div>
+                          <div>
+                            <h5>Business Plan</h5>
+                            <p className={styles.planPrice}>₹500/month</p>
+                          </div>
+                        </div>
+                        <ul className={styles.planFeatures}>
+                          <li>✓ Unlimited visitors</li>
+                          <li>✓ Unlimited conference bookings</li>
+                          <li>✓ Advanced reporting</li>
+                          <li>✓ Priority support</li>
+                        </ul>
+                        <button
+                          className={styles.upgradeBusinessBtn}
+                          onClick={handleUpgradeBusiness}
+                        >
+                          Upgrade to Business
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Enterprise Plan Card */}
+                    {canUpgradeEnterprise && (
+                      <div className={styles.planCard}>
+                        <div className={styles.planCardHeader}>
+                          <div className={styles.planIcon} style={{ background: "linear-gradient(135deg, #6a1b9a, #8e24aa)" }}>
+                            <Crown size={20} />
+                          </div>
+                          <div>
+                            <h5>Enterprise Plan</h5>
+                            <p className={styles.planPrice}>Custom Pricing</p>
+                          </div>
+                        </div>
+                        <ul className={styles.planFeatures}>
+                          <li>✓ Everything in Business</li>
+                          <li>✓ Custom integrations</li>
+                          <li>✓ Dedicated account manager</li>
+                          <li>✓ Custom branding</li>
+                          <li>✓ SLA guarantee</li>
+                        </ul>
+                        <button
+                          className={styles.upgradeEnterpriseBtn}
+                          onClick={handleUpgradeEnterprise}
+                        >
+                          Contact Sales
+                        </button>
+                      </div>
                     )}
                   </div>
                 )}
 
-                {subData && 
-                 subData.PLAN?.toLowerCase() === "enterprise" && 
-                 subData.STATUS?.toLowerCase() === "active" && (
-                  <div style={{ 
-                    marginTop: "30px",
-                    padding: "15px",
-                    background: "linear-gradient(135deg, #e3f2fd, #e1f5fe)",
-                    borderRadius: "12px",
-                    borderLeft: "4px solid #2196f3"
-                  }}>
-                    <p style={{ 
-                      fontSize: "13px", 
-                      color: "#0d47a1",
-                      margin: 0,
-                      lineHeight: 1.5
-                    }}>
+                {/* Enterprise Active Status */}
+                {currentPlan === "enterprise" && currentStatus === "active" && (
+                  <div className={styles.enterpriseActive}>
+                    <p>
                       ℹ️ You're on the Enterprise plan with full access to all features. 
                       Contact support for any custom requirements.
                     </p>
