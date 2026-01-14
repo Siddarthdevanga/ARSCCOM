@@ -30,204 +30,240 @@ function normalizeStatus(status) {
 
 /* ================= EMAIL TEMPLATES ================= */
 const emailTemplates = {
-  subscriptionActivated: (companyName, plan, expiresAt) => ({
-    subject: `🎉 Your PROMEET Subscription is Now Active!`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 40px 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 28px; }
-          .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }
-          .content { padding: 40px 30px; }
-          .success-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-          .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #6a00ff; border-radius: 8px; }
-          .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
-          .label { font-weight: 600; color: #555; }
-          .value { color: #333; font-weight: 700; }
-          .success-badge { background: linear-gradient(135deg, #00c853, #00e676); color: white; padding: 6px 16px; border-radius: 20px; display: inline-block; font-weight: bold; font-size: 14px; }
-          .cta-button { display: inline-block; background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; text-align: center; }
-          .cta-button:hover { opacity: 0.9; }
-          .features { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .features h3 { margin-top: 0; color: #6a00ff; }
-          .features ul { list-style: none; padding: 0; margin: 10px 0; }
-          .features li { padding: 8px 0; padding-left: 25px; position: relative; }
-          .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; }
-          .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
-          .footer p { margin: 5px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎉 Welcome to PROMEET!</h1>
-            <p>Your subscription is now active</p>
+  subscriptionActivated: (companyName, plan, expiresAt) => {
+    const planDetails = {
+      trial: {
+        price: '₹49 / 15 Days',
+        features: [
+          'Valid for 15 Days',
+          '100 Visitor Bookings',
+          '100 Conference Bookings',
+          '2 Conference Rooms'
+        ]
+      },
+      business: {
+        price: '₹500 / Month',
+        features: [
+          'Unlimited Visitors',
+          '1000 Conference bookings',
+          '6 Conference Rooms',
+          'Dedicated Support'
+        ]
+      },
+      enterprise: {
+        price: 'Custom Pricing',
+        features: [
+          'Unlimited Visitors',
+          'Unlimited Conference Bookings',
+          'Unlimited Conference Rooms',
+          'Dedicated Support'
+        ]
+      }
+    };
+
+    const currentPlan = planDetails[plan.toLowerCase()] || planDetails.trial;
+
+    return {
+      subject: `🎉 Your PROMEET Subscription is Now Active!`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 40px 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }
+            .content { padding: 40px 30px; }
+            .success-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
+            .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #6a00ff; border-radius: 8px; }
+            .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
+            .label { font-weight: 600; color: #555; }
+            .value { color: #333; font-weight: 700; }
+            .plan-badge { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .cta-button:hover { opacity: 0.9; }
+            .features { background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 20px 0; }
+            .features h3 { margin-top: 0; color: #6a00ff; font-size: 20px; }
+            .features ul { list-style: none; padding: 0; margin: 10px 0; }
+            .features li { padding: 10px 0; padding-left: 30px; position: relative; font-size: 15px; }
+            .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; font-size: 18px; }
+            .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
+            .footer p { margin: 5px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Welcome to PROMEET!</h1>
+              <p>Your subscription is now active</p>
+            </div>
+            <div class="content">
+              <div class="success-icon">✅</div>
+              <h2 style="text-align: center; color: #333;">Subscription Activated Successfully</h2>
+              <p>Dear <strong>${companyName}</strong> Team,</p>
+              <p>Great news! Your PROMEET subscription has been successfully activated and payment has been processed.</p>
+              
+              <div class="info-box">
+                <div class="info-row">
+                  <span class="label">Plan:</span>
+                  <span class="plan-badge">${plan.toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Price:</span>
+                  <span class="value">${currentPlan.price}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Status:</span>
+                  <span class="value" style="color: #00c853;">Active</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Valid Until:</span>
+                  <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Activated On:</span>
+                  <span class="value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+              </div>
+
+              <div class="features">
+                <h3>✨ Your ${plan.toUpperCase()} Plan Includes:</h3>
+                <ul>
+                  ${currentPlan.features.map(feature => `<li>${feature}</li>`).join('')}
+                </ul>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}" class="cta-button">Access Your Dashboard</a>
+              </div>
+
+              <p style="margin-top: 30px; color: #666;">If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+            </div>
+            <div class="footer">
+              <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
+              <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+              <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
+            </div>
           </div>
-          <div class="content">
-            <div class="success-icon">✅</div>
-            <h2 style="text-align: center; color: #333;">Subscription Activated Successfully</h2>
-            <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Great news! Your PROMEET subscription has been successfully activated and payment has been processed.</p>
-            
-            <div class="info-box">
-              <div class="info-row">
-                <span class="label">Plan:</span>
-                <span class="success-badge">${plan.toUpperCase()}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Status:</span>
-                <span class="value" style="color: #00c853;">Active</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Valid Until:</span>
-                <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Activated On:</span>
-                <span class="value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              </div>
-            </div>
+        </body>
+        </html>
+      `
+    };
+  },
 
-            <div class="features">
-              <h3>What's Included in Your ${plan.toUpperCase()} Plan:</h3>
-              <ul>
-                ${plan === 'business' ? `
-                  <li>Unlimited visitor management</li>
-                  <li>Unlimited conference room bookings</li>
-                  <li>Advanced reporting and analytics</li>
-                  <li>Priority customer support</li>
-                  <li>Export data to Excel</li>
-                ` : `
-                  <li>Visitor management</li>
-                  <li>Conference room bookings</li>
-                  <li>Basic reporting</li>
-                  <li>Standard support</li>
-                `}
-              </ul>
-            </div>
+  upgradeCompleted: (companyName, fromPlan, toPlan, expiresAt) => {
+    const planDetails = {
+      trial: { price: '₹49 / 15 Days', features: ['100 Visitor Bookings', '100 Conference Bookings', '2 Conference Rooms'] },
+      business: { price: '₹500 / Month', features: ['Unlimited Visitors', '1000 Conference bookings', '6 Conference Rooms', 'Dedicated Support'] },
+      enterprise: { price: 'Custom Pricing', features: ['Unlimited Visitors', 'Unlimited Conference Bookings', 'Unlimited Conference Rooms', 'Dedicated Support'] }
+    };
 
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}" class="cta-button">Access Dashboard</a>
-            </div>
+    const newPlan = planDetails[toPlan.toLowerCase()] || planDetails.business;
 
-            <p style="margin-top: 30px;">If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+    return {
+      subject: `🚀 Your Plan Has Been Upgraded Successfully!`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
+            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 40px 30px; text-align: center; }
+            .header h1 { margin: 0; font-size: 28px; }
+            .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }
+            .content { padding: 40px 30px; }
+            .upgrade-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
+            .upgrade-flow { text-align: center; margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 10px; }
+            .plan-badge { display: inline-block; padding: 12px 24px; border-radius: 25px; font-weight: bold; margin: 0 15px; font-size: 16px; }
+            .old-plan { background: #e0e0e0; color: #666; }
+            .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; }
+            .arrow { color: #7a00ff; font-size: 28px; margin: 0 10px; vertical-align: middle; }
+            .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
+            .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
+            .label { font-weight: 600; color: #555; }
+            .value { color: #333; font-weight: 700; }
+            .features { background: #f0fff4; padding: 25px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00c853; }
+            .features h3 { margin-top: 0; color: #00c853; font-size: 20px; }
+            .features ul { list-style: none; padding: 0; margin: 10px 0; }
+            .features li { padding: 10px 0; padding-left: 30px; position: relative; font-size: 15px; }
+            .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; font-size: 18px; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+            .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Congratulations!</h1>
+              <p>Your plan has been upgraded</p>
+            </div>
+            <div class="content">
+              <div class="upgrade-icon">🚀</div>
+              <h2 style="text-align: center; color: #333;">Plan Upgrade Successful</h2>
+              <p>Dear <strong>${companyName}</strong> Team,</p>
+              <p>Thank you for upgrading your PROMEET subscription! Your account has been successfully upgraded to the <strong>${toPlan.toUpperCase()}</strong> plan.</p>
+              
+              <div class="upgrade-flow">
+                <span class="plan-badge old-plan">${fromPlan.toUpperCase()}</span>
+                <span class="arrow">→</span>
+                <span class="plan-badge new-plan">${toPlan.toUpperCase()}</span>
+              </div>
+
+              <div class="info-box">
+                <div class="info-row">
+                  <span class="label">New Plan:</span>
+                  <span class="value" style="color: #00c853;">${toPlan.toUpperCase()}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Price:</span>
+                  <span class="value">${newPlan.price}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Status:</span>
+                  <span class="value" style="color: #00c853;">Active</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Valid Until:</span>
+                  <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Upgraded On:</span>
+                  <span class="value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+              </div>
+
+              <div class="features">
+                <h3>🎁 New Features Unlocked:</h3>
+                <ul>
+                  ${newPlan.features.map(feature => `<li>${feature}</li>`).join('')}
+                </ul>
+              </div>
+
+              <div style="text-align: center;">
+                <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}" class="cta-button">Explore Your New Features</a>
+              </div>
+
+              <p style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+                💡 <strong>Pro Tip:</strong> Check out the Reports section to explore the enhanced features available in your ${toPlan.toUpperCase()} plan!
+              </p>
+            </div>
+            <div class="footer">
+              <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
+              <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+              <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
+            </div>
           </div>
-          <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
-            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
-            <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
-
-  upgradeCompleted: (companyName, fromPlan, toPlan, expiresAt) => ({
-    subject: `🚀 Your Plan Has Been Upgraded Successfully!`,
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 40px 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 28px; }
-          .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }
-          .content { padding: 40px 30px; }
-          .upgrade-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-          .upgrade-flow { text-align: center; margin: 30px 0; }
-          .plan-badge { display: inline-block; padding: 10px 20px; border-radius: 25px; font-weight: bold; margin: 0 10px; }
-          .old-plan { background: #e0e0e0; color: #666; }
-          .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; }
-          .arrow { color: #7a00ff; font-size: 24px; margin: 0 10px; }
-          .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
-          .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
-          .label { font-weight: 600; color: #555; }
-          .value { color: #333; font-weight: 700; }
-          .features { background: #f0fff4; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #00c853; }
-          .features h3 { margin-top: 0; color: #00c853; }
-          .features ul { list-style: none; padding: 0; margin: 10px 0; }
-          .features li { padding: 8px 0; padding-left: 25px; position: relative; }
-          .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; }
-          .cta-button { display: inline-block; background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-          .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🎉 Congratulations!</h1>
-            <p>Your plan has been upgraded</p>
-          </div>
-          <div class="content">
-            <div class="upgrade-icon">🚀</div>
-            <h2 style="text-align: center; color: #333;">Plan Upgrade Successful</h2>
-            <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Thank you for upgrading your PROMEET subscription! Your account has been successfully upgraded to the <strong>${toPlan.toUpperCase()}</strong> plan.</p>
-            
-            <div class="upgrade-flow">
-              <span class="plan-badge old-plan">${fromPlan.toUpperCase()}</span>
-              <span class="arrow">→</span>
-              <span class="plan-badge new-plan">${toPlan.toUpperCase()}</span>
-            </div>
-
-            <div class="info-box">
-              <div class="info-row">
-                <span class="label">New Plan:</span>
-                <span class="value" style="color: #00c853;">${toPlan.toUpperCase()}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Status:</span>
-                <span class="value" style="color: #00c853;">Active</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Valid Until:</span>
-                <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">Upgraded On:</span>
-                <span class="value">${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-              </div>
-            </div>
-
-            <div class="features">
-              <h3>🎁 New Features Unlocked:</h3>
-              <ul>
-                <li>Unlimited visitor entries</li>
-                <li>Unlimited conference room bookings</li>
-                <li>Advanced reporting and analytics</li>
-                <li>Priority customer support</li>
-                <li>Export data to Excel</li>
-                <li>Custom integrations (coming soon)</li>
-              </ul>
-            </div>
-
-            <div style="text-align: center;">
-              <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}" class="cta-button">Explore New Features</a>
-            </div>
-
-            <p style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
-              💡 <strong>Pro Tip:</strong> Check out the Reports section to explore advanced analytics available in your new plan!
-            </p>
-          </div>
-          <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
-            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
-            <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `
-  }),
+        </body>
+        </html>
+      `
+    };
+  },
 
   subscriptionExpiring: (companyName, plan, expiresAt, daysLeft) => ({
-    subject: `⚠️ Your PROMEET Subscription Expires in ${daysLeft} Days`,
+    subject: `⚠️ Your PROMEET Subscription Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -239,7 +275,7 @@ const emailTemplates = {
           .header h1 { margin: 0; font-size: 28px; }
           .content { padding: 40px 30px; }
           .warning-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-          .countdown-box { background: #fff3e0; padding: 30px; margin: 25px 0; border-left: 4px solid #ff9800; border-radius: 8px; text-align: center; }
+          .countdown-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 30px; margin: 25px 0; border-left: 4px solid #ff9800; border-radius: 8px; text-align: center; }
           .days-remaining { font-size: 48px; font-weight: bold; color: #ff9800; margin: 10px 0; }
           .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-radius: 8px; }
           .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
@@ -247,6 +283,9 @@ const emailTemplates = {
           .value { color: #333; font-weight: 700; }
           .cta-button { display: inline-block; background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
+          .warning-list { background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .warning-list ul { margin: 10px 0; padding-left: 25px; }
+          .warning-list li { color: #e65100; padding: 5px 0; }
         </style>
       </head>
       <body>
@@ -263,7 +302,7 @@ const emailTemplates = {
             <div class="countdown-box">
               <p style="margin: 0; font-size: 18px; color: #666;">Your subscription expires in:</p>
               <div class="days-remaining">${daysLeft}</div>
-              <p style="margin: 0; font-size: 18px; color: #666;">${daysLeft === 1 ? 'Day' : 'Days'}</p>
+              <p style="margin: 0; font-size: 18px; color: #666; font-weight: bold;">${daysLeft === 1 ? 'Day' : 'Days'}</p>
             </div>
 
             <div class="info-box">
@@ -277,18 +316,21 @@ const emailTemplates = {
               </div>
             </div>
 
-            <p><strong>What happens if you don't renew?</strong></p>
-            <ul style="color: #666;">
-              <li>Access to your account will be suspended</li>
-              <li>You won't be able to add new visitors or bookings</li>
-              <li>Historical data will be preserved for 30 days</li>
-            </ul>
+            <div class="warning-list">
+              <p style="margin-top: 0; font-weight: bold; color: #e65100;">⚠️ What happens if you don't renew?</p>
+              <ul>
+                <li>Access to your account will be suspended</li>
+                <li>You won't be able to add new visitors or bookings</li>
+                <li>Historical data will be preserved for 30 days</li>
+                <li>All active bookings will be cancelled</li>
+              </ul>
+            </div>
 
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}/auth/subscription" class="cta-button">Renew Subscription Now</a>
             </div>
 
-            <p style="margin-top: 30px;">Don't lose access to your valuable data. Renew your subscription today to continue enjoying uninterrupted service.</p>
+            <p style="margin-top: 30px; color: #666;">Don't lose access to your valuable data. Renew your subscription today to continue enjoying uninterrupted service.</p>
           </div>
           <div class="footer">
             <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
@@ -314,12 +356,15 @@ const emailTemplates = {
           .header h1 { margin: 0; font-size: 28px; }
           .content { padding: 40px 30px; }
           .alert-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-          .alert-box { background: #ffebee; padding: 25px; margin: 25px 0; border-left: 4px solid #ff1744; border-radius: 8px; }
+          .alert-box { background: linear-gradient(135deg, #ffebee, #ffcdd2); padding: 25px; margin: 25px 0; border-left: 4px solid #ff1744; border-radius: 8px; }
           .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
           .label { font-weight: 600; color: #555; }
           .value { color: #333; font-weight: 700; }
           .expired-badge { background: #ff1744; color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; }
           .cta-button { display: inline-block; background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .impact-box { background: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0; }
+          .impact-box ul { margin: 10px 0; padding-left: 25px; }
+          .impact-box li { color: #c62828; padding: 5px 0; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
@@ -332,7 +377,7 @@ const emailTemplates = {
             <div class="alert-icon">🔴</div>
             <h2 style="text-align: center; color: #333;">Your Subscription Has Expired</h2>
             <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Your PROMEET subscription has expired. To continue using our services, please renew your subscription.</p>
+            <p>Your PROMEET subscription has expired. To continue using our services, please renew your subscription immediately.</p>
             
             <div class="alert-box">
               <div class="info-row">
@@ -349,20 +394,27 @@ const emailTemplates = {
               </div>
             </div>
 
-            <p><strong>What this means:</strong></p>
-            <ul style="color: #666;">
-              <li>Your account access has been suspended</li>
-              <li>You cannot add new visitors or bookings</li>
-              <li>Your data is safe and will be preserved for 30 days</li>
-              <li>Renew now to restore full access immediately</li>
-            </ul>
+            <div class="impact-box">
+              <p style="margin-top: 0; font-weight: bold; color: #c62828;">🚫 Current Limitations:</p>
+              <ul>
+                <li>Your account access has been suspended</li>
+                <li>You cannot add new visitors or bookings</li>
+                <li>Conference room bookings are disabled</li>
+                <li>Reports and exports are unavailable</li>
+                <li>Your data is safe and preserved for 30 days</li>
+              </ul>
+            </div>
+
+            <div style="text-align: center; background: #f0fff4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0; color: #00c853; font-weight: bold;">✅ Renew now to restore full access immediately!</p>
+            </div>
 
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}/auth/subscription" class="cta-button">Renew Subscription</a>
             </div>
 
             <p style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
-              💡 <strong>Need Help?</strong> Contact our support team if you have any questions about renewal.
+              💡 <strong>Need Help?</strong> Contact our support team if you have any questions about renewal or need assistance accessing your account.
             </p>
           </div>
           <div class="footer">
