@@ -3,7 +3,7 @@ import cron from "node-cron";
 import axios from "axios";
 import { db } from "../config/db.js";
 import { getZohoAccessToken } from "../services/zohoToken.service.js";
-import { sendEmail } from "../utils/mailer.js";
+
 
 const router = express.Router();
 
@@ -83,14 +83,12 @@ const emailTemplates = {
             .value { color: #333; font-weight: 700; }
             .plan-badge { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; }
             .cta-button { display: inline-block; background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-            .cta-button:hover { opacity: 0.9; }
             .features { background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 20px 0; }
             .features h3 { margin-top: 0; color: #6a00ff; font-size: 20px; }
             .features ul { list-style: none; padding: 0; margin: 10px 0; }
             .features li { padding: 10px 0; padding-left: 30px; position: relative; font-size: 15px; }
             .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; font-size: 18px; }
             .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
-            .footer p { margin: 5px 0; }
           </style>
         </head>
         <body>
@@ -173,14 +171,13 @@ const emailTemplates = {
             .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
             .header { background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 40px 30px; text-align: center; }
             .header h1 { margin: 0; font-size: 28px; }
-            .header p { margin: 10px 0 0 0; opacity: 0.9; font-size: 16px; }
             .content { padding: 40px 30px; }
             .upgrade-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
             .upgrade-flow { text-align: center; margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 10px; }
             .plan-badge { display: inline-block; padding: 12px 24px; border-radius: 25px; font-weight: bold; margin: 0 15px; font-size: 16px; }
             .old-plan { background: #e0e0e0; color: #666; }
             .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; }
-            .arrow { color: #7a00ff; font-size: 28px; margin: 0 10px; vertical-align: middle; }
+            .arrow { color: #7a00ff; font-size: 28px; margin: 0 10px; }
             .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
             .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
             .label { font-weight: 600; color: #555; }
@@ -246,14 +243,13 @@ const emailTemplates = {
                 <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}" class="cta-button">Explore Your New Features</a>
               </div>
 
-              <p style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
+              <p style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
                 💡 <strong>Pro Tip:</strong> Check out the Reports section to explore the enhanced features available in your ${toPlan.toUpperCase()} plan!
               </p>
             </div>
             <div class="footer">
               <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
               <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
-              <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
             </div>
           </div>
         </body>
@@ -283,9 +279,6 @@ const emailTemplates = {
           .value { color: #333; font-weight: 700; }
           .cta-button { display: inline-block; background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
-          .warning-list { background: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .warning-list ul { margin: 10px 0; padding-left: 25px; }
-          .warning-list li { color: #e65100; padding: 5px 0; }
         </style>
       </head>
       <body>
@@ -316,26 +309,13 @@ const emailTemplates = {
               </div>
             </div>
 
-            <div class="warning-list">
-              <p style="margin-top: 0; font-weight: bold; color: #e65100;">⚠️ What happens if you don't renew?</p>
-              <ul>
-                <li>Access to your account will be suspended</li>
-                <li>You won't be able to add new visitors or bookings</li>
-                <li>Historical data will be preserved for 30 days</li>
-                <li>All active bookings will be cancelled</li>
-              </ul>
-            </div>
-
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}/auth/subscription" class="cta-button">Renew Subscription Now</a>
             </div>
-
-            <p style="margin-top: 30px; color: #666;">Don't lose access to your valuable data. Renew your subscription today to continue enjoying uninterrupted service.</p>
           </div>
           <div class="footer">
             <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
             <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
-            <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
           </div>
         </div>
       </body>
@@ -362,9 +342,6 @@ const emailTemplates = {
           .value { color: #333; font-weight: 700; }
           .expired-badge { background: #ff1744; color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; }
           .cta-button { display: inline-block; background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
-          .impact-box { background: #ffebee; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .impact-box ul { margin: 10px 0; padding-left: 25px; }
-          .impact-box li { color: #c62828; padding: 5px 0; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
@@ -394,33 +371,13 @@ const emailTemplates = {
               </div>
             </div>
 
-            <div class="impact-box">
-              <p style="margin-top: 0; font-weight: bold; color: #c62828;">🚫 Current Limitations:</p>
-              <ul>
-                <li>Your account access has been suspended</li>
-                <li>You cannot add new visitors or bookings</li>
-                <li>Conference room bookings are disabled</li>
-                <li>Reports and exports are unavailable</li>
-                <li>Your data is safe and preserved for 30 days</li>
-              </ul>
-            </div>
-
-            <div style="text-align: center; background: #f0fff4; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p style="margin: 0; color: #00c853; font-weight: bold;">✅ Renew now to restore full access immediately!</p>
-            </div>
-
             <div style="text-align: center;">
               <a href="${process.env.FRONTEND_URL || 'https://promeet.zodopt.com'}/auth/subscription" class="cta-button">Renew Subscription</a>
             </div>
-
-            <p style="margin-top: 30px; padding: 15px; background: #e3f2fd; border-radius: 8px; border-left: 4px solid #2196f3;">
-              💡 <strong>Need Help?</strong> Contact our support team if you have any questions about renewal or need assistance accessing your account.
-            </p>
           </div>
           <div class="footer">
             <p><strong>PROMEET</strong> - Visitor & Conference Management System</p>
             <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
-            <p style="font-size: 12px; color: #999; margin-top: 15px;">This is an automated notification. Please do not reply to this email.</p>
           </div>
         </div>
       </body>
@@ -433,37 +390,41 @@ const emailTemplates = {
 async function repairBilling() {
   console.log("⏳ CRON: Checking companies for billing repair...");
 
+  // Get companies with their admin user email
   const [companies] = await db.query(
-  `
-    SELECT 
-      c.id,
-      c.name,
-      c.plan,
-      c.zoho_customer_id,
-      c.last_payment_link_id,
-      c.pending_upgrade_plan,
-      c.subscription_ends_at,
-      c.trial_ends_at,
-      c.subscription_status,
-      (SELECT email FROM users WHERE company_id = c.id ORDER BY id ASC LIMIT 1) as company_email
-    FROM companies c
-    WHERE 
-      c.zoho_customer_id IS NOT NULL
-    AND c.last_payment_link_id IS NOT NULL
-    AND (
-        c.subscription_status IN ('pending','trial')
-        OR c.pending_upgrade_plan IS NOT NULL
-        OR (
-          c.subscription_status='active'
-          AND (
-            (c.plan='trial' AND c.trial_ends_at IS NULL)
-            OR
-            (c.plan='business' AND c.subscription_ends_at IS NULL)
+    `
+      SELECT 
+        c.id,
+        c.name,
+        c.plan,
+        c.zoho_customer_id,
+        c.last_payment_link_id,
+        c.pending_upgrade_plan,
+        c.subscription_ends_at,
+        c.trial_ends_at,
+        c.subscription_status,
+        u.email as company_email
+      FROM companies c
+      LEFT JOIN users u ON c.id = u.company_id
+      WHERE 
+        c.zoho_customer_id IS NOT NULL
+      AND c.last_payment_link_id IS NOT NULL
+      AND (
+          c.subscription_status IN ('pending','trial')
+          OR c.pending_upgrade_plan IS NOT NULL
+          OR (
+            c.subscription_status='active'
+            AND (
+              (c.plan='trial' AND c.trial_ends_at IS NULL)
+              OR
+              (c.plan='business' AND c.subscription_ends_at IS NULL)
+            )
           )
-        )
-    )
-  `
-);
+      )
+      GROUP BY c.id
+    `
+  );
+
   if (!companies.length) {
     console.log("✅ No companies need processing");
   }
@@ -541,7 +502,7 @@ async function repairBilling() {
           );
         }
 
-        // Send email to company admin
+        // Send email to company
         if (company_email) {
           try {
             if (pending_upgrade_plan) {
@@ -596,22 +557,23 @@ async function checkExpiringSubscriptions() {
 
   const now = new Date();
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+  const mysqlThreeDays = threeDaysFromNow.toISOString().slice(0, 19).replace("T", " ");
 
   // Check expiring subscriptions (3 days warning)
   const [expiring] = await db.query(
     `
       SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at, u.email as company_email
       FROM companies c
-      LEFT JOIN users u ON c.id = u.company_id AND u.role = 'admin'
+      LEFT JOIN users u ON c.id = u.company_id
       WHERE c.subscription_status = 'active'
       AND (
         (c.plan = 'business' AND c.subscription_ends_at BETWEEN NOW() AND ?)
         OR
         (c.plan = 'trial' AND c.trial_ends_at BETWEEN NOW() AND ?)
       )
+      GROUP BY c.id
     `,
-    [threeDaysFromNow.toISOString().slice(0, 19).replace("T", " "), 
-     threeDaysFromNow.toISOString().slice(0, 19).replace("T", " ")]
+    [mysqlThreeDays, mysqlThreeDays]
   );
 
   for (const company of expiring) {
@@ -636,13 +598,14 @@ async function checkExpiringSubscriptions() {
     `
       SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at, u.email as company_email
       FROM companies c
-      LEFT JOIN users u ON c.id = u.company_id AND u.role = 'admin'
+      LEFT JOIN users u ON c.id = u.company_id
       WHERE c.subscription_status = 'active'
       AND (
         (c.plan = 'business' AND c.subscription_ends_at < NOW())
         OR
         (c.plan = 'trial' AND c.trial_ends_at < NOW())
       )
+      GROUP BY c.id
     `
   );
 
