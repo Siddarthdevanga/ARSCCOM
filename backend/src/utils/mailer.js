@@ -13,7 +13,7 @@ const REQUIRED_ENV = [
 for (const key of REQUIRED_ENV) {
   if (!process.env[key]) {
     console.error(`❌ Missing SMTP env variable: ${key}`);
-    throw new Error("SMTP configuration incomplete");
+    throw new Error(`SMTP configuration incomplete`);
   }
 }
 
@@ -21,62 +21,42 @@ for (const key of REQUIRED_ENV) {
    CREATE TRANSPORTER (SINGLETON)
 ====================================================== */
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false, // MUST be false for 587
+  host: process.env.SMTP_HOST,            // smtp.zoho.com
+  port: Number(process.env.SMTP_PORT),    // 587
+  secure: false,                          // MUST be false for 587
   auth: {
     user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD // APP PASSWORD ONLY
+    pass: process.env.SMTP_PASSWORD       // APP PASSWORD ONLY
   },
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false             // EC2 / cert-safe
   }
 });
 
 /* ======================================================
    VERIFY SMTP ON SERVER START
 ====================================================== */
-transporter.verify((err) => {
+transporter.verify((err, success) => {
   if (err) {
-    console.error("❌ SMTP verification failed", err.message);
+    console.error("❌ SMTP verification failed");
+    console.error(err);
   } else {
     console.log("✅ SMTP server ready to send emails");
   }
 });
 
 /* ======================================================
-   NORMALIZE EMAIL INPUT (STRICT FORMAT)
+   SEND EMAIL
 ====================================================== */
-function normalizeEmailPayload(input) {
-  // Allow legacy call: sendEmail(to, subject, html)
-  if (typeof input === "string") {
-    throw new Error(
-      "❌ sendEmail now requires an object: { to, subject, html }"
-    );
-  }
-
-  const {
-    to,
-    subject,
-    html,
-    attachments = []
-  } = input || {};
-
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+  attachments = []
+}) => {
   if (!to || !subject || !html) {
-    throw new Error(
-      "Email requires { to, subject, html } — received invalid payload"
-    );
+    throw new Error("Email requires to, subject and html");
   }
-
-  return { to, subject, html, attachments };
-}
-
-/* ======================================================
-   SEND EMAIL (STRICT + SAFE)
-====================================================== */
-export const sendEmail = async (payload) => {
-  const { to, subject, html, attachments } =
-    normalizeEmailPayload(payload);
 
   try {
     const info = await transporter.sendMail({
@@ -101,6 +81,6 @@ export const sendEmail = async (payload) => {
       subject,
       error: err.message
     });
-    throw err;
+    throw err; // propagate to caller
   }
 };
