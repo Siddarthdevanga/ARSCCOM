@@ -17,6 +17,12 @@ const router = express.Router();
  * - Trial → Enterprise (Return contact form URL)
  * - Business → Enterprise (Return contact form URL)
  *
+ * KEY BEHAVIOR:
+ * - If user clicks upgrade but doesn't pay, they continue with current plan
+ * - Status changes to "pending_upgrade" instead of "pending"
+ * - Current plan remains active until expiry
+ * - Once payment is completed (via webhook), new plan activates
+ *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
 
@@ -53,7 +59,8 @@ router.post("/", authenticate, async (req, res) => {
         plan,
         zoho_customer_id,
         last_payment_link,
-        last_payment_link_id
+        last_payment_link_id,
+        pending_upgrade_plan
       FROM companies
       WHERE id=? LIMIT 1
       `,
@@ -73,6 +80,12 @@ router.post("/", authenticate, async (req, res) => {
     /* ================= ENTERPRISE UPGRADE (REDIRECT TO CONTACT FORM) ================= */
     if (plan === "enterprise") {
       console.log(`📧 Redirecting Company ${companyId} to contact form for Enterprise upgrade`);
+
+      // Mark that they're interested in Enterprise upgrade
+      await db.query(
+        `UPDATE companies SET pending_upgrade_plan = 'enterprise' WHERE id = ?`,
+        [companyId]
+      );
 
       return res.json({
         success: true,
@@ -109,7 +122,7 @@ router.post("/", authenticate, async (req, res) => {
        * ======================================================
        */
       if (
-        status === "pending" &&
+        company.pending_upgrade_plan === "business" &&
         company.last_payment_link &&
         company.last_payment_link_id
       ) {
@@ -215,13 +228,14 @@ router.post("/", authenticate, async (req, res) => {
 
       console.log(`✅ Payment link created: ${link.payment_link_id}`);
 
-      /* ================= UPDATE DB ================= */
+      /* ================= UPDATE DB - MARK AS PENDING UPGRADE ================= */
+      // IMPORTANT: Keep current subscription_status active
+      // Only mark pending_upgrade_plan so user can continue current plan
       await db.query(
         `
         UPDATE companies
         SET 
-          subscription_status='pending',
-          plan = 'business',
+          pending_upgrade_plan = 'business',
           last_payment_link = ?,
           last_payment_link_id = ?,
           last_payment_created_at = NOW()
@@ -230,16 +244,17 @@ router.post("/", authenticate, async (req, res) => {
         [link.url, link.payment_link_id, companyId]
       );
 
-      console.log(`✅ Database updated: Company ${companyId} → Business (pending)`);
+      console.log(`✅ Database updated: Company ${companyId} → Pending Business upgrade (current plan still active)`);
 
       return res.json({
         success: true,
         redirectTo: link.url,
-        message: "Business upgrade payment link generated successfully",
+        message: "Business upgrade payment link generated. Your current plan remains active until you complete payment.",
         data: {
           plan: "business",
           amount: "500.00",
-          currency: "INR"
+          currency: "INR",
+          currentPlanContinues: true
         }
       });
     }
@@ -268,7 +283,7 @@ router.get("/options", authenticate, async (req, res) => {
     }
 
     const [[company]] = await db.query(
-      `SELECT plan, subscription_status FROM companies WHERE id=? LIMIT 1`,
+      `SELECT plan, subscription_status, pending_upgrade_plan FROM companies WHERE id=? LIMIT 1`,
       [companyId]
     );
 
@@ -278,6 +293,7 @@ router.get("/options", authenticate, async (req, res) => {
 
     const currentPlan = (company.plan || "trial").toLowerCase();
     const status = (company.subscription_status || "").toLowerCase();
+    const pendingUpgrade = company.pending_upgrade_plan;
 
     // Determine available upgrade options
     const availableUpgrades = [];
@@ -289,6 +305,7 @@ router.get("/options", authenticate, async (req, res) => {
           name: "Business Plan",
           price: "₹500/month",
           requiresPayment: true,
+          isPending: pendingUpgrade === "business",
           features: [
             "Unlimited visitors",
             "Unlimited conference bookings",
@@ -303,6 +320,7 @@ router.get("/options", authenticate, async (req, res) => {
           price: "Custom Pricing",
           requiresPayment: false,
           requiresContact: true,
+          isPending: pendingUpgrade === "enterprise",
           features: [
             "Everything in Business",
             "Custom integrations",
@@ -320,6 +338,7 @@ router.get("/options", authenticate, async (req, res) => {
         price: "Custom Pricing",
         requiresPayment: false,
         requiresContact: true,
+        isPending: pendingUpgrade === "enterprise",
         features: [
           "Everything in Business",
           "Custom integrations",
@@ -335,6 +354,7 @@ router.get("/options", authenticate, async (req, res) => {
       success: true,
       currentPlan,
       status,
+      pendingUpgrade,
       availableUpgrades
     });
 
