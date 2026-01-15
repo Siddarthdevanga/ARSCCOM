@@ -69,13 +69,26 @@ export default function VisitorDashboard() {
         }
       );
 
-      if (!res.ok) return;
+      if (!res.ok) {
+        console.error("Dashboard API error:", res.status, res.statusText);
+        return;
+      }
 
       const data = await res.json();
+      console.log("Dashboard data received:", data);
 
       setStats(data?.stats || { today: 0, inside: 0, out: 0 });
-      setActiveVisitors(data?.activeVisitors || []);
-      setCheckedOutVisitors(data?.checkedOutVisitors || []);
+      
+      // Handle active visitors
+      const active = data?.activeVisitors || [];
+      console.log("Active visitors:", active.length, active);
+      setActiveVisitors(active);
+      
+      // Handle checked out visitors - try multiple possible keys
+      const checkedOut = data?.checkedOutVisitors || data?.outVisitors || data?.checkedOut || [];
+      console.log("Checked out visitors:", checkedOut.length, checkedOut);
+      setCheckedOutVisitors(checkedOut);
+      
       setPlan(data?.plan || null);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
@@ -145,9 +158,15 @@ export default function VisitorDashboard() {
         }
       );
 
-      if (res.ok) await loadDashboard(token);
+      if (res.ok) {
+        await loadDashboard(token);
+        showToast("✓ Visitor checked out successfully!", "success");
+      } else {
+        showToast("✗ Failed to checkout visitor", "error");
+      }
     } catch (err) {
       console.error("Checkout error:", err);
+      showToast("✗ Checkout failed", "error");
     } finally {
       setCheckingOut(null);
     }
@@ -540,7 +559,7 @@ export default function VisitorDashboard() {
       <section className={styles.tablesRow}>
         {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
-          <h3>Active Visitors</h3>
+          <h3>Active Visitors ({activeVisitors.length})</h3>
 
           {activeVisitors.length === 0 ? (
             <p>No active visitors</p>
@@ -557,7 +576,7 @@ export default function VisitorDashboard() {
               </thead>
               <tbody>
                 {activeVisitors.map((v) => (
-                  <tr key={v.visitor_code}>
+                  <tr key={v.visitor_code || v.id}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
@@ -582,7 +601,7 @@ export default function VisitorDashboard() {
 
         {/* CHECKED OUT VISITORS */}
         <div className={styles.tableCard}>
-          <h3>Checked-Out Visitors</h3>
+          <h3>Checked-Out Visitors ({checkedOutVisitors.length})</h3>
 
           {checkedOutVisitors.length === 0 ? (
             <p>No visitors checked out today</p>
@@ -598,7 +617,7 @@ export default function VisitorDashboard() {
               </thead>
               <tbody>
                 {checkedOutVisitors.map((v) => (
-                  <tr key={v.visitor_code}>
+                  <tr key={v.visitor_code || v.id}>
                     <td>{v.visitor_code}</td>
                     <td>{v.name}</td>
                     <td>{v.phone}</td>
@@ -610,6 +629,16 @@ export default function VisitorDashboard() {
           )}
         </div>
       </section>
+
+      {/* ================= DEBUG INFO (REMOVE IN PRODUCTION) ================= */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{ background: '#f0f0f0', padding: '10px', margin: '10px 0', fontSize: '12px' }}>
+          <strong>Debug Info:</strong><br/>
+          Active Visitors: {activeVisitors.length}<br/>
+          Checked Out Visitors: {checkedOutVisitors.length}<br/>
+          Stats: {JSON.stringify(stats)}
+        </div>
+      )}
     </div>
   );
 }
