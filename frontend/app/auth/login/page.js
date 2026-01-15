@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -146,7 +147,7 @@ export default function LoginPage() {
           <div className={styles.planContainer}>
             {/* FREE PLAN */}
             <div className={styles.planCard}>
-              <h3>TRAIL</h3>
+              <h3>TRIAL</h3>
               <h2>₹49 / 15 DAYS</h2>
               <ul>
                 <li>✔ Valid 15 Days</li>
@@ -181,7 +182,7 @@ export default function LoginPage() {
               <ul>
                 <li>✔ Unlimited Visitors</li>
                 <li>✔ Unlimited Conference Bookings</li>
-                <li>✔ Unmilited Conference Rooms</li>
+                <li>✔ Unlimited Conference Rooms</li>
                 <li>✔ Dedicated Support</li>
               </ul>
               <Link href="/auth/contact-us">
@@ -227,12 +228,71 @@ export default function LoginPage() {
 
           <div className={styles.inputGroup}>
             <label>Password</label>
-            <input
-              type="password"
-              disabled={loading}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div style={{ position: "relative" }}>
+              <input
+                type={showPassword ? "text" : "password"}
+                disabled={loading}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{ paddingRight: "45px" }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: "5px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#666",
+                  fontSize: "18px",
+                  opacity: loading ? 0.5 : 1,
+                }}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  // Eye slash icon (password visible)
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                    <line x1="1" y1="1" x2="23" y2="23" />
+                  </svg>
+                ) : (
+                  // Eye icon (password hidden)
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {error && (
