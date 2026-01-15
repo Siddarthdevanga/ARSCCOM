@@ -13,7 +13,7 @@ const REQUIRED_ENV = [
 for (const key of REQUIRED_ENV) {
   if (!process.env[key]) {
     console.error(`❌ Missing SMTP env variable: ${key}`);
-    throw new Error(`SMTP configuration incomplete`);
+    throw new Error(`SMTP configuration incomplete: ${key} is missing`);
   }
 }
 
@@ -42,6 +42,9 @@ transporter.verify((err, success) => {
     console.error(err);
   } else {
     console.log("✅ SMTP server ready to send emails");
+    console.log(`   Host: ${process.env.SMTP_HOST}`);
+    console.log(`   Port: ${process.env.SMTP_PORT}`);
+    console.log(`   User: ${process.env.SMTP_USER}`);
   }
 });
 
@@ -52,34 +55,60 @@ export const sendEmail = async ({
   to,
   subject,
   html,
+  cc,
+  bcc,
   attachments = []
 }) => {
-  if (!to || !subject || !html) {
-    throw new Error("Email requires to, subject and html");
+  // Validation
+  if (!to) {
+    console.error("❌ Email validation failed: 'to' is required");
+    throw new Error("Email requires 'to' field");
+  }
+  
+  if (!subject) {
+    console.error("❌ Email validation failed: 'subject' is required");
+    throw new Error("Email requires 'subject' field");
+  }
+  
+  if (!html) {
+    console.error("❌ Email validation failed: 'html' is required");
+    throw new Error("Email requires 'html' field");
   }
 
   try {
-    const info = await transporter.sendMail({
+    console.log(`📤 Attempting to send email to: ${to}`);
+    console.log(`   Subject: ${subject}`);
+
+    const mailOptions = {
       from: `"PROMEET" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,
       attachments
-    });
+    };
 
-    console.log("📧 Email sent successfully", {
+    // Add optional fields if provided
+    if (cc) mailOptions.cc = cc;
+    if (bcc) mailOptions.bcc = bcc;
+
+    const info = await transporter.sendMail(mailOptions);
+    
+    console.log("✅ Email sent successfully", {
       to,
       subject,
-      messageId: info.messageId
+      messageId: info.messageId,
+      response: info.response
     });
-
+    
     return info;
-
+    
   } catch (err) {
     console.error("❌ Email sending failed", {
       to,
       subject,
-      error: err.message
+      error: err.message,
+      code: err.code,
+      command: err.command
     });
     throw err; // propagate to caller
   }
