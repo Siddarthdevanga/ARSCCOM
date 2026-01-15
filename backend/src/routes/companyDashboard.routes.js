@@ -28,14 +28,6 @@ router.use(authMiddleware);
 ====================================================== */
 
 /**
- * Check if a date has expired
- */
-const isExpired = (date) => {
-  if (!date) return true;
-  return new Date(date).getTime() < Date.now();
-};
-
-/**
  * Normalize plan name to lowercase (matches database enum)
  */
 const normalizePlan = (plan) => (plan || "trial").toLowerCase();
@@ -63,11 +55,12 @@ const generatePublicSlug = (companyName, companyId) => {
 
 /**
  * Validates company subscription and returns plan details
- * @throws {Error} if subscription is invalid or expired
+ * FIXED: Only checks subscription_status (cron job handles date checks)
+ * @throws {Error} if subscription is invalid
  */
 const validateCompanySubscription = async (companyId) => {
   const [[company]] = await db.query(
-    `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
+    `SELECT plan, subscription_status
      FROM companies
      WHERE id = ?
      LIMIT 1`,
@@ -81,19 +74,9 @@ const validateCompanySubscription = async (companyId) => {
   const plan = normalizePlan(company.plan);
   const status = normalizeStatus(company.subscription_status);
 
-  // Check subscription status
+  // ✅ ONLY check subscription_status (cron updates this based on expiry dates)
   if (!ACTIVE_STATUSES.includes(status)) {
-    throw new Error("Subscription inactive. Please upgrade your plan.");
-  }
-
-  // Check trial expiration
-  if (status === "trial" && isExpired(company.trial_ends_at)) {
-    throw new Error("Trial period has expired. Please upgrade to continue.");
-  }
-
-  // Check paid subscription expiration
-  if (status === "active" && isExpired(company.subscription_ends_at)) {
-    throw new Error("Subscription has expired. Please renew to continue.");
+    throw new Error("Subscription inactive. Please renew your subscription to continue.");
   }
 
   return {
@@ -280,7 +263,7 @@ router.get("/rooms", async (req, res) => {
     
     const statusCode = err.message.includes("not found") 
       ? 404 
-      : err.message.includes("expired") || err.message.includes("inactive")
+      : err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
       
@@ -317,8 +300,7 @@ router.get("/rooms/all", async (req, res) => {
   } catch (err) {
     console.error("[GET /rooms/all]", err.message);
     
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive") 
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403 
       : 500;
     
@@ -395,8 +377,7 @@ router.post("/rooms", async (req, res) => {
   } catch (err) {
     console.error("[POST /rooms]", err.message);
     
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403 
       : 500;
       
@@ -446,8 +427,8 @@ router.patch("/rooms/:id", async (req, res) => {
     const statusCode = err.message.includes("not found")
       ? 404
       : err.message.includes("locked") || 
-        err.message.includes("expired") ||
-        err.message.includes("inactive")
+        err.message.includes("inactive") ||
+        err.message.includes("renew")
       ? 403
       : 500;
 
@@ -508,7 +489,7 @@ router.delete("/rooms/:id", async (req, res) => {
     
     const statusCode = err.message.includes("not found")
       ? 404
-      : err.message.includes("expired") || err.message.includes("inactive")
+      : err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
       
@@ -548,8 +529,7 @@ router.get("/dashboard", async (req, res) => {
   } catch (err) {
     console.error("[GET /dashboard]", err.message);
     
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
       
@@ -588,8 +568,7 @@ router.get("/plan-usage", async (req, res) => {
   } catch (err) {
     console.error("[GET /plan-usage]", err.message);
     
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
       
@@ -625,8 +604,7 @@ router.post("/sync-rooms", async (req, res) => {
   } catch (err) {
     console.error("[POST /sync-rooms]", err.message);
     
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
       
@@ -675,8 +653,7 @@ router.get("/public-booking-info", async (req, res) => {
   } catch (err) {
     console.error("[GET /public-booking-info]", err.message);
 
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
 
@@ -759,8 +736,7 @@ router.get("/qr-code/download", async (req, res) => {
     await conn.rollback();
     console.error("[GET /qr-code/download]", err.message);
 
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
 
@@ -806,8 +782,7 @@ router.get("/bookings", async (req, res) => {
   } catch (err) {
     console.error("[GET /bookings]", err.message);
 
-    const statusCode = err.message.includes("expired") || 
-                       err.message.includes("inactive")
+    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
 
