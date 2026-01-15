@@ -1,33 +1,65 @@
 import { createCanvas, loadImage, registerFont } from "canvas";
 import fs from "fs";
 
-/* ================= FONT ================= */
+/* ================= FONT SETUP ================= */
 const FONT_PATH = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
 const FONT_FAMILY = "AppFont";
 
-if (!fs.existsSync(FONT_PATH)) {
-  console.error("❌ Font not found:", FONT_PATH);
-  throw new Error("Required font missing");
+// Check if font exists, fallback to system fonts if not
+if (fs.existsSync(FONT_PATH)) {
+  registerFont(FONT_PATH, { family: FONT_FAMILY });
+  console.log("✅ Custom font loaded:", FONT_PATH);
+} else {
+  console.warn("⚠️ Custom font not found, using system default");
 }
-
-registerFont(FONT_PATH, { family: FONT_FAMILY });
 
 /* ================= CONSTANTS ================= */
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 390;
 
-const BRAND_COLOR = "#3c007a";
+const BRAND_COLOR = "#6c2bd9";
+const ACCENT_COLOR = "#8e44ad";
 const TEXT_GRAY = "#666";
+const LIGHT_GRAY = "#f8f9fa";
 const CARD_RADIUS = 18;
 
 /* ======================================================
-   SUPER SAFE IST FORMATTER (NO DOUBLE +5:30 ISSUE)
+   IST FORMATTER FOR VISITOR PASS
 ====================================================== */
-const formatIST = (value) => {
+const formatISTForPass = (value) => {
   if (!value) return "-";
 
-  const format = (d) =>
-    d.toLocaleString("en-IN", {
+  try {
+    let date;
+
+    // Handle Date objects
+    if (value instanceof Date && !isNaN(value)) {
+      date = value;
+    }
+    // Handle MySQL datetime strings (YYYY-MM-DD HH:MM:SS)
+    else if (typeof value === "string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+      // Parse MySQL datetime as IST
+      const [datePart, timePart] = value.split(" ");
+      const [year, month, day] = datePart.split("-");
+      const [hour, minute, second] = timePart.split(":");
+      
+      // Create date treating MySQL datetime as IST
+      date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}+05:30`);
+    }
+    // Handle other string formats
+    else if (typeof value === "string") {
+      date = new Date(value);
+    }
+    // Handle other types
+    else {
+      date = new Date(value);
+    }
+
+    // Validate date
+    if (isNaN(date.getTime())) return "-";
+
+    // Format in IST
+    return date.toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       day: "2-digit",
       month: "short",
@@ -37,68 +69,15 @@ const formatIST = (value) => {
       hour12: true
     });
 
-  /* ---------- CASE 1: Already a valid Date ---------- */
-  if (value instanceof Date && !isNaN(value)) {
-    return format(value);
-  }
-
-  /* ---------- CASE 2: Non-string ---------- */
-  if (typeof value !== "string") {
-    try {
-      const d = new Date(value);
-      return isNaN(d) ? "-" : format(d);
-    } catch {
-      return "-";
-    }
-  }
-
-  /* ---------- CASE 3: ISO with timezone / Z ---------- */
-  if (value.includes("T") && (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))) {
-    try {
-      const d = new Date(value);
-      return isNaN(d) ? "-" : format(d);
-    } catch {
-      return "-";
-    }
-  }
-
-  /* ---------- CASE 4: ISO WITHOUT timezone ---------- */
-  if (value.includes("T")) {
-    try {
-      // Treat it as IST already — do NOT shift
-      const d = new Date(value.replace("T", " ") + " UTC"); 
-      return format(d);
-    } catch {
-      return "-";
-    }
-  }
-
-  /* ---------- CASE 5: MYSQL "YYYY-MM-DD HH:MM:SS" ---------- */
-  try {
-    const [date, time] = value.split(" ");
-    if (!date || !time) return value;
-
-    const [y, mo, d] = date.split("-");
-    let [h, m] = time.split(":");
-
-    let hour = parseInt(h, 10);
-    const suffix = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-
-    const monthNames = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-
-    return `${d} ${monthNames[mo - 1]} ${y}, ${hour}:${m} ${suffix}`;
-  } catch {
-    return value;
+  } catch (err) {
+    console.error("[formatISTForPass] Error:", err.message);
+    return "-";
   }
 };
 
-/* ================= TEXT TRIM ================= */
+/* ================= TEXT UTILITIES ================= */
 const drawEllipsisText = (ctx, text, x, y, maxWidth) => {
-  const value = text || "Company";
+  const value = text || "";
 
   if (ctx.measureText(value).width <= maxWidth) {
     ctx.fillText(value, x, y);
@@ -113,121 +92,221 @@ const drawEllipsisText = (ctx, text, x, y, maxWidth) => {
   ctx.fillText(trimmed + "...", x, y);
 };
 
+const drawRoundedRect = (ctx, x, y, width, height, radius) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, radius);
+  ctx.arcTo(x + width, y + height, x, y + height, radius);
+  ctx.arcTo(x, y + height, x, y, radius);
+  ctx.arcTo(x, y, x + width, y, radius);
+  ctx.closePath();
+};
+
 /* ================= MAIN IMAGE GENERATOR ================= */
 export const generateVisitorPassImage = async ({
   company = {},
   visitor = {}
 }) => {
-  const companyName =
-    company?.name ||
-    visitor?.companyName ||
-    "Company";
+  console.log("[VISITOR_PASS_IMAGE] Generating pass for:", visitor.name);
+  console.log("[VISITOR_PASS_IMAGE] Check-in time:", visitor.checkIn);
+
+  const companyName = company?.name || "Company";
+  const visitorName = visitor?.name || "Visitor";
+  const visitorCode = visitor?.visitorCode || "N/A";
+  const phone = visitor?.phone || "N/A";
+  const personToMeet = visitor?.personToMeet || "Reception";
+  
+  // Format check-in time
+  const checkInFormatted = formatISTForPass(visitor.checkIn);
+  console.log("[VISITOR_PASS_IMAGE] Formatted check-in:", checkInFormatted);
 
   const canvas = createCanvas(CANVAS_WIDTH, CANVAS_HEIGHT);
   const ctx = canvas.getContext("2d");
 
+  // Set default font (fallback if custom font fails)
+  const fontFamily = fs.existsSync(FONT_PATH) ? FONT_FAMILY : "Arial, sans-serif";
+
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
 
-  /* BG */
-  ctx.fillStyle = BRAND_COLOR;
+  /* ================= BACKGROUND ================= */
+  // Gradient background
+  const gradient = ctx.createLinearGradient(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  gradient.addColorStop(0, BRAND_COLOR);
+  gradient.addColorStop(1, ACCENT_COLOR);
+  
+  ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-  /* CARD */
+  /* ================= MAIN CARD ================= */
   const cardX = 20;
   const cardY = 20;
   const cardW = CANVAS_WIDTH - 40;
   const cardH = CANVAS_HEIGHT - 40;
 
-  ctx.fillStyle = "#fff";
+  // Card shadow
+  ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+  drawRoundedRect(ctx, cardX + 3, cardY + 3, cardW, cardH, CARD_RADIUS);
+  ctx.fill();
+
+  // Card background
+  ctx.fillStyle = "#ffffff";
+  drawRoundedRect(ctx, cardX, cardY, cardW, cardH, CARD_RADIUS);
+  ctx.fill();
+
+  /* ================= HEADER SECTION ================= */
+  ctx.fillStyle = BRAND_COLOR;
   ctx.beginPath();
   ctx.moveTo(cardX + CARD_RADIUS, cardY);
-  ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + cardH, CARD_RADIUS);
-  ctx.arcTo(cardX + cardW, cardY + cardH, cardX, cardY + cardH, CARD_RADIUS);
-  ctx.arcTo(cardX, cardY + cardH, cardX, cardY, CARD_RADIUS);
+  ctx.arcTo(cardX + cardW, cardY, cardX + cardW, cardY + 70, CARD_RADIUS);
+  ctx.lineTo(cardX + cardW, cardY + 70);
+  ctx.lineTo(cardX, cardY + 70);
   ctx.arcTo(cardX, cardY, cardX + cardW, cardY, CARD_RADIUS);
   ctx.closePath();
   ctx.fill();
 
-  /* HEADER */
-  ctx.fillStyle = BRAND_COLOR;
-  ctx.fillRect(cardX, cardY, cardW, 64);
+  // Company name
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `bold 24px ${fontFamily}`;
+  drawEllipsisText(ctx, companyName, cardX + 20, cardY + 35, cardW - 140);
 
-  ctx.fillStyle = "#fff";
-  ctx.font = `bold 22px ${FONT_FAMILY}`;
-  drawEllipsisText(ctx, companyName, cardX + 20, cardY + 32, cardW - 140);
+  // "Visitor Pass" subtitle
+  ctx.font = `16px ${fontFamily}`;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+  ctx.fillText("VISITOR PASS", cardX + 20, cardY + 55);
 
-  /* LOGO */
+  /* ================= COMPANY LOGO ================= */
   if (company.logo_url || company.logo) {
     try {
       const logo = await loadImage(company.logo_url || company.logo);
-      const ratio = Math.min(120 / logo.width, 48 / logo.height);
+      const maxLogoW = 120;
+      const maxLogoH = 50;
+      const ratio = Math.min(maxLogoW / logo.width, maxLogoH / logo.height);
+      const logoW = logo.width * ratio;
+      const logoH = logo.height * ratio;
+
+      // White background for logo
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(cardX + cardW - logoW - 25, cardY + 10, logoW + 10, logoH + 10);
 
       ctx.drawImage(
         logo,
-        cardX + cardW - logo.width * ratio - 20,
-        cardY + 8,
-        logo.width * ratio,
-        logo.height * ratio
+        cardX + cardW - logoW - 20,
+        cardY + 15,
+        logoW,
+        logoH
       );
+      
+      console.log("[VISITOR_PASS_IMAGE] Company logo loaded successfully");
     } catch (err) {
-      console.error("Logo load failed:", err.message);
+      console.error("[VISITOR_PASS_IMAGE] Logo load failed:", err.message);
     }
   }
 
-  /* DETAILS */
+  /* ================= VISITOR DETAILS ================= */
+  const detailsX = cardX + 20;
+  let detailsY = cardY + 90;
+  const lineHeight = 28;
+
+  // Section title
   ctx.fillStyle = BRAND_COLOR;
-  ctx.font = `bold 16px ${FONT_FAMILY}`;
-  ctx.fillText("Visitor Pass", cardX + 20, cardY + 100);
+  ctx.font = `bold 18px ${fontFamily}`;
+  ctx.fillText("VISITOR DETAILS", detailsX, detailsY);
+  detailsY += 35;
 
-  ctx.font = `15px ${FONT_FAMILY}`;
-  ctx.fillText(`Visitor ID : ${visitor.visitorCode || "-"}`, cardX + 20, cardY + 135);
-  ctx.fillText(`Name       : ${visitor.name || "-"}`, cardX + 20, cardY + 165);
-  ctx.fillText(`Phone      : ${visitor.phone || "-"}`, cardX + 20, cardY + 195);
+  // Details
+  ctx.font = `15px ${fontFamily}`;
+  const details = [
+    { label: "Visitor ID", value: visitorCode },
+    { label: "Name", value: visitorName },
+    { label: "Phone", value: phone },
+    { label: "Meeting", value: personToMeet },
+    { label: "Check-in", value: `${checkInFormatted} IST` }
+  ];
 
-  ctx.fillText(
-    `Check-in   : ${formatIST(visitor.checkIn)} (IST)`,
-    cardX + 20,
-    cardY + 225
-  );
+  details.forEach((detail, index) => {
+    ctx.fillStyle = TEXT_GRAY;
+    ctx.fillText(`${detail.label}:`, detailsX, detailsY + (index * lineHeight));
+    
+    ctx.fillStyle = "#333";
+    ctx.font = `bold 15px ${fontFamily}`;
+    drawEllipsisText(ctx, detail.value, detailsX + 85, detailsY + (index * lineHeight), 280);
+    
+    ctx.font = `15px ${fontFamily}`;
+  });
 
-  /* PHOTO */
-  const photoX = cardX + cardW - 190;
-  const photoY = cardY + 95;
-  const photoW = 150;
-  const photoH = 185;
+  /* ================= VISITOR PHOTO ================= */
+  const photoX = cardX + cardW - 170;
+  const photoY = cardY + 90;
+  const photoW = 130;
+  const photoH = 160;
 
+  // Photo background
+  ctx.fillStyle = LIGHT_GRAY;
+  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 8);
+  ctx.fill();
+
+  // Photo border
   ctx.strokeStyle = BRAND_COLOR;
-  ctx.lineWidth = 2;
-  ctx.strokeRect(photoX, photoY, photoW, photoH);
+  ctx.lineWidth = 3;
+  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 8);
+  ctx.stroke();
 
+  // Load and draw visitor photo
   if (visitor.photoUrl) {
     try {
       const img = await loadImage(visitor.photoUrl);
-      const r = Math.min(photoW / img.width, photoH / img.height);
+      const ratio = Math.min((photoW - 6) / img.width, (photoH - 6) / img.height);
+      const imgW = img.width * ratio;
+      const imgH = img.height * ratio;
 
-      ctx.drawImage(
-        img,
-        photoX + (photoW - img.width * r) / 2,
-        photoY + (photoH - img.height * r) / 2,
-        img.width * r,
-        img.height * r
-      );
-    } catch {
-      ctx.font = `12px ${FONT_FAMILY}`;
-      ctx.fillStyle = "#999";
-      ctx.fillText("Photo unavailable", photoX + 20, photoY + photoH / 2);
+      // Center the image
+      const imgX = photoX + (photoW - imgW) / 2;
+      const imgY = photoY + (photoH - imgH) / 2;
+
+      // Create clipping path for rounded photo
+      ctx.save();
+      drawRoundedRect(ctx, photoX + 3, photoY + 3, photoW - 6, photoH - 6, 5);
+      ctx.clip();
+      
+      ctx.drawImage(img, imgX, imgY, imgW, imgH);
+      ctx.restore();
+      
+      console.log("[VISITOR_PASS_IMAGE] Visitor photo loaded successfully");
+    } catch (err) {
+      console.error("[VISITOR_PASS_IMAGE] Photo load failed:", err.message);
+      
+      // Fallback: show placeholder text
+      ctx.fillStyle = TEXT_GRAY;
+      ctx.font = `12px ${fontFamily}`;
+      ctx.textAlign = "center";
+      ctx.fillText("Photo", photoX + photoW / 2, photoY + photoH / 2 - 10);
+      ctx.fillText("Not Available", photoX + photoW / 2, photoY + photoH / 2 + 10);
+      ctx.textAlign = "left";
     }
+  } else {
+    // No photo URL provided
+    ctx.fillStyle = TEXT_GRAY;
+    ctx.font = `12px ${fontFamily}`;
+    ctx.textAlign = "center";
+    ctx.fillText("No Photo", photoX + photoW / 2, photoY + photoH / 2);
+    ctx.textAlign = "left";
   }
 
-  /* FOOTER */
-  ctx.font = `12px ${FONT_FAMILY}`;
-  ctx.fillStyle = TEXT_GRAY;
-  ctx.fillText(
-    "Please carry this pass during your visit",
-    cardX + 20,
-    cardY + cardH - 18
-  );
+  /* ================= FOOTER ================= */
+  ctx.fillStyle = LIGHT_GRAY;
+  ctx.fillRect(cardX, cardY + cardH - 40, cardW, 40);
 
+  ctx.fillStyle = TEXT_GRAY;
+  ctx.font = `12px ${fontFamily}`;
+  ctx.fillText("Please carry this pass during your visit • Valid for today only", cardX + 20, cardY + cardH - 20);
+
+  // Timestamp
+  ctx.textAlign = "right";
+  ctx.fillText(`Generated: ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`, cardX + cardW - 20, cardY + cardH - 20);
+  ctx.textAlign = "left";
+
+  console.log("[VISITOR_PASS_IMAGE] Pass generated successfully");
+  
   return canvas.toBuffer("image/png");
 };
