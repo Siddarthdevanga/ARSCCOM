@@ -2,13 +2,42 @@ import { sendEmail } from "../utils/mailer.js";
 import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
 /* ======================================================
-   SUPER SAFE IST FORMATTER (NO DOUBLE +5:30)
+   IST FORMATTER (HANDLES ALL INPUT TYPES)
 ====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
 
-  const format = (d) =>
-    d.toLocaleString("en-IN", {
+  try {
+    let date;
+
+    // Handle Date objects
+    if (value instanceof Date) {
+      date = value;
+    }
+    // Handle MySQL datetime strings (YYYY-MM-DD HH:MM:SS)
+    else if (typeof value === "string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+      // MySQL datetime is already in IST, just parse it
+      const [datePart, timePart] = value.split(" ");
+      const [year, month, day] = datePart.split("-");
+      const [hour, minute, second] = timePart.split(":");
+      
+      // Create date object in UTC then treat as IST
+      date = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}+05:30`);
+    }
+    // Handle ISO strings
+    else if (typeof value === "string") {
+      date = new Date(value);
+    }
+    // Handle other types
+    else {
+      date = new Date(value);
+    }
+
+    // Validate date
+    if (isNaN(date.getTime())) return "-";
+
+    // Format in IST
+    return date.toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       day: "2-digit",
       month: "short",
@@ -18,67 +47,14 @@ const formatIST = (value) => {
       hour12: true
     });
 
-  // Date
-  if (value instanceof Date && !isNaN(value)) return format(value);
-
-  // Non-string
-  if (typeof value !== "string") {
-    try {
-      const d = new Date(value);
-      return isNaN(d) ? "-" : format(d);
-    } catch {
-      return "-";
-    }
-  }
-
-  /* ISO with timezone */
-  if (
-    value.includes("T") &&
-    (value.includes("Z") || /[+-]\d\d:?(\d\d)?$/.test(value))
-  ) {
-    try {
-      const d = new Date(value);
-      return isNaN(d) ? "-" : format(d);
-    } catch {
-      return "-";
-    }
-  }
-
-  /* ISO without timezone → treat as IST */
-  if (value.includes("T")) {
-    try {
-      const d = new Date(value.replace(" ", "T"));
-      return isNaN(d) ? "-" : format(d);
-    } catch {
-      return "-";
-    }
-  }
-
-  /* MYSQL FORMAT — already IST */
-  try {
-    const [date, time] = value.split(" ");
-    if (!date || !time) return value;
-
-    const [y, mo, d] = date.split("-");
-    let [h, m] = time.split(":");
-
-    let hour = parseInt(h, 10);
-    const suffix = hour >= 12 ? "PM" : "AM";
-    hour = hour % 12 || 12;
-
-    const monthNames = [
-      "Jan","Feb","Mar","Apr","May","Jun",
-      "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-
-    return `${d} ${monthNames[mo - 1]} ${y}, ${hour}:${m} ${suffix}`;
-  } catch {
-    return value;
+  } catch (err) {
+    console.error("[formatIST] Error:", err.message, "| Input:", value);
+    return "-";
   }
 };
 
 /* ======================================================
-   EMAIL FOOTER — COMPANY BRANDING ONLY
+   EMAIL FOOTER — COMPANY BRANDING
 ====================================================== */
 export const emailFooter = (company = {}) => {
   const companyName = company?.name || "Promeet";
@@ -115,158 +91,179 @@ ${companyLogo
    SEND VISITOR PASS EMAIL — PROFESSIONAL VERSION
 ====================================================== */
 export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
-  if (!visitor.email) return;
+  if (!visitor.email) {
+    console.log("[VISITOR_MAIL] No email provided, skipping");
+    return;
+  }
 
   const companyName = company.name || "Promeet";
   const visitorName = visitor.name || "Visitor";
   const visitorCode = visitor.visitorCode || "-";
-  const checkInTime = formatIST(visitor.checkIn);
+  const phone = visitor.phone || "-";
   const personToMeet = visitor.personToMeet || "Reception";
   const purpose = visitor.purpose || "Visit";
+  
+  // Format check-in time (handles both checkIn and checkInDisplay)
+  const checkInTime = visitor.checkInDisplay || formatIST(visitor.checkIn);
+  
+  console.log(`[VISITOR_MAIL] Preparing email for ${visitor.email}`);
+  console.log(`[VISITOR_MAIL] Check-in time: ${checkInTime}`);
 
   let imageBuffer = null;
 
+  // Generate visitor pass image
   try {
     imageBuffer = await generateVisitorPassImage({ company, visitor });
+    console.log("[VISITOR_MAIL] Visitor pass image generated successfully");
   } catch (err) {
-    console.error("[VISITOR_PASS_IMAGE] Error:", err.message);
+    console.error("[VISITOR_MAIL] Error generating pass image:", err.message);
   }
 
+  // Send email
   try {
     await sendEmail({
       to: visitor.email,
       subject: `Welcome to ${companyName} — Your Digital Visitor Pass`,
       html: `
-        <p>Hello <b>${visitorName}</b>,</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; }
+            .header { background: linear-gradient(135deg, #6c2bd9, #8e44ad); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .content { padding: 30px 20px; background: white; }
+            .success-badge { background: #e8f5e9; border-left: 4px solid #00c853; padding: 16px; margin: 20px 0; border-radius: 4px; }
+            .warning-badge { background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; margin: 20px 0; border-radius: 4px; }
+            .info-badge { background: #f8f9ff; border-left: 4px solid #6c2bd9; padding: 16px; margin: 20px 0; border-radius: 4px; }
+            .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+            .details-table td { padding: 12px; border: 1px solid #e0e0e0; }
+            .details-table tr:nth-child(odd) { background: #f8f9ff; }
+            .label { font-weight: 600; color: #6c2bd9; width: 35%; }
+            h2 { color: #6c2bd9; margin-top: 30px; margin-bottom: 10px; font-size: 20px; }
+            ul { font-size: 14px; line-height: 1.8; color: #333; }
+            ul li { margin-bottom: 8px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 style="margin: 0; font-size: 28px;">Welcome to ${companyName}!</h1>
+              <p style="margin: 10px 0 0; font-size: 16px; opacity: 0.95;">Your Digital Visitor Pass</p>
+            </div>
+            
+            <div class="content">
+              <p>Hello <b>${visitorName}</b>,</p>
 
-        <p>
-          Welcome to <b>${companyName}</b>! Your visitor registration has been successfully processed, 
-          and your digital visitor pass is ready.
-        </p>
+              <p>
+                Welcome to <b>${companyName}</b>! Your visitor registration has been successfully processed, 
+                and your digital visitor pass is ready.
+              </p>
 
-        <div style="background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;">
-          <p style="margin:0;color:#2e7d32;font-weight:600;">
-            ✓ Registration Confirmed — Check-in Completed
-          </p>
-        </div>
+              <div class="success-badge">
+                <p style="margin:0;color:#2e7d32;font-weight:600;">
+                  ✓ Registration Confirmed — Check-in Completed
+                </p>
+              </div>
 
-        <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
-          Visit Details
-        </h3>
+              <h2>📋 Visit Details</h2>
 
-        <table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:14px;margin-bottom:20px;">
-          <tr style="background:#f8f9ff;">
-            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;width:35%;">
-              Visitor ID
-            </td>
-            <td style="padding:12px;border:1px solid #e0e0e0;">
-              <b style="color:#222;font-size:15px;">${visitorCode}</b>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
-              Visitor Name
-            </td>
-            <td style="padding:12px;border:1px solid #e0e0e0;">
-              ${visitorName}
-            </td>
-          </tr>
-          <tr style="background:#f8f9ff;">
-            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
-              Company
-            </td>
-            <td style="padding:12px;border:1px solid #e0e0e0;">
-              ${companyName}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
-              Check-in Time
-            </td>
-            <td style="padding:12px;border:1px solid #e0e0e0;">
-              ${checkInTime} <span style="color:#666;font-size:12px;">(IST)</span>
-            </td>
-          </tr>
-          <tr style="background:#f8f9ff;">
-            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
-              Person to Meet
-            </td>
-            <td style="padding:12px;border:1px solid #e0e0e0;">
-              ${personToMeet}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding:12px;border:1px solid #e0e0e0;font-weight:600;color:#6c2bd9;">
-              Purpose of Visit
-            </td>
-            <td style="padding:12px;border:1px solid #e0e0e0;">
-              ${purpose}
-            </td>
-          </tr>
-        </table>
+              <table class="details-table">
+                <tr>
+                  <td class="label">Visitor ID</td>
+                  <td><b style="color:#222;font-size:15px;">${visitorCode}</b></td>
+                </tr>
+                <tr>
+                  <td class="label">Visitor Name</td>
+                  <td>${visitorName}</td>
+                </tr>
+                <tr>
+                  <td class="label">Phone</td>
+                  <td>${phone}</td>
+                </tr>
+                <tr>
+                  <td class="label">Company</td>
+                  <td>${companyName}</td>
+                </tr>
+                <tr>
+                  <td class="label">Check-in Time</td>
+                  <td>${checkInTime} <span style="color:#666;font-size:12px;">(IST)</span></td>
+                </tr>
+                <tr>
+                  <td class="label">Person to Meet</td>
+                  <td>${personToMeet}</td>
+                </tr>
+                <tr>
+                  <td class="label">Purpose of Visit</td>
+                  <td>${purpose}</td>
+                </tr>
+              </table>
 
-        <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
-          Your Digital Visitor Pass
-        </h3>
+              <h2>🎫 Your Digital Visitor Pass</h2>
 
-        <p>
-          Your visitor pass is attached to this email as an image. 
-          Please <b>show this pass at the reception</b> or security checkpoint when requested.
-        </p>
+              <p>
+                Your visitor pass is attached to this email as an image. 
+                Please <b>show this pass at the reception</b> or security checkpoint when requested.
+              </p>
 
-        <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:20px 0;">
-          <p style="margin:0;color:#e65100;font-weight:600;">
-            📱 Keep this email handy on your mobile device for easy access
-          </p>
-        </div>
+              <div class="warning-badge">
+                <p style="margin:0;color:#e65100;font-weight:600;">
+                  📱 Keep this email handy on your mobile device for easy access
+                </p>
+              </div>
 
-        <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
-          Important Guidelines
-        </h3>
+              <h2>📌 Important Guidelines</h2>
 
-        <ul style="font-size:14px;line-height:1.8;color:#333;">
-          <li>
-            <b>Display your visitor pass</b> when entering the premises or when requested by security.
-          </li>
-          <li>
-            <b>Check-out is mandatory</b> — Please inform reception when leaving the premises.
-          </li>
-          <li>
-            <b>Follow company policies</b> — Adhere to all security protocols and visitor guidelines.
-          </li>
-          <li>
-            <b>Report any issues</b> — Contact reception immediately if you face any difficulties.
-          </li>
-        </ul>
+              <ul>
+                <li>
+                  <b>Display your visitor pass</b> when entering the premises or when requested by security.
+                </li>
+                <li>
+                  <b>Check-out is mandatory</b> — Please inform reception when leaving the premises.
+                </li>
+                <li>
+                  <b>Follow company policies</b> — Adhere to all security protocols and visitor guidelines.
+                </li>
+                <li>
+                  <b>Report any issues</b> — Contact reception immediately if you face any difficulties.
+                </li>
+              </ul>
 
-        <div style="background:#f8f9ff;border-left:4px solid #6c2bd9;padding:16px;margin:30px 0;">
-          <p style="margin:0;color:#6c2bd9;font-weight:600;">
-            📧 Need help? Contact ${companyName} reception or administrator for assistance.
-          </p>
-        </div>
+              <div class="info-badge">
+                <p style="margin:0;color:#6c2bd9;font-weight:600;">
+                  📧 Need help? Contact ${companyName} reception or administrator for assistance.
+                </p>
+              </div>
 
-        <p>
-          Thank you for visiting <b>${companyName}</b>. 
-          We hope you have a productive and pleasant experience.
-        </p>
+              <p style="margin-top: 30px;">
+                Thank you for visiting <b>${companyName}</b>. 
+                We hope you have a productive and pleasant experience.
+              </p>
 
-        ${emailFooter(company)}
+              ${emailFooter(company)}
+            </div>
+          </div>
+        </body>
+        </html>
       `,
       attachments: imageBuffer
         ? [
             {
               filename: `${visitorCode}-visitor-pass.png`,
               content: imageBuffer,
-              contentType: "image/png"
+              contentType: "image/png",
+              cid: "visitor-pass-image" // Optional: can be referenced in HTML as <img src="cid:visitor-pass-image">
             }
           ]
         : []
     });
 
-    console.log(`[VISITOR_MAIL] Pass sent successfully to ${visitor.email}`);
+    console.log(`✅ [VISITOR_MAIL] Pass sent successfully to ${visitor.email}`);
 
   } catch (err) {
-    console.error("[VISITOR_MAIL] Error sending email:", err.message);
+    console.error("❌ [VISITOR_MAIL] Error sending email:", err.message);
     throw err;
   }
 };
