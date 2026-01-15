@@ -49,55 +49,59 @@ const emailTemplates = {
     const currentPlan = planDetails[plan.toLowerCase()] || planDetails.trial;
 
     return {
-      subject: `🎉 Your PROMEET Subscription is Now Active!`,
+      subject: `🎉 Your PROMEET ${plan.toUpperCase()} Subscription is Now Active!`,
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
-            .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f7fa; }
+            .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
             .header { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 40px 30px; text-align: center; }
-            .header h1 { margin: 0; font-size: 28px; }
+            .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
+            .header p { margin: 10px 0 0; font-size: 16px; opacity: 0.95; }
             .content { padding: 40px 30px; }
-            .success-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-            .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #6a00ff; border-radius: 8px; }
-            .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
-            .label { font-weight: 600; color: #555; }
-            .value { color: #333; font-weight: 700; }
-            .plan-badge { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; }
-            .features { background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 20px 0; }
-            .features h3 { margin-top: 0; color: #6a00ff; }
-            .features ul { list-style: none; padding: 0; }
-            .features li { padding: 10px 0; padding-left: 30px; position: relative; }
-            .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; font-size: 18px; }
-            .cta-button { display: inline-block; background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; }
+            .success-icon { text-align: center; font-size: 64px; margin-bottom: 20px; }
+            .greeting { font-size: 18px; margin-bottom: 20px; }
+            .info-box { background: linear-gradient(135deg, #f7f4ff, #faf7ff); padding: 25px; margin: 25px 0; border-left: 4px solid #6a00ff; border-radius: 8px; }
+            .info-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding: 10px 0; border-bottom: 1px solid #e8e4f0; }
+            .info-row:last-child { border-bottom: none; }
+            .label { font-weight: 600; color: #555; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+            .value { color: #333; font-weight: 700; font-size: 16px; }
+            .plan-badge { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 14px; }
+            .features { background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 25px 0; }
+            .features h3 { margin-top: 0; color: #6a00ff; font-size: 20px; }
+            .features ul { list-style: none; padding: 0; margin: 0; }
+            .features li { padding: 12px 0; padding-left: 35px; position: relative; font-size: 15px; }
+            .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; font-size: 20px; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(106, 0, 255, 0.3); }
             .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
+            .footer strong { color: #6a00ff; font-size: 16px; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <h1>🎉 Welcome to PROMEET!</h1>
-              <p>Your subscription is now active</p>
+              <p>Your subscription is now active and ready to use</p>
             </div>
             <div class="content">
               <div class="success-icon">✅</div>
-              <h2 style="text-align: center;">Subscription Activated Successfully</h2>
-              <p>Dear <strong>${companyName}</strong> Team,</p>
-              <p>Your PROMEET subscription has been successfully activated.</p>
+              <h2 style="text-align: center; color: #6a00ff; margin-bottom: 10px;">Subscription Activated Successfully</h2>
+              <p class="greeting">Dear <strong>${companyName}</strong> Team,</p>
+              <p>Congratulations! Your PROMEET subscription has been successfully activated. You now have full access to all features included in your plan.</p>
               
               <div class="info-box">
                 <div class="info-row">
-                  <span class="label">Plan:</span>
+                  <span class="label">Plan</span>
                   <span class="plan-badge">${plan.toUpperCase()}</span>
                 </div>
                 <div class="info-row">
-                  <span class="label">Price:</span>
+                  <span class="label">Price</span>
                   <span class="value">${currentPlan.price}</span>
                 </div>
                 <div class="info-row">
-                  <span class="label">Valid Until:</span>
+                  <span class="label">Valid Until</span>
                   <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
               </div>
@@ -110,12 +114,17 @@ const emailTemplates = {
               </div>
 
               <div style="text-align: center;">
-                <a href="https://www.promeet.zodopt.com" class="cta-button">Access Dashboard</a>
+                <p style="margin-bottom: 20px; font-size: 16px;">Ready to get started?</p>
+                <a href="https://www.promeet.zodopt.com" class="cta-button">Access Dashboard →</a>
               </div>
+
+              <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
+                If you have any questions, our support team is here to help!
+              </p>
             </div>
             <div class="footer">
-              <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
-              <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+              <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
+              <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -125,41 +134,45 @@ const emailTemplates = {
   },
 
   upgradeCompleted: (companyName, fromPlan, toPlan, expiresAt) => ({
-    subject: `🚀 Your Plan Has Been Upgraded Successfully!`,
+    subject: `🚀 Congratulations! You've Upgraded to ${toPlan.toUpperCase()}`,
     html: `
       <!DOCTYPE html>
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f7fa; }
+          .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 40px 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 28px; }
+          .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
+          .header p { margin: 10px 0 0; font-size: 16px; opacity: 0.95; }
           .content { padding: 40px 30px; }
-          .upgrade-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-          .upgrade-flow { text-align: center; margin: 30px 0; padding: 20px; background: #f9f9f9; border-radius: 10px; }
-          .plan-badge { display: inline-block; padding: 12px 24px; border-radius: 25px; font-weight: bold; margin: 0 15px; }
+          .upgrade-icon { text-align: center; font-size: 64px; margin-bottom: 20px; }
+          .celebration { text-align: center; font-size: 48px; margin: 20px 0; }
+          .upgrade-flow { text-align: center; margin: 30px 0; padding: 25px; background: linear-gradient(135deg, #f9f9f9, #f0f0f0); border-radius: 10px; }
+          .plan-badge { display: inline-block; padding: 12px 24px; border-radius: 25px; font-weight: bold; margin: 0 15px; font-size: 16px; }
           .old-plan { background: #e0e0e0; color: #666; }
-          .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; }
-          .arrow { color: #7a00ff; font-size: 28px; margin: 0 10px; }
-          .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
-          .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
-          .label { font-weight: 600; color: #555; }
-          .value { color: #333; font-weight: 700; }
+          .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3); }
+          .arrow { color: #7a00ff; font-size: 32px; margin: 0 10px; font-weight: bold; }
+          .info-box { background: linear-gradient(135deg, #f7f4ff, #faf7ff); padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
+          .info-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
+          .label { font-weight: 600; color: #555; font-size: 14px; text-transform: uppercase; }
+          .value { color: #333; font-weight: 700; font-size: 16px; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
+          .footer strong { color: #7a00ff; }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🎉 Congratulations!</h1>
-            <p>Your plan has been upgraded</p>
+            <p>Your plan has been successfully upgraded</p>
           </div>
           <div class="content">
             <div class="upgrade-icon">🚀</div>
-            <h2 style="text-align: center;">Plan Upgrade Successful</h2>
-            <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Your account has been upgraded to <strong>${toPlan.toUpperCase()}</strong> plan.</p>
+            <div class="celebration">✨ 🎊 ✨</div>
+            <h2 style="text-align: center; color: #7a00ff; margin-bottom: 20px;">Plan Upgrade Successful</h2>
+            <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
+            <p style="font-size: 16px;">Great news! Your account has been successfully upgraded to the <strong style="color: #00c853;">${toPlan.toUpperCase()}</strong> plan. You now have access to more features and capabilities.</p>
             
             <div class="upgrade-flow">
               <span class="plan-badge old-plan">${fromPlan.toUpperCase()}</span>
@@ -169,18 +182,22 @@ const emailTemplates = {
 
             <div class="info-box">
               <div class="info-row">
-                <span class="label">New Plan:</span>
+                <span class="label">New Plan</span>
                 <span class="value" style="color: #00c853;">${toPlan.toUpperCase()}</span>
               </div>
               <div class="info-row">
-                <span class="label">Valid Until:</span>
+                <span class="label">Valid Until</span>
                 <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
               </div>
             </div>
+
+            <p style="margin-top: 30px; font-size: 15px; color: #666; text-align: center;">
+              Thank you for choosing PROMEET. We're excited to support your growth!
+            </p>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
-            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+            <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
+            <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -195,15 +212,17 @@ const emailTemplates = {
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f7fa; }
+          .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 40px 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 28px; }
+          .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
           .content { padding: 40px 30px; }
-          .warning-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
-          .countdown-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 30px; margin: 25px 0; border-radius: 8px; text-align: center; }
-          .days-remaining { font-size: 48px; font-weight: bold; color: #ff9800; margin: 10px 0; }
-          .cta-button { display: inline-block; background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .warning-icon { text-align: center; font-size: 64px; margin-bottom: 20px; }
+          .countdown-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 30px; margin: 25px 0; border-radius: 10px; text-align: center; border: 2px solid #ff9800; }
+          .days-remaining { font-size: 56px; font-weight: bold; color: #ff9800; margin: 15px 0; }
+          .countdown-label { font-size: 20px; font-weight: bold; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+          .urgency-message { background: #fff3e0; padding: 20px; border-left: 4px solid #ff9800; border-radius: 8px; margin: 20px 0; }
+          .cta-button { display: inline-block; background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(255, 152, 0, 0.3); }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
@@ -214,23 +233,37 @@ const emailTemplates = {
           </div>
           <div class="content">
             <div class="warning-icon">⚠️</div>
-            <h2 style="text-align: center;">Action Required</h2>
-            <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Your PROMEET subscription will expire soon.</p>
+            <h2 style="text-align: center; color: #ff9800; margin-bottom: 20px;">Action Required</h2>
+            <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
+            <p style="font-size: 16px;">This is a friendly reminder that your PROMEET <strong>${plan.toUpperCase()}</strong> subscription will expire soon.</p>
             
             <div class="countdown-box">
               <p style="margin: 0; font-size: 18px; color: #666;">Your subscription expires in:</p>
               <div class="days-remaining">${daysLeft}</div>
-              <p style="margin: 0; font-size: 18px; font-weight: bold; color: #666;">${daysLeft === 1 ? 'Day' : 'Days'}</p>
+              <p class="countdown-label">${daysLeft === 1 ? 'Day' : 'Days'}</p>
+            </div>
+
+            <div class="urgency-message">
+              <p style="margin: 0; font-size: 15px; font-weight: 600; color: #ff6f00;">
+                ⏳ Don't lose access to your valuable data and features!
+              </p>
+              <p style="margin: 10px 0 0; font-size: 14px; color: #666;">
+                Renew now to ensure uninterrupted service and continue managing your visitors and conference bookings seamlessly.
+              </p>
             </div>
 
             <div style="text-align: center;">
-              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription</a>
+              <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">Renew your subscription today:</p>
+              <a href="https://www.promeet.zodopt.com/dashboard/subscription" class="cta-button">Renew Subscription →</a>
             </div>
+
+            <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
+              Questions? Contact our support team at <a href="mailto:support@promeet.zodopt.com" style="color: #ff9800;">support@promeet.zodopt.com</a>
+            </p>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
-            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+            <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
+            <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -245,15 +278,20 @@ const emailTemplates = {
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f7fa; }
+          .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 40px 30px; text-align: center; }
-          .header h1 { margin: 0; font-size: 28px; }
+          .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
           .content { padding: 40px 30px; }
-          .alert-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
+          .alert-icon { text-align: center; font-size: 64px; margin-bottom: 20px; }
           .alert-box { background: linear-gradient(135deg, #ffebee, #ffcdd2); padding: 25px; margin: 25px 0; border-left: 4px solid #ff1744; border-radius: 8px; }
-          .expired-badge { background: #ff1744; color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; }
-          .cta-button { display: inline-block; background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .expired-badge { background: #ff1744; color: white; padding: 10px 25px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(255, 23, 68, 0.3); }
+          .impact-list { background: #fff; padding: 20px; border: 2px solid #ffcdd2; border-radius: 8px; margin: 20px 0; }
+          .impact-list h4 { margin-top: 0; color: #ff1744; font-size: 18px; }
+          .impact-list ul { list-style: none; padding: 0; }
+          .impact-list li { padding: 8px 0; padding-left: 25px; position: relative; color: #666; }
+          .impact-list li:before { content: "✗"; position: absolute; left: 0; color: #ff1744; font-weight: bold; }
+          .cta-button { display: inline-block; background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(255, 23, 68, 0.3); }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
@@ -264,25 +302,47 @@ const emailTemplates = {
           </div>
           <div class="content">
             <div class="alert-icon">🔴</div>
-            <h2 style="text-align: center;">Your Subscription Has Expired</h2>
-            <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Your PROMEET subscription expired on <strong>${new Date(expiredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
+            <h2 style="text-align: center; color: #ff1744; margin-bottom: 20px;">Your Subscription Has Expired</h2>
+            <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
+            <p style="font-size: 16px;">Your PROMEET <strong>${plan.toUpperCase()}</strong> subscription expired on <strong>${new Date(expiredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
             
             <div class="alert-box">
-              <p style="margin: 0; text-align: center;">
-                <strong>Status:</strong> <span class="expired-badge">EXPIRED</span>
+              <p style="margin: 0; text-align: center; font-size: 16px;">
+                <strong>Current Status:</strong>
+              </p>
+              <p style="text-align: center; margin: 15px 0;">
+                <span class="expired-badge">EXPIRED</span>
               </p>
             </div>
 
-            <div style="text-align: center;">
-              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription</a>
+            <div class="impact-list">
+              <h4>⚠️ Limited Access</h4>
+              <p style="margin: 5px 0 15px; color: #666; font-size: 14px;">You currently have restricted access to:</p>
+              <ul>
+                <li>Visitor Management</li>
+                <li>Conference Room Bookings</li>
+                <li>QR Code Generation</li>
+                <li>Email Notifications</li>
+                <li>Dashboard & Reports</li>
+              </ul>
             </div>
 
-            <p style="margin-top: 30px; color: #666;">Please renew your subscription to regain access to all features.</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600; color: #ff1744;">
+                🔄 Renew now to restore full access!
+              </p>
+              <a href="https://www.promeet.zodopt.com/dashboard/subscription" class="cta-button">Renew Subscription →</a>
+            </div>
+
+            <p style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #666; text-align: center;">
+              <strong>Need help?</strong><br/>
+              Contact our support team at <a href="mailto:support@promeet.zodopt.com" style="color: #ff1744; text-decoration: none;">support@promeet.zodopt.com</a><br/>
+              or call us at <strong>+91-8647878785</strong>
+            </p>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
-            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+            <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
+            <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -396,10 +456,19 @@ async function repairBilling() {
             const emailContent = pending_upgrade_plan
               ? emailTemplates.upgradeCompleted(name, plan, activePlan, mysqlEnds)
               : emailTemplates.subscriptionActivated(name, activePlan, mysqlEnds);
-            await sendEmail(company_email, emailContent.subject, emailContent.html);
-            console.log(`📧 Email sent to ${company_email}`);
+            
+            console.log(`📧 Preparing to send email to ${company_email}`);
+            console.log(`   Subject: ${emailContent.subject}`);
+            
+            await sendEmail({
+              to: company_email,
+              subject: emailContent.subject,
+              html: emailContent.html
+            });
+            
+            console.log(`✅ Email sent successfully to ${company_email}`);
           } catch (emailErr) {
-            console.error("❌ Email failed:", emailErr.message);
+            console.error(`❌ Email failed for ${name}:`, emailErr.message);
           }
         }
 
@@ -475,7 +544,10 @@ async function checkExpiringSubscriptions() {
   );
 
   for (const company of expiring) {
-    if (!company.company_email) continue;
+    if (!company.company_email) {
+      console.log(`⚠️ ${company.name} has no email, skipping notification`);
+      continue;
+    }
     
     const expiresAt = company.plan === 'business' ? company.subscription_ends_at : company.trial_ends_at;
     const daysLeft = Math.ceil((new Date(expiresAt) - now) / (1000 * 60 * 60 * 24));
@@ -484,7 +556,16 @@ async function checkExpiringSubscriptions() {
 
     try {
       const emailContent = emailTemplates.subscriptionExpiring(company.name, company.plan, expiresAt, daysLeft);
-      await sendEmail(company.company_email, emailContent.subject, emailContent.html);
+      
+      console.log(`📧 Preparing expiring warning email for ${company.name}`);
+      console.log(`   To: ${company.company_email}`);
+      console.log(`   Subject: ${emailContent.subject}`);
+      
+      await sendEmail({
+        to: company.company_email,
+        subject: emailContent.subject,
+        html: emailContent.html
+      });
       
       // Mark as sent to prevent duplicate emails
       await db.query(
@@ -492,9 +573,10 @@ async function checkExpiringSubscriptions() {
         [company.id]
       );
       
-      console.log(`📧 Expiring notification sent to ${company.company_email}`);
+      console.log(`✅ Expiring notification sent to ${company.company_email}`);
     } catch (err) {
       console.error(`❌ Failed to send expiring email for ${company.name}:`, err.message);
+      console.error(`   Error details:`, err);
     }
   }
 
@@ -529,7 +611,16 @@ async function checkExpiringSubscriptions() {
     if (company.company_email) {
       try {
         const emailContent = emailTemplates.subscriptionExpired(company.name, company.plan, expiredAt);
-        await sendEmail(company.company_email, emailContent.subject, emailContent.html);
+        
+        console.log(`📧 Preparing expired email for ${company.name}`);
+        console.log(`   To: ${company.company_email}`);
+        console.log(`   Subject: ${emailContent.subject}`);
+        
+        await sendEmail({
+          to: company.company_email,
+          subject: emailContent.subject,
+          html: emailContent.html
+        });
         
         // Mark email as sent to prevent duplicates
         await db.query(
@@ -537,10 +628,13 @@ async function checkExpiringSubscriptions() {
           [company.id]
         );
         
-        console.log(`📧 Expired notification sent to ${company.company_email}`);
+        console.log(`✅ Expired notification sent to ${company.company_email}`);
       } catch (err) {
         console.error(`❌ Failed to send expired email for ${company.name}:`, err.message);
+        console.error(`   Error details:`, err);
       }
+    } else {
+      console.log(`⚠️ ${company.name} has no email, skipping notification`);
     }
   }
 }
