@@ -142,6 +142,10 @@ const emailTemplates = {
           .old-plan { background: #e0e0e0; color: #666; }
           .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; }
           .arrow { color: #7a00ff; font-size: 28px; margin: 0 10px; }
+          .info-box { background: #f7f4ff; padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
+          .info-row { display: flex; justify-content: space-between; margin: 12px 0; }
+          .label { font-weight: 600; color: #555; }
+          .value { color: #333; font-weight: 700; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
@@ -162,9 +166,20 @@ const emailTemplates = {
               <span class="arrow">→</span>
               <span class="plan-badge new-plan">${toPlan.toUpperCase()}</span>
             </div>
+
+            <div class="info-box">
+              <div class="info-row">
+                <span class="label">New Plan:</span>
+                <span class="value" style="color: #00c853;">${toPlan.toUpperCase()}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Valid Until:</span>
+                <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+              </div>
+            </div>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong></p>
+            <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
             <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
           </div>
         </div>
@@ -180,11 +195,16 @@ const emailTemplates = {
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; color: #333; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; }
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
+          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 40px 30px; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
           .content { padding: 40px 30px; }
-          .countdown { font-size: 48px; font-weight: bold; color: #ff9800; text-align: center; }
+          .warning-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
+          .countdown-box { background: linear-gradient(135deg, #fff3e0, #ffe0b2); padding: 30px; margin: 25px 0; border-radius: 8px; text-align: center; }
+          .days-remaining { font-size: 48px; font-weight: bold; color: #ff9800; margin: 10px 0; }
+          .cta-button { display: inline-block; background: linear-gradient(135deg, #ff9800, #ffa726); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
       <body>
@@ -193,10 +213,24 @@ const emailTemplates = {
             <h1>⏰ Subscription Expiring Soon</h1>
           </div>
           <div class="content">
+            <div class="warning-icon">⚠️</div>
+            <h2 style="text-align: center;">Action Required</h2>
             <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Your subscription expires in:</p>
-            <div class="countdown">${daysLeft}</div>
-            <p style="text-align: center; font-weight: bold;">${daysLeft === 1 ? 'Day' : 'Days'}</p>
+            <p>Your PROMEET subscription will expire soon.</p>
+            
+            <div class="countdown-box">
+              <p style="margin: 0; font-size: 18px; color: #666;">Your subscription expires in:</p>
+              <div class="days-remaining">${daysLeft}</div>
+              <p style="margin: 0; font-size: 18px; font-weight: bold; color: #666;">${daysLeft === 1 ? 'Day' : 'Days'}</p>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription</a>
+            </div>
+          </div>
+          <div class="footer">
+            <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
+            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -211,10 +245,16 @@ const emailTemplates = {
       <html>
       <head>
         <style>
-          body { font-family: Arial, sans-serif; color: #333; }
-          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; }
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f4f4; }
+          .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
           .header { background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 40px 30px; text-align: center; }
+          .header h1 { margin: 0; font-size: 28px; }
           .content { padding: 40px 30px; }
+          .alert-icon { text-align: center; font-size: 60px; margin-bottom: 20px; }
+          .alert-box { background: linear-gradient(135deg, #ffebee, #ffcdd2); padding: 25px; margin: 25px 0; border-left: 4px solid #ff1744; border-radius: 8px; }
+          .expired-badge { background: #ff1744; color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; }
+          .cta-button { display: inline-block; background: linear-gradient(135deg, #ff1744, #f50057); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 20px 0; }
+          .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
         </style>
       </head>
       <body>
@@ -223,9 +263,26 @@ const emailTemplates = {
             <h1>❌ Subscription Expired</h1>
           </div>
           <div class="content">
+            <div class="alert-icon">🔴</div>
+            <h2 style="text-align: center;">Your Subscription Has Expired</h2>
             <p>Dear <strong>${companyName}</strong> Team,</p>
-            <p>Your subscription expired on <strong>${new Date(expiredAt).toLocaleDateString()}</strong>.</p>
-            <p>Please renew to regain access.</p>
+            <p>Your PROMEET subscription expired on <strong>${new Date(expiredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
+            
+            <div class="alert-box">
+              <p style="margin: 0; text-align: center;">
+                <strong>Status:</strong> <span class="expired-badge">EXPIRED</span>
+              </p>
+            </div>
+
+            <div style="text-align: center;">
+              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription</a>
+            </div>
+
+            <p style="margin-top: 30px; color: #666;">Please renew your subscription to regain access to all features.</p>
+          </div>
+          <div class="footer">
+            <p><strong>PROMEET</strong> - Visitor & Conference Management</p>
+            <p>© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -391,51 +448,99 @@ async function repairBilling() {
   console.log("\n✅ CRON Completed\n");
 }
 
-/* ================= CHECK EXPIRING SUBSCRIPTIONS ================= */
+/* ================= CHECK EXPIRING SUBSCRIPTIONS WITH EMAIL TRACKING ================= */
 async function checkExpiringSubscriptions() {
+  console.log("\n⏰ Checking for expiring subscriptions...");
+  
   const now = new Date();
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
   const mysqlThreeDays = threeDaysFromNow.toISOString().slice(0, 19).replace("T", " ");
 
-  // Expiring soon
+  /* ================= EXPIRING SOON (3 DAYS WARNING) ================= */
   const [expiring] = await db.query(
     `
       SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at, 
-      (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) as company_email
+             c.expiry_warning_sent_at,
+             (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) as company_email
       FROM companies c
       WHERE c.subscription_status = 'active'
-      AND ((c.plan = 'business' AND c.subscription_ends_at BETWEEN NOW() AND ?) 
-      OR (c.plan = 'trial' AND c.trial_ends_at BETWEEN NOW() AND ?))
+      AND (
+        (c.plan = 'business' AND c.subscription_ends_at BETWEEN NOW() AND ?)
+        OR
+        (c.plan = 'trial' AND c.trial_ends_at BETWEEN NOW() AND ?)
+      )
+      AND (c.expiry_warning_sent_at IS NULL OR c.expiry_warning_sent_at < DATE_SUB(NOW(), INTERVAL 24 HOUR))
     `,
     [mysqlThreeDays, mysqlThreeDays]
   );
 
   for (const company of expiring) {
     if (!company.company_email) continue;
+    
     const expiresAt = company.plan === 'business' ? company.subscription_ends_at : company.trial_ends_at;
     const daysLeft = Math.ceil((new Date(expiresAt) - now) / (1000 * 60 * 60 * 24));
-    const emailContent = emailTemplates.subscriptionExpiring(company.name, company.plan, expiresAt, daysLeft);
-    await sendEmail(company.company_email, emailContent.subject, emailContent.html);
+
+    console.log(`⚠️ ${company.name} expires in ${daysLeft} days - sending warning`);
+
+    try {
+      const emailContent = emailTemplates.subscriptionExpiring(company.name, company.plan, expiresAt, daysLeft);
+      await sendEmail(company.company_email, emailContent.subject, emailContent.html);
+      
+      // Mark as sent to prevent duplicate emails
+      await db.query(
+        `UPDATE companies SET expiry_warning_sent_at = NOW(), updated_at = NOW() WHERE id = ?`,
+        [company.id]
+      );
+      
+      console.log(`📧 Expiring notification sent to ${company.company_email}`);
+    } catch (err) {
+      console.error(`❌ Failed to send expiring email for ${company.name}:`, err.message);
+    }
   }
 
-  // Expired
+  /* ================= EXPIRED SUBSCRIPTIONS ================= */
   const [expired] = await db.query(
     `
-      SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at, 
-      (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) as company_email
+      SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at,
+             c.expiry_email_sent_at,
+             (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) as company_email
       FROM companies c
       WHERE c.subscription_status = 'active'
-      AND ((c.plan = 'business' AND c.subscription_ends_at < NOW()) 
-      OR (c.plan = 'trial' AND c.trial_ends_at < NOW()))
+      AND (
+        (c.plan = 'business' AND c.subscription_ends_at < NOW())
+        OR
+        (c.plan = 'trial' AND c.trial_ends_at < NOW())
+      )
+      AND c.expiry_email_sent_at IS NULL
     `
   );
 
   for (const company of expired) {
     const expiredAt = company.plan === 'business' ? company.subscription_ends_at : company.trial_ends_at;
-    await db.query(`UPDATE companies SET subscription_status = 'expired', updated_at = NOW() WHERE id = ?`, [company.id]);
+
+    console.log(`🔴 ${company.name} subscription has expired`);
+
+    // Mark as expired
+    await db.query(
+      `UPDATE companies SET subscription_status = 'expired', updated_at = NOW() WHERE id = ?`,
+      [company.id]
+    );
+
     if (company.company_email) {
-      const emailContent = emailTemplates.subscriptionExpired(company.name, company.plan, expiredAt);
-      await sendEmail(company.company_email, emailContent.subject, emailContent.html);
+      try {
+        const emailContent = emailTemplates.subscriptionExpired(company.name, company.plan, expiredAt);
+        await sendEmail(company.company_email, emailContent.subject, emailContent.html);
+        
+        // Mark email as sent to prevent duplicates
+        await db.query(
+          `UPDATE companies SET expiry_email_sent_at = NOW(), updated_at = NOW() WHERE id = ?`,
+          [company.id]
+        );
+        
+        console.log(`📧 Expired notification sent to ${company.company_email}`);
+      } catch (err) {
+        console.error(`❌ Failed to send expired email for ${company.name}:`, err.message);
+      }
     }
   }
 }
