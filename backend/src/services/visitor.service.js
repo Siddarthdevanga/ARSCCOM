@@ -128,20 +128,40 @@ export const saveVisitor = async (companyId, data, file) => {
     const PLAN = (company.plan || "TRIAL").toUpperCase();
     const STATUS = (company.subscription_status || "PENDING").toUpperCase();
 
-    if (!["ACTIVE", "TRIAL"].includes(STATUS))
-      throw new Error("Subscription inactive. Please renew.");
+    // Check if subscription is expired or inactive
+    if (STATUS === "EXPIRED") {
+      const error = new Error("Your subscription has expired. Please renew your subscription to continue using our services.");
+      error.code = "SUBSCRIPTION_EXPIRED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
+
+    if (!["ACTIVE", "TRIAL"].includes(STATUS)) {
+      const error = new Error("Subscription inactive. Please activate your subscription to continue.");
+      error.code = "SUBSCRIPTION_INACTIVE";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
 
     /* ======================================================
        PLAN VALIDATION
     ======================================================= */
     if (PLAN === "TRIAL") {
-      if (!company.trial_ends_at)
-        throw new Error("Trial not initialized");
+      if (!company.trial_ends_at) {
+        const error = new Error("Trial not initialized. Please contact support or upgrade your plan.");
+        error.code = "TRIAL_NOT_INITIALIZED";
+        error.redirectTo = "/auth/subscription";
+        throw error;
+      }
 
       // Compare using current IST time
       const trialEndsDate = new Date(company.trial_ends_at);
-      if (trialEndsDate < new Date(checkInMySQL))
-        throw new Error("Trial expired. Please upgrade.");
+      if (trialEndsDate < new Date(checkInMySQL)) {
+        const error = new Error("Your trial period has expired. Please upgrade to a paid plan to continue using our services.");
+        error.code = "TRIAL_EXPIRED";
+        error.redirectTo = "/auth/subscription";
+        throw error;
+      }
 
       const [[{ total }]] = await conn.execute(
         `
@@ -153,18 +173,28 @@ export const saveVisitor = async (companyId, data, file) => {
         [companyId]
       );
 
-      if (total >= 100)
-        throw new Error(
-          "Trial limit reached (100 visitors). Please upgrade."
-        );
+      if (total >= 100) {
+        const error = new Error("Trial limit reached (100 visitors). Please upgrade to a paid plan to register more visitors.");
+        error.code = "TRIAL_LIMIT_REACHED";
+        error.redirectTo = "/auth/subscription";
+        throw error;
+      }
     } else {
-      if (!company.subscription_ends_at)
-        throw new Error("Subscription not initialized");
+      if (!company.subscription_ends_at) {
+        const error = new Error("Subscription not properly initialized. Please contact support or renew your subscription.");
+        error.code = "SUBSCRIPTION_NOT_INITIALIZED";
+        error.redirectTo = "/auth/subscription";
+        throw error;
+      }
 
       // Compare using current IST time
       const subEndsDate = new Date(company.subscription_ends_at);
-      if (subEndsDate < new Date(checkInMySQL))
-        throw new Error(`${PLAN} subscription expired. Please renew.`);
+      if (subEndsDate < new Date(checkInMySQL)) {
+        const error = new Error(`Your ${PLAN} subscription has expired. Please renew your subscription to continue using our services.`);
+        error.code = "SUBSCRIPTION_EXPIRED";
+        error.redirectTo = "/auth/subscription";
+        throw error;
+      }
     }
 
     /* ======================================================
