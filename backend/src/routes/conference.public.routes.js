@@ -4,14 +4,25 @@ import { sendEmail } from "../utils/mailer.js";
 
 const router = express.Router();
 
-/* ================= CONSTANTS ================= */
+/* ======================================================
+   CONSTANTS & CONFIGURATION
+====================================================== */
 const OTP_EXPIRY_MINUTES = 10;
 const OTP_LENGTH = 6;
 
 const PLAN_LIMITS = {
-  TRIAL: { bookings: 100, rooms: 2 },
-  BUSINESS: { bookings: 1000, rooms: 6 },
-  ENTERPRISE: { bookings: Infinity, rooms: Infinity }
+  TRIAL: { 
+    bookings: 100, 
+    rooms: 2
+  },
+  BUSINESS: { 
+    bookings: 1000, 
+    rooms: 6
+  },
+  ENTERPRISE: { 
+    bookings: Infinity, 
+    rooms: Infinity
+  }
 };
 
 const ERROR_MESSAGES = {
@@ -27,10 +38,17 @@ const ERROR_MESSAGES = {
   BOOKING_NOT_FOUND: "Booking not found",
   UNAUTHORIZED: "You are not authorized to modify this booking",
   PLAN_EXCEEDED: "Plan validity exceeded. Contact Administrator",
+  TRIAL_EXPIRED: "Your trial period has expired. Please upgrade to continue using conference booking services.",
+  SUBSCRIPTION_EXPIRED: "Your subscription has expired. Please renew to continue using conference booking services.",
+  SUBSCRIPTION_INACTIVE: "Subscription inactive. Please activate your subscription to continue.",
+  BOOKING_LIMIT_REACHED: "Booking limit reached for your current plan. Please upgrade to book more conferences.",
+  ROOM_LIMIT_REACHED: "Room limit reached for your current plan. Please upgrade to add more rooms.",
   SERVER_ERROR: "Server error occurred"
 };
 
-/* ================= UTILITY FUNCTIONS ================= */
+/* ======================================================
+   UTILITY FUNCTIONS
+====================================================== */
 const normalizeSlug = (value) => String(value || "").trim().toLowerCase();
 const normalizeEmail = (value) => String(value || "").trim().toLowerCase();
 
@@ -88,7 +106,9 @@ const generateOtp = () => {
   return String(Math.floor(min + Math.random() * (max - min + 1)));
 };
 
-/* ================= EMAIL TEMPLATES ================= */
+/* ======================================================
+   EMAIL TEMPLATES
+====================================================== */
 const emailFooter = (company) => `
 <br/>
 <br/>
@@ -209,7 +229,9 @@ const sendCancelEmail = async (email, company, room, booking) => {
   });
 };
 
-/* ================= DATABASE HELPERS ================= */
+/* ======================================================
+   DATABASE HELPERS
+====================================================== */
 /**
  * Fetches company by slug
  */
@@ -269,12 +291,17 @@ const isOtpVerified = async (companyId, email) => {
   return !!verified;
 };
 
-/* ================= PLAN VALIDATION ================= */
+/* ======================================================
+   ENHANCED PLAN VALIDATION
+====================================================== */
+
 /**
- * Validates company plan and limits
- * @throws {Error} If plan is invalid or limits exceeded
+ * Comprehensive subscription and plan validation
+ * @throws {Error} If subscription is expired or plan limits exceeded
  */
-const checkConferencePlan = async (companyId) => {
+const validateSubscriptionAndPlan = async (companyId, operation = "BOOKING") => {
+  console.log(`[PLAN_CHECK] Validating ${operation} for company:`, companyId);
+
   const [[company]] = await db.query(
     `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
      FROM companies WHERE id = ? LIMIT 1`,
@@ -289,61 +316,141 @@ const checkConferencePlan = async (companyId) => {
   const status = (company.subscription_status || "PENDING").toUpperCase();
   const now = new Date();
 
-  // Check subscription status
+  console.log(`[PLAN_CHECK] Plan: ${plan}, Status: ${status}`);
+
+  // Check subscription status first
+  if (status === "EXPIRED") {
+    const error = new Error(ERROR_MESSAGES.SUBSCRIPTION_EXPIRED);
+    error.code = "SUBSCRIPTION_EXPIRED";
+    error.redirectTo = "/auth/subscription";
+    throw error;
+  }
+
   if (!["ACTIVE", "TRIAL"].includes(status)) {
-    throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
+    const error = new Error(ERROR_MESSAGES.SUBSCRIPTION_INACTIVE);
+    error.code = "SUBSCRIPTION_INACTIVE";
+    error.redirectTo = "/auth/subscription";
+    throw error;
   }
 
   // Handle TRIAL plan
   if (plan === "TRIAL") {
-    if (!company.trial_ends_at || new Date(company.trial_ends_at) < now) {
-      throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
+    if (!company.trial_ends_at) {
+      const error = new Error("Trial not initialized. Please contact support.");
+      error.code = "TRIAL_NOT_INITIALIZED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
     }
-    await checkPlanLimits(companyId, plan);
-    return;
+
+    const trialEndsDate = new Date(company.trial_ends_at);
+    if (trialEndsDate < now) {
+      const error = new Error(ERROR_MESSAGES.TRIAL_EXPIRED);
+      error.code = "TRIAL_EXPIRED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
+
+    // Check trial limits
+    await validatePlanLimits(companyId, plan, operation);
+    return { plan, status, limits: PLAN_LIMITS[plan] };
   }
 
   // Handle BUSINESS plan
   if (plan === "BUSINESS") {
-    if (!company.subscription_ends_at || new Date(company.subscription_ends_at) < now) {
-      throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
+    if (!company.subscription_ends_at) {
+      const error = new Error("Subscription not properly initialized. Please contact support.");
+      error.code = "SUBSCRIPTION_NOT_INITIALIZED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
     }
-    await checkPlanLimits(companyId, plan);
-    return;
+
+    const subEndsDate = new Date(company.subscription_ends_at);
+    if (subEndsDate < now) {
+      const error = new Error(ERROR_MESSAGES.SUBSCRIPTION_EXPIRED);
+      error.code = "SUBSCRIPTION_EXPIRED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
+
+    // Check business limits
+    await validatePlanLimits(companyId, plan, operation);
+    return { plan, status, limits: PLAN_LIMITS[plan] };
   }
 
-  // ENTERPRISE has no limits
+  // ENTERPRISE has no limits but still check subscription
+  if (plan === "ENTERPRISE") {
+    if (!company.subscription_ends_at) {
+      const error = new Error("Enterprise subscription not properly initialized. Please contact support.");
+      error.code = "SUBSCRIPTION_NOT_INITIALIZED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
+
+    const subEndsDate = new Date(company.subscription_ends_at);
+    if (subEndsDate < now) {
+      const error = new Error(`${plan} subscription has expired. Please renew your subscription.`);
+      error.code = "SUBSCRIPTION_EXPIRED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
+
+    return { plan, status, limits: PLAN_LIMITS[plan] };
+  }
+
+  // Unknown plan
+  const error = new Error("Unknown subscription plan. Please contact support.");
+  error.code = "UNKNOWN_PLAN";
+  error.redirectTo = "/auth/subscription";
+  throw error;
 };
 
 /**
- * Checks if plan limits are exceeded
+ * Validates specific plan limits
  */
-const checkPlanLimits = async (companyId, plan) => {
+const validatePlanLimits = async (companyId, plan, operation) => {
   const limits = PLAN_LIMITS[plan];
-  if (!limits) return;
+  if (!limits || plan === "ENTERPRISE") return;
 
-  // Check booking limit
-  const [[bookingCount]] = await db.query(
-    `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
-    [companyId]
-  );
+  console.log(`[PLAN_LIMITS] Checking ${operation} limits for ${plan}:`, limits);
 
-  if (bookingCount.total >= limits.bookings) {
-    throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
+  // Check total booking limit
+  if (operation === "BOOKING" && limits.bookings !== Infinity) {
+    const [[bookingCount]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? AND status = 'BOOKED'`,
+      [companyId]
+    );
+
+    console.log(`[PLAN_LIMITS] Current bookings: ${bookingCount.total}/${limits.bookings}`);
+
+    if (bookingCount.total >= limits.bookings) {
+      const error = new Error(ERROR_MESSAGES.BOOKING_LIMIT_REACHED);
+      error.code = "BOOKING_LIMIT_REACHED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
   }
 
   // Check room limit
-  const [[roomCount]] = await db.query(
-    `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
-    [companyId]
-  );
+  if (operation === "ROOM" && limits.rooms !== Infinity) {
+    const [[roomCount]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
+      [companyId]
+    );
 
-  if (roomCount.total > limits.rooms) {
-    throw new Error(ERROR_MESSAGES.PLAN_EXCEEDED);
+    console.log(`[PLAN_LIMITS] Current rooms: ${roomCount.total}/${limits.rooms}`);
+
+    if (roomCount.total >= limits.rooms) {
+      const error = new Error(ERROR_MESSAGES.ROOM_LIMIT_REACHED);
+      error.code = "ROOM_LIMIT_REACHED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
   }
 };
 
-/* ================= ROUTE HANDLERS ================= */
+/* ======================================================
+   ROUTE HANDLERS
+====================================================== */
 
 /**
  * GET /company/:slug - Fetch company details
@@ -357,7 +464,31 @@ router.get("/company/:slug", async (req, res) => {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
     }
 
-    res.json(company);
+    // Validate subscription for company details access
+    try {
+      const { plan, status, limits } = await validateSubscriptionAndPlan(company.id, "ACCESS");
+      
+      res.json({
+        ...company,
+        planInfo: {
+          plan,
+          status,
+          limits: {
+            bookings: limits.bookings === Infinity ? "Unlimited" : limits.bookings,
+            rooms: limits.rooms === Infinity ? "Unlimited" : limits.rooms
+          }
+        }
+      });
+    } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
+      throw error;
+    }
   } catch (error) {
     console.error("[PUBLIC][COMPANY]", error);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
@@ -376,10 +507,17 @@ router.get("/company/:slug/rooms", async (req, res) => {
       return res.json([]);
     }
 
-    // Validate plan
+    // Validate subscription and plan
     try {
-      await checkConferencePlan(company.id);
+      await validateSubscriptionAndPlan(company.id, "ROOM");
     } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
       return res.status(403).json({ message: error.message });
     }
 
@@ -415,6 +553,20 @@ router.get("/company/:slug/bookings", async (req, res) => {
       return res.json([]);
     }
 
+    // Validate subscription
+    try {
+      await validateSubscriptionAndPlan(company.id, "ACCESS");
+    } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
+      return res.status(403).json({ message: error.message });
+    }
+
     const normalizedUserEmail = normalizeEmail(userEmail || "");
 
     const [bookings] = await db.query(
@@ -429,7 +581,9 @@ router.get("/company/:slug/bookings", async (req, res) => {
     // Add can_modify flag
     const enrichedBookings = bookings.map(booking => ({
       ...booking,
-      can_modify: normalizedUserEmail && booking.booked_by?.toLowerCase() === normalizedUserEmail
+      can_modify: normalizedUserEmail && booking.booked_by?.toLowerCase() === normalizedUserEmail,
+      pretty_start_time: prettyTime(booking.start_time),
+      pretty_end_time: prettyTime(booking.end_time)
     }));
 
     res.json(enrichedBookings);
@@ -456,6 +610,20 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
     }
 
+    // Validate subscription
+    try {
+      await validateSubscriptionAndPlan(company.id, "ACCESS");
+    } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
+      return res.status(403).json({ message: error.message });
+    }
+
     const otp = generateOtp();
 
     // Delete existing OTPs for this email
@@ -473,6 +641,8 @@ router.post("/company/:slug/send-otp", async (req, res) => {
     );
 
     await sendOtpEmail(email, otp, company);
+
+    console.log(`[OTP_SENT] Company: ${company.id}, Email: ${email}, OTP: ${otp}`);
 
     res.json({ message: "OTP sent successfully" });
   } catch (error) {
@@ -499,6 +669,20 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
     }
 
+    // Validate subscription
+    try {
+      await validateSubscriptionAndPlan(company.id, "ACCESS");
+    } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
+      return res.status(403).json({ message: error.message });
+    }
+
     const [[otpRecord]] = await db.query(
       `SELECT id FROM public_booking_otp
        WHERE company_id = ? AND email = ? AND otp = ?
@@ -517,6 +701,8 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
       [otpRecord.id]
     );
 
+    console.log(`[OTP_VERIFIED] Company: ${company.id}, Email: ${email}`);
+
     res.json({ message: "OTP verified successfully" });
   } catch (error) {
     console.error("[PUBLIC][VERIFY_OTP]", error);
@@ -525,7 +711,7 @@ router.post("/company/:slug/verify-otp", async (req, res) => {
 });
 
 /**
- * POST /company/:slug/book - Create a new booking (plan protected)
+ * POST /company/:slug/book - Create a new booking (comprehensive plan protection)
  */
 router.post("/company/:slug/book", async (req, res) => {
   try {
@@ -567,10 +753,18 @@ router.post("/company/:slug/book", async (req, res) => {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
     }
 
-    // Validate plan
+    // Comprehensive plan validation
     try {
-      await checkConferencePlan(company.id);
+      const { plan } = await validateSubscriptionAndPlan(company.id, "BOOKING");
+      console.log(`[BOOKING_ATTEMPT] Company: ${company.id}, Plan: ${plan}`);
     } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
       return res.status(403).json({ message: error.message });
     }
 
@@ -587,9 +781,12 @@ router.post("/company/:slug/book", async (req, res) => {
     }
 
     const room = await getRoomById(room_id);
+    if (!room) {
+      return res.status(404).json({ message: "Conference room not found" });
+    }
 
     // Create booking
-    await db.query(
+    const [insertResult] = await db.query(
       `INSERT INTO conference_bookings
        (company_id, room_id, booked_by, department, purpose,
         booking_date, start_time, end_time, status)
@@ -605,7 +802,12 @@ router.post("/company/:slug/book", async (req, res) => {
       purpose: cleanPurpose
     });
 
-    res.json({ message: "Booking confirmed successfully" });
+    console.log(`[BOOKING_SUCCESS] ID: ${insertResult.insertId}, Company: ${company.id}, Email: ${email}`);
+
+    res.json({ 
+      message: "Booking confirmed successfully",
+      bookingId: insertResult.insertId
+    });
   } catch (error) {
     console.error("[PUBLIC][BOOK]", error);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
@@ -613,7 +815,7 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 /**
- * PATCH /company/:slug/bookings/:id - Update booking time
+ * PATCH /company/:slug/bookings/:id - Update booking time (plan protected)
  */
 router.patch("/company/:slug/bookings/:id", async (req, res) => {
   try {
@@ -647,6 +849,20 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     const company = await getCompanyBySlug(slug, "id, name, logo_url");
     if (!company) {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+    }
+
+    // Validate subscription
+    try {
+      await validateSubscriptionAndPlan(company.id, "BOOKING");
+    } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
+      return res.status(403).json({ message: error.message });
     }
 
     // Fetch booking
@@ -693,7 +909,11 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
       end_time: endTime
     });
 
-    res.json({ message: "Booking updated successfully" });
+    console.log(`[BOOKING_UPDATED] ID: ${bookingId}`);
+
+    res.json({ 
+      message: "Booking updated successfully"
+    });
   } catch (error) {
     console.error("[PUBLIC][UPDATE]", error);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
@@ -701,7 +921,7 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
 });
 
 /**
- * PATCH /company/:slug/bookings/:id/cancel - Cancel booking
+ * PATCH /company/:slug/bookings/:id/cancel - Cancel booking (subscription protected)
  */
 router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
   try {
@@ -716,6 +936,20 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     const company = await getCompanyBySlug(slug, "id, name, logo_url");
     if (!company) {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+    }
+
+    // Validate subscription (even for cancellation)
+    try {
+      await validateSubscriptionAndPlan(company.id, "ACCESS");
+    } catch (error) {
+      if (error.code && error.redirectTo) {
+        return res.status(403).json({
+          message: error.message,
+          code: error.code,
+          redirectTo: error.redirectTo
+        });
+      }
+      return res.status(403).json({ message: error.message });
     }
 
     // Fetch booking
@@ -743,6 +977,8 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
     const room = await getRoomById(booking.room_id);
 
     await sendCancelEmail(email, company, room, booking);
+
+    console.log(`[BOOKING_CANCELLED] ID: ${bookingId}, Company: ${company.id}`);
 
     res.json({ message: "Booking cancelled successfully" });
   } catch (error) {
