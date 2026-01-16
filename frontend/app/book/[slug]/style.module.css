@@ -7,6 +7,7 @@
   padding: 2rem;
   overflow-y: auto;
   scrollbar-width: none;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .page::-webkit-scrollbar {
@@ -24,6 +25,7 @@
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #fff;
   text-align: center;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .spinner {
@@ -232,6 +234,7 @@
   padding: 2rem;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .card:hover {
@@ -257,6 +260,7 @@
   border-radius: 1.25rem;
   padding: 2.5rem;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .authHeader {
@@ -319,7 +323,7 @@
   outline: none;
   background: #fff;
   transition: all 0.2s ease;
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
   color: #333;
 }
 
@@ -581,7 +585,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .primaryBtn:hover:not(:disabled) {
@@ -616,7 +620,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   margin-top: 0.75rem;
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .secondaryBtn:hover:not(:disabled) {
@@ -645,7 +649,7 @@
   color: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .editBtn:hover:not(:disabled) {
@@ -674,7 +678,7 @@
   color: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .cancelBtn:hover:not(:disabled) {
@@ -704,7 +708,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 12px rgba(244, 67, 54, 0.3);
-  font-family: inherit;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
 }
 
 .dangerBtn:hover:not(:disabled) {
