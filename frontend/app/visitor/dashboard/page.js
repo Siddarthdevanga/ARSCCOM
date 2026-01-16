@@ -71,6 +71,16 @@ export default function VisitorDashboard() {
 
       if (!res.ok) {
         console.error("Dashboard API error:", res.status, res.statusText);
+        
+        // Handle subscription-related errors
+        if (res.status === 403) {
+          const errorData = await res.json();
+          if (errorData.message?.includes("expired") || errorData.message?.includes("inactive")) {
+            showToast("Your subscription has expired. Redirecting to subscription page...", "error");
+            setTimeout(() => router.replace("/auth/subscription"), 2000);
+            return;
+          }
+        }
         return;
       }
 
@@ -79,23 +89,24 @@ export default function VisitorDashboard() {
 
       setStats(data?.stats || { today: 0, inside: 0, out: 0 });
       
-      // Handle active visitors
-      const active = data?.activeVisitors || [];
+      // Handle active visitors (currently inside)
+      const active = data?.activeVisitors || data?.insideVisitors || [];
       console.log("Active visitors:", active.length, active);
       setActiveVisitors(active);
       
-      // Handle checked out visitors - try multiple possible keys
-      const checkedOut = data?.checkedOutVisitors || data?.outVisitors || data?.checkedOut || [];
+      // Handle checked out visitors (today's checkouts)
+      const checkedOut = data?.checkedOutVisitors || data?.outVisitors || data?.todayCheckouts || [];
       console.log("Checked out visitors:", checkedOut.length, checkedOut);
       setCheckedOutVisitors(checkedOut);
       
       setPlan(data?.plan || null);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
+      showToast("Failed to load dashboard data", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router]);
 
   /* ================= LOAD QR CODE ================= */
   const loadQRCode = useCallback(async (companySlug) => {
@@ -145,28 +156,45 @@ export default function VisitorDashboard() {
   /* ================= CHECKOUT ================= */
   const handleCheckout = async (visitorCode) => {
     const token = localStorage.getItem("token");
-    if (!token) return;
+    if (!token) {
+      showToast("Authentication required", "error");
+      return;
+    }
 
     try {
       setCheckingOut(visitorCode);
+      console.log("Checking out visitor:", visitorCode);
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/checkout`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
         }
       );
 
+      const data = await res.json();
+      console.log("Checkout response:", data);
+
       if (res.ok) {
-        await loadDashboard(token);
         showToast("✓ Visitor checked out successfully!", "success");
+        // Reload dashboard to update both active and checked-out lists
+        await loadDashboard(token);
       } else {
-        showToast("✗ Failed to checkout visitor", "error");
+        // Handle subscription errors
+        if (res.status === 403 && data.message?.includes("expired")) {
+          showToast("Subscription expired. Redirecting...", "error");
+          setTimeout(() => router.replace("/auth/subscription"), 2000);
+          return;
+        }
+        showToast(data.message || "Failed to checkout visitor", "error");
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      showToast("✗ Checkout failed", "error");
+      showToast("✗ Network error during checkout", "error");
     } finally {
       setCheckingOut(null);
     }
@@ -332,6 +360,16 @@ export default function VisitorDashboard() {
       });
   };
 
+  /* ================= HANDLE NEW VISITOR (WITH SUBSCRIPTION CHECK) ================= */
+  const handleNewVisitor = () => {
+    if (limitReached) {
+      showToast("Trial limit reached. Please upgrade your plan.", "error");
+      setTimeout(() => router.push("/auth/subscription"), 1500);
+      return;
+    }
+    router.push("/visitor/primary_details");
+  };
+
   /* ================= PLAN HELPERS ================= */
   const isTrial = plan?.plan === "TRIAL";
   const limitReached = isTrial && plan?.remaining === 0;
@@ -493,7 +531,7 @@ export default function VisitorDashboard() {
             opacity: limitReached ? 0.5 : 1,
             cursor: limitReached ? "not-allowed" : "pointer"
           }}
-          onClick={() => router.push("/visitor/primary_details")}
+          onClick={handleNewVisitor}
         >
           + New Visitor
         </button>
@@ -550,7 +588,7 @@ export default function VisitorDashboard() {
         </div>
 
         <div className={styles.bigCard}>
-          <h4>Visitors Out</h4>
+          <h4>Checked Out Today</h4>
           <p>{stats.out}</p>
         </div>
       </section>
@@ -559,84 +597,104 @@ export default function VisitorDashboard() {
       <section className={styles.tablesRow}>
         {/* ACTIVE VISITORS */}
         <div className={styles.tableCard}>
-          <h3>Active Visitors ({activeVisitors.length})</h3>
+          <h3>Currently Inside ({activeVisitors.length})</h3>
 
           {activeVisitors.length === 0 ? (
-            <p>No active visitors</p>
+            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+              <p>No visitors currently inside</p>
+            </div>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Check-in</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeVisitors.map((v) => (
-                  <tr key={v.visitor_code || v.id}>
-                    <td>{v.visitor_code}</td>
-                    <td>{v.name}</td>
-                    <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_in || v.checkIn)}</td>
-                    <td>
-                      <button
-                        className={styles.checkoutBtn}
-                        disabled={checkingOut === v.visitor_code}
-                        onClick={() => handleCheckout(v.visitor_code)}
-                      >
-                        {checkingOut === v.visitor_code
-                          ? "Checking out..."
-                          : "Checkout"}
-                      </button>
-                    </td>
+            <div style={{ overflowX: 'auto' }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Check-in</th>
+                    <th>Action</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {activeVisitors.map((v) => (
+                    <tr key={v.visitor_code || v.id}>
+                      <td>{v.visitor_code}</td>
+                      <td>{v.name}</td>
+                      <td>{v.phone}</td>
+                      <td>{formatISTTime(v.check_in || v.checkIn)}</td>
+                      <td>
+                        <button
+                          className={styles.checkoutBtn}
+                          disabled={checkingOut === v.visitor_code}
+                          onClick={() => handleCheckout(v.visitor_code)}
+                          style={{
+                            opacity: checkingOut === v.visitor_code ? 0.6 : 1,
+                            cursor: checkingOut === v.visitor_code ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {checkingOut === v.visitor_code
+                            ? "Checking out..."
+                            : "Checkout"}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
-        {/* CHECKED OUT VISITORS */}
+        {/* CHECKED OUT VISITORS (TODAY ONLY) */}
         <div className={styles.tableCard}>
-          <h3>Checked-Out Visitors ({checkedOutVisitors.length})</h3>
+          <h3>Checked Out Today ({checkedOutVisitors.length})</h3>
 
           {checkedOutVisitors.length === 0 ? (
-            <p>No visitors checked out today</p>
+            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+              <p>No visitors checked out today</p>
+            </div>
           ) : (
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>Code</th>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Check-out</th>
-                </tr>
-              </thead>
-              <tbody>
-                {checkedOutVisitors.map((v) => (
-                  <tr key={v.visitor_code || v.id}>
-                    <td>{v.visitor_code}</td>
-                    <td>{v.name}</td>
-                    <td>{v.phone}</td>
-                    <td>{formatISTTime(v.check_out || v.checkOut)}</td>
+            <div style={{ overflowX: 'auto' }}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Check-out</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {checkedOutVisitors.map((v) => (
+                    <tr key={v.visitor_code || v.id}>
+                      <td>{v.visitor_code}</td>
+                      <td>{v.name}</td>
+                      <td>{v.phone}</td>
+                      <td>{formatISTTime(v.check_out || v.checkOut)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </section>
 
-      {/* ================= DEBUG INFO (REMOVE IN PRODUCTION) ================= */}
+      {/* ================= DEBUG INFO (DEVELOPMENT ONLY) ================= */}
       {process.env.NODE_ENV === 'development' && (
-        <div style={{ background: '#f0f0f0', padding: '10px', margin: '10px 0', fontSize: '12px' }}>
-          <strong>Debug Info:</strong><br/>
+        <div style={{ 
+          background: '#f0f0f0', 
+          padding: '10px', 
+          margin: '10px 0', 
+          fontSize: '12px',
+          borderRadius: '4px',
+          border: '1px solid #ddd'
+        }}>
+          <strong>🔧 Debug Info:</strong><br/>
           Active Visitors: {activeVisitors.length}<br/>
           Checked Out Visitors: {checkedOutVisitors.length}<br/>
-          Stats: {JSON.stringify(stats)}
+          Stats: {JSON.stringify(stats)}<br/>
+          Current Date: {new Date().toLocaleDateString()}
         </div>
       )}
     </div>
