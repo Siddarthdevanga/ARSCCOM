@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "../../utils/api";
 import styles from "./style.module.css";
-
-const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 
 /* ======================================================
    TIME OPTIONS — 15-minute intervals (00, 15, 30, 45)
@@ -19,12 +18,18 @@ const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
 
   return {
     label: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
-    value: `${hour}:${String(m).padStart(2, "0")} ${ampm}`,
+    value: `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`,
     minutes: totalMinutes
   };
 });
 
-/* Convert DB HH:MM:SS → "4:30 PM" */
+/* ======================================================
+   NORMALIZE DB HH:MM:SS -> HH:MM
+====================================================== */
+const normalizeDbTime = (t = "") =>
+  t.includes(":") ? t.slice(0, 5) : t;
+
+/* Convert DB HH:MM -> "4:30 PM" */
 const dbToAmPm = t => {
   if (!t) return "";
   const [h, m] = t.split(":").map(Number);
@@ -33,7 +38,7 @@ const dbToAmPm = t => {
   return `${hr}:${String(m).padStart(2, "0")} ${am}`;
 };
 
-/* Convert AM/PM → minutes for comparison */
+/* Convert AM/PM -> minutes for comparison */
 const ampmToMinutes = str => {
   if (!str) return 0;
   const [time, suffix] = str.split(" ");
@@ -45,101 +50,43 @@ const ampmToMinutes = str => {
   return h * 60 + m;
 };
 
-/* ======================================================
-   ENHANCED TOAST NOTIFICATION
-====================================================== */
-const Toast = ({ message, type = "info", isVisible, onHide }) => {
-  useEffect(() => {
-    if (isVisible) {
-      const timer = setTimeout(onHide, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [isVisible, onHide]);
-
-  if (!isVisible) return null;
-
-  const getIcon = () => {
-    switch (type) {
-      case "success": return "✅";
-      case "error": return "❌";
-      case "warning": return "⚠️";
-      case "info": return "ℹ️";
-      default: return "ℹ️";
-    }
-  };
-
-  return (
-    <div className={`${styles.toast} ${styles[`toast${type.charAt(0).toUpperCase() + type.slice(1)}`]} ${isVisible ? styles.toastVisible : ''}`}>
-      <span className={styles.toastIcon}>{getIcon()}</span>
-      <span className={styles.toastMessage}>{message}</span>
-      <button className={styles.toastClose} onClick={onHide}>×</button>
-    </div>
-  );
+/* Convert 24hr -> AM/PM */
+const toAmPmStrict = (time24 = "") => {
+  const [h, m] = time24.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  const hr = h % 12 || 12;
+  return `${hr}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
+const normalizeDate = (d) =>
+  typeof d === "string" ? d.split("T")[0] : "";
+
 /* ======================================================
-   MODAL COMPONENT WITH BETTER ACCESSIBILITY
+   MODAL COMPONENT
 ====================================================== */
-const Modal = ({ isOpen, onClose, title, children, type = "info", size = "medium" }) => {
-  const modalRef = useRef(null);
-
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-      
-      // Focus management
-      setTimeout(() => {
-        const focusableElement = modalRef.current?.querySelector('button, input, select');
-        focusableElement?.focus();
-      }, 100);
-    } else {
-      document.body.style.overflow = '';
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, onClose]);
-
+const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
   if (!isOpen) return null;
 
   const getIcon = () => {
     switch (type) {
-      case "success": return "✅";
-      case "warning": return "⚠️";
-      case "error": return "❌";
-      default: return "ℹ️";
+      case "success":
+        return "✓";
+      case "warning":
+        return "⚠";
+      case "error":
+        return "✕";
+      default:
+        return "ℹ";
     }
   };
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div 
-        ref={modalRef}
-        className={`${styles.modal} ${styles[`modal${size.charAt(0).toUpperCase() + size.slice(1)}`]}`}
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
+      <div className={styles.modal} onClick={e => e.stopPropagation()}>
         <div className={`${styles.modalHeader} ${styles[`modal${type.charAt(0).toUpperCase() + type.slice(1)}`]}`}>
           <span className={styles.modalIcon}>{getIcon()}</span>
-          <h3 id="modal-title">{title}</h3>
-          <button 
-            className={styles.modalClose} 
-            onClick={onClose}
-            aria-label="Close modal"
-          >
-            ×
-          </button>
+          <h3>{title}</h3>
+          <button className={styles.modalClose} onClick={onClose}>×</button>
         </div>
         <div className={styles.modalBody}>
           {children}
@@ -150,61 +97,50 @@ const Modal = ({ isOpen, onClose, title, children, type = "info", size = "medium
 };
 
 /* ======================================================
-   TIME SCROLLER WITH IMPROVED UX
+   TIME SCROLLER COMPONENT
 ====================================================== */
-const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false, currentDate = null, today = null }) => {
+const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false, excludedSlots = new Set(), currentDate = null, today = null }) => {
   const [isOpen, setIsOpen] = useState(false);
   const scrollContainerRef = useRef(null);
-  const dropdownRef = useRef(null);
 
   // Get current time in minutes (rounded up to next 15-min slot)
   const getCurrentMinutes = () => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    // Round up to next 15-minute slot
     return Math.ceil(currentMinutes / 15) * 15;
   };
 
   const filteredOptions = useMemo(() => {
     let options = TIME_OPTIONS;
-
+    
     // Filter based on current time if it's today's date
     if (currentDate === today && !minTime) {
       const nowMinutes = getCurrentMinutes();
       options = options.filter(t => t.minutes >= nowMinutes);
     }
-
-    // Filter based on minTime (for end time)
+    
     if (minTime) {
-      const minMinutes = ampmToMinutes(minTime);
+      const minMinutes = minTime.includes(":")
+        ? parseInt(minTime.split(":")[0]) * 60 + parseInt(minTime.split(":")[1])
+        : ampmToMinutes(minTime);
       options = options.filter(t => t.minutes > minMinutes);
     }
-
+    
+    // Filter out excluded slots
+    options = options.filter(t => !excludedSlots.has(t.value));
+    
     return options;
-  }, [minTime, currentDate, today]);
+  }, [minTime, excludedSlots, currentDate, today]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // Auto-scroll to selected value
   useEffect(() => {
     if (isOpen && scrollContainerRef.current && value) {
-      const selectedIndex = filteredOptions.findIndex(t => t.value === value);
+      const selectedIndex = filteredOptions.findIndex(t => 
+        t.value === value || toAmPmStrict(t.value) === value
+      );
       if (selectedIndex !== -1) {
         const itemHeight = 40;
+        // Use requestAnimationFrame to avoid flickering
         requestAnimationFrame(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTop = selectedIndex * itemHeight - 80;
@@ -219,65 +155,68 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
     setIsOpen(false);
   };
 
-  const handleKeyDown = (e, timeValue) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleSelect(timeValue);
-    }
-  };
+  const displayValue = value ? (value.includes("M") ? value : toAmPmStrict(value)) : "";
 
   return (
-    <div className={styles.timeScroller} ref={dropdownRef}>
-      <label>{label} {!disabled && <span className={styles.required}>*</span>}</label>
+    <div className={styles.timeScroller}>
+      <label>{label}</label>
       <div 
-        className={`${styles.timeInput} ${disabled ? styles.timeInputDisabled : ''} ${isOpen ? styles.timeInputOpen : ''}`}
+        className={`${styles.timeInput} ${disabled ? styles.timeInputDisabled : ''}`}
         onClick={() => !disabled && setIsOpen(true)}
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        onKeyDown={(e) => {
-          if ((e.key === 'Enter' || e.key === ' ') && !disabled) {
-            e.preventDefault();
-            setIsOpen(true);
-          }
-        }}
-        aria-label={`${label}. Current value: ${value || 'Not selected'}`}
       >
-        <span className={value ? styles.timeSelected : styles.timePlaceholder}>
-          {value || "Select time"}
+        <span className={displayValue ? styles.timeSelected : styles.timePlaceholder}>
+          {displayValue || "Select time"}
         </span>
         <span className={styles.timeIcon}>🕒</span>
       </div>
 
       {isOpen && (
-        <div className={styles.timeDropdown}>
-          <div className={styles.timeDropdownHeader}>
-            <span>Select {label}</span>
-            <button onClick={() => setIsOpen(false)} aria-label="Close time picker">×</button>
-          </div>
-          <div 
-            className={styles.timeList} 
-            ref={scrollContainerRef}
-            role="listbox"
-          >
-            {filteredOptions.length === 0 ? (
-              <div className={styles.timeOptionEmpty}>No available times</div>
-            ) : (
-              filteredOptions.map(time => (
+        <>
+          <div className={styles.timeDropdownBackdrop} onClick={() => setIsOpen(false)} />
+          <div className={styles.timeDropdown}>
+            <div className={styles.timeDropdownHeader}>
+              <span>Select {label}</span>
+              <button onClick={() => setIsOpen(false)}>×</button>
+            </div>
+            <div 
+              className={styles.timeList} 
+              ref={scrollContainerRef}
+            >
+              {filteredOptions.map(time => (
                 <div
                   key={time.value}
-                  className={`${styles.timeOption} ${value === time.value ? styles.timeOptionSelected : ""}`}
+                  className={`${styles.timeOption} ${value === time.value || toAmPmStrict(value) === time.label ? styles.timeOptionSelected : ""}`}
                   onClick={() => handleSelect(time.value)}
-                  onKeyDown={(e) => handleKeyDown(e, time.value)}
-                  role="option"
-                  tabIndex={0}
-                  aria-selected={value === time.value}
                 >
                   {time.label}
                 </div>
-              ))
-            )}
+              ))}
+            </div>
           </div>
-        </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+/* ======================================================
+   BANNER COMPONENT
+====================================================== */
+const Banner = ({ message, type = "warning", onClose }) => {
+  if (!message) return null;
+
+  return (
+    <div className={`${styles.banner} ${styles[`banner${type.charAt(0).toUpperCase() + type.slice(1)}`]}`}>
+      <div className={styles.bannerContent}>
+        <span className={styles.bannerIcon}>
+          {type === "warning" && "⚠"}
+          {type === "error" && "✕"}
+          {type === "info" && "ℹ"}
+        </span>
+        <p>{message}</p>
+      </div>
+      {onClose && (
+        <button className={styles.bannerClose} onClick={onClose}>×</button>
       )}
     </div>
   );
@@ -286,38 +225,33 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
 /* ======================================================
    MAIN COMPONENT
 ====================================================== */
-export default function PublicConferenceBooking() {
-  const { slug } = useParams();
+export default function ConferenceBookings() {
   const router = useRouter();
-
   const today = new Date().toISOString().split("T")[0];
 
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
-  const [roomId, setRoomId] = useState("");
+  const [plan, setPlan] = useState(null);
+  const [planBlocked, setPlanBlocked] = useState(false);
+
   const [date, setDate] = useState(today);
+  const [roomId, setRoomId] = useState("");
+
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
 
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpVerified, setOtpVerified] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   const [editingId, setEditingId] = useState(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [resendTimer, setResendTimer] = useState(0);
-
-  // Enhanced state management
-  const [toast, setToast] = useState({ show: false, message: "", type: "info" });
-  const [formErrors, setFormErrors] = useState({});
 
   // Modal states
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null });
@@ -325,319 +259,166 @@ export default function PublicConferenceBooking() {
   const [cancelModal, setCancelModal] = useState({ isOpen: false, data: null });
   const [resultModal, setResultModal] = useState({ isOpen: false, type: "", message: "" });
 
-  /* ================= ENHANCED TOAST MANAGEMENT ================= */
-  const showToast = useCallback((message, type = "info") => {
-    setToast({ show: true, message, type });
-  }, []);
-
-  const hideToast = useCallback(() => {
-    setToast({ show: false, message: "", type: "info" });
-  }, []);
-
-  /* ================= FORM VALIDATION ================= */
-  const validateForm = () => {
-    const errors = {};
-
-    if (!roomId) errors.roomId = "Please select a room";
-    if (!date) errors.date = "Please select a date";
-    if (!startTime) errors.startTime = "Please select start time";
-    if (!endTime) errors.endTime = "Please select end time";
-    if (!department.trim()) errors.department = "Department is required";
-
-    if (startTime && endTime && ampmToMinutes(endTime) <= ampmToMinutes(startTime)) {
-      errors.endTime = "End time must be after start time";
-    }
-
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  /* ================= API ERROR HANDLER ================= */
-  const handleApiError = async (response, defaultMessage) => {
+  /* ======================================================
+     LOAD DATA + PLAN
+  ====================================================== */
+  const loadAll = async () => {
     try {
-      const data = await response.json();
-      
-      // Handle subscription-specific errors more subtly for public interface
-      if (response.status === 403 && data.code) {
-        switch (data.code) {
-          case "SUBSCRIPTION_EXPIRED":
-          case "TRIAL_EXPIRED":
-            // For public users, show a subtle message instead of aggressive upgrade prompts
-            showToast("Service temporarily unavailable. Please contact the organization.", "info");
-            break;
-          case "BOOKING_LIMIT_REACHED":
-          case "ROOM_LIMIT_REACHED":
-            // Show a more user-friendly message for booking limits
-            showToast("Booking unavailable at this time. Please try again later or contact support.", "warning");
-            break;
-          default:
-            showToast(data.message || defaultMessage, "error");
-        }
-        return;
+      const stored = localStorage.getItem("company");
+      if (stored) setCompany(JSON.parse(stored));
+
+      const [r, b, planRes] = await Promise.all([
+        apiFetch("/api/conference/rooms"),
+        apiFetch("/api/conference/bookings"),
+        apiFetch("/api/conference/plan-usage"),
+      ]);
+
+      setPlan(planRes);
+
+      if (!planRes || planRes.message) {
+        setPlanBlocked(true);
+      } else if (
+        planRes.limit !== "UNLIMITED" &&
+        Number(planRes.remaining) <= 0
+      ) {
+        setPlanBlocked(true);
+      } else {
+        setPlanBlocked(false);
       }
 
-      showToast(data.message || defaultMessage, "error");
-    } catch {
-      showToast(defaultMessage, "error");
-    }
-  };
+      let allowedRooms = Array.isArray(r) ? r : [];
 
-  /* ================= COMPANY DATA ================= */
-  useEffect(() => {
-    const loadCompany = async () => {
-      try {
-        const response = await fetch(`${API}/api/public/conference/company/${slug}`);
-        
-        if (!response.ok) {
-          await handleApiError(response, "Invalid booking link");
-          return;
-        }
-
-        const data = await response.json();
-        setCompany({
-          id: data.id,
-          name: data.name,
-          logo_url: data.logo_url
-        });
-        
-        console.log("[COMPANY_LOADED]", data.name);
-      } catch (error) {
-        console.error("[COMPANY_ERROR]", error);
-        showToast("Failed to load company information", "error");
+      if (planRes?.limit !== "UNLIMITED") {
+        allowedRooms = allowedRooms.slice(0, Number(planRes.limit));
       }
-    };
 
-    loadCompany();
-  }, [slug]);
+      setRooms(allowedRooms);
 
-  /* ================= ROOMS DATA ================= */
-  useEffect(() => {
-    if (!company) return;
-    
-    const loadRooms = async () => {
-      try {
-        const response = await fetch(`${API}/api/public/conference/company/${slug}/rooms`);
-        
-        if (!response.ok) {
-          // Even if there are plan restrictions, we gracefully handle the error
-          console.log("[ROOMS_API_ERROR] Status:", response.status);
-          
-          // For any API errors, we'll show a subtle toast but continue
-          if (response.status === 403) {
-            showToast("Some features may be limited. Contact your organization if you need assistance.", "info");
-          }
-          
-          // Set empty array if we can't load rooms
-          setRooms([]);
-          return;
-        }
-
-        const data = await response.json();
-        setRooms(data || []);
-        
-        console.log("[ROOMS_LOADED]", data?.length || 0, "rooms");
-      } catch (error) {
-        console.error("[ROOMS_ERROR]", error);
-        setRooms([]);
-      }
-    };
-
-    loadRooms();
-  }, [company, slug]);
-
-  /* ================= BOOKINGS DATA ================= */
-  const loadBookings = useCallback(async () => {
-    if (!roomId || !date) {
-      setBookings([]);
-      return;
-    }
-
-    try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}&userEmail=${email || ""}`
+      setBookings(
+        Array.isArray(b)
+          ? b.map((x) => ({
+              ...x,
+              start_time: normalizeDbTime(x.start_time),
+              end_time: normalizeDbTime(x.end_time),
+            }))
+          : []
       );
-
-      if (!response.ok) {
-        await handleApiError(response, "Failed to load bookings");
-        return;
-      }
-
-      const data = await response.json();
-      const formattedBookings = (Array.isArray(data) ? data : []).map(b => ({
-        ...b,
-        start_time: dbToAmPm(b.start_time),
-        end_time: dbToAmPm(b.end_time)
-      }));
-
-      setBookings(formattedBookings);
-      console.log("[BOOKINGS_LOADED]", formattedBookings.length, "bookings");
-    } catch (error) {
-      console.error("[BOOKINGS_ERROR]", error);
-      setBookings([]);
+    } catch {
+      router.replace("/auth/login");
     }
-  }, [roomId, date, slug, email]);
+  };
 
   useEffect(() => {
-    loadBookings();
-  }, [loadBookings, otpVerified]);
+    loadAll();
+  }, []);
 
-  /* ================= TIME VALIDATION ================= */
+  /* ======================================================
+     DAY BOOKINGS
+  ====================================================== */
+  const dayBookings = useMemo(() => {
+    if (!date || !roomId) return [];
+    return bookings.filter(
+      (b) =>
+        normalizeDate(b.booking_date) === date &&
+        Number(b.room_id) === Number(roomId) &&
+        b.status === "BOOKED"
+    );
+  }, [bookings, date, roomId]);
+
+  /* ======================================================
+     BLOCKED SLOTS
+  ====================================================== */
+  const blockedSlots = useMemo(() => {
+    const set = new Set();
+    dayBookings.forEach((b) => {
+      TIME_OPTIONS.forEach((t) => {
+        if (t.value >= b.start_time && t.value < b.end_time) {
+          set.add(t.value);
+        }
+      });
+    });
+    return set;
+  }, [dayBookings]);
+
+  /* ======================================================
+     BLOCKED EXCLUDING CURRENT
+  ====================================================== */
+  const getBlockedSlotsExcluding = (id) => {
+    const set = new Set();
+    dayBookings.forEach((b) => {
+      if (b.id === id) return;
+      TIME_OPTIONS.forEach((t) => {
+        if (t.value >= b.start_time && t.value < b.end_time) {
+          set.add(t.value);
+        }
+      });
+    });
+    return set;
+  };
+
+  // Clear start and end times when date changes to today
   useEffect(() => {
     if (date === today && startTime) {
       const nowMinutes = Math.ceil((new Date().getHours() * 60 + new Date().getMinutes()) / 15) * 15;
-      const startMinutes = ampmToMinutes(startTime);
+      const startMins = startTime.includes(":") && !startTime.includes("M")
+        ? parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1])
+        : ampmToMinutes(startTime);
       
-      if (startMinutes < nowMinutes) {
+      if (startMins < nowMinutes) {
         setStartTime("");
         setEndTime("");
-        showToast("Selected time has passed. Please choose a future time.", "warning");
       }
     }
-  }, [date, today, startTime]);
+  }, [date, today]);
 
-  /* ================= SLOT VALIDATION ================= */
-  const isSlotFree = useCallback((s, e, ignore = null) =>
-    !bookings.some(
-      b =>
-        b.id !== ignore &&
-        ampmToMinutes(b.start_time) < ampmToMinutes(e) &&
-        ampmToMinutes(b.end_time) > ampmToMinutes(s)
-    ), [bookings]);
+  const isSlotFree = (s, e, ignore = null) => {
+    const startMins = s.includes(":") && !s.includes("M")
+      ? parseInt(s.split(":")[0]) * 60 + parseInt(s.split(":")[1])
+      : ampmToMinutes(s);
+    const endMins = e.includes(":") && !e.includes("M")
+      ? parseInt(e.split(":")[0]) * 60 + parseInt(e.split(":")[1])
+      : ampmToMinutes(e);
 
-  /* ================= AUTH FUNCTIONS ================= */
-  const handleLogout = () => {
-    setOtpVerified(false);
-    setOtpSent(false);
-    setOtp("");
-    setEmail("");
-    setBookings([]);
-    setRoomId("");
-    setDate(today);
-    setStartTime("");
-    setEndTime("");
-    setDepartment("");
-    setPurpose("");
-    setFormErrors({});
-    hideToast();
-    showToast("Logged out successfully", "info");
-  };
-
-  /* ================= OTP FUNCTIONS ================= */
-  const sendOtp = async () => {
-    if (!email.includes("@")) {
-      showToast("Please enter a valid email address", "error");
-      return;
-    }
-
-    setLoading(true);
-    hideToast();
-
-    try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/send-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
-
-      if (!response.ok) {
-        await handleApiError(response, "Failed to send OTP");
-        return;
+    return !dayBookings.some(
+      b => {
+        if (b.id === ignore) return false;
+        const bStart = b.start_time.includes(":") && !b.start_time.includes("M")
+          ? parseInt(b.start_time.split(":")[0]) * 60 + parseInt(b.start_time.split(":")[1])
+          : ampmToMinutes(b.start_time);
+        const bEnd = b.end_time.includes(":") && !b.end_time.includes("M")
+          ? parseInt(b.end_time.split(":")[0]) * 60 + parseInt(b.end_time.split(":")[1])
+          : ampmToMinutes(b.end_time);
+        
+        return bStart < endMins && bEnd > startMins;
       }
-
-      setOtpSent(true);
-      showToast("OTP sent to your email", "success");
-      setResendTimer(30);
-    } catch (error) {
-      console.error("[OTP_SEND_ERROR]", error);
-      showToast("Network error. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
+    );
   };
 
-  useEffect(() => {
-    if (!resendTimer) return;
-    const timer = setInterval(() => setResendTimer(s => (s > 0 ? s - 1 : 0)), 1000);
-    return () => clearInterval(timer);
-  }, [resendTimer]);
-
-  const resendOtp = async () => {
-    hideToast();
-    
-    try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/send-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
-
-      if (!response.ok) {
-        await handleApiError(response, "Failed to resend OTP");
-        return;
-      }
-
-      showToast("OTP resent to your email", "success");
-      setResendTimer(30);
-    } catch (error) {
-      console.error("[OTP_RESEND_ERROR]", error);
-      showToast("Network error. Please try again.", "error");
-    }
-  };
-
-  const verifyOtp = async () => {
-    if (!otp.trim()) {
-      showToast("Please enter the OTP", "error");
-      return;
-    }
-    
-    setLoading(true);
-    hideToast();
-    
-    try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/verify-otp`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, otp })
-        }
-      );
-
-      if (!response.ok) {
-        await handleApiError(response, "Invalid or expired OTP");
-        return;
-      }
-
-      setOtpVerified(true);
-      showToast("Email verified successfully", "success");
-      loadBookings();
-    } catch (error) {
-      console.error("[OTP_VERIFY_ERROR]", error);
-      showToast("Network error. Please try again.", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  /* ================= BOOKING FUNCTIONS ================= */
+  /* ======================================================
+     CREATE - Show Confirmation Modal
+  ====================================================== */
   const initiateBooking = () => {
-    hideToast();
-    
-    if (!validateForm()) {
-      showToast("Please fill in all required fields", "error");
-      return;
-    }
+    setError("");
+    setSuccess("");
 
-    if (!isSlotFree(startTime, endTime)) {
-      showToast("Selected time slot conflicts with existing booking", "error");
-      return;
-    }
+    if (planBlocked)
+      return setError("🚫 Your plan does not allow more bookings. Upgrade plan.");
+
+    if (!date || !roomId || !startTime || !endTime || !department)
+      return setError("All fields except purpose are required");
+
+    const startMins = startTime.includes(":") && !startTime.includes("M")
+      ? parseInt(startTime.split(":")[0]) * 60 + parseInt(startTime.split(":")[1])
+      : ampmToMinutes(startTime);
+    const endMins = endTime.includes(":") && !endTime.includes("M")
+      ? parseInt(endTime.split(":")[0]) * 60 + parseInt(endTime.split(":")[1])
+      : ampmToMinutes(endTime);
+
+    if (endMins <= startMins)
+      return setError("End time must be after start time");
+
+    if (!isSlotFree(startTime, endTime))
+      return setError("Selected time slot conflicts with existing booking");
 
     const selectedRoom = rooms.find(r => r.id === Number(roomId));
     
@@ -647,8 +428,8 @@ export default function PublicConferenceBooking() {
         room: selectedRoom?.room_name || "Unknown Room",
         roomNumber: selectedRoom?.room_number || "",
         date,
-        startTime,
-        endTime,
+        startTime: startTime.includes("M") ? startTime : toAmPmStrict(startTime),
+        endTime: endTime.includes("M") ? endTime : toAmPmStrict(endTime),
         department,
         purpose: purpose || "—"
       }
@@ -660,94 +441,71 @@ export default function PublicConferenceBooking() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/book`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            room_id: roomId,
-            booked_by: email,
-            department,
-            purpose,
-            booking_date: date,
-            start_time: startTime,
-            end_time: endTime
-          })
-        }
-      );
-
-      if (!response.ok) {
-        // Handle subscription errors more gracefully for public users
-        if (response.status === 403) {
-          const data = await response.json();
-          if (data.code && (data.code.includes("SUBSCRIPTION") || data.code.includes("TRIAL") || data.code.includes("LIMIT"))) {
-            setResultModal({
-              isOpen: true,
-              type: "error",
-              message: "Booking is currently unavailable. Please contact your organization's administrator for assistance."
-            });
-            return;
-          }
-        }
-        
-        await handleApiError(response, "Booking failed");
-        return;
-      }
+      await apiFetch("/api/conference/bookings", {
+        method: "POST",
+        body: JSON.stringify({
+          room_id: roomId,
+          booked_by: "ADMIN",
+          department,
+          purpose,
+          booking_date: date,
+          start_time: startTime.includes("M") ? startTime : toAmPmStrict(startTime),
+          end_time: endTime.includes("M") ? endTime : toAmPmStrict(endTime),
+        }),
+      });
 
       setResultModal({
         isOpen: true,
         type: "success",
-        message: "Your conference room has been booked successfully! A confirmation email has been sent to you."
+        message: "Booking created successfully!"
       });
 
-      // Reset form
       setStartTime("");
       setEndTime("");
       setDepartment("");
       setPurpose("");
-      setFormErrors({});
-      
-      loadBookings();
-    } catch (error) {
-      console.error("[BOOKING_ERROR]", error);
+      loadAll();
+    } catch (e) {
       setResultModal({
         isOpen: true,
         type: "error",
-        message: "Network error occurred. Please try again."
+        message: e.message || "Plan/Booking limit reached or slot conflict"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= EDIT FUNCTIONS ================= */
+  /* ======================================================
+     EDIT - Show Reschedule Modal
+  ====================================================== */
   const initiateEdit = (booking) => {
     setEditingId(booking.id);
     setEditStart(booking.start_time);
     setEditEnd(booking.end_time);
-    hideToast();
+    setError("");
   };
 
   const showRescheduleConfirmation = () => {
-    hideToast();
-    
-    if (!editStart || !editEnd) {
-      showToast("Please select both start and end times", "error");
-      return;
-    }
+    setError("");
 
-    if (ampmToMinutes(editEnd) <= ampmToMinutes(editStart)) {
-      showToast("End time must be after start time", "error");
-      return;
-    }
+    if (!editStart || !editEnd)
+      return setError("Select both start and end times");
 
-    if (!isSlotFree(editStart, editEnd, editingId)) {
-      showToast("Selected time slot is not available", "error");
-      return;
-    }
+    const startMins = editStart.includes(":") && !editStart.includes("M")
+      ? parseInt(editStart.split(":")[0]) * 60 + parseInt(editStart.split(":")[1])
+      : ampmToMinutes(editStart);
+    const endMins = editEnd.includes(":") && !editEnd.includes("M")
+      ? parseInt(editEnd.split(":")[0]) * 60 + parseInt(editEnd.split(":")[1])
+      : ampmToMinutes(editEnd);
 
-    const booking = bookings.find(b => b.id === editingId);
+    if (endMins <= startMins)
+      return setError("End time must be after start time");
+
+    if (!isSlotFree(editStart, editEnd, editingId))
+      return setError("Selected time slot is not available");
+
+    const booking = dayBookings.find(b => b.id === editingId);
     const selectedRoom = rooms.find(r => r.id === booking.room_id);
 
     setRescheduleModal({
@@ -757,10 +515,10 @@ export default function PublicConferenceBooking() {
         room: selectedRoom?.room_name || "Unknown Room",
         roomNumber: selectedRoom?.room_number || "",
         date: booking.booking_date,
-        oldStart: booking.start_time,
-        oldEnd: booking.end_time,
-        newStart: editStart,
-        newEnd: editEnd
+        oldStart: booking.start_time.includes("M") ? booking.start_time : dbToAmPm(booking.start_time),
+        oldEnd: booking.end_time.includes("M") ? booking.end_time : dbToAmPm(booking.end_time),
+        newStart: editStart.includes("M") ? editStart : toAmPmStrict(editStart),
+        newEnd: editEnd.includes("M") ? editEnd : toAmPmStrict(editEnd)
       }
     });
   };
@@ -771,40 +529,29 @@ export default function PublicConferenceBooking() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/bookings/${id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            start_time: editStart,
-            end_time: editEnd,
-            email
-          })
-        }
-      );
-
-      if (!response.ok) {
-        await handleApiError(response, "Failed to reschedule booking");
-        return;
-      }
+      await apiFetch(`/api/conference/bookings/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          start_time: editStart.includes("M") ? editStart : toAmPmStrict(editStart),
+          end_time: editEnd.includes("M") ? editEnd : toAmPmStrict(editEnd),
+        }),
+      });
 
       setResultModal({
         isOpen: true,
         type: "success",
-        message: "Your booking has been rescheduled successfully! A confirmation email has been sent to you."
+        message: "Booking updated successfully!"
       });
 
       setEditingId(null);
       setEditStart("");
       setEditEnd("");
-      loadBookings();
-    } catch (error) {
-      console.error("[RESCHEDULE_ERROR]", error);
+      loadAll();
+    } catch (e) {
       setResultModal({
         isOpen: true,
         type: "error",
-        message: "Network error occurred. Please try again."
+        message: e.message || "Unable to update — slot conflict"
       });
     } finally {
       setLoading(false);
@@ -815,10 +562,12 @@ export default function PublicConferenceBooking() {
     setEditingId(null);
     setEditStart("");
     setEditEnd("");
-    hideToast();
+    setError("");
   };
 
-  /* ================= CANCEL FUNCTIONS ================= */
+  /* ======================================================
+     CANCEL - Show Cancellation Modal
+  ====================================================== */
   const initiateCancellation = (booking) => {
     const selectedRoom = rooms.find(r => r.id === booking.room_id);
     
@@ -829,8 +578,8 @@ export default function PublicConferenceBooking() {
         room: selectedRoom?.room_name || "Unknown Room",
         roomNumber: selectedRoom?.room_number || "",
         date: booking.booking_date,
-        startTime: booking.start_time,
-        endTime: booking.end_time,
+        startTime: booking.start_time.includes("M") ? booking.start_time : dbToAmPm(booking.start_time),
+        endTime: booking.end_time.includes("M") ? booking.end_time : dbToAmPm(booking.end_time),
         department: booking.department
       }
     });
@@ -842,357 +591,246 @@ export default function PublicConferenceBooking() {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/bookings/${id}/cancel`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
-
-      if (!response.ok) {
-        await handleApiError(response, "Failed to cancel booking");
-        return;
-      }
+      await apiFetch(`/api/conference/bookings/${id}/cancel`, {
+        method: "PATCH",
+      });
 
       setResultModal({
         isOpen: true,
         type: "success",
-        message: "Your booking has been cancelled successfully. A confirmation email has been sent to you."
+        message: "Booking cancelled successfully!"
       });
 
-      loadBookings();
-    } catch (error) {
-      console.error("[CANCELLATION_ERROR]", error);
+      loadAll();
+    } catch {
       setResultModal({
         isOpen: true,
         type: "error",
-        message: "Network error occurred. Please try again."
+        message: "Failed to cancel booking"
       });
     } finally {
       setLoading(false);
     }
   };
 
-  /* ================= LOADING STATE ================= */
-  if (!company) return (
-    <div className={styles.loadingContainer}>
-      <div className={styles.spinner}></div>
-      <p>Loading conference booking system...</p>
-    </div>
-  );
+  if (!company) return null;
 
+  /* ======================================================
+     UI
+  ====================================================== */
   return (
     <div className={styles.page}>
-      {/* Enhanced Toast Notification */}
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.show}
-        onHide={hideToast}
-      />
+      {planBlocked && (
+        <Banner 
+          message="🚫 Booking not allowed. Upgrade plan to continue."
+          type="error"
+        />
+      )}
 
       <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <div className={styles.headerLeft}>
-            <h1>{company.name}</h1>
-            <p className={styles.subtitle}>Conference Room Booking</p>
-          </div>
+        <button className={styles.backBtn} onClick={() => router.back()}>
+          ←
+        </button>
 
-          <div className={styles.headerRight}>
-            {otpVerified && (
-              <>
-                <span className={styles.userEmail}>{email}</span>
-                <button 
-                  className={styles.logoutBtn} 
-                  onClick={handleLogout} 
-                  title="Logout"
-                  aria-label="Logout"
-                >
-                  <span>⎋</span>
-                </button>
-              </>
-            )}
+        <h1 className={styles.companyName}>{company.name}</h1>
 
-            {company.logo_url && (
-              <img 
-                src={company.logo_url} 
-                alt={`${company.name} logo`} 
-                className={styles.logo} 
-              />
-            )}
-          </div>
+        <div className={styles.headerRight}>
+          {company.logo_url && <img src={company.logo_url} alt="logo" />}
         </div>
       </header>
 
-      {/* ================= OTP VERIFICATION SECTION ================= */}
-      {!otpVerified ? (
-        <div className={styles.container}>
-          <div className={styles.authCard}>
-            <div className={styles.authHeader}>
-              <h2>Email Verification</h2>
-              <p>Enter your email to receive a one-time password for booking confirmation</p>
-            </div>
+      <div className={styles.content}>
+        {/* LEFT FORM */}
+        <div className={styles.card}>
+          <h2>Book Conference Room</h2>
 
-            <div className={styles.formGroup}>
-              <label htmlFor="email">Email Address <span className={styles.required}>*</span></label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                placeholder="your.email@company.com"
-                onChange={e => setEmail(e.target.value)}
-                className={styles.input}
-                disabled={otpSent}
-                autoComplete="email"
-              />
-            </div>
+          {error && <div className={styles.errorMsg}>{error}</div>}
+          {success && <div className={styles.successMsg}>{success}</div>}
 
-            {!otpSent ? (
-              <button 
-                onClick={sendOtp} 
-                disabled={loading}
-                className={styles.primaryBtn}
-              >
-                {loading ? "Sending..." : "Send OTP"}
-              </button>
-            ) : (
-              <>
-                <div className={styles.formGroup}>
-                  <label htmlFor="otp">Enter OTP <span className={styles.required}>*</span></label>
-                  <input
-                    id="otp"
-                    type="text"
-                    value={otp}
-                    placeholder="000000"
-                    onChange={e => setOtp(e.target.value)}
-                    className={styles.input}
-                    maxLength={6}
-                    autoComplete="one-time-code"
-                  />
-                </div>
-
-                <button 
-                  onClick={verifyOtp} 
-                  disabled={loading}
-                  className={styles.primaryBtn}
-                >
-                  {loading ? "Verifying..." : "Verify OTP"}
-                </button>
-
-                <button 
-                  onClick={resendOtp} 
-                  disabled={loading || resendTimer > 0}
-                  className={styles.secondaryBtn}
-                >
-                  {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend OTP"}
-                </button>
-              </>
-            )}
+          <div className={styles.formGroup}>
+            <label>Date *</label>
+            <input
+              type="date"
+              value={date}
+              min={today}
+              disabled={planBlocked}
+              onChange={(e) => setDate(e.target.value)}
+              className={styles.input}
+            />
           </div>
-        </div>
-      ) : (
-        <div className={styles.container}>
-          <div className={styles.layout}>
-            {/* ================= BOOKING FORM ================= */}
-            <div className={styles.card}>
-              <h2>Book a Conference Room</h2>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="date">Date <span className={styles.required}>*</span></label>
-                <input
-                  id="date"
-                  type="date"
-                  value={date}
-                  min={today}
-                  onChange={e => setDate(e.target.value)}
-                  className={`${styles.input} ${formErrors.date ? styles.inputError : ''}`}
-                />
-                {formErrors.date && <span className={styles.errorText}>{formErrors.date}</span>}
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="room">Room <span className={styles.required}>*</span></label>
-                <select 
-                  id="room"
-                  value={roomId} 
-                  onChange={e => setRoomId(e.target.value)}
-                  className={`${styles.select} ${formErrors.roomId ? styles.inputError : ''}`}
-                >
-                  <option value="">Select a room</option>
-                  {rooms.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.room_name} (#{r.room_number})
-                    </option>
-                  ))}
-                </select>
-                {formErrors.roomId && <span className={styles.errorText}>{formErrors.roomId}</span>}
-              </div>
-
-              <div className={formErrors.startTime ? styles.formGroupError : styles.formGroup}>
-                <TimeScroller
-                  value={startTime}
-                  onChange={setStartTime}
-                  label="Start Time"
-                  disabled={!roomId || !date}
-                  currentDate={date}
-                  today={today}
-                />
-                {formErrors.startTime && <span className={styles.errorText}>{formErrors.startTime}</span>}
-              </div>
-
-              <div className={formErrors.endTime ? styles.formGroupError : styles.formGroup}>
-                <TimeScroller
-                  value={endTime}
-                  onChange={setEndTime}
-                  label="End Time"
-                  minTime={startTime}
-                  disabled={!startTime}
-                  currentDate={date}
-                  today={today}
-                />
-                {formErrors.endTime && <span className={styles.errorText}>{formErrors.endTime}</span>}
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="department">Department <span className={styles.required}>*</span></label>
-                <input
-                  id="department"
-                  type="text"
-                  value={department}
-                  placeholder="e.g., Engineering, Sales, Marketing"
-                  onChange={e => setDepartment(e.target.value)}
-                  className={`${styles.input} ${formErrors.department ? styles.inputError : ''}`}
-                />
-                {formErrors.department && <span className={styles.errorText}>{formErrors.department}</span>}
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="purpose">Purpose (Optional)</label>
-                <input
-                  id="purpose"
-                  type="text"
-                  value={purpose}
-                  placeholder="e.g., Team Meeting, Client Call, Training"
-                  onChange={e => setPurpose(e.target.value)}
-                  className={styles.input}
-                />
-              </div>
-
-              <button
-                onClick={initiateBooking}
-                disabled={loading || !roomId || !date}
-                className={styles.primaryBtn}
-              >
-                {loading ? "Processing..." : "Book Room"}
-              </button>
-            </div>
-
-            {/* ================= BOOKINGS LIST ================= */}
-            <div className={styles.card}>
-              <h2>Current Bookings</h2>
-              
-              {!roomId || !date ? (
-                <p className={styles.emptyState}>Select a room and date to view bookings</p>
-              ) : !bookings.length ? (
-                <p className={styles.emptyState}>No bookings for this date</p>
-              ) : (
-                <div className={styles.bookingsList}>
-                  {bookings.map(b => (
-                    <div key={b.id} className={styles.bookingItem}>
-                      {editingId === b.id ? (
-                        <>
-                          <div className={styles.bookingHeader}>
-                            <h4>Reschedule Booking</h4>
-                          </div>
-                          
-                          <div className={styles.bookingDetails}>
-                            <p><strong>Department:</strong> {b.department}</p>
-                          </div>
-
-                          <TimeScroller
-                            value={editStart}
-                            onChange={setEditStart}
-                            label="New Start Time"
-                            currentDate={b.booking_date}
-                            today={today}
-                          />
-
-                          <TimeScroller
-                            value={editEnd}
-                            onChange={setEditEnd}
-                            label="New End Time"
-                            minTime={editStart}
-                            currentDate={b.booking_date}
-                            today={today}
-                          />
-
-                          <div className={styles.bookingActions}>
-                            <button 
-                              onClick={showRescheduleConfirmation}
-                              className={styles.primaryBtn}
-                              disabled={loading}
-                            >
-                              {loading ? "Saving..." : "Save Changes"}
-                            </button>
-                            <button 
-                              onClick={cancelEdit}
-                              className={styles.secondaryBtn}
-                              disabled={loading}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className={styles.bookingHeader}>
-                            <div className={styles.bookingTime}>
-                              <span className={styles.timeIcon}>🕒</span>
-                              <strong>{b.start_time} – {b.end_time}</strong>
-                            </div>
-                            {b.can_modify && (
-                              <span className={styles.bookingBadge}>Your Booking</span>
-                            )}
-                          </div>
-
-                          <div className={styles.bookingDetails}>
-                            <p><strong>Department:</strong> {b.department}</p>
-                            {b.purpose && <p><strong>Purpose:</strong> {b.purpose}</p>}
-                            <p className={styles.bookedBy}>
-                              <span>👤</span> {b.booked_by}
-                            </p>
-                          </div>
-
-                          {b.can_modify && (
-                            <div className={styles.bookingActions}>
-                              <button
-                                onClick={() => initiateEdit(b)}
-                                className={styles.editBtn}
-                                disabled={loading}
-                              >
-                                Reschedule
-                              </button>
-                              <button
-                                onClick={() => initiateCancellation(b)}
-                                className={styles.cancelBtn}
-                                disabled={loading}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <div className={styles.formGroup}>
+            <label>Room *</label>
+            <select
+              className={styles.select}
+              value={roomId}
+              disabled={planBlocked}
+              onChange={(e) => setRoomId(e.target.value)}
+            >
+              <option value="">Select a room</option>
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.room_name}
+                </option>
+              ))}
+            </select>
           </div>
+
+          <TimeScroller
+            value={startTime}
+            onChange={setStartTime}
+            label="Start Time"
+            disabled={planBlocked || !roomId || !date}
+            excludedSlots={blockedSlots}
+            currentDate={date}
+            today={today}
+          />
+
+          <TimeScroller
+            value={endTime}
+            onChange={setEndTime}
+            label="End Time"
+            minTime={startTime}
+            disabled={planBlocked || !startTime}
+            excludedSlots={blockedSlots}
+            currentDate={date}
+            today={today}
+          />
+
+          <div className={styles.formGroup}>
+            <label>Department *</label>
+            <input
+              value={department}
+              disabled={planBlocked}
+              onChange={(e) => setDepartment(e.target.value)}
+              className={styles.input}
+              placeholder="e.g., Engineering, Sales"
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Purpose (Optional)</label>
+            <input
+              value={purpose}
+              disabled={planBlocked}
+              onChange={(e) => setPurpose(e.target.value)}
+              className={styles.input}
+              placeholder="e.g., Team Meeting"
+            />
+          </div>
+
+          <button 
+            disabled={planBlocked || loading} 
+            onClick={initiateBooking}
+            className={styles.primaryBtn}
+          >
+            {loading ? "Processing..." : "Book Room"}
+          </button>
         </div>
-      )}
+
+        {/* RIGHT LIST */}
+        <div className={styles.side}>
+          <h2>Bookings for {date}</h2>
+
+          {!roomId || !date ? (
+            <p className={styles.emptyState}>Select a room and date to view bookings</p>
+          ) : dayBookings.length === 0 ? (
+            <p className={styles.emptyState}>No bookings for this date</p>
+          ) : (
+            <div className={styles.bookingsList}>
+              {dayBookings.map((b) => {
+                const blocked = getBlockedSlotsExcluding(b.id);
+
+                return (
+                  <div key={b.id} className={styles.bookingItem}>
+                    {editingId === b.id ? (
+                      <>
+                        <div className={styles.bookingHeader}>
+                          <h4>Reschedule Booking</h4>
+                        </div>
+                        
+                        <div className={styles.bookingDetails}>
+                          <p><strong>Department:</strong> {b.department}</p>
+                        </div>
+
+                        <TimeScroller
+                          value={editStart}
+                          onChange={setEditStart}
+                          label="New Start Time"
+                          excludedSlots={blocked}
+                          currentDate={normalizeDate(b.booking_date)}
+                          today={today}
+                        />
+
+                        <TimeScroller
+                          value={editEnd}
+                          onChange={setEditEnd}
+                          label="New End Time"
+                          minTime={editStart}
+                          excludedSlots={blocked}
+                          currentDate={normalizeDate(b.booking_date)}
+                          today={today}
+                        />
+
+                        <div className={styles.bookingActions}>
+                          <button
+                            className={styles.primaryBtn}
+                            onClick={showRescheduleConfirmation}
+                          >
+                            Save Changes
+                          </button>
+
+                          <button
+                            className={styles.secondaryBtn}
+                            onClick={cancelEdit}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.bookingHeader}>
+                          <div className={styles.bookingTime}>
+                            <span className={styles.timeIcon}>🕒</span>
+                            <strong>
+                              {b.start_time.includes("M") ? b.start_time : dbToAmPm(b.start_time)} – {b.end_time.includes("M") ? b.end_time : dbToAmPm(b.end_time)}
+                            </strong>
+                          </div>
+                        </div>
+
+                        <div className={styles.bookingDetails}>
+                          <p><strong>Department:</strong> {b.department}</p>
+                          {b.purpose && <p><strong>Purpose:</strong> {b.purpose}</p>}
+                          <p className={styles.bookedBy}>
+                            <span>👤</span> {b.booked_by}
+                          </p>
+                        </div>
+
+                        <div className={styles.bookingActions}>
+                          <button
+                            className={styles.editBtn}
+                            onClick={() => initiateEdit(b)}
+                          >
+                            Reschedule
+                          </button>
+
+                          <button
+                            className={styles.cancelBtn}
+                            onClick={() => initiateCancellation(b)}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* ================= MODALS ================= */}
       
