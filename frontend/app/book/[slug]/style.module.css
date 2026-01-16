@@ -1,25 +1,4 @@
-/* ===== GLOBAL RESET & SCROLLBAR ===== */
-:global(*) {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-:global(html),
-:global(body) {
-  height: 100%;
-  margin: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
-}
-
-:global(body::-webkit-scrollbar),
-.page::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
+/* Note: Global resets should be handled by globals.css or layout component */
 
 /* ================= PAGE ================= */
 .page {
@@ -28,6 +7,11 @@
   padding: 2rem;
   overflow-y: auto;
   scrollbar-width: none;
+}
+
+.page::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 /* ================= LOADING CONTAINER ================= */
@@ -1352,7 +1336,14 @@
 
 /* ================= ACCESSIBILITY IMPROVEMENTS ================= */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  .page,
+  .page *,
+  .spinner,
+  .toast,
+  .modal,
+  .card,
+  .timeDropdown,
+  .bookingItem {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
