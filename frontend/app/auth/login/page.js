@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -24,7 +25,7 @@ export default function LoginPage() {
         LOGIN + STRICT SUBSCRIPTION RULE
   ====================================================== */
   const handleLogin = async () => {
-    if (loading) return;
+    if (loading || isRedirecting) return;
 
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password) {
@@ -62,7 +63,8 @@ export default function LoginPage() {
 
       if (!company) {
         setError("Company not found. Redirecting to registration...");
-        setTimeout(() => router.replace("/auth/register"), 1200);
+        setIsRedirecting(true);
+        setTimeout(() => router.replace("/auth/register"), 1500);
         return;
       }
 
@@ -72,16 +74,37 @@ export default function LoginPage() {
       console.log("SUBSCRIPTION STATUS →", status);
 
       /* ======================================================
-            STRICT RULE
-            Active / Trial  → /home
-            Everything else → /auth/subscription
+            SUBSCRIPTION-BASED ROUTING WITH BETTER UX
       ====================================================== */
       if (["active", "trial"].includes(status)) {
-        router.replace("/home");
+        // Show success message before redirecting
+        setError("");
+        setIsRedirecting(true);
+        
+        // Brief success indication
+        const successMessage = status === "trial" 
+          ? "Login successful! Welcome to your trial period." 
+          : "Login successful! Welcome back.";
+          
+        // You could add a success state here if needed
+        setTimeout(() => {
+          router.replace("/home");
+        }, 800);
         return;
       }
 
-      router.replace("/auth/subscription");
+      // Handle expired/pending subscriptions
+      if (status === "expired") {
+        setError("Your subscription has expired. Redirecting to subscription page...");
+        setIsRedirecting(true);
+        setTimeout(() => router.replace("/auth/subscription"), 1500);
+        return;
+      }
+
+      // Handle pending/other statuses
+      setError("Account setup required. Redirecting to subscription page...");
+      setIsRedirecting(true);
+      setTimeout(() => router.replace("/auth/subscription"), 1500);
       return;
 
     } catch (err) {
@@ -89,6 +112,13 @@ export default function LoginPage() {
       setError("Unable to connect to server. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle Enter key press
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter" && !loading && !isRedirecting) {
+      handleLogin();
     }
   };
 
@@ -220,9 +250,11 @@ export default function LoginPage() {
             <label>Email</label>
             <input
               type="email"
-              disabled={loading}
+              disabled={loading || isRedirecting}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onKeyPress={handleKeyPress}
+              autoComplete="email"
             />
           </div>
 
@@ -231,9 +263,11 @@ export default function LoginPage() {
             <div style={{ position: "relative", width: "100%" }}>
               <input
                 type={showPassword ? "text" : "password"}
-                disabled={loading}
+                disabled={loading || isRedirecting}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onKeyPress={handleKeyPress}
+                autoComplete="current-password"
                 style={{ 
                   paddingRight: "45px",
                   width: "100%",
@@ -244,7 +278,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading}
+                  disabled={loading || isRedirecting}
                   style={{
                     position: "absolute",
                     right: "12px",
@@ -252,19 +286,19 @@ export default function LoginPage() {
                     transform: "translateY(-50%)",
                     background: "none",
                     border: "none",
-                    cursor: loading ? "default" : "pointer",
+                    cursor: (loading || isRedirecting) ? "default" : "pointer",
                     padding: "5px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#666",
                     fontSize: "18px",
-                    opacity: loading ? 0.5 : 1,
+                    opacity: (loading || isRedirecting) ? 0.5 : 1,
                     transition: "opacity 0.2s, color 0.2s",
                     outline: "none",
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading) e.currentTarget.style.color = "#333";
+                    if (!loading && !isRedirecting) e.currentTarget.style.color = "#333";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = "#666";
@@ -310,30 +344,53 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p
+            <div
               style={{
-                color: "#ff3333",
-                background: "rgba(255,0,0,.15)",
-                padding: "8px",
-                borderRadius: "6px",
+                color: error.includes("successful") || error.includes("Welcome") ? "#00c853" : "#ff3333",
+                background: error.includes("successful") || error.includes("Welcome") 
+                  ? "rgba(0, 200, 83, 0.15)" 
+                  : "rgba(255,0,0,.15)",
+                padding: "10px 12px",
+                borderRadius: "8px",
                 textAlign: "center",
-                marginTop: "6px",
-                fontSize: "13px",
+                marginTop: "8px",
+                fontSize: "14px",
+                fontWeight: "500",
+                border: error.includes("successful") || error.includes("Welcome")
+                  ? "1px solid rgba(0, 200, 83, 0.3)"
+                  : "1px solid rgba(255, 51, 51, 0.3)",
               }}
             >
+              {isRedirecting && (
+                <span style={{ marginRight: "8px" }}>
+                  {error.includes("successful") ? "✅" : "⏳"}
+                </span>
+              )}
               {error}
-            </p>
+            </div>
           )}
 
           <button
             className={styles.loginBtn}
             onClick={handleLogin}
-            disabled={loading}
+            disabled={loading || isRedirecting}
+            style={{
+              opacity: (loading || isRedirecting) ? 0.7 : 1,
+              cursor: (loading || isRedirecting) ? "not-allowed" : "pointer",
+              transition: "opacity 0.2s",
+            }}
           >
-            {loading ? "Logging in..." : "LOGIN"}
+            {loading 
+              ? "Logging in..." 
+              : isRedirecting 
+              ? "Redirecting..." 
+              : "LOGIN"}
           </button>
 
-          <div className={styles.extraLinks}>
+          <div className={styles.extraLinks} style={{ 
+            opacity: (loading || isRedirecting) ? 0.5 : 1,
+            pointerEvents: (loading || isRedirecting) ? "none" : "auto"
+          }}>
             <Link href="/auth/forgot-password">Forgot Password?</Link>
             <span> | </span>
             <Link href="/auth/register">New Registration</Link>
