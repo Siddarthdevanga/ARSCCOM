@@ -254,7 +254,7 @@ const emailTemplates = {
 
             <div style="text-align: center;">
               <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">Renew your subscription today:</p>
-              <a href="https://www.promeet.zodopt.com/dashboard/subscription" class="cta-button">Renew Subscription →</a>
+              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
             </div>
 
             <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
@@ -331,7 +331,7 @@ const emailTemplates = {
               <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600; color: #ff1744;">
                 🔄 Renew now to restore full access!
               </p>
-              <a href="https://www.promeet.zodopt.com/dashboard/subscription" class="cta-button">Renew Subscription →</a>
+              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
             </div>
 
             <p style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #666; text-align: center;">
