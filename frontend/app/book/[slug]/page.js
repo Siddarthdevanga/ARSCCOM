@@ -284,42 +284,6 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
 };
 
 /* ======================================================
-   ENHANCED BANNER WITH SUBSCRIPTION ACTIONS
-====================================================== */
-const Banner = ({ message, type = "warning", onClose, actionLabel, onAction }) => {
-  if (!message) return null;
-
-  const getIcon = () => {
-    switch (type) {
-      case "warning": return "⚠️";
-      case "error": return "❌";
-      case "info": return "ℹ️";
-      case "subscription": return "💳";
-      default: return "ℹ️";
-    }
-  };
-
-  return (
-    <div className={`${styles.banner} ${styles[`banner${type.charAt(0).toUpperCase() + type.slice(1)}`]}`}>
-      <div className={styles.bannerContent}>
-        <span className={styles.bannerIcon}>{getIcon()}</span>
-        <div className={styles.bannerText}>
-          <p>{message}</p>
-          {actionLabel && onAction && (
-            <button onClick={onAction} className={styles.bannerAction}>
-              {actionLabel}
-            </button>
-          )}
-        </div>
-      </div>
-      {onClose && (
-        <button className={styles.bannerClose} onClick={onClose} aria-label="Close banner">×</button>
-      )}
-    </div>
-  );
-};
-
-/* ======================================================
    MAIN COMPONENT
 ====================================================== */
 export default function PublicConferenceBooking() {
@@ -331,7 +295,6 @@ export default function PublicConferenceBooking() {
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
-  const [planInfo, setPlanInfo] = useState(null);
 
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState(today);
@@ -351,7 +314,6 @@ export default function PublicConferenceBooking() {
 
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
-  const [subscriptionBanner, setSubscriptionBanner] = useState(null);
 
   // Enhanced state management
   const [toast, setToast] = useState({ show: false, message: "", type: "info" });
@@ -395,32 +357,18 @@ export default function PublicConferenceBooking() {
     try {
       const data = await response.json();
       
-      // Handle subscription-specific errors
+      // Handle subscription-specific errors more subtly for public interface
       if (response.status === 403 && data.code) {
         switch (data.code) {
           case "SUBSCRIPTION_EXPIRED":
           case "TRIAL_EXPIRED":
-            setSubscriptionBanner({
-              type: "subscription",
-              message: data.message,
-              actionLabel: "Upgrade Plan",
-              onAction: () => {
-                if (data.redirectTo) {
-                  window.open(`${window.location.origin}${data.redirectTo}`, '_blank');
-                }
-              }
-            });
+            // For public users, show a subtle message instead of aggressive upgrade prompts
+            showToast("Service temporarily unavailable. Please contact the organization.", "info");
             break;
           case "BOOKING_LIMIT_REACHED":
           case "ROOM_LIMIT_REACHED":
-            setSubscriptionBanner({
-              type: "warning",
-              message: data.message,
-              actionLabel: "View Plans",
-              onAction: () => {
-                window.open(`${window.location.origin}/auth/subscription`, '_blank');
-              }
-            });
+            // Show a more user-friendly message for booking limits
+            showToast("Booking unavailable at this time. Please try again later or contact support.", "warning");
             break;
           default:
             showToast(data.message || defaultMessage, "error");
@@ -446,10 +394,13 @@ export default function PublicConferenceBooking() {
         }
 
         const data = await response.json();
-        setCompany(data);
-        setPlanInfo(data.planInfo);
+        setCompany({
+          id: data.id,
+          name: data.name,
+          logo_url: data.logo_url
+        });
         
-        console.log("[COMPANY_LOADED]", data);
+        console.log("[COMPANY_LOADED]", data.name);
       } catch (error) {
         console.error("[COMPANY_ERROR]", error);
         showToast("Failed to load company information", "error");
@@ -468,14 +419,23 @@ export default function PublicConferenceBooking() {
         const response = await fetch(`${API}/api/public/conference/company/${slug}/rooms`);
         
         if (!response.ok) {
-          await handleApiError(response, "Failed to load rooms");
+          // Even if there are plan restrictions, we gracefully handle the error
+          console.log("[ROOMS_API_ERROR] Status:", response.status);
+          
+          // For any API errors, we'll show a subtle toast but continue
+          if (response.status === 403) {
+            showToast("Some features may be limited. Contact your organization if you need assistance.", "info");
+          }
+          
+          // Set empty array if we can't load rooms
+          setRooms([]);
           return;
         }
 
         const data = await response.json();
-        setRooms(data);
+        setRooms(data || []);
         
-        console.log("[ROOMS_LOADED]", data.length, "rooms");
+        console.log("[ROOMS_LOADED]", data?.length || 0, "rooms");
       } catch (error) {
         console.error("[ROOMS_ERROR]", error);
         setRooms([]);
@@ -558,7 +518,6 @@ export default function PublicConferenceBooking() {
     setDepartment("");
     setPurpose("");
     setFormErrors({});
-    setSubscriptionBanner(null);
     hideToast();
     showToast("Logged out successfully", "info");
   };
@@ -719,6 +678,19 @@ export default function PublicConferenceBooking() {
       );
 
       if (!response.ok) {
+        // Handle subscription errors more gracefully for public users
+        if (response.status === 403) {
+          const data = await response.json();
+          if (data.code && (data.code.includes("SUBSCRIPTION") || data.code.includes("TRIAL") || data.code.includes("LIMIT"))) {
+            setResultModal({
+              isOpen: true,
+              type: "error",
+              message: "Booking is currently unavailable. Please contact your organization's administrator for assistance."
+            });
+            return;
+          }
+        }
+        
         await handleApiError(response, "Booking failed");
         return;
       }
@@ -921,27 +893,11 @@ export default function PublicConferenceBooking() {
         onHide={hideToast}
       />
 
-      {/* Subscription Banner */}
-      {subscriptionBanner && (
-        <Banner 
-          message={subscriptionBanner.message}
-          type={subscriptionBanner.type}
-          onClose={() => setSubscriptionBanner(null)}
-          actionLabel={subscriptionBanner.actionLabel}
-          onAction={subscriptionBanner.onAction}
-        />
-      )}
-
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
             <h1>{company.name}</h1>
             <p className={styles.subtitle}>Conference Room Booking</p>
-            {planInfo && (
-              <p className={styles.planInfo}>
-                {planInfo.plan} Plan - {planInfo.limits.bookings} Bookings, {planInfo.limits.rooms} Rooms
-              </p>
-            )}
           </div>
 
           <div className={styles.headerRight}>
