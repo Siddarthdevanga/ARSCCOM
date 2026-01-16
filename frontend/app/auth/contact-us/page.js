@@ -71,7 +71,7 @@ export default function ContactUs() {
 
           <div className={styles.contactBox}>
             <span>Email</span>
-            <strong>admin@wheelbrand.in</strong>
+            <strong>admin@promeet.zodopt.com</strong>
           </div>
 
           <div className={styles.contactBox}>
