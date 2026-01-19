@@ -1,6 +1,5 @@
 import express from "express";
 import { upload } from "../middlewares/upload.middleware.js";
-
 import {
   register,
   login,
@@ -21,15 +20,40 @@ const asyncHandler = (fn) => (req, res, next) =>
   });
 
 /* ======================================================
-   REGISTER
---------------------------------------------------------
-Creates:
- - Company
- - Admin User
- - Uploads Logo (optional)
+   SUBSCRIPTION CHECK MIDDLEWARE
+   --------------------------------------------------------
+   Checks if user's subscription is expired after login
+   Redirects to subscription page if needed
+====================================================== */
+const checkSubscriptionStatus = (req, res, next) => {
+  // This runs after login controller sets response
+  const originalJson = res.json.bind(res);
+  
+  res.json = function(data) {
+    // Check if login was successful and subscription is expired
+    if (data?.subscription_status === "expired") {
+      return originalJson({
+        ...data,
+        redirect: "/auth/subscription",
+        message: "Your subscription has expired. Please renew to continue."
+      });
+    }
+    return originalJson(data);
+  };
+  
+  next();
+};
 
-Frontend expectation:
- - After success, redirect to Subscription Page
+/* ======================================================
+   REGISTER
+   --------------------------------------------------------
+   Creates:
+   - Company
+   - Admin User
+   - Uploads Logo (optional)
+
+   Frontend expectation:
+   - After success, redirect to Subscription Page
 ====================================================== */
 router.post(
   "/register",
@@ -39,36 +63,40 @@ router.post(
 
 /* ======================================================
    LOGIN
---------------------------------------------------------
-Returns:
- - JWT Token
- - User
- - Company Subscription Context
+   --------------------------------------------------------
+   Returns:
+   - JWT Token
+   - User
+   - Company Subscription Context
 
-subscription_status expected values:
-  "pending" | "trial" | "active" | "expired" | "cancelled"
+   subscription_status expected values:
+   "pending" | "trial" | "active" | "expired" | "cancelled"
 ====================================================== */
-router.post("/login", asyncHandler(login));
+router.post(
+  "/login",
+  checkSubscriptionStatus,
+  asyncHandler(login)
+);
 
 /* ======================================================
    FORGOT PASSWORD
---------------------------------------------------------
-Returns:
- - Always success message (no email leak)
- - Sends reset code internally
+   --------------------------------------------------------
+   Returns:
+   - Always success message (no email leak)
+   - Sends reset code internally
 ====================================================== */
 router.post("/forgot-password", asyncHandler(forgotPassword));
 
 /* ======================================================
    RESET PASSWORD
---------------------------------------------------------
-Validates:
- - Email
- - OTP Code
- - New Password
+   --------------------------------------------------------
+   Validates:
+   - Email
+   - OTP Code
+   - New Password
 
-Updates:
- - Password
+   Updates:
+   - Password
 ====================================================== */
 router.post("/reset-password", asyncHandler(resetPassword));
 
