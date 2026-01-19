@@ -50,14 +50,14 @@ export default function LoginPage() {
         return;
       }
 
-      const token = data?.token;
-      const company = data?.company;
+      const { token, company } = data;
 
       if (!token) {
         setError("Authentication failed. Please try again.");
         return;
       }
 
+      // Store authentication
       localStorage.setItem("token", token);
       document.cookie = `token=${token}; path=/; SameSite=Lax`;
 
@@ -74,38 +74,32 @@ export default function LoginPage() {
       console.log("SUBSCRIPTION STATUS →", status);
 
       /* ======================================================
-            SUBSCRIPTION-BASED ROUTING WITH BETTER UX
+            SUBSCRIPTION-BASED ROUTING
       ====================================================== */
+      // Active or trial subscription - proceed to home
       if (["active", "trial"].includes(status)) {
-        // Show success message before redirecting
-        setError("");
-        setIsRedirecting(true);
-        
-        // Brief success indication
         const successMessage = status === "trial" 
           ? "Login successful! Welcome to your trial period." 
           : "Login successful! Welcome back.";
-          
-        // You could add a success state here if needed
-        setTimeout(() => {
-          router.replace("/home");
-        }, 800);
+        
+        setError(successMessage);
+        setIsRedirecting(true);
+        setTimeout(() => router.replace("/home"), 800);
         return;
       }
 
-      // Handle expired/pending subscriptions
+      // Expired subscription - redirect to subscription page
       if (status === "expired") {
-        setError("Your subscription has expired. Redirecting to subscription page...");
+        setError("Your subscription has expired. Redirecting to renew...");
         setIsRedirecting(true);
         setTimeout(() => router.replace("/auth/subscription"), 1500);
         return;
       }
 
-      // Handle pending/other statuses
+      // Pending or other status - redirect to subscription page
       setError("Account setup required. Redirecting to subscription page...");
       setIsRedirecting(true);
       setTimeout(() => router.replace("/auth/subscription"), 1500);
-      return;
 
     } catch (err) {
       console.error("LOGIN ERROR:", err);
@@ -121,6 +115,14 @@ export default function LoginPage() {
       handleLogin();
     }
   };
+
+  // Helper to check if message is success
+  const isSuccessMessage = (msg) => {
+    return msg.includes("successful") || msg.includes("Welcome");
+  };
+
+  // Prevent interactions during loading/redirecting
+  const isDisabled = loading || isRedirecting;
 
   return (
     <div className={styles.container}>
@@ -231,7 +233,7 @@ export default function LoginPage() {
       {activeTab === "contact" && (
         <div className={styles.dropdownBox}>
           <h2>Contact Us</h2>
-          <p>Email: admin@wheelbrand.in</p>
+          <p>Email: admin@promeet.zodopt.com</p>
           <p>Phone: 8647878785</p>
           <p>We are happy to support you.</p>
 
@@ -250,7 +252,7 @@ export default function LoginPage() {
             <label>Email</label>
             <input
               type="email"
-              disabled={loading || isRedirecting}
+              disabled={isDisabled}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -263,7 +265,7 @@ export default function LoginPage() {
             <div style={{ position: "relative", width: "100%" }}>
               <input
                 type={showPassword ? "text" : "password"}
-                disabled={loading || isRedirecting}
+                disabled={isDisabled}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -278,7 +280,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={loading || isRedirecting}
+                  disabled={isDisabled}
                   style={{
                     position: "absolute",
                     right: "12px",
@@ -286,19 +288,19 @@ export default function LoginPage() {
                     transform: "translateY(-50%)",
                     background: "none",
                     border: "none",
-                    cursor: (loading || isRedirecting) ? "default" : "pointer",
+                    cursor: isDisabled ? "default" : "pointer",
                     padding: "5px",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#666",
                     fontSize: "18px",
-                    opacity: (loading || isRedirecting) ? 0.5 : 1,
+                    opacity: isDisabled ? 0.5 : 1,
                     transition: "opacity 0.2s, color 0.2s",
                     outline: "none",
                   }}
                   onMouseEnter={(e) => {
-                    if (!loading && !isRedirecting) e.currentTarget.style.color = "#333";
+                    if (!isDisabled) e.currentTarget.style.color = "#333";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = "#666";
@@ -306,7 +308,6 @@ export default function LoginPage() {
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    // Eye slash icon (password visible)
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -322,7 +323,6 @@ export default function LoginPage() {
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   ) : (
-                    // Eye icon (password hidden)
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       width="20"
@@ -346,24 +346,24 @@ export default function LoginPage() {
           {error && (
             <div
               style={{
-                color: error.includes("successful") || error.includes("Welcome") ? "#00c853" : "#ff3333",
-                background: error.includes("successful") || error.includes("Welcome") 
+                color: isSuccessMessage(error) ? "#00c853" : "#ff3333",
+                background: isSuccessMessage(error)
                   ? "rgba(0, 200, 83, 0.15)" 
-                  : "rgba(255,0,0,.15)",
+                  : "rgba(255, 0, 0, 0.15)",
                 padding: "10px 12px",
                 borderRadius: "8px",
                 textAlign: "center",
                 marginTop: "8px",
                 fontSize: "14px",
                 fontWeight: "500",
-                border: error.includes("successful") || error.includes("Welcome")
+                border: isSuccessMessage(error)
                   ? "1px solid rgba(0, 200, 83, 0.3)"
                   : "1px solid rgba(255, 51, 51, 0.3)",
               }}
             >
               {isRedirecting && (
                 <span style={{ marginRight: "8px" }}>
-                  {error.includes("successful") ? "✅" : "⏳"}
+                  {isSuccessMessage(error) ? "✅" : "⏳"}
                 </span>
               )}
               {error}
@@ -373,10 +373,10 @@ export default function LoginPage() {
           <button
             className={styles.loginBtn}
             onClick={handleLogin}
-            disabled={loading || isRedirecting}
+            disabled={isDisabled}
             style={{
-              opacity: (loading || isRedirecting) ? 0.7 : 1,
-              cursor: (loading || isRedirecting) ? "not-allowed" : "pointer",
+              opacity: isDisabled ? 0.7 : 1,
+              cursor: isDisabled ? "not-allowed" : "pointer",
               transition: "opacity 0.2s",
             }}
           >
@@ -387,10 +387,13 @@ export default function LoginPage() {
               : "LOGIN"}
           </button>
 
-          <div className={styles.extraLinks} style={{ 
-            opacity: (loading || isRedirecting) ? 0.5 : 1,
-            pointerEvents: (loading || isRedirecting) ? "none" : "auto"
-          }}>
+          <div 
+            className={styles.extraLinks} 
+            style={{ 
+              opacity: isDisabled ? 0.5 : 1,
+              pointerEvents: isDisabled ? "none" : "auto"
+            }}
+          >
             <Link href="/auth/forgot-password">Forgot Password?</Link>
             <span> | </span>
             <Link href="/auth/register">New Registration</Link>
