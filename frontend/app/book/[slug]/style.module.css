@@ -1,14 +1,3 @@
-/* Note: Global resets should be handled by globals.css or layout component */
-
-/* ================= GLOBAL SCROLLBAR HIDING ================= */
-* {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
-}
-
-*::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
-}
 
 /* ================= PAGE ================= */
 .page {
@@ -22,6 +11,15 @@
 }
 
 .page::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.page * {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.page *::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Opera */
 }
 
