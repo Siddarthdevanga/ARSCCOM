@@ -43,7 +43,7 @@ export default function LandingPage() {
       <header className="header">
         <div className="logo">
           <Image 
-            src="https://i.imghippo.com/files/ley4074BZM.png" 
+            src="/Brand Logo.png" 
             alt="Promeet Logo" 
             width={28}
             height={28}
@@ -88,7 +88,7 @@ export default function LandingPage() {
         <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
 
         <div className="heroButtons">
-          <Link className="btnPrimary" href="https://www.promeet.zodopt.com" target="_blank">
+          <Link className="btnPrimary" href="https://www.promeet.zodopt.com/auth/login" target="_blank">
             Start 15-Day Trial →
           </Link>
           <Link className="btnSecondary" href="https://wa.me/918647878785" target="_blank">
@@ -224,7 +224,7 @@ export default function LandingPage() {
           </div>
 
           <p className="ctaText">Ready to experience the simplicity?</p>
-          <Link href="https://www.promeet.zodopt.com" className="ctaBtn">
+          <Link href="https://www.promeet.zodopt.com/auth/login" className="ctaBtn">
             Start Your Trial – Just ₹49
           </Link>
         </div>
@@ -261,7 +261,7 @@ export default function LandingPage() {
           </div>
 
           <div className="featuresCta">
-            <Link href="https://www.promeet.zodopt.com" target="_blank" className="ctaBtn">
+            <Link href="https://www.promeet.zodopt.com/auth/login" target="_blank" className="ctaBtn">
               Get Started Today ↗
             </Link>
           </div>
@@ -557,7 +557,7 @@ export default function LandingPage() {
           <div className="footerBrand fadeUp">
             <div className="logoWrap">
               <Image 
-                src="https://i.imghippo.com/files/ley4074BZM.png" 
+                src="/Brand Logo.png" 
                 alt="Promeet Logo"
                 width={46}
                 height={46}
