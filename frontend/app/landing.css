@@ -195,16 +195,17 @@ body::before {
 }
 
 .scrollText {
-  font-size: 40px;
-  font-weight: 300;
+  font-size: 32px;
+  font-weight: 400;
   white-space: nowrap;
   display: inline-block;
   background: linear-gradient(120deg, #ffffff 20%, #ffb26b 40%, #ffffff 60%);
-  background-size: 100% auto;
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   animation: moveRight 15s linear infinite, shimmer 3s linear infinite;
-  text-shadow: 0 0 20px rgba(255,178,107,.25);
+  letter-spacing: 1px;
 }
 
 .hero h1 {
@@ -214,8 +215,8 @@ body::before {
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   animation: shimmer 3s linear infinite;
-  text-shadow: 0 0 40px rgba(255,178,107,.25);
   opacity: 0;
   transform: translateY(40px);
 }
@@ -228,6 +229,7 @@ body::before {
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   animation: shimmer 4s linear infinite;
   opacity: 0;
   transform: translateY(40px);
@@ -248,6 +250,7 @@ body::before {
   gap: 16px;
   opacity: 0;
   transform: translateY(30px);
+  flex-wrap: wrap;
 }
 
 .btnPrimary {
@@ -322,6 +325,7 @@ body::before {
 .liveTop {
   display: flex;
   justify-content: space-between;
+  align-items: center;
 }
 
 .liveTop span {
@@ -344,6 +348,7 @@ body::before {
 
 .stat h2 {
   font-size: 32px;
+  margin: 0;
 }
 
 .meeting {
@@ -362,6 +367,9 @@ body::before {
   padding: 12px;
   border-radius: 12px;
   color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .bars {
@@ -442,6 +450,7 @@ body::before {
   background: linear-gradient(90deg, #ff6a00, #d07cff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .headingContainer {
@@ -579,6 +588,7 @@ body::before {
   background: linear-gradient(90deg, #ff9f0f, #ff5fa2);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .subtitle {
@@ -753,6 +763,8 @@ body::before {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 28px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .industryCard {
@@ -835,7 +847,7 @@ body::before {
   text-align: center;
   color: #fff;
   background: linear-gradient(135deg, #ff6a00 0%, #9b2cff 50%, #3b5cff 100%);
-  box-shadow: 0 30px 80px rgba(255, 251, 251, 0.25);
+  box-shadow: 0 30px 80px rgba(255, 106, 0, 0.25);
 }
 
 .ctaIcon {
@@ -911,6 +923,7 @@ body::before {
   background: linear-gradient(135deg, #2b0b45, #6a0572, #ff6a00);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
   margin-bottom: 15px;
 }
 
@@ -1047,6 +1060,10 @@ body::before {
   margin-bottom: 30px;
 }
 
+.pricingCard.featured .planDuration {
+  color: #d6cdef;
+}
+
 .planFeatures {
   list-style: none;
   padding: 0;
@@ -1066,6 +1083,7 @@ body::before {
   content: "✓";
   position: absolute;
   left: 0;
+  top: 0;
   color: #ff6a00;
   font-weight: bold;
   font-size: 18px;
@@ -1147,6 +1165,7 @@ body::before {
   background: linear-gradient(90deg, #ff6a00, #9b2cff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .sectionSubtitle {
@@ -1224,6 +1243,7 @@ body::before {
   justify-content: center;
   color: #fff;
   font-size: 20px;
+  flex-shrink: 0;
 }
 
 .user strong {
@@ -1243,7 +1263,7 @@ body::before {
   border-radius: 18px;
   padding: 26px 30px;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 20px;
   box-shadow: 0 15px 40px rgba(0,0,0,0.08);
 }
@@ -1254,6 +1274,8 @@ body::before {
   background: linear-gradient(90deg, #ff6a00, #9b2cff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin: 0;
 }
 
 .testimonialStats p {
@@ -1288,7 +1310,7 @@ body::before {
 
 .securityCards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 24px;
   margin-bottom: 55px;
 }
@@ -1342,12 +1364,15 @@ body::before {
   align-items: center;
   justify-content: space-between;
   box-shadow: 0 14px 38px rgba(0,0,0,0.08);
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
 .barItem h3 {
   font-size: 26px;
   font-weight: 800;
   color: #0f172a;
+  margin: 0;
 }
 
 .barItem p {
@@ -1394,6 +1419,7 @@ body::before {
   background: linear-gradient(90deg, #ff6a00, #9b2cff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .faqSubtitle {
@@ -1418,9 +1444,7 @@ body::before {
 }
 
 .faqItem:hover {
-  border: 1px solid transparent;
-  background: linear-gradient(#fff, #fff) padding-box,
-    linear-gradient(135deg, #ff6a00, #9b2cff) border-box;
+  border-color: rgba(255, 106, 0, 0.3);
   box-shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
   transform: translateY(-4px);
 }
@@ -1451,10 +1475,11 @@ body::before {
   justify-content: center;
   font-size: 18px;
   transition: transform 0.3s ease;
+  flex-shrink: 0;
 }
 
 .faqItem.active .icon {
-  transform: rotate(180deg);
+  transform: rotate(45deg);
 }
 
 .faqAnswer {
@@ -1468,7 +1493,7 @@ body::before {
 }
 
 .faqItem.active .faqAnswer {
-  max-height: 200px;
+  max-height: 300px;
   padding: 0 24px 24px;
 }
 
@@ -1523,12 +1548,14 @@ body::before {
 .gsLeft h2 {
   font-size: 40px;
   line-height: 1.2;
+  margin: 0;
 }
 
 .gsLeft h2 span {
   background: linear-gradient(90deg, #ff9f45, #ff5fd8);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .gsLeft p {
@@ -1569,6 +1596,10 @@ body::before {
   transition: transform 0.4s ease, box-shadow 0.4s ease;
 }
 
+.gsCard h3 {
+  margin: 0 0 10px 0;
+}
+
 .gsCard:hover {
   transform: translateY(-8px);
   box-shadow: 0 30px 60px rgba(0,0,0,0.3);
@@ -1603,8 +1634,12 @@ body::before {
   max-width: 1200px;
   margin: 40px auto 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
+}
+
+.gsFeatures h4 {
+  margin: 0 0 5px 0;
 }
 
 .fadeUp {
@@ -1642,6 +1677,10 @@ body::before {
   gap: 14px;
 }
 
+.logoWrap h3 {
+  margin: 0;
+}
+
 .footerBrand span {
   color: #ff9f1c;
   font-size: 13px;
@@ -1657,6 +1696,7 @@ body::before {
 .footerCta {
   display: flex;
   gap: 15px;
+  flex-wrap: wrap;
 }
 
 .footerLinks h4 {
@@ -1701,7 +1741,7 @@ body::before {
   max-width: 1200px;
   margin: auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 24px;
 }
 
@@ -1742,6 +1782,8 @@ body::before {
   align-items: center;
   font-size: 13px;
   opacity: 0.8;
+  flex-wrap: wrap;
+  gap: 15px;
 }
 
 .footerLink {
@@ -1758,6 +1800,7 @@ body::before {
 .footerLinksInline {
   display: flex;
   gap: 20px;
+  flex-wrap: wrap;
 }
 
 .footerLinksInline a {
@@ -1790,10 +1833,11 @@ body::before {
 @media(max-width:768px){
   .hero h1 { font-size: 56px; }
   .hero h2 { font-size: 22px; }
-  .scrollText { font-size: 32px; }
+  .scrollText { font-size: 24px; }
   .dashboardCards { grid-template-columns: 1fr; }
   .dashFeatures { grid-template-columns: 1fr; gap: 20px; }
   .pricingCards { grid-template-columns: 1fr; }
+  .pricingCard.featured { transform: scale(1); }
   .pricingTitle { font-size: 36px; }
   .headerAuth { flex-direction: column; gap: 8px; }
   .featuresGrid { grid-template-columns: repeat(2, 1fr); }
@@ -1803,14 +1847,21 @@ body::before {
   .testimonialStats { grid-template-columns: 1fr; }
   .footerTop, .footerTrust { grid-template-columns: 1fr; }
   .footerBottom { flex-direction: column; gap: 10px; text-align: center; }
-  .gsContainer { grid-template-columns: 1fr; }
+  .gsContainer { grid-template-columns: 1fr; padding: 40px 30px; }
   .gsFeatures { grid-template-columns: 1fr; }
+  .header { padding: 14px 20px; }
 }
 
 @media(max-width:600px){
   .featuresGrid { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 42px; }
+  .scrollText { font-size: 20px; }
+  .whySection h2 { font-size: 2rem; }
+  .title { font-size: 36px; }
 }
 
 @media(max-width:520px){
   .securityCards { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 36px; }
+  .hero h2 { font-size: 20px; }
 }
