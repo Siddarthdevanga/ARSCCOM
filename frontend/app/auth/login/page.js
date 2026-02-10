@@ -19,7 +19,7 @@ export default function LoginPage() {
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-    "https://www.wheelbrand.in";
+    "https://www.promeet.zodopt.in";
 
   /* ======================================================
         LOGIN + STRICT SUBSCRIPTION RULE
