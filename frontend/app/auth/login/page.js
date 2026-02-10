@@ -21,9 +21,6 @@ export default function LoginPage() {
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
     "https://www.promeet.zodopt.in";
 
-  /* ======================================================
-        LOGIN + STRICT SUBSCRIPTION RULE
-  ====================================================== */
   const handleLogin = async () => {
     if (loading || isRedirecting) return;
 
@@ -57,7 +54,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Store authentication
       localStorage.setItem("token", token);
       document.cookie = `token=${token}; path=/; SameSite=Lax`;
 
@@ -73,10 +69,6 @@ export default function LoginPage() {
       const status = company?.subscription_status?.toLowerCase() || "pending";
       console.log("SUBSCRIPTION STATUS →", status);
 
-      /* ======================================================
-            SUBSCRIPTION-BASED ROUTING
-      ====================================================== */
-      // Active or trial subscription - proceed to home
       if (["active", "trial"].includes(status)) {
         const successMessage = status === "trial" 
           ? "Login successful! Welcome to your trial period." 
@@ -88,7 +80,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Expired subscription - redirect to subscription page
       if (status === "expired") {
         setError("Your subscription has expired. Redirecting to renew...");
         setIsRedirecting(true);
@@ -96,7 +87,6 @@ export default function LoginPage() {
         return;
       }
 
-      // Pending or other status - redirect to subscription page
       setError("Account setup required. Redirecting to subscription page...");
       setIsRedirecting(true);
       setTimeout(() => router.replace("/auth/subscription"), 1500);
@@ -109,244 +99,265 @@ export default function LoginPage() {
     }
   };
 
-  // Handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !loading && !isRedirecting) {
       handleLogin();
     }
   };
 
-  // Helper to check if message is success
   const isSuccessMessage = (msg) => {
     return msg.includes("successful") || msg.includes("Welcome");
   };
 
-  // Prevent interactions during loading/redirecting
   const isDisabled = loading || isRedirecting;
 
   return (
     <div className={styles.container}>
-      {/* HEADER */}
-      <header className={styles.header}>
-        <div className={styles.brandSection}>
-          <div className={styles.logoText}>
-            VISITOR MANAGEMENT PLATFORM
+      {/* LEFT BRANDING SECTION */}
+      <div className={styles.leftSection}>
+        <nav className={styles.topNav}>
+          <button 
+            className={activeTab === "about" ? styles.activeNavBtn : ""} 
+            onClick={() => setActiveTab(activeTab === "about" ? null : "about")}
+          >
+            ABOUT
+          </button>
+          <button 
+            className={activeTab === "plans" ? styles.activeNavBtn : ""} 
+            onClick={() => setActiveTab(activeTab === "plans" ? null : "plans")}
+          >
+            PLANS
+          </button>
+          <button 
+            className={activeTab === "contact" ? styles.activeNavBtn : ""} 
+            onClick={() => setActiveTab(activeTab === "contact" ? null : "contact")}
+          >
+            CONTACT
+          </button>
+        </nav>
+
+        <div className={styles.brandingContent}>
+          <div className={styles.logoContainer}>
+            <Image
+              src="/Brand Logo.png"
+              alt="Promeet Logo"
+              width={300}
+              height={100}
+              priority
+              className={styles.brandLogo}
+            />
           </div>
 
-          <Image
-            src="/Brand Logo.png"
-            alt="promeet"
-            width={420}
-            height={140}
-            priority
-            className={styles.brandLogo}
-            style={{
-              width: '100%',
-              height: 'auto',
-              maxWidth: '420px'
-            }}
-          />
-        </div>
+          <h1 className={styles.platformTitle}>VISITOR MANAGEMENT PLATFORM</h1>
 
-        {/* NAV BUTTONS */}
-        <div className={styles.nav}>
-          <button onClick={() => setActiveTab("about")}>ABOUT</button>
-          <button onClick={() => setActiveTab("plans")}>PLANS</button>
-          <button onClick={() => setActiveTab("contact")}>CONTACT</button>
-        </div>
-      </header>
-
-      {/* ABOUT SECTION */}
-      {activeTab === "about" && (
-        <div className={styles.dropdownBox}>
-          <h2>About Our Platform</h2>
-          <p>
-            Promeet is a secure Visitor & Conference Management Platform
-            designed to digitalize visitor flow, improve security, and enhance
-            organizational efficiency.
-          </p>
-          <p>
-            Manage visitors, schedule meetings, track conference rooms, and
-            maintain complete control — all in one place.
-          </p>
-
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
-            Close
-          </button>
-        </div>
-      )}
-
-      {/* PLANS SECTION */}
-      {activeTab === "plans" && (
-        <div className={styles.dropdownBox}>
-          <h2>Subscription Plans</h2>
-
-          <div className={styles.planContainer}>
-            {/* TRIAL PLAN */}
-            <div className={styles.planCard}>
-              <h3>TRIAL</h3>
-              <h2>₹49 / 15 DAYS</h2>
-              <ul>
-                <li>✔ Valid 15 Days</li>
-                <li>✔ 100 Visitor Bookings</li>
-                <li>✔ 100 Conference Bookings</li>
-                <li>✔ 2 Conference Rooms</li>
-              </ul>
-              <Link href="/auth/register">
-                <button className={styles.planBtn}>Enroll Now</button>
-              </Link>
-            </div>
-
-            {/* BUSINESS PLAN */}
-            <div className={styles.planCard}>
-              <h3>BUSINESS</h3>
-              <h2>₹500 / Month</h2>
-              <ul>
-                <li>✔ Unlimited Visitors</li>
-                <li>✔ 1000 Conference bookings</li>
-                <li>✔ 6 Conference Rooms</li>
-                <li>✔ Dedicated Support</li>
-              </ul>
-              <Link href="/auth/register">
-                <button className={styles.planBtn}>Enroll Now</button>
-              </Link>
-            </div>
-
-            {/* ENTERPRISE */}
-            <div className={styles.planCard}>
-              <h3>ENTERPRISE</h3>
-              <h2>Custom Pricing</h2>
-              <ul>
-                <li>✔ Unlimited Visitors</li>
-                <li>✔ Unlimited Conference Bookings</li>
-                <li>✔ Unlimited Conference Rooms</li>
-                <li>✔ Dedicated Support</li>
-              </ul>
-              <Link href="/auth/contact-us">
-                <button className={styles.planBtn}>Contact Us</button>
-              </Link>
+          <div className={styles.platformDescription}>
+            <p className={styles.descriptionText}>
+              Streamline visitor check-ins, enhance security, and manage conference rooms 
+              with our comprehensive digital platform.
+            </p>
+            
+            <div className={styles.featureGrid}>
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>✓</div>
+                <div className={styles.featureText}>
+                  <strong>Digital Check-in</strong>
+                  <span>Contactless visitor registration</span>
+                </div>
+              </div>
+              
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>✓</div>
+                <div className={styles.featureText}>
+                  <strong>Smart Scheduling</strong>
+                  <span>Automated meeting coordination</span>
+                </div>
+              </div>
+              
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>✓</div>
+                <div className={styles.featureText}>
+                  <strong>Room Management</strong>
+                  <span>Efficient space utilization</span>
+                </div>
+              </div>
+              
+              <div className={styles.featureItem}>
+                <div className={styles.featureIcon}>✓</div>
+                <div className={styles.featureText}>
+                  <strong>Real-time Tracking</strong>
+                  <span>Monitor visitor activity</span>
+                </div>
+              </div>
             </div>
           </div>
-
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
-            Close
-          </button>
         </div>
-      )}
 
-      {/* CONTACT SECTION */}
-      {activeTab === "contact" && (
-        <div className={styles.dropdownBox}>
-          <h2>Contact Us</h2>
-          <p>Email: admin@promeet.zodopt.com</p>
-          <p>Phone: 8647878785</p>
-          <p>We are happy to support you.</p>
+        {activeTab && (
+          <div className={styles.dropdownOverlay} onClick={() => setActiveTab(null)}>
+            <div className={styles.dropdownContent} onClick={(e) => e.stopPropagation()}>
+              {activeTab === "about" && (
+                <div className={styles.dropdownSection}>
+                  <h2>About Promeet</h2>
+                  <p>
+                    Promeet is a secure Visitor & Conference Management Platform designed to 
+                    digitalize visitor flow, improve security, and enhance organizational efficiency.
+                  </p>
+                  <p>
+                    Manage visitors, schedule meetings, track conference rooms, and maintain 
+                    complete control — all in one unified platform.
+                  </p>
+                  <ul className={styles.aboutList}>
+                    <li>✓ Enterprise-grade security</li>
+                    <li>✓ Cloud-based accessibility</li>
+                    <li>✓ Customizable workflows</li>
+                    <li>✓ Analytics & reporting</li>
+                  </ul>
+                </div>
+              )}
 
-          <button className={styles.closeBtn} onClick={() => setActiveTab(null)}>
-            Close
-          </button>
-        </div>
-      )}
+              {activeTab === "plans" && (
+                <div className={styles.dropdownSection}>
+                  <h2>Subscription Plans</h2>
+                  <div className={styles.plansGrid}>
+                    <div className={styles.planCard}>
+                      <div className={styles.planHeader}>
+                        <h3>TRIAL</h3>
+                        <div className={styles.planPrice}>₹49<span>/15 days</span></div>
+                      </div>
+                      <ul className={styles.planFeatures}>
+                        <li>✓ 100 Visitor Bookings</li>
+                        <li>✓ 100 Conference Bookings</li>
+                        <li>✓ 2 Conference Rooms</li>
+                        <li>✓ Email Support</li>
+                      </ul>
+                      <Link href="/auth/register">
+                        <button className={styles.planBtn}>Start Trial</button>
+                      </Link>
+                    </div>
 
-      {/* LOGIN CARD */}
-      <main className={styles.loginWrapper}>
+                    <div className={`${styles.planCard} ${styles.popularPlan}`}>
+                      <div className={styles.popularBadge}>POPULAR</div>
+                      <div className={styles.planHeader}>
+                        <h3>BUSINESS</h3>
+                        <div className={styles.planPrice}>₹500<span>/month</span></div>
+                      </div>
+                      <ul className={styles.planFeatures}>
+                        <li>✓ Unlimited Visitors</li>
+                        <li>✓ 1000 Conference Bookings</li>
+                        <li>✓ 6 Conference Rooms</li>
+                        <li>✓ Priority Support</li>
+                      </ul>
+                      <Link href="/auth/register">
+                        <button className={styles.planBtn}>Get Started</button>
+                      </Link>
+                    </div>
+
+                    <div className={styles.planCard}>
+                      <div className={styles.planHeader}>
+                        <h3>ENTERPRISE</h3>
+                        <div className={styles.planPrice}>Custom</div>
+                      </div>
+                      <ul className={styles.planFeatures}>
+                        <li>✓ Unlimited Everything</li>
+                        <li>✓ Custom Integrations</li>
+                        <li>✓ Dedicated Account Manager</li>
+                        <li>✓ 24/7 Support</li>
+                      </ul>
+                      <Link href="/auth/contact-us">
+                        <button className={styles.planBtn}>Contact Sales</button>
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "contact" && (
+                <div className={styles.dropdownSection}>
+                  <h2>Get in Touch</h2>
+                  <div className={styles.contactGrid}>
+                    <div className={styles.contactItem}>
+                      <div className={styles.contactIcon}>📧</div>
+                      <div>
+                        <strong>Email</strong>
+                        <p>admin@promeet.zodopt.com</p>
+                      </div>
+                    </div>
+                    <div className={styles.contactItem}>
+                      <div className={styles.contactIcon}>📞</div>
+                      <div>
+                        <strong>Phone</strong>
+                        <p>+91 8647878785</p>
+                      </div>
+                    </div>
+                    <div className={styles.contactItem}>
+                      <div className={styles.contactIcon}>⏰</div>
+                      <div>
+                        <strong>Support Hours</strong>
+                        <p>Mon-Fri, 9AM-6PM IST</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p style={{ marginTop: "1.5rem", textAlign: "center" }}>
+                    We're here to help you streamline your visitor management.
+                  </p>
+                </div>
+              )}
+
+              <button className={styles.closeDropdown} onClick={() => setActiveTab(null)}>
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* RIGHT LOGIN SECTION */}
+      <div className={styles.rightSection}>
         <div className={styles.loginCard}>
-          <h4>LOGIN TO YOUR ACCOUNT</h4>
+          <h2 className={styles.loginTitle}>LOGIN TO YOUR ACCOUNT</h2>
 
           <div className={styles.inputGroup}>
-            <label>Email</label>
+            <label htmlFor="email">Email</label>
             <input
+              id="email"
               type="email"
               disabled={isDisabled}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyPress={handleKeyPress}
               autoComplete="email"
+              placeholder="Enter your email"
             />
           </div>
 
           <div className={styles.inputGroup}>
-            <label>Password</label>
-            <div style={{ position: "relative", width: "100%" }}>
+            <label htmlFor="password">Password</label>
+            <div className={styles.passwordWrapper}>
               <input
+                id="password"
                 type={showPassword ? "text" : "password"}
                 disabled={isDisabled}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 onKeyPress={handleKeyPress}
                 autoComplete="current-password"
-                style={{ 
-                  paddingRight: "clamp(40px, 10vw, 45px)",
-                  width: "100%",
-                  boxSizing: "border-box"
-                }}
+                placeholder="Enter your password"
               />
               {password && (
                 <button
                   type="button"
+                  className={styles.passwordToggle}
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isDisabled}
-                  style={{
-                    position: "absolute",
-                    right: "clamp(8px, 2vw, 12px)",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: isDisabled ? "default" : "pointer",
-                    padding: "clamp(3px, 1vw, 5px)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#666",
-                    fontSize: "clamp(16px, 3.5vw, 18px)",
-                    opacity: isDisabled ? 0.5 : 1,
-                    transition: "opacity 0.2s, color 0.2s",
-                    outline: "none",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!isDisabled) e.currentTarget.style.color = "#333";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = "#666";
-                  }}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="100%"
-                      height="100%"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{
-                        width: "clamp(18px, 4vw, 20px)",
-                        height: "clamp(18px, 4vw, 20px)"
-                      }}
-                    >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                       <line x1="1" y1="1" x2="23" y2="23" />
                     </svg>
                   ) : (
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="100%"
-                      height="100%"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{
-                        width: "clamp(18px, 4vw, 20px)",
-                        height: "clamp(18px, 4vw, 20px)"
-                      }}
-                    >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
                     </svg>
@@ -357,26 +368,10 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <div
-              style={{
-                color: isSuccessMessage(error) ? "#00c853" : "#ff3333",
-                background: isSuccessMessage(error)
-                  ? "rgba(0, 200, 83, 0.15)" 
-                  : "rgba(255, 0, 0, 0.15)",
-                padding: "clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 12px)",
-                borderRadius: "clamp(6px, 1.5vw, 8px)",
-                textAlign: "center",
-                marginTop: "clamp(6px, 1.5vw, 8px)",
-                fontSize: "clamp(12px, 2.8vw, 14px)",
-                fontWeight: "500",
-                border: isSuccessMessage(error)
-                  ? "1px solid rgba(0, 200, 83, 0.3)"
-                  : "1px solid rgba(255, 51, 51, 0.3)",
-              }}
-            >
+            <div className={isSuccessMessage(error) ? styles.successMessage : styles.errorMessage}>
               {isRedirecting && (
-                <span style={{ marginRight: "clamp(6px, 1.5vw, 8px)" }}>
-                  {isSuccessMessage(error) ? "✅" : "⏳"}
+                <span className={styles.messageIcon}>
+                  {isSuccessMessage(error) ? "✓" : "⏳"}
                 </span>
               )}
               {error}
@@ -387,32 +382,21 @@ export default function LoginPage() {
             className={styles.loginBtn}
             onClick={handleLogin}
             disabled={isDisabled}
-            style={{
-              opacity: isDisabled ? 0.7 : 1,
-              cursor: isDisabled ? "not-allowed" : "pointer",
-              transition: "opacity 0.2s",
-            }}
           >
-            {loading 
-              ? "Logging in..." 
-              : isRedirecting 
-              ? "Redirecting..." 
-              : "LOGIN"}
+            {loading ? "LOGGING IN..." : isRedirecting ? "REDIRECTING..." : "LOGIN"}
           </button>
 
-          <div 
-            className={styles.extraLinks} 
-            style={{ 
-              opacity: isDisabled ? 0.5 : 1,
-              pointerEvents: isDisabled ? "none" : "auto"
-            }}
-          >
-            <Link href="/auth/forgot-password">Forgot Password?</Link>
-            <span> | </span>
-            <Link href="/auth/register">New Registration</Link>
+          <div className={styles.loginLinks}>
+            <Link href="/auth/register" className={styles.link}>
+              Create account?
+            </Link>
+            <span className={styles.linkDivider}>|</span>
+            <Link href="/auth/forgot-password" className={styles.link}>
+              New Password?
+            </Link>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 }
