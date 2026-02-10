@@ -6,9 +6,9 @@
   overflow: hidden;
 }
 
-/* ================= LEFT BRANDING SECTION ================= */
+/* ================= LEFT BRANDING SECTION - 65% ================= */
 .leftSection {
-  flex: 1;
+  flex: 0 0 65%;
   background: linear-gradient(135deg, #5d00b8 0%, #7a19d6 50%, #6200c4 100%);
   display: flex;
   flex-direction: column;
@@ -16,11 +16,13 @@
   overflow: hidden;
 }
 
-/* ================= TOP NAVIGATION ================= */
+/* ================= TOP NAVIGATION - CENTERED ================= */
 .topNav {
   display: flex;
-  gap: clamp(24px, 4vw, 48px);
-  padding: clamp(28px, 3.5vh, 40px) clamp(36px, 4vw, 60px);
+  justify-content: center;
+  align-items: center;
+  gap: clamp(48px, 6vw, 80px);
+  padding: clamp(32px, 4vh, 48px) clamp(36px, 4vw, 60px);
   position: relative;
   z-index: 10;
 }
@@ -29,57 +31,63 @@
   background: none;
   border: none;
   color: white;
-  font-size: clamp(13px, 1.5vw, 15px);
-  font-weight: 800;
-  letter-spacing: 1.8px;
+  font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(14px, 1.6vw, 16px);
+  font-weight: 700;
+  letter-spacing: 2px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  padding: clamp(10px, 1.5vh, 12px) 0;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: clamp(12px, 1.8vh, 14px) clamp(16px, 2vw, 20px);
   position: relative;
-  opacity: 0.88;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
 }
 
 .topNav button::after {
   content: '';
   position: absolute;
-  bottom: 0;
-  left: 0;
+  bottom: 4px;
+  left: 50%;
+  transform: translateX(-50%);
   width: 0;
   height: 3px;
   background: white;
-  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.4);
+  transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
 }
 
 .topNav button:hover {
   opacity: 1;
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .topNav button:hover::after,
 .activeNavBtn::after {
-  width: 100%;
+  width: 70%;
 }
 
 .activeNavBtn {
   opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.15) !important;
 }
 
-/* ================= BRANDING CONTENT ================= */
+/* ================= BRANDING CONTENT - CENTERED ================= */
 .brandingContent {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: clamp(24px, 4vh, 48px) clamp(32px, 4vw, 60px);
+  padding: clamp(32px, 5vh, 60px) clamp(40px, 5vw, 80px);
   text-align: center;
 }
 
 .logoContainer {
-  margin-bottom: clamp(24px, 3.5vh, 36px);
-  animation: fadeInScale 1s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: clamp(32px, 4.5vh, 48px);
+  animation: fadeInScale 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes fadeInScale {
@@ -93,37 +101,42 @@
   }
 }
 
+/* SMALLER LOGO */
 .brandLogo {
-  width: clamp(240px, 38vw, 380px);
+  width: clamp(200px, 28vw, 280px);
   height: auto;
   max-width: 100%;
   filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.35));
 }
 
 .platformTitle {
-  font-size: clamp(20px, 3.2vw, 34px);
+  font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(22px, 3.5vw, 38px);
   font-weight: 900;
-  letter-spacing: clamp(2.5px, 0.45vw, 4px);
+  letter-spacing: clamp(3px, 0.5vw, 5px);
   color: white;
-  margin: 0 0 clamp(14px, 2vh, 18px) 0;
-  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  margin: 0 0 clamp(16px, 2.5vh, 24px) 0;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   animation: fadeIn 1s ease 0.3s both;
   line-height: 1.2;
 }
 
 .platformTagline {
-  font-size: clamp(13px, 1.8vw, 16px);
-  color: rgba(255, 255, 255, 0.92);
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(14px, 2vw, 18px);
+  color: rgba(255, 255, 255, 0.95);
   font-weight: 500;
-  margin: 0 0 clamp(28px, 4vh, 40px) 0;
-  letter-spacing: 0.5px;
+  margin: 0;
+  letter-spacing: 0.8px;
   animation: fadeIn 1s ease 0.5s both;
+  max-width: 90%;
+  line-height: 1.6;
 }
 
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
@@ -131,57 +144,8 @@
   }
 }
 
-/* ================= FEATURE LIST ================= */
-.featureList {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(12px, 1.8vh, 16px);
-  max-width: clamp(400px, 70%, 560px);
-  width: 100%;
-  animation: fadeIn 1s ease 0.7s both;
-}
-
-.featureItem {
-  display: flex;
-  align-items: center;
-  gap: clamp(14px, 2vw, 18px);
-  padding: clamp(12px, 1.8vh, 16px) clamp(18px, 2.5vw, 24px);
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: clamp(10px, 1.4vw, 14px);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: left;
-}
-
-.featureItem:hover {
-  background: rgba(255, 255, 255, 0.18);
-  transform: translateX(6px);
-  border-color: rgba(255, 255, 255, 0.4);
-}
-
-.featureIcon {
-  width: clamp(26px, 3.5vw, 32px);
-  height: clamp(26px, 3.5vw, 32px);
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(14px, 2vw, 16px);
-  font-weight: 900;
-  color: white;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.featureLabel {
-  font-size: clamp(13px, 1.85vw, 15px);
-  color: white;
-  font-weight: 500;
-  line-height: 1.5;
-  letter-spacing: 0.3px;
-}
+/* ================= FEATURE LIST REMOVED ================= */
+/* All feature list styles removed as per requirement */
 
 /* ================= DROPDOWN OVERLAY ================= */
 .dropdownOverlay {
@@ -190,8 +154,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.65);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
   z-index: 100;
   animation: fadeIn 0.3s ease;
   overflow-y: auto;
@@ -201,7 +165,7 @@
 
 /* Custom scrollbar */
 .dropdownOverlay::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
 }
 
 .dropdownOverlay::-webkit-scrollbar-track {
@@ -210,7 +174,7 @@
 
 .dropdownOverlay::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 .dropdownOverlay::-webkit-scrollbar-thumb:hover {
@@ -221,9 +185,9 @@
   max-width: clamp(600px, 88vw, 1100px);
   margin: auto;
   background: white;
-  border-radius: clamp(18px, 2.5vw, 28px);
-  padding: clamp(32px, 5vh, 56px) clamp(28px, 4vw, 48px);
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  border-radius: clamp(20px, 3vw, 32px);
+  padding: clamp(36px, 6vh, 64px) clamp(32px, 5vw, 56px);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.5);
   animation: slideInScale 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
 }
@@ -241,95 +205,100 @@
 
 .closeDropdown {
   position: absolute;
-  top: clamp(16px, 2.5vh, 24px);
-  right: clamp(16px, 2.5vw, 24px);
-  width: clamp(36px, 5vw, 44px);
-  height: clamp(36px, 5vw, 44px);
+  top: clamp(18px, 3vh, 28px);
+  right: clamp(18px, 3vw, 28px);
+  width: clamp(40px, 6vw, 48px);
+  height: clamp(40px, 6vw, 48px);
   border-radius: 50%;
   background: #f5f5f5;
   border: none;
-  font-size: clamp(20px, 2.8vw, 24px);
+  font-size: clamp(22px, 3.2vw, 26px);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.35s ease;
   color: #666;
   font-weight: 300;
+  font-family: 'Inter', sans-serif;
 }
 
 .closeDropdown:hover {
-  background: #e8e8e8;
+  background: #e0e0e0;
   color: #333;
-  transform: rotate(90deg) scale(1.05);
+  transform: rotate(90deg) scale(1.08);
 }
 
 .dropdownSection h2 {
-  font-size: clamp(24px, 3.8vw, 32px);
+  font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(26px, 4.2vw, 36px);
   font-weight: 900;
   color: #5d00b8;
-  margin: 0 0 clamp(18px, 3vh, 28px) 0;
+  margin: 0 0 clamp(20px, 3.5vh, 32px) 0;
   letter-spacing: 0.5px;
 }
 
 .dropdownSection p {
-  font-size: clamp(14px, 2.2vw, 16px);
-  line-height: 1.75;
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(15px, 2.4vw, 17px);
+  line-height: 1.8;
   color: #444;
-  margin-bottom: clamp(14px, 2.5vh, 18px);
+  margin-bottom: clamp(16px, 2.8vh, 20px);
 }
 
 /* ================= STATS GRID ================= */
 .statsGrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: clamp(16px, 2.5vw, 24px);
-  margin-top: clamp(24px, 3.5vh, 32px);
+  gap: clamp(18px, 3vw, 28px);
+  margin-top: clamp(28px, 4vh, 36px);
 }
 
 .statItem {
   text-align: center;
-  padding: clamp(16px, 2.5vh, 24px);
+  padding: clamp(18px, 3vh, 28px);
   background: linear-gradient(135deg, #f8f5ff 0%, #ffffff 100%);
-  border-radius: clamp(12px, 1.8vw, 16px);
+  border-radius: clamp(14px, 2.2vw, 18px);
   border: 2px solid #e8e0ff;
-  transition: all 0.3s ease;
+  transition: all 0.35s ease;
 }
 
 .statItem:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(93, 0, 184, 0.15);
+  transform: translateY(-6px);
+  box-shadow: 0 10px 30px rgba(93, 0, 184, 0.18);
   border-color: #d0b8ff;
 }
 
 .statItem strong {
   display: block;
-  font-size: clamp(24px, 4vw, 36px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(28px, 4.5vw, 40px);
   font-weight: 900;
   color: #5d00b8;
-  margin-bottom: clamp(4px, 0.8vh, 8px);
+  margin-bottom: clamp(6px, 1vh, 10px);
 }
 
 .statItem span {
-  font-size: clamp(12px, 2vw, 14px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(13px, 2.2vw, 15px);
   color: #666;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
 }
 
 /* ================= PLANS GRID ================= */
 .plansGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(240px, 100%, 290px), 1fr));
-  gap: clamp(18px, 2.8vw, 28px);
-  margin-top: clamp(24px, 3.5vh, 32px);
+  grid-template-columns: repeat(auto-fit, minmax(clamp(240px, 100%, 300px), 1fr));
+  gap: clamp(20px, 3.2vw, 32px);
+  margin-top: clamp(28px, 4vh, 36px);
 }
 
 .planCard {
   background: linear-gradient(135deg, #fafbff 0%, #ffffff 100%);
-  border-radius: clamp(14px, 2.2vw, 18px);
-  padding: clamp(24px, 3.5vh, 32px) clamp(20px, 3vw, 28px);
+  border-radius: clamp(16px, 2.6vw, 20px);
+  padding: clamp(28px, 4vh, 36px) clamp(24px, 3.5vw, 32px);
   border: 2px solid #e8e8e8;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -337,54 +306,58 @@
 }
 
 .planCard:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 16px 48px rgba(93, 0, 184, 0.18);
+  transform: translateY(-8px);
+  box-shadow: 0 18px 56px rgba(93, 0, 184, 0.2);
   border-color: #b388ff;
 }
 
 .popularPlan {
   border-color: #7a19d6;
   border-width: 3px;
-  box-shadow: 0 12px 36px rgba(122, 25, 214, 0.2);
+  box-shadow: 0 14px 42px rgba(122, 25, 214, 0.22);
 }
 
 .popularPlan:hover {
-  box-shadow: 0 18px 56px rgba(122, 25, 214, 0.28);
+  box-shadow: 0 20px 64px rgba(122, 25, 214, 0.32);
 }
 
 .popularBadge {
   position: absolute;
-  top: clamp(-12px, -1.8vh, -14px);
+  top: clamp(-14px, -2vh, -16px);
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(135deg, #7a19d6, #5d00b8);
   color: white;
-  font-size: clamp(10px, 1.6vw, 12px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(11px, 1.8vw, 13px);
   font-weight: 800;
-  padding: clamp(6px, 1vh, 8px) clamp(14px, 2.2vw, 18px);
-  border-radius: clamp(14px, 2vw, 18px);
-  letter-spacing: 1px;
-  box-shadow: 0 4px 12px rgba(122, 25, 214, 0.4);
+  padding: clamp(7px, 1.2vh, 9px) clamp(16px, 2.5vw, 20px);
+  border-radius: clamp(16px, 2.4vw, 20px);
+  letter-spacing: 1.2px;
+  box-shadow: 0 4px 14px rgba(122, 25, 214, 0.45);
 }
 
 .planHeader h3 {
-  font-size: clamp(16px, 2.6vw, 19px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(18px, 2.8vw, 21px);
   font-weight: 800;
   color: #5d00b8;
-  margin: 0 0 clamp(10px, 1.8vh, 14px) 0;
-  letter-spacing: 1.2px;
+  margin: 0 0 clamp(12px, 2vh, 16px) 0;
+  letter-spacing: 1.4px;
 }
 
 .planPrice {
-  font-size: clamp(28px, 4.5vw, 36px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(32px, 5vw, 40px);
   font-weight: 900;
   color: #1a1a1a;
-  margin-bottom: clamp(18px, 2.8vh, 24px);
+  margin-bottom: clamp(20px, 3.2vh, 28px);
   line-height: 1;
 }
 
 .planPrice span {
-  font-size: clamp(14px, 2.2vw, 16px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(15px, 2.4vw, 17px);
   font-weight: 600;
   color: #777;
 }
@@ -392,16 +365,17 @@
 .planFeatures {
   list-style: none;
   padding: 0;
-  margin: 0 0 clamp(20px, 3vh, 26px) 0;
+  margin: 0 0 clamp(22px, 3.5vh, 30px) 0;
 }
 
 .planFeatures li {
-  font-size: clamp(13px, 2.1vw, 15px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(14px, 2.3vw, 16px);
   color: #555;
-  margin-bottom: clamp(10px, 1.6vh, 12px);
-  padding-left: clamp(22px, 3.2vw, 28px);
+  margin-bottom: clamp(12px, 1.8vh, 14px);
+  padding-left: clamp(26px, 3.6vw, 32px);
   position: relative;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .planFeatures li::before {
@@ -410,110 +384,116 @@
   left: 0;
   color: #7a19d6;
   font-weight: 900;
-  font-size: clamp(14px, 2.2vw, 16px);
+  font-size: clamp(16px, 2.4vw, 18px);
 }
 
 .planBtn {
   width: 100%;
-  padding: clamp(13px, 2.2vh, 16px);
+  padding: clamp(14px, 2.4vh, 18px);
   background: linear-gradient(135deg, #7a19d6, #5d00b8);
   color: white;
   border: none;
-  border-radius: clamp(10px, 1.6vw, 12px);
-  font-size: clamp(14px, 2.2vw, 16px);
+  border-radius: clamp(12px, 1.8vw, 14px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(15px, 2.4vw, 17px);
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 0.8px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: 1px;
   text-transform: uppercase;
 }
 
 .planBtn:hover {
-  transform: scale(1.03);
-  box-shadow: 0 10px 28px rgba(122, 25, 214, 0.45);
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 12px 32px rgba(122, 25, 214, 0.5);
 }
 
 .planBtn:active {
-  transform: scale(0.98);
+  transform: translateY(0) scale(0.98);
 }
 
 /* ================= CONTACT GRID ================= */
 .contactGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 100%, 280px), 1fr));
-  gap: clamp(18px, 2.8vw, 24px);
-  margin-top: clamp(24px, 3.5vh, 32px);
+  gap: clamp(20px, 3.2vw, 28px);
+  margin-top: clamp(28px, 4vh, 36px);
 }
 
 .contactItem {
   display: flex;
   align-items: flex-start;
-  gap: clamp(14px, 2.2vw, 18px);
-  padding: clamp(18px, 2.8vh, 24px);
+  gap: clamp(16px, 2.6vw, 20px);
+  padding: clamp(20px, 3.2vh, 28px);
   background: linear-gradient(135deg, #f8f5ff 0%, #ffffff 100%);
-  border-radius: clamp(12px, 1.8vw, 14px);
+  border-radius: clamp(14px, 2.2vw, 16px);
   border: 2px solid #e8e0ff;
-  transition: all 0.3s ease;
+  transition: all 0.35s ease;
 }
 
 .contactItem:hover {
   border-color: #d0b8ff;
-  box-shadow: 0 6px 20px rgba(93, 0, 184, 0.12);
+  box-shadow: 0 8px 24px rgba(93, 0, 184, 0.15);
+  transform: translateY(-2px);
 }
 
 .contactIcon {
-  font-size: clamp(26px, 4vw, 32px);
+  font-size: clamp(28px, 4.5vw, 36px);
   flex-shrink: 0;
 }
 
 .contactItem strong {
   display: block;
-  font-size: clamp(14px, 2.2vw, 16px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(15px, 2.4vw, 17px);
   font-weight: 700;
   color: #5d00b8;
-  margin-bottom: clamp(5px, 1vh, 7px);
+  margin-bottom: clamp(6px, 1.2vh, 8px);
 }
 
 .contactItem p {
-  font-size: clamp(13px, 2.1vw, 15px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(14px, 2.3vw, 16px);
   color: #555;
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .contactFooter {
-  margin-top: clamp(24px, 3.5vh, 32px);
+  margin-top: clamp(28px, 4vh, 36px);
   text-align: center;
-  font-size: clamp(14px, 2.2vw, 15px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(15px, 2.4vw, 16px);
   color: #666;
   font-style: italic;
+  line-height: 1.6;
 }
 
-/* ================= RIGHT LOGIN SECTION ================= */
+/* ================= RIGHT LOGIN SECTION - 35% ================= */
 .rightSection {
-  flex: 0 0 clamp(340px, 42vw, 580px);
+  flex: 0 0 35%;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: clamp(24px, 4vh, 48px) clamp(20px, 3vw, 40px);
-  box-shadow: -10px 0 40px rgba(0, 0, 0, 0.08);
+  padding: clamp(28px, 5vh, 56px) clamp(24px, 4vw, 48px);
+  box-shadow: -12px 0 48px rgba(0, 0, 0, 0.1);
 }
 
 .loginCard {
   width: 100%;
-  max-width: clamp(340px, 92%, 460px);
+  max-width: clamp(320px, 90%, 420px);
   background: white;
-  padding: clamp(36px, 6vh, 52px) clamp(32px, 5vw, 44px);
-  border-radius: clamp(18px, 2.8vw, 26px);
-  box-shadow: 0 24px 68px rgba(0, 0, 0, 0.1);
-  animation: fadeInRight 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: clamp(40px, 7vh, 60px) clamp(36px, 6vw, 52px);
+  border-radius: clamp(20px, 3.2vw, 30px);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.12);
+  animation: fadeInRight 0.9s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes fadeInRight {
   from {
     opacity: 0;
-    transform: translateX(40px);
+    transform: translateX(50px);
   }
   to {
     opacity: 1;
@@ -522,48 +502,52 @@
 }
 
 .loginTitle {
-  font-size: clamp(19px, 3.4vw, 24px);
+  font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(20px, 3.8vw, 26px);
   font-weight: 800;
   color: #5d00b8;
   text-align: center;
-  margin: 0 0 clamp(32px, 5vh, 40px) 0;
-  letter-spacing: 0.8px;
+  margin: 0 0 clamp(36px, 6vh, 48px) 0;
+  letter-spacing: 1px;
 }
 
 /* ================= INPUT GROUPS ================= */
 .inputGroup {
-  margin-bottom: clamp(22px, 3.5vh, 28px);
+  margin-bottom: clamp(24px, 4vh, 32px);
 }
 
 .inputGroup label {
   display: block;
-  font-size: clamp(13px, 2.1vw, 15px);
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(14px, 2.3vw, 16px);
   font-weight: 700;
   color: #2a2a2a;
-  margin-bottom: clamp(7px, 1.2vh, 9px);
+  margin-bottom: clamp(8px, 1.4vh, 10px);
 }
 
 .inputGroup input {
   width: 100%;
-  padding: clamp(13px, 2.2vh, 16px);
+  padding: clamp(14px, 2.4vh, 18px);
   border: 2px solid #ddd;
-  border-radius: clamp(10px, 1.6vw, 12px);
-  font-size: clamp(14px, 2.3vw, 16px);
+  border-radius: clamp(12px, 1.8vw, 14px);
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(15px, 2.5vw, 17px);
   color: #2a2a2a;
-  transition: all 0.3s ease;
+  transition: all 0.35s ease;
   background: #fafafa;
   box-sizing: border-box;
 }
 
 .inputGroup input::placeholder {
   color: #aaa;
+  font-weight: 400;
 }
 
 .inputGroup input:focus {
   outline: none;
   border-color: #7a19d6;
   background: white;
-  box-shadow: 0 0 0 4px rgba(122, 25, 214, 0.1);
+  box-shadow: 0 0 0 4px rgba(122, 25, 214, 0.12);
 }
 
 .inputGroup input:disabled {
@@ -580,24 +564,24 @@
 
 .passwordToggle {
   position: absolute;
-  right: clamp(12px, 2vw, 16px);
+  right: clamp(14px, 2.4vw, 18px);
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: #777;
   cursor: pointer;
-  padding: clamp(5px, 1vh, 7px);
+  padding: clamp(6px, 1.2vh, 8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.2s ease;
-  border-radius: 4px;
+  transition: all 0.25s ease;
+  border-radius: 6px;
 }
 
 .passwordToggle:hover {
   color: #333;
-  background: rgba(0, 0, 0, 0.04);
+  background: rgba(0, 0, 0, 0.05);
 }
 
 .passwordToggle:disabled {
@@ -606,30 +590,31 @@
 }
 
 .passwordToggle svg {
-  width: clamp(19px, 3.2vw, 22px);
-  height: clamp(19px, 3.2vw, 22px);
+  width: clamp(20px, 3.6vw, 24px);
+  height: clamp(20px, 3.6vw, 24px);
 }
 
 /* ================= MESSAGES ================= */
 .errorMessage,
 .successMessage {
-  padding: clamp(11px, 2vh, 14px) clamp(14px, 2.5vw, 16px);
-  border-radius: clamp(10px, 1.6vw, 12px);
-  font-size: clamp(13px, 2.1vw, 15px);
+  padding: clamp(12px, 2.2vh, 16px) clamp(16px, 2.8vw, 20px);
+  border-radius: clamp(12px, 1.8vw, 14px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(14px, 2.3vw, 16px);
   font-weight: 600;
   text-align: center;
-  margin-bottom: clamp(18px, 3vh, 22px);
+  margin-bottom: clamp(20px, 3.5vh, 26px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(7px, 1.2vw, 9px);
+  gap: clamp(8px, 1.4vw, 10px);
   animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes slideInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
@@ -638,45 +623,46 @@
 }
 
 .errorMessage {
-  background: rgba(255, 59, 48, 0.08);
+  background: rgba(255, 59, 48, 0.1);
   color: #c62828;
-  border: 2px solid rgba(255, 59, 48, 0.25);
+  border: 2px solid rgba(255, 59, 48, 0.3);
 }
 
 .successMessage {
-  background: rgba(52, 199, 89, 0.08);
+  background: rgba(52, 199, 89, 0.1);
   color: #2e7d32;
-  border: 2px solid rgba(52, 199, 89, 0.25);
+  border: 2px solid rgba(52, 199, 89, 0.3);
 }
 
 .messageIcon {
-  font-size: clamp(15px, 2.4vw, 17px);
+  font-size: clamp(16px, 2.6vw, 18px);
 }
 
 /* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
-  padding: clamp(15px, 2.6vh, 18px);
+  padding: clamp(16px, 2.8vh, 20px);
   background: linear-gradient(135deg, #7a19d6, #5d00b8);
   color: white;
   border: none;
-  border-radius: clamp(10px, 1.6vw, 12px);
-  font-size: clamp(15px, 2.6vw, 17px);
+  border-radius: clamp(12px, 1.8vw, 14px);
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(16px, 2.8vw, 18px);
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.4px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-bottom: clamp(18px, 3vh, 22px);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-bottom: clamp(20px, 3.5vh, 26px);
   text-transform: uppercase;
 }
 
 .loginBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(122, 25, 214, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(122, 25, 214, 0.4);
 }
 
 .loginBtn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(-1px);
 }
 
 .loginBtn:disabled {
@@ -687,11 +673,12 @@
 /* ================= LOGIN LINKS ================= */
 .loginLinks {
   text-align: center;
-  font-size: clamp(13px, 2.1vw, 15px);
+  font-family: 'Poppins', sans-serif;
+  font-size: clamp(14px, 2.3vw, 16px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(10px, 1.8vw, 14px);
+  gap: clamp(12px, 2vw, 16px);
   flex-wrap: wrap;
 }
 
@@ -699,24 +686,39 @@
   color: #7a19d6;
   text-decoration: none;
   font-weight: 700;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
 
 .link:hover {
   color: #5d00b8;
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .linkDivider {
   color: #ccc;
-  font-weight: 300;
+  font-weight: 400;
 }
 
 /* ================= RESPONSIVE BREAKPOINTS ================= */
 
-@media (max-width: 1200px) {
+@media (max-width: 1400px) {
+  .leftSection {
+    flex: 0 0 62%;
+  }
+  
   .rightSection {
-    flex: 0 0 clamp(320px, 45vw, 500px);
+    flex: 0 0 38%;
+  }
+}
+
+@media (max-width: 1200px) {
+  .leftSection {
+    flex: 0 0 58%;
+  }
+  
+  .rightSection {
+    flex: 0 0 42%;
   }
 }
 
@@ -738,12 +740,13 @@
   }
 
   .leftSection {
-    min-height: 65vh;
     flex: none;
+    min-height: 65vh;
   }
 
   .topNav {
     justify-content: center;
+    gap: clamp(32px, 5vw, 48px);
   }
 
   .rightSection {
@@ -762,29 +765,26 @@
 
 @media (max-width: 600px) {
   .topNav {
-    gap: 16px;
-    padding: 24px 20px;
+    gap: 20px;
+    padding: 28px 24px;
   }
 
   .topNav button {
-    font-size: 11px;
-    letter-spacing: 1.2px;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    padding: 10px 14px;
   }
 
   .brandingContent {
-    padding: 24px 20px;
-  }
-
-  .featureItem {
-    padding: 12px 16px;
+    padding: 28px 24px;
   }
 
   .dropdownContent {
-    padding: 28px 20px;
+    padding: 32px 24px;
   }
 
   .loginCard {
-    padding: 32px 24px;
+    padding: 36px 28px;
   }
 
   .statsGrid {
@@ -794,25 +794,30 @@
 
 @media (max-width: 400px) {
   .topNav {
-    gap: 12px;
-    padding: 20px 16px;
+    gap: 16px;
+    padding: 24px 20px;
   }
 
   .topNav button {
-    font-size: 10px;
-    letter-spacing: 1px;
-    padding: 8px 0;
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    padding: 9px 12px;
   }
 
   .platformTitle {
-    font-size: 18px;
+    font-size: 20px;
+    letter-spacing: 2.5px;
+  }
+
+  .platformTagline {
+    font-size: 13px;
   }
 
   .loginCard {
-    padding: 28px 20px;
+    padding: 32px 24px;
   }
 
   .loginTitle {
-    font-size: 17px;
+    font-size: 18px;
   }
 }
