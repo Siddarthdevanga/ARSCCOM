@@ -14,10 +14,22 @@
   padding: 0;
   box-sizing: border-box;
   font-family: "Segoe UI", system-ui, sans-serif;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
 }
 
 html {
   scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
 }
 
 body {
@@ -27,6 +39,12 @@ body {
   background-size: 300% 300%;
   animation: bgMove 20s ease infinite;
   position: relative;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
 }
 
 /* Grid Background */
@@ -222,7 +240,7 @@ body::before {
 }
 
 .hero h2 {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: 700;
   margin: 14px 0;
   background: linear-gradient(120deg, #ff6a00 20%, #ffd1a3 40%, #ff6a00 60%);
@@ -1702,6 +1720,7 @@ body::before {
 .footerLinks h4 {
   margin-bottom: 18px;
   font-size: 18px;
+  color: #ffffff;
 }
 
 .footerLinks ul {
@@ -1711,10 +1730,11 @@ body::before {
 
 .footerLinks li {
   margin-bottom: 12px;
-  opacity: 0.85;
+  opacity: 0.95;
   cursor: pointer;
   position: relative;
   transition: transform 0.3s ease, color 0.3s ease;
+  color: #e0e0e0;
 }
 
 .footerLinks li::after {
@@ -1729,7 +1749,7 @@ body::before {
 }
 
 .footerLinks li:hover {
-  color: #fff;
+  color: #ffffff;
   transform: translateX(4px);
 }
 
@@ -1739,7 +1759,7 @@ body::before {
 
 .footerTrust {
   max-width: 1200px;
-  margin: auto;
+  margin: 60px auto 0;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 24px;
@@ -1763,12 +1783,14 @@ body::before {
 .trustCard strong {
   font-size: 14px;
   display: block;
+  color: #ffffff;
 }
 
 .trustCard span {
   font-size: 12px;
-  opacity: 0.8;
+  opacity: 0.9;
   display: block;
+  color: #d0d0d0;
 }
 
 .footerBottom {
@@ -1781,14 +1803,15 @@ body::before {
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
-  opacity: 0.8;
+  opacity: 0.95;
   flex-wrap: wrap;
   gap: 15px;
+  color: #d0d0d0;
 }
 
 .footerLink {
   text-decoration: none;
-  color: inherit;
+  color: #d0d0d0;
   cursor: pointer;
   transition: color 0.3s ease;
 }
@@ -1804,7 +1827,7 @@ body::before {
 }
 
 .footerLinksInline a {
-  color: #fff;
+  color: #d0d0d0;
   text-decoration: none;
   position: relative;
   transition: color 0.3s ease;
@@ -1832,7 +1855,7 @@ body::before {
 /* Responsive */
 @media(max-width:768px){
   .hero h1 { font-size: 56px; }
-  .hero h2 { font-size: 22px; }
+  .hero h2 { font-size: 18px; }
   .scrollText { font-size: 24px; }
   .dashboardCards { grid-template-columns: 1fr; }
   .dashFeatures { grid-template-columns: 1fr; gap: 20px; }
@@ -1855,6 +1878,7 @@ body::before {
 @media(max-width:600px){
   .featuresGrid { grid-template-columns: 1fr; }
   .hero h1 { font-size: 42px; }
+  .hero h2 { font-size: 16px; }
   .scrollText { font-size: 20px; }
   .whySection h2 { font-size: 2rem; }
   .title { font-size: 36px; }
@@ -1863,5 +1887,5 @@ body::before {
 @media(max-width:520px){
   .securityCards { grid-template-columns: 1fr; }
   .hero h1 { font-size: 36px; }
-  .hero h2 { font-size: 20px; }
+  .hero h2 { font-size: 14px; }
 }
