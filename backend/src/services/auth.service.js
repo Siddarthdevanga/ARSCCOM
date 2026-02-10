@@ -72,6 +72,20 @@ const validateEmail = (email) => {
   }
 };
 
+const validateWhatsAppUrl = (url) => {
+  if (!url) return null; // Optional field
+  
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return null;
+  
+  const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i;
+  if (!whatsappPattern.test(trimmedUrl)) {
+    throw new Error("Invalid WhatsApp URL format. Must start with https://wa.me/ or https://api.whatsapp.com/");
+  }
+  
+  return trimmedUrl;
+};
+
 const normalizeEmail = (email) => email?.trim().toLowerCase();
 
 /* ======================================================
@@ -101,6 +115,7 @@ export const registerCompany = async (data, file) => {
   const phone = data.phone || null;
   const conferenceRooms = Number(data.conferenceRooms || 0);
   const password = data.password;
+  const whatsappUrl = validateWhatsAppUrl(data.whatsappUrl); // Optional field
 
   if (!companyName || !email || !password || !file) {
     throw new Error("Company name, email, password and logo are required");
@@ -133,12 +148,12 @@ export const registerCompany = async (data, file) => {
   try {
     await conn.beginTransaction();
 
-    // Insert company
+    // Insert company with optional WhatsApp URL
     const [companyResult] = await conn.execute(
       `INSERT INTO companies 
-       (name, slug, logo_url, rooms, subscription_status, plan)
-       VALUES (?, ?, ?, ?, 'pending', 'trial')`,
-      [companyName, slug, logoUrl, conferenceRooms]
+       (name, slug, logo_url, rooms, whatsapp_url, subscription_status, plan)
+       VALUES (?, ?, ?, ?, ?, 'pending', 'trial')`,
+      [companyName, slug, logoUrl, conferenceRooms, whatsappUrl]
     );
 
     const companyId = companyResult.insertId;
@@ -172,7 +187,13 @@ export const registerCompany = async (data, file) => {
     // Send welcome email (non-blocking)
     sendWelcomeEmail(email, companyName).catch(console.error);
 
-    return { companyId, companyName, slug, logoUrl };
+    return { 
+      companyId, 
+      companyName, 
+      slug, 
+      logoUrl,
+      whatsappUrl 
+    };
 
   } catch (err) {
     await conn.rollback();
@@ -250,7 +271,7 @@ export const login = async ({ email, password }) => {
 
   validateEmail(cleanEmail);
 
-  // Fetch user and company data
+  // Fetch user and company data (including whatsapp_url)
   const [rows] = await db.execute(
     `SELECT
        u.id,
@@ -259,6 +280,7 @@ export const login = async ({ email, password }) => {
        c.name     AS companyName,
        c.slug     AS companySlug,
        c.logo_url AS companyLogo,
+       c.whatsapp_url AS whatsappUrl,
        c.subscription_status,
        c.plan
      FROM users u
@@ -308,6 +330,7 @@ export const login = async ({ email, password }) => {
       name: user.companyName,
       slug: user.companySlug,
       logo_url: user.companyLogo,
+      whatsapp_url: user.whatsappUrl || null,
       subscription_status: user.subscription_status || "pending",
       plan: user.plan || "trial"
     }
