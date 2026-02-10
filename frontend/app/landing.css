@@ -1706,47 +1706,16 @@ body::before {
   color: #fff;
 }
 
-/* FEATURES */
-.gs-features {
+.gsFeatures {
   max-width: 1200px;
   margin: 40px auto 0;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 25px;
 }
 
-.feature-box {
-  padding: 25px;
-  border-radius: 18px;
-  background: #51174c;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-}
-
-/* ANIMATIONS */
-.fade-up {
-  opacity: 0;
-  transform: translateY(30px);
-  animation: fadeUp 0.9s ease forwards;
-}
-
-.delay-1 { animation-delay: 0.2s; }
-.delay-2 { animation-delay: 0.4s; }
-
-@keyframes fadeUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* RESPONSIVE */
-@media (max-width: 900px) {
-  .gs-container {
-    grid-template-columns: 1fr;
-  }
-  .gs-features {
-    grid-template-columns: 1fr;
-  }
+.gsFeatures h4 {
+  margin: 0 0 5px 0;
 }
 
 .fadeUp {
