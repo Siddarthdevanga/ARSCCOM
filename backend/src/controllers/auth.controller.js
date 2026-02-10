@@ -21,6 +21,7 @@ export const register = async (req, res) => {
       phone,
       conferenceRooms,
       password,
+      whatsappUrl, // Optional field
     } = req.body;
 
     if (!companyName || !email || !phone || !conferenceRooms || !password) {
@@ -28,6 +29,18 @@ export const register = async (req, res) => {
         success: false,
         message: "All fields are required",
       });
+    }
+
+    /* ---------- WHATSAPP URL VALIDATION (Optional) ---------- */
+    if (whatsappUrl && whatsappUrl.trim()) {
+      // Basic validation for WhatsApp URL format
+      const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i;
+      if (!whatsappPattern.test(whatsappUrl.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid WhatsApp URL format. Must start with https://wa.me/ or https://api.whatsapp.com/",
+        });
+      }
     }
 
     /* ---------- REGISTER SERVICE ---------- */
@@ -76,6 +89,7 @@ export const login = async (req, res) => {
      *  name
      *  slug
      *  logo_url
+     *  whatsapp_url (optional)
      *  subscription_status   ---> MUST BE one of:
      *     active | trial | pending | expired | cancelled | none
      *  plan
