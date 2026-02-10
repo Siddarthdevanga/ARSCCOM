@@ -364,10 +364,10 @@ export default function LandingPage() {
             <div className="planPrice">Custom</div>
             <p className="planDuration">For large organizations</p>
             <ul className="planFeatures">
-              <li>Unlimited Everything</li>
+              <li>Unlimited Visitors</li>
+              <li>Unlimited Conference Bookings</li>
               <li>Unlimited Conference Rooms</li>
-              <li>Advanced Security Features</li>
-              <li>API Access</li>
+              <li>Customised Support</li>
             </ul>
           </div>
         </div>
