@@ -64,7 +64,7 @@ const formatISTForDisplay = (date) => {
 };
 
 /* ======================================================
-   SAVE VISITOR (REFINED WITH WHATSAPP SUPPORT)
+   SAVE VISITOR (FIXED TRANSACTION WITH CORRECT IST)
 ====================================================== */
 export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
@@ -89,10 +89,8 @@ export const saveVisitor = async (companyId, data, file) => {
     idNumber,
   } = data;
 
-  // Validation
-  if (!name?.trim() || !phone?.trim()) {
+  if (!name?.trim() || !phone?.trim())
     throw new Error("Visitor name and phone are required");
-  }
 
   // Get current IST time
   const checkInIST = getISTDate();
@@ -113,18 +111,11 @@ export const saveVisitor = async (companyId, data, file) => {
     await conn.beginTransaction();
 
     /* ======================================================
-       LOCK COMPANY (PREVENT PARALLEL INSERTS) + GET WHATSAPP
+       LOCK COMPANY (PREVENT PARALLEL INSERTS)
     ======================================================= */
     const [[company]] = await conn.execute(
       `
-      SELECT 
-        name,
-        logo_url,
-        whatsapp_url,
-        plan, 
-        subscription_status, 
-        trial_ends_at, 
-        subscription_ends_at
+      SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
       FROM companies
       WHERE id = ?
       FOR UPDATE
@@ -132,16 +123,12 @@ export const saveVisitor = async (companyId, data, file) => {
       [companyId]
     );
 
-    if (!company) {
-      throw new Error("Company not found");
-    }
+    if (!company) throw new Error("Company not found");
 
     const PLAN = (company.plan || "TRIAL").toUpperCase();
     const STATUS = (company.subscription_status || "PENDING").toUpperCase();
 
-    /* ======================================================
-       SUBSCRIPTION VALIDATION
-    ======================================================= */
+    // Check if subscription is expired or inactive
     if (STATUS === "EXPIRED") {
       const error = new Error("Your subscription has expired. Please renew your subscription to continue using our services.");
       error.code = "SUBSCRIPTION_EXPIRED";
@@ -157,7 +144,7 @@ export const saveVisitor = async (companyId, data, file) => {
     }
 
     /* ======================================================
-       PLAN LIMITS VALIDATION
+       PLAN VALIDATION
     ======================================================= */
     if (PLAN === "TRIAL") {
       if (!company.trial_ends_at) {
@@ -167,6 +154,7 @@ export const saveVisitor = async (companyId, data, file) => {
         throw error;
       }
 
+      // Compare using current IST time
       const trialEndsDate = new Date(company.trial_ends_at);
       if (trialEndsDate < new Date(checkInMySQL)) {
         const error = new Error("Your trial period has expired. Please upgrade to a paid plan to continue using our services.");
@@ -199,6 +187,7 @@ export const saveVisitor = async (companyId, data, file) => {
         throw error;
       }
 
+      // Compare using current IST time
       const subEndsDate = new Date(company.subscription_ends_at);
       if (subEndsDate < new Date(checkInMySQL)) {
         const error = new Error(`Your ${PLAN} subscription has expired. Please renew your subscription to continue using our services.`);
@@ -226,23 +215,23 @@ export const saveVisitor = async (companyId, data, file) => {
         companyId,
         name.trim(),
         phone.trim(),
-        email?.trim() || null,
-        fromCompany?.trim() || null,
-        department?.trim() || null,
-        designation?.trim() || null,
-        address?.trim() || null,
-        city?.trim() || null,
-        state?.trim() || null,
-        postalCode?.trim() || null,
-        country?.trim() || null,
-        personToMeet?.trim() || null,
-        purpose?.trim() || null,
+        email || null,
+        fromCompany || null,
+        department || null,
+        designation || null,
+        address || null,
+        city || null,
+        state || null,
+        postalCode || null,
+        country || null,
+        personToMeet || null,
+        purpose || null,
         Array.isArray(belongings)
           ? belongings.join(", ")
-          : belongings?.trim() || null,
-        idType?.trim() || null,
-        idNumber?.trim() || null,
-        checkInMySQL,
+          : belongings || null,
+        idType || null,
+        idNumber || null,
+        checkInMySQL, // Store as MySQL datetime string
       ]
     );
 
@@ -253,6 +242,7 @@ export const saveVisitor = async (companyId, data, file) => {
     ======================================================= */
     const dateKey = formatISTDateKey(checkInIST);
 
+    // Count visitors for today (using DATE function on stored datetime)
     const [[{ count }]] = await conn.execute(
       `
       SELECT COUNT(*) AS count
@@ -268,7 +258,7 @@ export const saveVisitor = async (companyId, data, file) => {
     console.log("✅ Generated Visitor Code:", visitorCode);
 
     /* ======================================================
-       UPLOAD PHOTO TO S3
+       UPLOAD PHOTO
     ======================================================= */
     const photoUrl = await uploadToS3(
       file,
@@ -292,18 +282,22 @@ export const saveVisitor = async (companyId, data, file) => {
     console.log("✅ Visitor saved successfully with ID:", visitorId);
 
     /* ======================================================
-       SEND VISITOR PASS EMAIL (NON-BLOCKING)
+       SEND MAIL (NON-BLOCKING)
     ======================================================= */
-    if (email?.trim()) {
+    if (email) {
       try {
+        const [[companyInfo]] = await db.execute(
+          `SELECT name, logo_url FROM companies WHERE id = ?`,
+          [companyId]
+        );
+
         console.log("📧 Sending visitor pass email to:", email);
 
         await sendVisitorPassMail({
           company: {
             id: companyId,
-            name: company.name,
-            logo: company.logo_url,
-            whatsappUrl: company.whatsapp_url || null, // Include WhatsApp URL
+            name: companyInfo.name,
+            logo: companyInfo.logo_url,
           },
           visitor: {
             visitorCode,
@@ -311,8 +305,8 @@ export const saveVisitor = async (companyId, data, file) => {
             phone,
             email,
             photoUrl,
-            checkIn: checkInMySQL,
-            checkInDisplay: formatISTForDisplay(checkInIST),
+            checkIn: checkInMySQL, // Pass MySQL datetime string
+            checkInDisplay: formatISTForDisplay(checkInIST), // Pass formatted display time
           },
         });
 
@@ -324,12 +318,11 @@ export const saveVisitor = async (companyId, data, file) => {
         console.log("✅ Visitor pass email sent successfully");
       } catch (err) {
         console.error("❌ VISITOR MAIL ERROR:", err.message);
-        // Don't throw - visitor is already saved
       }
     }
 
     /* ======================================================
-       RETURN VISITOR DATA
+       FINAL RESPONSE
     ======================================================= */
     return {
       id: visitorId,
@@ -341,7 +334,6 @@ export const saveVisitor = async (companyId, data, file) => {
       status: "IN",
       checkIn: checkInMySQL,
       checkInDisplay: formatISTForDisplay(checkInIST),
-      companyWhatsappUrl: company.whatsapp_url || null, // Return WhatsApp URL
     };
 
   } catch (err) {
