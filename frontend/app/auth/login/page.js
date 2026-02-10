@@ -112,7 +112,7 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      {/* LEFT BRANDING SECTION */}
+      {/* LEFT BRANDING SECTION - 65% */}
       <div className={styles.leftSection}>
         <nav className={styles.topNav}>
           <button 
@@ -140,8 +140,8 @@ export default function LoginPage() {
             <Image
               src="/Brand Logo.png"
               alt="Promeet Logo"
-              width={380}
-              height={120}
+              width={280}
+              height={90}
               priority
               className={styles.brandLogo}
             />
@@ -152,25 +152,6 @@ export default function LoginPage() {
           <p className={styles.platformTagline}>
             Streamline check-ins • Enhance security • Optimize space utilization
           </p>
-
-          <div className={styles.featureList}>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>✓</span>
-              <span className={styles.featureLabel}>Digital visitor registration & badge printing</span>
-            </div>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>✓</span>
-              <span className={styles.featureLabel}>Smart conference room scheduling</span>
-            </div>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>✓</span>
-              <span className={styles.featureLabel}>Real-time visitor tracking & notifications</span>
-            </div>
-            <div className={styles.featureItem}>
-              <span className={styles.featureIcon}>✓</span>
-              <span className={styles.featureLabel}>Comprehensive analytics dashboard</span>
-            </div>
-          </div>
         </div>
 
         {activeTab && (
@@ -300,7 +281,7 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* RIGHT LOGIN SECTION */}
+      {/* RIGHT LOGIN SECTION - 35% */}
       <div className={styles.rightSection}>
         <div className={styles.loginCard}>
           <h2 className={styles.loginTitle}>LOGIN TO YOUR ACCOUNT</h2>
