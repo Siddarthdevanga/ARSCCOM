@@ -86,7 +86,7 @@
 }
 
 .logoContainer {
-  margin-bottom: clamp(28px, 4vh, 40px);
+  margin-bottom: clamp(20px, 3vh, 30px);
   animation: fadeInScale 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -101,9 +101,9 @@
   }
 }
 
-/* SMALLER LOGO - MORE PROFESSIONAL */
+/* LOGO SIZE INCREASED */
 .brandLogo {
-  width: clamp(180px, 24vw, 240px);
+  width: clamp(220px, 30vw, 280px);
   height: auto;
   max-width: 100%;
   filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.35));
@@ -119,6 +119,8 @@
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   animation: fadeIn 1s ease 0.3s both;
   line-height: 1.2;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 .platformTagline {
@@ -482,7 +484,7 @@
 
 .loginCard {
   width: 100%;
-  max-width: clamp(320px, 88%, 400px);
+  max-width: clamp(380px, 92%, 480px);
   background: white;
   padding: clamp(36px, 6vh, 52px) clamp(32px, 5vw, 44px);
   border-radius: clamp(18px, 2.8vw, 26px);
@@ -509,6 +511,7 @@
   text-align: center;
   margin: 0 0 clamp(32px, 5.5vh, 42px) 0;
   letter-spacing: 0.8px;
+  white-space: nowrap;
 }
 
 /* ================= INPUT GROUPS ================= */
