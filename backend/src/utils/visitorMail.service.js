@@ -54,12 +54,11 @@ const formatIST = (value) => {
 };
 
 /* ======================================================
-   EMAIL FOOTER — COMPANY BRANDING WITH WHATSAPP
+   EMAIL FOOTER — COMPANY BRANDING
 ====================================================== */
 export const emailFooter = (company = {}) => {
   const companyName = company?.name || "Promeet";
   const companyLogo = company?.logo_url || company?.logo || null;
-  const whatsappUrl = company?.whatsappUrl || company?.whatsapp_url || null;
 
   return `
 <br/>
@@ -75,20 +74,6 @@ ${companyLogo
     alt="${companyName} Logo"
     style="margin-top:10px;height:60px;border-radius:8px;border:1px solid #eee;background:#fff;padding:6px;display:block;"
   />
-`
-  : ""
-}
-
-${whatsappUrl
-  ? `
-  <div style="margin:20px 0;">
-    <a 
-      href="${whatsappUrl}" 
-      style="display:inline-block;background:#25D366;color:white;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;font-family:Arial,Helvetica,sans-serif;"
-    >
-      💬 Join WhatsApp for Updates & Support
-    </a>
-  </div>
 `
   : ""
 }
@@ -117,14 +102,12 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
   const phone = visitor.phone || "-";
   const personToMeet = visitor.personToMeet || "Reception";
   const purpose = visitor.purpose || "Visit";
-  const whatsappUrl = company.whatsappUrl || company.whatsapp_url || null;
   
   // Format check-in time (handles both checkIn and checkInDisplay)
   const checkInTime = visitor.checkInDisplay || formatIST(visitor.checkIn);
   
   console.log(`[VISITOR_MAIL] Preparing email for ${visitor.email}`);
   console.log(`[VISITOR_MAIL] Check-in time: ${checkInTime}`);
-  console.log(`[VISITOR_MAIL] WhatsApp URL: ${whatsappUrl ? "Available" : "Not provided"}`);
 
   let imageBuffer = null;
 
@@ -155,13 +138,10 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
             .success-badge { background: #e8f5e9; border-left: 4px solid #00c853; padding: 16px; margin: 20px 0; border-radius: 4px; }
             .warning-badge { background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; margin: 20px 0; border-radius: 4px; }
             .info-badge { background: #f8f9ff; border-left: 4px solid #6c2bd9; padding: 16px; margin: 20px 0; border-radius: 4px; }
-            .whatsapp-badge { background: #e7f5ec; border-left: 4px solid #25D366; padding: 16px; margin: 20px 0; border-radius: 4px; }
             .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             .details-table td { padding: 12px; border: 1px solid #e0e0e0; }
             .details-table tr:nth-child(odd) { background: #f8f9ff; }
             .label { font-weight: 600; color: #6c2bd9; width: 35%; }
-            .whatsapp-button { display: inline-block; background: #25D366; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; margin: 20px 0; transition: background 0.3s ease; }
-            .whatsapp-button:hover { background: #20BA5A; }
             h2 { color: #6c2bd9; margin-top: 30px; margin-bottom: 10px; font-size: 20px; }
             ul { font-size: 14px; line-height: 1.8; color: #333; }
             ul li { margin-bottom: 8px; }
@@ -234,24 +214,6 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
                 </p>
               </div>
 
-              ${whatsappUrl
-                ? `
-                <h2>💬 Stay Connected</h2>
-
-                <div class="whatsapp-badge">
-                  <p style="margin:0 0 12px 0;color:#1b5e20;font-weight:600;">
-                    Join our WhatsApp group for instant updates, support, and important announcements!
-                  </p>
-                  <p style="margin:0;text-align:center;">
-                    <a href="${whatsappUrl}" class="whatsapp-button">
-                      💬 Join WhatsApp Group
-                    </a>
-                  </p>
-                </div>
-                `
-                : ""
-              }
-
               <h2>📌 Important Guidelines</h2>
 
               <ul>
@@ -267,10 +229,6 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
                 <li>
                   <b>Report any issues</b> — Contact reception immediately if you face any difficulties.
                 </li>
-                ${whatsappUrl
-                  ? `<li><b>WhatsApp support</b> — Use the WhatsApp group for quick assistance and updates.</li>`
-                  : ""
-                }
               </ul>
 
               <div class="info-badge">
@@ -296,7 +254,7 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
               filename: `${visitorCode}-visitor-pass.png`,
               content: imageBuffer,
               contentType: "image/png",
-              cid: "visitor-pass-image"
+              cid: "visitor-pass-image" // Optional: can be referenced in HTML as <img src="cid:visitor-pass-image">
             }
           ]
         : []
@@ -309,5 +267,3 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
     throw err;
   }
 };
-
-[💬 Join WhatsApp for Updates & Support]
