@@ -64,6 +64,25 @@ body::before {
   100% { background-position: 0 0, 0 0; }
 }
 
+@keyframes moveRight {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes fadeSlideUp {
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Header */
 .header {
   position: fixed;
@@ -186,11 +205,6 @@ body::before {
   -webkit-text-fill-color: transparent;
   animation: moveRight 15s linear infinite, shimmer 3s linear infinite;
   text-shadow: 0 0 20px rgba(255,178,107,.25);
-}
-
-@keyframes moveRight {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
 }
 
 .hero h1 {
@@ -490,13 +504,6 @@ body::before {
 .card:nth-child(4) { animation-delay: 0.55s; }
 .card:nth-child(5) { animation-delay: 0.7s; }
 .card:nth-child(6) { animation-delay: 0.85s; }
-
-@keyframes fadeSlideUp {
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
 
 .card:hover {
   transform: translateY(-6px) scale(1.05);
@@ -1610,13 +1617,6 @@ body::before {
 .delay2 { animation-delay: 0.3s; }
 .delay3 { animation-delay: 0.45s; }
 .delay4 { animation-delay: 0.6s; }
-
-@keyframes fadeUp {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
 
 /* Footer */
 .footer {
