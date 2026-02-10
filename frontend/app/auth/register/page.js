@@ -40,7 +40,6 @@ export default function RegisterPage() {
       [field]: value,
     }));
     
-    // Clear errors on input change
     if (error) setError("");
   };
 
@@ -56,7 +55,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Validate file type
     const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
     if (!validTypes.includes(file.type)) {
       setError("Logo must be JPG, PNG, or WEBP format");
@@ -64,7 +62,6 @@ export default function RegisterPage() {
       return;
     }
 
-    // Validate file size (3MB)
     if (file.size > 3 * 1024 * 1024) {
       setError("Logo file must be less than 3MB");
       e.target.value = "";
@@ -73,7 +70,6 @@ export default function RegisterPage() {
 
     setLogo(file);
 
-    // Generate preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setLogoPreview(reader.result);
@@ -97,33 +93,28 @@ export default function RegisterPage() {
       confirmPassword,
     } = formData;
 
-    // Required fields
     if (!companyName?.trim()) {
       setError("Company name is required");
       return false;
     }
 
-    // Email validation
     const normalizedEmail = email?.trim().toLowerCase();
     if (!normalizedEmail || !/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
       setError("Enter a valid email address");
       return false;
     }
 
-    // Phone validation
     if (!phone?.trim() || phone.trim().length < 8) {
       setError("Enter a valid phone number (minimum 8 digits)");
       return false;
     }
 
-    // Conference rooms validation
     const roomCount = Number(conferenceRooms);
     if (!roomCount || roomCount < 1 || roomCount > 100) {
       setError("Conference rooms must be between 1 and 100");
       return false;
     }
 
-    // WhatsApp URL validation (optional)
     if (whatsappUrl?.trim()) {
       const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i;
       if (!whatsappPattern.test(whatsappUrl.trim())) {
@@ -134,13 +125,11 @@ export default function RegisterPage() {
       }
     }
 
-    // Logo validation
     if (!logo) {
       setError("Company logo is required");
       return false;
     }
 
-    // Password validation
     if (!password || password.length < 8) {
       setError("Password must be at least 8 characters");
       return false;
@@ -161,7 +150,6 @@ export default function RegisterPage() {
     setError("");
     setSuccess("");
 
-    // Validate form
     if (!validateForm()) {
       return;
     }
@@ -183,7 +171,6 @@ export default function RegisterPage() {
     formPayload.append("password", password);
     formPayload.append("logo", logo);
 
-    // Add WhatsApp URL only if provided
     if (whatsappUrl?.trim()) {
       formPayload.append("whatsappUrl", whatsappUrl.trim());
     }
@@ -204,7 +191,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // Store email for login page pre-fill
       const normalizedEmail = email.trim().toLowerCase();
       if (normalizedEmail) {
         localStorage.setItem("regEmail", normalizedEmail);
@@ -226,93 +212,27 @@ export default function RegisterPage() {
   };
 
   /* ======================================================
-     FORM FIELDS CONFIGURATION
-  ====================================================== */
-  const formFields = [
-    {
-      label: "Company Name",
-      name: "companyName",
-      type: "text",
-      placeholder: "Enter your company name",
-      required: true,
-      fullWidth: true,
-    },
-    {
-      label: "Admin Email",
-      name: "email",
-      type: "email",
-      placeholder: "admin@company.com",
-      required: true,
-    },
-    {
-      label: "Admin Phone",
-      name: "phone",
-      type: "tel",
-      placeholder: "+1234567890",
-      required: true,
-    },
-    {
-      label: "WhatsApp Contact URL",
-      name: "whatsappUrl",
-      type: "url",
-      placeholder: "https://wa.me/1234567890 (Optional)",
-      required: false,
-      fullWidth: true,
-      helpText: "Optional: Add your company's WhatsApp contact link for visitor support",
-    },
-    {
-      label: "Conference Rooms",
-      name: "conferenceRooms",
-      type: "number",
-      placeholder: "Number of rooms",
-      required: true,
-      min: 1,
-      max: 100,
-    },
-    {
-      label: "Password",
-      name: "password",
-      type: "password",
-      placeholder: "Minimum 8 characters",
-      required: true,
-    },
-    {
-      label: "Confirm Password",
-      name: "confirmPassword",
-      type: "password",
-      placeholder: "Re-enter your password",
-      required: true,
-    },
-  ];
-
-  /* ======================================================
      RENDER
   ====================================================== */
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <div className={styles.brand}>
-          <span className={styles.brandIcon}>📅</span>
-          PROMEET
-        </div>
+        <div className={styles.brand}>PROMEET</div>
 
         <button
           className={styles.backButton}
           onClick={() => router.push("/auth/login")}
           type="button"
         >
-          <span className={styles.backIcon}>←</span>
-          Back to Login
+          ← Back to Login
         </button>
       </header>
 
       <div className={styles.card}>
-        <div className={styles.cardHeader}>
-          <h2 className={styles.title}>Create Company Account</h2>
-          <p className={styles.subtitle}>
-            Register your organization to start managing visitors & conference rooms
-          </p>
-        </div>
+        <h2 className={styles.title}>Create Company Account</h2>
+        <p className={styles.subtitle}>
+          Register your organization to start managing visitors & conference rooms
+        </p>
 
         <form
           className={styles.form}
@@ -321,42 +241,103 @@ export default function RegisterPage() {
             handleRegister();
           }}
         >
-          {/* DYNAMIC FORM FIELDS */}
-          <div className={styles.formGrid}>
-            {formFields.map((field) => (
-              <div
-                key={field.name}
-                className={`${styles.formField} ${
-                  field.fullWidth ? styles.fullWidth : ""
-                }`}
-              >
-                <label className={styles.label} htmlFor={field.name}>
-                  {field.label} {field.required && <span className={styles.required}>*</span>}
-                </label>
-                <input
-                  id={field.name}
-                  name={field.name}
-                  type={field.type}
-                  className={styles.input}
-                  placeholder={field.placeholder}
-                  value={formData[field.name]}
-                  onChange={(e) => handleInputChange(field.name, e.target.value)}
-                  min={field.min}
-                  max={field.max}
-                  disabled={loading}
-                  autoComplete={field.type === "password" ? "new-password" : field.name}
-                />
-                {field.helpText && (
-                  <small className={styles.helpText}>{field.helpText}</small>
-                )}
-              </div>
-            ))}
+          {/* Company Name - Full Width */}
+          <div className={styles.formField}>
+            <label className={styles.label} htmlFor="companyName">
+              Company Name *
+            </label>
+            <input
+              id="companyName"
+              name="companyName"
+              type="text"
+              className={styles.input}
+              placeholder="Enter your company name"
+              value={formData.companyName}
+              onChange={(e) => handleInputChange("companyName", e.target.value)}
+              disabled={loading}
+              autoComplete="organization"
+            />
           </div>
 
-          {/* LOGO UPLOAD WITH PREVIEW */}
+          {/* Email & Phone - Single Row */}
+          <div className={styles.row2}>
+            <div className={styles.formField}>
+              <label className={styles.label} htmlFor="email">
+                Admin Email *
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                className={styles.input}
+                placeholder="admin@company.com"
+                value={formData.email}
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                disabled={loading}
+                autoComplete="email"
+              />
+            </div>
+
+            <div className={styles.formField}>
+              <label className={styles.label} htmlFor="phone">
+                Admin Phone *
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                className={styles.input}
+                placeholder="+1234567890"
+                value={formData.phone}
+                onChange={(e) => handleInputChange("phone", e.target.value)}
+                disabled={loading}
+                autoComplete="tel"
+              />
+            </div>
+          </div>
+
+          {/* WhatsApp URL & Conference Rooms - Single Row */}
+          <div className={styles.row2}>
+            <div className={styles.formField}>
+              <label className={styles.label} htmlFor="whatsappUrl">
+                WhatsApp Contact URL (Optional)
+              </label>
+              <input
+                id="whatsappUrl"
+                name="whatsappUrl"
+                type="url"
+                className={styles.input}
+                placeholder="https://wa.me/1234567890"
+                value={formData.whatsappUrl}
+                onChange={(e) => handleInputChange("whatsappUrl", e.target.value)}
+                disabled={loading}
+                autoComplete="url"
+              />
+            </div>
+
+            <div className={styles.formField}>
+              <label className={styles.label} htmlFor="conferenceRooms">
+                Conference Rooms *
+              </label>
+              <input
+                id="conferenceRooms"
+                name="conferenceRooms"
+                type="number"
+                className={styles.input}
+                placeholder="Number of rooms"
+                value={formData.conferenceRooms}
+                onChange={(e) => handleInputChange("conferenceRooms", e.target.value)}
+                disabled={loading}
+                min="1"
+                max="100"
+              />
+            </div>
+          </div>
+
+          {/* Logo Upload */}
           <div className={styles.formField}>
             <label className={styles.label} htmlFor="logo">
-              Company Logo <span className={styles.required}>*</span>
+              Company Logo *
             </label>
             
             <div className={styles.logoUploadContainer}>
@@ -382,7 +363,6 @@ export default function RegisterPage() {
                 </div>
               ) : (
                 <div className={styles.logoUploadPlaceholder}>
-                  <span className={styles.uploadIcon}>📁</span>
                   <p>Click to upload company logo</p>
                   <small>JPG, PNG or WEBP (Max 3MB)</small>
                 </div>
@@ -400,18 +380,53 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Password & Confirm Password - Single Row */}
+          <div className={styles.row2}>
+            <div className={styles.formField}>
+              <label className={styles.label} htmlFor="password">
+                🔒 Password *
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                className={styles.input}
+                placeholder="Minimum 8 characters"
+                value={formData.password}
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div className={styles.formField}>
+              <label className={styles.label} htmlFor="confirmPassword">
+                🔒 Confirm Password *
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                className={styles.input}
+                placeholder="Re-enter your password"
+                value={formData.confirmPassword}
+                onChange={(e) => handleInputChange("confirmPassword", e.target.value)}
+                disabled={loading}
+                autoComplete="new-password"
+              />
+            </div>
+          </div>
+
           {/* ERROR & SUCCESS MESSAGES */}
           {error && (
             <div className={styles.alert} role="alert">
-              <span className={styles.alertIcon}>⚠️</span>
-              <span className={styles.alertText}>{error}</span>
+              ⚠️ {error}
             </div>
           )}
 
           {success && (
             <div className={`${styles.alert} ${styles.alertSuccess}`} role="alert">
-              <span className={styles.alertIcon}>✓</span>
-              <span className={styles.alertText}>{success}</span>
+              ✓ {success}
             </div>
           )}
 
@@ -427,10 +442,7 @@ export default function RegisterPage() {
                 Registering...
               </>
             ) : (
-              <>
-                <span className={styles.submitIcon}>→</span>
-                Register & Continue
-              </>
+              "Register & Continue →"
             )}
           </button>
 
