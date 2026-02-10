@@ -7,10 +7,29 @@ import './landing.css';
 
 export default function LandingPage() {
   useEffect(() => {
-    // Animate hero elements on load
-    const elements = document.querySelectorAll('.badge, .hero h1, .hero h2, .hero p, .heroButtons');
-    elements.forEach((el, i) => {
+    // Animate hero elements on load with staggered timing
+    const heroElements = document.querySelectorAll('.badge, .hero h1, .hero h2, .hero p, .heroButtons');
+    heroElements.forEach((el, i) => {
       setTimeout(() => el.classList.add('animate'), i * 160);
+    });
+
+    // Animate sections on scroll
+    const observerOptions = {
+      threshold: 0.1,
+      rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('fadeUp');
+        }
+      });
+    }, observerOptions);
+
+    // Observe fade-up elements
+    document.querySelectorAll('.fadeUp').forEach(el => {
+      observer.observe(el);
     });
 
     // FAQ accordion functionality
@@ -29,13 +48,80 @@ export default function LandingPage() {
           }
         });
 
-        // Toggle current
+        // Toggle current item
         const isOpen = item.classList.contains('active');
         item.classList.toggle('active');
         if (icon) icon.textContent = isOpen ? '+' : '−';
       });
     });
+
+    // Cleanup observer on unmount
+    return () => observer.disconnect();
   }, []);
+
+  const whyCards = [
+    { title: 'Instant Digital Visitor Pass', desc: 'Visitors receive secure virtual passes via Email/WhatsApp eliminating manual paper slips.', className: 'card1' },
+    { title: 'Powerful Live Dashboard', desc: 'Track check-ins, check-outs, approvals and analytics in real time.', className: 'card2' },
+    { title: 'Conference Room Booking + Email Alerts', desc: 'Employees can instantly book conference rooms. Organizers receive confirmation notifications.', className: 'card3' },
+    { title: 'Company Specific Public URL', desc: 'Each company receives a dedicated access link where employees log in via OTP. No HR dependency, no onboarding workload.', className: 'card4' },
+    { title: 'Zero Manual Work', desc: 'No registers, no spreadsheets, no paper passes. Everything automated.', className: 'card5' },
+    { title: 'Secure & Enterprise Ready', desc: 'Role based authentication, encryption and compliance aligned security.', className: 'card6' }
+  ];
+
+  const steps = [
+    { title: 'Visitor Registration', desc: 'Visitors can quickly register their arrival using either by scanning a QR code or a web link, making the check-in process seamless.', color: 'orange' },
+    { title: 'Visitor Notification', desc: 'Visitor receives instant notification via email or WhatsApp.', color: 'purple' },
+    { title: 'Digital Pass Issued', desc: 'Visitor receives a secure digital pass. Valid for specified duration and location.', color: 'blue' },
+    { title: 'Track & Analyze', desc: 'Monitor activity on a live dashboard. Generate reports and maintain compliance.', color: 'pink' }
+  ];
+
+  const features = [
+    'Visitor Walk-in management',
+    'Digital visitor passes',
+    'Visitor notifications via email/WhatsApp',
+    'Conference room scheduling',
+    'Meeting configuration, reschedule and cancel',
+    'Meeting confirmations',
+    'Comprehensive visitor analytics & reports',
+    'Integration with access control systems',
+    'Multi-location support',
+    'Role-based access control',
+    'Mobile-responsive interface',
+    'QR code based bookings'
+  ];
+
+  const industries = [
+    { title: 'Corporates', desc: 'Enterprise offices with high visitor traffic and multiple meeting rooms', color: 'blue' },
+    { title: 'IT Parks', desc: 'Technology campuses with multiple tenants and shared conference facilities', color: 'violet' },
+    { title: 'Co-working Spaces', desc: 'Flexible workspaces managing visitors for multiple companies', color: 'green' },
+    { title: 'Manufacturing Units', desc: 'Production facilities requiring strict security and visitor tracking', color: 'amber' },
+    { title: 'Enterprises', desc: 'Large organizations with multi-location visitor management needs', color: 'red' },
+    { title: 'Educational Institutions', desc: 'Universities and colleges managing campus visitors and event bookings', color: 'sky' }
+  ];
+
+  const testimonials = [
+    { name: 'Rajesh Kumar', role: 'IT Manager', company: 'Tech Solutions Pvt Ltd', review: 'Promeet has completely transformed how we manage visitors. The digital passes and real-time dashboard have eliminated all manual work. Highly recommended!', featured: true },
+    { name: 'Priya Sharma', role: 'HR Director', company: 'Global Enterprises', review: 'The conference room booking feature is a game-changer. No more double bookings or confusion. Our employees love how easy it is to use.' },
+    { name: 'Amit Patel', role: 'Facility Manager', company: 'Manufacturing Co.', review: 'Security has improved significantly since we started using Promeet. We always know who is on our premises. WhatsApp notifications are very convenient.' }
+  ];
+
+  const securityFeatures = [
+    { title: 'ISO 27001', desc: 'Information Security' },
+    { title: 'SSL/TLS', desc: 'Encrypted Data' },
+    { title: 'GDPR', desc: 'Compliant' },
+    { title: '99.9%', desc: 'Uptime SLA' }
+  ];
+
+  const faqs = [
+    { q: 'How does the 15-day trial work?', a: 'Pay just ₹49 to start your 15-day trial. You get full access to all Professional plan features. After the trial, you can choose to continue with a paid plan or cancel anytime with no further charges.' },
+    { q: 'How long does it take to set up Promeet?', a: 'Setup is incredibly quick! Most organizations are up and running within 10 minutes. We provide step-by-step guidance, and our team is available to help with onboarding and training.' },
+    { q: 'Is my data secure with Promeet?', a: 'Absolutely. We use enterprise-grade encryption, secure cloud storage, and comply with data protection regulations. Your visitor data is stored securely and only accessible to authorized personnel.' },
+    { q: 'Does Promeet work offline?', a: 'Promeet requires an internet connection for real-time notifications and cloud sync. However, we offer offline modes for visitor check-in at reception with automatic sync when connected.' },
+    { q: 'What happens to my data if I cancel?', a: 'You can export all your data before cancellation. We provide data export in standard formats (EXCEL, PDF). After cancellation, we retain your data for 30 days before permanent deletion.' },
+    { q: 'Do you provide training for our team?', a: 'Yes! All plans include onboarding training. We provide video tutorials, documentation, and live training sessions. Enterprise customers get dedicated training programs.' },
+    { q: 'Can we use Promeet across multiple office locations?', a: 'Yes! Professional and Enterprise plans support multiple locations. Each location can have its own settings, hosts, and reporting while maintaining centralized management.' },
+    { q: 'What kind of support do you offer?', a: 'We offer email and WhatsApp support for all plans. Professional plans get priority support with faster response times. Enterprise customers have access to phone support and a dedicated account manager.' }
+  ];
 
   return (
     <>
@@ -48,6 +134,7 @@ export default function LandingPage() {
             width={28}
             height={28}
             className="logoImg"
+            priority
           />
           <div>
             Promeet <span>Visitor Management System</span>
@@ -88,10 +175,10 @@ export default function LandingPage() {
         <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
 
         <div className="heroButtons">
-          <Link className="btnPrimary" href="https://www.promeet.zodopt.com/auth/login" target="_blank">
+          <Link className="btnPrimary" href="https://www.promeet.zodopt.com/auth/login" target="_blank" rel="noopener noreferrer">
             Start 15-Day Trial →
           </Link>
-          <Link className="btnSecondary" href="https://wa.me/918647878785" target="_blank">
+          <Link className="btnSecondary" href="https://wa.me/918647878785" target="_blank" rel="noopener noreferrer">
             Watch Demo
           </Link>
         </div>
@@ -154,7 +241,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why Section */}
-      <section className="whySection" aria-label="Why Organizations Love Promeet">
+      <section className="whySection" id="features" aria-label="Why Organizations Love Promeet">
         <div className="headingContainer">
           <span className="badge">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '6px' }}>
@@ -171,15 +258,8 @@ export default function LandingPage() {
         </div>
 
         <div className="cardsContainer">
-          {[
-            { title: 'Instant Digital Visitor Pass', desc: 'Visitors receive secure virtual passes via Email/WhatsApp eliminating manual paper slips.', className: 'card1' },
-            { title: 'Powerful Live Dashboard', desc: 'Track check-ins, check-outs, approvals and analytics in real time.', className: 'card2' },
-            { title: 'Conference Room Booking + Email Alerts', desc: 'Employees can instantly book conference rooms. Organizers receive confirmation notifications.', className: 'card3' },
-            { title: 'Company Specific Public URL', desc: 'Each company receives a dedicated access link where employees log in via OTP. No HR dependency, no onboarding workload.', className: 'card4' },
-            { title: 'Zero Manual Work', desc: 'No registers, no spreadsheets, no paper passes. Everything automated.', className: 'card5' },
-            { title: 'Secure & Enterprise Ready', desc: 'Role based authentication, encryption and compliance aligned security.', className: 'card6' }
-          ].map((card, i) => (
-            <div key={i} className={`card ${card.className}`} tabIndex={0}>
+          {whyCards.map((card, i) => (
+            <div key={i} className={`card ${card.className}`} tabIndex={0} role="article">
               <div className="iconContainer">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="white" height="24" viewBox="0 0 24 24" width="24">
                   <path d="M12 2a5 5 0 0 0-5 5v4H6v10h12V11h-1v-4a5 5 0 0 0-5-5z"/>
@@ -195,7 +275,7 @@ export default function LandingPage() {
       {/* How It Works */}
       <section className="howItWorks" id="how-it-works">
         <div className="container">
-          <span className="badge">✨Simple Process</span>
+          <span className="badge">✨ Simple Process</span>
           <h2 className="title">
             How <span>Promeet</span> Works
           </h2>
@@ -204,15 +284,10 @@ export default function LandingPage() {
           </p>
 
           <div className="steps">
-            {[
-              { title: 'Visitor Registration', desc: 'Visitors can quickly register their arrival using either by scanning a QR code or a web link, making the check-in process seamless.', color: 'orange' },
-              { title: 'Visitor Notification', desc: 'Visitor receives instant notification via email or WhatsApp.', color: 'purple' },
-              { title: 'Digital Pass Issued', desc: 'Visitor receives a secure digital pass. Valid for specified duration and location.', color: 'blue' },
-              { title: 'Track & Analyze', desc: 'Monitor activity on a live dashboard. Generate reports and maintain compliance.', color: 'pink' }
-            ].map((step, i) => (
+            {steps.map((step, i) => (
               <div key={i} className="stepCard">
                 <div className={`icon ${step.color}`}>
-                  <svg viewBox="0 0 24 24">
+                  <svg viewBox="0 0 24 24" fill="white">
                     <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"/>
                   </svg>
                 </div>
@@ -231,7 +306,7 @@ export default function LandingPage() {
       </section>
 
       {/* Everything Section */}
-      <section className="everythingSection" id="features">
+      <section className="everythingSection">
         <div className="container">
           <span className="badge">✨ Complete Platform</span>
           <h2 className="title">
@@ -242,26 +317,13 @@ export default function LandingPage() {
           </p>
 
           <div className="featuresGrid">
-            {[
-              'Visitor Walk-in management',
-              'Digital visitor passes',
-              'Visitor notifications via email/WhatsApp',
-              'Conference room scheduling',
-              'Meeting configuration, reschedule and cancel',
-              'Meeting confirmations',
-              'Comprehensive visitor analytics & reports',
-              'Integration with access control systems',
-              'Multi-location support',
-              'Role-based access control',
-              'Mobile-responsive interface',
-              'QR code based bookings'
-            ].map((feature, i) => (
+            {features.map((feature, i) => (
               <div key={i} className="featureBox">{feature}</div>
             ))}
           </div>
 
           <div className="featuresCta">
-            <Link href="https://www.promeet.zodopt.com/auth/login" target="_blank" className="ctaBtn">
+            <Link href="https://www.promeet.zodopt.com/auth/login" target="_blank" rel="noopener noreferrer" className="ctaBtn">
               Get Started Today ↗
             </Link>
           </div>
@@ -280,17 +342,10 @@ export default function LandingPage() {
           </p>
 
           <div className="industryGrid">
-            {[
-              { title: 'Corporates', desc: 'Enterprise offices with high visitor traffic and multiple meeting rooms', color: 'blue' },
-              { title: 'IT Parks', desc: 'Technology campuses with multiple tenants and shared conference facilities', color: 'violet' },
-              { title: 'Co-working Spaces', desc: 'Flexible workspaces managing visitors for multiple companies', color: 'green' },
-              { title: 'Manufacturing Units', desc: 'Production facilities requiring strict security and visitor tracking', color: 'amber' },
-              { title: 'Enterprises', desc: 'Large organizations with multi-location visitor management needs', color: 'red' },
-              { title: 'Educational Institutions', desc: 'Universities and colleges managing campus visitors and event bookings', color: 'sky' }
-            ].map((industry, i) => (
+            {industries.map((industry, i) => (
               <div key={i} className="industryCard">
                 <div className={`industryIcon ${industry.color}`}>
-                  <svg viewBox="0 0 24 24">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
                     <rect x="6" y="3" width="5" height="18" rx="1"/>
                     <rect x="13" y="7" width="5" height="14" rx="1"/>
                   </svg>
@@ -313,7 +368,9 @@ export default function LandingPage() {
             conference management with Promeet
           </p>
           <div className="ctaActions">
-            <button className="btnPrimary">Schedule a Demo →</button>
+            <Link href="https://wa.me/918647878785" target="_blank" rel="noopener noreferrer" className="btnPrimary">
+              Schedule a Demo →
+            </Link>
           </div>
           <div className="ctaPoints">
             <span>● Free Trial Available</span>
@@ -344,6 +401,9 @@ export default function LandingPage() {
               <li>100 Conference Bookings</li>
               <li>2 Conference Rooms</li>
             </ul>
+            <Link href="https://www.promeet.zodopt.com/auth/login" className="planCta">
+              Get Started
+            </Link>
           </div>
 
           <div className="pricingCard featured">
@@ -357,6 +417,9 @@ export default function LandingPage() {
               <li>Up to 6 Conference Rooms</li>
               <li>Advanced Analytics & Reports</li>
             </ul>
+            <Link href="https://www.promeet.zodopt.com/auth/login" className="planCta">
+              Get Started
+            </Link>
           </div>
 
           <div className="pricingCard">
@@ -369,6 +432,9 @@ export default function LandingPage() {
               <li>Unlimited Conference Rooms</li>
               <li>Customised Support</li>
             </ul>
+            <Link href="https://wa.me/918647878785" className="planCta">
+              Contact Sales
+            </Link>
           </div>
         </div>
       </section>
@@ -385,11 +451,7 @@ export default function LandingPage() {
           </p>
 
           <div className="testimonialCards">
-            {[
-              { name: 'Rajesh Kumar', role: 'IT Manager', company: 'Tech Solutions Pvt Ltd', review: 'Promeet has completely transformed how we manage visitors. The digital passes and real-time dashboard have eliminated all manual work. Highly recommended!', featured: true },
-              { name: 'Priya Sharma', role: 'HR Director', company: 'Global Enterprises', review: 'The conference room booking feature is a game-changer. No more double bookings or confusion. Our employees love how easy it is to use.' },
-              { name: 'Amit Patel', role: 'Facility Manager', company: 'Manufacturing Co.', review: 'Security has improved significantly since we started using Promeet. We always know who is on our premises. WhatsApp notifications are very convenient.' }
-            ].map((testimonial, i) => (
+            {testimonials.map((testimonial, i) => (
               <div key={i} className={`testimonialCard ${testimonial.featured ? 'featured' : ''}`}>
                 <div className="stars">★★★★★</div>
                 <p className="review">{testimonial.review}</p>
@@ -423,15 +485,10 @@ export default function LandingPage() {
           </p>
 
           <div className="securityCards">
-            {[
-              { title: 'ISO 27001', desc: 'Information Security', color: 'blue' },
-              { title: 'SSL/TLS', desc: 'Encrypted Data', color: 'green' },
-              { title: 'GDPR', desc: 'Compliant', color: 'purple' },
-              { title: '99.9%', desc: 'Uptime SLA', color: 'orange' }
-            ].map((item, i) => (
+            {securityFeatures.map((item, i) => (
               <div key={i} className="securityCard">
-                <div className={`securityIcon ${item.color}`}>
-                  <svg viewBox="0 0 24 24">
+                <div className="securityIcon" style={{ background: ['#4f6df5', '#059669', '#7c3aed', '#ff6a00'][i] }}>
+                  <svg viewBox="0 0 24 24" fill="white">
                     <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
                   </svg>
                 </div>
@@ -463,18 +520,9 @@ export default function LandingPage() {
           </p>
 
           <div className="faqList">
-            {[
-              { q: 'How does the 15-day trial work?', a: 'Pay just ₹49 to start your 15-day trial. You get full access to all Professional plan features. After the trial, you can choose to continue with a paid plan or cancel anytime with no further charges.' },
-              { q: 'How long does it take to set up Promeet?', a: 'Setup is incredibly quick! Most organizations are up and running within 10 minutes. We provide step-by-step guidance, and our team is available to help with onboarding and training.' },
-              { q: 'Is my data secure with Promeet?', a: 'Absolutely. We use enterprise-grade encryption, secure cloud storage, and comply with data protection regulations. Your visitor data is stored securely and only accessible to authorized personnel.' },
-              { q: 'Does Promeet work offline?', a: 'Promeet requires an internet connection for real-time notifications and cloud sync. However, we offer offline modes for visitor check-in at reception with automatic sync when connected.' },
-              { q: 'What happens to my data if I cancel?', a: 'You can export all your data before cancellation. We provide data export in standard formats (EXCEL, PDF). After cancellation, we retain your data for 30 days before permanent deletion.' },
-              { q: 'Do you provide training for our team?', a: 'Yes! All plans include onboarding training. We provide video tutorials, documentation, and live training sessions. Enterprise customers get dedicated training programs.' },
-              { q: 'Can we use Promeet across multiple office locations?', a: 'Yes! Professional and Enterprise plans support multiple locations. Each location can have its own settings, hosts, and reporting while maintaining centralized management.' },
-              { q: 'What kind of support do you offer?', a: 'We offer email and WhatsApp support for all plans. Professional plans get priority support with faster response times. Enterprise customers have access to phone support and a dedicated account manager.' }
-            ].map((faq, i) => (
+            {faqs.map((faq, i) => (
               <div key={i} className="faqItem">
-                <button className="faqQuestion">
+                <button className="faqQuestion" aria-expanded="false">
                   <span>{faq.q}</span>
                   <span className="icon">+</span>
                 </button>
@@ -486,7 +534,7 @@ export default function LandingPage() {
           <div className="faqCta">
             <h3>Still have questions?</h3>
             <p>Can't find the answer you're looking for? Our team is here to help.</p>
-            <Link href="https://wa.me/918647878785" target="_blank" className="ctaBtn">
+            <Link href="https://wa.me/918647878785" target="_blank" rel="noopener noreferrer" className="ctaBtn">
               Contact Support
             </Link>
           </div>
@@ -509,7 +557,7 @@ export default function LandingPage() {
             <div className="gsContact">
               <div className="contactItem">
                 <div className="icon whatsapp">
-                  <svg viewBox="0 0 24 24">
+                  <svg viewBox="0 0 24 24" fill="white">
                     <path d="M20.52 3.48A11.91 11.91 0 0 0 12.07 0C5.5 0 .16 5.34.16 11.91c0 2.1.55 4.15 1.6 5.96L0 24l6.32-1.66a11.88 11.88 0 0 0 5.75 1.47c6.57 0 11.91-5.34 11.91-11.91 0-3.18-1.24-6.17-3.46-8.42z"/>
                   </svg>
                 </div>
@@ -517,7 +565,7 @@ export default function LandingPage() {
               </div>
               <div className="contactItem">
                 <div className="icon email">
-                  <svg viewBox="0 0 24 24">
+                  <svg viewBox="0 0 24 24" fill="white">
                     <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
                   </svg>
                 </div>
@@ -530,7 +578,7 @@ export default function LandingPage() {
             <div className="gsCard whatsappCard">
               <h3>Chat on WhatsApp</h3>
               <p>Get instant answers to your questions from our team</p>
-              <Link href="https://wa.me/918647878785" className="btn">
+              <Link href="https://wa.me/918647878785" target="_blank" rel="noopener noreferrer" className="btn">
                 Start Conversation →
               </Link>
             </div>
@@ -573,10 +621,10 @@ export default function LandingPage() {
               professional visitor experience.
             </p>
             <div className="footerCta">
-              <Link href="https://wa.me/918647878785" className="btn whatsapp">
+              <Link href="https://wa.me/918647878785" target="_blank" rel="noopener noreferrer" className="btnPrimary">
                 WhatsApp →
               </Link>
-              <Link href="mailto:admin@promeet.zodopt.com" className="btn email">
+              <Link href="mailto:admin@promeet.zodopt.com" className="btnSecondary">
                 Email →
               </Link>
             </div>
@@ -585,56 +633,52 @@ export default function LandingPage() {
           <div className="footerLinks fadeUp delay1">
             <h4>Key Features</h4>
             <ul>
-              <li>→ Digital Visitor Passes</li>
-              <li>→ Live Dashboard</li>
-              <li>→ Conference Booking</li>
-              <li>→ Email & WhatsApp Alerts</li>
-              <li>→ Multi-location Support</li>
-              <li>→ Analytics & Reports</li>
+              <li>Digital Visitor Passes</li>
+              <li>Live Dashboard</li>
+              <li>Conference Booking</li>
+              <li>Email & WhatsApp Alerts</li>
+              <li>Multi-location Support</li>
+              <li>Analytics & Reports</li>
             </ul>
           </div>
 
           <div className="footerLinks fadeUp delay2">
             <h4>Industries</h4>
             <ul>
-              <li>→ Corporates</li>
-              <li>→ IT Parks</li>
-              <li>→ Co-working Spaces</li>
-              <li>→ Manufacturing Units</li>
-              <li>→ Enterprises</li>
-              <li>→ Educational Institutions</li>
+              <li>Corporates</li>
+              <li>IT Parks</li>
+              <li>Co-working Spaces</li>
+              <li>Manufacturing Units</li>
+              <li>Enterprises</li>
+              <li>Educational Institutions</li>
             </ul>
           </div>
         </div>
 
-        <div className="divider"></div>
-
         <div className="footerTrust fadeUp delay3">
           <div className="trustCard">
-            <div className="icon orange">🛡</div>
+            <span style={{ fontSize: '24px' }}>🛡</span>
             <div><strong>Secure</strong><span>Enterprise Grade</span></div>
           </div>
           <div className="trustCard">
-            <div className="icon purple">🕒</div>
+            <span style={{ fontSize: '24px' }}>🕒</span>
             <div><strong>24/7</strong><span>Support</span></div>
           </div>
           <div className="trustCard">
-            <div className="icon blue">✔</div>
+            <span style={{ fontSize: '24px' }}>✔</span>
             <div><strong>Reliable</strong><span>99.9% Uptime</span></div>
           </div>
         </div>
 
-        <div className="divider"></div>
-
         <div className="footerBottom fadeUp delay4">
           <span>© 2026 Promeet. All rights reserved.</span>
-          <Link href="https://zodopt.com/about-us/" target="_blank" className="footerLink">
+          <Link href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer" className="footerLink">
             <span>© Zodopt</span>
           </Link>
           <div className="footerLinksInline">
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Security</a>
+            <a href="#privacy">Privacy Policy</a>
+            <a href="#terms">Terms of Service</a>
+            <a href="#security">Security</a>
           </div>
         </div>
       </footer>
