@@ -1,97 +1,89 @@
-/* ================= GLOBAL RESET ================= */
-/* Note: Global styles (html, body) should be in global.css, not CSS modules */
-
 /* ================= CONTAINER ================= */
 .container {
+  display: flex;
   height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
-  font-family: "Segoe UI", Arial, sans-serif;
-  color: white;
-  overflow-y: auto;
-  overflow-x: hidden;
+  width: 100vw;
+  overflow: hidden;
 }
 
-/* ================= HEADER ================= */
-.header {
-  position: relative;
-  padding: clamp(16px, 3vw, 24px) clamp(20px, 5vw, 60px);
-}
-
-.brandSection {
+/* ================= LEFT BRANDING SECTION ================= */
+.leftSection {
+  flex: 1;
+  background: linear-gradient(135deg, #4a0080 0%, #7000d0 50%, #5500a3 100%);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  position: relative;
+  overflow: hidden;
 }
 
-.logoText {
-  font-size: clamp(16px, 4vw, 26px);
-  font-weight: 900;
-  letter-spacing: clamp(1px, 0.3vw, 2px);
-  margin-bottom: clamp(10px, 2vw, 18px);
-  line-height: 1.2;
-}
-
-.brandLogo {
-  width: clamp(200px, 50vw, 340px);
-  max-width: 100%;
-  height: auto;
-  margin-left: clamp(0px, 4vw, 40px);
-}
-
-/* ================= NAV ================= */
-.nav {
-  position: absolute;
-  top: clamp(20px, 3vw, 30px);
-  right: clamp(20px, 5vw, 60px);
+/* ================= TOP NAVIGATION ================= */
+.topNav {
   display: flex;
-  gap: clamp(15px, 3vw, 35px);
-  flex-wrap: wrap;
+  gap: clamp(20px, 4vw, 40px);
+  padding: clamp(24px, 3vw, 40px) clamp(30px, 4vw, 50px);
+  position: relative;
+  z-index: 10;
 }
 
-.nav button {
+.topNav button {
   background: none;
   border: none;
   color: white;
-  font-size: clamp(12px, 2.5vw, 15px);
+  font-size: clamp(12px, 1.8vw, 15px);
   font-weight: 800;
-  letter-spacing: clamp(0.5px, 0.2vw, 1px);
+  letter-spacing: 1.5px;
   cursor: pointer;
-  transition: all 0.25s ease;
-  padding: clamp(4px, 1vw, 8px) clamp(8px, 1.5vw, 12px);
-  white-space: nowrap;
+  transition: all 0.3s ease;
+  padding: clamp(8px, 1.2vw, 12px) 0;
+  position: relative;
+  opacity: 0.9;
 }
 
-.nav button:hover {
-  opacity: 0.75;
-  transform: translateY(-1px);
-}
-
-.nav button:active {
-  transform: translateY(0);
-}
-
-/* ================= INFO DROPDOWN ================= */
-.dropdownBox {
+.topNav button::after {
+  content: '';
   position: absolute;
-  top: clamp(80px, 12vw, 90px);
-  right: clamp(20px, 5vw, 60px);
-  left: clamp(20px, 5vw, auto);
-  width: auto;
-  max-width: clamp(300px, 85vw, 900px);
-  background: #ffffff;
-  color: #222;
-  border-radius: clamp(12px, 2vw, 18px);
-  padding: clamp(18px, 3vw, 26px);
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  box-shadow: 0 clamp(15px, 3vw, 25px) clamp(30px, 5vw, 60px) rgba(0, 0, 0, 0.35);
-  z-index: 100;
-  animation: slideDown 0.3s ease;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background: white;
+  transition: width 0.3s ease;
 }
 
-@keyframes slideDown {
+.topNav button:hover {
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.topNav button:hover::after,
+.activeNavBtn::after {
+  width: 100%;
+}
+
+.activeNavBtn {
+  opacity: 1 !important;
+}
+
+/* ================= BRANDING CONTENT ================= */
+.brandingContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: clamp(20px, 3vw, 40px);
+  text-align: center;
+}
+
+.logoContainer {
+  margin-bottom: clamp(20px, 3vw, 30px);
+  animation: fadeInDown 0.8s ease;
+}
+
+@keyframes fadeInDown {
   from {
     opacity: 0;
-    transform: translateY(-10px);
+    transform: translateY(-30px);
   }
   to {
     opacity: 1;
@@ -99,130 +91,500 @@
   }
 }
 
-.dropdownBox h2 {
-  margin: 0 0 clamp(8px, 1.5vw, 10px) 0;
-  font-size: clamp(18px, 3.5vw, 22px);
+.brandLogo {
+  width: clamp(200px, 40vw, 340px);
+  height: auto;
+  max-width: 100%;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+}
+
+.platformTitle {
+  font-size: clamp(18px, 3.5vw, 32px);
   font-weight: 900;
-  color: #3c007a;
-  line-height: 1.3;
-}
-
-.dropdownBox p {
-  font-size: clamp(13px, 2.5vw, 15px);
-  color: #333;
-  line-height: 1.6;
-  margin-bottom: clamp(8px, 1.5vw, 12px);
-}
-
-/* ================= PLANS ================= */
-.planContainer {
-  display: flex;
-  gap: clamp(12px, 2vw, 18px);
-  margin-top: clamp(6px, 1.5vw, 8px);
-  flex-wrap: wrap;
-}
-
-.planCard {
-  flex: 1;
-  min-width: clamp(200px, 100%, 250px);
-  padding: clamp(14px, 2.5vw, 16px);
-  border-radius: clamp(10px, 2vw, 14px);
-  background: #f7f7ff;
-  border: 1px solid rgba(0, 0, 0, 0.18);
-  color: #222;
-  box-shadow: 0 clamp(8px, 1.5vw, 12px) clamp(20px, 3vw, 30px) rgba(0, 0, 0, 0.18);
-  transition: transform 0.25s ease-in-out, box-shadow 0.25s ease;
-}
-
-.planCard:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 clamp(12px, 2vw, 16px) clamp(30px, 4vw, 40px) rgba(0, 0, 0, 0.25);
-}
-
-.planCard h3 {
-  margin: 0;
-  font-size: clamp(14px, 2.8vw, 16px);
-  font-weight: 800;
-  color: #5c00c8;
-}
-
-.planCard h2 {
-  margin: clamp(4px, 1vw, 6px) 0 clamp(6px, 1.2vw, 8px) 0;
-  font-size: clamp(16px, 3.5vw, 20px);
-  font-weight: 900;
-  color: #000;
-  line-height: 1.2;
-}
-
-.planCard ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.planCard li {
-  font-size: clamp(12px, 2.3vw, 14px);
-  margin-bottom: clamp(3px, 0.8vw, 4px);
-  color: #333;
-  line-height: 1.5;
-}
-
-/* ================= PLAN BUTTONS ================= */
-.planBtn {
-  margin-top: clamp(10px, 2vw, 12px);
-  padding: clamp(8px, 1.8vw, 10px) clamp(14px, 2.5vw, 18px);
-  border-radius: clamp(8px, 1.5vw, 10px);
-  border: none;
-  background: linear-gradient(135deg, #4d00ff, #9a00ff);
-  color: #fff;
-  font-weight: 800;
-  font-size: clamp(12px, 2.5vw, 14px);
-  cursor: pointer;
-  width: 100%;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-
-.planBtn:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 16px rgba(77, 0, 255, 0.3);
-}
-
-.planBtn:active {
-  transform: scale(1.02);
-}
-
-/* ================= CLOSE BUTTON ================= */
-.closeBtn {
-  margin-top: clamp(14px, 2.5vw, 16px);
-  padding: clamp(8px, 1.8vw, 10px) clamp(20px, 4vw, 28px);
-  border-radius: clamp(20px, 4vw, 30px);
-  border: none;
-  background: linear-gradient(135deg, #7a00ff, #5c00c8);
+  letter-spacing: clamp(2px, 0.4vw, 3px);
   color: white;
-  font-size: clamp(12px, 2.5vw, 14px);
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.25s ease;
-}
-
-.closeBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px) rgba(0, 0, 0, 0.25);
-}
-
-.closeBtn:active {
-  transform: translateY(0);
-}
-
-/* ================= LOGIN ================= */
-.loginWrapper {
-  position: absolute;
-  top: clamp(90px, 15vw, 110px);
-  right: clamp(20px, 8vw, 100px);
-  animation: fadeIn 0.4s ease;
+  margin: 0 0 clamp(20px, 3vw, 30px) 0;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 1s ease 0.2s both;
 }
 
 @keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ================= PLATFORM DESCRIPTION ================= */
+.platformDescription {
+  max-width: clamp(400px, 80%, 600px);
+  animation: fadeIn 1s ease 0.4s both;
+}
+
+.descriptionText {
+  font-size: clamp(14px, 2vw, 16px);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.95);
+  margin-bottom: clamp(24px, 3vw, 32px);
+  font-weight: 400;
+}
+
+/* ================= FEATURE GRID ================= */
+.featureGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(180px, 35vw, 250px), 1fr));
+  gap: clamp(16px, 2.5vw, 24px);
+  margin-top: clamp(20px, 3vw, 30px);
+}
+
+.featureItem {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(12px, 1.8vw, 16px);
+  text-align: left;
+  padding: clamp(12px, 2vw, 16px);
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: clamp(10px, 1.5vw, 12px);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.featureItem:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-3px);
+}
+
+.featureIcon {
+  width: clamp(28px, 4vw, 36px);
+  height: clamp(28px, 4vw, 36px);
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(14px, 2vw, 18px);
+  font-weight: 900;
+  color: white;
+  flex-shrink: 0;
+}
+
+.featureText {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.5vw, 4px);
+}
+
+.featureText strong {
+  font-size: clamp(13px, 2vw, 15px);
+  font-weight: 700;
+  color: white;
+  display: block;
+}
+
+.featureText span {
+  font-size: clamp(11px, 1.8vw, 13px);
+  color: rgba(255, 255, 255, 0.85);
+  line-height: 1.4;
+}
+
+/* ================= DROPDOWN OVERLAY ================= */
+.dropdownOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  z-index: 100;
+  animation: fadeIn 0.3s ease;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: clamp(20px, 3vw, 40px);
+}
+
+/* Custom scrollbar for dropdown */
+.dropdownOverlay::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dropdownOverlay::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dropdownOverlay::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.dropdownOverlay::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.dropdownContent {
+  max-width: clamp(600px, 85vw, 1100px);
+  margin: auto;
+  background: white;
+  border-radius: clamp(16px, 2vw, 24px);
+  padding: clamp(30px, 4vw, 50px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: slideInDown 0.4s ease;
+  position: relative;
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.closeDropdown {
+  position: absolute;
+  top: clamp(15px, 2vw, 20px);
+  right: clamp(15px, 2vw, 20px);
+  width: clamp(32px, 4vw, 40px);
+  height: clamp(32px, 4vw, 40px);
+  border-radius: 50%;
+  background: #f0f0f0;
+  border: none;
+  font-size: clamp(18px, 2.5vw, 22px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  color: #666;
+}
+
+.closeDropdown:hover {
+  background: #e0e0e0;
+  color: #333;
+  transform: rotate(90deg);
+}
+
+.dropdownSection h2 {
+  font-size: clamp(22px, 3.5vw, 28px);
+  font-weight: 900;
+  color: #4a0080;
+  margin: 0 0 clamp(16px, 2.5vw, 24px) 0;
+}
+
+.dropdownSection p {
+  font-size: clamp(14px, 2vw, 16px);
+  line-height: 1.7;
+  color: #333;
+  margin-bottom: clamp(12px, 2vw, 16px);
+}
+
+/* ================= ABOUT LIST ================= */
+.aboutList {
+  list-style: none;
+  padding: 0;
+  margin: clamp(16px, 2.5vw, 24px) 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: clamp(10px, 1.5vw, 12px);
+}
+
+.aboutList li {
+  font-size: clamp(13px, 2vw, 15px);
+  color: #555;
+  padding: clamp(8px, 1.5vw, 10px);
+  background: #f8f8ff;
+  border-radius: clamp(6px, 1vw, 8px);
+  border-left: 3px solid #7000d0;
+}
+
+/* ================= PLANS GRID ================= */
+.plansGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 100%, 280px), 1fr));
+  gap: clamp(16px, 2.5vw, 24px);
+  margin-top: clamp(20px, 3vw, 24px);
+}
+
+.planCard {
+  background: linear-gradient(135deg, #f8f8ff 0%, #ffffff 100%);
+  border-radius: clamp(12px, 2vw, 16px);
+  padding: clamp(20px, 3vw, 28px);
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.planCard:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 40px rgba(74, 0, 128, 0.2);
+  border-color: #7000d0;
+}
+
+.popularPlan {
+  border-color: #7000d0;
+  box-shadow: 0 8px 30px rgba(74, 0, 128, 0.15);
+}
+
+.popularBadge {
+  position: absolute;
+  top: clamp(12px, 2vw, 16px);
+  right: clamp(12px, 2vw, 16px);
+  background: linear-gradient(135deg, #7000d0, #5500a3);
+  color: white;
+  font-size: clamp(10px, 1.6vw, 11px);
+  font-weight: 800;
+  padding: clamp(4px, 0.8vw, 6px) clamp(10px, 1.5vw, 12px);
+  border-radius: clamp(12px, 1.5vw, 16px);
+  letter-spacing: 0.5px;
+}
+
+.planHeader h3 {
+  font-size: clamp(16px, 2.5vw, 18px);
+  font-weight: 800;
+  color: #4a0080;
+  margin: 0 0 clamp(8px, 1.5vw, 12px) 0;
+  letter-spacing: 1px;
+}
+
+.planPrice {
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 900;
+  color: #000;
+  margin-bottom: clamp(16px, 2.5vw, 20px);
+  line-height: 1;
+}
+
+.planPrice span {
+  font-size: clamp(13px, 2vw, 15px);
+  font-weight: 600;
+  color: #666;
+}
+
+.planFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 clamp(16px, 2.5vw, 20px) 0;
+}
+
+.planFeatures li {
+  font-size: clamp(13px, 2vw, 14px);
+  color: #555;
+  margin-bottom: clamp(8px, 1.2vw, 10px);
+  padding-left: clamp(20px, 3vw, 24px);
+  position: relative;
+  line-height: 1.5;
+}
+
+.planFeatures li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #7000d0;
+  font-weight: 900;
+}
+
+.planBtn {
+  width: 100%;
+  padding: clamp(12px, 2vw, 14px);
+  background: linear-gradient(135deg, #7000d0, #5500a3);
+  color: white;
+  border: none;
+  border-radius: clamp(8px, 1.5vw, 10px);
+  font-size: clamp(13px, 2vw, 15px);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.planBtn:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 20px rgba(112, 0, 208, 0.4);
+}
+
+.planBtn:active {
+  transform: scale(0.98);
+}
+
+/* ================= CONTACT GRID ================= */
+.contactGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(200px, 100%, 250px), 1fr));
+  gap: clamp(16px, 2.5vw, 20px);
+  margin-top: clamp(20px, 3vw, 24px);
+}
+
+.contactItem {
+  display: flex;
+  align-items: flex-start;
+  gap: clamp(12px, 2vw, 16px);
+  padding: clamp(16px, 2.5vw, 20px);
+  background: #f8f8ff;
+  border-radius: clamp(10px, 1.5vw, 12px);
+  border: 2px solid #e8e8ff;
+}
+
+.contactIcon {
+  font-size: clamp(24px, 3.5vw, 30px);
+  flex-shrink: 0;
+}
+
+.contactItem strong {
+  display: block;
+  font-size: clamp(13px, 2vw, 15px);
+  font-weight: 700;
+  color: #4a0080;
+  margin-bottom: clamp(4px, 0.8vw, 6px);
+}
+
+.contactItem p {
+  font-size: clamp(13px, 2vw, 14px);
+  color: #555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ================= RIGHT LOGIN SECTION ================= */
+.rightSection {
+  flex: 0 0 clamp(320px, 45vw, 550px);
+  background: linear-gradient(135deg, #f5f5f5 0%, #ffffff 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(20px, 3vw, 40px);
+}
+
+.loginCard {
+  width: 100%;
+  max-width: clamp(320px, 90%, 420px);
+  background: white;
+  padding: clamp(32px, 5vw, 48px) clamp(28px, 4vw, 40px);
+  border-radius: clamp(16px, 2.5vw, 24px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+  animation: fadeInRight 0.8s ease;
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.loginTitle {
+  font-size: clamp(18px, 3.2vw, 22px);
+  font-weight: 800;
+  color: #4a0080;
+  text-align: center;
+  margin: 0 0 clamp(28px, 4vw, 36px) 0;
+  letter-spacing: 0.5px;
+}
+
+/* ================= INPUT GROUPS ================= */
+.inputGroup {
+  margin-bottom: clamp(20px, 3vw, 24px);
+}
+
+.inputGroup label {
+  display: block;
+  font-size: clamp(13px, 2vw, 14px);
+  font-weight: 700;
+  color: #333;
+  margin-bottom: clamp(6px, 1vw, 8px);
+}
+
+.inputGroup input {
+  width: 100%;
+  padding: clamp(12px, 2vw, 14px);
+  border: 2px solid #e0e0e0;
+  border-radius: clamp(8px, 1.5vw, 10px);
+  font-size: clamp(14px, 2.2vw, 15px);
+  color: #333;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.inputGroup input::placeholder {
+  color: #aaa;
+}
+
+.inputGroup input:focus {
+  outline: none;
+  border-color: #7000d0;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(112, 0, 208, 0.1);
+}
+
+.inputGroup input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ================= PASSWORD WRAPPER ================= */
+.passwordWrapper {
+  position: relative;
+  width: 100%;
+}
+
+.passwordToggle {
+  position: absolute;
+  right: clamp(10px, 2vw, 14px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: clamp(4px, 1vw, 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s ease;
+}
+
+.passwordToggle:hover {
+  color: #333;
+}
+
+.passwordToggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.passwordToggle svg {
+  width: clamp(18px, 3vw, 20px);
+  height: clamp(18px, 3vw, 20px);
+}
+
+/* ================= MESSAGES ================= */
+.errorMessage,
+.successMessage {
+  padding: clamp(10px, 2vw, 12px);
+  border-radius: clamp(8px, 1.5vw, 10px);
+  font-size: clamp(13px, 2vw, 14px);
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: clamp(16px, 2.5vw, 20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1vw, 8px);
+  animation: slideInUp 0.4s ease;
+}
+
+@keyframes slideInUp {
   from {
     opacity: 0;
     transform: translateY(10px);
@@ -233,76 +595,41 @@
   }
 }
 
-.loginCard {
-  width: clamp(300px, 90vw, 420px);
-  background: white;
-  color: #333;
-  padding: clamp(24px, 5vw, 36px) clamp(20px, 5vw, 38px);
-  border-radius: clamp(14px, 2.5vw, 20px);
-  box-shadow: 0 clamp(12px, 2.5vw, 18px) clamp(25px, 4vw, 40px) rgba(0, 0, 0, 0.30);
+.errorMessage {
+  background: rgba(255, 59, 48, 0.1);
+  color: #d32f2f;
+  border: 1px solid rgba(255, 59, 48, 0.3);
 }
 
-.loginCard h4 {
-  text-align: center;
-  color: #4b008f;
-  margin-top: 0;
-  margin-bottom: clamp(16px, 3vw, 20px);
-  font-size: clamp(16px, 3.2vw, 20px);
-  font-weight: 800;
-  letter-spacing: clamp(0.5px, 0.1vw, 1px);
+.successMessage {
+  background: rgba(52, 199, 89, 0.1);
+  color: #2e7d32;
+  border: 1px solid rgba(52, 199, 89, 0.3);
 }
 
-.inputGroup {
-  margin-bottom: clamp(14px, 2.5vw, 16px);
+.messageIcon {
+  font-size: clamp(14px, 2.2vw, 16px);
 }
 
-.inputGroup label {
-  display: block;
-  font-size: clamp(12px, 2.3vw, 13px);
-  font-weight: 700;
-  color: #555;
-  margin-bottom: clamp(4px, 1vw, 6px);
-}
-
-.inputGroup input {
-  width: 100%;
-  padding: clamp(10px, 2vw, 11px);
-  border-radius: clamp(8px, 1.5vw, 10px);
-  border: 1px solid #ccc;
-  font-size: clamp(13px, 2.5vw, 14px);
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-.inputGroup input:focus {
-  border-color: #7a00ff;
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(122, 0, 255, 0.1);
-}
-
-.inputGroup input:disabled {
-  background-color: #f5f5f5;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
+/* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
-  padding: clamp(11px, 2.2vw, 13px);
-  background: #7a00ff;
+  padding: clamp(14px, 2.5vw, 16px);
+  background: linear-gradient(135deg, #7000d0, #5500a3);
   color: white;
-  border-radius: clamp(8px, 1.5vw, 10px);
-  font-size: clamp(14px, 2.8vw, 16px);
-  font-weight: 700;
   border: none;
+  border-radius: clamp(8px, 1.5vw, 10px);
+  font-size: clamp(14px, 2.5vw, 16px);
+  font-weight: 800;
+  letter-spacing: 1px;
   cursor: pointer;
-  margin-top: clamp(6px, 1.5vw, 8px);
-  transition: all 0.25s ease;
+  transition: all 0.3s ease;
+  margin-bottom: clamp(16px, 2.5vw, 20px);
 }
 
 .loginBtn:hover:not(:disabled) {
-  background: #5c00c7;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 12px rgba(122, 0, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(112, 0, 208, 0.3);
 }
 
 .loginBtn:active:not(:disabled) {
@@ -310,245 +637,159 @@
 }
 
 .loginBtn:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
-.extraLinks {
-  margin-top: clamp(12px, 2.5vw, 14px);
+/* ================= LOGIN LINKS ================= */
+.loginLinks {
   text-align: center;
-  font-size: clamp(12px, 2.3vw, 14px);
-  line-height: 1.6;
+  font-size: clamp(13px, 2vw, 14px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, 1.5vw, 12px);
+  flex-wrap: wrap;
 }
 
-.extraLinks a {
-  color: #5c00c7;
+.link {
+  color: #7000d0;
   text-decoration: none;
-  margin: 0 clamp(6px, 1.2vw, 8px);
   font-weight: 700;
   transition: all 0.2s ease;
 }
 
-.extraLinks a:hover {
+.link:hover {
+  color: #5500a3;
   text-decoration: underline;
-  color: #7a00ff;
 }
 
-.extraLinks span {
-  color: #999;
-  margin: 0 clamp(4px, 0.8vw, 6px);
+.linkDivider {
+  color: #ccc;
 }
 
 /* ================= RESPONSIVE BREAKPOINTS ================= */
 
-/* Large tablets and small desktops */
-@media (max-width: 1024px) {
-  .header {
-    padding-bottom: clamp(12px, 2vw, 16px);
-  }
-
-  .nav {
-    gap: clamp(12px, 2.5vw, 20px);
-  }
-
-  .dropdownBox {
-    max-width: 80vw;
-  }
-
-  .loginWrapper {
-    right: clamp(20px, 5vw, 40px);
+/* Tablet landscape and smaller desktops */
+@media (max-width: 1200px) {
+  .featureGrid {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
-/* Tablets */
-@media (max-width: 820px) {
+/* Tablet portrait */
+@media (max-width: 900px) {
   .container {
-    overflow-y: auto;
-  }
-
-  .header {
-    padding: clamp(12px, 2.5vw, 16px) clamp(16px, 3vw, 24px);
-  }
-
-  .brandSection {
-    align-items: center;
-    text-align: center;
-  }
-
-  .brandLogo {
-    margin-left: 0;
-  }
-
-  .nav {
-    position: relative;
-    top: auto;
-    right: auto;
-    justify-content: center;
-    margin-top: clamp(12px, 2vw, 16px);
-    gap: clamp(10px, 2vw, 15px);
-  }
-
-  .dropdownBox {
-    position: relative;
-    top: auto;
-    right: auto;
-    left: auto;
-    margin: clamp(16px, 3vw, 20px) auto;
-    max-width: 90vw;
-  }
-
-  .planContainer {
     flex-direction: column;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .planCard {
-    min-width: 100%;
-  }
-
-  .loginWrapper {
-    position: relative;
-    top: auto;
-    right: auto;
-    display: flex;
-    justify-content: center;
-    margin: clamp(16px, 3vw, 24px) auto;
-    padding: 0 clamp(16px, 3vw, 20px);
-  }
-
-  .loginCard {
-    width: 100%;
-    max-width: 450px;
-  }
-}
-
-/* Mobile devices */
-@media (max-width: 480px) {
-  .header {
-    padding: 12px 16px;
-  }
-
-  .logoText {
-    font-size: 14px;
-    letter-spacing: 0.8px;
-    margin-bottom: 8px;
-  }
-
-  .brandLogo {
-    width: 180px;
-  }
-
-  .nav {
-    margin-top: 10px;
-    gap: 8px;
-  }
-
-  .nav button {
-    font-size: 11px;
-    padding: 6px 10px;
-  }
-
-  .dropdownBox {
-    margin: 12px 16px;
-    padding: 16px;
-    border-radius: 12px;
-  }
-
-  .dropdownBox h2 {
-    font-size: 16px;
-  }
-
-  .dropdownBox p {
-    font-size: 12px;
-  }
-
-  .planCard {
-    padding: 12px;
-  }
-
-  .planCard h3 {
-    font-size: 13px;
-  }
-
-  .planCard h2 {
-    font-size: 15px;
-  }
-
-  .planCard li {
-    font-size: 11px;
-  }
-
-  .loginWrapper {
-    margin: 12px auto;
-    padding: 0 12px;
-  }
-
-  .loginCard {
-    padding: 20px 18px;
-  }
-
-  .loginCard h4 {
-    font-size: 15px;
-    margin-bottom: 14px;
-  }
-
-  .inputGroup {
-    margin-bottom: 12px;
-  }
-
-  .inputGroup label {
-    font-size: 11px;
-  }
-
-  .inputGroup input {
-    padding: 9px;
-    font-size: 13px;
-  }
-
-  .loginBtn {
-    padding: 10px;
-    font-size: 13px;
-  }
-
-  .extraLinks {
-    font-size: 11px;
-    margin-top: 10px;
-  }
-}
-
-/* Extra small devices */
-@media (max-width: 360px) {
-  .logoText {
-    font-size: 12px;
-    letter-spacing: 0.5px;
-  }
-
-  .brandLogo {
-    width: 150px;
-  }
-
-  .nav button {
-    font-size: 10px;
-    padding: 5px 8px;
-  }
-
-  .dropdownBox {
-    padding: 12px;
-  }
-
-  .loginCard {
-    padding: 16px 14px;
-  }
-}
-
-/* Print styles */
-@media print {
-  .nav,
-  .dropdownBox,
-  .closeBtn {
+  /* Hide scrollbar but keep functionality */
+  .container::-webkit-scrollbar {
+    width: 0;
     display: none;
   }
 
   .container {
-    background: white;
-    color: black;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .leftSection {
+    min-height: 60vh;
+    flex: none;
+  }
+
+  .topNav {
+    justify-content: center;
+  }
+
+  .brandingContent {
+    padding: clamp(20px, 4vw, 30px) clamp(20px, 4vw, 40px);
+  }
+
+  .featureGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rightSection {
+    flex: none;
+    min-height: 40vh;
+  }
+
+  .plansGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile */
+@media (max-width: 600px) {
+  .topNav {
+    gap: 12px;
+    padding: 20px;
+  }
+
+  .topNav button {
+    font-size: 11px;
+    padding: 8px 0;
+  }
+
+  .platformTitle {
+    font-size: 18px;
+    letter-spacing: 1.5px;
+  }
+
+  .descriptionText {
+    font-size: 13px;
+  }
+
+  .featureItem {
+    padding: 12px;
+  }
+
+  .featureText strong {
+    font-size: 12px;
+  }
+
+  .featureText span {
+    font-size: 11px;
+  }
+
+  .dropdownContent {
+    padding: 24px 20px;
+  }
+
+  .dropdownSection h2 {
+    font-size: 20px;
+  }
+
+  .loginCard {
+    padding: 28px 24px;
+  }
+
+  .loginTitle {
+    font-size: 17px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 380px) {
+  .topNav {
+    gap: 8px;
+    padding: 16px;
+  }
+
+  .topNav button {
+    font-size: 10px;
+    letter-spacing: 1px;
+  }
+
+  .platformTitle {
+    font-size: 16px;
+  }
+
+  .loginCard {
+    padding: 24px 20px;
   }
 }
