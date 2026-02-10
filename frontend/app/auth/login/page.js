@@ -377,11 +377,11 @@ export default function LoginPage() {
 
           <div className={styles.loginLinks}>
             <Link href="/auth/register" className={styles.link}>
-              Create account?
+              New Registration?
             </Link>
             <span className={styles.linkDivider}>|</span>
             <Link href="/auth/forgot-password" className={styles.link}>
-              New Password?
+              Forgot Password?
             </Link>
           </div>
         </div>
