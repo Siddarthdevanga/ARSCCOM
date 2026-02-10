@@ -1,15 +1,5 @@
 /* ================= GLOBAL RESET ================= */
-html,
-body {
-  height: 100%;
-  overflow: hidden;
-  margin: 0;
-  padding: 0;
-}
-
-* {
-  box-sizing: border-box;
-}
+/* Note: Global styles (html, body) should be in global.css, not CSS modules */
 
 /* ================= CONTAINER ================= */
 .container {
