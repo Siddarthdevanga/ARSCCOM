@@ -140,6 +140,11 @@ export default function LoginPage() {
             height={140}
             priority
             className={styles.brandLogo}
+            style={{
+              width: '100%',
+              height: 'auto',
+              maxWidth: '420px'
+            }}
           />
         </div>
 
@@ -271,7 +276,7 @@ export default function LoginPage() {
                 onKeyPress={handleKeyPress}
                 autoComplete="current-password"
                 style={{ 
-                  paddingRight: "45px",
+                  paddingRight: "clamp(40px, 10vw, 45px)",
                   width: "100%",
                   boxSizing: "border-box"
                 }}
@@ -283,18 +288,18 @@ export default function LoginPage() {
                   disabled={isDisabled}
                   style={{
                     position: "absolute",
-                    right: "12px",
+                    right: "clamp(8px, 2vw, 12px)",
                     top: "50%",
                     transform: "translateY(-50%)",
                     background: "none",
                     border: "none",
                     cursor: isDisabled ? "default" : "pointer",
-                    padding: "5px",
+                    padding: "clamp(3px, 1vw, 5px)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     color: "#666",
-                    fontSize: "18px",
+                    fontSize: "clamp(16px, 3.5vw, 18px)",
                     opacity: isDisabled ? 0.5 : 1,
                     transition: "opacity 0.2s, color 0.2s",
                     outline: "none",
@@ -310,14 +315,18 @@ export default function LoginPage() {
                   {showPassword ? (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
+                      width="100%"
+                      height="100%"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      style={{
+                        width: "clamp(18px, 4vw, 20px)",
+                        height: "clamp(18px, 4vw, 20px)"
+                      }}
                     >
                       <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                       <line x1="1" y1="1" x2="23" y2="23" />
@@ -325,14 +334,18 @@ export default function LoginPage() {
                   ) : (
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="20"
-                      height="20"
+                      width="100%"
+                      height="100%"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
+                      style={{
+                        width: "clamp(18px, 4vw, 20px)",
+                        height: "clamp(18px, 4vw, 20px)"
+                      }}
                     >
                       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                       <circle cx="12" cy="12" r="3" />
@@ -350,11 +363,11 @@ export default function LoginPage() {
                 background: isSuccessMessage(error)
                   ? "rgba(0, 200, 83, 0.15)" 
                   : "rgba(255, 0, 0, 0.15)",
-                padding: "10px 12px",
-                borderRadius: "8px",
+                padding: "clamp(8px, 2vw, 10px) clamp(10px, 2.5vw, 12px)",
+                borderRadius: "clamp(6px, 1.5vw, 8px)",
                 textAlign: "center",
-                marginTop: "8px",
-                fontSize: "14px",
+                marginTop: "clamp(6px, 1.5vw, 8px)",
+                fontSize: "clamp(12px, 2.8vw, 14px)",
                 fontWeight: "500",
                 border: isSuccessMessage(error)
                   ? "1px solid rgba(0, 200, 83, 0.3)"
@@ -362,7 +375,7 @@ export default function LoginPage() {
               }}
             >
               {isRedirecting && (
-                <span style={{ marginRight: "8px" }}>
+                <span style={{ marginRight: "clamp(6px, 1.5vw, 8px)" }}>
                   {isSuccessMessage(error) ? "✅" : "⏳"}
                 </span>
               )}
