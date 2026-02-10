@@ -277,10 +277,10 @@ body::before {
 }
 
 .hero h1 {
-  font-size: 106px;
-  font-weight: 900;
+  font-size: 90px;
+  font-weight: 820;
   background: linear-gradient(120deg, #ffffff 20%, #ffb26b 40%, #ffffff 60%);
-  background-size: 200% auto;
+  background-size: 180% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
