@@ -195,6 +195,32 @@ body::before {
   position: relative;
 }
 
+.hero::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.015) 1px,
+      rgba(255, 255, 255, 0.015) 2px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 1px,
+      rgba(255, 255, 255, 0.015) 1px,
+      rgba(255, 255, 255, 0.015) 2px
+    );
+  pointer-events: none;
+  z-index: 0;
+}
+
 .badge {
   display: inline-block;
   padding: 6px 16px;
@@ -204,26 +230,50 @@ body::before {
   margin-bottom: 24px;
   opacity: 0;
   transform: translateY(30px);
+  position: relative;
+  z-index: 1;
 }
 
 .scrollContainer {
   width: 100%;
   overflow: hidden;
   margin: 20px 0;
+  position: relative;
+}
+
+.scrollContainer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 2px,
+      rgba(255, 255, 255, 0.02) 2px,
+      rgba(255, 255, 255, 0.02) 4px
+    );
+  pointer-events: none;
+  z-index: 1;
 }
 
 .scrollText {
-  font-size: 28px;
-  font-weight: 340;
+  font-size: 20px;
+  font-weight: 400;
   white-space: nowrap;
   display: inline-block;
   background: linear-gradient(120deg, #ffffff 20%, #ffb26b 40%, #ffffff 60%);
-  background-size: 180% auto;
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: moveRight 15s linear infinite, shimmer 3s linear infinite;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
+  position: relative;
+  z-index: 2;
 }
 
 .hero h1 {
@@ -237,20 +287,24 @@ body::before {
   animation: shimmer 3s linear infinite;
   opacity: 0;
   transform: translateY(40px);
+  position: relative;
+  z-index: 1;
 }
 
 .hero h2 {
-  font-size: 20px;
-  font-weight: 500;
-  margin: 12px 0;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 14px 0;
   background: linear-gradient(120deg, #ff6a00 20%, #ffd1a3 40%, #ff6a00 60%);
-  background-size: 180% auto;
+  background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer 4s linear infinite;
   opacity: 0;
   transform: translateY(40px);
+  position: relative;
+  z-index: 1;
 }
 
 .hero p {
@@ -260,6 +314,8 @@ body::before {
   font-size: 18px;
   opacity: 0;
   transform: translateY(30px);
+  position: relative;
+  z-index: 1;
 }
 
 .heroButtons {
@@ -269,6 +325,8 @@ body::before {
   opacity: 0;
   transform: translateY(30px);
   flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
 }
 
 .btnPrimary {
@@ -1856,7 +1914,7 @@ body::before {
 @media(max-width:768px){
   .hero h1 { font-size: 56px; }
   .hero h2 { font-size: 18px; }
-  .scrollText { font-size: 24px; }
+  .scrollText { font-size: 18px; }
   .dashboardCards { grid-template-columns: 1fr; }
   .dashFeatures { grid-template-columns: 1fr; gap: 20px; }
   .pricingCards { grid-template-columns: 1fr; }
@@ -1879,7 +1937,7 @@ body::before {
   .featuresGrid { grid-template-columns: 1fr; }
   .hero h1 { font-size: 42px; }
   .hero h2 { font-size: 16px; }
-  .scrollText { font-size: 20px; }
+  .scrollText { font-size: 16px; }
   .whySection h2 { font-size: 2rem; }
   .title { font-size: 36px; }
 }
@@ -1888,4 +1946,5 @@ body::before {
   .securityCards { grid-template-columns: 1fr; }
   .hero h1 { font-size: 36px; }
   .hero h2 { font-size: 14px; }
+  .scrollText { font-size: 14px; }
 }
