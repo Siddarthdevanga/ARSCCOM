@@ -31,7 +31,7 @@ const checkSubscriptionStatus = (req, res, next) => {
   
   res.json = function(data) {
     // Check if login was successful and subscription is expired
-    if (data?.subscription_status === "expired") {
+    if (data?.company?.subscription_status === "expired") {
       return originalJson({
         ...data,
         redirect: "/auth/subscription",
@@ -48,10 +48,19 @@ const checkSubscriptionStatus = (req, res, next) => {
    REGISTER
    --------------------------------------------------------
    Creates:
-   - Company
+   - Company (with optional WhatsApp URL)
    - Admin User
-   - Uploads Logo (optional)
-
+   - Uploads Logo (required)
+   
+   Expected Fields:
+   - companyName (required)
+   - email (required)
+   - phone (required)
+   - conferenceRooms (required)
+   - password (required)
+   - whatsappUrl (optional) - Format: https://wa.me/... or https://api.whatsapp.com/...
+   - logo (file, required)
+   
    Frontend expectation:
    - After success, redirect to Subscription Page
 ====================================================== */
@@ -66,9 +75,17 @@ router.post(
    --------------------------------------------------------
    Returns:
    - JWT Token
-   - User
-   - Company Subscription Context
-
+   - User { id, email }
+   - Company { 
+       id, 
+       name, 
+       slug, 
+       logo_url,
+       whatsapp_url (optional),
+       subscription_status,
+       plan 
+     }
+   
    subscription_status expected values:
    "pending" | "trial" | "active" | "expired" | "cancelled"
 ====================================================== */
@@ -84,6 +101,9 @@ router.post(
    Returns:
    - Always success message (no email leak)
    - Sends reset code internally
+   
+   Rate limiting:
+   - 30 seconds cooldown between requests
 ====================================================== */
 router.post("/forgot-password", asyncHandler(forgotPassword));
 
@@ -92,11 +112,12 @@ router.post("/forgot-password", asyncHandler(forgotPassword));
    --------------------------------------------------------
    Validates:
    - Email
-   - OTP Code
-   - New Password
-
+   - OTP Code (6-character hex)
+   - New Password (min 8 characters)
+   
    Updates:
-   - Password
+   - Password hash
+   - Clears reset tokens
 ====================================================== */
 router.post("/reset-password", asyncHandler(resetPassword));
 
