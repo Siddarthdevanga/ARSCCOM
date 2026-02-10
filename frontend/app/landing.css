@@ -213,12 +213,12 @@ body::before {
 }
 
 .scrollText {
-  font-size: 32px;
-  font-weight: 400;
+  font-size: 28px;
+  font-weight: 340;
   white-space: nowrap;
   display: inline-block;
   background: linear-gradient(120deg, #ffffff 20%, #ffb26b 40%, #ffffff 60%);
-  background-size: 200% auto;
+  background-size: 180% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
