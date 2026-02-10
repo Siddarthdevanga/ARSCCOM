@@ -71,7 +71,8 @@ export const getVisitorPass = async (req, res) => {
         v.check_out,
         v.status,
         c.name AS company_name,
-        c.logo_url AS company_logo
+        c.logo_url AS company_logo,
+        c.whatsapp_url AS company_whatsapp
       FROM visitors v
       INNER JOIN companies c ON c.id = v.company_id
       WHERE v.visitor_code = ?
@@ -94,7 +95,8 @@ export const getVisitorPass = async (req, res) => {
       success: true,
       company: {
         name: v.company_name,
-        logo: v.company_logo
+        logo: v.company_logo,
+        whatsappUrl: v.company_whatsapp || null
       },
       visitor: {
         visitorCode: v.visitor_code,
@@ -121,6 +123,8 @@ export const getVisitorPass = async (req, res) => {
 
 /* =========================================================
    PUBLIC VISITOR PASS (NO AUTH)
+   --------------------------------------------------------
+   INCLUDES: WhatsApp URL for visitor support/group access
 ========================================================= */
 export const getPublicVisitorPass = async (req, res) => {
   try {
@@ -145,7 +149,8 @@ export const getPublicVisitorPass = async (req, res) => {
         v.check_out,
         v.status,
         c.name AS company_name,
-        c.logo_url AS company_logo
+        c.logo_url AS company_logo,
+        c.whatsapp_url AS company_whatsapp
       FROM visitors v
       INNER JOIN companies c ON c.id = v.company_id
       WHERE v.visitor_code = ?
@@ -167,7 +172,8 @@ export const getPublicVisitorPass = async (req, res) => {
       success: true,
       company: {
         name: v.company_name,
-        logo: v.company_logo
+        logo: v.company_logo,
+        whatsappUrl: v.company_whatsapp || null
       },
       visitor: {
         visitorCode: v.visitor_code,
