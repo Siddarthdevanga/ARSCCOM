@@ -6,9 +6,9 @@
   overflow: hidden;
 }
 
-/* ================= LEFT BRANDING SECTION - 65% ================= */
+/* ================= LEFT BRANDING SECTION - 55% ================= */
 .leftSection {
-  flex: 0 0 65%;
+  flex: 0 0 55%;
   background: linear-gradient(135deg, #5d00b8 0%, #7a19d6 50%, #6200c4 100%);
   display: flex;
   flex-direction: column;
@@ -21,8 +21,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: clamp(48px, 6vw, 80px);
-  padding: clamp(32px, 4vh, 48px) clamp(36px, 4vw, 60px);
+  gap: clamp(40px, 5vw, 64px);
+  padding: clamp(28px, 3.5vh, 42px) clamp(32px, 3.5vw, 52px);
   position: relative;
   z-index: 10;
 }
@@ -32,12 +32,12 @@
   border: none;
   color: white;
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(14px, 1.6vw, 16px);
+  font-size: clamp(13px, 1.4vw, 15px);
   font-weight: 700;
-  letter-spacing: 2px;
+  letter-spacing: 1.8px;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  padding: clamp(12px, 1.8vh, 14px) clamp(16px, 2vw, 20px);
+  padding: clamp(10px, 1.5vh, 12px) clamp(14px, 1.8vw, 18px);
   position: relative;
   opacity: 0.9;
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -81,12 +81,12 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: clamp(32px, 5vh, 60px) clamp(40px, 5vw, 80px);
+  padding: clamp(28px, 4.5vh, 52px) clamp(36px, 4.5vw, 70px);
   text-align: center;
 }
 
 .logoContainer {
-  margin-bottom: clamp(32px, 4.5vh, 48px);
+  margin-bottom: clamp(28px, 4vh, 40px);
   animation: fadeInScale 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -101,9 +101,9 @@
   }
 }
 
-/* SMALLER LOGO */
+/* SMALLER LOGO - MORE PROFESSIONAL */
 .brandLogo {
-  width: clamp(200px, 28vw, 280px);
+  width: clamp(180px, 24vw, 240px);
   height: auto;
   max-width: 100%;
   filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.35));
@@ -111,11 +111,11 @@
 
 .platformTitle {
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(22px, 3.5vw, 38px);
+  font-size: clamp(20px, 3vw, 32px);
   font-weight: 900;
-  letter-spacing: clamp(3px, 0.5vw, 5px);
+  letter-spacing: clamp(2.5px, 0.45vw, 4.5px);
   color: white;
-  margin: 0 0 clamp(16px, 2.5vh, 24px) 0;
+  margin: 0 0 clamp(14px, 2vh, 20px) 0;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   animation: fadeIn 1s ease 0.3s both;
   line-height: 1.2;
@@ -123,11 +123,11 @@
 
 .platformTagline {
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(14px, 2vw, 18px);
+  font-size: clamp(13px, 1.8vw, 16px);
   color: rgba(255, 255, 255, 0.95);
   font-weight: 500;
   margin: 0;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.6px;
   animation: fadeIn 1s ease 0.5s both;
   max-width: 90%;
   line-height: 1.6;
@@ -469,9 +469,9 @@
   line-height: 1.6;
 }
 
-/* ================= RIGHT LOGIN SECTION - 35% ================= */
+/* ================= RIGHT LOGIN SECTION - 45% ================= */
 .rightSection {
-  flex: 0 0 35%;
+  flex: 0 0 45%;
   background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
   display: flex;
   align-items: center;
@@ -482,11 +482,11 @@
 
 .loginCard {
   width: 100%;
-  max-width: clamp(320px, 90%, 420px);
+  max-width: clamp(320px, 88%, 400px);
   background: white;
-  padding: clamp(40px, 7vh, 60px) clamp(36px, 6vw, 52px);
-  border-radius: clamp(20px, 3.2vw, 30px);
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.12);
+  padding: clamp(36px, 6vh, 52px) clamp(32px, 5vw, 44px);
+  border-radius: clamp(18px, 2.8vw, 26px);
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.12);
   animation: fadeInRight 0.9s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -503,35 +503,35 @@
 
 .loginTitle {
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(20px, 3.8vw, 26px);
+  font-size: clamp(18px, 3.2vw, 22px);
   font-weight: 800;
   color: #5d00b8;
   text-align: center;
-  margin: 0 0 clamp(36px, 6vh, 48px) 0;
-  letter-spacing: 1px;
+  margin: 0 0 clamp(32px, 5.5vh, 42px) 0;
+  letter-spacing: 0.8px;
 }
 
 /* ================= INPUT GROUPS ================= */
 .inputGroup {
-  margin-bottom: clamp(24px, 4vh, 32px);
+  margin-bottom: clamp(20px, 3.5vh, 28px);
 }
 
 .inputGroup label {
   display: block;
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(14px, 2.3vw, 16px);
+  font-size: clamp(13px, 2.1vw, 15px);
   font-weight: 700;
   color: #2a2a2a;
-  margin-bottom: clamp(8px, 1.4vh, 10px);
+  margin-bottom: clamp(7px, 1.2vh, 9px);
 }
 
 .inputGroup input {
   width: 100%;
-  padding: clamp(14px, 2.4vh, 18px);
+  padding: clamp(13px, 2.2vh, 16px);
   border: 2px solid #ddd;
-  border-radius: clamp(12px, 1.8vw, 14px);
+  border-radius: clamp(10px, 1.6vw, 12px);
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(15px, 2.5vw, 17px);
+  font-size: clamp(14px, 2.3vw, 16px);
   color: #2a2a2a;
   transition: all 0.35s ease;
   background: #fafafa;
@@ -597,17 +597,17 @@
 /* ================= MESSAGES ================= */
 .errorMessage,
 .successMessage {
-  padding: clamp(12px, 2.2vh, 16px) clamp(16px, 2.8vw, 20px);
-  border-radius: clamp(12px, 1.8vw, 14px);
+  padding: clamp(11px, 2vh, 14px) clamp(14px, 2.5vw, 18px);
+  border-radius: clamp(10px, 1.6vw, 12px);
   font-family: 'Poppins', sans-serif;
-  font-size: clamp(14px, 2.3vw, 16px);
+  font-size: clamp(13px, 2.1vw, 15px);
   font-weight: 600;
   text-align: center;
-  margin-bottom: clamp(20px, 3.5vh, 26px);
+  margin-bottom: clamp(18px, 3.2vh, 24px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(8px, 1.4vw, 10px);
+  gap: clamp(7px, 1.2vw, 9px);
   animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -641,18 +641,18 @@
 /* ================= LOGIN BUTTON ================= */
 .loginBtn {
   width: 100%;
-  padding: clamp(16px, 2.8vh, 20px);
+  padding: clamp(14px, 2.5vh, 18px);
   background: linear-gradient(135deg, #7a19d6, #5d00b8);
   color: white;
   border: none;
-  border-radius: clamp(12px, 1.8vw, 14px);
+  border-radius: clamp(10px, 1.6vw, 12px);
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(16px, 2.8vw, 18px);
+  font-size: clamp(15px, 2.6vw, 17px);
   font-weight: 800;
-  letter-spacing: 1.4px;
+  letter-spacing: 1.2px;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-bottom: clamp(20px, 3.5vh, 26px);
+  margin-bottom: clamp(18px, 3.2vh, 24px);
   text-transform: uppercase;
 }
 
@@ -674,11 +674,11 @@
 .loginLinks {
   text-align: center;
   font-family: 'Poppins', sans-serif;
-  font-size: clamp(14px, 2.3vw, 16px);
+  font-size: clamp(13px, 2.1vw, 15px);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(12px, 2vw, 16px);
+  gap: clamp(10px, 1.8vw, 14px);
   flex-wrap: wrap;
 }
 
@@ -704,21 +704,21 @@
 
 @media (max-width: 1400px) {
   .leftSection {
-    flex: 0 0 62%;
+    flex: 0 0 52%;
   }
   
   .rightSection {
-    flex: 0 0 38%;
+    flex: 0 0 48%;
   }
 }
 
 @media (max-width: 1200px) {
   .leftSection {
-    flex: 0 0 58%;
+    flex: 0 0 50%;
   }
   
   .rightSection {
-    flex: 0 0 42%;
+    flex: 0 0 50%;
   }
 }
 
