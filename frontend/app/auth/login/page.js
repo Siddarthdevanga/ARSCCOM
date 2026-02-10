@@ -67,7 +67,6 @@ export default function LoginPage() {
       localStorage.setItem("company", JSON.stringify(company));
 
       const status = company?.subscription_status?.toLowerCase() || "pending";
-      console.log("SUBSCRIPTION STATUS →", status);
 
       if (["active", "trial"].includes(status)) {
         const successMessage = status === "trial" 
@@ -141,8 +140,8 @@ export default function LoginPage() {
             <Image
               src="/Brand Logo.png"
               alt="Promeet Logo"
-              width={300}
-              height={100}
+              width={380}
+              height={120}
               priority
               className={styles.brandLogo}
             />
@@ -150,44 +149,26 @@ export default function LoginPage() {
 
           <h1 className={styles.platformTitle}>VISITOR MANAGEMENT PLATFORM</h1>
 
-          <div className={styles.platformDescription}>
-            <p className={styles.descriptionText}>
-              Streamline visitor check-ins, enhance security, and manage conference rooms 
-              with our comprehensive digital platform.
-            </p>
-            
-            <div className={styles.featureGrid}>
-              <div className={styles.featureItem}>
-                <div className={styles.featureIcon}>✓</div>
-                <div className={styles.featureText}>
-                  <strong>Digital Check-in</strong>
-                  <span>Contactless visitor registration</span>
-                </div>
-              </div>
-              
-              <div className={styles.featureItem}>
-                <div className={styles.featureIcon}>✓</div>
-                <div className={styles.featureText}>
-                  <strong>Smart Scheduling</strong>
-                  <span>Automated meeting coordination</span>
-                </div>
-              </div>
-              
-              <div className={styles.featureItem}>
-                <div className={styles.featureIcon}>✓</div>
-                <div className={styles.featureText}>
-                  <strong>Room Management</strong>
-                  <span>Efficient space utilization</span>
-                </div>
-              </div>
-              
-              <div className={styles.featureItem}>
-                <div className={styles.featureIcon}>✓</div>
-                <div className={styles.featureText}>
-                  <strong>Real-time Tracking</strong>
-                  <span>Monitor visitor activity</span>
-                </div>
-              </div>
+          <p className={styles.platformTagline}>
+            Streamline check-ins • Enhance security • Optimize space utilization
+          </p>
+
+          <div className={styles.featureList}>
+            <div className={styles.featureItem}>
+              <span className={styles.featureIcon}>✓</span>
+              <span className={styles.featureLabel}>Digital visitor registration & badge printing</span>
+            </div>
+            <div className={styles.featureItem}>
+              <span className={styles.featureIcon}>✓</span>
+              <span className={styles.featureLabel}>Smart conference room scheduling</span>
+            </div>
+            <div className={styles.featureItem}>
+              <span className={styles.featureIcon}>✓</span>
+              <span className={styles.featureLabel}>Real-time visitor tracking & notifications</span>
+            </div>
+            <div className={styles.featureItem}>
+              <span className={styles.featureIcon}>✓</span>
+              <span className={styles.featureLabel}>Comprehensive analytics dashboard</span>
             </div>
           </div>
         </div>
@@ -203,15 +184,23 @@ export default function LoginPage() {
                     digitalize visitor flow, improve security, and enhance organizational efficiency.
                   </p>
                   <p>
-                    Manage visitors, schedule meetings, track conference rooms, and maintain 
-                    complete control — all in one unified platform.
+                    Transform your workplace with seamless visitor management, automated meeting 
+                    coordination, and intelligent space utilization — all in one powerful platform.
                   </p>
-                  <ul className={styles.aboutList}>
-                    <li>✓ Enterprise-grade security</li>
-                    <li>✓ Cloud-based accessibility</li>
-                    <li>✓ Customizable workflows</li>
-                    <li>✓ Analytics & reporting</li>
-                  </ul>
+                  <div className={styles.statsGrid}>
+                    <div className={styles.statItem}>
+                      <strong>99.9%</strong>
+                      <span>Uptime</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <strong>500+</strong>
+                      <span>Companies</span>
+                    </div>
+                    <div className={styles.statItem}>
+                      <strong>50K+</strong>
+                      <span>Daily Visitors</span>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -225,10 +214,10 @@ export default function LoginPage() {
                         <div className={styles.planPrice}>₹49<span>/15 days</span></div>
                       </div>
                       <ul className={styles.planFeatures}>
-                        <li>✓ 100 Visitor Bookings</li>
-                        <li>✓ 100 Conference Bookings</li>
-                        <li>✓ 2 Conference Rooms</li>
-                        <li>✓ Email Support</li>
+                        <li>100 Visitor Bookings</li>
+                        <li>100 Conference Bookings</li>
+                        <li>2 Conference Rooms</li>
+                        <li>Email Support</li>
                       </ul>
                       <Link href="/auth/register">
                         <button className={styles.planBtn}>Start Trial</button>
@@ -236,16 +225,16 @@ export default function LoginPage() {
                     </div>
 
                     <div className={`${styles.planCard} ${styles.popularPlan}`}>
-                      <div className={styles.popularBadge}>POPULAR</div>
+                      <div className={styles.popularBadge}>MOST POPULAR</div>
                       <div className={styles.planHeader}>
                         <h3>BUSINESS</h3>
                         <div className={styles.planPrice}>₹500<span>/month</span></div>
                       </div>
                       <ul className={styles.planFeatures}>
-                        <li>✓ Unlimited Visitors</li>
-                        <li>✓ 1000 Conference Bookings</li>
-                        <li>✓ 6 Conference Rooms</li>
-                        <li>✓ Priority Support</li>
+                        <li>Unlimited Visitors</li>
+                        <li>1000 Conference Bookings</li>
+                        <li>6 Conference Rooms</li>
+                        <li>Priority Support</li>
                       </ul>
                       <Link href="/auth/register">
                         <button className={styles.planBtn}>Get Started</button>
@@ -258,10 +247,10 @@ export default function LoginPage() {
                         <div className={styles.planPrice}>Custom</div>
                       </div>
                       <ul className={styles.planFeatures}>
-                        <li>✓ Unlimited Everything</li>
-                        <li>✓ Custom Integrations</li>
-                        <li>✓ Dedicated Account Manager</li>
-                        <li>✓ 24/7 Support</li>
+                        <li>Unlimited Everything</li>
+                        <li>Custom Integrations</li>
+                        <li>Dedicated Manager</li>
+                        <li>24/7 Support</li>
                       </ul>
                       <Link href="/auth/contact-us">
                         <button className={styles.planBtn}>Contact Sales</button>
@@ -297,8 +286,8 @@ export default function LoginPage() {
                       </div>
                     </div>
                   </div>
-                  <p style={{ marginTop: "1.5rem", textAlign: "center" }}>
-                    We're here to help you streamline your visitor management.
+                  <p className={styles.contactFooter}>
+                    Our dedicated team is ready to help you streamline your visitor management.
                   </p>
                 </div>
               )}
