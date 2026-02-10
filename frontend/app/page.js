@@ -676,9 +676,12 @@ export default function LandingPage() {
             <span>© Zodopt</span>
           </Link>
           <div className="footerLinksInline">
-            <a href="#privacy">Privacy Policy</a>
-            <a href="#terms">Terms of Service</a>
-            <a href="#security">Security</a>
+            <Link href="https://zodopt.com/privacy-policy/" target="_blank" rel="noopener noreferrer">
+              Privacy Policy
+            </Link>
+            <Link href="https://zodopt.com/terms-and-conditions/" target="_blank" rel="noopener noreferrer">
+              Terms and Conditions
+            </Link>
           </div>
         </div>
       </footer>
