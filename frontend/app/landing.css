@@ -1706,16 +1706,19 @@ body::before {
   color: #fff;
 }
 
-.gsFeatures {
+.gs-features {
   max-width: 1200px;
   margin: 40px auto 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 25px;
 }
 
-.gsFeatures h4 {
-  margin: 0 0 5px 0;
+.feature-box {
+  padding: 25px;
+  border-radius: 18px;
+  background: #51174c;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
 .fadeUp {
