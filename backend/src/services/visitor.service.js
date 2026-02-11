@@ -282,12 +282,12 @@ export const saveVisitor = async (companyId, data, file) => {
     console.log("✅ Visitor saved successfully with ID:", visitorId);
 
     /* ======================================================
-       SEND MAIL (NON-BLOCKING)
+       SEND MAIL (NON-BLOCKING) - WITH WHATSAPP URL
     ======================================================= */
     if (email) {
       try {
         const [[companyInfo]] = await db.execute(
-          `SELECT name, logo_url FROM companies WHERE id = ?`,
+          `SELECT name, logo_url, whatsapp_url FROM companies WHERE id = ?`,
           [companyId]
         );
 
@@ -298,6 +298,7 @@ export const saveVisitor = async (companyId, data, file) => {
             id: companyId,
             name: companyInfo.name,
             logo: companyInfo.logo_url,
+            whatsapp_url: companyInfo.whatsapp_url || null,
           },
           visitor: {
             visitorCode,
