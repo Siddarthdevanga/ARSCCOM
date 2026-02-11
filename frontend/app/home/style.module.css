@@ -394,6 +394,329 @@ body::-webkit-scrollbar {
   margin-bottom: clamp(24px, 3.5vh, 32px);
 }
 
+/* ================= SETTINGS VIEW ================= */
+.settingsView {
+  width: 100%;
+  max-width: 900px;
+  animation: fadeInUp 0.6s ease;
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  gap: clamp(16px, 2.5vw, 20px);
+  margin-bottom: clamp(28px, 4.5vh, 36px);
+  padding-bottom: clamp(20px, 3vh, 24px);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.settingsHeaderIcon {
+  width: clamp(56px, 9vw, 72px);
+  height: clamp(56px, 9vw, 72px);
+  border-radius: clamp(14px, 2vw, 18px);
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  display: grid;
+  place-items: center;
+  color: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+}
+
+.settingsTitle {
+  margin: 0 0 clamp(4px, 0.8vh, 6px) 0;
+  font-size: clamp(24px, 3.8vw, 32px);
+  font-weight: 900;
+  letter-spacing: clamp(0.5px, 0.1vw, 1px);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.settingsSubtitle {
+  margin: 0;
+  font-size: clamp(13px, 2.1vw, 15px);
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 500;
+}
+
+/* ================= SETTINGS TABS ================= */
+.settingsTabs {
+  display: flex;
+  gap: clamp(8px, 1.5vw, 12px);
+  margin-bottom: clamp(24px, 3.5vh, 32px);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.settingsTabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tab,
+.activeTab {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 1vw, 8px);
+  padding: clamp(10px, 1.5vh, 12px) clamp(16px, 2.5vw, 20px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: clamp(10px, 1.5vw, 12px);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: clamp(13px, 2.1vw, 14px);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.activeTab {
+  background: white;
+  border-color: white;
+  color: #5d00c7;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.3);
+}
+
+.activeTab svg {
+  color: #5d00c7;
+}
+
+/* ================= SETTINGS CONTENT ================= */
+.settingsContent {
+  background: white;
+  border-radius: clamp(14px, 2vw, 18px);
+  padding: clamp(24px, 3.5vh, 32px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  animation: fadeInUp 0.4s ease;
+}
+
+.settingsSection {
+  width: 100%;
+}
+
+.settingsSectionTitle {
+  margin: 0 0 clamp(20px, 3vh, 24px) 0;
+  font-size: clamp(18px, 2.8vw, 20px);
+  font-weight: 800;
+  color: #5d00c7;
+  letter-spacing: 0.3px;
+}
+
+/* ================= FORM ELEMENTS ================= */
+.formGroup {
+  margin-bottom: clamp(20px, 3vh, 24px);
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: clamp(6px, 1vh, 8px);
+  font-size: clamp(13px, 2.1vw, 14px);
+  font-weight: 700;
+  color: #2e2e2e;
+  letter-spacing: 0.2px;
+}
+
+.input {
+  width: 100%;
+  padding: clamp(12px, 1.8vh, 14px) clamp(14px, 2.2vw, 16px);
+  border: 2px solid #e0e0e0;
+  border-radius: clamp(8px, 1.2vw, 10px);
+  font-size: clamp(14px, 2.2vw, 15px);
+  font-weight: 500;
+  color: #2e2e2e;
+  transition: all 0.3s ease;
+  background: #fafafa;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #7a00ff;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(122, 0, 255, 0.1);
+}
+
+.input::placeholder {
+  color: #999;
+}
+
+.readOnlyInput {
+  background: #f0f0f0;
+  color: #666;
+  cursor: not-allowed;
+}
+
+/* ================= PASSWORD INPUT ================= */
+.passwordInput {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.passwordInput .input {
+  padding-right: clamp(44px, 7vw, 52px);
+}
+
+.passwordToggle {
+  position: absolute;
+  right: clamp(12px, 2vw, 14px);
+  background: transparent;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: clamp(6px, 1vh, 8px);
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+}
+
+.passwordToggle:hover {
+  color: #7a00ff;
+}
+
+/* ================= LOGO PREVIEW ================= */
+.logoPreview {
+  width: clamp(120px, 20vw, 150px);
+  height: clamp(120px, 20vw, 150px);
+  border-radius: clamp(10px, 1.5vw, 12px);
+  border: 2px solid #e0e0e0;
+  display: grid;
+  place-items: center;
+  margin-bottom: clamp(12px, 2vh, 16px);
+  background: #fafafa;
+  overflow: hidden;
+}
+
+.logoPreview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* ================= UPLOAD BUTTON ================= */
+.uploadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: clamp(8px, 1.2vw, 10px);
+  padding: clamp(10px, 1.5vh, 12px) clamp(16px, 2.5vw, 20px);
+  background: linear-gradient(135deg, #7a00ff, #9500ff);
+  color: white;
+  border: none;
+  border-radius: clamp(8px, 1.2vw, 10px);
+  font-size: clamp(13px, 2.1vw, 14px);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);
+}
+
+.uploadBtn:hover {
+  background: linear-gradient(135deg, #9500ff, #b000ff);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(122, 0, 255, 0.4);
+}
+
+/* ================= FIELD HELPERS ================= */
+.fieldHelp {
+  margin: clamp(6px, 1vh, 8px) 0 0 0;
+  font-size: clamp(12px, 1.9vw, 13px);
+  color: #666;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.fieldError {
+  margin: clamp(6px, 1vh, 8px) 0 0 0;
+  font-size: clamp(12px, 1.9vw, 13px);
+  color: #ff1744;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.fileSelected {
+  margin: clamp(8px, 1.2vh, 10px) 0 0 0;
+  font-size: clamp(13px, 2.1vw, 14px);
+  color: #00c853;
+  font-weight: 600;
+}
+
+/* ================= READ-ONLY SECTION ================= */
+.readOnlySection {
+  margin-top: clamp(24px, 3.5vh, 32px);
+  padding: clamp(16px, 2.5vh, 20px);
+  background: #f8f5ff;
+  border-radius: clamp(10px, 1.5vw, 12px);
+  border: 2px solid #ede7ff;
+}
+
+.readOnlySection h4 {
+  margin: 0 0 clamp(12px, 2vh, 16px) 0;
+  font-size: clamp(14px, 2.2vw, 15px);
+  font-weight: 800;
+  color: #5d00c7;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.readOnlyRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(10px, 1.5vh, 12px) 0;
+  border-bottom: 1px solid #ede7ff;
+  font-size: clamp(13px, 2.1vw, 14px);
+}
+
+.readOnlyRow:last-child {
+  border-bottom: none;
+}
+
+.readOnlyRow span {
+  color: #666;
+  font-weight: 500;
+}
+
+.readOnlyRow strong {
+  color: #5d00c7;
+  font-weight: 700;
+}
+
+/* ================= SAVE BUTTON ================= */
+.saveBtn {
+  width: 100%;
+  padding: clamp(14px, 2.2vh, 16px);
+  background: linear-gradient(135deg, #7a00ff, #9500ff);
+  color: white;
+  border: none;
+  border-radius: clamp(10px, 1.5vw, 12px);
+  font-size: clamp(14px, 2.2vw, 15px);
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(122, 0, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: clamp(20px, 3vh, 24px);
+}
+
+.saveBtn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #9500ff, #b000ff);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 28px rgba(122, 0, 255, 0.45);
+}
+
+.saveBtn:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.saveBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ================= OVERLAY ================= */
 .overlay {
   position: fixed;
@@ -674,6 +997,9 @@ body::-webkit-scrollbar {
   margin-bottom: clamp(24px, 3.5vh, 32px);
   padding-top: clamp(20px, 3vh, 24px);
   border-top: 2px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2vh, 14px);
 }
 
 .menuItem {
@@ -1294,6 +1620,11 @@ body::-webkit-scrollbar {
   .reportsGrid {
     grid-template-columns: 1fr;
   }
+
+  .settingsTabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
 }
 
 @media (max-width: 600px) {
@@ -1340,6 +1671,16 @@ body::-webkit-scrollbar {
 
   .reportsGrid {
     gap: clamp(16px, 2.5vw, 18px);
+  }
+
+  .settingsTabs {
+    gap: clamp(6px, 1vw, 8px);
+  }
+
+  .tab,
+  .activeTab {
+    font-size: clamp(12px, 2vw, 13px);
+    padding: clamp(8px, 1.2vh, 10px) clamp(12px, 2vw, 14px);
   }
 }
 
