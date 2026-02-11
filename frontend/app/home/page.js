@@ -13,7 +13,11 @@ import {
   Clock,
   TrendingUp,
   Download,
-  AlertCircle
+  AlertCircle,
+  BarChart3,
+  Calendar,
+  Filter,
+  ArrowLeft
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -21,7 +25,11 @@ export default function Home() {
   const router = useRouter();
   const [company, setCompany] = useState(null);
 
-  const [showSub, setShowSub] = useState(false);
+  // Panel states
+  const [showPanel, setShowPanel] = useState(false);
+  const [panelView, setPanelView] = useState("subscription"); // "subscription" or "reports"
+  
+  // Subscription states
   const [subData, setSubData] = useState(null);
   const [loadingSub, setLoadingSub] = useState(false);
   const [subError, setSubError] = useState("");
@@ -30,13 +38,18 @@ export default function Home() {
   const [upgradingBusiness, setUpgradingBusiness] = useState(false);
   const [upgradingEnterprise, setUpgradingEnterprise] = useState(false);
 
-  // Reports panel states
-  const [showReports, setShowReports] = useState(false);
+  // Reports states
   const [exportStats, setExportStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [downloadError, setDownloadError] = useState("");
+
+  // Detailed reports overlay
+  const [showDetailedReports, setShowDetailedReports] = useState(false);
+
+  // Logout modal
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   /* ================= AUTH CHECK ================= */
   useEffect(() => {
@@ -119,15 +132,15 @@ export default function Home() {
       switch (type) {
         case "visitors":
           endpoint = "/api/exports/visitors";
-          reportName = "Visitor Records";
+          reportName = "Visitor-Records";
           break;
         case "bookings":
           endpoint = "/api/exports/conference-bookings";
-          reportName = "Conference Bookings";
+          reportName = "Conference-Bookings";
           break;
         case "all":
           endpoint = "/api/exports/all";
-          reportName = "Complete Report";
+          reportName = "Complete-Report";
           break;
         default:
           throw new Error("Invalid download type");
@@ -144,17 +157,15 @@ export default function Home() {
         throw new Error(error?.message || "Download failed");
       }
 
-      // Get the blob and filename
       const blob = await res.blob();
       const contentDisposition = res.headers.get("content-disposition");
-      let filename = `${reportName.replace(/\s+/g, '-')}-${Date.now()}.xlsx`;
+      let filename = `${reportName}-${Date.now()}.xlsx`;
       
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="(.+)"/);
         if (match) filename = match[1];
       }
 
-      // Create download link
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -164,11 +175,9 @@ export default function Home() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
-      // Show success message
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 4000);
       
-      // Refresh stats after download
       fetchExportStats();
     } catch (err) {
       setDownloadError(err?.message || "Download failed");
@@ -230,7 +239,7 @@ export default function Home() {
       }
 
       if (data.success && data.redirectTo) {
-        setShowSub(false);
+        setShowPanel(false);
         router.push(data.redirectTo);
       } else {
         throw new Error(data.message || "No redirect URL provided");
@@ -242,29 +251,44 @@ export default function Home() {
     }
   };
 
-  const handleOpenReports = () => {
-    setShowReports(true);
-    fetchExportStats();
-  };
-
+  /* ================= PANEL HANDLERS ================= */
   const handleOpenSubscription = () => {
-    setShowSub(true);
+    setPanelView("subscription");
+    setShowPanel(true);
     fetchSubscription();
   };
 
+  const handleOpenReports = () => {
+    setPanelView("reports");
+    setShowPanel(true);
+    fetchExportStats();
+  };
+
+  const handleClosePanel = () => {
+    setShowPanel(false);
+    setDownloadSuccess(false);
+    setDownloadError("");
+  };
+
   const handleRenew = () => {
-    setShowSub(false);
+    setShowPanel(false);
     router.push("/auth/subscription");
   };
 
-  const handleLogout = () => {
-    if (confirm("Are you sure you want to logout?")) {
-      localStorage.clear();
-      router.replace("/auth/login");
-    }
+  /* ================= LOGOUT HANDLERS ================= */
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
   };
 
-  // Determine upgrade options based on current plan and status
+  const handleLogoutConfirm = () => {
+    localStorage.clear();
+    router.replace("/auth/login");
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
+  };
+
   const currentPlan = subData?.PLAN?.toLowerCase() || "";
   const currentStatus = subData?.STATUS?.toLowerCase() || "";
   
@@ -276,7 +300,6 @@ export default function Home() {
   
   const needsRenewal = ["expired", "cancelled"].includes(currentStatus);
 
-  // Get status badge style
   const getStatusStyle = (status) => {
     const statusLower = status?.toLowerCase() || "";
     switch (statusLower) {
@@ -329,8 +352,8 @@ export default function Home() {
           <button
             className={styles.reportsBtn}
             onClick={handleOpenReports}
-            title="View & Download Reports"
-            aria-label="Open Reports Panel"
+            title="View Reports"
+            aria-label="Open Reports"
           >
             <FileSpreadsheet size={18} />
             <span>Reports</span>
@@ -338,7 +361,7 @@ export default function Home() {
 
           <button
             className={styles.logoutBtn}
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             title="Logout"
             aria-label="Logout"
           >
@@ -359,10 +382,7 @@ export default function Home() {
           <p className={styles.welcomeSubtitle}>Choose a module to get started</p>
         </div>
 
-        {/* MODULE CARDS */}
         <div className={styles.cardGrid}>
-
-          {/* VISITOR MANAGEMENT */}
           <div
             className={styles.moduleCard}
             onClick={() => router.push("/visitor/dashboard")}
@@ -383,7 +403,6 @@ export default function Home() {
             <div className={styles.cardArrow}>→</div>
           </div>
 
-          {/* CONFERENCE BOOKING */}
           <div
             className={styles.moduleCard}
             onClick={() => router.push("/conference/dashboard")}
@@ -403,232 +422,344 @@ export default function Home() {
             </div>
             <div className={styles.cardArrow}>→</div>
           </div>
-
         </div>
       </main>
 
-      {/* ================= SUBSCRIPTION PANEL (LEFT) ================= */}
-      {showSub && (
+      {/* ================= LEFT SIDE PANEL ================= */}
+      {showPanel && (
         <>
           <div
             className={styles.overlay}
-            onClick={() => setShowSub(false)}
+            onClick={handleClosePanel}
             aria-hidden="true"
           />
 
-          <aside
-            className={styles.slidePanel}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="subscription-title"
-          >
+          <aside className={styles.slidePanel} role="dialog" aria-modal="true">
             <div className={styles.panelHeader}>
-              <h3 id="subscription-title">Subscription Details</h3>
-              <button
-                className={styles.closeBtn}
-                onClick={() => setShowSub(false)}
-                aria-label="Close subscription panel"
-              >
+              <h3>{panelView === "subscription" ? "Subscription Details" : "Reports & Analytics"}</h3>
+              <button className={styles.closeBtn} onClick={handleClosePanel} aria-label="Close panel">
                 <X size={20} />
               </button>
             </div>
 
             <div className={styles.panelBody}>
-              {loadingSub && (
-                <div className={styles.loadingState}>
-                  <div className={styles.spinner}></div>
-                  <p>Loading subscription details...</p>
-                </div>
-              )}
-
-              {subError && (
-                <div className={styles.errorState}>
-                  <AlertCircle size={24} />
-                  <p>{subError}</p>
-                </div>
-              )}
-
-              {subData && (
+              
+              {panelView === "subscription" && (
                 <>
-                  {/* Current Plan Card */}
-                  <div className={styles.currentPlanCard}>
-                    <div className={styles.planBadge}>
-                      <span>Current Plan</span>
+                  {loadingSub && (
+                    <div className={styles.loadingState}>
+                      <div className={styles.spinner}></div>
+                      <p>Loading subscription details...</p>
                     </div>
-                    <h4 className={styles.currentPlanName}>
-                      {subData.PLAN || "—"}
-                    </h4>
-                    <div className={styles.statusBadge} style={{ color: statusStyle.color }}>
-                      <StatusIcon size={16} />
-                      <span>{subData.STATUS || "—"}</span>
+                  )}
+
+                  {subError && (
+                    <div className={styles.errorState}>
+                      <AlertCircle size={24} />
+                      <p>{subError}</p>
                     </div>
-                  </div>
+                  )}
 
-                  {/* Subscription Details */}
-                  <div className={styles.detailsSection}>
-                    <h5 className={styles.sectionTitle}>Details</h5>
-                    
-                    {subData.ZOHO_CUSTOMER_ID && (
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Customer ID</span>
-                        <span className={styles.detailValue}>{subData.ZOHO_CUSTOMER_ID}</span>
+                  {subData && (
+                    <>
+                      <div className={styles.currentPlanCard}>
+                        <div className={styles.planBadge}>
+                          <span>Current Plan</span>
+                        </div>
+                        <h4 className={styles.currentPlanName}>{subData.PLAN || "—"}</h4>
+                        <div className={styles.statusBadge} style={{ color: statusStyle.color }}>
+                          <StatusIcon size={16} />
+                          <span>{subData.STATUS || "—"}</span>
+                        </div>
                       </div>
-                    )}
 
-                    {subData.TRIAL_ENDS_ON && (
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Trial Ends</span>
-                        <span className={styles.detailValue}>
-                          {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
+                      <div className={styles.detailsSection}>
+                        <h5 className={styles.sectionTitle}>Details</h5>
+                        
+                        {subData.ZOHO_CUSTOMER_ID && (
+                          <div className={styles.detailRow}>
+                            <span className={styles.detailLabel}>Customer ID</span>
+                            <span className={styles.detailValue}>{subData.ZOHO_CUSTOMER_ID}</span>
+                          </div>
+                        )}
+
+                        {subData.TRIAL_ENDS_ON && (
+                          <div className={styles.detailRow}>
+                            <span className={styles.detailLabel}>Trial Ends</span>
+                            <span className={styles.detailValue}>
+                              {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString('en-US', {
+                                month: 'short', day: 'numeric', year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
+
+                        {subData.EXPIRES_ON && (
+                          <div className={styles.detailRow}>
+                            <span className={styles.detailLabel}>Expires On</span>
+                            <span className={styles.detailValue}>
+                              {new Date(subData.EXPIRES_ON).toLocaleDateString('en-US', {
+                                month: 'short', day: 'numeric', year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
+
+                        {subData.LAST_PAID_ON && (
+                          <div className={styles.detailRow}>
+                            <span className={styles.detailLabel}>Last Payment</span>
+                            <span className={styles.detailValue}>
+                              {new Date(subData.LAST_PAID_ON).toLocaleDateString('en-US', {
+                                month: 'short', day: 'numeric', year: 'numeric'
+                              })}
+                            </span>
+                          </div>
+                        )}
                       </div>
-                    )}
 
-                    {subData.EXPIRES_ON && (
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Expires On</span>
-                        <span className={styles.detailValue}>
-                          {new Date(subData.EXPIRES_ON).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    )}
+                      {needsRenewal && (
+                        <div className={styles.renewalSection}>
+                          <div className={styles.alertBox}>
+                            <AlertCircle size={20} />
+                            <div>
+                              <p className={styles.alertTitle}>Subscription Expired</p>
+                              <p className={styles.alertText}>
+                                Renew now to continue accessing all PROMEET features
+                              </p>
+                            </div>
+                          </div>
+                          <button className={styles.primaryBtn} onClick={handleRenew}>
+                            Renew Subscription
+                          </button>
+                        </div>
+                      )}
 
-                    {subData.LAST_PAID_ON && (
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Last Payment</span>
-                        <span className={styles.detailValue}>
-                          {new Date(subData.LAST_PAID_ON).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                      {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
+                        <div className={styles.upgradeSection}>
+                          <div className={styles.sectionHeader}>
+                            <TrendingUp size={20} />
+                            <h5>Upgrade Your Plan</h5>
+                          </div>
+                          <p className={styles.sectionDescription}>
+                            Unlock more features and grow your business
+                          </p>
 
-                  {/* ================= RENEWAL SECTION ================= */}
-                  {needsRenewal && (
-                    <div className={styles.renewalSection}>
-                      <div className={styles.alertBox}>
-                        <AlertCircle size={20} />
-                        <div>
-                          <p className={styles.alertTitle}>Subscription Expired</p>
-                          <p className={styles.alertText}>
-                            Renew now to continue accessing all PROMEET features
+                          {canUpgradeBusiness && (
+                            <div className={styles.upgradePlanCard}>
+                              <div className={styles.planIconWrapper}>
+                                <Zap size={22} />
+                              </div>
+                              <div className={styles.planInfo}>
+                                <h6>Business Plan</h6>
+                                <div className={styles.planPricing}>
+                                  <span className={styles.price}>₹500</span>
+                                  <span className={styles.period}>/month</span>
+                                </div>
+                              </div>
+                              <ul className={styles.featureList}>
+                                <li><CheckCircle size={14} /> Unlimited visitors</li>
+                                <li><CheckCircle size={14} /> 1000 Conference bookings</li>
+                                <li><CheckCircle size={14} /> 6 Conference rooms</li>
+                                <li><CheckCircle size={14} /> Priority support</li>
+                              </ul>
+                              <button
+                                className={styles.upgradeBtn}
+                                onClick={handleUpgradeBusiness}
+                                disabled={upgradingBusiness}
+                              >
+                                {upgradingBusiness ? (
+                                  <>
+                                    <div className={styles.btnSpinner}></div>
+                                    Processing...
+                                  </>
+                                ) : (
+                                  "Upgrade to Business"
+                                )}
+                              </button>
+                            </div>
+                          )}
+
+                          {canUpgradeEnterprise && (
+                            <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
+                              <div className={styles.planIconWrapper}>
+                                <Crown size={22} />
+                              </div>
+                              <div className={styles.planInfo}>
+                                <h6>Enterprise Plan</h6>
+                                <div className={styles.planPricing}>
+                                  <span className={styles.customPrice}>Custom Pricing</span>
+                                </div>
+                              </div>
+                              <ul className={styles.featureList}>
+                                <li><CheckCircle size={14} /> Everything in Business</li>
+                                <li><CheckCircle size={14} /> Custom integrations</li>
+                                <li><CheckCircle size={14} /> Dedicated account manager</li>
+                                <li><CheckCircle size={14} /> Custom branding</li>
+                              </ul>
+                              <button
+                                className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`}
+                                onClick={handleUpgradeEnterprise}
+                                disabled={upgradingEnterprise}
+                              >
+                                {upgradingEnterprise ? (
+                                  <>
+                                    <div className={styles.btnSpinner}></div>
+                                    Processing...
+                                  </>
+                                ) : (
+                                  "Contact Sales"
+                                )}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {currentPlan === "enterprise" && currentStatus === "active" && (
+                        <div className={styles.infoBox}>
+                          <Crown size={18} />
+                          <p>
+                            You're on our premium Enterprise plan with full access to all features. 
+                            Contact support for custom requirements.
                           </p>
                         </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {panelView === "reports" && (
+                <>
+                  {downloadSuccess && (
+                    <div className={styles.notification} data-type="success">
+                      <CheckCircle size={18} />
+                      <span>Report downloaded successfully!</span>
+                    </div>
+                  )}
+
+                  {downloadError && (
+                    <div className={styles.notification} data-type="error">
+                      <AlertCircle size={18} />
+                      <span>{downloadError}</span>
+                    </div>
+                  )}
+
+                  {loadingStats && (
+                    <div className={styles.loadingState}>
+                      <div className={styles.spinner}></div>
+                      <p>Loading statistics...</p>
+                    </div>
+                  )}
+
+                  {exportStats && (
+                    <>
+                      <div className={styles.statsOverview}>
+                        <div className={styles.statCard}>
+                          <Users size={20} />
+                          <div>
+                            <p className={styles.statLabel}>Total Visitors</p>
+                            <p className={styles.statValue}>{exportStats.visitors?.total || 0}</p>
+                          </div>
+                        </div>
+                        <div className={styles.statCard}>
+                          <DoorOpen size={20} />
+                          <div>
+                            <p className={styles.statLabel}>Total Bookings</p>
+                            <p className={styles.statValue}>{exportStats.bookings?.total || 0}</p>
+                          </div>
+                        </div>
                       </div>
+
+                      <div className={styles.reportsSection}>
+                        <h5 className={styles.sectionTitle}>Quick Downloads</h5>
+
+                        <div className={styles.reportCard}>
+                          <div className={styles.reportHeader}>
+                            <div className={styles.reportIcon}>
+                              <Users size={20} />
+                            </div>
+                            <div>
+                              <h6>Visitor Records</h6>
+                              <p className={styles.reportMeta}>
+                                {exportStats.visitors?.active || 0} active • {exportStats.visitors?.total || 0} total
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            className={styles.downloadBtn}
+                            onClick={() => handleDownload("visitors")}
+                            disabled={downloading}
+                          >
+                            <Download size={16} />
+                            {downloading ? "Downloading..." : "Download"}
+                          </button>
+                        </div>
+
+                        <div className={styles.reportCard}>
+                          <div className={styles.reportHeader}>
+                            <div className={styles.reportIcon}>
+                              <DoorOpen size={20} />
+                            </div>
+                            <div>
+                              <h6>Conference Bookings</h6>
+                              <p className={styles.reportMeta}>
+                                {exportStats.bookings?.upcoming || 0} upcoming • {exportStats.bookings?.total || 0} total
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            className={styles.downloadBtn}
+                            onClick={() => handleDownload("bookings")}
+                            disabled={downloading}
+                          >
+                            <Download size={16} />
+                            {downloading ? "Downloading..." : "Download"}
+                          </button>
+                        </div>
+
+                        <div className={`${styles.reportCard} ${styles.premiumReport}`}>
+                          <div className={styles.reportHeader}>
+                            <div className={styles.reportIcon}>
+                              <FileSpreadsheet size={20} />
+                            </div>
+                            <div>
+                              <h6>Complete Report</h6>
+                              <p className={styles.reportMeta}>
+                                All data in one Excel file with multiple sheets
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`}
+                            onClick={() => handleDownload("all")}
+                            disabled={downloading}
+                          >
+                            <Download size={16} />
+                            {downloading ? "Downloading..." : "Download All"}
+                          </button>
+                        </div>
+                      </div>
+
                       <button
-                        className={styles.primaryBtn}
-                        onClick={handleRenew}
+                        className={styles.detailedReportsBtn}
+                        onClick={() => {
+                          setShowDetailedReports(true);
+                          setShowPanel(false);
+                        }}
                       >
-                        Renew Subscription
+                        <BarChart3 size={18} />
+                        View Detailed Analytics
                       </button>
-                    </div>
-                  )}
 
-                  {/* ================= UPGRADE SECTION ================= */}
-                  {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
-                    <div className={styles.upgradeSection}>
-                      <div className={styles.sectionHeader}>
-                        <TrendingUp size={20} />
-                        <h5>Upgrade Your Plan</h5>
+                      <div className={styles.infoBox}>
+                        <FileSpreadsheet size={16} />
+                        <p>
+                          Reports are exported in Excel format (.xlsx) with professional formatting, 
+                          headers, and color-coded status indicators.
+                        </p>
                       </div>
-                      <p className={styles.sectionDescription}>
-                        Unlock more features and grow your business
-                      </p>
-
-                      {/* Business Plan */}
-                      {canUpgradeBusiness && (
-                        <div className={styles.upgradePlanCard}>
-                          <div className={styles.planIconWrapper}>
-                            <Zap size={22} />
-                          </div>
-                          <div className={styles.planInfo}>
-                            <h6>Business Plan</h6>
-                            <div className={styles.planPricing}>
-                              <span className={styles.price}>₹500</span>
-                              <span className={styles.period}>/month</span>
-                            </div>
-                          </div>
-                          <ul className={styles.featureList}>
-                            <li><CheckCircle size={14} /> Unlimited visitors</li>
-                            <li><CheckCircle size={14} /> 1000 Conference bookings</li>
-                            <li><CheckCircle size={14} /> 6 Conference rooms</li>
-                            <li><CheckCircle size={14} /> Priority support</li>
-                          </ul>
-                          <button
-                            className={styles.upgradeBtn}
-                            onClick={handleUpgradeBusiness}
-                            disabled={upgradingBusiness}
-                          >
-                            {upgradingBusiness ? (
-                              <>
-                                <div className={styles.btnSpinner}></div>
-                                Processing...
-                              </>
-                            ) : (
-                              "Upgrade to Business"
-                            )}
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Enterprise Plan */}
-                      {canUpgradeEnterprise && (
-                        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
-                          <div className={styles.planIconWrapper}>
-                            <Crown size={22} />
-                          </div>
-                          <div className={styles.planInfo}>
-                            <h6>Enterprise Plan</h6>
-                            <div className={styles.planPricing}>
-                              <span className={styles.customPrice}>Custom Pricing</span>
-                            </div>
-                          </div>
-                          <ul className={styles.featureList}>
-                            <li><CheckCircle size={14} /> Everything in Business</li>
-                            <li><CheckCircle size={14} /> Custom integrations</li>
-                            <li><CheckCircle size={14} /> Dedicated account manager</li>
-                            <li><CheckCircle size={14} /> Custom branding</li>
-                          </ul>
-                          <button
-                            className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`}
-                            onClick={handleUpgradeEnterprise}
-                            disabled={upgradingEnterprise}
-                          >
-                            {upgradingEnterprise ? (
-                              <>
-                                <div className={styles.btnSpinner}></div>
-                                Processing...
-                              </>
-                            ) : (
-                              "Contact Sales"
-                            )}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Enterprise Active Status */}
-                  {currentPlan === "enterprise" && currentStatus === "active" && (
-                    <div className={styles.infoBox}>
-                      <Crown size={18} />
-                      <p>
-                        You're on our premium Enterprise plan with full access to all features. 
-                        Contact support for custom requirements.
-                      </p>
-                    </div>
+                    </>
                   )}
                 </>
               )}
@@ -637,161 +768,101 @@ export default function Home() {
         </>
       )}
 
-      {/* ================= REPORTS PANEL (RIGHT) ================= */}
-      {showReports && (
+      {/* ================= DETAILED REPORTS OVERLAY ================= */}
+      {showDetailedReports && (
+        <div className={styles.detailedReportsOverlay}>
+          <div className={styles.detailedReportsContainer}>
+            <header className={styles.detailedReportsHeader}>
+              <button
+                className={styles.backBtn}
+                onClick={() => {
+                  setShowDetailedReports(false);
+                  setShowPanel(true);
+                }}
+              >
+                <ArrowLeft size={20} />
+                <span>Back to Reports</span>
+              </button>
+              <h2>Detailed Analytics</h2>
+              <button
+                className={styles.closeDetailedBtn}
+                onClick={() => setShowDetailedReports(false)}
+              >
+                <X size={24} />
+              </button>
+            </header>
+
+            <div className={styles.detailedReportsContent}>
+              <div className={styles.analyticsPlaceholder}>
+                <BarChart3 size={64} />
+                <h3>Analytics Dashboard</h3>
+                <p>
+                  Detailed analytics dashboard with charts, graphs, and comprehensive data visualization 
+                  will be displayed here. This includes visitor trends, peak hours, conference room 
+                  utilization, and more.
+                </p>
+                
+                <div className={styles.placeholderFeatures}>
+                  <div className={styles.placeholderFeature}>
+                    <Calendar size={24} />
+                    <span>Date Range Filters</span>
+                  </div>
+                  <div className={styles.placeholderFeature}>
+                    <BarChart3 size={24} />
+                    <span>Interactive Charts</span>
+                  </div>
+                  <div className={styles.placeholderFeature}>
+                    <Filter size={24} />
+                    <span>Advanced Filters</span>
+                  </div>
+                  <div className={styles.placeholderFeature}>
+                    <Download size={24} />
+                    <span>Export Options</span>
+                  </div>
+                </div>
+
+                <p className={styles.placeholderNote}>
+                  <AlertCircle size={16} />
+                  This is a placeholder for the detailed analytics dashboard. 
+                  Integration with charting libraries and data visualization will be implemented here.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= LOGOUT CONFIRMATION MODAL ================= */}
+      {showLogoutModal && (
         <>
           <div
-            className={styles.overlay}
-            onClick={() => setShowReports(false)}
+            className={styles.modalOverlay}
+            onClick={handleLogoutCancel}
             aria-hidden="true"
           />
-
-          <aside
-            className={`${styles.slidePanel} ${styles.rightPanel}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reports-title"
-          >
-            <div className={styles.panelHeader}>
-              <h3 id="reports-title">Reports & Analytics</h3>
+          <div className={styles.logoutModal} role="dialog" aria-modal="true">
+            <div className={styles.logoutModalIcon}>
+              <AlertCircle size={48} />
+            </div>
+            <h3 className={styles.logoutModalTitle}>Confirm Logout</h3>
+            <p className={styles.logoutModalText}>
+              Are you sure you want to logout? You will need to login again to access your account.
+            </p>
+            <div className={styles.logoutModalActions}>
               <button
-                className={styles.closeBtn}
-                onClick={() => setShowReports(false)}
-                aria-label="Close reports panel"
+                className={styles.logoutCancelBtn}
+                onClick={handleLogoutCancel}
               >
-                <X size={20} />
+                Cancel
+              </button>
+              <button
+                className={styles.logoutConfirmBtn}
+                onClick={handleLogoutConfirm}
+              >
+                Logout
               </button>
             </div>
-
-            <div className={styles.panelBody}>
-              {/* Success Notification */}
-              {downloadSuccess && (
-                <div className={styles.notification} data-type="success">
-                  <CheckCircle size={18} />
-                  <span>Report downloaded successfully!</span>
-                </div>
-              )}
-
-              {/* Error Notification */}
-              {downloadError && (
-                <div className={styles.notification} data-type="error">
-                  <AlertCircle size={18} />
-                  <span>{downloadError}</span>
-                </div>
-              )}
-
-              {/* Loading Stats */}
-              {loadingStats && (
-                <div className={styles.loadingState}>
-                  <div className={styles.spinner}></div>
-                  <p>Loading statistics...</p>
-                </div>
-              )}
-
-              {/* Export Options */}
-              {exportStats && (
-                <>
-                  <div className={styles.statsOverview}>
-                    <div className={styles.statCard}>
-                      <Users size={20} />
-                      <div>
-                        <p className={styles.statLabel}>Total Visitors</p>
-                        <p className={styles.statValue}>{exportStats.visitors?.total || 0}</p>
-                      </div>
-                    </div>
-                    <div className={styles.statCard}>
-                      <DoorOpen size={20} />
-                      <div>
-                        <p className={styles.statLabel}>Total Bookings</p>
-                        <p className={styles.statValue}>{exportStats.bookings?.total || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.reportsSection}>
-                    <h5 className={styles.sectionTitle}>Download Reports</h5>
-
-                    {/* Visitor Records */}
-                    <div className={styles.reportCard}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}>
-                          <Users size={20} />
-                        </div>
-                        <div>
-                          <h6>Visitor Records</h6>
-                          <p className={styles.reportMeta}>
-                            {exportStats.visitors?.active || 0} active • {exportStats.visitors?.total || 0} total
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className={styles.downloadBtn}
-                        onClick={() => handleDownload("visitors")}
-                        disabled={downloading}
-                      >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download"}
-                      </button>
-                    </div>
-
-                    {/* Conference Bookings */}
-                    <div className={styles.reportCard}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}>
-                          <DoorOpen size={20} />
-                        </div>
-                        <div>
-                          <h6>Conference Bookings</h6>
-                          <p className={styles.reportMeta}>
-                            {exportStats.bookings?.upcoming || 0} upcoming • {exportStats.bookings?.total || 0} total
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className={styles.downloadBtn}
-                        onClick={() => handleDownload("bookings")}
-                        disabled={downloading}
-                      >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download"}
-                      </button>
-                    </div>
-
-                    {/* Complete Report */}
-                    <div className={`${styles.reportCard} ${styles.premiumReport}`}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}>
-                          <FileSpreadsheet size={20} />
-                        </div>
-                        <div>
-                          <h6>Complete Report</h6>
-                          <p className={styles.reportMeta}>
-                            All data in one Excel file with multiple sheets
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`}
-                        onClick={() => handleDownload("all")}
-                        disabled={downloading}
-                      >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download All"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.infoBox}>
-                    <FileSpreadsheet size={16} />
-                    <p>
-                      Reports are exported in Excel format (.xlsx) with professional formatting, 
-                      headers, and color-coded status indicators.
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
-          </aside>
+          </div>
         </>
       )}
     </div>
