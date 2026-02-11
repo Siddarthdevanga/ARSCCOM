@@ -51,6 +51,31 @@ const formatIST = (value) => {
 };
 
 /* ======================================================
+   WHATSAPP SECTION COMPONENT
+====================================================== */
+function WhatsAppSection({ whatsappUrl, companyName }) {
+  if (!whatsappUrl) return null;
+
+  return (
+    <div className={styles.whatsappSection}>
+      <div className={styles.whatsappIcon}>📱</div>
+      <div className={styles.whatsappText}>
+        <strong>Stay Connected with {companyName}</strong>
+        <p>Join our WhatsApp group for updates and support during your visit</p>
+      </div>
+      
+        href={whatsappUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={styles.whatsappBtn}
+      >
+        Join WhatsApp Group
+      </a>
+    </div>
+  );
+}
+
+/* ======================================================
    INNER COMPONENT
 ====================================================== */
 function VisitorPassContent() {
@@ -193,7 +218,6 @@ function VisitorPassContent() {
     <div className={styles.page}>
       <div className={styles.passCard}>
         
-        {/* HEADER */}
         <header className={styles.header}>
           <div className={styles.companyName}>{company.name}</div>
 
@@ -206,7 +230,6 @@ function VisitorPassContent() {
           )}
         </header>
 
-        {/* SUCCESS/ERROR MESSAGES */}
         {resendSuccess && (
           <div className={styles.successMessage}>
             ✓ Visitor pass resent successfully to {visitor.email}
@@ -219,7 +242,6 @@ function VisitorPassContent() {
           </div>
         )}
 
-        {/* BODY */}
         <div className={styles.body}>
           <div className={styles.details}>
             <div className={styles.passTitle}>VISITOR PASS</div>
@@ -268,26 +290,8 @@ function VisitorPassContent() {
           </div>
         </div>
 
-        {/* WHATSAPP SECTION */}
-        {whatsappUrl && (
-          <div className={styles.whatsappSection}>
-            <div className={styles.whatsappIcon}>📱</div>
-            <div className={styles.whatsappText}>
-              <strong>Stay Connected with {company.name}</strong>
-              <p>Join our WhatsApp group for updates and support during your visit</p>
-            </div>
-            
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.whatsappBtn}
-            >
-              Join WhatsApp Group
-            </a>
-          </div>
-        )}
+        <WhatsAppSection whatsappUrl={whatsappUrl} companyName={company.name} />
 
-        {/* ACTIONS */}
         <div className={styles.actions}>
           {visitor.email && (
             <button
@@ -300,7 +304,6 @@ function VisitorPassContent() {
           )}
         </div>
 
-        {/* FOOTER */}
         <div className={styles.footer}>
           <button
             className={styles.secondaryBtn}
