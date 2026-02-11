@@ -88,7 +88,7 @@ ${companyLogo
 };
 
 /* ======================================================
-   SEND VISITOR PASS EMAIL — PROFESSIONAL VERSION
+   SEND VISITOR PASS EMAIL — WITH WHATSAPP INTEGRATION
 ====================================================== */
 export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
   if (!visitor.email) {
@@ -108,6 +108,7 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
   
   console.log(`[VISITOR_MAIL] Preparing email for ${visitor.email}`);
   console.log(`[VISITOR_MAIL] Check-in time: ${checkInTime}`);
+  console.log(`[VISITOR_MAIL] WhatsApp URL: ${company.whatsapp_url || 'Not provided'}`);
 
   let imageBuffer = null;
 
@@ -138,10 +139,13 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
             .success-badge { background: #e8f5e9; border-left: 4px solid #00c853; padding: 16px; margin: 20px 0; border-radius: 4px; }
             .warning-badge { background: #fff3e0; border-left: 4px solid #ff9800; padding: 16px; margin: 20px 0; border-radius: 4px; }
             .info-badge { background: #f8f9ff; border-left: 4px solid #6c2bd9; padding: 16px; margin: 20px 0; border-radius: 4px; }
+            .whatsapp-badge { background: #e8f5e9; border-left: 4px solid #25D366; padding: 20px; margin: 20px 0; border-radius: 4px; text-align: center; }
             .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
             .details-table td { padding: 12px; border: 1px solid #e0e0e0; }
             .details-table tr:nth-child(odd) { background: #f8f9ff; }
             .label { font-weight: 600; color: #6c2bd9; width: 35%; }
+            .whatsapp-button { display: inline-block; background: #25D366; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px; }
+            .whatsapp-button:hover { background: #1fa855; }
             h2 { color: #6c2bd9; margin-top: 30px; margin-bottom: 10px; font-size: 20px; }
             ul { font-size: 14px; line-height: 1.8; color: #333; }
             ul li { margin-bottom: 8px; }
@@ -231,6 +235,26 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
                 </li>
               </ul>
 
+              ${company.whatsapp_url ? `
+              <h2>📱 Stay Connected</h2>
+
+              <div class="whatsapp-badge">
+                <p style="margin: 0 0 15px 0; color: #2e7d32; font-weight: 600; font-size: 16px;">
+                  Join ${companyName} WhatsApp
+                </p>
+                <a 
+                  href="${company.whatsapp_url}" 
+                  class="whatsapp-button"
+                  target="_blank"
+                >
+                  📱 Join WhatsApp Group
+                </a>
+                <p style="margin: 15px 0 0 0; font-size: 13px; color: #666;">
+                  Get instant updates, announcements, and support during your visit
+                </p>
+              </div>
+              ` : ''}
+
               <div class="info-badge">
                 <p style="margin:0;color:#6c2bd9;font-weight:600;">
                   📧 Need help? Contact ${companyName} reception or administrator for assistance.
@@ -254,7 +278,7 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
               filename: `${visitorCode}-visitor-pass.png`,
               content: imageBuffer,
               contentType: "image/png",
-              cid: "visitor-pass-image" // Optional: can be referenced in HTML as <img src="cid:visitor-pass-image">
+              cid: "visitor-pass-image"
             }
           ]
         : []
