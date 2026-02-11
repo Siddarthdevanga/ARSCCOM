@@ -46,7 +46,7 @@ export default function LandingPage() {
     setMounted(true);
 
     // Animate hero elements on load with staggered timing
-    const heroElements = document.querySelectorAll('.badge, .hero h1, .hero h2, .hero p, .heroButtons');
+    const heroElements = document.querySelectorAll('.hero h1, .hero h2, .hero p, .heroButtons');
     heroElements.forEach((el, i) => {
       setTimeout(() => el.classList.add('animate'), i * 160);
     });
@@ -403,7 +403,6 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="hero">
-        <div className="badge">✨ Enterprise-Grade Platform</div>
         <h1>{CONFIG.company.name}</h1>
 
         <div className="scrollContainer">
@@ -803,12 +802,6 @@ export default function LandingPage() {
               </Link>
             </div>
           </div>
-        </div>
-
-        <div className="gsFeatures fadeUp delay2">
-          <div className="featureBox"><h4>⚡ Quick Setup</h4><p>Get started in minutes, not days</p></div>
-          <div className="featureBox"><h4>🎧 24/7 Support</h4><p>We're here whenever you need us</p></div>
-          <div className="featureBox"><h4>🛡 Secure & Reliable</h4><p>Enterprise-grade security standards</p></div>
         </div>
       </section>
 
