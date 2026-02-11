@@ -38,19 +38,22 @@
   padding: 0;
   box-sizing: border-box;
   font-family: "Segoe UI", system-ui, sans-serif;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
+/* Hide scrollbars but keep scrolling functionality */
 *::-webkit-scrollbar {
   display: none;
 }
 
-html {
-  scroll-behavior: smooth;
+* {
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+
+html {
+  scroll-behavior: smooth;
   font-size: clamp(14px, 1vw + 0.5rem, 16px);
+  /* Remove scrollbar hiding from html to allow scrolling */
 }
 
 html::-webkit-scrollbar {
@@ -60,12 +63,13 @@ html::-webkit-scrollbar {
 body {
   color: white;
   overflow-x: hidden;
+  overflow-y: auto; /* Changed from default - explicitly allow vertical scrolling */
   background: linear-gradient(120deg, #2b1055, #6a0572, #ff6a00);
   background-size: 300% 300%;
   animation: bgMove 20s ease infinite;
   position: relative;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  /* Ensure touch scrolling works on mobile */
+  -webkit-overflow-scrolling: touch;
 }
 
 body::-webkit-scrollbar {
