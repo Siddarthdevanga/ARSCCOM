@@ -36,3 +36,17 @@ body {
 * {
   box-sizing: border-box;
 }
+
+
+/* Add this to your app/globals.css file */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
