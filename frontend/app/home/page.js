@@ -13,7 +13,9 @@ import {
   Clock,
   TrendingUp,
   Download,
-  AlertCircle
+  AlertCircle,
+  ChevronRight,
+  ArrowLeft
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -21,6 +23,10 @@ export default function Home() {
   const router = useRouter();
   const [company, setCompany] = useState(null);
 
+  // View state
+  const [currentView, setCurrentView] = useState("home"); // "home" | "reports"
+
+  // Subscription panel states
   const [showSub, setShowSub] = useState(false);
   const [subData, setSubData] = useState(null);
   const [loadingSub, setLoadingSub] = useState(false);
@@ -30,8 +36,7 @@ export default function Home() {
   const [upgradingBusiness, setUpgradingBusiness] = useState(false);
   const [upgradingEnterprise, setUpgradingEnterprise] = useState(false);
 
-  // Reports panel states
-  const [showReports, setShowReports] = useState(false);
+  // Reports states
   const [exportStats, setExportStats] = useState(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -242,14 +247,19 @@ export default function Home() {
     }
   };
 
-  const handleOpenReports = () => {
-    setShowReports(true);
-    fetchExportStats();
-  };
-
   const handleOpenSubscription = () => {
     setShowSub(true);
     fetchSubscription();
+  };
+
+  const handleOpenReports = () => {
+    setShowSub(false);
+    setCurrentView("reports");
+    fetchExportStats();
+  };
+
+  const handleBackToHome = () => {
+    setCurrentView("home");
   };
 
   const handleRenew = () => {
@@ -301,18 +311,29 @@ export default function Home() {
 
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <button
-          className={styles.menuBtn}
-          onClick={handleOpenSubscription}
-          title="View subscription details"
-          aria-label="Open subscription panel"
-        >
-          <div className={styles.menuDots}>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </button>
+        {currentView === "reports" ? (
+          <button
+            className={styles.backBtn}
+            onClick={handleBackToHome}
+            aria-label="Back to home"
+          >
+            <ArrowLeft size={20} />
+            <span>Back</span>
+          </button>
+        ) : (
+          <button
+            className={styles.menuBtn}
+            onClick={handleOpenSubscription}
+            title="View subscription details"
+            aria-label="Open subscription panel"
+          >
+            <div className={styles.menuDots}>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </button>
+        )}
 
         <div className={styles.companyInfo}>
           {company.logo_url && (
@@ -326,16 +347,6 @@ export default function Home() {
         </div>
 
         <div className={styles.headerActions}>
-          <button
-            className={styles.reportsBtn}
-            onClick={handleOpenReports}
-            title="View & Download Reports"
-            aria-label="Open Reports Panel"
-          >
-            <FileSpreadsheet size={18} />
-            <span>Reports</span>
-          </button>
-
           <button
             className={styles.logoutBtn}
             onClick={handleLogout}
@@ -354,57 +365,199 @@ export default function Home() {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className={styles.main}>
-        <div className={styles.welcomeSection}>
-          <h2 className={styles.welcomeTitle}>Welcome back!</h2>
-          <p className={styles.welcomeSubtitle}>Choose a module to get started</p>
-        </div>
-
-        {/* MODULE CARDS */}
-        <div className={styles.cardGrid}>
-
-          {/* VISITOR MANAGEMENT */}
-          <div
-            className={styles.moduleCard}
-            onClick={() => router.push("/visitor/dashboard")}
-            role="button"
-            tabIndex={0}
-            aria-label="Open Visitor Management"
-            onKeyDown={(e) => e.key === 'Enter' && router.push("/visitor/dashboard")}
-          >
-            <div className={styles.cardIcon}>
-              <Users size={32} />
+        
+        {/* HOME VIEW */}
+        {currentView === "home" && (
+          <>
+            <div className={styles.welcomeSection}>
+              <h2 className={styles.welcomeTitle}>Welcome back!</h2>
+              <p className={styles.welcomeSubtitle}>Choose a module to get started</p>
             </div>
-            <div className={styles.cardContent}>
-              <h3 className={styles.cardTitle}>Visitor Management</h3>
-              <p className={styles.cardDescription}>
-                Manage visitor entries, ID verification & digital passes
-              </p>
+
+            <div className={styles.cardGrid}>
+              <div
+                className={styles.moduleCard}
+                onClick={() => router.push("/visitor/dashboard")}
+                role="button"
+                tabIndex={0}
+                aria-label="Open Visitor Management"
+                onKeyDown={(e) => e.key === 'Enter' && router.push("/visitor/dashboard")}
+              >
+                <div className={styles.cardIcon}>
+                  <Users size={32} />
+                </div>
+                <div className={styles.cardContent}>
+                  <h3 className={styles.cardTitle}>Visitor Management</h3>
+                  <p className={styles.cardDescription}>
+                    Manage visitor entries, ID verification & digital passes
+                  </p>
+                </div>
+                <div className={styles.cardArrow}>→</div>
+              </div>
+
+              <div
+                className={styles.moduleCard}
+                onClick={() => router.push("/conference/dashboard")}
+                role="button"
+                tabIndex={0}
+                aria-label="Open Conference Booking"
+                onKeyDown={(e) => e.key === 'Enter' && router.push("/conference/dashboard")}
+              >
+                <div className={styles.cardIcon}>
+                  <DoorOpen size={32} />
+                </div>
+                <div className={styles.cardContent}>
+                  <h3 className={styles.cardTitle}>Conference Booking</h3>
+                  <p className={styles.cardDescription}>
+                    Schedule meetings & manage conference rooms
+                  </p>
+                </div>
+                <div className={styles.cardArrow}>→</div>
+              </div>
             </div>
-            <div className={styles.cardArrow}>→</div>
+          </>
+        )}
+
+        {/* REPORTS VIEW */}
+        {currentView === "reports" && (
+          <div className={styles.reportsView}>
+            <div className={styles.reportsHeader}>
+              <div className={styles.reportsHeaderIcon}>
+                <FileSpreadsheet size={32} />
+              </div>
+              <div>
+                <h2 className={styles.reportsTitle}>Reports & Analytics</h2>
+                <p className={styles.reportsSubtitle}>Download and export your data</p>
+              </div>
+            </div>
+
+            {/* Success Notification */}
+            {downloadSuccess && (
+              <div className={styles.notification} data-type="success">
+                <CheckCircle size={18} />
+                <span>Report downloaded successfully!</span>
+              </div>
+            )}
+
+            {/* Error Notification */}
+            {downloadError && (
+              <div className={styles.notification} data-type="error">
+                <AlertCircle size={18} />
+                <span>{downloadError}</span>
+              </div>
+            )}
+
+            {/* Loading Stats */}
+            {loadingStats && (
+              <div className={styles.loadingState}>
+                <div className={styles.spinner}></div>
+                <p>Loading statistics...</p>
+              </div>
+            )}
+
+            {/* Export Content */}
+            {exportStats && (
+              <>
+                <div className={styles.statsOverview}>
+                  <div className={styles.statCard}>
+                    <Users size={24} />
+                    <div>
+                      <p className={styles.statLabel}>Total Visitors</p>
+                      <p className={styles.statValue}>{exportStats.visitors?.total || 0}</p>
+                    </div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <DoorOpen size={24} />
+                    <div>
+                      <p className={styles.statLabel}>Total Bookings</p>
+                      <p className={styles.statValue}>{exportStats.bookings?.total || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className={styles.reportsGrid}>
+                  {/* Visitor Records */}
+                  <div className={styles.reportCard}>
+                    <div className={styles.reportHeader}>
+                      <div className={styles.reportIcon}>
+                        <Users size={24} />
+                      </div>
+                      <div>
+                        <h6>Visitor Records</h6>
+                        <p className={styles.reportMeta}>
+                          {exportStats.visitors?.active || 0} active • {exportStats.visitors?.total || 0} total
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className={styles.downloadBtn}
+                      onClick={() => handleDownload("visitors")}
+                      disabled={downloading}
+                    >
+                      <Download size={16} />
+                      {downloading ? "Downloading..." : "Download"}
+                    </button>
+                  </div>
+
+                  {/* Conference Bookings */}
+                  <div className={styles.reportCard}>
+                    <div className={styles.reportHeader}>
+                      <div className={styles.reportIcon}>
+                        <DoorOpen size={24} />
+                      </div>
+                      <div>
+                        <h6>Conference Bookings</h6>
+                        <p className={styles.reportMeta}>
+                          {exportStats.bookings?.upcoming || 0} upcoming • {exportStats.bookings?.total || 0} total
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className={styles.downloadBtn}
+                      onClick={() => handleDownload("bookings")}
+                      disabled={downloading}
+                    >
+                      <Download size={16} />
+                      {downloading ? "Downloading..." : "Download"}
+                    </button>
+                  </div>
+
+                  {/* Complete Report */}
+                  <div className={`${styles.reportCard} ${styles.premiumReport}`}>
+                    <div className={styles.reportHeader}>
+                      <div className={styles.reportIcon}>
+                        <FileSpreadsheet size={24} />
+                      </div>
+                      <div>
+                        <h6>Complete Report</h6>
+                        <p className={styles.reportMeta}>
+                          All data in one Excel file with multiple sheets
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`}
+                      onClick={() => handleDownload("all")}
+                      disabled={downloading}
+                    >
+                      <Download size={16} />
+                      {downloading ? "Downloading..." : "Download All"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.infoBox}>
+                  <FileSpreadsheet size={16} />
+                  <p>
+                    Reports are exported in Excel format (.xlsx) with professional formatting, 
+                    headers, and color-coded status indicators.
+                  </p>
+                </div>
+              </>
+            )}
           </div>
+        )}
 
-          {/* CONFERENCE BOOKING */}
-          <div
-            className={styles.moduleCard}
-            onClick={() => router.push("/conference/dashboard")}
-            role="button"
-            tabIndex={0}
-            aria-label="Open Conference Booking"
-            onKeyDown={(e) => e.key === 'Enter' && router.push("/conference/dashboard")}
-          >
-            <div className={styles.cardIcon}>
-              <DoorOpen size={32} />
-            </div>
-            <div className={styles.cardContent}>
-              <h3 className={styles.cardTitle}>Conference Booking</h3>
-              <p className={styles.cardDescription}>
-                Schedule meetings & manage conference rooms
-              </p>
-            </div>
-            <div className={styles.cardArrow}>→</div>
-          </div>
-
-        </div>
       </main>
 
       {/* ================= SUBSCRIPTION PANEL (LEFT) ================= */}
@@ -423,11 +576,11 @@ export default function Home() {
             aria-labelledby="subscription-title"
           >
             <div className={styles.panelHeader}>
-              <h3 id="subscription-title">Subscription Details</h3>
+              <h3 id="subscription-title">Menu</h3>
               <button
                 className={styles.closeBtn}
                 onClick={() => setShowSub(false)}
-                aria-label="Close subscription panel"
+                aria-label="Close panel"
               >
                 <X size={20} />
               </button>
@@ -466,7 +619,7 @@ export default function Home() {
 
                   {/* Subscription Details */}
                   <div className={styles.detailsSection}>
-                    <h5 className={styles.sectionTitle}>Details</h5>
+                    <h5 className={styles.sectionTitle}>Subscription Details</h5>
                     
                     {subData.ZOHO_CUSTOMER_ID && (
                       <div className={styles.detailRow}>
@@ -513,6 +666,23 @@ export default function Home() {
                         </span>
                       </div>
                     )}
+                  </div>
+
+                  {/* ================= REPORTS MENU ITEM ================= */}
+                  <div className={styles.menuSection}>
+                    <button
+                      className={styles.menuItem}
+                      onClick={handleOpenReports}
+                    >
+                      <div className={styles.menuItemIcon}>
+                        <FileSpreadsheet size={20} />
+                      </div>
+                      <div className={styles.menuItemContent}>
+                        <span className={styles.menuItemTitle}>Reports & Analytics</span>
+                        <span className={styles.menuItemSubtitle}>Download visitor & booking data</span>
+                      </div>
+                      <ChevronRight size={18} className={styles.menuItemArrow} />
+                    </button>
                   </div>
 
                   {/* ================= RENEWAL SECTION ================= */}
@@ -630,164 +800,6 @@ export default function Home() {
                       </p>
                     </div>
                   )}
-                </>
-              )}
-            </div>
-          </aside>
-        </>
-      )}
-
-      {/* ================= REPORTS PANEL (RIGHT) ================= */}
-      {showReports && (
-        <>
-          <div
-            className={styles.overlay}
-            onClick={() => setShowReports(false)}
-            aria-hidden="true"
-          />
-
-          <aside
-            className={`${styles.slidePanel} ${styles.rightPanel}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="reports-title"
-          >
-            <div className={styles.panelHeader}>
-              <h3 id="reports-title">Reports & Analytics</h3>
-              <button
-                className={styles.closeBtn}
-                onClick={() => setShowReports(false)}
-                aria-label="Close reports panel"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className={styles.panelBody}>
-              {/* Success Notification */}
-              {downloadSuccess && (
-                <div className={styles.notification} data-type="success">
-                  <CheckCircle size={18} />
-                  <span>Report downloaded successfully!</span>
-                </div>
-              )}
-
-              {/* Error Notification */}
-              {downloadError && (
-                <div className={styles.notification} data-type="error">
-                  <AlertCircle size={18} />
-                  <span>{downloadError}</span>
-                </div>
-              )}
-
-              {/* Loading Stats */}
-              {loadingStats && (
-                <div className={styles.loadingState}>
-                  <div className={styles.spinner}></div>
-                  <p>Loading statistics...</p>
-                </div>
-              )}
-
-              {/* Export Options */}
-              {exportStats && (
-                <>
-                  <div className={styles.statsOverview}>
-                    <div className={styles.statCard}>
-                      <Users size={20} />
-                      <div>
-                        <p className={styles.statLabel}>Total Visitors</p>
-                        <p className={styles.statValue}>{exportStats.visitors?.total || 0}</p>
-                      </div>
-                    </div>
-                    <div className={styles.statCard}>
-                      <DoorOpen size={20} />
-                      <div>
-                        <p className={styles.statLabel}>Total Bookings</p>
-                        <p className={styles.statValue}>{exportStats.bookings?.total || 0}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.reportsSection}>
-                    <h5 className={styles.sectionTitle}>Download Reports</h5>
-
-                    {/* Visitor Records */}
-                    <div className={styles.reportCard}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}>
-                          <Users size={20} />
-                        </div>
-                        <div>
-                          <h6>Visitor Records</h6>
-                          <p className={styles.reportMeta}>
-                            {exportStats.visitors?.active || 0} active • {exportStats.visitors?.total || 0} total
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className={styles.downloadBtn}
-                        onClick={() => handleDownload("visitors")}
-                        disabled={downloading}
-                      >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download"}
-                      </button>
-                    </div>
-
-                    {/* Conference Bookings */}
-                    <div className={styles.reportCard}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}>
-                          <DoorOpen size={20} />
-                        </div>
-                        <div>
-                          <h6>Conference Bookings</h6>
-                          <p className={styles.reportMeta}>
-                            {exportStats.bookings?.upcoming || 0} upcoming • {exportStats.bookings?.total || 0} total
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className={styles.downloadBtn}
-                        onClick={() => handleDownload("bookings")}
-                        disabled={downloading}
-                      >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download"}
-                      </button>
-                    </div>
-
-                    {/* Complete Report */}
-                    <div className={`${styles.reportCard} ${styles.premiumReport}`}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}>
-                          <FileSpreadsheet size={20} />
-                        </div>
-                        <div>
-                          <h6>Complete Report</h6>
-                          <p className={styles.reportMeta}>
-                            All data in one Excel file with multiple sheets
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`}
-                        onClick={() => handleDownload("all")}
-                        disabled={downloading}
-                      >
-                        <Download size={16} />
-                        {downloading ? "Downloading..." : "Download All"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.infoBox}>
-                    <FileSpreadsheet size={16} />
-                    <p>
-                      Reports are exported in Excel format (.xlsx) with professional formatting, 
-                      headers, and color-coded status indicators.
-                    </p>
-                  </div>
                 </>
               )}
             </div>
