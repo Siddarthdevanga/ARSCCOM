@@ -17,6 +17,7 @@ import billingRepair from "./routes/billingRepair.route.js";
 import billingCron from "./routes/billingCron.route.js";
 import billingSyncRoutes from "./routes/billingSync.route.js";
 import exportsRoutes from "./routes/exports.routes.js";
+import settingsRoutes from "./routes/settings.routes.js"; // ✨ NEW
 
 const app = express();
 
@@ -160,6 +161,7 @@ app.get("/", (req, res) => {
         "/api/payment",
         "/api/subscription",
         "/api/upgrade",
+        "/api/settings", // ✨ NEW
       ],
     },
   });
@@ -193,6 +195,9 @@ app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/upgrade", upgradeRoutes);
 app.use("/api/payment/zoho", billingSyncRoutes);
 
+// Settings Management ✨ NEW
+app.use("/api/settings", settingsRoutes);
+
 // Billing Management
 app.use("/api/billing/repair", billingRepair);
 app.use("/api/billing/cron", billingCron);
@@ -217,6 +222,7 @@ app.use((req, res) => {
       "/api/payment",
       "/api/subscription",
       "/api/upgrade",
+      "/api/settings", // ✨ NEW
     ],
   });
 });
