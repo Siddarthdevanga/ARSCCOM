@@ -22,14 +22,12 @@ const formatIST = (value) => {
 
     let y, mo, d, h, m;
 
-    // MySQL: YYYY-MM-DD HH:MM:SS
     if (str.includes(" ")) {
       const [date, time] = str.split(" ");
       [y, mo, d] = date.split("-");
       [h, m] = time.split(":");
       h = parseInt(h, 10);
     }
-    // ISO: YYYY-MM-DDTHH:MM:SS...
     else if (str.includes("T")) {
       const [date, timePart] = str.split("T");
       [y, mo, d] = date.split("-");
@@ -56,6 +54,10 @@ const formatIST = (value) => {
 function WhatsAppSection({ whatsappUrl, companyName }) {
   if (!whatsappUrl) return null;
 
+  const handleWhatsAppClick = () => {
+    window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <div className={styles.whatsappSection}>
       <div className={styles.whatsappIcon}>📱</div>
@@ -63,14 +65,13 @@ function WhatsAppSection({ whatsappUrl, companyName }) {
         <strong>Stay Connected with {companyName}</strong>
         <p>Join our WhatsApp group for updates and support during your visit</p>
       </div>
-      
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
+        onClick={handleWhatsAppClick}
         className={styles.whatsappBtn}
+        type="button"
       >
         Join WhatsApp Group
-      </a>
+      </button>
     </div>
   );
 }
@@ -92,12 +93,10 @@ function VisitorPassContent() {
   const [visitor, setVisitor] = useState(null);
   const [error, setError] = useState("");
 
-  // Resend states
   const [resending, setResending] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [resendError, setResendError] = useState("");
 
-  // Get company from localStorage to access whatsapp_url
   const [localCompany, setLocalCompany] = useState(null);
 
   useEffect(() => {
@@ -145,9 +144,6 @@ function VisitorPassContent() {
     return () => controller.abort();
   }, [visitorCode]);
 
-  /* ======================================================
-     RESEND VISITOR PASS
-  ====================================================== */
   const handleResendPass = async () => {
     setResending(true);
     setResendError("");
@@ -183,7 +179,6 @@ function VisitorPassContent() {
     }
   };
 
-  /* ---------- Loading ---------- */
   if (loading) {
     return (
       <div className={styles.page}>
@@ -192,7 +187,6 @@ function VisitorPassContent() {
     );
   }
 
-  /* ---------- Error ---------- */
   if (error) {
     return (
       <div className={styles.page}>
@@ -211,7 +205,6 @@ function VisitorPassContent() {
 
   if (!visitor || !company) return null;
 
-  // Check if WhatsApp URL exists (from localStorage company or fallback)
   const whatsappUrl = localCompany?.whatsapp_url || company?.whatsapp_url || null;
 
   return (
@@ -328,9 +321,6 @@ function VisitorPassContent() {
   );
 }
 
-/* ======================================================
-   PAGE EXPORT
-====================================================== */
 export default function VisitorPassPage() {
   return (
     <Suspense
