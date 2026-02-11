@@ -28,10 +28,9 @@ body {
   flex-direction: column;
   gap: 20px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
-
   /* ensure card never overflows viewport */
   max-height: calc(100vh - 40px);
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 /* ================= HEADER ================= */
@@ -53,11 +52,34 @@ body {
   object-fit: contain;
 }
 
+/* ================= SUCCESS/ERROR MESSAGES ================= */
+.successMessage {
+  background: #d1fae5;
+  border: 1px solid #34d399;
+  border-left: 4px solid #10b981;
+  color: #065f46;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.errorMessage {
+  background: #fee2e2;
+  border: 1px solid #f87171;
+  border-left: 4px solid #ef4444;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
 /* ================= BODY ================= */
 .body {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 28px;
 }
 
@@ -90,6 +112,16 @@ body {
   color: #6b7280;
 }
 
+.statusIn {
+  color: #10b981;
+  font-weight: 600;
+}
+
+.statusOut {
+  color: #ef4444;
+  font-weight: 600;
+}
+
 /* ================= PHOTO ================= */
 .photoBox {
   width: 150px;
@@ -99,6 +131,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .photo {
@@ -111,6 +144,88 @@ body {
 .noPhoto {
   font-size: 12px;
   color: #9ca3af;
+}
+
+/* ================= WHATSAPP SECTION ================= */
+.whatsappSection {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+  border: 1px solid #6ee7b7;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.whatsappIcon {
+  font-size: 36px;
+  flex-shrink: 0;
+}
+
+.whatsappText {
+  flex: 1;
+}
+
+.whatsappText strong {
+  display: block;
+  font-size: 16px;
+  color: #065f46;
+  margin-bottom: 4px;
+}
+
+.whatsappText p {
+  font-size: 13px;
+  color: #047857;
+  margin: 0;
+}
+
+.whatsappBtn {
+  background: #25D366;
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.whatsappBtn:hover {
+  background: #1fa855;
+}
+
+/* ================= ACTIONS ================= */
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.resendBtn {
+  padding: 10px 24px;
+  background: #f3f4f6;
+  color: #4b5563;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.resendBtn:hover:not(:disabled) {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.resendBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* ================= FOOTER BUTTONS ================= */
@@ -128,6 +243,11 @@ body {
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.primaryBtn:hover {
+  transform: translateY(-2px);
 }
 
 .secondaryBtn {
@@ -138,6 +258,12 @@ body {
   border-radius: 8px;
   font-weight: 500;
   cursor: pointer;
+  transition: all 0.2s;
+}
+
+.secondaryBtn:hover {
+  background: #ede9fe;
+  border-color: #c4b5fd;
 }
 
 /* ================= STATE CARD ================= */
@@ -152,10 +278,27 @@ body {
 @media (max-width: 768px) {
   .body {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .photoBox {
     margin: 0 auto;
+  }
+
+  .whatsappSection {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .whatsappBtn {
+    width: 100%;
+  }
+
+  .footer {
+    flex-direction: column-reverse;
+  }
+
+  .footer button {
+    width: 100%;
   }
 }
