@@ -380,19 +380,23 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
     const limits = PLANS[plan] || PLANS.trial;
     const limit = limits.rooms;
 
+    // First, deactivate all rooms
     await db.query(
       `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
       [companyId]
     );
 
+    // ✅ If unlimited (Enterprise), activate ALL rooms
     if (limit === Infinity) {
       await db.query(
         `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
         [companyId]
       );
+      console.log(`✅ [syncRoomActivation] Enterprise plan - Activated ALL rooms for company ${companyId}`);
       return;
     }
 
+    // Otherwise, activate only up to limit
     if (limit > 0) {
       await db.query(
         `UPDATE conference_rooms SET is_active = 1
@@ -406,6 +410,7 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
          )`,
         [companyId, limit]
       );
+      console.log(`✅ [syncRoomActivation] ${plan.toUpperCase()} plan - Activated ${limit} rooms for company ${companyId}`);
     }
   } catch (error) {
     console.error("[syncRoomActivationByPlan]", error.message);
@@ -644,6 +649,7 @@ router.post("/rooms", async (req, res) => {
       [companyId, room_number, room_name.trim(), capacity || 0]
     );
 
+    // ✅ Sync room activation after creating new room
     await syncRoomActivationByPlan(companyId, plan);
 
     // Get the newly created room's activation status
@@ -737,7 +743,7 @@ router.delete("/rooms/:id", async (req, res) => {
       [roomId, companyId]
     );
 
-    // Re-sync room activation after deletion
+    // ✅ Re-sync room activation after deletion
     await syncRoomActivationByPlan(companyId, plan);
 
     res.json({ message: "Room deleted successfully" });
@@ -1002,7 +1008,16 @@ router.post("/sync-rooms", async (req, res) => {
 
     await syncRoomActivationByPlan(companyId, plan);
 
-    res.json({ message: "Room activation synced successfully" });
+    // Get updated room stats
+    const roomStats = await getRoomStats(companyId);
+
+    res.json({ 
+      message: "Room activation synced successfully",
+      plan: plan.toUpperCase(),
+      totalRooms: roomStats.total,
+      activeRooms: roomStats.active,
+      lockedRooms: roomStats.locked,
+    });
   } catch (err) {
     console.error("[POST /sync-rooms]", err.message);
     
