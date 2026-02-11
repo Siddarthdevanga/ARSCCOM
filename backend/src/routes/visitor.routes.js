@@ -1,13 +1,13 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
-
 import {
   createVisitor,
   getVisitorPass,
   getPublicVisitorPass,
   getVisitorDashboard,
-  checkoutVisitor
+  checkoutVisitor,
+  resendVisitorPass  // ✅ NEW IMPORT
 } from "../controllers/visitor.controller.js";
 
 const router = express.Router();
@@ -18,7 +18,6 @@ const router = express.Router();
    - Used in Email + QR
 ====================================================== */
 router.get("/public/code/:visitorCode", getPublicVisitorPass);
-
 
 /* ======================================================
    👤 CREATE VISITOR
@@ -34,7 +33,6 @@ router.post(
   createVisitor
 );
 
-
 /* ======================================================
    📊 VISITOR DASHBOARD (ADMIN)
    GET /api/visitors/dashboard
@@ -44,7 +42,6 @@ router.get(
   authenticate,
   getVisitorDashboard
 );
-
 
 /* ======================================================
    🔒 SECURE ADMIN VISITOR PASS
@@ -58,6 +55,18 @@ router.get(
   getVisitorPass
 );
 
+/* ======================================================
+   📧 RESEND VISITOR PASS EMAIL
+   POST /api/visitors/:visitorCode/resend
+   - Requires auth
+   - Company isolated
+   - ✅ NEW ENDPOINT
+====================================================== */
+router.post(
+  "/:visitorCode/resend",
+  authenticate,
+  resendVisitorPass
+);
 
 /* ======================================================
    🚪 CHECKOUT VISITOR
