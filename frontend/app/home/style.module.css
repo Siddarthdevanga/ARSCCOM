@@ -15,10 +15,6 @@ body::-webkit-scrollbar {
   display: none;
 }
 
-* {
-  box-sizing: border-box;
-}
-
 /* ================= MAIN CONTAINER ================= */
 .container {
   height: 100vh;
