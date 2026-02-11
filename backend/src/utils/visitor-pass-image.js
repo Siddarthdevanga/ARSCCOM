@@ -1,6 +1,5 @@
 import { createCanvas, loadImage, registerFont } from "canvas";
 import fs from "fs";
-import QRCode from "qrcode";
 
 /* ================= FONT SETUP ================= */
 const FONT_PATH = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
@@ -22,7 +21,6 @@ const BRAND_COLOR = "#6c2bd9";
 const ACCENT_COLOR = "#8e44ad";
 const TEXT_GRAY = "#666";
 const LIGHT_GRAY = "#f8f9fa";
-const WHATSAPP_GREEN = "#25D366";
 const CARD_RADIUS = 18;
 
 /* ======================================================
@@ -104,76 +102,6 @@ const drawRoundedRect = (ctx, x, y, width, height, radius) => {
   ctx.closePath();
 };
 
-/* ================= SHORTEN URL FOR DISPLAY ================= */
-const shortenUrl = (url) => {
-  if (!url) return "";
-  
-  try {
-    // Remove protocol
-    let shortened = url.replace(/^https?:\/\//, "");
-    
-    // Remove trailing slash
-    shortened = shortened.replace(/\/$/, "");
-    
-    // If still too long, truncate
-    if (shortened.length > 30) {
-      shortened = shortened.substring(0, 27) + "...";
-    }
-    
-    return shortened;
-  } catch {
-    return url;
-  }
-};
-
-/* ================= DRAW WHATSAPP ICON ================= */
-const drawWhatsAppIcon = (ctx, x, y, size) => {
-  const centerX = x + size / 2;
-  const centerY = y + size / 2;
-  const radius = size / 2;
-
-  // Green circle background
-  ctx.fillStyle = WHATSAPP_GREEN;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-  ctx.fill();
-
-  // White phone icon (simplified)
-  ctx.strokeStyle = "#ffffff";
-  ctx.fillStyle = "#ffffff";
-  ctx.lineWidth = size * 0.08;
-
-  // Draw phone receiver shape
-  ctx.beginPath();
-  
-  // Bottom curve (receiver bottom)
-  ctx.arc(
-    centerX - radius * 0.3,
-    centerY + radius * 0.3,
-    radius * 0.15,
-    Math.PI * 0.75,
-    Math.PI * 1.5
-  );
-  
-  // Top curve (receiver top)
-  ctx.arc(
-    centerX + radius * 0.3,
-    centerY - radius * 0.3,
-    radius * 0.15,
-    Math.PI * 1.5,
-    Math.PI * 2.25
-  );
-  
-  ctx.stroke();
-
-  // Add chat bubble effect
-  ctx.beginPath();
-  ctx.arc(centerX + radius * 0.1, centerY - radius * 0.1, radius * 0.5, 0, Math.PI * 2);
-  ctx.strokeStyle = "#ffffff";
-  ctx.lineWidth = size * 0.06;
-  ctx.stroke();
-};
-
 /* ================= MAIN IMAGE GENERATOR ================= */
 export const generateVisitorPassImage = async ({
   company = {},
@@ -181,14 +109,12 @@ export const generateVisitorPassImage = async ({
 }) => {
   console.log("[VISITOR_PASS_IMAGE] Generating pass for:", visitor.name);
   console.log("[VISITOR_PASS_IMAGE] Check-in time:", visitor.checkIn);
-  console.log("[VISITOR_PASS_IMAGE] WhatsApp URL:", company.whatsapp_url || "Not provided");
 
   const companyName = company?.name || "Company";
   const visitorName = visitor?.name || "Visitor";
   const visitorCode = visitor?.visitorCode || "N/A";
   const phone = visitor?.phone || "N/A";
   const personToMeet = visitor?.personToMeet || "Reception";
-  const whatsappUrl = company?.whatsapp_url || null;
   
   // Format check-in time
   const checkInFormatted = formatISTForPass(visitor.checkIn);
@@ -367,53 +293,13 @@ export const generateVisitorPassImage = async ({
     ctx.textAlign = "left";
   }
 
-  /* ================= WHATSAPP SECTION (IF URL EXISTS) ================= */
-  if (whatsappUrl) {
-    const whatsappX = cardX + 20;
-    const whatsappY = cardY + cardH - 80;
-    const iconSize = 32;
-
-    // Background box for WhatsApp section
-    ctx.fillStyle = "#e8f5e9";
-    drawRoundedRect(ctx, whatsappX, whatsappY, 320, 50, 8);
-    ctx.fill();
-
-    // Border
-    ctx.strokeStyle = WHATSAPP_GREEN;
-    ctx.lineWidth = 2;
-    drawRoundedRect(ctx, whatsappX, whatsappY, 320, 50, 8);
-    ctx.stroke();
-
-    // WhatsApp icon
-    drawWhatsAppIcon(ctx, whatsappX + 10, whatsappY + 9, iconSize);
-
-    // Text content
-    ctx.fillStyle = "#1b5e20";
-    ctx.font = `bold 13px ${fontFamily}`;
-    ctx.fillText("Join WhatsApp Group", whatsappX + iconSize + 20, whatsappY + 18);
-
-    // URL
-    ctx.fillStyle = "#2e7d32";
-    ctx.font = `11px ${fontFamily}`;
-    const displayUrl = shortenUrl(whatsappUrl);
-    drawEllipsisText(ctx, displayUrl, whatsappX + iconSize + 20, whatsappY + 35, 260);
-
-    console.log("[VISITOR_PASS_IMAGE] WhatsApp section added");
-  }
-
   /* ================= FOOTER ================= */
   ctx.fillStyle = LIGHT_GRAY;
   ctx.fillRect(cardX, cardY + cardH - 40, cardW, 40);
 
   ctx.fillStyle = TEXT_GRAY;
   ctx.font = `12px ${fontFamily}`;
-  
-  // Adjust footer text position if WhatsApp section exists
-  const footerText = whatsappUrl 
-    ? "Please carry this pass during your visit"
-    : "Please carry this pass during your visit • Valid for today only";
-  
-  ctx.fillText(footerText, cardX + 20, cardY + cardH - 20);
+  ctx.fillText("Please carry this pass during your visit • Valid for today only", cardX + 20, cardY + cardH - 20);
 
   // Timestamp
   ctx.textAlign = "right";
