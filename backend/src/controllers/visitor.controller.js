@@ -333,3 +333,119 @@ export const checkoutVisitor = async (req, res) => {
     });
   }
 };
+
+
+/* =========================================================
+   RESEND VISITOR PASS EMAIL
+   POST /api/visitors/:visitorCode/resend
+========================================================= */
+export const resendVisitorPass = async (req, res) => {
+  try {
+    const { visitorCode } = req.params;
+    const companyId = req.user?.companyId;
+
+    if (!visitorCode) {
+      return res.status(400).json({
+        success: false,
+        message: "Visitor code is required"
+      });
+    }
+
+    // Fetch visitor with company info including whatsapp_url
+    const [[visitor]] = await db.execute(
+      `
+      SELECT
+        v.id,
+        v.visitor_code,
+        v.name,
+        v.phone,
+        v.email,
+        v.photo_url,
+        v.check_in,
+        v.person_to_meet,
+        v.purpose,
+        c.id AS company_id,
+        c.name AS company_name,
+        c.logo_url AS company_logo,
+        c.whatsapp_url AS company_whatsapp_url
+      FROM visitors v
+      INNER JOIN companies c ON c.id = v.company_id
+      WHERE v.visitor_code = ?
+        AND v.company_id = ?
+      LIMIT 1
+      `,
+      [visitorCode, companyId]
+    );
+
+    if (!visitor) {
+      return res.status(404).json({
+        success: false,
+        message: "Visitor not found"
+      });
+    }
+
+    if (!visitor.email) {
+      return res.status(400).json({
+        success: false,
+        message: "Visitor does not have an email address"
+      });
+    }
+
+    // Import the email service
+    const { sendVisitorPassMail } = await import("../utils/visitorMail.service.js");
+
+    // Format check-in time for display
+    const formatISTForDisplay = (date) => {
+      if (!date) return "-";
+      const d = new Date(date);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const day = d.getDate();
+      const month = months[d.getMonth()];
+      const year = d.getFullYear();
+      let hours = d.getHours();
+      const minutes = String(d.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+    };
+
+    // Send visitor pass email
+    await sendVisitorPassMail({
+      company: {
+        id: visitor.company_id,
+        name: visitor.company_name,
+        logo: visitor.company_logo,
+        whatsapp_url: visitor.company_whatsapp_url || null,
+      },
+      visitor: {
+        visitorCode: visitor.visitor_code,
+        name: visitor.name,
+        phone: visitor.phone,
+        email: visitor.email,
+        photoUrl: visitor.photo_url,
+        checkIn: visitor.check_in,
+        checkInDisplay: formatISTForDisplay(visitor.check_in),
+        personToMeet: visitor.person_to_meet || "Reception",
+        purpose: visitor.purpose || "Visit",
+      },
+    });
+
+    // Update pass_mail_sent flag
+    await db.execute(
+      `UPDATE visitors SET pass_mail_sent = pass_mail_sent + 1 WHERE id = ?`,
+      [visitor.id]
+    );
+
+    return res.json({
+      success: true,
+      message: "Visitor pass resent successfully"
+    });
+
+  } catch (error) {
+    console.error("RESEND VISITOR PASS ERROR:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to resend visitor pass"
+    });
+  }
+};
