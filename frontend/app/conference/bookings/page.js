@@ -62,6 +62,15 @@ const normalizeDate = (d) =>
   typeof d === "string" ? d.split("T")[0] : "";
 
 /* ======================================================
+   HELPER: Check if plan is unlimited
+====================================================== */
+const isUnlimitedPlan = (limit) => {
+  if (!limit) return false;
+  const str = String(limit).toLowerCase();
+  return str === "unlimited" || str === "infinity" || limit === Infinity;
+};
+
+/* ======================================================
    MODAL COMPONENT
 ====================================================== */
 const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
@@ -260,7 +269,7 @@ export default function ConferenceBookings() {
   const [resultModal, setResultModal] = useState({ isOpen: false, type: "", message: "" });
 
   /* ======================================================
-     LOAD DATA + PLAN
+     LOAD DATA + PLAN (FIXED)
   ====================================================== */
   const loadAll = async () => {
     try {
@@ -273,23 +282,29 @@ export default function ConferenceBookings() {
         apiFetch("/api/conference/plan-usage"),
       ]);
 
+      console.log("📊 Plan Response:", planRes); // Debug log
+      console.log("🏢 Rooms Response:", r); // Debug log
+
       setPlan(planRes);
 
+      // Check if plan is blocked
       if (!planRes || planRes.message) {
-        setPlanBlocked(true);
-      } else if (
-        planRes.limit !== "UNLIMITED" &&
-        Number(planRes.remaining) <= 0
-      ) {
         setPlanBlocked(true);
       } else {
         setPlanBlocked(false);
       }
 
+      // ✅ FIXED: For unlimited plans, use ALL rooms returned by backend
+      // Backend already filters by is_active = 1, so we trust it
       let allowedRooms = Array.isArray(r) ? r : [];
 
-      if (planRes?.limit !== "UNLIMITED") {
-        allowedRooms = allowedRooms.slice(0, Number(planRes.limit));
+      // ✅ Only slice if NOT unlimited (case-insensitive check)
+      if (!isUnlimitedPlan(planRes?.limit)) {
+        const roomLimit = Number(planRes?.limit) || 0;
+        allowedRooms = allowedRooms.slice(0, roomLimit);
+        console.log(`🔒 Limited to ${roomLimit} rooms`);
+      } else {
+        console.log(`✅ Unlimited plan - showing all ${allowedRooms.length} active rooms`);
       }
 
       setRooms(allowedRooms);
@@ -303,7 +318,8 @@ export default function ConferenceBookings() {
             }))
           : []
       );
-    } catch {
+    } catch (err) {
+      console.error("❌ Load error:", err);
       router.replace("/auth/login");
     }
   };
@@ -660,7 +676,7 @@ export default function ConferenceBookings() {
           </div>
 
           <div className={styles.formGroup}>
-            <label>Room *</label>
+            <label>Room * {plan && `(${rooms.length} available)`}</label>
             <select
               className={styles.select}
               value={roomId}
