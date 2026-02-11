@@ -33,9 +33,6 @@ export default function Home() {
   // View state: "home" | "reports" | "settings"
   const [currentView, setCurrentView] = useState("home");
 
-  // Settings tab state: "company" | "profile" | "password"
-  const [settingsTab, setSettingsTab] = useState("company");
-
   // Subscription panel state
   const [showMenu, setShowMenu] = useState(false);
   const [subData, setSubData] = useState(null);
@@ -502,7 +499,6 @@ export default function Home() {
   const handleOpenSettings = () => {
     setShowMenu(false);
     setCurrentView("settings");
-    setSettingsTab("company");
     fetchSettings();
   };
 
@@ -836,259 +832,233 @@ export default function Home() {
             )}
 
             {settingsData && (
-              <>
-                {/* Settings Tabs */}
-                <div className={styles.settingsTabs}>
+              <div className={styles.settingsContent}>
+                
+                {/* COMPANY SETTINGS CARD */}
+                <div className={styles.settingsSection}>
+                  <div className={styles.settingsSectionTitle}>
+                    <Building2 size={20} />
+                    <h3>Company Settings</h3>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Company Name *</label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Enter company name"
+                      className={styles.input}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>WhatsApp URL (Optional)</label>
+                    <input
+                      type="url"
+                      value={whatsappUrl}
+                      onChange={(e) => setWhatsappUrl(e.target.value)}
+                      placeholder="https://wa.me/..."
+                      className={styles.input}
+                    />
+                    <p className={styles.fieldHelp}>
+                      Used in visitor pass emails
+                    </p>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Company Logo</label>
+                    {logoPreview && (
+                      <div className={styles.logoPreview}>
+                        <img src={logoPreview} alt="Logo preview" />
+                      </div>
+                    )}
+                    <label htmlFor="logo-upload" className={styles.uploadBtn}>
+                      <Upload size={14} />
+                      <span>{logoFile ? "Change Logo" : "Upload Logo"}</span>
+                    </label>
+                    <input
+                      id="logo-upload"
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      style={{ display: "none" }}
+                    />
+                    {logoFile && (
+                      <p className={styles.fileSelected}>
+                        {logoFile.name}
+                      </p>
+                    )}
+                    <p className={styles.fieldHelp}>
+                      Max 5MB • JPG, PNG, WEBP
+                    </p>
+                  </div>
+
+                  <div className={styles.readOnlySection}>
+                    <h4>Read-Only Info</h4>
+                    <div className={styles.readOnlyRow}>
+                      <span>Conference Rooms</span>
+                      <strong>{settingsData.company?.rooms || 0}</strong>
+                    </div>
+                    <div className={styles.readOnlyRow}>
+                      <span>Plan</span>
+                      <strong>{settingsData.company?.plan || "—"}</strong>
+                    </div>
+                    <div className={styles.readOnlyRow}>
+                      <span>Status</span>
+                      <strong>{settingsData.company?.subscription_status || "—"}</strong>
+                    </div>
+                  </div>
+
                   <button
-                    className={settingsTab === "company" ? styles.activeTab : styles.tab}
-                    onClick={() => setSettingsTab("company")}
+                    className={styles.saveBtn}
+                    onClick={handleSaveCompanySettings}
+                    disabled={savingSettings}
                   >
-                    <Building2 size={18} />
-                    <span>Company Settings</span>
-                  </button>
-                  <button
-                    className={settingsTab === "profile" ? styles.activeTab : styles.tab}
-                    onClick={() => setSettingsTab("profile")}
-                  >
-                    <User size={18} />
-                    <span>User Profile</span>
-                  </button>
-                  <button
-                    className={settingsTab === "password" ? styles.activeTab : styles.tab}
-                    onClick={() => setSettingsTab("password")}
-                  >
-                    <Lock size={18} />
-                    <span>Change Password</span>
+                    {savingSettings ? "Saving..." : "Save Company Settings"}
                   </button>
                 </div>
 
-                {/* Company Settings Tab */}
-                {settingsTab === "company" && (
-                  <div className={styles.settingsContent}>
-                    <div className={styles.settingsSection}>
-                      <h3 className={styles.settingsSectionTitle}>Company Information</h3>
+                {/* USER PROFILE CARD */}
+                <div className={styles.settingsSection}>
+                  <div className={styles.settingsSectionTitle}>
+                    <User size={20} />
+                    <h3>User Profile</h3>
+                  </div>
 
-                      <div className={styles.formGroup}>
-                        <label>Company Name *</label>
-                        <input
-                          type="text"
-                          value={companyName}
-                          onChange={(e) => setCompanyName(e.target.value)}
-                          placeholder="Enter company name"
-                          className={styles.input}
-                        />
-                      </div>
+                  <div className={styles.formGroup}>
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      value={userName}
+                      onChange={(e) => setUserName(e.target.value)}
+                      placeholder="Enter your name"
+                      className={styles.input}
+                    />
+                  </div>
 
-                      <div className={styles.formGroup}>
-                        <label>WhatsApp URL (Optional)</label>
-                        <input
-                          type="url"
-                          value={whatsappUrl}
-                          onChange={(e) => setWhatsappUrl(e.target.value)}
-                          placeholder="https://wa.me/... or https://api.whatsapp.com/..."
-                          className={styles.input}
-                        />
-                        <p className={styles.fieldHelp}>
-                          Used in visitor pass emails. Format: https://wa.me/your-link
-                        </p>
-                      </div>
+                  <div className={styles.formGroup}>
+                    <label>Phone Number</label>
+                    <input
+                      type="tel"
+                      value={userPhone}
+                      onChange={(e) => setUserPhone(e.target.value)}
+                      placeholder="Enter your phone"
+                      className={styles.input}
+                    />
+                  </div>
 
-                      <div className={styles.formGroup}>
-                        <label>Company Logo</label>
-                        {logoPreview && (
-                          <div className={styles.logoPreview}>
-                            <img src={logoPreview} alt="Logo preview" />
-                          </div>
-                        )}
-                        <label htmlFor="logo-upload" className={styles.uploadBtn}>
-                          <Upload size={16} />
-                          <span>{logoFile ? "Change Logo" : "Upload New Logo"}</span>
-                        </label>
-                        <input
-                          id="logo-upload"
-                          type="file"
-                          accept="image/*"
-                          onChange={handleLogoChange}
-                          style={{ display: "none" }}
-                        />
-                        {logoFile && (
-                          <p className={styles.fileSelected}>
-                            Selected: {logoFile.name}
-                          </p>
-                        )}
-                        <p className={styles.fieldHelp}>
-                          Max 5MB. Formats: JPG, PNG, WEBP
-                        </p>
-                      </div>
+                  <div className={styles.formGroup}>
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      value={userEmail}
+                      disabled
+                      className={`${styles.input} ${styles.readOnlyInput}`}
+                    />
+                    <p className={styles.fieldHelp}>
+                      Email cannot be changed (security)
+                    </p>
+                  </div>
 
-                      <div className={styles.readOnlySection}>
-                        <h4>Read-Only Information</h4>
-                        <div className={styles.readOnlyRow}>
-                          <span>Conference Rooms:</span>
-                          <strong>{settingsData.company?.rooms || 0}</strong>
-                        </div>
-                        <div className={styles.readOnlyRow}>
-                          <span>Subscription Plan:</span>
-                          <strong>{settingsData.company?.plan?.toUpperCase() || "—"}</strong>
-                        </div>
-                        <div className={styles.readOnlyRow}>
-                          <span>Status:</span>
-                          <strong>{settingsData.company?.subscription_status?.toUpperCase() || "—"}</strong>
-                        </div>
-                      </div>
+                  <button
+                    className={styles.saveBtn}
+                    onClick={handleSaveUserProfile}
+                    disabled={savingSettings}
+                  >
+                    {savingSettings ? "Saving..." : "Save Profile"}
+                  </button>
+                </div>
 
+                {/* CHANGE PASSWORD CARD */}
+                <div className={styles.settingsSection}>
+                  <div className={styles.settingsSectionTitle}>
+                    <Lock size={20} />
+                    <h3>Change Password</h3>
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Current Password *</label>
+                    <div className={styles.passwordInput}>
+                      <input
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter current password"
+                        className={styles.input}
+                      />
                       <button
-                        className={styles.saveBtn}
-                        onClick={handleSaveCompanySettings}
-                        disabled={savingSettings}
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className={styles.passwordToggle}
                       >
-                        {savingSettings ? "Saving..." : "Save Company Settings"}
+                        {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* User Profile Tab */}
-                {settingsTab === "profile" && (
-                  <div className={styles.settingsContent}>
-                    <div className={styles.settingsSection}>
-                      <h3 className={styles.settingsSectionTitle}>Personal Information</h3>
-
-                      <div className={styles.formGroup}>
-                        <label>Full Name</label>
-                        <input
-                          type="text"
-                          value={userName}
-                          onChange={(e) => setUserName(e.target.value)}
-                          placeholder="Enter your name"
-                          className={styles.input}
-                        />
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Phone Number</label>
-                        <input
-                          type="tel"
-                          value={userPhone}
-                          onChange={(e) => setUserPhone(e.target.value)}
-                          placeholder="Enter your phone"
-                          className={styles.input}
-                        />
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Email Address</label>
-                        <input
-                          type="email"
-                          value={userEmail}
-                          disabled
-                          className={`${styles.input} ${styles.readOnlyInput}`}
-                        />
-                        <p className={styles.fieldHelp}>
-                          Email cannot be changed (security)
-                        </p>
-                      </div>
-
+                  <div className={styles.formGroup}>
+                    <label>New Password *</label>
+                    <div className={styles.passwordInput}>
+                      <input
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Min 8 characters"
+                        className={styles.input}
+                      />
                       <button
-                        className={styles.saveBtn}
-                        onClick={handleSaveUserProfile}
-                        disabled={savingSettings}
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className={styles.passwordToggle}
                       >
-                        {savingSettings ? "Saving..." : "Save Profile"}
+                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                   </div>
-                )}
 
-                {/* Change Password Tab */}
-                {settingsTab === "password" && (
-                  <div className={styles.settingsContent}>
-                    <div className={styles.settingsSection}>
-                      <h3 className={styles.settingsSectionTitle}>Change Password</h3>
-
-                      <div className={styles.formGroup}>
-                        <label>Current Password *</label>
-                        <div className={styles.passwordInput}>
-                          <input
-                            type={showCurrentPassword ? "text" : "password"}
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="Enter current password"
-                            className={styles.input}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                            className={styles.passwordToggle}
-                          >
-                            {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>New Password *</label>
-                        <div className={styles.passwordInput}>
-                          <input
-                            type={showNewPassword ? "text" : "password"}
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter new password (min 8 characters)"
-                            className={styles.input}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowNewPassword(!showNewPassword)}
-                            className={styles.passwordToggle}
-                          >
-                            {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Confirm New Password *</label>
-                        <div className={styles.passwordInput}>
-                          <input
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                            className={styles.input}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                            className={styles.passwordToggle}
-                          >
-                            {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                          <p className={styles.fieldError}>
-                            Passwords do not match
-                          </p>
-                        )}
-                      </div>
-
-                      <div className={styles.infoBox}>
-                        <Lock size={16} />
-                        <p>
-                          Password must be at least 8 characters long. You will receive a confirmation email after changing your password.
-                        </p>
-                      </div>
-
+                  <div className={styles.formGroup}>
+                    <label>Confirm Password *</label>
+                    <div className={styles.passwordInput}>
+                      <input
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className={styles.input}
+                      />
                       <button
-                        className={styles.saveBtn}
-                        onClick={handleChangePassword}
-                        disabled={savingSettings}
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className={styles.passwordToggle}
                       >
-                        {savingSettings ? "Changing..." : "Change Password"}
+                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
+                    {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                      <p className={styles.fieldError}>
+                        Passwords do not match
+                      </p>
+                    )}
                   </div>
-                )}
-              </>
+
+                  <div className={styles.infoBox}>
+                    <Lock size={16} />
+                    <p>
+                      Password must be at least 8 characters. You'll receive a confirmation email.
+                    </p>
+                  </div>
+
+                  <button
+                    className={styles.saveBtn}
+                    onClick={handleChangePassword}
+                    disabled={savingSettings}
+                  >
+                    {savingSettings ? "Changing..." : "Change Password"}
+                  </button>
+                </div>
+
+              </div>
             )}
           </div>
         )}
