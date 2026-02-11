@@ -67,6 +67,25 @@ function VisitorPassContent() {
   const [visitor, setVisitor] = useState(null);
   const [error, setError] = useState("");
 
+  // Resend states
+  const [resending, setResending] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
+  const [resendError, setResendError] = useState("");
+
+  // Get company from localStorage to access whatsapp_url
+  const [localCompany, setLocalCompany] = useState(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("company");
+      if (stored) {
+        setLocalCompany(JSON.parse(stored));
+      }
+    } catch (err) {
+      console.error("Failed to parse company from localStorage:", err);
+    }
+  }, []);
+
   useEffect(() => {
     if (!visitorCode) {
       setError("Visitor pass not found");
@@ -101,6 +120,44 @@ function VisitorPassContent() {
     return () => controller.abort();
   }, [visitorCode]);
 
+  /* ======================================================
+     RESEND VISITOR PASS
+  ====================================================== */
+  const handleResendPass = async () => {
+    setResending(true);
+    setResendError("");
+    setResendSuccess(false);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Authentication required");
+      }
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/resend`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Failed to resend pass");
+
+      setResendSuccess(true);
+      setTimeout(() => setResendSuccess(false), 5000);
+    } catch (err) {
+      console.error("RESEND ERROR:", err);
+      setResendError(err.message || "Failed to resend visitor pass");
+      setTimeout(() => setResendError(""), 5000);
+    } finally {
+      setResending(false);
+    }
+  };
+
   /* ---------- Loading ---------- */
   if (loading) {
     return (
@@ -129,6 +186,9 @@ function VisitorPassContent() {
 
   if (!visitor || !company) return null;
 
+  // Check if WhatsApp URL exists (from localStorage company or fallback)
+  const whatsappUrl = localCompany?.whatsapp_url || company?.whatsapp_url || null;
+
   return (
     <div className={styles.page}>
       <div className={styles.passCard}>
@@ -146,6 +206,19 @@ function VisitorPassContent() {
           )}
         </header>
 
+        {/* SUCCESS/ERROR MESSAGES */}
+        {resendSuccess && (
+          <div className={styles.successMessage}>
+            ✓ Visitor pass resent successfully to {visitor.email}
+          </div>
+        )}
+
+        {resendError && (
+          <div className={styles.errorMessage}>
+            ✕ {resendError}
+          </div>
+        )}
+
         {/* BODY */}
         <div className={styles.body}>
           <div className={styles.details}>
@@ -162,9 +235,23 @@ function VisitorPassContent() {
               <b>{visitor.phone}</b>
             </div>
 
+            {visitor.email && (
+              <div className={styles.row}>
+                <span>Email</span>
+                <b>{visitor.email}</b>
+              </div>
+            )}
+
             <div className={styles.row}>
               <span>Check-in</span>
               <b>{formatIST(visitor.checkIn)}</b>
+            </div>
+
+            <div className={styles.row}>
+              <span>Status</span>
+              <b className={visitor.status === "IN" ? styles.statusIn : styles.statusOut}>
+                {visitor.status === "IN" ? "Checked In" : "Checked Out"}
+              </b>
             </div>
           </div>
 
@@ -179,6 +266,38 @@ function VisitorPassContent() {
               <div className={styles.noPhoto}>NO PHOTO</div>
             )}
           </div>
+        </div>
+
+        {/* WHATSAPP SECTION */}
+        {whatsappUrl && (
+          <div className={styles.whatsappSection}>
+            <div className={styles.whatsappIcon}>📱</div>
+            <div className={styles.whatsappText}>
+              <strong>Stay Connected with {company.name}</strong>
+              <p>Join our WhatsApp group for updates and support during your visit</p>
+            </div>
+            
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={styles.whatsappBtn}
+            >
+              Join WhatsApp Group
+            </a>
+          </div>
+        )}
+
+        {/* ACTIONS */}
+        <div className={styles.actions}>
+          {visitor.email && (
+            <button
+              className={styles.resendBtn}
+              onClick={handleResendPass}
+              disabled={resending}
+            >
+              {resending ? "Sending..." : "📧 Resend Pass"}
+            </button>
+          )}
         </div>
 
         {/* FOOTER */}
