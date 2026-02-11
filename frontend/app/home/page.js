@@ -2,7 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Users, DoorOpen, FileSpreadsheet, CheckCircle, X, Zap, Crown } from "lucide-react";
+import { 
+  Users, 
+  DoorOpen, 
+  FileSpreadsheet, 
+  CheckCircle, 
+  X, 
+  Zap, 
+  Crown,
+  Clock,
+  TrendingUp,
+  Download,
+  AlertCircle
+} from "lucide-react";
 import styles from "./style.module.css";
 
 export default function Home() {
@@ -60,7 +72,7 @@ export default function Home() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.MESSAGE || "Failed to load");
+      if (!res.ok) throw new Error(data?.MESSAGE || "Failed to load subscription details");
 
       setSubData(data);
     } catch (err) {
@@ -84,7 +96,7 @@ export default function Home() {
       });
 
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to load stats");
+      if (!res.ok) throw new Error(data?.message || "Failed to load statistics");
 
       setExportStats(data);
     } catch (err) {
@@ -102,15 +114,20 @@ export default function Home() {
       setDownloadSuccess(false);
 
       let endpoint = "";
+      let reportName = "";
+      
       switch (type) {
         case "visitors":
           endpoint = "/api/exports/visitors";
+          reportName = "Visitor Records";
           break;
         case "bookings":
           endpoint = "/api/exports/conference-bookings";
+          reportName = "Conference Bookings";
           break;
         case "all":
           endpoint = "/api/exports/all";
+          reportName = "Complete Report";
           break;
         default:
           throw new Error("Invalid download type");
@@ -130,7 +147,7 @@ export default function Home() {
       // Get the blob and filename
       const blob = await res.blob();
       const contentDisposition = res.headers.get("content-disposition");
-      let filename = `report-${Date.now()}.xlsx`;
+      let filename = `${reportName.replace(/\s+/g, '-')}-${Date.now()}.xlsx`;
       
       if (contentDisposition) {
         const match = contentDisposition.match(/filename="(.+)"/);
@@ -149,9 +166,13 @@ export default function Home() {
 
       // Show success message
       setDownloadSuccess(true);
-      setTimeout(() => setDownloadSuccess(false), 3000);
+      setTimeout(() => setDownloadSuccess(false), 4000);
+      
+      // Refresh stats after download
+      fetchExportStats();
     } catch (err) {
       setDownloadError(err?.message || "Download failed");
+      setTimeout(() => setDownloadError(""), 5000);
     } finally {
       setDownloading(false);
     }
@@ -178,14 +199,13 @@ export default function Home() {
       }
 
       if (data.success && data.redirectTo) {
-        // Redirect to Zoho payment page
         window.location.href = data.redirectTo;
       } else {
         throw new Error(data.message || "No redirect URL provided");
       }
     } catch (err) {
       console.error("Business upgrade error:", err);
-      alert(err.message || "Failed to process Business upgrade");
+      alert(err.message || "Failed to process Business upgrade. Please try again.");
       setUpgradingBusiness(false);
     }
   };
@@ -210,7 +230,6 @@ export default function Home() {
       }
 
       if (data.success && data.redirectTo) {
-        // Close subscription panel and redirect to contact form
         setShowSub(false);
         router.push(data.redirectTo);
       } else {
@@ -218,7 +237,7 @@ export default function Home() {
       }
     } catch (err) {
       console.error("Enterprise upgrade error:", err);
-      alert(err.message || "Failed to process Enterprise upgrade");
+      alert(err.message || "Failed to process Enterprise upgrade. Please contact support.");
       setUpgradingEnterprise(false);
     }
   };
@@ -239,8 +258,10 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    localStorage.clear();
-    router.replace("/auth/login");
+    if (confirm("Are you sure you want to logout?")) {
+      localStorage.clear();
+      router.replace("/auth/login");
+    }
   };
 
   // Determine upgrade options based on current plan and status
@@ -255,44 +276,65 @@ export default function Home() {
   
   const needsRenewal = ["expired", "cancelled"].includes(currentStatus);
 
+  // Get status badge style
+  const getStatusStyle = (status) => {
+    const statusLower = status?.toLowerCase() || "";
+    switch (statusLower) {
+      case "active":
+        return { color: "#00c853", icon: CheckCircle };
+      case "expired":
+        return { color: "#ff1744", icon: AlertCircle };
+      case "trial":
+        return { color: "#ff9800", icon: Clock };
+      default:
+        return { color: "#666", icon: AlertCircle };
+    }
+  };
+
   if (!company) return null;
+
+  const statusStyle = getStatusStyle(subData?.STATUS);
+  const StatusIcon = statusStyle.icon;
 
   return (
     <div className={styles.container}>
 
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
-        <div
-          className={styles.menuDots}
+        <button
+          className={styles.menuBtn}
           onClick={handleOpenSubscription}
           title="View subscription details"
-          role="button"
           aria-label="Open subscription panel"
         >
-          ⋮
-        </div>
+          <div className={styles.menuDots}>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </button>
 
-        <div className={styles.logoText}>{company.name}</div>
-
-        <div className={styles.rightSection}>
-          {/* Reports Button - Unique Design */}
-          <button
-            className={styles.reportsBtn}
-            onClick={handleOpenReports}
-            title="View Reports"
-            aria-label="Open Reports"
-          >
-            <FileSpreadsheet size={18} />
-            <span>Reports</span>
-          </button>
-
+        <div className={styles.companyInfo}>
           {company.logo_url && (
             <img
               src={company.logo_url}
               alt={`${company.name} logo`}
-              className={styles.companyLogo}
+              className={styles.companyLogoHeader}
             />
           )}
+          <h1 className={styles.companyName}>{company.name}</h1>
+        </div>
+
+        <div className={styles.headerActions}>
+          <button
+            className={styles.reportsBtn}
+            onClick={handleOpenReports}
+            title="View & Download Reports"
+            aria-label="Open Reports Panel"
+          >
+            <FileSpreadsheet size={18} />
+            <span>Reports</span>
+          </button>
 
           <button
             className={styles.logoutBtn}
@@ -300,45 +342,72 @@ export default function Home() {
             title="Logout"
             aria-label="Logout"
           >
-            ⏻
+            <span>Logout</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
           </button>
         </div>
       </header>
 
-      {/* ================= MODULE CARDS ================= */}
-      <div className={styles.cardWrapper}>
-
-        {/* VISITOR MANAGEMENT */}
-        <div
-          className={styles.card}
-          onClick={() => router.push("/visitor/dashboard")}
-          role="button"
-          aria-label="Open Visitor Management"
-        >
-          <div className={styles.iconCircle}>
-            <Users size={40} />
-          </div>
-          <h2>Visitor Management</h2>
-          <p>Manage visitor entries, ID verification & passes.</p>
+      {/* ================= MAIN CONTENT ================= */}
+      <main className={styles.main}>
+        <div className={styles.welcomeSection}>
+          <h2 className={styles.welcomeTitle}>Welcome back!</h2>
+          <p className={styles.welcomeSubtitle}>Choose a module to get started</p>
         </div>
 
-        {/* CONFERENCE BOOKING */}
-        <div
-          className={styles.card}
-          onClick={() => router.push("/conference/dashboard")}
-          role="button"
-          aria-label="Open Conference Booking"
-        >
-          <div className={styles.iconCircle}>
-            <DoorOpen size={40} />
+        {/* MODULE CARDS */}
+        <div className={styles.cardGrid}>
+
+          {/* VISITOR MANAGEMENT */}
+          <div
+            className={styles.moduleCard}
+            onClick={() => router.push("/visitor/dashboard")}
+            role="button"
+            tabIndex={0}
+            aria-label="Open Visitor Management"
+            onKeyDown={(e) => e.key === 'Enter' && router.push("/visitor/dashboard")}
+          >
+            <div className={styles.cardIcon}>
+              <Users size={32} />
+            </div>
+            <div className={styles.cardContent}>
+              <h3 className={styles.cardTitle}>Visitor Management</h3>
+              <p className={styles.cardDescription}>
+                Manage visitor entries, ID verification & digital passes
+              </p>
+            </div>
+            <div className={styles.cardArrow}>→</div>
           </div>
-          <h2>Conference Booking</h2>
-          <p>Manage conference rooms & meetings.</p>
+
+          {/* CONFERENCE BOOKING */}
+          <div
+            className={styles.moduleCard}
+            onClick={() => router.push("/conference/dashboard")}
+            role="button"
+            tabIndex={0}
+            aria-label="Open Conference Booking"
+            onKeyDown={(e) => e.key === 'Enter' && router.push("/conference/dashboard")}
+          >
+            <div className={styles.cardIcon}>
+              <DoorOpen size={32} />
+            </div>
+            <div className={styles.cardContent}>
+              <h3 className={styles.cardTitle}>Conference Booking</h3>
+              <p className={styles.cardDescription}>
+                Schedule meetings & manage conference rooms
+              </p>
+            </div>
+            <div className={styles.cardArrow}>→</div>
+          </div>
+
         </div>
+      </main>
 
-      </div>
-
-      {/* ================= LEFT SLIDE SUBSCRIPTION PANEL ================= */}
+      {/* ================= SUBSCRIPTION PANEL (LEFT) ================= */}
       {showSub && (
         <>
           <div
@@ -348,187 +417,227 @@ export default function Home() {
           />
 
           <aside
-            className={styles.subSlide}
+            className={styles.slidePanel}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="subscription-title"
           >
-            <div className={styles.subHeader}>
-              <h3>Subscription Details</h3>
+            <div className={styles.panelHeader}>
+              <h3 id="subscription-title">Subscription Details</h3>
               <button
+                className={styles.closeBtn}
                 onClick={() => setShowSub(false)}
                 aria-label="Close subscription panel"
               >
-                ✖
+                <X size={20} />
               </button>
             </div>
 
-            {loadingSub && (
-              <p className={styles.subLoading}>
-                Loading subscription…
-              </p>
-            )}
-
-            {subError && (
-              <p className={styles.subError}>
-                {subError}
-              </p>
-            )}
-
-            {subData && (
-              <div className={styles.subContent}>
-
-                <div className={styles.subRow}>
-                  <span>Plan</span>
-                  <strong>{subData.PLAN || "—"}</strong>
+            <div className={styles.panelBody}>
+              {loadingSub && (
+                <div className={styles.loadingState}>
+                  <div className={styles.spinner}></div>
+                  <p>Loading subscription details...</p>
                 </div>
+              )}
 
-                <div className={styles.subRow}>
-                  <span>Status</span>
-                  <strong 
-                    style={{
-                      color: 
-                        subData.STATUS?.toLowerCase() === "active" ? "#00c853" :
-                        subData.STATUS?.toLowerCase() === "expired" ? "#ff1744" :
-                        subData.STATUS?.toLowerCase() === "trial" ? "#ff9800" :
-                        "inherit"
-                    }}
-                  >
-                    {subData.STATUS || "—"}
-                  </strong>
+              {subError && (
+                <div className={styles.errorState}>
+                  <AlertCircle size={24} />
+                  <p>{subError}</p>
                 </div>
+              )}
 
-                {subData.ZOHO_CUSTOMER_ID && (
-                  <div className={styles.subRow}>
-                    <span>Customer No</span>
-                    <strong>{subData.ZOHO_CUSTOMER_ID}</strong>
+              {subData && (
+                <>
+                  {/* Current Plan Card */}
+                  <div className={styles.currentPlanCard}>
+                    <div className={styles.planBadge}>
+                      <span>Current Plan</span>
+                    </div>
+                    <h4 className={styles.currentPlanName}>
+                      {subData.PLAN || "—"}
+                    </h4>
+                    <div className={styles.statusBadge} style={{ color: statusStyle.color }}>
+                      <StatusIcon size={16} />
+                      <span>{subData.STATUS || "—"}</span>
+                    </div>
                   </div>
-                )}
 
-                {subData.TRIAL_ENDS_ON && (
-                  <div className={styles.subRow}>
-                    <span>Trial Ends</span>
-                    <strong>
-                      {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString()}
-                    </strong>
+                  {/* Subscription Details */}
+                  <div className={styles.detailsSection}>
+                    <h5 className={styles.sectionTitle}>Details</h5>
+                    
+                    {subData.ZOHO_CUSTOMER_ID && (
+                      <div className={styles.detailRow}>
+                        <span className={styles.detailLabel}>Customer ID</span>
+                        <span className={styles.detailValue}>{subData.ZOHO_CUSTOMER_ID}</span>
+                      </div>
+                    )}
+
+                    {subData.TRIAL_ENDS_ON && (
+                      <div className={styles.detailRow}>
+                        <span className={styles.detailLabel}>Trial Ends</span>
+                        <span className={styles.detailValue}>
+                          {new Date(subData.TRIAL_ENDS_ON).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
+
+                    {subData.EXPIRES_ON && (
+                      <div className={styles.detailRow}>
+                        <span className={styles.detailLabel}>Expires On</span>
+                        <span className={styles.detailValue}>
+                          {new Date(subData.EXPIRES_ON).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
+
+                    {subData.LAST_PAID_ON && (
+                      <div className={styles.detailRow}>
+                        <span className={styles.detailLabel}>Last Payment</span>
+                        <span className={styles.detailValue}>
+                          {new Date(subData.LAST_PAID_ON).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                )}
 
-                {subData.EXPIRES_ON && (
-                  <div className={styles.subRow}>
-                    <span>Subscription Expires</span>
-                    <strong>
-                      {new Date(subData.EXPIRES_ON).toLocaleDateString()}
-                    </strong>
-                  </div>
-                )}
+                  {/* ================= RENEWAL SECTION ================= */}
+                  {needsRenewal && (
+                    <div className={styles.renewalSection}>
+                      <div className={styles.alertBox}>
+                        <AlertCircle size={20} />
+                        <div>
+                          <p className={styles.alertTitle}>Subscription Expired</p>
+                          <p className={styles.alertText}>
+                            Renew now to continue accessing all PROMEET features
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        className={styles.primaryBtn}
+                        onClick={handleRenew}
+                      >
+                        Renew Subscription
+                      </button>
+                    </div>
+                  )}
 
-                {subData.LAST_PAID_ON && (
-                  <div className={styles.subRow}>
-                    <span>Last Paid</span>
-                    <strong>
-                      {new Date(subData.LAST_PAID_ON).toLocaleString()}
-                    </strong>
-                  </div>
-                )}
+                  {/* ================= UPGRADE SECTION ================= */}
+                  {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
+                    <div className={styles.upgradeSection}>
+                      <div className={styles.sectionHeader}>
+                        <TrendingUp size={20} />
+                        <h5>Upgrade Your Plan</h5>
+                      </div>
+                      <p className={styles.sectionDescription}>
+                        Unlock more features and grow your business
+                      </p>
 
-                {/* ================= UPGRADE/RENEW SECTION ================= */}
-                {needsRenewal && (
-                  <div className={styles.upgradeSection}>
-                    <div className={styles.renewalAlert}>
+                      {/* Business Plan */}
+                      {canUpgradeBusiness && (
+                        <div className={styles.upgradePlanCard}>
+                          <div className={styles.planIconWrapper}>
+                            <Zap size={22} />
+                          </div>
+                          <div className={styles.planInfo}>
+                            <h6>Business Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.price}>₹500</span>
+                              <span className={styles.period}>/month</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={14} /> Unlimited visitors</li>
+                            <li><CheckCircle size={14} /> 1000 Conference bookings</li>
+                            <li><CheckCircle size={14} /> 6 Conference rooms</li>
+                            <li><CheckCircle size={14} /> Priority support</li>
+                          </ul>
+                          <button
+                            className={styles.upgradeBtn}
+                            onClick={handleUpgradeBusiness}
+                            disabled={upgradingBusiness}
+                          >
+                            {upgradingBusiness ? (
+                              <>
+                                <div className={styles.btnSpinner}></div>
+                                Processing...
+                              </>
+                            ) : (
+                              "Upgrade to Business"
+                            )}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Enterprise Plan */}
+                      {canUpgradeEnterprise && (
+                        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
+                          <div className={styles.planIconWrapper}>
+                            <Crown size={22} />
+                          </div>
+                          <div className={styles.planInfo}>
+                            <h6>Enterprise Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.customPrice}>Custom Pricing</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={14} /> Everything in Business</li>
+                            <li><CheckCircle size={14} /> Custom integrations</li>
+                            <li><CheckCircle size={14} /> Dedicated account manager</li>
+                            <li><CheckCircle size={14} /> Custom branding</li>
+                          </ul>
+                          <button
+                            className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`}
+                            onClick={handleUpgradeEnterprise}
+                            disabled={upgradingEnterprise}
+                          >
+                            {upgradingEnterprise ? (
+                              <>
+                                <div className={styles.btnSpinner}></div>
+                                Processing...
+                              </>
+                            ) : (
+                              "Contact Sales"
+                            )}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Enterprise Active Status */}
+                  {currentPlan === "enterprise" && currentStatus === "active" && (
+                    <div className={styles.infoBox}>
+                      <Crown size={18} />
                       <p>
-                        ⚠️ Your subscription has expired. Renew to continue using PROMEET.
+                        You're on our premium Enterprise plan with full access to all features. 
+                        Contact support for custom requirements.
                       </p>
                     </div>
-                    <button
-                      className={styles.renewBtn}
-                      onClick={handleRenew}
-                    >
-                      Renew Subscription
-                    </button>
-                  </div>
-                )}
-
-                {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
-                  <div className={styles.upgradeSection}>
-                    <div className={styles.upgradeHeader}>
-                      <h4>Upgrade Your Plan</h4>
-                      <p>Get more features and unlock your full potential</p>
-                    </div>
-
-                    {/* Business Plan Card */}
-                    {canUpgradeBusiness && (
-                      <div className={styles.planCard}>
-                        <div className={styles.planCardHeader}>
-                          <div className={styles.planIcon}>
-                            <Zap size={20} />
-                          </div>
-                          <div>
-                            <h5>Business Plan</h5>
-                            <p className={styles.planPrice}>₹500/month</p>
-                          </div>
-                        </div>
-                        <ul className={styles.planFeatures}>
-                          <li>Unlimited visitors</li>
-                          <li>1000 Conference Bookings</li>
-                          <li>6 Conference Rooms</li>
-                          <li>Priority support</li>
-                        </ul>
-                        <button
-                          className={styles.upgradeBusinessBtn}
-                          onClick={handleUpgradeBusiness}
-                          disabled={upgradingBusiness}
-                        >
-                          {upgradingBusiness ? "Processing..." : "Upgrade to Business"}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Enterprise Plan Card */}
-                    {canUpgradeEnterprise && (
-                      <div className={styles.planCard}>
-                        <div className={styles.planCardHeader}>
-                          <div className={styles.planIcon} style={{ background: "linear-gradient(135deg, #6a1b9a, #8e24aa)" }}>
-                            <Crown size={20} />
-                          </div>
-                          <div>
-                            <h5>Enterprise Plan</h5>
-                            <p className={styles.planPrice}>Custom Pricing</p>
-                          </div>
-                        </div>
-                        <ul className={styles.planFeatures}>
-                          <li>Everything in Business</li>
-                          <li>Custom integrations</li>
-                          <li>Dedicated account manager</li>
-                          <li>Custom branding</li>
-                        </ul>
-                        <button
-                          className={styles.upgradeEnterpriseBtn}
-                          onClick={handleUpgradeEnterprise}
-                          disabled={upgradingEnterprise}
-                        >
-                          {upgradingEnterprise ? "Processing..." : "Contact Sales"}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Enterprise Active Status */}
-                {currentPlan === "enterprise" && currentStatus === "active" && (
-                  <div className={styles.enterpriseActive}>
-                    <p>
-                      ℹ️ You're on the Enterprise plan with full access to all features. 
-                      Contact support for any custom requirements.
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </>
+              )}
+            </div>
           </aside>
         </>
       )}
 
-      {/* ================= RIGHT SLIDE REPORTS PANEL ================= */}
+      {/* ================= REPORTS PANEL (RIGHT) ================= */}
       {showReports && (
         <>
           <div
@@ -538,138 +647,150 @@ export default function Home() {
           />
 
           <aside
-            className={styles.reportsSlide}
+            className={`${styles.slidePanel} ${styles.rightPanel}`}
             role="dialog"
             aria-modal="true"
+            aria-labelledby="reports-title"
           >
-            <div className={styles.reportsHeader}>
-              <h3>Reports</h3>
+            <div className={styles.panelHeader}>
+              <h3 id="reports-title">Reports & Analytics</h3>
               <button
+                className={styles.closeBtn}
                 onClick={() => setShowReports(false)}
                 aria-label="Close reports panel"
               >
-                ✖
+                <X size={20} />
               </button>
             </div>
 
-            {/* Success Message */}
-            {downloadSuccess && (
-              <div className={styles.successMessage}>
-                <CheckCircle size={20} />
-                <span>Report downloaded successfully!</span>
-              </div>
-            )}
-
-            {/* Error Message */}
-            {downloadError && (
-              <div className={styles.errorMessage}>
-                <X size={20} />
-                <span>{downloadError}</span>
-              </div>
-            )}
-
-            {/* Loading Stats */}
-            {loadingStats && (
-              <p className={styles.reportsLoading}>
-                Loading statistics…
-              </p>
-            )}
-
-            {/* Download Options */}
-            {exportStats && (
-              <div className={styles.reportsContent}>
-                
-                {/* Visitors Report */}
-                <div className={styles.reportCard}>
-                  <div className={styles.reportCardHeader}>
-                    <FileSpreadsheet size={24} color="#7a00ff" />
-                    <h4>Visitor Records</h4>
-                  </div>
-                  <div className={styles.reportCardStats}>
-                    <div className={styles.statItem}>
-                      <span>Total Visitors:</span>
-                      <strong>{exportStats.visitors?.total || 0}</strong>
-                    </div>
-                    <div className={styles.statItem}>
-                      <span>Currently Active:</span>
-                      <strong style={{ color: "#00c853" }}>
-                        {exportStats.visitors?.active || 0}
-                      </strong>
-                    </div>
-                  </div>
-                  <button
-                    className={styles.reportCardBtn}
-                    onClick={() => handleDownload("visitors")}
-                    disabled={downloading}
-                  >
-                    {downloading ? "Downloading..." : "Download Visitors"}
-                  </button>
+            <div className={styles.panelBody}>
+              {/* Success Notification */}
+              {downloadSuccess && (
+                <div className={styles.notification} data-type="success">
+                  <CheckCircle size={18} />
+                  <span>Report downloaded successfully!</span>
                 </div>
+              )}
 
-                {/* Conference Bookings Report */}
-                <div className={styles.reportCard}>
-                  <div className={styles.reportCardHeader}>
-                    <FileSpreadsheet size={24} color="#7a00ff" />
-                    <h4>Conference Bookings</h4>
-                  </div>
-                  <div className={styles.reportCardStats}>
-                    <div className={styles.statItem}>
-                      <span>Total Bookings:</span>
-                      <strong>{exportStats.bookings?.total || 0}</strong>
+              {/* Error Notification */}
+              {downloadError && (
+                <div className={styles.notification} data-type="error">
+                  <AlertCircle size={18} />
+                  <span>{downloadError}</span>
+                </div>
+              )}
+
+              {/* Loading Stats */}
+              {loadingStats && (
+                <div className={styles.loadingState}>
+                  <div className={styles.spinner}></div>
+                  <p>Loading statistics...</p>
+                </div>
+              )}
+
+              {/* Export Options */}
+              {exportStats && (
+                <>
+                  <div className={styles.statsOverview}>
+                    <div className={styles.statCard}>
+                      <Users size={20} />
+                      <div>
+                        <p className={styles.statLabel}>Total Visitors</p>
+                        <p className={styles.statValue}>{exportStats.visitors?.total || 0}</p>
+                      </div>
                     </div>
-                    <div className={styles.statItem}>
-                      <span>Upcoming:</span>
-                      <strong style={{ color: "#ff9800" }}>
-                        {exportStats.bookings?.upcoming || 0}
-                      </strong>
+                    <div className={styles.statCard}>
+                      <DoorOpen size={20} />
+                      <div>
+                        <p className={styles.statLabel}>Total Bookings</p>
+                        <p className={styles.statValue}>{exportStats.bookings?.total || 0}</p>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    className={styles.reportCardBtn}
-                    onClick={() => handleDownload("bookings")}
-                    disabled={downloading}
-                  >
-                    {downloading ? "Downloading..." : "Download Bookings"}
-                  </button>
-                </div>
 
-                {/* Complete Report */}
-                <div className={styles.reportCard} style={{ borderColor: "#6a1b9a" }}>
-                  <div className={styles.reportCardHeader}>
-                    <FileSpreadsheet size={24} color="#6a1b9a" />
-                    <h4>Complete Report</h4>
+                  <div className={styles.reportsSection}>
+                    <h5 className={styles.sectionTitle}>Download Reports</h5>
+
+                    {/* Visitor Records */}
+                    <div className={styles.reportCard}>
+                      <div className={styles.reportHeader}>
+                        <div className={styles.reportIcon}>
+                          <Users size={20} />
+                        </div>
+                        <div>
+                          <h6>Visitor Records</h6>
+                          <p className={styles.reportMeta}>
+                            {exportStats.visitors?.active || 0} active • {exportStats.visitors?.total || 0} total
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        className={styles.downloadBtn}
+                        onClick={() => handleDownload("visitors")}
+                        disabled={downloading}
+                      >
+                        <Download size={16} />
+                        {downloading ? "Downloading..." : "Download"}
+                      </button>
+                    </div>
+
+                    {/* Conference Bookings */}
+                    <div className={styles.reportCard}>
+                      <div className={styles.reportHeader}>
+                        <div className={styles.reportIcon}>
+                          <DoorOpen size={20} />
+                        </div>
+                        <div>
+                          <h6>Conference Bookings</h6>
+                          <p className={styles.reportMeta}>
+                            {exportStats.bookings?.upcoming || 0} upcoming • {exportStats.bookings?.total || 0} total
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        className={styles.downloadBtn}
+                        onClick={() => handleDownload("bookings")}
+                        disabled={downloading}
+                      >
+                        <Download size={16} />
+                        {downloading ? "Downloading..." : "Download"}
+                      </button>
+                    </div>
+
+                    {/* Complete Report */}
+                    <div className={`${styles.reportCard} ${styles.premiumReport}`}>
+                      <div className={styles.reportHeader}>
+                        <div className={styles.reportIcon}>
+                          <FileSpreadsheet size={20} />
+                        </div>
+                        <div>
+                          <h6>Complete Report</h6>
+                          <p className={styles.reportMeta}>
+                            All data in one Excel file with multiple sheets
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`}
+                        onClick={() => handleDownload("all")}
+                        disabled={downloading}
+                      >
+                        <Download size={16} />
+                        {downloading ? "Downloading..." : "Download All"}
+                      </button>
+                    </div>
                   </div>
-                  <p style={{ 
-                    fontSize: "13px", 
-                    color: "#666", 
-                    marginBottom: "15px",
-                    lineHeight: 1.4
-                  }}>
-                    Download both visitors and conference bookings data in a single Excel file with multiple sheets.
-                  </p>
-                  <button
-                    className={styles.reportCardBtn}
-                    style={{ 
-                      background: "linear-gradient(135deg, #6a1b9a, #7a00ff)",
-                      fontWeight: 600
-                    }}
-                    onClick={() => handleDownload("all")}
-                    disabled={downloading}
-                  >
-                    {downloading ? "Downloading..." : "Download Complete Report"}
-                  </button>
-                </div>
 
-                {/* Info Note */}
-                <div className={styles.reportNote}>
-                  <p>
-                    📊 Reports are generated in Excel format (.xlsx) with professional formatting, 
-                    including headers, borders, and color-coded status indicators.
-                  </p>
-                </div>
-
-              </div>
-            )}
+                  <div className={styles.infoBox}>
+                    <FileSpreadsheet size={16} />
+                    <p>
+                      Reports are exported in Excel format (.xlsx) with professional formatting, 
+                      headers, and color-coded status indicators.
+                    </p>
+                  </div>
+                </>
+              )}
+            </div>
           </aside>
         </>
       )}
