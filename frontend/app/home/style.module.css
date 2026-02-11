@@ -38,7 +38,7 @@ body::-webkit-scrollbar {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
 }
 
-/* ================= MENU BUTTON ================= */
+/* ================= MENU BUTTON (3 DOTS) ================= */
 .menuBtn {
   background: rgba(255, 255, 255, 0.15);
   border: none;
@@ -109,6 +109,7 @@ body::-webkit-scrollbar {
   gap: clamp(12px, 2vw, 18px);
 }
 
+/* ================= REPORTS BUTTON ================= */
 .reportsBtn {
   display: flex;
   align-items: center;
@@ -136,6 +137,12 @@ body::-webkit-scrollbar {
   transform: translateY(-1px);
 }
 
+.reportsBtn span {
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* ================= LOGOUT BUTTON ================= */
 .logoutBtn {
   display: flex;
   align-items: center;
@@ -162,6 +169,10 @@ body::-webkit-scrollbar {
   transform: translateY(-1px);
 }
 
+.logoutBtn svg {
+  stroke-width: 2.5;
+}
+
 /* ================= MAIN CONTENT ================= */
 .main {
   flex: 1;
@@ -178,6 +189,7 @@ body::-webkit-scrollbar {
   display: none;
 }
 
+/* ================= WELCOME SECTION ================= */
 .welcomeSection {
   text-align: center;
   margin-bottom: clamp(32px, 5vh, 48px);
@@ -211,6 +223,7 @@ body::-webkit-scrollbar {
   letter-spacing: 0.3px;
 }
 
+/* ================= MODULE CARDS GRID ================= */
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 420px));
@@ -232,6 +245,7 @@ body::-webkit-scrollbar {
   }
 }
 
+/* ================= MODULE CARD ================= */
 .moduleCard {
   background: #ffffff;
   color: #2e2e2e;
@@ -275,6 +289,7 @@ body::-webkit-scrollbar {
   transform: translateY(-8px);
 }
 
+/* ================= CARD ICON ================= */
 .cardIcon {
   width: clamp(60px, 10vw, 80px);
   height: clamp(60px, 10vw, 80px);
@@ -296,6 +311,7 @@ body::-webkit-scrollbar {
   stroke-width: 2.5;
 }
 
+/* ================= CARD CONTENT ================= */
 .cardContent {
   flex: 1;
 }
@@ -317,6 +333,7 @@ body::-webkit-scrollbar {
   font-weight: 500;
 }
 
+/* ================= CARD ARROW ================= */
 .cardArrow {
   position: absolute;
   bottom: clamp(20px, 3vh, 28px);
@@ -333,6 +350,7 @@ body::-webkit-scrollbar {
   transform: translateX(0);
 }
 
+/* ================= OVERLAY ================= */
 .overlay {
   position: fixed;
   inset: 0;
@@ -347,6 +365,7 @@ body::-webkit-scrollbar {
   to { opacity: 1; }
 }
 
+/* ================= SLIDE PANEL (BASE) ================= */
 .slidePanel {
   position: fixed;
   top: 0;
@@ -363,6 +382,13 @@ body::-webkit-scrollbar {
   overflow: hidden;
 }
 
+.rightPanel {
+  left: auto;
+  right: 0;
+  box-shadow: -6px 0 32px rgba(0, 0, 0, 0.35);
+  animation: slideInRight 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 @keyframes slideInLeft {
   from { 
     transform: translateX(-100%);
@@ -374,6 +400,18 @@ body::-webkit-scrollbar {
   }
 }
 
+@keyframes slideInRight {
+  from { 
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to { 
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* ================= PANEL HEADER ================= */
 .panelHeader {
   display: flex;
   justify-content: space-between;
@@ -414,6 +452,7 @@ body::-webkit-scrollbar {
   transform: rotate(90deg) scale(0.95);
 }
 
+/* ================= PANEL BODY ================= */
 .panelBody {
   flex: 1;
   overflow-y: auto;
@@ -439,6 +478,7 @@ body::-webkit-scrollbar {
   background: #b0b0b0;
 }
 
+/* ================= LOADING STATE ================= */
 .loadingState {
   display: flex;
   flex-direction: column;
@@ -469,6 +509,7 @@ body::-webkit-scrollbar {
   to { transform: rotate(360deg); }
 }
 
+/* ================= ERROR STATE ================= */
 .errorState {
   display: flex;
   flex-direction: column;
@@ -493,6 +534,7 @@ body::-webkit-scrollbar {
   text-align: center;
 }
 
+/* ================= CURRENT PLAN CARD ================= */
 .currentPlanCard {
   background: linear-gradient(135deg, #f8f5ff, #ffffff);
   border: 2px solid #ede7ff;
@@ -551,6 +593,7 @@ body::-webkit-scrollbar {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* ================= DETAILS SECTION ================= */
 .detailsSection {
   margin-bottom: clamp(24px, 3.5vh, 32px);
 }
@@ -600,6 +643,7 @@ body::-webkit-scrollbar {
   text-align: right;
 }
 
+/* ================= RENEWAL SECTION ================= */
 .renewalSection {
   margin-bottom: clamp(24px, 3.5vh, 32px);
 }
@@ -661,6 +705,7 @@ body::-webkit-scrollbar {
   transform: translateY(-1px);
 }
 
+/* ================= UPGRADE SECTION ================= */
 .upgradeSection {
   margin-bottom: clamp(24px, 3.5vh, 32px);
   padding-top: clamp(20px, 3vh, 24px);
@@ -687,6 +732,7 @@ body::-webkit-scrollbar {
   letter-spacing: 0.3px;
 }
 
+/* ================= UPGRADE PLAN CARD ================= */
 .upgradePlanCard {
   background: linear-gradient(135deg, #fafafa, #ffffff);
   border: 2px solid #e8e8e8;
@@ -729,6 +775,7 @@ body::-webkit-scrollbar {
   box-shadow: 0 8px 32px rgba(142, 36, 170, 0.2);
 }
 
+/* ================= PLAN ICON WRAPPER ================= */
 .planIconWrapper {
   width: clamp(44px, 7vw, 52px);
   height: clamp(44px, 7vw, 52px);
@@ -751,6 +798,7 @@ body::-webkit-scrollbar {
   box-shadow: 0 4px 16px rgba(106, 27, 154, 0.3);
 }
 
+/* ================= PLAN INFO ================= */
 .planInfo {
   margin-bottom: clamp(14px, 2.2vh, 18px);
   padding-bottom: clamp(12px, 2vh, 16px);
@@ -790,6 +838,7 @@ body::-webkit-scrollbar {
   letter-spacing: 0.3px;
 }
 
+/* ================= FEATURE LIST ================= */
 .featureList {
   list-style: none;
   padding: 0;
@@ -814,6 +863,7 @@ body::-webkit-scrollbar {
   flex-shrink: 0;
 }
 
+/* ================= UPGRADE BUTTON ================= */
 .upgradeBtn {
   width: 100%;
   padding: clamp(13px, 2vh, 15px);
@@ -869,6 +919,7 @@ body::-webkit-scrollbar {
   animation: spin 0.6s linear infinite;
 }
 
+/* ================= INFO BOX ================= */
 .infoBox {
   display: flex;
   gap: clamp(10px, 1.6vw, 12px);
@@ -892,6 +943,7 @@ body::-webkit-scrollbar {
   font-weight: 600;
 }
 
+/* ================= NOTIFICATION ================= */
 .notification {
   display: flex;
   align-items: center;
@@ -932,6 +984,7 @@ body::-webkit-scrollbar {
   flex-shrink: 0;
 }
 
+/* ================= STATS OVERVIEW ================= */
 .statsOverview {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -977,10 +1030,12 @@ body::-webkit-scrollbar {
   color: #5d00c7;
 }
 
+/* ================= REPORTS SECTION ================= */
 .reportsSection {
   margin-bottom: clamp(20px, 3vh, 24px);
 }
 
+/* ================= REPORT CARD ================= */
 .reportCard {
   background: #ffffff;
   border: 2px solid #e8e8e8;
@@ -1027,6 +1082,7 @@ body::-webkit-scrollbar {
   box-shadow: 0 6px 24px rgba(142, 36, 170, 0.2);
 }
 
+/* ================= REPORT HEADER ================= */
 .reportHeader {
   display: flex;
   align-items: flex-start;
@@ -1070,6 +1126,7 @@ body::-webkit-scrollbar {
   line-height: 1.4;
 }
 
+/* ================= DOWNLOAD BUTTON ================= */
 .downloadBtn {
   width: 100%;
   padding: clamp(11px, 1.8vh, 13px);
@@ -1115,312 +1172,20 @@ body::-webkit-scrollbar {
   box-shadow: 0 6px 20px rgba(106, 27, 154, 0.4);
 }
 
-.detailedReportsBtn {
-  width: 100%;
-  padding: clamp(14px, 2.2vh, 16px);
-  background: linear-gradient(135deg, #2196f3, #1976d2);
-  color: white;
-  border: none;
-  border-radius: clamp(10px, 1.5vw, 12px);
-  font-size: clamp(14px, 2.2vw, 15px);
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.35);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(8px, 1.2vw, 10px);
-  margin-bottom: clamp(16px, 2.5vh, 20px);
-}
-
-.detailedReportsBtn:hover {
-  background: linear-gradient(135deg, #1976d2, #0d47a1);
-  transform: translateY(-3px);
-  box-shadow: 0 10px 28px rgba(33, 150, 243, 0.45);
-}
-
-.detailedReportsBtn:active {
-  transform: translateY(-1px);
-}
-
-.detailedReportsOverlay {
-  position: fixed;
-  inset: 0;
-  background: linear-gradient(135deg, #3c007a 0%, #7a00ff 100%);
-  z-index: 200;
-  animation: fadeIn 0.4s ease;
-  overflow: hidden;
-}
-
-.detailedReportsContainer {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.detailedReportsHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: clamp(20px, 3vh, 28px) clamp(24px, 4vw, 40px);
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.detailedReportsHeader h2 {
-  margin: 0;
-  font-size: clamp(20px, 3.2vw, 28px);
-  font-weight: 800;
-  color: white;
-  text-align: center;
-  flex: 1;
-}
-
-.backBtn {
-  display: flex;
-  align-items: center;
-  gap: clamp(6px, 1vw, 8px);
-  padding: clamp(10px, 1.5vh, 12px) clamp(16px, 2.5vw, 20px);
-  background: rgba(255, 255, 255, 0.15);
-  color: white;
-  border: none;
-  border-radius: clamp(10px, 1.5vw, 12px);
-  cursor: pointer;
-  font-size: clamp(13px, 2vw, 14px);
-  font-weight: 700;
-  transition: all 0.3s ease;
-}
-
-.backBtn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateY(-2px);
-}
-
-.closeDetailedBtn {
-  background: rgba(255, 255, 255, 0.15);
-  border: none;
-  border-radius: clamp(10px, 1.5vw, 12px);
-  padding: clamp(10px, 1.5vh, 12px);
-  cursor: pointer;
-  color: white;
-  transition: all 0.3s ease;
-  display: grid;
-  place-items: center;
-}
-
-.closeDetailedBtn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: scale(1.1);
-}
-
-.detailedReportsContent {
-  flex: 1;
-  overflow-y: auto;
-  padding: clamp(24px, 4vh, 40px);
-}
-
-.analyticsPlaceholder {
-  max-width: 900px;
-  margin: 0 auto;
-  text-align: center;
-  padding: clamp(40px, 6vh, 60px);
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: clamp(16px, 2.5vw, 24px);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.analyticsPlaceholder > svg {
-  color: rgba(255, 255, 255, 0.5);
-  margin-bottom: clamp(20px, 3vh, 28px);
-}
-
-.analyticsPlaceholder h3 {
-  margin: 0 0 clamp(16px, 2.5vh, 20px) 0;
-  font-size: clamp(22px, 3.5vw, 32px);
-  font-weight: 800;
-  color: white;
-}
-
-.analyticsPlaceholder > p {
-  margin: 0 0 clamp(28px, 4vh, 36px) 0;
-  font-size: clamp(14px, 2.2vw, 16px);
-  color: rgba(255, 255, 255, 0.85);
-  line-height: 1.7;
-}
-
-.placeholderFeatures {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(140px, 100%, 200px), 1fr));
-  gap: clamp(16px, 2.5vw, 24px);
-  margin-bottom: clamp(28px, 4vh, 36px);
-}
-
-.placeholderFeature {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(10px, 1.5vh, 12px);
-  padding: clamp(18px, 3vh, 24px);
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: clamp(12px, 1.8vw, 14px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  transition: all 0.3s ease;
-}
-
-.placeholderFeature:hover {
-  background: rgba(255, 255, 255, 0.12);
-  transform: translateY(-4px);
-}
-
-.placeholderFeature svg {
-  color: white;
-}
-
-.placeholderFeature span {
-  font-size: clamp(13px, 2.1vw, 14px);
-  font-weight: 700;
-  color: white;
-  text-align: center;
-}
-
-.placeholderNote {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(8px, 1.2vw, 10px);
-  margin: 0;
-  padding: clamp(14px, 2.2vh, 16px);
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: clamp(10px, 1.5vw, 12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  font-size: clamp(13px, 2.1vw, 14px);
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.6;
-}
-
-.placeholderNote svg {
-  flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(6px);
-  z-index: 999;
-  animation: fadeIn 0.3s ease;
-  display: grid;
-  place-items: center;
-}
-
-.logoutModal {
-  background: white;
-  border-radius: clamp(16px, 2.5vw, 24px);
-  padding: clamp(32px, 5vh, 44px) clamp(28px, 4vw, 40px);
-  max-width: clamp(320px, 90%, 450px);
-  width: 100%;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
-  animation: scaleIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: center;
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.logoutModalIcon {
-  display: flex;
-  justify-content: center;
-  margin-bottom: clamp(20px, 3vh, 24px);
-}
-
-.logoutModalIcon svg {
-  color: #ff9800;
-}
-
-.logoutModalTitle {
-  margin: 0 0 clamp(12px, 2vh, 16px) 0;
-  font-size: clamp(20px, 3.2vw, 24px);
-  font-weight: 800;
-  color: #2e2e2e;
-}
-
-.logoutModalText {
-  margin: 0 0 clamp(28px, 4vh, 36px) 0;
-  font-size: clamp(14px, 2.2vw, 15px);
-  color: #666;
-  line-height: 1.6;
-}
-
-.logoutModalActions {
-  display: flex;
-  gap: clamp(12px, 2vw, 16px);
-}
-
-.logoutCancelBtn,
-.logoutConfirmBtn {
-  flex: 1;
-  padding: clamp(13px, 2vh, 15px);
-  border: none;
-  border-radius: clamp(10px, 1.5vw, 12px);
-  font-size: clamp(14px, 2.2vw, 15px);
-  font-weight: 800;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.logoutCancelBtn {
-  background: #e0e0e0;
-  color: #555;
-}
-
-.logoutCancelBtn:hover {
-  background: #d0d0d0;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.logoutConfirmBtn {
-  background: linear-gradient(135deg, #ff1744, #f50057);
-  color: white;
-  box-shadow: 0 4px 16px rgba(255, 23, 68, 0.3);
-}
-
-.logoutConfirmBtn:hover {
-  background: linear-gradient(135deg, #f50057, #ff4081);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 23, 68, 0.4);
-}
-
-.logoutCancelBtn:active,
-.logoutConfirmBtn:active {
-  transform: translateY(0);
-}
-
+/* ================= RESPONSIVE BREAKPOINTS ================= */
 @media (max-width: 900px) {
-  .slidePanel {
+  .slidePanel,
+  .rightPanel {
     width: clamp(320px, 50vw, 400px);
   }
 
   .cardGrid {
     grid-template-columns: 1fr;
     max-width: 500px;
+  }
+
+  .welcomeSection {
+    margin-bottom: clamp(24px, 4vh, 32px);
   }
 }
 
@@ -1429,8 +1194,10 @@ body::-webkit-scrollbar {
     padding: clamp(12px, 2vh, 16px) clamp(16px, 3vw, 20px);
   }
 
-  .slidePanel {
+  .slidePanel,
+  .rightPanel {
     width: 90vw;
+    max-width: none;
   }
 
   .companyInfo {
@@ -1438,22 +1205,67 @@ body::-webkit-scrollbar {
     gap: clamp(8px, 1.5vh, 10px);
   }
 
+  .companyLogoHeader {
+    width: clamp(36px, 7vw, 50px);
+    height: clamp(36px, 7vw, 50px);
+  }
+
+  .headerActions {
+    gap: clamp(8px, 1.5vw, 12px);
+  }
+
   .reportsBtn span,
   .logoutBtn span {
     display: none;
   }
 
-  .statsOverview {
-    grid-template-columns: 1fr;
+  .reportsBtn,
+  .logoutBtn {
+    padding: clamp(10px, 1.5vh, 12px);
   }
 
-  .placeholderFeatures {
-    grid-template-columns: 1fr 1fr;
+  .cardGrid {
+    gap: clamp(16px, 3vh, 20px);
+  }
+
+  .statsOverview {
+    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 400px) {
-  .logoutModalActions {
-    flex-direction: column;
+  .menuDots span {
+    width: 16px;
+    height: 3px;
   }
+
+  .companyName {
+    font-size: 16px;
+  }
+
+  .moduleCard {
+    padding: clamp(20px, 3.5vh, 24px) clamp(18px, 3vw, 20px);
+  }
+
+  .featureList li {
+    font-size: 12px;
+  }
+}
+
+/* ================= ANIMATIONS ================= */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.panelBody > *:nth-child(n) {
+  animation: fadeInScale 0.4s ease;
+  animation-fill-mode: both;
+  animation-delay: calc(var(--index, 0) * 0.05s);
 }
