@@ -320,6 +320,13 @@ export default function PublicVisitorRegistration() {
     }
   };
 
+  /* ================= WHATSAPP HANDLER ================= */
+  const handleWhatsAppContact = () => {
+    if (company?.whatsapp_url) {
+      window.open(company.whatsapp_url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   /* ================= LOGOUT ================= */
   const handleLogout = () => {
     // Clear all state
@@ -829,7 +836,7 @@ export default function PublicVisitorRegistration() {
         </div>
       )}
 
-      {/* ================= STEP 4: THANK YOU ================= */}
+      {/* ================= STEP 4: THANK YOU WITH WHATSAPP ================= */}
       {step === 4 && (
         <div className={styles.container}>
           <header className={styles.header}>
@@ -860,6 +867,80 @@ export default function PublicVisitorRegistration() {
                 Please show this ID at the reception desk.<br />
                 Check your email ({email}) for the digital pass.
               </p>
+
+              {/* WhatsApp Contact Section */}
+              {company?.whatsapp_url && (
+                <div style={{
+                  background: "linear-gradient(135deg, #e8f5e9, #c8e6c9)",
+                  border: "2px solid #4caf50",
+                  borderRadius: "1rem",
+                  padding: "1.5rem",
+                  marginBottom: "2rem",
+                  textAlign: "left"
+                }}>
+                  <div style={{ 
+                    display: "flex", 
+                    alignItems: "center", 
+                    gap: "0.75rem",
+                    marginBottom: "1rem"
+                  }}>
+                    <div style={{
+                      width: "40px",
+                      height: "40px",
+                      borderRadius: "50%",
+                      background: "#25d366",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: "1.5rem"
+                    }}>
+                      📱
+                    </div>
+                    <div>
+                      <h3 style={{ 
+                        margin: 0, 
+                        fontSize: "1rem", 
+                        fontWeight: 700,
+                        color: "#2e7d32"
+                      }}>
+                        Need Help?
+                      </h3>
+                      <p style={{ 
+                        margin: 0, 
+                        fontSize: "0.85rem", 
+                        color: "#558b2f"
+                      }}>
+                        Contact us on WhatsApp
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <button
+                    onClick={handleWhatsAppContact}
+                    style={{
+                      width: "100%",
+                      padding: "0.875rem",
+                      background: "#25d366",
+                      color: "white",
+                      border: "none",
+                      borderRadius: "0.5rem",
+                      fontSize: "0.95rem",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.5rem",
+                      transition: "all 0.3s ease"
+                    }}
+                    onMouseOver={(e) => e.currentTarget.style.background = "#20ba5a"}
+                    onMouseOut={(e) => e.currentTarget.style.background = "#25d366"}
+                  >
+                    <span style={{ fontSize: "1.25rem" }}>💬</span>
+                    Contact on WhatsApp
+                  </button>
+                </div>
+              )}
 
               <button 
                 className={styles.primaryBtn}
