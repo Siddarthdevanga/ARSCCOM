@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -10,7 +10,7 @@ export default function PublicVisitorRegistration() {
   const slug = params?.slug;
 
   /* ================= STATE ================= */
-  const [step, setStep] = useState(0); // 0: Welcome/OTP, 1: Primary, 2: Secondary, 3: Identity, 4: Thank You
+  const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [company, setCompany] = useState(null);
@@ -26,11 +26,8 @@ export default function PublicVisitorRegistration() {
 
   /* ================= FORM DATA ================= */
   const [formData, setFormData] = useState({
-    // Primary Details
     name: "",
     phone: "",
-    
-    // Secondary Details
     fromCompany: "",
     department: "",
     designation: "",
@@ -42,8 +39,6 @@ export default function PublicVisitorRegistration() {
     personToMeet: "",
     purpose: "",
     belongings: [],
-    
-    // Identity
     idType: "",
     idNumber: ""
   });
@@ -70,10 +65,9 @@ export default function PublicVisitorRegistration() {
           return;
         }
 
-        console.log("Company data loaded:", data.company); // Debug log
         setCompany(data.company);
       } catch (err) {
-        console.error("Failed to load company info:", err);
+        console.error("[VISITOR_REG] Failed to load company info:", err);
         setError("Failed to load registration page");
       } finally {
         setLoading(false);
@@ -91,40 +85,47 @@ export default function PublicVisitorRegistration() {
     }
   }, [resendTimer]);
 
-  /* ================= CLEANUP CAMERA ================= */
+  /* ================= CAMERA SETUP ================= */
   useEffect(() => {
     if (cameraActive && stream && videoRef.current) {
       videoRef.current.srcObject = stream;
       videoRef.current.muted = true;
       videoRef.current.playsInline = true;
-      videoRef.current.play();
+      videoRef.current.play().catch(err => {
+        console.error("[CAMERA] Playback error:", err);
+      });
     }
   }, [cameraActive, stream]);
 
+  /* ================= CLEANUP ================= */
   useEffect(() => {
     return () => {
-      stream?.getTracks().forEach(track => track.stop());
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
     };
   }, [stream]);
 
   /* ================= HANDLERS ================= */
-  const handleInputChange = (e) => {
+  const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const toggleBelonging = (item) => {
+  const toggleBelonging = useCallback((item) => {
     setFormData(prev => ({
       ...prev,
       belongings: prev.belongings.includes(item)
         ? prev.belongings.filter(b => b !== item)
         : [...prev.belongings, item]
     }));
-  };
+  }, []);
 
   /* ================= OTP FUNCTIONS ================= */
   const handleSendOTP = async () => {
-    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    const trimmedEmail = email.trim().toLowerCase();
+    
+    if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setError("Valid email address required");
       return;
     }
@@ -136,7 +137,7 @@ export default function PublicVisitorRegistration() {
       const res = await fetch(`/api/public/visitor/${slug}/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email: trimmedEmail })
       });
 
       const data = await res.json();
@@ -145,6 +146,7 @@ export default function PublicVisitorRegistration() {
         throw new Error(data.message || "Failed to send OTP");
       }
 
+      setEmail(trimmedEmail);
       setOtpSent(true);
       setResendTimer(data.resendAfter || 30);
       setError("");
@@ -178,7 +180,7 @@ export default function PublicVisitorRegistration() {
       }
 
       setOtpToken(data.otpToken);
-      setStep(1); // Move to primary details
+      setStep(1);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -191,22 +193,29 @@ export default function PublicVisitorRegistration() {
     setError("");
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" }
+        video: { 
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 }
+        }
       });
       setStream(mediaStream);
       setCameraActive(true);
     } catch (err) {
+      console.error("[CAMERA] Access error:", err);
       setError("Camera access denied or unavailable");
     }
   };
 
-  const stopCamera = () => {
-    stream?.getTracks().forEach(track => track.stop());
-    setStream(null);
+  const stopCamera = useCallback(() => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
     setCameraActive(false);
-  };
+  }, [stream]);
 
-  const capturePhoto = () => {
+  const capturePhoto = useCallback(() => {
     if (!canvasRef.current || !videoRef.current) return;
 
     const canvas = canvasRef.current;
@@ -218,14 +227,14 @@ export default function PublicVisitorRegistration() {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, 400, 300);
 
-    setPhoto(canvas.toDataURL("image/jpeg"));
+    setPhoto(canvas.toDataURL("image/jpeg", 0.9));
     stopCamera();
-  };
+  }, [stopCamera]);
 
   /* ================= VALIDATION ================= */
-  const validateStep = () => {
+  const validateStep = useCallback(() => {
     switch (step) {
-      case 1: // Primary Details
+      case 1:
         if (!formData.name.trim()) {
           setError("Visitor name is required");
           return false;
@@ -236,36 +245,41 @@ export default function PublicVisitorRegistration() {
         }
         break;
 
-      case 2: // Secondary Details
+      case 2:
         if (!formData.personToMeet.trim()) {
           setError("Person to meet is required");
           return false;
         }
         break;
 
-      case 3: // Identity
+      case 3:
         if (!photo) {
           setError("Visitor photo is required");
           return false;
         }
         break;
+
+      default:
+        break;
     }
 
     setError("");
     return true;
-  };
+  }, [step, formData, photo]);
 
   /* ================= NAVIGATION ================= */
-  const handleNext = () => {
+  const handleNext = useCallback(() => {
     if (validateStep()) {
       setStep(prev => prev + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  };
+  }, [validateStep]);
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     setError("");
     setStep(prev => prev - 1);
-  };
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
@@ -280,28 +294,19 @@ export default function PublicVisitorRegistration() {
 
       const formDataToSend = new FormData();
       
-      formDataToSend.append("name", formData.name);
-      formDataToSend.append("phone", formData.phone);
-      formDataToSend.append("fromCompany", formData.fromCompany || "");
-      formDataToSend.append("department", formData.department || "");
-      formDataToSend.append("designation", formData.designation || "");
-      formDataToSend.append("address", formData.address || "");
-      formDataToSend.append("city", formData.city || "");
-      formDataToSend.append("state", formData.state || "");
-      formDataToSend.append("postalCode", formData.postalCode || "");
-      formDataToSend.append("country", formData.country || "");
-      formDataToSend.append("personToMeet", formData.personToMeet || "");
-      formDataToSend.append("purpose", formData.purpose || "");
-      formDataToSend.append("belongings", formData.belongings.join(", "));
-      formDataToSend.append("idType", formData.idType || "");
-      formDataToSend.append("idNumber", formData.idNumber || "");
+      Object.entries(formData).forEach(([key, value]) => {
+        if (key === "belongings") {
+          formDataToSend.append(key, Array.isArray(value) ? value.join(", ") : "");
+        } else {
+          formDataToSend.append(key, value || "");
+        }
+      });
+      
       formDataToSend.append("photo", file);
 
       const res = await fetch(`/api/public/visitor/${slug}/register`, {
         method: "POST",
-        headers: {
-          "otp-token": otpToken
-        },
+        headers: { "otp-token": otpToken },
         body: formDataToSend
       });
 
@@ -312,9 +317,10 @@ export default function PublicVisitorRegistration() {
       }
 
       setVisitorCode(data.visitorCode);
-      setStep(4); // Thank you screen
+      setStep(4);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
-      console.error("Registration error:", err);
+      console.error("[VISITOR_REG] Registration error:", err);
       setError(err.message || "Failed to register. Please try again.");
     } finally {
       setSubmitting(false);
@@ -322,16 +328,14 @@ export default function PublicVisitorRegistration() {
   };
 
   /* ================= WHATSAPP HANDLER ================= */
-  const handleWhatsAppContact = () => {
-    console.log("WhatsApp URL:", company?.whatsapp_url); // Debug log
+  const handleWhatsAppContact = useCallback(() => {
     if (company?.whatsapp_url) {
-      window.open(company.whatsapp_url, '_blank', 'noopener,noreferrer');
+      window.open(company.whatsapp_url, "_blank", "noopener,noreferrer");
     }
-  };
+  }, [company]);
 
-  /* ================= LOGOUT ================= */
-  const handleLogout = () => {
-    // Clear all state
+  /* ================= RESET ================= */
+  const handleReset = useCallback(() => {
     setStep(0);
     setEmail("");
     setOtp("");
@@ -359,13 +363,27 @@ export default function PublicVisitorRegistration() {
     setVisitorCode("");
     setError("");
     
-    // Stop camera if active
     if (stream) {
       stream.getTracks().forEach(track => track.stop());
       setStream(null);
       setCameraActive(false);
     }
-  };
+    
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [stream]);
+
+  /* ================= KEYBOARD HANDLERS ================= */
+  const handleEmailKeyPress = useCallback((e) => {
+    if (e.key === "Enter" && !submitting) {
+      handleSendOTP();
+    }
+  }, [submitting]);
+
+  const handleOTPKeyPress = useCallback((e) => {
+    if (e.key === "Enter" && otp.length === 6 && !submitting) {
+      handleVerifyOTP();
+    }
+  }, [otp, submitting]);
 
   /* ================= LOADING STATE ================= */
   if (loading) {
@@ -385,7 +403,10 @@ export default function PublicVisitorRegistration() {
             <h2>⚠️ Error</h2>
             <p>{error}</p>
           </div>
-          <button className={styles.primaryBtn} onClick={() => router.push("/")}>
+          <button 
+            className={styles.primaryBtn} 
+            onClick={() => router.push("/")}
+          >
             Go Home
           </button>
         </div>
@@ -417,15 +438,17 @@ export default function PublicVisitorRegistration() {
             {!otpSent ? (
               <>
                 <div className={styles.formGroup}>
-                  <label>Email Address *</label>
+                  <label htmlFor="email">Email Address *</label>
                   <input
+                    id="email"
                     className={styles.input}
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyPress={handleEmailKeyPress}
                     placeholder="your.email@example.com"
                     disabled={submitting}
-                    onKeyPress={(e) => e.key === "Enter" && handleSendOTP()}
+                    autoComplete="email"
                   />
                 </div>
 
@@ -440,16 +463,19 @@ export default function PublicVisitorRegistration() {
             ) : (
               <>
                 <div className={styles.formGroup}>
-                  <label>Enter 6-Digit Verification Code</label>
+                  <label htmlFor="otp">Enter 6-Digit Verification Code</label>
                   <input
+                    id="otp"
                     className={styles.input}
                     type="text"
+                    inputMode="numeric"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onKeyPress={handleOTPKeyPress}
                     placeholder="123456"
                     maxLength={6}
                     disabled={submitting}
-                    onKeyPress={(e) => e.key === "Enter" && otp.length === 6 && handleVerifyOTP()}
+                    autoComplete="one-time-code"
                     style={{ 
                       letterSpacing: "8px", 
                       fontSize: "1.25rem", 
@@ -480,7 +506,7 @@ export default function PublicVisitorRegistration() {
                 <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.9rem", color: "#666" }}>
                   Code sent to: <strong>{email}</strong>
                   <br />
-                  <span 
+                  <button 
                     onClick={() => {
                       setOtpSent(false);
                       setOtp("");
@@ -490,11 +516,15 @@ export default function PublicVisitorRegistration() {
                       color: "#667eea", 
                       cursor: "pointer",
                       textDecoration: "underline",
-                      fontSize: "0.85rem"
+                      fontSize: "0.85rem",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      marginTop: "0.5rem"
                     }}
                   >
                     Change email
-                  </span>
+                  </button>
                 </p>
               </>
             )}
@@ -518,36 +548,42 @@ export default function PublicVisitorRegistration() {
             {error && <div className={styles.errorMsg}>{error}</div>}
 
             <div className={styles.formGroup}>
-              <label>Full Name *</label>
+              <label htmlFor="name">Full Name *</label>
               <input
+                id="name"
                 className={styles.input}
                 type="text"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="Enter your full name"
+                autoComplete="name"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label>Phone Number *</label>
+              <label htmlFor="phone">Phone Number *</label>
               <input
+                id="phone"
                 className={styles.input}
                 type="tel"
                 name="phone"
                 value={formData.phone}
                 onChange={handleInputChange}
                 placeholder="+1234567890"
+                autoComplete="tel"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label>Email Address (Verified)</label>
+              <label htmlFor="email-verified">Email Address (Verified)</label>
               <input
+                id="email-verified"
                 className={styles.input}
                 type="email"
                 value={email}
                 disabled
+                readOnly
                 style={{ background: "#f5f5f5", cursor: "not-allowed" }}
               />
             </div>
@@ -586,6 +622,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.fromCompany}
                 onChange={handleInputChange}
                 placeholder="From Company"
+                autoComplete="organization"
               />
               <input
                 className={styles.input}
@@ -593,6 +630,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.department}
                 onChange={handleInputChange}
                 placeholder="Department"
+                autoComplete="organization-title"
               />
               <input
                 className={styles.input}
@@ -600,6 +638,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.designation}
                 onChange={handleInputChange}
                 placeholder="Designation"
+                autoComplete="organization-title"
               />
             </div>
 
@@ -610,6 +649,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.address}
                 onChange={handleInputChange}
                 placeholder="Organization Address"
+                autoComplete="street-address"
               />
             </div>
 
@@ -620,6 +660,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.city}
                 onChange={handleInputChange}
                 placeholder="City"
+                autoComplete="address-level2"
               />
               <input
                 className={styles.input}
@@ -627,6 +668,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.state}
                 onChange={handleInputChange}
                 placeholder="State"
+                autoComplete="address-level1"
               />
               <input
                 className={styles.input}
@@ -634,6 +676,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.postalCode}
                 onChange={handleInputChange}
                 placeholder="Postal Code"
+                autoComplete="postal-code"
               />
             </div>
 
@@ -644,6 +687,7 @@ export default function PublicVisitorRegistration() {
                 value={formData.country}
                 onChange={handleInputChange}
                 placeholder="Country"
+                autoComplete="country-name"
               />
               <input
                 className={styles.input}
@@ -701,7 +745,6 @@ export default function PublicVisitorRegistration() {
 
             {error && <div className={styles.errorMsg}>{error}</div>}
 
-            {/* Camera Section */}
             <div className={styles.cameraContainer}>
               {!cameraActive && !photo && (
                 <button 
@@ -721,6 +764,7 @@ export default function PublicVisitorRegistration() {
                     autoPlay 
                     playsInline
                     muted
+                    aria-label="Camera preview"
                     style={{
                       width: "100%",
                       maxWidth: "400px",
@@ -743,7 +787,7 @@ export default function PublicVisitorRegistration() {
                 <>
                   <img 
                     src={photo} 
-                    alt="Preview" 
+                    alt="Captured visitor photo" 
                     style={{
                       width: "100%",
                       maxWidth: "400px",
@@ -763,10 +807,10 @@ export default function PublicVisitorRegistration() {
               )}
             </div>
 
-            {/* Identity Details Section */}
             <div className={styles.formGroup}>
-              <label>ID Proof Type</label>
+              <label htmlFor="idType">ID Proof Type</label>
               <select
+                id="idType"
                 className={styles.select}
                 name="idType"
                 value={formData.idType}
@@ -782,8 +826,9 @@ export default function PublicVisitorRegistration() {
             </div>
 
             <div className={styles.formGroup}>
-              <label>ID Number</label>
+              <label htmlFor="idNumber">ID Number</label>
               <input
+                id="idNumber"
                 className={styles.input}
                 name="idNumber"
                 value={formData.idNumber}
@@ -792,7 +837,6 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            {/* Buttons Section */}
             <div className={styles.buttonRow}>
               <button 
                 className={styles.secondaryBtn} 
@@ -810,7 +854,7 @@ export default function PublicVisitorRegistration() {
               </button>
             </div>
 
-            <canvas ref={canvasRef} style={{ display: "none" }} />
+            <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
           </main>
         </div>
       )}
@@ -827,7 +871,7 @@ export default function PublicVisitorRegistration() {
 
           <div className={styles.authCard}>
             <div className={styles.textCenter}>
-              <div style={{ fontSize: "4rem", marginBottom: "1rem", color: "#4caf50" }}>✓</div>
+              <div style={{ fontSize: "4rem", marginBottom: "1rem", color: "#4caf50" }} aria-label="Success">✓</div>
               <h2 style={{ color: "#4caf50", marginBottom: "1rem", fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 800 }}>
                 Registration Successful!
               </h2>
@@ -860,11 +904,10 @@ export default function PublicVisitorRegistration() {
                 Check your email <strong>({email})</strong> for the digital pass.
               </p>
 
-              {/* WhatsApp Contact Section */}
-              {company?.whatsapp_url && company.whatsapp_url.trim() !== "" && (
+              {company?.whatsapp_url && company.whatsapp_url.trim() && (
                 <div className={styles.whatsappSection}>
                   <div className={styles.whatsappHeader}>
-                    <div className={styles.whatsappIcon}>📱</div>
+                    <div className={styles.whatsappIcon} aria-label="WhatsApp">📱</div>
                     <div>
                       <h3 className={styles.whatsappTitle}>Need Help?</h3>
                       <p className={styles.whatsappSubtitle}>Contact us on WhatsApp</p>
@@ -875,8 +918,9 @@ export default function PublicVisitorRegistration() {
                     onClick={handleWhatsAppContact}
                     className={styles.whatsappBtn}
                     type="button"
+                    aria-label="Contact on WhatsApp"
                   >
-                    <span style={{ fontSize: "1.25rem" }}>💬</span>
+                    <span style={{ fontSize: "1.25rem" }} aria-hidden="true">💬</span>
                     Contact on WhatsApp
                   </button>
                 </div>
@@ -884,7 +928,7 @@ export default function PublicVisitorRegistration() {
 
               <button 
                 className={styles.primaryBtn}
-                onClick={handleLogout}
+                onClick={handleReset}
                 type="button"
               >
                 ✓ Done
