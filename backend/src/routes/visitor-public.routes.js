@@ -66,7 +66,7 @@ const hashOTP = (otp) =>
 ====================================================== */
 const getCompanyBySlug = async (slug) => {
   const [[company]] = await db.query(
-    `SELECT id, name, slug, logo_url
+    `SELECT id, name, slug, logo_url, whatsapp_url
      FROM companies
      WHERE slug = ?
      LIMIT 1`,
@@ -129,6 +129,7 @@ router.get("/visitor/:slug/info", async (req, res) => {
       company: {
         name: company.name,
         logo_url: company.logo_url,
+        whatsapp_url: company.whatsapp_url || null,
       },
       qrCode,
       publicUrl,
