@@ -15,14 +15,7 @@ import {
   Download,
   AlertCircle,
   ChevronRight,
-  ArrowLeft,
-  Settings,
-  User,
-  Building2,
-  Lock,
-  Eye,
-  EyeOff,
-  Upload
+  Settings
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -30,7 +23,7 @@ export default function Home() {
   const router = useRouter();
   const [company, setCompany] = useState(null);
 
-  // View state: "home" | "reports" | "settings"
+  // View state: "home" | "reports"
   const [currentView, setCurrentView] = useState("home");
 
   // Subscription panel state
@@ -49,28 +42,6 @@ export default function Home() {
   const [downloading, setDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [downloadError, setDownloadError] = useState("");
-
-  // Settings states
-  const [settingsData, setSettingsData] = useState(null);
-  const [loadingSettings, setLoadingSettings] = useState(false);
-  const [savingSettings, setSavingSettings] = useState(false);
-  const [settingsSuccess, setSettingsSuccess] = useState("");
-  const [settingsError, setSettingsError] = useState("");
-
-  // Settings form states
-  const [companyName, setCompanyName] = useState("");
-  const [whatsappUrl, setWhatsappUrl] = useState("");
-  const [logoFile, setLogoFile] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);
-  const [userName, setUserName] = useState("");
-  const [userPhone, setUserPhone] = useState("");
-  const [userEmail, setUserEmail] = useState("");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   /* ================= AUTH CHECK ================= */
   useEffect(() => {
@@ -140,38 +111,6 @@ export default function Home() {
     }
   };
 
-  /* ================= FETCH SETTINGS ================= */
-  const fetchSettings = async () => {
-    try {
-      setLoadingSettings(true);
-      setSettingsError("");
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to load settings");
-
-      setSettingsData(data);
-      
-      // Populate form fields
-      setCompanyName(data.company?.name || "");
-      setWhatsappUrl(data.company?.whatsapp_url || "");
-      setLogoPreview(data.company?.logo_url || null);
-      setUserName(data.user?.name || "");
-      setUserPhone(data.user?.phone || "");
-      setUserEmail(data.user?.email || "");
-
-    } catch (err) {
-      setSettingsError(err?.message || "Unable to fetch settings");
-    } finally {
-      setLoadingSettings(false);
-    }
-  };
-
   /* ================= DOWNLOAD FUNCTIONS ================= */
   const handleDownload = async (type) => {
     try {
@@ -238,186 +177,6 @@ export default function Home() {
     } finally {
       setDownloading(false);
     }
-  };
-
-  /* ================= SAVE COMPANY SETTINGS ================= */
-  const handleSaveCompanySettings = async () => {
-    try {
-      setSavingSettings(true);
-      setSettingsError("");
-      setSettingsSuccess("");
-
-      // Update company name and WhatsApp URL
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          name: companyName,
-          whatsappUrl: whatsappUrl || null,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to update company settings");
-
-      // Update localStorage
-      const storedCompany = JSON.parse(localStorage.getItem("company"));
-      storedCompany.name = data.company.name;
-      storedCompany.whatsapp_url = data.company.whatsapp_url;
-      localStorage.setItem("company", JSON.stringify(storedCompany));
-      setCompany(storedCompany);
-
-      // Upload logo if file selected
-      if (logoFile) {
-        const formData = new FormData();
-        formData.append("logo", logoFile);
-
-        const logoRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company/logo`, {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: formData,
-        });
-
-        const logoData = await logoRes.json();
-        if (!logoRes.ok) throw new Error(logoData?.message || "Failed to upload logo");
-
-        // Update localStorage with new logo
-        storedCompany.logo_url = logoData.logo_url;
-        localStorage.setItem("company", JSON.stringify(storedCompany));
-        setCompany(storedCompany);
-        setLogoPreview(logoData.logo_url);
-        setLogoFile(null);
-      }
-
-      setSettingsSuccess("Company settings updated successfully");
-      setTimeout(() => setSettingsSuccess(""), 5000);
-
-    } catch (err) {
-      setSettingsError(err?.message || "Failed to update settings");
-      setTimeout(() => setSettingsError(""), 5000);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  /* ================= SAVE USER PROFILE ================= */
-  const handleSaveUserProfile = async () => {
-    try {
-      setSavingSettings(true);
-      setSettingsError("");
-      setSettingsSuccess("");
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/profile`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          name: userName,
-          phone: userPhone,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to update profile");
-
-      setSettingsSuccess("Profile updated successfully");
-      setTimeout(() => setSettingsSuccess(""), 5000);
-
-    } catch (err) {
-      setSettingsError(err?.message || "Failed to update profile");
-      setTimeout(() => setSettingsError(""), 5000);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  /* ================= CHANGE PASSWORD ================= */
-  const handleChangePassword = async () => {
-    try {
-      setSavingSettings(true);
-      setSettingsError("");
-      setSettingsSuccess("");
-
-      // Validation
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        setSettingsError("All password fields are required");
-        setSavingSettings(false);
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        setSettingsError("New passwords do not match");
-        setSavingSettings(false);
-        return;
-      }
-
-      if (newPassword.length < 8) {
-        setSettingsError("Password must be at least 8 characters long");
-        setSavingSettings(false);
-        return;
-      }
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/password`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to change password");
-
-      setSettingsSuccess("Password changed successfully");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setTimeout(() => setSettingsSuccess(""), 5000);
-
-    } catch (err) {
-      setSettingsError(err?.message || "Failed to change password");
-      setTimeout(() => setSettingsError(""), 5000);
-    } finally {
-      setSavingSettings(false);
-    }
-  };
-
-  /* ================= LOGO FILE HANDLER ================= */
-  const handleLogoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      setSettingsError("Please select an image file");
-      return;
-    }
-
-    // Validate file size (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setSettingsError("Logo size must be less than 5MB");
-      return;
-    }
-
-    setLogoFile(file);
-    
-    // Preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setLogoPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
   };
 
   /* ================= UPGRADE FUNCTIONS ================= */
@@ -498,14 +257,11 @@ export default function Home() {
 
   const handleOpenSettings = () => {
     setShowMenu(false);
-    setCurrentView("settings");
-    fetchSettings();
+    router.push("/home/settings");
   };
 
   const handleBackToHome = () => {
     setCurrentView("home");
-    setSettingsSuccess("");
-    setSettingsError("");
   };
 
   const handleRenew = () => {
@@ -563,7 +319,9 @@ export default function Home() {
             onClick={handleBackToHome}
             aria-label="Back to home"
           >
-            <ArrowLeft size={20} />
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
             <span>Back</span>
           </button>
         ) : (
@@ -793,272 +551,6 @@ export default function Home() {
                   </p>
                 </div>
               </>
-            )}
-          </div>
-        )}
-
-        {/* SETTINGS VIEW */}
-        {currentView === "settings" && (
-          <div className={styles.settingsView}>
-            <div className={styles.settingsHeader}>
-              <div className={styles.settingsHeaderIcon}>
-                <Settings size={32} />
-              </div>
-              <div>
-                <h2 className={styles.settingsTitle}>My Account</h2>
-                <p className={styles.settingsSubtitle}>Manage your company and profile settings</p>
-              </div>
-            </div>
-
-            {settingsSuccess && (
-              <div className={styles.notification} data-type="success">
-                <CheckCircle size={18} />
-                <span>{settingsSuccess}</span>
-              </div>
-            )}
-
-            {settingsError && (
-              <div className={styles.notification} data-type="error">
-                <AlertCircle size={18} />
-                <span>{settingsError}</span>
-              </div>
-            )}
-
-            {loadingSettings && (
-              <div className={styles.loadingState}>
-                <div className={styles.spinner}></div>
-                <p>Loading settings...</p>
-              </div>
-            )}
-
-            {settingsData && (
-              <div className={styles.settingsContent}>
-                
-                {/* COMPANY SETTINGS CARD */}
-                <div className={styles.settingsSection}>
-                  <div className={styles.settingsSectionTitle}>
-                    <Building2 size={20} />
-                    <h3>Company Settings</h3>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Company Name *</label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="Enter company name"
-                      className={styles.input}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>WhatsApp URL (Optional)</label>
-                    <input
-                      type="url"
-                      value={whatsappUrl}
-                      onChange={(e) => setWhatsappUrl(e.target.value)}
-                      placeholder="https://wa.me/..."
-                      className={styles.input}
-                    />
-                    <p className={styles.fieldHelp}>
-                      Used in visitor pass emails
-                    </p>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Company Logo</label>
-                    {logoPreview && (
-                      <div className={styles.logoPreview}>
-                        <img src={logoPreview} alt="Logo preview" />
-                      </div>
-                    )}
-                    <label htmlFor="logo-upload" className={styles.uploadBtn}>
-                      <Upload size={14} />
-                      <span>{logoFile ? "Change Logo" : "Upload Logo"}</span>
-                    </label>
-                    <input
-                      id="logo-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoChange}
-                      style={{ display: "none" }}
-                    />
-                    {logoFile && (
-                      <p className={styles.fileSelected}>
-                        {logoFile.name}
-                      </p>
-                    )}
-                    <p className={styles.fieldHelp}>
-                      Max 5MB • JPG, PNG, WEBP
-                    </p>
-                  </div>
-
-                  <div className={styles.readOnlySection}>
-                    <h4>Read-Only Info</h4>
-                    <div className={styles.readOnlyRow}>
-                      <span>Conference Rooms</span>
-                      <strong>{settingsData.company?.rooms || 0}</strong>
-                    </div>
-                    <div className={styles.readOnlyRow}>
-                      <span>Plan</span>
-                      <strong>{settingsData.company?.plan || "—"}</strong>
-                    </div>
-                    <div className={styles.readOnlyRow}>
-                      <span>Status</span>
-                      <strong>{settingsData.company?.subscription_status || "—"}</strong>
-                    </div>
-                  </div>
-
-                  <button
-                    className={styles.saveBtn}
-                    onClick={handleSaveCompanySettings}
-                    disabled={savingSettings}
-                  >
-                    {savingSettings ? "Saving..." : "Save Company Settings"}
-                  </button>
-                </div>
-
-                {/* USER PROFILE CARD */}
-                <div className={styles.settingsSection}>
-                  <div className={styles.settingsSectionTitle}>
-                    <User size={20} />
-                    <h3>User Profile</h3>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Full Name</label>
-                    <input
-                      type="text"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                      placeholder="Enter your name"
-                      className={styles.input}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Phone Number</label>
-                    <input
-                      type="tel"
-                      value={userPhone}
-                      onChange={(e) => setUserPhone(e.target.value)}
-                      placeholder="Enter your phone"
-                      className={styles.input}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Email Address</label>
-                    <input
-                      type="email"
-                      value={userEmail}
-                      disabled
-                      className={`${styles.input} ${styles.readOnlyInput}`}
-                    />
-                    <p className={styles.fieldHelp}>
-                      Email cannot be changed (security)
-                    </p>
-                  </div>
-
-                  <button
-                    className={styles.saveBtn}
-                    onClick={handleSaveUserProfile}
-                    disabled={savingSettings}
-                  >
-                    {savingSettings ? "Saving..." : "Save Profile"}
-                  </button>
-                </div>
-
-                {/* CHANGE PASSWORD CARD */}
-                <div className={styles.settingsSection}>
-                  <div className={styles.settingsSectionTitle}>
-                    <Lock size={20} />
-                    <h3>Change Password</h3>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Current Password *</label>
-                    <div className={styles.passwordInput}>
-                      <input
-                        type={showCurrentPassword ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="Enter current password"
-                        className={styles.input}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className={styles.passwordToggle}
-                      >
-                        {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>New Password *</label>
-                    <div className={styles.passwordInput}>
-                      <input
-                        type={showNewPassword ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Min 8 characters"
-                        className={styles.input}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className={styles.passwordToggle}
-                      >
-                        {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Confirm Password *</label>
-                    <div className={styles.passwordInput}>
-                      <input
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm new password"
-                        className={styles.input}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className={styles.passwordToggle}
-                      >
-                        {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
-                    {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                      <p className={styles.fieldError}>
-                        Passwords do not match
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={styles.infoBox}>
-                    <Lock size={16} />
-                    <p>
-                      Password must be at least 8 characters. You'll receive a confirmation email.
-                    </p>
-                  </div>
-
-                  <button
-                    className={styles.saveBtn}
-                    onClick={handleChangePassword}
-                    disabled={savingSettings}
-                  >
-                    {savingSettings ? "Changing..." : "Change Password"}
-                  </button>
-                </div>
-
-              </div>
             )}
           </div>
         )}
