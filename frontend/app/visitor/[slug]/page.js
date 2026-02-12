@@ -550,11 +550,11 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            <div style={{ display: "flex", gap: "1rem", marginTop: "2rem" }}>
-              <button className={styles.secondaryBtn} onClick={() => setStep(0)} style={{ width: "auto", flex: 1 }}>
+            <div className={styles.buttonRow}>
+              <button className={styles.secondaryBtn} onClick={() => setStep(0)}>
                 ← Back
               </button>
-              <button className={styles.primaryBtn} onClick={handleNext} style={{ width: "auto", flex: 1 }}>
+              <button className={styles.primaryBtn} onClick={handleNext}>
                 Next →
               </button>
             </div>
@@ -577,7 +577,7 @@ export default function PublicVisitorRegistration() {
 
             {error && <div className={styles.errorMsg}>{error}</div>}
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div className={styles.gridRow}>
               <input
                 className={styles.input}
                 name="fromCompany"
@@ -611,7 +611,7 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div className={styles.gridRow}>
               <input
                 className={styles.input}
                 name="city"
@@ -635,7 +635,7 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div className={styles.gridRow}>
               <input
                 className={styles.input}
                 name="country"
@@ -659,34 +659,24 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            <div style={{ display: "flex", gap: "1.5rem", marginBottom: "2rem", flexWrap: "wrap" }}>
+            <div className={styles.checkboxGroup}>
               {["Laptop", "Bag", "Documents"].map(item => (
-                <label 
-                  key={item}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.5rem",
-                    cursor: "pointer",
-                    fontSize: "0.95rem"
-                  }}
-                >
+                <label key={item} className={styles.checkboxLabel}>
                   <input
                     type="checkbox"
                     checked={formData.belongings.includes(item)}
                     onChange={() => toggleBelonging(item)}
-                    style={{ cursor: "pointer", width: "18px", height: "18px" }}
                   />
                   {item}
                 </label>
               ))}
             </div>
 
-            <div style={{ display: "flex", gap: "1rem" }}>
-              <button className={styles.secondaryBtn} onClick={handleBack} style={{ width: "auto", flex: 1 }}>
+            <div className={styles.buttonRow}>
+              <button className={styles.secondaryBtn} onClick={handleBack}>
                 ← Previous
               </button>
-              <button className={styles.primaryBtn} onClick={handleNext} style={{ width: "auto", flex: 1 }}>
+              <button className={styles.primaryBtn} onClick={handleNext}>
                 Next →
               </button>
             </div>
@@ -694,7 +684,7 @@ export default function PublicVisitorRegistration() {
         </div>
       )}
 
-      {/* ================= STEP 3: IDENTITY + PHOTO (REFINED LAYOUT) ================= */}
+      {/* ================= STEP 3: IDENTITY + PHOTO ================= */}
       {step === 3 && (
         <div className={styles.container}>
           <header className={styles.header}>
@@ -710,18 +700,7 @@ export default function PublicVisitorRegistration() {
             {error && <div className={styles.errorMsg}>{error}</div>}
 
             {/* Camera Section */}
-            <div style={{ 
-              border: "2px dashed #e0e0e0", 
-              borderRadius: "1rem", 
-              padding: "1.5rem",
-              minHeight: "350px",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "1rem",
-              marginBottom: "2rem"
-            }}>
+            <div className={styles.cameraContainer}>
               {!cameraActive && !photo && (
                 <button 
                   type="button"
@@ -729,7 +708,7 @@ export default function PublicVisitorRegistration() {
                   onClick={startCamera}
                   style={{ maxWidth: "300px" }}
                 >
-                  Start Camera
+                  📷 Start Camera
                 </button>
               )}
 
@@ -753,7 +732,7 @@ export default function PublicVisitorRegistration() {
                     onClick={capturePhoto}
                     style={{ maxWidth: "300px" }}
                   >
-                    Capture Photo
+                    📸 Capture Photo
                   </button>
                 </>
               )}
@@ -776,48 +755,47 @@ export default function PublicVisitorRegistration() {
                     onClick={() => setPhoto(null)}
                     style={{ maxWidth: "300px", marginTop: 0 }}
                   >
-                    Retake Photo
+                    🔄 Retake Photo
                   </button>
                 </>
               )}
             </div>
 
             {/* Identity Details Section */}
-            <div style={{ marginBottom: "2rem" }}>
-              <div className={styles.formGroup}>
-                <label>ID Proof Type</label>
-                <select
-                  className={styles.select}
-                  name="idType"
-                  value={formData.idType}
-                  onChange={handleInputChange}
-                >
-                  <option value="">Select ID Proof (Optional)</option>
-                  <option value="aadhaar">Aadhaar</option>
-                  <option value="pan">PAN Card</option>
-                  <option value="passport">Passport</option>
-                </select>
-              </div>
+            <div className={styles.formGroup}>
+              <label>ID Proof Type</label>
+              <select
+                className={styles.select}
+                name="idType"
+                value={formData.idType}
+                onChange={handleInputChange}
+              >
+                <option value="">Select ID Proof (Optional)</option>
+                <option value="aadhaar">Aadhaar</option>
+                <option value="pan">PAN Card</option>
+                <option value="passport">Passport</option>
+                <option value="driving_license">Driving License</option>
+                <option value="voter_id">Voter ID</option>
+              </select>
+            </div>
 
-              <div className={styles.formGroup}>
-                <label>ID Number</label>
-                <input
-                  className={styles.input}
-                  name="idNumber"
-                  value={formData.idNumber}
-                  onChange={handleInputChange}
-                  placeholder="ID Number (Optional)"
-                />
-              </div>
+            <div className={styles.formGroup}>
+              <label>ID Number</label>
+              <input
+                className={styles.input}
+                name="idNumber"
+                value={formData.idNumber}
+                onChange={handleInputChange}
+                placeholder="ID Number (Optional)"
+              />
             </div>
 
             {/* Buttons Section */}
-            <div style={{ display: "flex", gap: "1rem" }}>
+            <div className={styles.buttonRow}>
               <button 
                 className={styles.secondaryBtn} 
                 onClick={handleBack}
                 disabled={submitting}
-                style={{ width: "auto", flex: 1, marginTop: 0 }}
               >
                 ← Previous
               </button>
@@ -825,9 +803,8 @@ export default function PublicVisitorRegistration() {
                 className={styles.primaryBtn} 
                 onClick={handleSubmit}
                 disabled={!photo || submitting}
-                style={{ width: "auto", flex: 1 }}
               >
-                {submitting ? "Submitting..." : "Submit"}
+                {submitting ? "Submitting..." : "✓ Submit"}
               </button>
             </div>
 
@@ -847,94 +824,55 @@ export default function PublicVisitorRegistration() {
           </header>
 
           <div className={styles.authCard}>
-            <div style={{ textAlign: "center" }}>
+            <div className={styles.textCenter}>
               <div style={{ fontSize: "4rem", marginBottom: "1rem", color: "#4caf50" }}>✓</div>
-              <h2 style={{ color: "#4caf50", marginBottom: "1rem", fontSize: "1.75rem" }}>
+              <h2 style={{ color: "#4caf50", marginBottom: "1rem", fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 800 }}>
                 Registration Successful!
               </h2>
-              <p style={{ fontSize: "1rem", color: "#666", marginBottom: "2rem" }}>
+              <p style={{ fontSize: "clamp(0.9rem, 2vw, 1rem)", color: "#666", marginBottom: "2rem", lineHeight: 1.6 }}>
                 Your visitor pass has been sent to your email.
               </p>
 
-              <div className={styles.successMsg} style={{ textAlign: "center", marginBottom: "2rem" }}>
-                <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600 }}>Visitor ID</p>
-                <p style={{ margin: "0.5rem 0 0 0", fontSize: "1.75rem", fontWeight: "800", color: "#667eea" }}>
+              <div className={styles.successMsg}>
+                <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#2e7d32" }}>
+                  Visitor ID
+                </p>
+                <p style={{ 
+                  margin: "0.5rem 0 0 0", 
+                  fontSize: "clamp(1.5rem, 3.5vw, 2rem)", 
+                  fontWeight: "800", 
+                  color: "#667eea",
+                  letterSpacing: "2px"
+                }}>
                   {visitorCode}
                 </p>
               </div>
 
-              <p style={{ fontSize: "0.9rem", color: "#888", lineHeight: 1.6, marginBottom: "2rem" }}>
+              <p style={{ 
+                fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)", 
+                color: "#888", 
+                lineHeight: 1.6, 
+                marginBottom: "2rem" 
+              }}>
                 Please show this ID at the reception desk.<br />
-                Check your email ({email}) for the digital pass.
+                Check your email <strong>({email})</strong> for the digital pass.
               </p>
 
               {/* WhatsApp Contact Section */}
               {company?.whatsapp_url && (
-                <div style={{
-                  background: "linear-gradient(135deg, #e8f5e9, #c8e6c9)",
-                  border: "2px solid #4caf50",
-                  borderRadius: "1rem",
-                  padding: "1.5rem",
-                  marginBottom: "2rem",
-                  textAlign: "left"
-                }}>
-                  <div style={{ 
-                    display: "flex", 
-                    alignItems: "center", 
-                    gap: "0.75rem",
-                    marginBottom: "1rem"
-                  }}>
-                    <div style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                      background: "#25d366",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "1.5rem"
-                    }}>
-                      📱
-                    </div>
+                <div className={styles.whatsappSection}>
+                  <div className={styles.whatsappHeader}>
+                    <div className={styles.whatsappIcon}>📱</div>
                     <div>
-                      <h3 style={{ 
-                        margin: 0, 
-                        fontSize: "1rem", 
-                        fontWeight: 700,
-                        color: "#2e7d32"
-                      }}>
-                        Need Help?
-                      </h3>
-                      <p style={{ 
-                        margin: 0, 
-                        fontSize: "0.85rem", 
-                        color: "#558b2f"
-                      }}>
-                        Contact us on WhatsApp
-                      </p>
+                      <h3 className={styles.whatsappTitle}>Need Help?</h3>
+                      <p className={styles.whatsappSubtitle}>Contact us on WhatsApp</p>
                     </div>
                   </div>
                   
                   <button
                     onClick={handleWhatsAppContact}
-                    style={{
-                      width: "100%",
-                      padding: "0.875rem",
-                      background: "#25d366",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "0.5rem",
-                      fontSize: "0.95rem",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: "0.5rem",
-                      transition: "all 0.3s ease"
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.background = "#20ba5a"}
-                    onMouseOut={(e) => e.currentTarget.style.background = "#25d366"}
+                    className={styles.whatsappBtn}
+                    type="button"
                   >
                     <span style={{ fontSize: "1.25rem" }}>💬</span>
                     Contact on WhatsApp
@@ -945,8 +883,9 @@ export default function PublicVisitorRegistration() {
               <button 
                 className={styles.primaryBtn}
                 onClick={handleLogout}
+                type="button"
               >
-                Done
+                ✓ Done
               </button>
             </div>
           </div>
