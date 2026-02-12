@@ -70,6 +70,7 @@ export default function PublicVisitorRegistration() {
           return;
         }
 
+        console.log("Company data loaded:", data.company); // Debug log
         setCompany(data.company);
       } catch (err) {
         console.error("Failed to load company info:", err);
@@ -322,6 +323,7 @@ export default function PublicVisitorRegistration() {
 
   /* ================= WHATSAPP HANDLER ================= */
   const handleWhatsAppContact = () => {
+    console.log("WhatsApp URL:", company?.whatsapp_url); // Debug log
     if (company?.whatsapp_url) {
       window.open(company.whatsapp_url, '_blank', 'noopener,noreferrer');
     }
@@ -859,7 +861,7 @@ export default function PublicVisitorRegistration() {
               </p>
 
               {/* WhatsApp Contact Section */}
-              {company?.whatsapp_url && (
+              {company?.whatsapp_url && company.whatsapp_url.trim() !== "" && (
                 <div className={styles.whatsappSection}>
                   <div className={styles.whatsappHeader}>
                     <div className={styles.whatsappIcon}>📱</div>
