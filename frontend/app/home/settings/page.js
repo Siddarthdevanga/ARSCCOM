@@ -30,16 +30,11 @@ export default function SettingsPage() {
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
-  const [companyRooms, setCompanyRooms] = useState(0);
-  const [companyPlan, setCompanyPlan] = useState("");
-  const [companyStatus, setCompanyStatus] = useState("");
 
   // User Profile
   const [userName, setUserName] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [userEmail, setUserEmail] = useState("");
-  const [memberSince, setMemberSince] = useState("");
-  const [userRole, setUserRole] = useState("");
 
   // Password
   const [currentPassword, setCurrentPassword] = useState("");
@@ -109,16 +104,11 @@ export default function SettingsPage() {
       setCompanyName(data.company?.name || "");
       setWhatsappUrl(data.company?.whatsapp_url || "");
       setLogoPreview(data.company?.logo_url || null);
-      setCompanyRooms(data.company?.rooms || 0);
-      setCompanyPlan(data.company?.plan || "");
-      setCompanyStatus(data.company?.subscription_status || "");
 
       // User data
       setUserName(data.user?.name || "");
       setUserPhone(data.user?.phone || "");
       setUserEmail(data.user?.email || "");
-      setMemberSince(data.user?.created_at || "");
-      setUserRole(data.user?.role || "Admin");
 
     } catch (err) {
       setErrorMsg(err?.message || "Unable to fetch settings");
@@ -668,23 +658,6 @@ export default function SettingsPage() {
                 )}
                 <p className={styles.fieldHelp}>Max 5MB • JPG, PNG, WEBP</p>
               </div>
-
-              {/* Read-Only Info */}
-              <div className={styles.readOnlySection}>
-                <h4>ℹ️ Read-Only Info</h4>
-                <div className={styles.readOnlyRow}>
-                  <span>Conference Rooms</span>
-                  <strong>{companyRooms}</strong>
-                </div>
-                <div className={styles.readOnlyRow}>
-                  <span>Plan</span>
-                  <strong>{companyPlan || "—"}</strong>
-                </div>
-                <div className={styles.readOnlyRow}>
-                  <span>Status</span>
-                  <strong>{companyStatus || "—"}</strong>
-                </div>
-              </div>
             </div>
 
             {/* USER PROFILE CARD */}
@@ -787,25 +760,6 @@ export default function SettingsPage() {
                   <span className={styles.fieldValue} style={{ color: "#999" }}>{userEmail}</span>
                 </div>
                 <p className={styles.fieldHelp}>Email cannot be changed (security)</p>
-              </div>
-
-              {/* Read-Only Info */}
-              <div className={styles.readOnlySection}>
-                <h4>ℹ️ Read-Only Info</h4>
-                <div className={styles.readOnlyRow}>
-                  <span>Member Since</span>
-                  <strong>
-                    {memberSince ? new Date(memberSince).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    }) : "—"}
-                  </strong>
-                </div>
-                <div className={styles.readOnlyRow}>
-                  <span>Role</span>
-                  <strong>{userRole}</strong>
-                </div>
               </div>
             </div>
 
