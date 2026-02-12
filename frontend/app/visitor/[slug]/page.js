@@ -909,8 +909,8 @@ export default function PublicVisitorRegistration() {
                   <div className={styles.whatsappHeader}>
                     <div className={styles.whatsappIcon} aria-label="WhatsApp">📱</div>
                     <div>
-                      <h3 className={styles.whatsappTitle}>Need Help?</h3>
-                      <p className={styles.whatsappSubtitle}>Contact us on WhatsApp</p>
+                      <h3 className={styles.whatsappTitle}>Stay Connected With Us</h3>
+                      <p className={styles.whatsappSubtitle}>Contact on WhatsApp</p>
                     </div>
                   </div>
                   
