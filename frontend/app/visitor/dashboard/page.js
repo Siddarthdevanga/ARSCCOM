@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ======================================================
-   READ MYSQL / ISO TIME AS-IS (No timezone conversion)
+   UTILITY: Format MySQL/ISO time without timezone conversion
 ====================================================== */
 const formatISTTime = (value) => {
   if (!value) return "-";
@@ -14,7 +14,7 @@ const formatISTTime = (value) => {
     let timePart;
 
     if (str.includes(" ")) timePart = str.split(" ")[1];
-    if (str.includes("T")) timePart = str.split("T")[1];
+    else if (str.includes("T")) timePart = str.split("T")[1];
 
     if (!timePart) return "-";
 
@@ -31,35 +31,41 @@ const formatISTTime = (value) => {
   }
 };
 
+/* ======================================================
+   MAIN COMPONENT
+====================================================== */
 export default function VisitorDashboard() {
   const router = useRouter();
 
+  // Core state
   const [company, setCompany] = useState(null);
   const [stats, setStats] = useState({ today: 0, inside: 0, out: 0 });
   const [activeVisitors, setActiveVisitors] = useState([]);
   const [checkedOutVisitors, setCheckedOutVisitors] = useState([]);
   const [checkingOut, setCheckingOut] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [plan, setPlan] = useState(null);
   
-  /* ================= SLIDING PANEL STATE ================= */
+  // Plan state (NEW - for usage display)
+  const [planUsage, setPlanUsage] = useState(null);
+  
+  // QR Panel state
   const [panelOpen, setPanelOpen] = useState(false);
   const [publicUrl, setPublicUrl] = useState("");
   const [qrCodeImage, setQrCodeImage] = useState("");
   const [loadingQR, setLoadingQR] = useState(false);
 
-  /* ================= TOAST STATE ================= */
+  // Toast state
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
-  /* ================= SHOW TOAST ================= */
-  const showToast = (message, type = "success") => {
+  /* ================= TOAST HELPER ================= */
+  const showToast = useCallback((message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => {
       setToast({ show: false, message: "", type: "success" });
     }, 3000);
-  };
+  }, []);
 
-  /* ================= FETCH DASHBOARD ================= */
+  /* ================= FETCH DASHBOARD DATA ================= */
   const loadDashboard = useCallback(async (token) => {
     try {
       const res = await fetch(
@@ -72,41 +78,42 @@ export default function VisitorDashboard() {
       if (!res.ok) {
         console.error("Dashboard API error:", res.status, res.statusText);
         
-        // Handle subscription-related errors
+        // Handle subscription errors
         if (res.status === 403) {
           const errorData = await res.json();
           if (errorData.message?.includes("expired") || errorData.message?.includes("inactive")) {
-            showToast("Your subscription has expired. Redirecting to subscription page...", "error");
+            showToast("Your subscription has expired. Redirecting...", "error");
             setTimeout(() => router.replace("/auth/subscription"), 2000);
             return;
           }
         }
-        return;
+        throw new Error("Failed to load dashboard");
       }
 
       const data = await res.json();
       console.log("Dashboard data received:", data);
 
       setStats(data?.stats || { today: 0, inside: 0, out: 0 });
+      setActiveVisitors(data?.activeVisitors || data?.insideVisitors || []);
+      setCheckedOutVisitors(data?.checkedOutVisitors || data?.outVisitors || data?.todayCheckouts || []);
       
-      // Handle active visitors (currently inside)
-      const active = data?.activeVisitors || data?.insideVisitors || [];
-      console.log("Active visitors:", active.length, active);
-      setActiveVisitors(active);
-      
-      // Handle checked out visitors (today's checkouts)
-      const checkedOut = data?.checkedOutVisitors || data?.outVisitors || data?.todayCheckouts || [];
-      console.log("Checked out visitors:", checkedOut.length, checkedOut);
-      setCheckedOutVisitors(checkedOut);
-      
-      setPlan(data?.plan || null);
+      // Store plan info from dashboard response
+      if (data?.plan) {
+        setPlanUsage({
+          plan: data.plan.plan,
+          limit: data.plan.limit,
+          used: data.plan.used,
+          remaining: data.plan.remaining,
+          isUnlimited: data.plan.plan === "ENTERPRISE"
+        });
+      }
     } catch (err) {
       console.error("Dashboard fetch error:", err);
       showToast("Failed to load dashboard data", "error");
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [router, showToast]);
 
   /* ================= LOAD QR CODE ================= */
   const loadQRCode = useCallback(async (companySlug) => {
@@ -132,7 +139,7 @@ export default function VisitorDashboard() {
     }
   }, []);
 
-  /* ================= AUTH + INIT ================= */
+  /* ================= INITIAL LOAD ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -153,8 +160,8 @@ export default function VisitorDashboard() {
     }
   }, [router, loadDashboard, loadQRCode]);
 
-  /* ================= CHECKOUT ================= */
-  const handleCheckout = async (visitorCode) => {
+  /* ================= CHECKOUT VISITOR ================= */
+  const handleCheckout = useCallback(async (visitorCode) => {
     const token = localStorage.getItem("token");
     if (!token) {
       showToast("Authentication required", "error");
@@ -177,14 +184,11 @@ export default function VisitorDashboard() {
       );
 
       const data = await res.json();
-      console.log("Checkout response:", data);
 
       if (res.ok) {
         showToast("✓ Visitor checked out successfully!", "success");
-        // Reload dashboard to update both active and checked-out lists
         await loadDashboard(token);
       } else {
-        // Handle subscription errors
         if (res.status === 403 && data.message?.includes("expired")) {
           showToast("Subscription expired. Redirecting...", "error");
           setTimeout(() => router.replace("/auth/subscription"), 2000);
@@ -198,16 +202,15 @@ export default function VisitorDashboard() {
     } finally {
       setCheckingOut(null);
     }
-  };
+  }, [loadDashboard, router, showToast]);
 
-  /* ================= DOWNLOAD IMAGE WITH LOGO ================= */
-  const downloadImage = async () => {
+  /* ================= DOWNLOAD QR IMAGE ================= */
+  const downloadImage = useCallback(async () => {
     if (!qrCodeImage || !company) return;
 
     try {
       showToast('Generating QR code image...', 'info');
 
-      // Create canvas
       const canvas = document.createElement('canvas');
       canvas.width = 800;
       canvas.height = 1000;
@@ -224,22 +227,21 @@ export default function VisitorDashboard() {
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 800, 120);
 
-      // Company Name (Left side)
+      // Company Name
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 32px Arial';
       ctx.textAlign = 'left';
       ctx.fillText(company.name, 50, 70);
 
-      // Company Logo (Right side)
+      // Company Logo
       if (company.logo_url) {
         try {
           const logoImg = new Image();
           logoImg.crossOrigin = 'anonymous';
           logoImg.src = company.logo_url;
           
-          await new Promise((resolve, reject) => {
+          await new Promise((resolve) => {
             logoImg.onload = () => {
-              // Calculate logo dimensions (max 120x80, maintain aspect ratio)
               const maxWidth = 120;
               const maxHeight = 80;
               let width = logoImg.width;
@@ -255,19 +257,13 @@ export default function VisitorDashboard() {
                 height = maxHeight;
               }
               
-              // Position logo on right side (750 - width, centered vertically)
               const x = 750 - width;
               const y = 20 + (80 - height) / 2;
               
               ctx.drawImage(logoImg, x, y, width, height);
               resolve();
             };
-            logoImg.onerror = () => {
-              console.log('Logo load failed');
-              resolve(); // Continue even if logo fails
-            };
-            
-            // Timeout after 5 seconds
+            logoImg.onerror = () => resolve();
             setTimeout(() => resolve(), 5000);
           });
         } catch (e) {
@@ -308,18 +304,23 @@ export default function VisitorDashboard() {
       
       ctx.font = '14px Arial';
       ctx.fillStyle = '#666666';
-      ctx.fillText('1. Scan the QR code with your phone camera', 70, 685);
-      ctx.fillText('2. Or visit the URL above in your browser', 70, 715);
-      ctx.fillText('3. Enter your email to receive verification code', 70, 745);
-      ctx.fillText('4. Complete the registration form', 70, 775);
-      ctx.fillText('5. Capture your photo', 70, 805);
-      ctx.fillText('6. Receive your digital visitor pass via email', 70, 835);
+      const instructions = [
+        '1. Scan the QR code with your phone camera',
+        '2. Or visit the URL above in your browser',
+        '3. Enter your email to receive verification code',
+        '4. Complete the registration form',
+        '5. Capture your photo',
+        '6. Receive your digital visitor pass via email'
+      ];
+      
+      instructions.forEach((text, i) => {
+        ctx.fillText(text, 70, 685 + (i * 30));
+      });
 
-      // Footer background
+      // Footer
       ctx.fillStyle = '#f5f5f5';
       ctx.fillRect(0, 900, 800, 100);
 
-      // Footer text
       ctx.fillStyle = '#7a00ff';
       ctx.font = 'bold 20px Arial';
       ctx.textAlign = 'center';
@@ -329,7 +330,7 @@ export default function VisitorDashboard() {
       ctx.font = '14px Arial';
       ctx.fillText('Visitor and Conference Booking Platform', 400, 970);
 
-      // Convert canvas to blob and download
+      // Download
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -345,46 +346,45 @@ export default function VisitorDashboard() {
       console.error('Image generation error:', err);
       showToast('✗ Failed to generate image', 'error');
     }
-  };
+  }, [qrCodeImage, company, publicUrl, showToast]);
 
   /* ================= COPY URL ================= */
-  const copyURL = () => {
+  const copyURL = useCallback(() => {
     if (!publicUrl) return;
     
     navigator.clipboard.writeText(publicUrl)
-      .then(() => {
-        showToast('✓ URL copied to clipboard!', 'success');
-      })
-      .catch(() => {
-        showToast('✗ Failed to copy URL', 'error');
-      });
-  };
+      .then(() => showToast('✓ URL copied to clipboard!', 'success'))
+      .catch(() => showToast('✗ Failed to copy URL', 'error'));
+  }, [publicUrl, showToast]);
 
-  /* ================= HANDLE NEW VISITOR (WITH SUBSCRIPTION CHECK) ================= */
-  const handleNewVisitor = () => {
+  /* ================= NEW VISITOR HANDLER ================= */
+  const handleNewVisitor = useCallback(() => {
     if (limitReached) {
       showToast("Trial limit reached. Please upgrade your plan.", "error");
       setTimeout(() => router.push("/auth/subscription"), 1500);
       return;
     }
     router.push("/visitor/primary_details");
-  };
+  }, [router, showToast]);
 
-  /* ================= PLAN HELPERS ================= */
-  const isTrial = plan?.plan === "TRIAL";
-  const limitReached = isTrial && plan?.remaining === 0;
+  /* ================= PLAN CALCULATIONS ================= */
+  const isTrial = planUsage?.plan === "TRIAL";
+  const limitReached = isTrial && planUsage?.remaining === 0;
 
   const planPercentage = useMemo(() => {
-    if (!plan?.limit || plan.limit === 0) return 0;
-    return Math.min(100, Math.round((plan.used / plan.limit) * 100));
-  }, [plan]);
+    if (!planUsage?.limit || planUsage.limit === 0) return 0;
+    if (planUsage.isUnlimited) return 100;
+    return Math.min(100, Math.round((planUsage.used / planUsage.limit) * 100));
+  }, [planUsage]);
 
-  const planBarColor =
-    planPercentage >= 90 ? "#ff1744" :
-    planPercentage >= 70 ? "#ff9800" :
-    "#00c853";
+  const planBarColor = useMemo(() => {
+    if (planUsage?.isUnlimited) return "#10b981"; // Green for unlimited
+    if (planPercentage >= 90) return "#ff1744";   // Red
+    if (planPercentage >= 70) return "#ff9800";   // Orange
+    return "#00c853";                              // Green
+  }, [planPercentage, planUsage]);
 
-  /* ================= LOADING ================= */
+  /* ================= LOADING STATE ================= */
   if (loading || !company) {
     return (
       <div className={styles.container}>
@@ -402,13 +402,14 @@ export default function VisitorDashboard() {
         </div>
       )}
 
-      {/* ================= SLIDING PANEL ================= */}
+      {/* ================= SLIDING QR PANEL ================= */}
       <div className={`${styles.slidingPanel} ${panelOpen ? styles.panelOpen : ''}`}>
         <div className={styles.panelHeader}>
           <h3>Public Registration</h3>
           <button 
             className={styles.panelCloseBtn}
             onClick={() => setPanelOpen(false)}
+            aria-label="Close panel"
           >
             ✕
           </button>
@@ -422,19 +423,17 @@ export default function VisitorDashboard() {
             </div>
           ) : (
             <>
-              {/* QR Code */}
               {qrCodeImage && (
                 <div className={styles.qrSection}>
                   <img 
                     src={qrCodeImage} 
-                    alt="QR Code" 
+                    alt="Visitor Registration QR Code" 
                     className={styles.qrImage}
                   />
                   <p className={styles.qrHint}>Scan to register</p>
                 </div>
               )}
 
-              {/* Public URL */}
               {publicUrl && (
                 <div className={styles.urlSection}>
                   <label>Public Registration URL</label>
@@ -449,6 +448,7 @@ export default function VisitorDashboard() {
                       className={styles.copyBtn}
                       onClick={copyURL}
                       title="Copy URL"
+                      aria-label="Copy URL to clipboard"
                     >
                       📋
                     </button>
@@ -456,7 +456,6 @@ export default function VisitorDashboard() {
                 </div>
               )}
 
-              {/* Download Button */}
               <button 
                 className={styles.downloadPdfBtn}
                 onClick={downloadImage}
@@ -464,7 +463,6 @@ export default function VisitorDashboard() {
                 📄 Download QR Code Image
               </button>
 
-              {/* Instructions */}
               <div className={styles.panelInstructions}>
                 <h4>How to use:</h4>
                 <ol>
@@ -484,7 +482,8 @@ export default function VisitorDashboard() {
         <button 
           className={styles.panelToggleBtn}
           onClick={() => setPanelOpen(true)}
-          title="Show Public Registration"
+          title="Show Public Registration QR Code"
+          aria-label="Open QR code panel"
         >
           📱 QR Code
         </button>
@@ -495,6 +494,7 @@ export default function VisitorDashboard() {
         <div 
           className={styles.panelOverlay}
           onClick={() => setPanelOpen(false)}
+          aria-label="Close panel overlay"
         />
       )}
 
@@ -507,20 +507,21 @@ export default function VisitorDashboard() {
         <div className={styles.rightHeader}>
           <img
             src={company.logo_url || "/logo.png"}
-            alt="Company Logo"
+            alt={`${company.name} logo`}
             className={styles.companyLogo}
           />
 
           <button
             className={styles.backBtn}
             onClick={() => router.push("/home")}
+            aria-label="Go back to home"
           >
             ← Back
           </button>
         </div>
       </header>
 
-      {/* ================= TITLE ================= */}
+      {/* ================= TITLE BAR ================= */}
       <div className={styles.titleRow}>
         <h1 className={styles.pageTitle}>Visitor Dashboard</h1>
 
@@ -532,6 +533,7 @@ export default function VisitorDashboard() {
             cursor: limitReached ? "not-allowed" : "pointer"
           }}
           onClick={handleNewVisitor}
+          aria-label="Register new visitor"
         >
           + New Visitor
         </button>
@@ -544,13 +546,18 @@ export default function VisitorDashboard() {
         </div>
       )}
 
-      {/* ================= PLAN BAR ================= */}
-      {isTrial && (
+      {/* ================= PLAN USAGE BAR (IMPROVED) ================= */}
+      {planUsage && (
         <section className={styles.planBarWrapper}>
           <div className={styles.planHeader}>
-            <span className={styles.planName}>Trial Plan</span>
+            <span className={styles.planName}>
+              {planUsage.plan} Plan {planUsage.isUnlimited && '✨'}
+            </span>
             <span className={styles.planRemaining}>
-              {plan.remaining} Visitors Remaining
+              {planUsage.isUnlimited 
+                ? `${planUsage.used} Visitors Registered`
+                : `${planUsage.remaining} Visitors Remaining`
+              }
             </span>
           </div>
 
@@ -561,21 +568,25 @@ export default function VisitorDashboard() {
                 width: `${planPercentage}%`,
                 background: planBarColor
               }}
-            />
+            >
+              {planUsage.isUnlimited && (
+                <span className={styles.planBarText}>Unlimited</span>
+              )}
+            </div>
           </div>
 
           <div className={styles.planFooter}>
-            <span>{plan.used} / {plan.limit} Used</span>
-            {plan.trialEndsAt && (
-              <span>
-                Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}
-              </span>
-            )}
+            <span>
+              {planUsage.isUnlimited 
+                ? `${planUsage.used} Total Visitors`
+                : `${planUsage.used} / ${planUsage.limit} Used`
+              }
+            </span>
           </div>
         </section>
       )}
 
-      {/* ================= KPI ================= */}
+      {/* ================= KPI STATS ================= */}
       <section className={styles.topStats}>
         <div className={styles.bigCard}>
           <h4>Visitors Today</h4>
@@ -593,18 +604,18 @@ export default function VisitorDashboard() {
         </div>
       </section>
 
-      {/* ================= TABLES ================= */}
+      {/* ================= VISITOR TABLES ================= */}
       <section className={styles.tablesRow}>
-        {/* ACTIVE VISITORS */}
+        {/* ACTIVE VISITORS TABLE */}
         <div className={styles.tableCard}>
           <h3>Currently Inside ({activeVisitors.length})</h3>
 
           {activeVisitors.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+            <div className={styles.emptyState}>
               <p>No visitors currently inside</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -631,6 +642,7 @@ export default function VisitorDashboard() {
                             opacity: checkingOut === v.visitor_code ? 0.6 : 1,
                             cursor: checkingOut === v.visitor_code ? 'not-allowed' : 'pointer'
                           }}
+                          aria-label={`Checkout ${v.name}`}
                         >
                           {checkingOut === v.visitor_code
                             ? "Checking out..."
@@ -645,16 +657,16 @@ export default function VisitorDashboard() {
           )}
         </div>
 
-        {/* CHECKED OUT VISITORS (TODAY ONLY) */}
+        {/* CHECKED OUT VISITORS TABLE */}
         <div className={styles.tableCard}>
           <h3>Checked Out Today ({checkedOutVisitors.length})</h3>
 
           {checkedOutVisitors.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
+            <div className={styles.emptyState}>
               <p>No visitors checked out today</p>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div className={styles.tableWrapper}>
               <table className={styles.table}>
                 <thead>
                   <tr>
@@ -679,24 +691,6 @@ export default function VisitorDashboard() {
           )}
         </div>
       </section>
-
-      {/* ================= DEBUG INFO (DEVELOPMENT ONLY) ================= */}
-      {process.env.NODE_ENV === 'development' && (
-        <div style={{ 
-          background: '#f0f0f0', 
-          padding: '10px', 
-          margin: '10px 0', 
-          fontSize: '12px',
-          borderRadius: '4px',
-          border: '1px solid #ddd'
-        }}>
-          <strong>🔧 Debug Info:</strong><br/>
-          Active Visitors: {activeVisitors.length}<br/>
-          Checked Out Visitors: {checkedOutVisitors.length}<br/>
-          Stats: {JSON.stringify(stats)}<br/>
-          Current Date: {new Date().toLocaleDateString()}
-        </div>
-      )}
     </div>
   );
 }
