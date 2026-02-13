@@ -7,12 +7,11 @@ const router = express.Router();
 
 /* ======================================================
    PLAN CONFIGURATION (matches database enum)
-   FIXED: Use -1 instead of Infinity for Enterprise
 ====================================================== */
 const PLANS = {
-  trial: { limit: 2, isUnlimited: false },
-  business: { limit: 6, isUnlimited: false },
-  enterprise: { limit: -1, isUnlimited: true },
+  trial: 2,
+  business: 6,
+  enterprise: Infinity,
 };
 
 const ACTIVE_STATUSES = ["active", "trial"];
@@ -50,21 +49,13 @@ const generatePublicSlug = (companyName, companyId) => {
   return `${normalized}-${companyId}`;
 };
 
-/**
- * Get plan configuration with proper unlimited handling
- */
-const getPlanConfig = (plan) => {
-  const normalizedPlan = normalizePlan(plan);
-  return PLANS[normalizedPlan] || PLANS.trial;
-};
-
 /* ======================================================
    CORE BUSINESS LOGIC
 ====================================================== */
 
 /**
  * Validates company subscription and returns plan details
- * FIXED: Properly handles Enterprise unlimited plan
+ * FIXED: Only checks subscription_status (cron job handles date checks)
  * @throws {Error} if subscription is invalid
  */
 const validateCompanySubscription = async (companyId) => {
@@ -88,22 +79,18 @@ const validateCompanySubscription = async (companyId) => {
     throw new Error("Subscription inactive. Please renew your subscription to continue.");
   }
 
-  const planConfig = getPlanConfig(plan);
-
   return {
     plan,
-    limit: planConfig.limit,
-    isUnlimited: planConfig.isUnlimited,
+    limit: PLANS[plan] ?? 0,
+    isUnlimited: PLANS[plan] === Infinity,
   };
 };
 
 /**
  * Check if company can add more rooms
- * FIXED: Properly handles unlimited plans
  */
-const canAddRoom = async (companyId, isUnlimited, roomLimit) => {
-  // Enterprise plan has unlimited rooms
-  if (isUnlimited) return true;
+const canAddRoom = async (companyId, roomLimit) => {
+  if (roomLimit === Infinity) return true;
 
   const [[count]] = await db.query(
     `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
@@ -116,11 +103,9 @@ const canAddRoom = async (companyId, isUnlimited, roomLimit) => {
 /**
  * Synchronizes room activation status based on plan limits
  * Rooms are activated in order of room_number (ascending)
- * FIXED: Properly handles Enterprise unlimited plan
  */
 export const syncRoomActivationByPlan = async (companyId, plan) => {
-  const planConfig = getPlanConfig(plan);
-  const { limit, isUnlimited } = planConfig;
+  const limit = PLANS[plan] ?? 0;
 
   // First, deactivate all rooms
   await db.query(
@@ -130,8 +115,8 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
     [companyId]
   );
 
-  // If unlimited plan (Enterprise), activate all rooms
-  if (isUnlimited) {
+  // If unlimited plan, activate all rooms
+  if (limit === Infinity) {
     await db.query(
       `UPDATE conference_rooms 
        SET is_active = 1 
@@ -141,7 +126,7 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
     return;
   }
 
-  // Activate first N rooms (by room_number ascending) for Trial/Business
+  // Activate first N rooms (by room_number ascending)
   if (limit > 0) {
     await db.query(
       `UPDATE conference_rooms
@@ -177,30 +162,6 @@ const getRoomStats = async (companyId) => {
     total: stats?.total || 0,
     active: stats?.active || 0,
     locked: (stats?.total || 0) - (stats?.active || 0),
-  };
-};
-
-/**
- * Get booking statistics for a company
- * NEW: Returns booking counts for progress bar display
- */
-const getBookingStats = async (companyId) => {
-  const [[stats]] = await db.query(
-    `SELECT 
-       COUNT(*) AS total,
-       COUNT(CASE WHEN booking_date >= CURDATE() THEN 1 END) AS upcoming,
-       COUNT(CASE WHEN booking_date = CURDATE() THEN 1 END) AS today,
-       COUNT(CASE WHEN booking_date < CURDATE() THEN 1 END) AS past
-     FROM conference_bookings
-     WHERE company_id = ? AND status = 'BOOKED'`,
-    [companyId]
-  );
-
-  return {
-    total: stats?.total || 0,
-    upcoming: stats?.upcoming || 0,
-    today: stats?.today || 0,
-    past: stats?.past || 0,
   };
 };
 
@@ -352,7 +313,6 @@ router.get("/rooms/all", async (req, res) => {
 /**
  * POST /api/conference/rooms
  * Creates a new conference room with plan limit checking
- * FIXED: Properly handles unlimited plans
  */
 router.post("/rooms", async (req, res) => {
   try {
@@ -369,10 +329,10 @@ router.post("/rooms", async (req, res) => {
     }
 
     // Validate subscription and get plan limits
-    const { plan, limit, isUnlimited } = await validateCompanySubscription(companyId);
+    const { plan, limit } = await validateCompanySubscription(companyId);
 
     // Check if company can add more rooms
-    const canAdd = await canAddRoom(companyId, isUnlimited, limit);
+    const canAdd = await canAddRoom(companyId, limit);
     if (!canAdd) {
       return res.status(403).json({
         message: `Your ${plan.toUpperCase()} plan allows only ${limit} room(s). Please upgrade to add more.`,
@@ -582,7 +542,6 @@ router.get("/dashboard", async (req, res) => {
 /**
  * GET /api/conference/plan-usage
  * Returns plan usage information for UI display
- * FIXED: Now includes booking statistics for progress bar
  */
 router.get("/plan-usage", async (req, res) => {
   try {
@@ -597,29 +556,14 @@ router.get("/plan-usage", async (req, res) => {
     // Get room statistics
     const roomStats = await getRoomStats(companyId);
 
-    // Get booking statistics (NEW - for progress bar display)
-    const bookingStats = await getBookingStats(companyId);
-
     res.json({
-      // Plan Information
-      plan: plan.toUpperCase(),
+      plan: plan.toUpperCase(), // Return uppercase for frontend display
       limit: isUnlimited ? "Unlimited" : limit,
-      isUnlimited: isUnlimited, // Explicit flag for frontend
-      
-      // Room Statistics
       totalRooms: roomStats.total,
       activeRooms: roomStats.active,
       lockedRooms: roomStats.locked,
       slotsAvailable: isUnlimited ? null : Math.max(0, limit - roomStats.total),
       upgradeRequired: !isUnlimited && roomStats.total >= limit,
-      
-      // Booking Statistics (NEW - for showing actual usage in progress bar)
-      bookings: {
-        total: bookingStats.total,
-        upcoming: bookingStats.upcoming,
-        today: bookingStats.today,
-        past: bookingStats.past,
-      },
     });
   } catch (err) {
     console.error("[GET /plan-usage]", err.message);
@@ -807,29 +751,14 @@ router.get("/qr-code/download", async (req, res) => {
 /**
  * GET /api/conference/bookings
  * Returns all bookings for the company
- * FIXED: Added pagination support for Enterprise users with many bookings
  */
 router.get("/bookings", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-    
-    // Extract pagination parameters
-    const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(100, Math.max(10, parseInt(req.query.limit) || 50));
-    const offset = (page - 1) * limit;
 
     // Validate subscription
     await validateCompanySubscription(companyId);
 
-    // Get total count for pagination
-    const [[{ total }]] = await db.query(
-      `SELECT COUNT(*) as total
-       FROM conference_bookings cb
-       WHERE cb.company_id = ?`,
-      [companyId]
-    );
-
-    // Fetch bookings with pagination
     const [bookings] = await db.query(
       `SELECT 
         cb.id,
@@ -845,21 +774,11 @@ router.get("/bookings", async (req, res) => {
        FROM conference_bookings cb
        JOIN conference_rooms cr ON cb.room_id = cr.id
        WHERE cb.company_id = ?
-       ORDER BY cb.booking_date DESC, cb.start_time DESC
-       LIMIT ? OFFSET ?`,
-      [companyId, limit, offset]
+       ORDER BY cb.booking_date DESC, cb.start_time DESC`,
+      [companyId]
     );
 
-    res.json({
-      bookings,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-        hasMore: offset + bookings.length < total,
-      },
-    });
+    res.json(bookings);
   } catch (err) {
     console.error("[GET /bookings]", err.message);
 
