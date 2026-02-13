@@ -233,6 +233,8 @@ export default function PublicVisitorRegistration() {
 
   /* ================= VALIDATION ================= */
   const validateStep = useCallback(() => {
+    setError("");
+    
     switch (step) {
       case 1:
         if (!formData.name.trim()) {
@@ -263,7 +265,6 @@ export default function PublicVisitorRegistration() {
         break;
     }
 
-    setError("");
     return true;
   }, [step, formData, photo]);
 
@@ -274,12 +275,6 @@ export default function PublicVisitorRegistration() {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [validateStep]);
-
-  const handleBack = useCallback(() => {
-    setError("");
-    setStep(prev => prev - 1);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
 
   /* ================= SUBMIT ================= */
   const handleSubmit = async () => {
@@ -377,13 +372,13 @@ export default function PublicVisitorRegistration() {
     if (e.key === "Enter" && !submitting) {
       handleSendOTP();
     }
-  }, [submitting]);
+  }, [submitting, handleSendOTP]);
 
   const handleOTPKeyPress = useCallback((e) => {
     if (e.key === "Enter" && otp.length === 6 && !submitting) {
       handleVerifyOTP();
     }
-  }, [otp, submitting]);
+  }, [otp, submitting, handleVerifyOTP]);
 
   /* ================= LOADING STATE ================= */
   if (loading) {
@@ -588,14 +583,13 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            <div className={styles.buttonRow}>
-              <button className={styles.secondaryBtn} onClick={() => setStep(0)}>
-                ← Back
-              </button>
-              <button className={styles.primaryBtn} onClick={handleNext}>
-                Next →
-              </button>
-            </div>
+            <button 
+              className={styles.primaryBtn} 
+              onClick={handleNext}
+              style={{ width: "100%" }}
+            >
+              Next →
+            </button>
           </main>
         </div>
       )}
@@ -718,14 +712,13 @@ export default function PublicVisitorRegistration() {
               ))}
             </div>
 
-            <div className={styles.buttonRow}>
-              <button className={styles.secondaryBtn} onClick={handleBack}>
-                ← Previous
-              </button>
-              <button className={styles.primaryBtn} onClick={handleNext}>
-                Next →
-              </button>
-            </div>
+            <button 
+              className={styles.primaryBtn} 
+              onClick={handleNext}
+              style={{ width: "100%" }}
+            >
+              Next →
+            </button>
           </main>
         </div>
       )}
@@ -837,22 +830,14 @@ export default function PublicVisitorRegistration() {
               />
             </div>
 
-            <div className={styles.buttonRow}>
-              <button 
-                className={styles.secondaryBtn} 
-                onClick={handleBack}
-                disabled={submitting}
-              >
-                ← Previous
-              </button>
-              <button 
-                className={styles.primaryBtn} 
-                onClick={handleSubmit}
-                disabled={!photo || submitting}
-              >
-                {submitting ? "Submitting..." : "✓ Submit"}
-              </button>
-            </div>
+            <button 
+              className={styles.primaryBtn} 
+              onClick={handleSubmit}
+              disabled={!photo || submitting}
+              style={{ width: "100%" }}
+            >
+              {submitting ? "Submitting..." : "✓ Submit"}
+            </button>
 
             <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
           </main>
