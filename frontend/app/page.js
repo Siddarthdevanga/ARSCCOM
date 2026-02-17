@@ -12,7 +12,7 @@ const CONFIG = {
     tagline: 'Visitor Management System',
     logo: '/Brand Logo.png',
     email: 'admin@promeet.zodopt.com',
-    whatsapp: 'https://api.whatsapp.com/send/?phone=918647878785&text=Hi+can+i+get+to+know+more+about+promeet&type=phone_number&app_absent=0',
+    whatsapp: 'https://api.whatsapp.com/send/?phone=918647878785&text=Hi+I+want+Promeet+Demo&type=phone_number&app_absent=0',
     loginUrl: 'https://www.promeet.zodopt.com/auth/login',
   },
   trial: {
@@ -382,7 +382,7 @@ export default function LandingPage() {
     <>
       {/* Floating WhatsApp Button */}
       <a
-        href="https://wa.me/918647878785?text=Hi%20I%20am%20interested%20in%20Promeet.%20Please%20share%20demo."
+        href={CONFIG.company.whatsapp}
         target="_blank"
         rel="noopener noreferrer"
         className="floatingWhatsapp"
@@ -838,7 +838,7 @@ export default function LandingPage() {
             </div>
             <div className="gsCard demoCard">
               <h3>Request a Demo</h3>
-              <p>See {CONFIG.company.whatsapp} in action with a personalized walkthrough</p>
+              <p>See {CONFIG.company.name} in action with a personalized walkthrough</p>
               <Link href={`mailto:${CONFIG.company.email}`} className="btn secondary">
                 Schedule Demo →
               </Link>
