@@ -838,7 +838,7 @@ export default function LandingPage() {
             </div>
             <div className="gsCard demoCard">
               <h3>Request a Demo</h3>
-              <p>See {CONFIG.company.name} in action with a personalized walkthrough</p>
+              <p>See {CONFIG.company.whatsapp} in action with a personalized walkthrough</p>
               <Link href={`mailto:${CONFIG.company.email}`} className="btn secondary">
                 Schedule Demo →
               </Link>
