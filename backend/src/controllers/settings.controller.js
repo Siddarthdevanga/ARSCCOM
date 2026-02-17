@@ -28,47 +28,41 @@ This email was automatically sent from the PROMEET Platform.
 ====================================================== */
 
 /**
- * Accepts:
- *   https://wa.me/<number>
- *   https://api.whatsapp.com/send/?phone=...
- *   +91XXXXXXXXXX  →  auto-converts to https://wa.me/91XXXXXXXXXX
- *   91XXXXXXXXXX   →  auto-converts to https://wa.me/91XXXXXXXXXX
+ * Single validator — accepts ALL WhatsApp link formats in one field:
+ *
+ *   Direct chat:
+ *     +91XXXXXXXXXX           → auto-converts → https://wa.me/91XXXXXXXXXX
+ *     91XXXXXXXXXX            → auto-converts → https://wa.me/91XXXXXXXXXX
+ *     https://wa.me/...
+ *     https://api.whatsapp.com/send/?phone=...
+ *
+ *   Group invite:
+ *     https://chat.whatsapp.com/<invite-code>
  */
 const validateWhatsAppUrl = (input) => {
   if (!input || !input.trim()) return null;
   const v = input.trim();
 
-  // Plain phone number → convert to wa.me link
+  // Plain phone number → auto-convert to wa.me link
   if (/^\+?\d{7,15}$/.test(v)) {
-    const digits = v.replace(/^\+/, "");
-    return `https://wa.me/${digits}`;
+    return `https://wa.me/${v.replace(/^\+/, "")}`;
   }
 
-  // Already a valid WhatsApp URL
+  // Direct chat URLs
   if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i.test(v)) {
     return v;
   }
 
-  throw new Error(
-    "Invalid WhatsApp contact. Provide a phone number (e.g. +918647878785) " +
-    "or a URL starting with https://wa.me/ or https://api.whatsapp.com/"
-  );
-};
-
-/**
- * Accepts:
- *   https://chat.whatsapp.com/<invite-code>
- */
-const validateWhatsAppGroupUrl = (input) => {
-  if (!input || !input.trim()) return null;
-  const v = input.trim();
-
+  // Group invite URL
   if (/^https:\/\/chat\.whatsapp\.com\/.+/i.test(v)) {
     return v;
   }
 
   throw new Error(
-    "Invalid WhatsApp Group link. Must start with https://chat.whatsapp.com/"
+    "Invalid WhatsApp value. Accepted formats:\n" +
+    "• Phone number: +918647878785\n" +
+    "• Direct chat: https://wa.me/... or https://api.whatsapp.com/...\n" +
+    "• Group invite: https://chat.whatsapp.com/..."
   );
 };
 
@@ -88,7 +82,7 @@ export const getSettings = async (req, res) => {
     const [[company]] = await db.execute(
       `SELECT
          id, name, slug, logo_url, rooms,
-         whatsapp_url, whatsapp_group_url,
+         whatsapp_url,
          plan, subscription_status
        FROM companies
        WHERE id = ?`,
@@ -118,8 +112,7 @@ export const getSettings = async (req, res) => {
         slug:                company.slug,
         logo_url:            company.logo_url,
         rooms:               company.rooms,
-        whatsapp_url:        company.whatsapp_url       || null,
-        whatsapp_group_url:  company.whatsapp_group_url || null,
+        whatsapp_url:        company.whatsapp_url || null,
         plan:                company.plan,
         subscription_status: company.subscription_status,
       },
@@ -150,25 +143,24 @@ export const updateCompanySettings = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { name, whatsappUrl, whatsappGroupUrl } = req.body;
+    const { name, whatsappUrl } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: "Company name is required" });
     }
 
-    // Validate both fields independently (both optional)
-    const validatedWhatsAppUrl      = validateWhatsAppUrl(whatsappUrl);
-    const validatedWhatsAppGroupUrl = validateWhatsAppGroupUrl(whatsappGroupUrl);
+    // Single validator handles direct chat, group invites, and phone numbers
+    const validatedWhatsAppUrl = validateWhatsAppUrl(whatsappUrl);
 
     await db.execute(
       `UPDATE companies
-       SET name = ?, whatsapp_url = ?, whatsapp_group_url = ?
+       SET name = ?, whatsapp_url = ?
        WHERE id = ?`,
-      [name.trim(), validatedWhatsAppUrl, validatedWhatsAppGroupUrl, companyId]
+      [name.trim(), validatedWhatsAppUrl, companyId]
     );
 
     const [[updated]] = await db.execute(
-      `SELECT name, whatsapp_url, whatsapp_group_url, logo_url, slug
+      `SELECT name, whatsapp_url, logo_url, slug
        FROM companies WHERE id = ?`,
       [companyId]
     );
@@ -177,12 +169,11 @@ export const updateCompanySettings = async (req, res) => {
       success: true,
       message: "Company settings updated successfully",
       company: {
-        id:                 companyId,
-        name:               updated.name,
-        slug:               updated.slug,
-        logo_url:           updated.logo_url,
-        whatsapp_url:       updated.whatsapp_url       || null,
-        whatsapp_group_url: updated.whatsapp_group_url || null,
+        id:           companyId,
+        name:         updated.name,
+        slug:         updated.slug,
+        logo_url:     updated.logo_url,
+        whatsapp_url: updated.whatsapp_url || null,
       },
     });
 
