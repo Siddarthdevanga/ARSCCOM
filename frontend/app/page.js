@@ -5,6 +5,18 @@ import Image from 'next/image';
 import Link from 'next/link';
 import './landing.css';
 
+
+/* ── Google Analytics helpers ─────────────────────────── */
+const GA_ID = 'G-QGBT88DMG1';
+
+/** Fire a GA4 event. Safe — no-ops if gtag hasn't loaded yet. */
+const gaEvent = (eventName, params = {}) => {
+  if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+    window.gtag('event', eventName, params);
+  }
+};
+
+
 // Configuration object for easy updates
 const CONFIG = {
   company: {
