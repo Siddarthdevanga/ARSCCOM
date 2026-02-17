@@ -41,6 +41,7 @@ const CONFIG = {
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
+  const [showWaTooltip, setShowWaTooltip] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -93,8 +94,18 @@ export default function LandingPage() {
       });
     });
 
+    // Show WhatsApp tooltip after 3 seconds
+    const tooltipTimer = setTimeout(() => {
+      setShowWaTooltip(true);
+      // Hide tooltip after 5 seconds
+      setTimeout(() => setShowWaTooltip(false), 5000);
+    }, 3000);
+
     // Cleanup observer on unmount
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      clearTimeout(tooltipTimer);
+    };
   }, []);
 
   // Navigation items
@@ -345,7 +356,7 @@ export default function LandingPage() {
         'Customised Support'
       ],
       cta: 'Contact Sales',
-      ctaLink: `https://wa.me/${CONFIG.company.whatsapp}`,
+      ctaLink: CONFIG.company.whatsapp,
       popular: false
     }
   ];
@@ -369,6 +380,37 @@ export default function LandingPage() {
 
   return (
     <>
+      {/* Floating WhatsApp Button */}
+      <a
+        href={CONFIG.company.whatsapp}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="floatingWhatsapp"
+        aria-label="Chat with us on WhatsApp"
+        onMouseEnter={() => setShowWaTooltip(true)}
+        onMouseLeave={() => setShowWaTooltip(false)}
+      >
+        {/* Pulse rings */}
+        <span className="waPulse" aria-hidden="true"></span>
+        <span className="waPulse waPulse2" aria-hidden="true"></span>
+
+        {/* WhatsApp SVG icon */}
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 32 32"
+          fill="white"
+          className="waIcon"
+          aria-hidden="true"
+        >
+          <path d="M16 0C7.164 0 0 7.164 0 16c0 2.822.736 5.472 2.027 7.773L0 32l8.476-2.004A15.935 15.935 0 0 0 16 32c8.836 0 16-7.164 16-16S24.836 0 16 0zm0 29.333a13.27 13.27 0 0 1-6.77-1.846l-.486-.29-5.03 1.188 1.21-4.902-.318-.502A13.271 13.271 0 0 1 2.667 16C2.667 8.636 8.636 2.667 16 2.667S29.333 8.636 29.333 16 23.364 29.333 16 29.333zm7.274-9.938c-.398-.199-2.355-1.162-2.72-1.294-.364-.132-.63-.199-.895.199-.265.398-1.028 1.294-1.26 1.56-.232.265-.464.298-.862.1-.398-.2-1.681-.619-3.203-1.977-1.184-1.057-1.982-2.362-2.214-2.76-.232-.398-.025-.613.174-.811.179-.178.398-.465.597-.697.199-.233.265-.399.398-.664.132-.265.066-.497-.033-.696-.1-.199-.895-2.159-1.227-2.956-.323-.776-.65-.671-.895-.683l-.763-.013c-.265 0-.696.1-.1.06 1.328.265 1.727 1.03 1.992 1.495.265.464 1.129 2.75 1.394 3.347.265.597.1.995-.033 1.36-.132.364-.597 1.426-1.028 2.09.99.132 2.058.298 3.126.1 1.09-.199 2.29-.895 2.787-1.727.497-.83.597-1.727.497-2.09-.1-.364-.398-.531-.729-.664z"/>
+        </svg>
+
+        {/* Tooltip */}
+        <span className={`waTooltip${showWaTooltip ? ' waTooltipVisible' : ''}`}>
+          💬 Chat with us!
+        </span>
+      </a>
+
       {/* Header */}
       <header className="header">
         <div className="logo">
@@ -418,7 +460,7 @@ export default function LandingPage() {
           <Link className="btnPrimary" href={CONFIG.company.loginUrl} target="_blank" rel="noopener noreferrer">
             Start {CONFIG.trial.duration} Trial →
           </Link>
-          <Link className="btnSecondary" href={`https://wa.me/${CONFIG.company.whatsapp}`} target="_blank" rel="noopener noreferrer">
+          <Link className="btnSecondary" href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer">
             Watch Demo
           </Link>
         </div>
@@ -607,7 +649,7 @@ export default function LandingPage() {
             conference management with {CONFIG.company.name}
           </p>
           <div className="ctaActions">
-            <Link href={`https://wa.me/${CONFIG.company.whatsapp}`} target="_blank" rel="noopener noreferrer" className="btnPrimary">
+            <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="btnPrimary">
               Schedule a Demo →
             </Link>
           </div>
@@ -746,7 +788,7 @@ export default function LandingPage() {
           <div className="faqCta">
             <h3>Still have questions?</h3>
             <p>Can't find the answer you're looking for? Our team is here to help.</p>
-            <Link href={`https://wa.me/${CONFIG.company.whatsapp}`} target="_blank" rel="noopener noreferrer" className="ctaBtn">
+            <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="ctaBtn">
               Contact Support
             </Link>
           </div>
@@ -773,7 +815,7 @@ export default function LandingPage() {
                     <path d="M20.52 3.48A11.91 11.91 0 0 0 12.07 0C5.5 0 .16 5.34.16 11.91c0 2.1.55 4.15 1.6 5.96L0 24l6.32-1.66a11.88 11.88 0 0 0 5.75 1.47c6.57 0 11.91-5.34 11.91-11.91 0-3.18-1.24-6.17-3.46-8.42z"/>
                   </svg>
                 </div>
-                <span>Chat on WhatsApp<br/><strong>+{CONFIG.company.whatsapp}</strong></span>
+                <span>Chat on WhatsApp<br/><strong>+91 8647878785</strong></span>
               </div>
               <div className="contactItem">
                 <div className="icon email">
@@ -790,7 +832,7 @@ export default function LandingPage() {
             <div className="gsCard whatsappCard">
               <h3>Chat on WhatsApp</h3>
               <p>Get instant answers to your questions from our team</p>
-              <Link href={`https://wa.me/${CONFIG.company.whatsapp}`} target="_blank" rel="noopener noreferrer" className="btn">
+              <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="btn">
                 Start Conversation →
               </Link>
             </div>
@@ -827,7 +869,7 @@ export default function LandingPage() {
               professional visitor experience.
             </p>
             <div className="footerCta">
-              <Link href={`https://wa.me/${CONFIG.company.whatsapp}`} target="_blank" rel="noopener noreferrer" className="btnPrimary">
+              <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="btnPrimary">
                 WhatsApp →
               </Link>
               <Link href={`mailto:${CONFIG.company.email}`} className="btnSecondary">
