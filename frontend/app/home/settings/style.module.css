@@ -338,29 +338,12 @@ body {
 }
 
 .fieldGroup label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
   margin-bottom: clamp(6px, 1vh, 8px);
   font-size: clamp(13px, 2.1vw, 14px);
   font-weight: 700;
   color: #555;
   letter-spacing: 0.2px;
-}
-
-/* Small tag badge next to label e.g. "Optional" */
-.fieldBadge {
-  display: inline-block;
-  padding: 2px 8px;
-  background: rgba(122, 0, 255, 0.1);
-  color: #7a00ff;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 20px;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 /* ================= FIELD DISPLAY (Read Mode) ================= */
