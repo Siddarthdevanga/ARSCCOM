@@ -2217,7 +2217,6 @@ body::before {
   }
 }
 
-
 /* ============================================================
    FLOATING WHATSAPP BUTTON
    ============================================================ */
@@ -2234,36 +2233,25 @@ body::before {
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-@keyframes waWiggle {
-  0%, 100% { transform: rotate(0deg)   scale(1);    }
-  20%       { transform: rotate(-14deg) scale(1.05); }
-  40%       { transform: rotate(12deg)  scale(1.05); }
-  60%       { transform: rotate(-9deg)  scale(1);    }
-  80%       { transform: rotate(7deg)   scale(1);    }
-}
-
 /* ── Button shell ─────────────────────────────────────────── */
 .floatingWhatsapp {
   position: fixed;
-  bottom: clamp(1.5rem, 3vw, 2.25rem);
-  right:  clamp(1.5rem, 3vw, 2.25rem);
+  bottom: 25px;
+  right:  25px;
   z-index: 9999;
 
-  /* Fixed comfortable size */
+  /* Size matches the img (60px) + pulse rings bleed out */
   width:  60px;
   height: 60px;
   border-radius: 50%;
 
-  /* Official WhatsApp green */
-  background: linear-gradient(145deg, #2ecc71, #20b858);
-  box-shadow:
-    0 4px 20px rgba(37, 211, 102, 0.5),
-    0 2px 6px  rgba(0, 0, 0, 0.2);
+  /* Transparent — the Wikipedia SVG already has the green circle */
+  background: transparent;
 
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: visible;   /* let pulse rings bleed out */
+  overflow: visible;
 
   text-decoration: none;
   cursor: pointer;
@@ -2271,44 +2259,37 @@ body::before {
   /* Entrance bounce */
   animation: waEntrance 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 1.5s both;
 
-  transition:
-    transform   0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow  0.25s ease,
-    background  0.25s ease;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .floatingWhatsapp:hover {
-  background: linear-gradient(145deg, #27d461, #1aaa4e);
-  box-shadow:
-    0 8px 32px rgba(37, 211, 102, 0.65),
-    0 3px 10px rgba(0, 0, 0, 0.22);
-  transform: scale(1.13);
+  transform: scale(1.12);
 }
 
-/* ── WhatsApp SVG icon ────────────────────────────────────── */
+/* ── WhatsApp icon (img) ──────────────────────────────────── */
 .waIcon {
-  /* Icon fills ~58% of button — good optical breathing room */
-  width:  34px;
-  height: 34px;
+  width:  60px;
+  height: 60px;
+  display: block;
   position: relative;
   z-index: 2;
-  /* Paths are filled white via the SVG fill attribute */
-  fill: #ffffff;
-  /* Smooth wiggle reset */
-  transition: transform 0.15s ease;
-  /* Slight drop shadow for depth */
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+  /* Crisp rendering */
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  /* Subtle shadow under the icon */
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.25));
+  transition: filter 0.2s ease;
 }
 
-/* Trigger wiggle on hover */
 .floatingWhatsapp:hover .waIcon {
-  animation: waWiggle 0.5s ease-in-out;
+  filter: drop-shadow(0 6px 18px rgba(37, 211, 102, 0.5));
 }
 
 /* ── Pulse rings ──────────────────────────────────────────── */
 .waPulse {
   position: absolute;
-  inset: 0;
+  width:  60px;
+  height: 60px;
   border-radius: 50%;
   background: rgba(37, 211, 102, 0.4);
   animation: waPulseAnim 2.6s ease-out infinite;
@@ -2366,15 +2347,20 @@ body::before {
 /* ── Mobile overrides ─────────────────────────────────────── */
 @media (max-width: 480px) {
   .floatingWhatsapp {
-    bottom: 1.25rem;
-    right:  1.25rem;
-    width:  56px;
-    height: 56px;
+    bottom: 16px;
+    right:  16px;
+    width:  54px;
+    height: 54px;
   }
 
   .waIcon {
-    width:  30px;
-    height: 30px;
+    width:  54px;
+    height: 54px;
+  }
+
+  .waPulse {
+    width:  54px;
+    height: 54px;
   }
 
   /* Tooltip shifts above on small screens */
