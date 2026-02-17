@@ -68,6 +68,7 @@ body {
   gap: clamp(12px, 2vw, 16px);
   flex: 1;
   justify-content: center;
+  min-width: 0; /* prevent flex overflow */
 }
 
 .companyLogoHeader {
@@ -76,6 +77,7 @@ body {
   object-fit: contain;
   filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
   border-radius: 8px;
+  flex-shrink: 0;
 }
 
 .companyName {
@@ -85,6 +87,10 @@ body {
   letter-spacing: clamp(0.5px, 0.1vw, 1px);
   text-transform: uppercase;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  /* Prevent long names breaking layout */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ================= LOGOUT BUTTON ================= */
@@ -102,6 +108,7 @@ body {
   color: #ff1744;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
 }
 
 .logoutBtn:hover {
@@ -182,14 +189,8 @@ body {
 }
 
 @keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ================= SETTINGS HEADER ================= */
@@ -246,14 +247,8 @@ body {
 }
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .notification[data-type="success"] {
@@ -337,6 +332,9 @@ body {
 /* ================= FIELD GROUP ================= */
 .fieldGroup {
   margin-bottom: clamp(18px, 2.8vh, 22px);
+  /* Ensure field group never overflows card */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .fieldGroup label {
@@ -352,13 +350,15 @@ body {
 .fieldDisplay {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: clamp(10px, 1.6vw, 12px);
+  gap: clamp(8px, 1.2vw, 10px);
   padding: clamp(12px, 2vh, 14px) clamp(14px, 2.2vw, 16px);
   background: #f8f9fa;
   border: 2px solid #e9ecef;
   border-radius: clamp(10px, 1.5vw, 12px);
   transition: all 0.2s ease;
+  /* KEY FIX: prevent container from stretching wider than card */
+  min-width: 0;
+  overflow: hidden;
 }
 
 .fieldDisplay:hover {
@@ -366,15 +366,28 @@ body {
   border-color: #dee2e6;
 }
 
+/* ================= FIELD VALUE ================= */
 .fieldValue {
+  /* KEY FIX: truncate long text (URLs, long names) with ellipsis */
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: clamp(14px, 2.2vw, 15px);
   font-weight: 600;
   color: #2e2e2e;
 }
 
+/* Tooltip on hover so full URL is visible on hover */
+.fieldValue[title]:hover {
+  cursor: default;
+}
+
 /* ================= EDIT BUTTON ================= */
 .editBtn {
+  /* KEY FIX: never shrink — always stay visible */
+  flex-shrink: 0;
   background: rgba(122, 0, 255, 0.1);
   border: none;
   border-radius: clamp(8px, 1.2vw, 10px);
@@ -384,7 +397,9 @@ body {
   display: grid;
   place-items: center;
   transition: all 0.2s ease;
-  flex-shrink: 0;
+  /* Fixed size so it's always a neat square */
+  width: clamp(32px, 4.5vw, 36px);
+  height: clamp(32px, 4.5vw, 36px);
 }
 
 .editBtn:hover {
@@ -402,10 +417,12 @@ body {
   display: flex;
   gap: clamp(8px, 1.2vw, 10px);
   align-items: center;
+  min-width: 0;
 }
 
 .input {
   flex: 1;
+  min-width: 0; /* allow shrinking inside flex */
   padding: clamp(11px, 1.8vh, 13px) clamp(14px, 2.2vw, 16px);
   background: #ffffff;
   border: 2px solid #dee2e6;
@@ -415,6 +432,9 @@ body {
   color: #2e2e2e;
   transition: all 0.2s ease;
   font-family: inherit;
+  /* Long URLs should wrap in input */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .input:focus {
@@ -431,7 +451,7 @@ body {
 .fieldActions {
   display: flex;
   gap: clamp(6px, 1vw, 8px);
-  flex-shrink: 0;
+  flex-shrink: 0; /* always visible */
 }
 
 .saveBtn,
@@ -445,6 +465,7 @@ body {
   transition: all 0.2s ease;
   min-width: clamp(32px, 5vw, 36px);
   min-height: clamp(32px, 5vw, 36px);
+  flex-shrink: 0;
 }
 
 .saveBtn {
@@ -552,6 +573,10 @@ body {
   font-size: clamp(12px, 2vw, 13px);
   color: #00c853;
   font-weight: 600;
+  /* Truncate long filenames */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ================= SAVE LOGO BUTTON ================= */
@@ -607,6 +632,8 @@ body {
   align-items: center;
   padding: clamp(10px, 1.6vh, 12px) 0;
   border-bottom: 1px solid #f0f0f0;
+  min-width: 0;
+  gap: 12px;
 }
 
 .readOnlyRow:last-child {
@@ -617,12 +644,18 @@ body {
   font-size: clamp(12px, 2vw, 13px);
   color: #666;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .readOnlyRow strong {
   font-size: clamp(13px, 2.1vw, 14px);
   color: #2e2e2e;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  text-align: right;
 }
 
 /* ================= PASSWORD INPUT ================= */
