@@ -24,35 +24,52 @@ This email was automatically sent from the PROMEET Platform.
 </p>`;
 
 /* ======================================================
-   VALIDATE WHATSAPP URL  (direct chat)
-   Accepts: https://wa.me/...  or  https://api.whatsapp.com/...
+   VALIDATORS
 ====================================================== */
-const validateWhatsAppUrl = (url) => {
-  if (!url || !url.trim()) return null;
-  const trimmedUrl = url.trim();
-  const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i;
-  if (!whatsappPattern.test(trimmedUrl)) {
-    throw new Error(
-      "Invalid WhatsApp URL. Must start with https://wa.me/ or https://api.whatsapp.com/"
-    );
+
+/**
+ * Accepts:
+ *   https://wa.me/<number>
+ *   https://api.whatsapp.com/send/?phone=...
+ *   +91XXXXXXXXXX  →  auto-converts to https://wa.me/91XXXXXXXXXX
+ *   91XXXXXXXXXX   →  auto-converts to https://wa.me/91XXXXXXXXXX
+ */
+const validateWhatsAppUrl = (input) => {
+  if (!input || !input.trim()) return null;
+  const v = input.trim();
+
+  // Plain phone number → convert to wa.me link
+  if (/^\+?\d{7,15}$/.test(v)) {
+    const digits = v.replace(/^\+/, "");
+    return `https://wa.me/${digits}`;
   }
-  return trimmedUrl;
+
+  // Already a valid WhatsApp URL
+  if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i.test(v)) {
+    return v;
+  }
+
+  throw new Error(
+    "Invalid WhatsApp contact. Provide a phone number (e.g. +918647878785) " +
+    "or a URL starting with https://wa.me/ or https://api.whatsapp.com/"
+  );
 };
 
-/* ======================================================
-   VALIDATE WHATSAPP GROUP INVITE LINK
-   Accepts: https://chat.whatsapp.com/<invite-code>
-====================================================== */
-const validateWhatsAppGroupUrl = (url) => {
-  if (!url || !url.trim()) return null;
-  const trimmedUrl = url.trim();
-  const groupPattern = /^https:\/\/chat\.whatsapp\.com\/.+/i;
-  if (!groupPattern.test(trimmedUrl)) {
-    throw new Error(
-      "Invalid WhatsApp Group link. Must start with https://chat.whatsapp.com/"
-    );
+/**
+ * Accepts:
+ *   https://chat.whatsapp.com/<invite-code>
+ */
+const validateWhatsAppGroupUrl = (input) => {
+  if (!input || !input.trim()) return null;
+  const v = input.trim();
+
+  if (/^https:\/\/chat\.whatsapp\.com\/.+/i.test(v)) {
+    return v;
   }
-  return trimmedUrl;
+
+  throw new Error(
+    "Invalid WhatsApp Group link. Must start with https://chat.whatsapp.com/"
+  );
 };
 
 /* ======================================================
@@ -69,11 +86,11 @@ export const getSettings = async (req, res) => {
     }
 
     const [[company]] = await db.execute(
-      `SELECT 
+      `SELECT
          id, name, slug, logo_url, rooms,
          whatsapp_url, whatsapp_group_url,
          plan, subscription_status
-       FROM companies 
+       FROM companies
        WHERE id = ?`,
       [companyId]
     );
@@ -84,7 +101,7 @@ export const getSettings = async (req, res) => {
 
     const [[user]] = await db.execute(
       `SELECT id, email, name, phone
-       FROM users 
+       FROM users
        WHERE id = ? AND company_id = ?`,
       [userId, companyId]
     );
@@ -96,15 +113,15 @@ export const getSettings = async (req, res) => {
     return res.json({
       success: true,
       company: {
-        id:                   company.id,
-        name:                 company.name,
-        slug:                 company.slug,
-        logo_url:             company.logo_url,
-        rooms:                company.rooms,
-        whatsapp_url:         company.whatsapp_url         || null,
-        whatsapp_group_url:   company.whatsapp_group_url   || null,
-        plan:                 company.plan,
-        subscription_status:  company.subscription_status,
+        id:                  company.id,
+        name:                company.name,
+        slug:                company.slug,
+        logo_url:            company.logo_url,
+        rooms:               company.rooms,
+        whatsapp_url:        company.whatsapp_url       || null,
+        whatsapp_group_url:  company.whatsapp_group_url || null,
+        plan:                company.plan,
+        subscription_status: company.subscription_status,
       },
       user: {
         id:    user.id,
@@ -139,19 +156,19 @@ export const updateCompanySettings = async (req, res) => {
       return res.status(400).json({ success: false, message: "Company name is required" });
     }
 
-    // Validate both WhatsApp fields (both optional)
+    // Validate both fields independently (both optional)
     const validatedWhatsAppUrl      = validateWhatsAppUrl(whatsappUrl);
     const validatedWhatsAppGroupUrl = validateWhatsAppGroupUrl(whatsappGroupUrl);
 
     await db.execute(
-      `UPDATE companies 
+      `UPDATE companies
        SET name = ?, whatsapp_url = ?, whatsapp_group_url = ?
        WHERE id = ?`,
       [name.trim(), validatedWhatsAppUrl, validatedWhatsAppGroupUrl, companyId]
     );
 
     const [[updated]] = await db.execute(
-      `SELECT name, whatsapp_url, whatsapp_group_url, logo_url, slug 
+      `SELECT name, whatsapp_url, whatsapp_group_url, logo_url, slug
        FROM companies WHERE id = ?`,
       [companyId]
     );
@@ -251,16 +268,14 @@ export const updateUserProfile = async (req, res) => {
 
     const updates = [];
     const values  = [];
-
-    if (name && name.trim())  { updates.push("name = ?");  values.push(name.trim()); }
+    if (name  && name.trim())  { updates.push("name = ?");  values.push(name.trim()); }
     if (phone && phone.trim()) { updates.push("phone = ?"); values.push(phone.trim()); }
 
     if (updates.length === 0) {
       return res.status(400).json({ success: false, message: "No valid fields to update" });
     }
 
-    values.push(userId);
-    values.push(companyId);
+    values.push(userId, companyId);
 
     await db.execute(
       `UPDATE users SET ${updates.join(", ")} WHERE id = ? AND company_id = ?`,
@@ -330,21 +345,13 @@ export const changePassword = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
-
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: "Current password is incorrect",
-      });
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: "Current password is incorrect" });
     }
 
-    const newPasswordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
-
-    await db.execute(
-      `UPDATE users SET password_hash = ? WHERE id = ?`,
-      [newPasswordHash, userId]
-    );
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await db.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 
     // Non-blocking confirmation email
     sendPasswordChangedEmail(user.email, user.company_name).catch(console.error);
@@ -366,32 +373,26 @@ const sendPasswordChangedEmail = async (email, companyName) => {
     subject: "PROMEET — Password Successfully Changed",
     html: `
       <p>Hello <b>${companyName}</b>,</p>
-
       <p>
-        This email confirms that your PROMEET account password has been 
+        This email confirms that your PROMEET account password has been
         <b style="color:#00c853;">successfully changed</b>.
       </p>
-
       <div style="background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;">
         <p style="margin:0;color:#2e7d32;font-weight:600;">
           ✓ Your password has been updated securely
         </p>
       </div>
-
       <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
         Important Security Notice
       </h3>
-
       <p><b style="color:#ff1744;">Did you make this change?</b></p>
-
       <ul style="font-size:14px;line-height:1.8;">
         <li><b>If yes:</b> No further action required. Your account is secure.</li>
         <li>
-          <b>If no:</b> Someone may have unauthorized access. 
+          <b>If no:</b> Someone may have unauthorized access.
           Please contact support <b>immediately</b>.
         </li>
       </ul>
-
       ${emailFooter()}
     `,
   });
