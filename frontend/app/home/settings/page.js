@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import {
-  Building2, User, Lock, Eye, EyeOff,
-  Upload, Edit2, Check, X, Loader2
+import { 
+  Building2, User, Lock, Eye, EyeOff, Upload, Edit2, Check, X, Loader2
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -14,55 +13,44 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
 
   const [successMsg, setSuccessMsg] = useState("");
-  const [errorMsg,   setErrorMsg]   = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  // Company fields
-  const [companyName,       setCompanyName]       = useState("");
-  const [whatsappUrl,       setWhatsappUrl]       = useState("");
-  const [whatsappGroupUrl,  setWhatsappGroupUrl]  = useState("");   // ← NEW
-  const [logoPreview,       setLogoPreview]       = useState(null);
-  const [logoFile,          setLogoFile]          = useState(null);
+  const [companyName, setCompanyName] = useState("");
+  const [whatsappUrl, setWhatsappUrl] = useState("");
+  const [logoPreview, setLogoPreview] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
 
-  // User fields
-  const [userName,  setUserName]  = useState("");
+  const [userName, setUserName] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [userEmail, setUserEmail] = useState("");
 
-  // Password fields
-  const [currentPassword,     setCurrentPassword]     = useState("");
-  const [newPassword,         setNewPassword]         = useState("");
-  const [confirmPassword,     setConfirmPassword]     = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword,     setShowNewPassword]     = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Edit mode flags
-  const [editingCompanyName,      setEditingCompanyName]      = useState(false);
-  const [editingWhatsapp,         setEditingWhatsapp]         = useState(false);
-  const [editingWhatsappGroup,    setEditingWhatsappGroup]    = useState(false);   // ← NEW
-  const [editingUserName,         setEditingUserName]         = useState(false);
-  const [editingUserPhone,        setEditingUserPhone]        = useState(false);
+  const [editingCompanyName, setEditingCompanyName] = useState(false);
+  const [editingWhatsapp, setEditingWhatsapp] = useState(false);
+  const [editingUserName, setEditingUserName] = useState(false);
+  const [editingUserPhone, setEditingUserPhone] = useState(false);
 
-  // Temp values
-  const [tempCompanyName,     setTempCompanyName]     = useState("");
-  const [tempWhatsapp,        setTempWhatsapp]        = useState("");
-  const [tempWhatsappGroup,   setTempWhatsappGroup]   = useState("");   // ← NEW
-  const [tempUserName,        setTempUserName]        = useState("");
-  const [tempUserPhone,       setTempUserPhone]       = useState("");
+  const [tempCompanyName, setTempCompanyName] = useState("");
+  const [tempWhatsapp, setTempWhatsapp] = useState("");
+  const [tempUserName, setTempUserName] = useState("");
+  const [tempUserPhone, setTempUserPhone] = useState("");
 
-  // Saving flags
-  const [savingCompanyName,    setSavingCompanyName]    = useState(false);
-  const [savingWhatsapp,       setSavingWhatsapp]       = useState(false);
-  const [savingWhatsappGroup,  setSavingWhatsappGroup]  = useState(false);   // ← NEW
-  const [savingLogo,           setSavingLogo]           = useState(false);
-  const [savingUserName,       setSavingUserName]       = useState(false);
-  const [savingUserPhone,      setSavingUserPhone]      = useState(false);
-  const [savingPassword,       setSavingPassword]       = useState(false);
+  const [savingCompanyName, setSavingCompanyName] = useState(false);
+  const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+  const [savingLogo, setSavingLogo] = useState(false);
+  const [savingUserName, setSavingUserName] = useState(false);
+  const [savingUserPhone, setSavingUserPhone] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
-  /* ── Auth check ── */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token         = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
     if (!token || !storedCompany) { router.replace("/auth/login"); return; }
     try {
@@ -74,21 +62,19 @@ export default function SettingsPage() {
     }
   }, [router]);
 
-  /* ── Fetch settings ── */
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings`, {
+      setErrorMsg("");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to load settings");
-
-      setCompanyName(data.company?.name              || "");
-      setWhatsappUrl(data.company?.whatsapp_url      || "");
-      setWhatsappGroupUrl(data.company?.whatsapp_group_url || "");   // ← NEW
-      setLogoPreview(data.company?.logo_url          || null);
-      setUserName(data.user?.name   || "");
+      setCompanyName(data.company?.name || "");
+      setWhatsappUrl(data.company?.whatsapp_url || "");
+      setLogoPreview(data.company?.logo_url || null);
+      setUserName(data.user?.name || "");
       setUserPhone(data.user?.phone || "");
       setUserEmail(data.user?.email || "");
     } catch (err) {
@@ -109,9 +95,9 @@ export default function SettingsPage() {
     try {
       setSavingCompanyName(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
-        method:  "PUT",
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    JSON.stringify({ name: tempCompanyName, whatsappUrl, whatsappGroupUrl }),
+        body: JSON.stringify({ name: tempCompanyName }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to update");
@@ -126,16 +112,16 @@ export default function SettingsPage() {
     finally { setSavingCompanyName(false); }
   };
 
-  /* ── WhatsApp URL ── */
+  /* ── WhatsApp ── */
   const startEditWhatsapp  = () => { setTempWhatsapp(whatsappUrl); setEditingWhatsapp(true); };
   const cancelEditWhatsapp = () => { setEditingWhatsapp(false); setTempWhatsapp(""); };
   const saveWhatsapp = async () => {
     try {
       setSavingWhatsapp(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
-        method:  "PUT",
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    JSON.stringify({ name: companyName, whatsappUrl: tempWhatsapp || null, whatsappGroupUrl }),
+        body: JSON.stringify({ name: companyName, whatsappUrl: tempWhatsapp || null }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to update");
@@ -150,34 +136,6 @@ export default function SettingsPage() {
     finally { setSavingWhatsapp(false); }
   };
 
-  /* ── WhatsApp Group URL  ← NEW ── */
-  const startEditWhatsappGroup  = () => { setTempWhatsappGroup(whatsappGroupUrl); setEditingWhatsappGroup(true); };
-  const cancelEditWhatsappGroup = () => { setEditingWhatsappGroup(false); setTempWhatsappGroup(""); };
-  const saveWhatsappGroup = async () => {
-    try {
-      setSavingWhatsappGroup(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    JSON.stringify({
-          name:             companyName,
-          whatsappUrl,
-          whatsappGroupUrl: tempWhatsappGroup || null,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to update");
-      setWhatsappGroupUrl(tempWhatsappGroup);
-      setEditingWhatsappGroup(false);
-      const sc = JSON.parse(localStorage.getItem("company"));
-      sc.whatsapp_group_url = tempWhatsappGroup;
-      localStorage.setItem("company", JSON.stringify(sc));
-      setCompany(sc);
-      showSuccess("WhatsApp Group link updated successfully");
-    } catch (err) { showError(err?.message || "Failed to update WhatsApp Group link"); }
-    finally { setSavingWhatsappGroup(false); }
-  };
-
   /* ── User Name ── */
   const startEditUserName  = () => { setTempUserName(userName); setEditingUserName(true); };
   const cancelEditUserName = () => { setEditingUserName(false); setTempUserName(""); };
@@ -186,9 +144,9 @@ export default function SettingsPage() {
     try {
       setSavingUserName(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/profile`, {
-        method:  "PUT",
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    JSON.stringify({ name: tempUserName, phone: userPhone }),
+        body: JSON.stringify({ name: tempUserName, phone: userPhone }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to update");
@@ -207,9 +165,9 @@ export default function SettingsPage() {
     try {
       setSavingUserPhone(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/profile`, {
-        method:  "PUT",
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    JSON.stringify({ name: userName, phone: tempUserPhone }),
+        body: JSON.stringify({ name: userName, phone: tempUserPhone }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to update");
@@ -225,7 +183,7 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) { showError("Please select an image file"); return; }
-    if (file.size > 5 * 1024 * 1024)    { showError("Logo size must be less than 5MB"); return; }
+    if (file.size > 5 * 1024 * 1024) { showError("Logo size must be less than 5MB"); return; }
     setLogoFile(file);
     const reader = new FileReader();
     reader.onloadend = () => setLogoPreview(reader.result);
@@ -239,9 +197,9 @@ export default function SettingsPage() {
       const formData = new FormData();
       formData.append("logo", logoFile);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company/logo`, {
-        method:  "PUT",
+        method: "PUT",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    formData,
+        body: formData,
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to upload logo");
@@ -258,17 +216,15 @@ export default function SettingsPage() {
 
   /* ── Password ── */
   const handleChangePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      showError("All password fields are required"); return;
-    }
+    if (!currentPassword || !newPassword || !confirmPassword) { showError("All password fields are required"); return; }
     if (newPassword !== confirmPassword) { showError("New passwords do not match"); return; }
-    if (newPassword.length < 8)          { showError("Password must be at least 8 characters long"); return; }
+    if (newPassword.length < 8) { showError("Password must be at least 8 characters long"); return; }
     try {
       setSavingPassword(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/password`, {
-        method:  "PUT",
+        method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
-        body:    JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to change password");
@@ -286,7 +242,6 @@ export default function SettingsPage() {
     }
   };
 
-  /* ── Loading state ── */
   if (loading) {
     return (
       <div className={styles.container}>
@@ -298,56 +253,10 @@ export default function SettingsPage() {
     );
   }
 
-  /* ── Helper: inline field row ── */
-  const InlineField = ({
-    label, value, editing, tempValue, onTempChange,
-    onStart, onSave, onCancel, saving,
-    type = "text", placeholder = "",
-    helpText, badge,
-  }) => (
-    <div className={styles.fieldGroup}>
-      <label>
-        {label}
-        {badge && <span className={styles.fieldBadge}>{badge}</span>}
-      </label>
-      {!editing ? (
-        <div className={styles.fieldDisplay}>
-          <span className={styles.fieldValue} title={value || "Not set"}>
-            {value || "Not set"}
-          </span>
-          <button className={styles.editBtn} onClick={onStart} aria-label={`Edit ${label}`}>
-            <Edit2 size={15} />
-          </button>
-        </div>
-      ) : (
-        <div className={styles.fieldEdit}>
-          <input
-            type={type}
-            value={tempValue}
-            onChange={(e) => onTempChange(e.target.value)}
-            placeholder={placeholder}
-            className={styles.input}
-            autoFocus
-          />
-          <div className={styles.fieldActions}>
-            <button className={styles.saveBtn} onClick={onSave} disabled={saving}>
-              {saving ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
-            </button>
-            <button className={styles.cancelBtn} onClick={onCancel} disabled={saving}>
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-      {helpText && <p className={styles.fieldHelp}>{helpText}</p>}
-    </div>
-  );
-
-  /* ── Render ── */
   return (
     <div className={styles.container}>
 
-      {/* Header */}
+      {/* ── Header ── */}
       <header className={styles.header}>
         <button className={styles.backBtn} onClick={handleBack} aria-label="Back to home">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -363,7 +272,7 @@ export default function SettingsPage() {
           <h1 className={styles.companyName}>{company?.name}</h1>
         </div>
 
-        <button className={styles.logoutBtn} onClick={handleLogout} aria-label="Logout">
+        <button className={styles.logoutBtn} onClick={handleLogout} title="Logout" aria-label="Logout">
           <span>Logout</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -373,11 +282,11 @@ export default function SettingsPage() {
         </button>
       </header>
 
-      {/* Main */}
+      {/* ── Main ── */}
       <main className={styles.main}>
         <div className={styles.settingsView}>
 
-          {/* Page title */}
+          {/* Page Header */}
           <div className={styles.settingsHeader}>
             <div className={styles.settingsHeaderIcon}>
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -403,10 +312,10 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* Grid */}
+          {/* Settings Grid */}
           <div className={styles.settingsContent}>
 
-            {/* ── Company Settings ── */}
+            {/* ── COMPANY SETTINGS ── */}
             <div className={styles.settingsSection}>
               <div className={styles.settingsSectionTitle}>
                 <Building2 size={20} />
@@ -414,51 +323,65 @@ export default function SettingsPage() {
               </div>
 
               {/* Company Name */}
-              <InlineField
-                label="Company Name *"
-                value={companyName}
-                editing={editingCompanyName}
-                tempValue={tempCompanyName}
-                onTempChange={setTempCompanyName}
-                onStart={startEditCompanyName}
-                onSave={saveCompanyName}
-                onCancel={cancelEditCompanyName}
-                saving={savingCompanyName}
-              />
+              <div className={styles.fieldGroup}>
+                <label>Company Name *</label>
+                {!editingCompanyName ? (
+                  <div className={styles.fieldDisplay}>
+                    <span className={styles.fieldValue} title={companyName}>{companyName}</span>
+                    <button className={styles.editBtn} onClick={startEditCompanyName} aria-label="Edit company name">
+                      <Edit2 size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.fieldEdit}>
+                    <input type="text" value={tempCompanyName} onChange={(e) => setTempCompanyName(e.target.value)} className={styles.input} autoFocus />
+                    <div className={styles.fieldActions}>
+                      <button className={styles.saveBtn} onClick={saveCompanyName} disabled={savingCompanyName}>
+                        {savingCompanyName ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
+                      </button>
+                      <button className={styles.cancelBtn} onClick={cancelEditCompanyName} disabled={savingCompanyName}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              {/* WhatsApp Direct URL */}
-              <InlineField
-                label="WhatsApp URL"
-                badge="Optional"
-                value={whatsappUrl}
-                editing={editingWhatsapp}
-                tempValue={tempWhatsapp}
-                onTempChange={setTempWhatsapp}
-                onStart={startEditWhatsapp}
-                onSave={saveWhatsapp}
-                onCancel={cancelEditWhatsapp}
-                saving={savingWhatsapp}
-                type="url"
-                placeholder="https://api.whatsapp.com/send/?phone=91..."
-                helpText="Direct chat link — used in visitor pass emails"
-              />
-
-              {/* WhatsApp Group Invite ← NEW */}
-              <InlineField
-                label="WhatsApp Group Invite"
-                badge="Optional"
-                value={whatsappGroupUrl}
-                editing={editingWhatsappGroup}
-                tempValue={tempWhatsappGroup}
-                onTempChange={setTempWhatsappGroup}
-                onStart={startEditWhatsappGroup}
-                onSave={saveWhatsappGroup}
-                onCancel={cancelEditWhatsappGroup}
-                saving={savingWhatsappGroup}
-                type="url"
-                placeholder="https://chat.whatsapp.com/..."
-                helpText="Group invite link — shared with visitors on check-in"
-              />
+              {/* WhatsApp URL */}
+              <div className={styles.fieldGroup}>
+                <label>WhatsApp URL (Optional)</label>
+                {!editingWhatsapp ? (
+                  <div className={styles.fieldDisplay}>
+                    {/* title attr shows full URL on hover */}
+                    <span className={styles.fieldValue} title={whatsappUrl || "Not set"}>
+                      {whatsappUrl || "Not set"}
+                    </span>
+                    <button className={styles.editBtn} onClick={startEditWhatsapp} aria-label="Edit WhatsApp URL">
+                      <Edit2 size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.fieldEdit}>
+                    <input
+                      type="url"
+                      value={tempWhatsapp}
+                      onChange={(e) => setTempWhatsapp(e.target.value)}
+                      placeholder="https://api.whatsapp.com/send/?phone=91..."
+                      className={styles.input}
+                      autoFocus
+                    />
+                    <div className={styles.fieldActions}>
+                      <button className={styles.saveBtn} onClick={saveWhatsapp} disabled={savingWhatsapp}>
+                        {savingWhatsapp ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
+                      </button>
+                      <button className={styles.cancelBtn} onClick={cancelEditWhatsapp} disabled={savingWhatsapp}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <p className={styles.fieldHelp}>Used in visitor pass emails</p>
+              </div>
 
               {/* Company Logo */}
               <div className={styles.fieldGroup}>
@@ -472,18 +395,12 @@ export default function SettingsPage() {
                   <Upload size={14} />
                   <span>{logoFile ? "Change Logo" : "Upload Logo"}</span>
                 </label>
-                <input
-                  id="logo-upload" type="file" accept="image/*"
-                  onChange={handleLogoChange} style={{ display: "none" }}
-                />
+                <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoChange} style={{ display: "none" }} />
                 {logoFile && (
                   <>
                     <p className={styles.fileSelected} title={logoFile.name}>{logoFile.name}</p>
                     <button className={styles.saveLogoBtn} onClick={uploadLogo} disabled={savingLogo}>
-                      {savingLogo
-                        ? <><Loader2 size={14} className={styles.spinning} /> Uploading...</>
-                        : "Save Logo"
-                      }
+                      {savingLogo ? <><Loader2 size={14} className={styles.spinning} /> Uploading...</> : "Save Logo"}
                     </button>
                   </>
                 )}
@@ -491,82 +408,112 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* ── User Profile ── */}
+            {/* ── USER PROFILE ── */}
             <div className={styles.settingsSection}>
               <div className={styles.settingsSectionTitle}>
                 <User size={20} />
                 <h3>User Profile</h3>
               </div>
 
-              <InlineField
-                label="Full Name *"
-                value={userName}
-                editing={editingUserName}
-                tempValue={tempUserName}
-                onTempChange={setTempUserName}
-                onStart={startEditUserName}
-                onSave={saveUserName}
-                onCancel={cancelEditUserName}
-                saving={savingUserName}
-              />
+              {/* Full Name */}
+              <div className={styles.fieldGroup}>
+                <label>Full Name *</label>
+                {!editingUserName ? (
+                  <div className={styles.fieldDisplay}>
+                    <span className={styles.fieldValue} title={userName}>{userName}</span>
+                    <button className={styles.editBtn} onClick={startEditUserName} aria-label="Edit name">
+                      <Edit2 size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.fieldEdit}>
+                    <input type="text" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} className={styles.input} autoFocus />
+                    <div className={styles.fieldActions}>
+                      <button className={styles.saveBtn} onClick={saveUserName} disabled={savingUserName}>
+                        {savingUserName ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
+                      </button>
+                      <button className={styles.cancelBtn} onClick={cancelEditUserName} disabled={savingUserName}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
-              <InlineField
-                label="Phone Number"
-                value={userPhone}
-                editing={editingUserPhone}
-                tempValue={tempUserPhone}
-                onTempChange={setTempUserPhone}
-                onStart={startEditUserPhone}
-                onSave={saveUserPhone}
-                onCancel={cancelEditUserPhone}
-                saving={savingUserPhone}
-                type="tel"
-              />
+              {/* Phone */}
+              <div className={styles.fieldGroup}>
+                <label>Phone Number</label>
+                {!editingUserPhone ? (
+                  <div className={styles.fieldDisplay}>
+                    <span className={styles.fieldValue} title={userPhone}>{userPhone}</span>
+                    <button className={styles.editBtn} onClick={startEditUserPhone} aria-label="Edit phone">
+                      <Edit2 size={15} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className={styles.fieldEdit}>
+                    <input type="tel" value={tempUserPhone} onChange={(e) => setTempUserPhone(e.target.value)} className={styles.input} autoFocus />
+                    <div className={styles.fieldActions}>
+                      <button className={styles.saveBtn} onClick={saveUserPhone} disabled={savingUserPhone}>
+                        {savingUserPhone ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
+                      </button>
+                      <button className={styles.cancelBtn} onClick={cancelEditUserPhone} disabled={savingUserPhone}>
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Email — read only */}
               <div className={styles.fieldGroup}>
                 <label>Email Address 🔒</label>
                 <div className={styles.fieldDisplay}>
-                  <span className={styles.fieldValue} style={{ color: "#999" }} title={userEmail}>
-                    {userEmail}
-                  </span>
+                  <span className={styles.fieldValue} style={{ color: "#999" }} title={userEmail}>{userEmail}</span>
                 </div>
                 <p className={styles.fieldHelp}>Email cannot be changed (security)</p>
               </div>
             </div>
 
-            {/* ── Change Password ── */}
+            {/* ── CHANGE PASSWORD ── */}
             <div className={`${styles.settingsSection} ${styles.fullWidth}`}>
               <div className={styles.settingsSectionTitle}>
                 <Lock size={20} />
                 <h3>Change Password</h3>
               </div>
 
-              {[
-                { label: "Current Password *", value: currentPassword, setter: setCurrentPassword, show: showCurrentPassword, toggle: () => setShowCurrentPassword(p => !p), placeholder: "Enter current password" },
-                { label: "New Password *",      value: newPassword,     setter: setNewPassword,     show: showNewPassword,     toggle: () => setShowNewPassword(p => !p),     placeholder: "Min 8 characters" },
-                { label: "Confirm New Password *", value: confirmPassword, setter: setConfirmPassword, show: showConfirmPassword, toggle: () => setShowConfirmPassword(p => !p), placeholder: "Confirm new password" },
-              ].map(({ label, value, setter, show, toggle, placeholder }) => (
-                <div className={styles.fieldGroup} key={label}>
-                  <label>{label}</label>
-                  <div className={styles.passwordInput}>
-                    <input
-                      type={show ? "text" : "password"}
-                      value={value}
-                      onChange={(e) => setter(e.target.value)}
-                      placeholder={placeholder}
-                      className={styles.input}
-                    />
-                    <button type="button" onClick={toggle} className={styles.passwordToggle}>
-                      {show ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
+              <div className={styles.fieldGroup}>
+                <label>Current Password *</label>
+                <div className={styles.passwordInput}>
+                  <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" className={styles.input} />
+                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className={styles.passwordToggle}>
+                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
-              ))}
+              </div>
 
-              {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                <p className={styles.fieldError}>Passwords do not match</p>
-              )}
+              <div className={styles.fieldGroup}>
+                <label>New Password *</label>
+                <div className={styles.passwordInput}>
+                  <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" className={styles.input} />
+                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className={styles.passwordToggle}>
+                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className={styles.fieldGroup}>
+                <label>Confirm New Password *</label>
+                <div className={styles.passwordInput}>
+                  <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={styles.input} />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.passwordToggle}>
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                  <p className={styles.fieldError}>Passwords do not match</p>
+                )}
+              </div>
 
               <div className={styles.infoBox}>
                 <Lock size={16} />
