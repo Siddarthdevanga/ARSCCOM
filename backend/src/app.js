@@ -17,7 +17,7 @@ import billingRepair from "./routes/billingRepair.route.js";
 import billingCron from "./routes/billingCron.route.js";
 import billingSyncRoutes from "./routes/billingSync.route.js";
 import exportsRoutes from "./routes/exports.routes.js";
-import settingsRoutes from "./routes/settings.routes.js"; // ✨ NEW
+import settingsRoutes from "./routes/settings.routes.js";
 
 const app = express();
 
@@ -56,8 +56,7 @@ app.use(
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "http://13.205.13.110",
-  "http://13.205.13.110:3000",
+  // ✅ REMOVED bare IP entries — phones should always use the domain
   "https://wheelbrand.in",
   "https://www.wheelbrand.in",
   "https://promeet.zodopt.com",
@@ -66,17 +65,18 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl)
+    // Allow requests with no origin (mobile apps, Postman, curl, QR scanner)
     if (!origin) return callback(null, true);
-    
-    // Check if origin is allowed
-    if (allowedOrigins.includes(origin)) return callback(null, true);
 
-    // Log blocked origins in development
-    if (!IS_PRODUCTION) {
-      console.warn(`⚠️ CORS blocked: ${origin}`);
+    // Strip port 443 from origin if present (some mobile browsers add it)
+    const normalizedOrigin = origin.replace(/:443$/, "").replace(/:80$/, "");
+
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
     }
-    
+
+    // Log blocked origins always (not just dev) so you can catch new issues
+    console.warn(`⚠️ CORS blocked: ${origin}`);
     return callback(new Error("CORS policy violation"), false);
   },
   credentials: true,
@@ -87,11 +87,13 @@ const corsOptions = {
     "X-Requested-With",
     "Accept",
     "Origin",
+    "otp-token",          // ✅ FIX: required for visitor registration
+    "x-access-token",     // ✅ FIX: fallback token header used in auth middleware
   ],
   exposedHeaders: [
-    "Content-Range", 
+    "Content-Range",
     "X-Content-Range",
-    "Content-Disposition", // Important for file downloads
+    "Content-Disposition",
   ],
   maxAge: 600,
 };
@@ -105,10 +107,7 @@ app.use(
     level: 6,
     threshold: 1024,
     filter: (req, res) => {
-      // Don't compress file downloads
-      if (res.getHeader("Content-Type")?.includes("spreadsheet")) {
-        return false;
-      }
+      if (res.getHeader("Content-Type")?.includes("spreadsheet")) return false;
       return compression.filter(req, res);
     },
   })
@@ -119,13 +118,16 @@ app.use(express.json({ limit: "25mb", strict: false }));
 app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 /* ================= LOGGING ================= */
-if (!IS_PRODUCTION) {
-  app.use((req, res, next) => {
-    const timestamp = new Date().toISOString();
-    console.log(`[${timestamp}] ${req.method} ${req.path}`);
-    next();
-  });
-}
+app.use((req, res, next) => {
+  // Always log CORS origin in production so you can catch phone issues
+  const origin = req.headers.origin || "no-origin";
+  if (IS_PRODUCTION && req.path.includes("/api/public")) {
+    console.log(`[PUBLIC] ${req.method} ${req.path} | Origin: ${origin}`);
+  } else if (!IS_PRODUCTION) {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path} | Origin: ${origin}`);
+  }
+  next();
+});
 
 /* ================= HEALTH CHECK ================= */
 app.get("/health", (req, res) => {
@@ -148,22 +150,6 @@ app.get("/", (req, res) => {
     version: "1.0.0",
     status: "running",
     environment: NODE_ENV,
-    endpoints: {
-      public: [
-        "/api/public",
-        "/api/public/conference",
-      ],
-      protected: [
-        "/api/auth",
-        "/api/visitors",
-        "/api/conference",
-        "/api/exports",
-        "/api/payment",
-        "/api/subscription",
-        "/api/upgrade",
-        "/api/settings", // ✨ NEW
-      ],
-    },
   });
 });
 
@@ -176,33 +162,17 @@ app.use("/api/public/conference", conferencePublicRoutes);
 /* =====================================================
    PROTECTED ROUTES (REQUIRE AUTH)
 ===================================================== */
-
-// Authentication
 app.use("/api/auth", authRoutes);
-
-// Visitor Management
 app.use("/api/visitors", visitorRoutes);
-
-// Conference Room Management
 app.use("/api/conference", conferenceRoutes);
-
-// Data Exports (Excel downloads)
 app.use("/api/exports", exportsRoutes);
-
-// Payment & Subscription Management
 app.use("/api/payment", paymentRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/upgrade", upgradeRoutes);
 app.use("/api/payment/zoho", billingSyncRoutes);
-
-// Settings Management ✨ NEW
 app.use("/api/settings", settingsRoutes);
-
-// Billing Management
 app.use("/api/billing/repair", billingRepair);
 app.use("/api/billing/cron", billingCron);
-
-// Webhooks
 app.use("/api/webhook", webhookRoutes);
 
 /* ================= 404 HANDLER ================= */
@@ -211,41 +181,22 @@ app.use((req, res) => {
     success: false,
     error: "Not Found",
     message: `Route ${req.originalUrl} does not exist`,
-    availableRoutes: [
-      "/health",
-      "/api/public",
-      "/api/public/conference",
-      "/api/auth",
-      "/api/visitors",
-      "/api/conference",
-      "/api/exports",
-      "/api/payment",
-      "/api/subscription",
-      "/api/upgrade",
-      "/api/settings", // ✨ NEW
-    ],
   });
 });
 
 /* ================= ERROR HANDLER ================= */
 app.use((err, req, res, next) => {
-  // Log error details
   console.error("❌ ERROR:", err.message);
-  
-  if (!IS_PRODUCTION) {
-    console.error("Stack:", err.stack);
-  }
+  if (!IS_PRODUCTION) console.error("Stack:", err.stack);
 
-  // Handle CORS errors
   if (err.message?.includes("CORS")) {
     return res.status(403).json({
       success: false,
       error: "CORS policy violation",
-      message: "Origin not allowed",
+      message: `Origin not allowed: ${err.origin || "unknown"}`,
     });
   }
 
-  // Handle validation errors
   if (err.name === "ValidationError") {
     return res.status(400).json({
       success: false,
@@ -254,7 +205,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Handle JWT errors
   if (err.name === "JsonWebTokenError" || err.name === "TokenExpiredError") {
     return res.status(401).json({
       success: false,
@@ -263,7 +213,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Handle database errors
   if (err.code === "ER_DUP_ENTRY") {
     return res.status(409).json({
       success: false,
@@ -272,7 +221,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Default error response
   res.status(err.status || 500).json({
     success: false,
     error: IS_PRODUCTION ? "Internal Server Error" : err.name || "Error",
@@ -280,34 +228,6 @@ app.use((err, req, res, next) => {
       ? "Something went wrong"
       : err.message || "An unexpected error occurred",
   });
-});
-
-/* ================= GRACEFUL SHUTDOWN ================= */
-const shutdown = (signal) => {
-  console.log(`\n🛑 ${signal} received. Shutting down gracefully...`);
-  
-  // Close server and cleanup
-  setTimeout(() => {
-    console.log("✅ Cleanup completed. Exiting...");
-    process.exit(0);
-  }, 1000);
-};
-
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
-
-// Handle uncaught exceptions
-process.on("uncaughtException", (err) => {
-  console.error("💥 UNCAUGHT EXCEPTION:", err);
-  console.error("Stack:", err.stack);
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on("unhandledRejection", (reason, promise) => {
-  console.error("💥 UNHANDLED REJECTION at:", promise);
-  console.error("Reason:", reason);
-  process.exit(1);
 });
 
 export default app;
