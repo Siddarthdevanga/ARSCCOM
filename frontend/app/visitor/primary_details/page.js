@@ -1,15 +1,12 @@
 "use client";
-
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import styles from "./style.module.css";
 
 export default function VisitorPrimaryDetails() {
   const router = useRouter();
-
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
-
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -19,12 +16,10 @@ export default function VisitorPrimaryDetails() {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
-
     if (!token || !storedCompany) {
       router.replace("/auth/login");
       return;
     }
-
     setCompany(JSON.parse(storedCompany));
     setLoading(false);
   }, [router]);
@@ -34,17 +29,14 @@ export default function VisitorPrimaryDetails() {
   /* ================= NEXT ================= */
   const handleNext = () => {
     setError("");
-
     if (!name.trim() || !phone.trim() || !email.trim()) {
       setError("All fields are mandatory");
       return;
     }
-
     localStorage.setItem(
       "visitor_primary",
       JSON.stringify({ name, phone, email })
     );
-
     router.push("/visitor/secondary_details");
   };
 
@@ -53,8 +45,6 @@ export default function VisitorPrimaryDetails() {
       {/* ================= HEADER ================= */}
       <header className={styles.header}>
         <div className={styles.companyName}>{company.name}</div>
-
-        {/* ✅ FIXED: use logo_url directly with fallback */}
         <img
           src={company.logo_url || "/logo.png"}
           alt="Company Logo"
@@ -78,6 +68,7 @@ export default function VisitorPrimaryDetails() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Visitor name"
+            autoComplete="off"
           />
 
           {/* PHONE + EMAIL SAME LINE */}
@@ -89,9 +80,10 @@ export default function VisitorPrimaryDetails() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="Phone number"
+                autoComplete="off"
+                inputMode="tel"
               />
             </div>
-
             <div className={styles.col}>
               <label className={styles.label}>Email *</label>
               <input
@@ -99,6 +91,8 @@ export default function VisitorPrimaryDetails() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email address"
+                autoComplete="off"
+                inputMode="email"
               />
             </div>
           </div>
