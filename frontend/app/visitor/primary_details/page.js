@@ -71,7 +71,6 @@ export default function VisitorPrimaryDetails() {
             autoComplete="off"
           />
 
-          {/* PHONE + EMAIL SAME LINE */}
           <div className={styles.row}>
             <div className={styles.col}>
               <label className={styles.label}>Phone *</label>
