@@ -158,7 +158,7 @@ function VisitorPassContent() {
             <div className={styles.logoText}>Visitor Pass</div>
           </div>
           <div className={styles.rightHeader}>
-            <button className={styles.backBtn} onClick={() => router.push("/")}>
+            <button className={styles.backBtn} onClick={() => router.push("/visitor_dashboard")}>
               ← Home
             </button>
           </div>
@@ -167,7 +167,7 @@ function VisitorPassContent() {
           <div className={styles.errorStatePage}>
             <div className={styles.errorStateIcon}>⚠️</div>
             <p>{error}</p>
-            <button className={styles.dashboardBtn} onClick={() => router.push("/")}>
+            <button className={styles.dashboardBtn} onClick={() => router.push("/visitor_dashboard")}>
               Go Home
             </button>
           </div>
