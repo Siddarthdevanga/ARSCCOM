@@ -1,7 +1,7 @@
 /* ============================================================================
-   PROMEET — Home Page style.module.css  v2
+   PROMEET — Home Page style.module.css  v3
    Theme: Deep Purple #6A0DAD / #8B2BE2 + Amber #F5A623
-   Matches login page: split feel, bold typography, glassmorphism accents
+   Updated: White-bg buttons → Purple; font colors adjusted accordingly
    ============================================================================ */
 
 /* ── CSS Custom Properties ─────────────────────────────────────────────────── */
@@ -344,15 +344,16 @@
   flex-shrink: 0;
 }
 
+/* UPDATED: Logout button — purple background, white text */
 .logoutBtn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.45rem 0.9rem;
-  background: transparent;
-  border: 1.5px solid var(--border-med);
+  background: var(--grad-brand);
+  border: 1.5px solid var(--purple-700);
   border-radius: var(--r-full);
-  color: var(--gray-500);
+  color: var(--white);
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
@@ -360,32 +361,36 @@
   transition: all var(--t);
   white-space: nowrap;
   letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px rgba(107,19,196,0.3);
 }
 .logoutBtn:hover {
-  background: var(--purple-50);
-  border-color: var(--purple-600);
-  color: var(--purple-700);
+  background: var(--grad-brand-dark);
+  border-color: var(--purple-900);
+  box-shadow: 0 4px 18px rgba(107,19,196,0.45);
+  transform: translateY(-1px);
 }
 
 /* ── Menu Button ─────────────────────────────────────────────────────────── */
+/* UPDATED: starts as purple filled */
 .menuBtn {
   width: 2.125rem;
   height: 2.125rem;
   padding: 0;
-  background: var(--purple-50);
-  border: 1.5px solid var(--border-med);
+  background: var(--purple-700);
+  border: 1.5px solid var(--purple-700);
   border-radius: var(--r-sm);
-  color: var(--purple-700);
+  color: var(--white);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all var(--t-spring);
   flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(107,19,196,0.3);
 }
 .menuBtn:hover {
-  background: var(--purple-700);
-  border-color: var(--purple-700);
+  background: var(--purple-900);
+  border-color: var(--purple-900);
   transform: scale(1.06);
 }
 .menuBtn:hover .menuDots span { background: var(--white); }
@@ -400,32 +405,35 @@
   display: block;
   width: 14px;
   height: 2px;
-  background: var(--purple-700);
+  background: var(--white);
   border-radius: 2px;
   transition: background var(--t);
 }
 
 /* ── Back Button ─────────────────────────────────────────────────────────── */
+/* UPDATED: purple filled */
 .backBtn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.4rem 0.875rem;
-  background: var(--purple-50);
-  border: 1.5px solid var(--border-med);
+  background: var(--purple-700);
+  border: 1.5px solid var(--purple-700);
   border-radius: var(--r-full);
-  color: var(--purple-700);
+  color: var(--white);
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
   transition: all var(--t);
+  box-shadow: 0 2px 10px rgba(107,19,196,0.3);
 }
 .backBtn:hover {
-  background: var(--purple-700);
+  background: var(--purple-900);
   color: var(--white);
-  border-color: var(--purple-700);
+  border-color: var(--purple-900);
   transform: translateX(-2px);
+  box-shadow: 0 4px 18px rgba(107,19,196,0.4);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -440,7 +448,7 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HERO SECTION — matches login left panel aesthetic
+   HERO SECTION
    ═══════════════════════════════════════════════════════════════════════════ */
 .welcomeSection {
   background: var(--grad-brand);
@@ -450,7 +458,6 @@
   text-align: center;
 }
 
-/* Amber orb — top right (mirrors login page logo glow) */
 .welcomeSection::before {
   content: '';
   position: absolute;
@@ -462,7 +469,6 @@
   pointer-events: none;
 }
 
-/* Purple orb — bottom left */
 .welcomeSection::after {
   content: '';
   position: absolute;
@@ -483,7 +489,6 @@
   gap: 0.5rem;
 }
 
-/* Dynamic greeting chip */
 .greetingChip {
   display: inline-flex;
   align-items: center;
@@ -546,16 +551,17 @@
   box-sizing: border-box;
 }
 
+/* UPDATED: Module cards — purple tinted background instead of white */
 .moduleCard {
-  background: var(--white);
-  border: 1.5px solid var(--border-light);
+  background: linear-gradient(145deg, #f8f5ff 0%, #ede9fe 100%);
+  border: 1.5px solid var(--border-med);
   border-radius: var(--r-xl);
   padding: clamp(1.25rem, 3vw, 1.75rem);
   display: flex;
   align-items: center;
   gap: 1.125rem;
   cursor: pointer;
-  transition: transform var(--t-spring), box-shadow var(--t), border-color var(--t);
+  transition: transform var(--t-spring), box-shadow var(--t), border-color var(--t), background var(--t);
   box-shadow: var(--shadow-sm);
   position: relative;
   overflow: hidden;
@@ -564,7 +570,6 @@
 }
 .moduleCard:nth-child(2) { animation-delay: 0.1s; }
 
-/* Amber accent sweep on hover */
 .moduleCard::before {
   content: '';
   position: absolute;
@@ -580,7 +585,8 @@
 .moduleCard:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow-lg);
-  border-color: var(--border-str);
+  border-color: var(--purple-500);
+  background: linear-gradient(145deg, #ede9fe 0%, #ddd6fe 100%);
 }
 .moduleCard:hover::before { transform: scaleY(1); }
 
@@ -608,24 +614,27 @@
 
 .cardContent { flex: 1; min-width: 0; }
 
+/* UPDATED: card title — deeper purple for contrast on purple-tinted bg */
 .cardTitle {
   font-size: clamp(1rem, 2.5vw, 1.1rem);
   font-weight: 700;
-  color: var(--gray-900);
+  color: var(--purple-900);
   margin: 0 0 0.3rem;
   letter-spacing: -0.015em;
 }
 
+/* UPDATED: card description — purple-700 instead of gray-500 */
 .cardDescription {
   font-size: clamp(0.775rem, 1.8vw, 0.85rem);
-  color: var(--gray-500);
+  color: var(--purple-700);
   margin: 0;
   line-height: 1.5;
+  opacity: 0.75;
 }
 
 .cardArrow {
   font-size: 1.25rem;
-  color: var(--gray-400);
+  color: var(--purple-400);
   transition: all var(--t);
   flex-shrink: 0;
 }
@@ -711,13 +720,14 @@
   margin-bottom: 1.5rem;
 }
 
+/* UPDATED: stat cards — purple tinted bg */
 .statCard {
   display: flex;
   align-items: center;
   gap: 0.875rem;
   padding: 1rem 1.25rem;
-  background: var(--white);
-  border: 1.5px solid var(--border-light);
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-xs);
   animation: popIn 0.35s var(--t-spring) both;
@@ -730,7 +740,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--gray-400);
+  color: var(--purple-600);
   margin: 0 0 0.15rem;
 }
 
@@ -751,9 +761,10 @@
   margin-bottom: 1rem;
 }
 
+/* UPDATED: report cards — purple tinted bg */
 .reportCard {
-  background: var(--white);
-  border: 1.5px solid var(--border-light);
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
   padding: 1.25rem;
   display: flex;
@@ -766,13 +777,13 @@
 .reportCard:nth-child(2) { animation-delay: 0.07s; }
 .reportCard:nth-child(3) { animation-delay: 0.14s; }
 .reportCard:hover {
-  border-color: var(--border-str);
+  border-color: var(--purple-500);
   box-shadow: var(--shadow-md);
   transform: translateY(-3px);
 }
 
 .premiumReport {
-  background: linear-gradient(145deg, var(--white) 0%, var(--amber-50) 100%);
+  background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%);
   border-color: rgba(245,158,11,0.3);
 }
 .premiumReport:hover { border-color: var(--amber-500); }
@@ -783,48 +794,54 @@
   gap: 0.75rem;
 }
 
+/* UPDATED: report icon — purple filled */
 .reportIcon {
   width: 42px; height: 42px;
   border-radius: var(--r);
-  background: var(--purple-50);
-  border: 1.5px solid var(--border-med);
-  color: var(--purple-600);
+  background: var(--purple-700);
+  border: 1.5px solid var(--purple-700);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: all var(--t);
+  box-shadow: 0 2px 8px rgba(107,19,196,0.3);
 }
 .premiumReport .reportIcon {
-  background: var(--amber-50);
-  border-color: rgba(245,158,11,0.25);
-  color: var(--amber-600);
+  background: var(--grad-amber);
+  border-color: var(--amber-500);
+  color: var(--white);
+  box-shadow: var(--shadow-amber);
 }
 .reportCard:hover .reportIcon { transform: scale(1.06); }
 
+/* UPDATED: report header text — darker purple for contrast */
 .reportHeader h6 {
   font-size: 0.9rem;
   font-weight: 700;
-  color: var(--gray-900);
+  color: var(--purple-900);
   margin: 0 0 0.2rem;
 }
 
 .reportMeta {
   font-size: 0.71rem;
-  color: var(--gray-400);
+  color: var(--purple-600);
   margin: 0;
+  opacity: 0.8;
 }
 
+/* UPDATED: download button — purple filled, white text */
 .downloadBtn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem 1rem;
-  background: var(--purple-50);
-  border: 1.5px solid var(--border-med);
+  background: var(--grad-brand);
+  border: 1.5px solid var(--purple-700);
   border-radius: var(--r-sm);
-  color: var(--purple-700);
+  color: var(--white);
   font-family: var(--font-sans);
   font-size: 0.78rem;
   font-weight: 600;
@@ -832,12 +849,13 @@
   transition: all var(--t);
   width: 100%;
   letter-spacing: 0.01em;
+  box-shadow: 0 2px 10px rgba(107,19,196,0.3);
 }
 .downloadBtn:hover:not(:disabled) {
-  background: var(--purple-700);
-  border-color: var(--purple-700);
-  color: var(--white);
-  box-shadow: var(--shadow-purple);
+  background: var(--grad-brand-dark);
+  border-color: var(--purple-900);
+  box-shadow: 0 4px 20px rgba(107,19,196,0.5);
+  transform: translateY(-1px);
 }
 .downloadBtn:disabled {
   opacity: 0.45;
@@ -867,7 +885,7 @@
   border: 1px solid var(--border-med);
   border-radius: var(--r);
   font-size: 0.78rem;
-  color: var(--gray-700);
+  color: var(--purple-800);
   line-height: 1.55;
 }
 .infoBox svg { color: var(--purple-600); flex-shrink: 0; margin-top: 1px; }
@@ -885,16 +903,17 @@
   animation: fadeIn 0.2s ease;
 }
 
+/* UPDATED: slide panel — purple-tinted bg instead of pure white */
 .slidePanel {
   position: fixed;
   top: 0; left: 0; bottom: 0;
   width: clamp(300px, 85vw, 376px);
-  background: var(--white);
+  background: linear-gradient(180deg, #f5f3ff 0%, #faf9ff 100%);
   z-index: 500;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-xl);
-  border-right: 1px solid var(--border-light);
+  border-right: 1px solid var(--border-med);
   overflow: hidden;
   animation: panelSlide 0.3s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
@@ -913,7 +932,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1.125rem 1.25rem 1rem;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-med);
   flex-shrink: 0;
   background: var(--grad-brand);
 }
@@ -952,7 +971,7 @@
   scrollbar-color: var(--purple-100) transparent;
 }
 .panelBody::-webkit-scrollbar { width: 4px; }
-.panelBody::-webkit-scrollbar-thumb { background: var(--purple-100); border-radius: 4px; }
+.panelBody::-webkit-scrollbar-thumb { background: var(--purple-300, #c4b5fd); border-radius: 4px; }
 
 /* ── Error State ─────────────────────────────────────────────────────────── */
 .errorState {
@@ -1020,12 +1039,14 @@
   padding: 0.3rem 0.7rem;
   border-radius: var(--r-full);
   border: 1px solid rgba(255,255,255,0.2);
+  color: var(--white);
 }
 
 /* ── Details Section ─────────────────────────────────────────────────────── */
+/* UPDATED: details section — purple-tinted */
 .detailsSection {
-  background: var(--gray-50);
-  border: 1px solid var(--border-light);
+  background: var(--purple-50);
+  border: 1px solid var(--border-med);
   border-radius: var(--r-lg);
   overflow: hidden;
 }
@@ -1035,11 +1056,11 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.14em;
-  color: var(--gray-400);
+  color: var(--purple-700);
   margin: 0;
   padding: 0.55rem 0.875rem;
-  background: var(--purple-50);
-  border-bottom: 1px solid var(--border-light);
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  border-bottom: 1px solid var(--border-med);
 }
 
 .detailRow {
@@ -1054,14 +1075,14 @@
 
 .detailLabel {
   font-size: 0.72rem;
-  color: var(--gray-400);
+  color: var(--purple-600);
   font-weight: 500;
   flex-shrink: 0;
 }
 
 .detailValue {
   font-size: 0.78rem;
-  color: var(--gray-900);
+  color: var(--purple-900);
   font-weight: 600;
   text-align: right;
 }
@@ -1073,13 +1094,14 @@
   gap: 0.35rem;
 }
 
+/* UPDATED: menu items — purple tinted bg, purple text */
 .menuItem {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   padding: 0.8rem 0.875rem;
-  background: var(--white);
-  border: 1.5px solid var(--border-light);
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
   cursor: pointer;
   transition: all var(--t);
@@ -1087,53 +1109,61 @@
   width: 100%;
 }
 .menuItem:hover {
-  background: var(--purple-50);
-  border-color: var(--border-str);
+  background: var(--grad-brand);
+  border-color: var(--purple-700);
   transform: translateX(3px);
-  box-shadow: var(--shadow-xs);
+  box-shadow: var(--shadow-sm);
 }
 
+/* UPDATED: menu item icon — purple filled */
 .menuItemIcon {
   width: 38px; height: 38px;
   border-radius: var(--r-sm);
-  background: var(--purple-50);
-  border: 1px solid var(--border-med);
-  color: var(--purple-600);
+  background: var(--purple-700);
+  border: 1px solid var(--purple-700);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: all var(--t);
+  box-shadow: 0 2px 8px rgba(107,19,196,0.3);
 }
 .menuItem:hover .menuItemIcon {
-  background: var(--purple-700);
+  background: rgba(255,255,255,0.22);
   color: var(--white);
-  border-color: var(--purple-700);
+  border-color: rgba(255,255,255,0.3);
 }
 
 .menuItemContent { flex: 1; min-width: 0; }
 
+/* UPDATED: menu item title — purple-900, switches white on hover */
 .menuItemTitle {
   display: block;
   font-size: 0.85rem;
   font-weight: 700;
-  color: var(--gray-900);
+  color: var(--purple-900);
   margin-bottom: 0.1rem;
+  transition: color var(--t);
 }
+.menuItem:hover .menuItemTitle { color: var(--white); }
 
+/* UPDATED: menu item subtitle — purple, switches to semi-white on hover */
 .menuItemSubtitle {
   display: block;
   font-size: 0.69rem;
-  color: var(--gray-400);
+  color: var(--purple-600);
+  transition: color var(--t);
 }
+.menuItem:hover .menuItemSubtitle { color: rgba(255,255,255,0.72); }
 
 .menuItemArrow {
-  color: var(--gray-400);
+  color: var(--purple-500);
   flex-shrink: 0;
   transition: all var(--t);
 }
 .menuItem:hover .menuItemArrow {
-  color: var(--purple-600);
+  color: var(--white);
   transform: translateX(3px);
 }
 
@@ -1205,22 +1235,24 @@
 .sectionHeader h5 {
   font-size: 0.875rem;
   font-weight: 800;
-  color: var(--gray-900);
+  color: var(--purple-900);
   margin: 0;
   letter-spacing: -0.01em;
 }
 
 .sectionDescription {
   font-size: 0.75rem;
-  color: var(--gray-400);
+  color: var(--purple-700);
   margin: 0;
   line-height: 1.5;
+  opacity: 0.8;
 }
 
 /* ── Plan Cards ──────────────────────────────────────────────────────────── */
+/* UPDATED: plan cards — purple tinted */
 .upgradePlanCard {
-  background: var(--white);
-  border: 1.5px solid var(--border-light);
+  background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
+  border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
   padding: 1.125rem;
   display: flex;
@@ -1230,31 +1262,34 @@
   transition: all var(--t);
 }
 .upgradePlanCard:hover {
-  border-color: var(--border-str);
+  border-color: var(--purple-500);
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
 .enterprisePlan {
-  background: linear-gradient(145deg, var(--white) 0%, var(--amber-50) 100%);
+  background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%);
   border-color: rgba(245,158,11,0.3);
 }
 .enterprisePlan:hover { border-color: var(--amber-500); }
 
+/* UPDATED: plan icon wrapper — purple filled */
 .planIconWrapper {
   width: 42px; height: 42px;
   border-radius: var(--r);
-  background: var(--purple-50);
-  border: 1.5px solid var(--border-med);
-  color: var(--purple-600);
+  background: var(--purple-700);
+  border: 1.5px solid var(--purple-700);
+  color: var(--white);
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 8px rgba(107,19,196,0.3);
 }
 .enterprisePlan .planIconWrapper {
-  background: var(--amber-50);
-  border-color: rgba(245,158,11,0.25);
-  color: var(--amber-600);
+  background: var(--grad-amber);
+  border-color: var(--amber-500);
+  color: var(--white);
+  box-shadow: var(--shadow-amber);
 }
 
 .planInfo {
@@ -1263,10 +1298,11 @@
   justify-content: space-between;
   gap: 0.5rem;
 }
+/* UPDATED: plan info heading — deep purple */
 .planInfo h6 {
   font-size: 0.95rem;
   font-weight: 800;
-  color: var(--gray-900);
+  color: var(--purple-900);
   margin: 0;
 }
 
@@ -1277,13 +1313,14 @@
   color: var(--purple-800);
   letter-spacing: -0.02em;
 }
-.period { font-size: 0.68rem; color: var(--gray-400); }
+.period { font-size: 0.68rem; color: var(--purple-500); }
 .customPrice {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--amber-600);
 }
 
+/* UPDATED: feature list — purple text */
 .featureList {
   list-style: none;
   margin: 0;
@@ -1297,7 +1334,7 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.75rem;
-  color: var(--gray-700);
+  color: var(--purple-800);
 }
 .featureList li svg { color: var(--success); flex-shrink: 0; }
 
