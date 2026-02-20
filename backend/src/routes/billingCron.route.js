@@ -28,21 +28,29 @@ function normalizeStatus(status) {
   return map[status] || status;
 }
 
+/* ================= PLAN DURATION (DAYS) ================= */
+function getPlanDuration(plan) {
+  if (!plan) return 30;
+  const p = plan.toLowerCase();
+  if (p === "trial") return 15;
+  return 30; // business & enterprise both get 30 days
+}
+
 /* ================= EMAIL TEMPLATES ================= */
 const emailTemplates = {
   subscriptionActivated: (companyName, plan, expiresAt) => {
     const planDetails = {
       trial: {
-        price: '₹49 / 15 Days',
-        features: ['Valid for 15 Days', '100 Visitor Bookings', '100 Conference Bookings', '2 Conference Rooms']
+        price: "₹49 / 15 Days",
+        features: ["Valid for 15 Days", "100 Visitor Bookings", "100 Conference Bookings", "2 Conference Rooms"]
       },
       business: {
-        price: '₹500 / Month',
-        features: ['Unlimited Visitors', '1000 Conference bookings', '6 Conference Rooms', 'Dedicated Support']
+        price: "₹500 / Month",
+        features: ["Unlimited Visitors", "1000 Conference bookings", "6 Conference Rooms", "Dedicated Support"]
       },
       enterprise: {
-        price: 'Custom Pricing',
-        features: ['Unlimited Visitors', 'Unlimited Conference Bookings', 'Unlimited Conference Rooms', 'Dedicated Support']
+        price: "Custom Pricing",
+        features: ["Unlimited Visitors", "Unlimited Conference Bookings", "Unlimited Conference Rooms", "Dedicated Support"]
       }
     };
 
@@ -90,7 +98,6 @@ const emailTemplates = {
               <h2 style="text-align: center; color: #6a00ff; margin-bottom: 10px;">Subscription Activated Successfully</h2>
               <p class="greeting">Dear <strong>${companyName}</strong> Team,</p>
               <p>Congratulations! Your PROMEET subscription has been successfully activated. You now have full access to all features included in your plan.</p>
-              
               <div class="info-box">
                 <div class="info-row">
                   <span class="label">Plan</span>
@@ -102,22 +109,19 @@ const emailTemplates = {
                 </div>
                 <div class="info-row">
                   <span class="label">Valid Until</span>
-                  <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  <span class="value">${new Date(expiresAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
                 </div>
               </div>
-
               <div class="features">
                 <h3>✨ Your ${plan.toUpperCase()} Plan Includes:</h3>
                 <ul>
-                  ${currentPlan.features.map(feature => `<li>${feature}</li>`).join('')}
+                  ${currentPlan.features.map(feature => `<li>${feature}</li>`).join("")}
                 </ul>
               </div>
-
               <div style="text-align: center;">
                 <p style="margin-bottom: 20px; font-size: 16px;">Ready to get started?</p>
                 <a href="https://www.promeet.zodopt.com" class="cta-button">Access Dashboard →</a>
               </div>
-
               <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
                 If you have any questions, our support team is here to help!
               </p>
@@ -172,14 +176,12 @@ const emailTemplates = {
             <div class="celebration">✨ 🎊 ✨</div>
             <h2 style="text-align: center; color: #7a00ff; margin-bottom: 20px;">Plan Upgrade Successful</h2>
             <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
-            <p style="font-size: 16px;">Great news! Your account has been successfully upgraded to the <strong style="color: #00c853;">${toPlan.toUpperCase()}</strong> plan. You now have access to more features and capabilities.</p>
-            
+            <p style="font-size: 16px;">Great news! Your account has been successfully upgraded to the <strong style="color: #00c853;">${toPlan.toUpperCase()}</strong> plan.</p>
             <div class="upgrade-flow">
               <span class="plan-badge old-plan">${fromPlan.toUpperCase()}</span>
               <span class="arrow">→</span>
               <span class="plan-badge new-plan">${toPlan.toUpperCase()}</span>
             </div>
-
             <div class="info-box">
               <div class="info-row">
                 <span class="label">New Plan</span>
@@ -187,10 +189,9 @@ const emailTemplates = {
               </div>
               <div class="info-row">
                 <span class="label">Valid Until</span>
-                <span class="value">${new Date(expiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                <span class="value">${new Date(expiresAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</span>
               </div>
             </div>
-
             <p style="margin-top: 30px; font-size: 15px; color: #666; text-align: center;">
               Thank you for choosing PROMEET. We're excited to support your growth!
             </p>
@@ -206,7 +207,7 @@ const emailTemplates = {
   }),
 
   subscriptionExpiring: (companyName, plan, expiresAt, daysLeft) => ({
-    subject: `⚠️ Your PROMEET Subscription Expires in ${daysLeft} Day${daysLeft === 1 ? '' : 's'}`,
+    subject: `⚠️ Your PROMEET Subscription Expires in ${daysLeft} Day${daysLeft === 1 ? "" : "s"}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -236,13 +237,11 @@ const emailTemplates = {
             <h2 style="text-align: center; color: #ff9800; margin-bottom: 20px;">Action Required</h2>
             <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
             <p style="font-size: 16px;">This is a friendly reminder that your PROMEET <strong>${plan.toUpperCase()}</strong> subscription will expire soon.</p>
-            
             <div class="countdown-box">
               <p style="margin: 0; font-size: 18px; color: #666;">Your subscription expires in:</p>
               <div class="days-remaining">${daysLeft}</div>
-              <p class="countdown-label">${daysLeft === 1 ? 'Day' : 'Days'}</p>
+              <p class="countdown-label">${daysLeft === 1 ? "Day" : "Days"}</p>
             </div>
-
             <div class="urgency-message">
               <p style="margin: 0; font-size: 15px; font-weight: 600; color: #ff6f00;">
                 ⏳ Don't lose access to your valuable data and features!
@@ -251,12 +250,10 @@ const emailTemplates = {
                 Renew now to ensure uninterrupted service and continue managing your visitors and conference bookings seamlessly.
               </p>
             </div>
-
             <div style="text-align: center;">
               <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">Renew your subscription today:</p>
               <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
             </div>
-
             <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
               Questions? Contact our support team at <a href="mailto:admin@promeet.zodopt.com" style="color: #ff9800;">admin@promeet.zodopt.com</a>
             </p>
@@ -304,17 +301,13 @@ const emailTemplates = {
             <div class="alert-icon">🔴</div>
             <h2 style="text-align: center; color: #ff1744; margin-bottom: 20px;">Your Subscription Has Expired</h2>
             <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
-            <p style="font-size: 16px;">Your PROMEET <strong>${plan.toUpperCase()}</strong> subscription expired on <strong>${new Date(expiredAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</strong>.</p>
-            
+            <p style="font-size: 16px;">Your PROMEET <strong>${plan.toUpperCase()}</strong> subscription expired on <strong>${new Date(expiredAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</strong>.</p>
             <div class="alert-box">
-              <p style="margin: 0; text-align: center; font-size: 16px;">
-                <strong>Current Status:</strong>
-              </p>
+              <p style="margin: 0; text-align: center; font-size: 16px;"><strong>Current Status:</strong></p>
               <p style="text-align: center; margin: 15px 0;">
                 <span class="expired-badge">EXPIRED</span>
               </p>
             </div>
-
             <div class="impact-list">
               <h4>⚠️ Limited Access</h4>
               <p style="margin: 5px 0 15px; color: #666; font-size: 14px;">You currently have restricted access to:</p>
@@ -326,14 +319,12 @@ const emailTemplates = {
                 <li>Dashboard & Reports</li>
               </ul>
             </div>
-
             <div style="text-align: center; margin: 30px 0;">
               <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600; color: #ff1744;">
                 🔄 Renew now to restore full access!
               </p>
               <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
             </div>
-
             <p style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #666; text-align: center;">
               <strong>Need help?</strong><br/>
               Contact our support team at <a href="mailto:admin@promeet.zodopt.com" style="color: #ff1744; text-decoration: none;">admin@promeet.zodopt.com</a><br/>
@@ -373,14 +364,14 @@ async function repairBilling() {
         c.zoho_customer_id IS NOT NULL
       AND c.last_payment_link_id IS NOT NULL
       AND (
-          c.subscription_status IN ('pending','trial')
+          c.subscription_status IN ('pending', 'trial')
           OR c.pending_upgrade_plan IS NOT NULL
           OR (
-            c.subscription_status='active'
+            c.subscription_status = 'active'
             AND (
-              (c.plan='trial' AND c.trial_ends_at IS NULL)
+              (c.plan = 'trial' AND c.trial_ends_at IS NULL)
               OR
-              (c.plan='business' AND c.subscription_ends_at IS NULL)
+              (c.plan IN ('business', 'enterprise') AND c.subscription_ends_at IS NULL)
             )
           )
       )
@@ -430,8 +421,12 @@ async function repairBilling() {
         if (isNaN(paidDate.getTime())) paidDate = new Date();
 
         const mysqlPaid = paidDate.toISOString().slice(0, 19).replace("T", " ");
+
+        // Determine active plan — preserve existing plan for enterprise
         const activePlan = pending_upgrade_plan || plan;
-        const durationDays = activePlan === "business" ? 30 : 15;
+
+        // FIX: trial = 15 days, business & enterprise = 30 days
+        const durationDays = getPlanDuration(activePlan);
         const endsAtDate = new Date(paidDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
         const mysqlEnds = endsAtDate.toISOString().slice(0, 19).replace("T", " ");
 
@@ -439,15 +434,31 @@ async function repairBilling() {
         console.log("📅 Ends At:", mysqlEnds);
         console.log("📦 Activating Plan:", activePlan);
 
-        if (activePlan === "business") {
+        if (activePlan === "trial") {
+          // Trial — uses trial_ends_at
           await db.query(
-            `UPDATE companies SET subscription_status='active', plan='business', pending_upgrade_plan=NULL, last_payment_created_at=?, subscription_ends_at=?, updated_at=NOW() WHERE id=?`,
+            `UPDATE companies SET 
+               subscription_status = 'active', 
+               plan = 'trial', 
+               pending_upgrade_plan = NULL, 
+               last_payment_created_at = ?, 
+               trial_ends_at = ?, 
+               updated_at = NOW() 
+             WHERE id = ?`,
             [mysqlPaid, mysqlEnds, id]
           );
         } else {
+          // Business OR Enterprise — both use subscription_ends_at
           await db.query(
-            `UPDATE companies SET subscription_status='active', plan='trial', pending_upgrade_plan=NULL, last_payment_created_at=?, trial_ends_at=?, updated_at=NOW() WHERE id=?`,
-            [mysqlPaid, mysqlEnds, id]
+            `UPDATE companies SET 
+               subscription_status = 'active', 
+               plan = ?, 
+               pending_upgrade_plan = NULL, 
+               last_payment_created_at = ?, 
+               subscription_ends_at = ?, 
+               updated_at = NOW() 
+             WHERE id = ?`,
+            [activePlan, mysqlPaid, mysqlEnds, id]
           );
         }
 
@@ -456,17 +467,14 @@ async function repairBilling() {
             const emailContent = pending_upgrade_plan
               ? emailTemplates.upgradeCompleted(name, plan, activePlan, mysqlEnds)
               : emailTemplates.subscriptionActivated(name, activePlan, mysqlEnds);
-            
-            console.log(`📧 Preparing to send email to ${company_email}`);
-            console.log(`   Subject: ${emailContent.subject}`);
-            
+
+            console.log(`📧 Sending email to ${company_email}`);
             await sendEmail({
               to: company_email,
               subject: emailContent.subject,
               html: emailContent.html
             });
-            
-            console.log(`✅ Email sent successfully to ${company_email}`);
+            console.log(`✅ Email sent to ${company_email}`);
           } catch (emailErr) {
             console.error(`❌ Email failed for ${name}:`, emailErr.message);
           }
@@ -476,29 +484,25 @@ async function repairBilling() {
         continue;
       }
 
-      /* ================= FAILED / EXPIRED - CRITICAL FIX ================= */
+      /* ================= FAILED / EXPIRED ================= */
       if (status === "expired" || status === "failed") {
         console.log("❌ Payment expired/failed");
 
         if (pending_upgrade_plan) {
-          // This was an UPGRADE attempt - just clear pending_upgrade_plan
-          // CRITICAL: Keep subscription_status unchanged (user keeps current access)
-          console.log(`🔄 Clearing pending upgrade for ${name}`);
-          console.log(`   ✅ Current plan (${plan}) and status (${subscription_status}) remain unchanged`);
-          
+          // Upgrade attempt failed — keep current plan, just clear pending
+          console.log(`🔄 Clearing pending upgrade for ${name} — keeping current plan (${plan})`);
           await db.query(
-            `UPDATE companies SET pending_upgrade_plan=NULL, updated_at=NOW() WHERE id=?`,
+            `UPDATE companies SET pending_upgrade_plan = NULL, updated_at = NOW() WHERE id = ?`,
             [id]
           );
         } else {
-          // This was INITIAL payment - only mark pending if not currently active
-          if (subscription_status === 'active' || subscription_status === 'trial') {
+          // Initial payment failed — only mark pending if not already active
+          if (subscription_status === "active" || subscription_status === "trial") {
             console.log(`✅ Keeping ${name} active despite failed payment link`);
-            // Don't change status - user still has valid subscription
           } else {
             console.log(`⚠️ Marking subscription as pending for ${name}`);
             await db.query(
-              `UPDATE companies SET subscription_status='pending', updated_at=NOW() WHERE id=?`,
+              `UPDATE companies SET subscription_status = 'pending', updated_at = NOW() WHERE id = ?`,
               [id]
             );
           }
@@ -517,24 +521,25 @@ async function repairBilling() {
   console.log("\n✅ CRON Completed\n");
 }
 
-/* ================= CHECK EXPIRING SUBSCRIPTIONS WITH EMAIL TRACKING ================= */
+/* ================= CHECK EXPIRING & EXPIRED SUBSCRIPTIONS ================= */
 async function checkExpiringSubscriptions() {
   console.log("\n⏰ Checking for expiring subscriptions...");
-  
+
   const now = new Date();
   const threeDaysFromNow = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
   const mysqlThreeDays = threeDaysFromNow.toISOString().slice(0, 19).replace("T", " ");
 
   /* ================= EXPIRING SOON (3 DAYS WARNING) ================= */
+  // FIX: Include enterprise in the expiring check alongside business
   const [expiring] = await db.query(
     `
-      SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at, 
+      SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at,
              c.expiry_warning_sent_at,
              (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) as company_email
       FROM companies c
       WHERE c.subscription_status = 'active'
       AND (
-        (c.plan = 'business' AND c.subscription_ends_at BETWEEN NOW() AND ?)
+        (c.plan IN ('business', 'enterprise') AND c.subscription_ends_at BETWEEN NOW() AND ?)
         OR
         (c.plan = 'trial' AND c.trial_ends_at BETWEEN NOW() AND ?)
       )
@@ -548,39 +553,33 @@ async function checkExpiringSubscriptions() {
       console.log(`⚠️ ${company.name} has no email, skipping notification`);
       continue;
     }
-    
-    const expiresAt = company.plan === 'business' ? company.subscription_ends_at : company.trial_ends_at;
+
+    const expiresAt = company.plan === "trial" ? company.trial_ends_at : company.subscription_ends_at;
     const daysLeft = Math.ceil((new Date(expiresAt) - now) / (1000 * 60 * 60 * 24));
 
-    console.log(`⚠️ ${company.name} expires in ${daysLeft} days - sending warning`);
+    console.log(`⚠️ ${company.name} (${company.plan}) expires in ${daysLeft} days — sending warning`);
 
     try {
       const emailContent = emailTemplates.subscriptionExpiring(company.name, company.plan, expiresAt, daysLeft);
-      
-      console.log(`📧 Preparing expiring warning email for ${company.name}`);
-      console.log(`   To: ${company.company_email}`);
-      console.log(`   Subject: ${emailContent.subject}`);
-      
       await sendEmail({
         to: company.company_email,
         subject: emailContent.subject,
         html: emailContent.html
       });
-      
-      // Mark as sent to prevent duplicate emails
+
       await db.query(
         `UPDATE companies SET expiry_warning_sent_at = NOW(), updated_at = NOW() WHERE id = ?`,
         [company.id]
       );
-      
+
       console.log(`✅ Expiring notification sent to ${company.company_email}`);
     } catch (err) {
       console.error(`❌ Failed to send expiring email for ${company.name}:`, err.message);
-      console.error(`   Error details:`, err);
     }
   }
 
   /* ================= EXPIRED SUBSCRIPTIONS ================= */
+  // FIX: Include enterprise in the expired check
   const [expired] = await db.query(
     `
       SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at,
@@ -589,7 +588,7 @@ async function checkExpiringSubscriptions() {
       FROM companies c
       WHERE c.subscription_status = 'active'
       AND (
-        (c.plan = 'business' AND c.subscription_ends_at < NOW())
+        (c.plan IN ('business', 'enterprise') AND c.subscription_ends_at < NOW())
         OR
         (c.plan = 'trial' AND c.trial_ends_at < NOW())
       )
@@ -598,11 +597,11 @@ async function checkExpiringSubscriptions() {
   );
 
   for (const company of expired) {
-    const expiredAt = company.plan === 'business' ? company.subscription_ends_at : company.trial_ends_at;
+    const expiredAt = company.plan === "trial" ? company.trial_ends_at : company.subscription_ends_at;
 
-    console.log(`🔴 ${company.name} subscription has expired`);
+    console.log(`🔴 ${company.name} (${company.plan}) subscription has expired`);
 
-    // Mark as expired
+    // Mark as expired in DB
     await db.query(
       `UPDATE companies SET subscription_status = 'expired', updated_at = NOW() WHERE id = ?`,
       [company.id]
@@ -611,27 +610,20 @@ async function checkExpiringSubscriptions() {
     if (company.company_email) {
       try {
         const emailContent = emailTemplates.subscriptionExpired(company.name, company.plan, expiredAt);
-        
-        console.log(`📧 Preparing expired email for ${company.name}`);
-        console.log(`   To: ${company.company_email}`);
-        console.log(`   Subject: ${emailContent.subject}`);
-        
         await sendEmail({
           to: company.company_email,
           subject: emailContent.subject,
           html: emailContent.html
         });
-        
-        // Mark email as sent to prevent duplicates
+
         await db.query(
           `UPDATE companies SET expiry_email_sent_at = NOW(), updated_at = NOW() WHERE id = ?`,
           [company.id]
         );
-        
+
         console.log(`✅ Expired notification sent to ${company.company_email}`);
       } catch (err) {
         console.error(`❌ Failed to send expired email for ${company.name}:`, err.message);
-        console.error(`   Error details:`, err);
       }
     } else {
       console.log(`⚠️ ${company.name} has no email, skipping notification`);
