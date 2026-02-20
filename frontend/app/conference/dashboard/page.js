@@ -2,192 +2,192 @@
 
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import {
+  LayoutGrid, QrCode, Home, X, Plus, RefreshCw,
+  Pencil, Trash2, Check, AlertCircle, Info,
+  Users, DoorOpen, CalendarClock, Download, Share2,
+  CheckCircle, Clock, TrendingUp,
+} from "lucide-react";
 import { apiFetch, downloadQRCode, shareURL, fetchPublicBookingInfo } from "../../utils/api";
 import styles from "./style.module.css";
 
-/* ================= DATE FORMATTER ================= */
-const formatNiceDate = (value) => {
-  if (!value) return "-";
-  try {
-    let str = String(value).trim();
-    if (str.includes("T")) str = str.split("T")[0];
-    if (str.includes(" ")) str = str.split(" ")[0];
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOAST SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+let _tid = 0;
 
-    const [y, m, d] = str.split("-");
-    const names = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    return `${names[Number(m) - 1]} ${d}, ${y}`;
-  } catch {
-    return value;
-  }
-};
+function useToast() {
+  const [toasts, setToasts] = useState([]);
 
-/* ================= TIME FORMATTER ================= */
-const formatNiceTime = (value) => {
-  if (!value) return "-";
-  try {
-    let str = String(value).trim();
-    if (str.includes("T")) str = str.split("T")[1];
-    if (str.includes(" ")) str = str.split(" ")[1];
-
-    const [hRaw, m] = str.split(":");
-    let h = parseInt(hRaw, 10);
-    if (isNaN(h)) return "-";
-
-    const suffix = h >= 12 ? "PM" : "AM";
-    h = h % 12 || 12;
-    return `${h}:${m} ${suffix}`;
-  } catch {
-    return "-";
-  }
-};
-
-export default function ConferenceDashboard() {
-  const router = useRouter();
-
-  /* ================= STATE ================= */
-  const [company, setCompany] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [rooms, setRooms] = useState([]);
-  const [allRooms, setAllRooms] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-
-  const [plan, setPlan] = useState(null);
-  const [bookingPlan, setBookingPlan] = useState(null);
-
-  const [sidePanelOpen, setSidePanelOpen] = useState(false);
-  const [qrPanelOpen, setQrPanelOpen] = useState(false);
-  const [editingRoomId, setEditingRoomId] = useState(null);
-  const [editName, setEditName] = useState("");
-  const [editCapacity, setEditCapacity] = useState(0);
-
-  const [showAddRoomModal, setShowAddRoomModal] = useState(false);
-  const [newRoomName, setNewRoomName] = useState("");
-  const [newRoomNumber, setNewRoomNumber] = useState("");
-  const [newRoomCapacity, setNewRoomCapacity] = useState("");
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
-
-  const [filterDay, setFilterDay] = useState("today");
-  
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [roomToDelete, setRoomToDelete] = useState(null);
-
-  // QR Code state
-  const [publicBookingInfo, setPublicBookingInfo] = useState(null);
-  const [loadingQR, setLoadingQR] = useState(false);
-
-  /* ================= HELPERS ================= */
-  const getDate = useCallback((offset) => {
-    const d = new Date();
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().split("T")[0];
+  const addToast = useCallback(({ type = "info", title, message, duration = 4500 }) => {
+    const id = ++_tid;
+    setToasts((p) => [...p, { id, type, title, message, duration, exiting: false }]);
+    setTimeout(() => {
+      setToasts((p) => p.map((t) => (t.id === id ? { ...t, exiting: true } : t)));
+      setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 300);
+    }, duration);
+    return id;
   }, []);
 
-  const dates = useMemo(() => ({
-    today: getDate(0),
-    yesterday: getDate(-1),
-    tomorrow: getDate(1)
-  }), [getDate]);
+  const removeToast = useCallback((id) => {
+    setToasts((p) => p.map((t) => (t.id === id ? { ...t, exiting: true } : t)));
+    setTimeout(() => setToasts((p) => p.filter((t) => t.id !== id)), 300);
+  }, []);
 
+  const toast = {
+    success: (title, msg, opts) => addToast({ type: "success", title, message: msg, ...opts }),
+    error:   (title, msg, opts) => addToast({ type: "error",   title, message: msg, ...opts }),
+    warning: (title, msg, opts) => addToast({ type: "warning", title, message: msg, ...opts }),
+    info:    (title, msg, opts) => addToast({ type: "info",    title, message: msg, ...opts }),
+  };
+
+  return { toasts, toast, removeToast };
+}
+
+const TOAST_ICONS = { success: CheckCircle, error: AlertCircle, warning: AlertCircle, info: Info };
+const TOAST_LABELS = { success: "Success", error: "Error", warning: "Warning", info: "Info" };
+
+function ToastContainer({ toasts, removeToast }) {
+  if (!toasts.length) return null;
+  return (
+    <div className={styles.toastContainer} role="region" aria-live="polite">
+      {toasts.map((t) => {
+        const Icon = TOAST_ICONS[t.type];
+        return (
+          <div key={t.id} className={`${styles.toast}${t.exiting ? " " + styles.exiting : ""}`} data-type={t.type} role="alert">
+            <div className={styles.toastInner}>
+              <div className={styles.toastIconWrap}><Icon size={17} /></div>
+              <div className={styles.toastBody}>
+                <p className={styles.toastTitle}>{t.title || TOAST_LABELS[t.type]}</p>
+                {t.message && <p className={styles.toastMessage}>{t.message}</p>}
+              </div>
+              <button className={styles.toastClose} onClick={() => removeToast(t.id)} aria-label="Dismiss"><X size={13} /></button>
+            </div>
+            <div className={styles.toastProgress}>
+              <div className={styles.toastProgressBar} style={{ animationDuration: `${t.duration}ms` }} />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DATE / TIME HELPERS
+   ═══════════════════════════════════════════════════════════════════════════ */
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function fmtDate(v) {
+  if (!v) return "—";
+  try {
+    const s = String(v).split("T")[0].split(" ")[0];
+    const [y, m, d] = s.split("-");
+    return `${MONTHS[+m - 1]} ${d}, ${y}`;
+  } catch { return v; }
+}
+
+function fmtTime(v) {
+  if (!v) return "—";
+  try {
+    let s = String(v).trim();
+    if (s.includes("T")) s = s.split("T")[1];
+    if (s.includes(" ")) s = s.split(" ")[1];
+    const [hRaw, m] = s.split(":");
+    let h = parseInt(hRaw, 10);
+    if (isNaN(h)) return "—";
+    const sfx = h >= 12 ? "PM" : "AM";
+    h = h % 12 || 12;
+    return `${h}:${m} ${sfx}`;
+  } catch { return "—"; }
+}
+
+function getOffset(n) {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().split("T")[0];
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PROGRESS BAR COLOUR
+   ═══════════════════════════════════════════════════════════════════════════ */
+function barWarn(pct) {
+  if (pct >= 100) return "red";
+  if (pct >= 85) return "orange";
+  return "green";
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONFERENCE DASHBOARD
+   ═══════════════════════════════════════════════════════════════════════════ */
+export default function ConferenceDashboard() {
+  const router = useRouter();
+  const { toasts, toast, removeToast } = useToast();
+
+  /* ── State ── */
+  const [company,   setCompany]   = useState(null);
+  const [stats,     setStats]     = useState(null);
+  const [allRooms,  setAllRooms]  = useState([]);
+  const [bookings,  setBookings]  = useState([]);
+  const [plan,      setPlan]      = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [syncing,   setSyncing]   = useState(false);
+
+  const [filterDay, setFilterDay] = useState("today");
+
+  // Panels
+  const [leftOpen,  setLeftOpen]  = useState(false);
+  const [rightOpen, setRightOpen] = useState(false);
+
+  // Room editing
+  const [editId,   setEditId]   = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editCap,  setEditCap]  = useState("");
+
+  // Modals
+  const [addModal,    setAddModal]    = useState(false);
+  const [deleteModal, setDeleteModal] = useState(null); // room object
+  const [newName,   setNewName]   = useState("");
+  const [newNumber, setNewNumber] = useState("");
+  const [newCap,    setNewCap]    = useState("");
+  const [creating,  setCreating]  = useState(false);
+
+  // QR
+  const [qrInfo,    setQrInfo]    = useState(null);
+  const [loadingQR, setLoadingQR] = useState(false);
+
+  /* ── Date helpers ── */
+  const dates = useMemo(() => ({
+    yesterday: getOffset(-1), today: getOffset(0), tomorrow: getOffset(1),
+  }), []);
   const selectedDate = dates[filterDay];
 
-  /* ================= NOTIFICATION HELPER ================= */
-  const showNotification = (message, type = "info") => {
-    setNotification({ show: true, message, type });
-    setTimeout(() => setNotification({ show: false, message: "", type: "" }), 5000);
-  };
+  /* ── Auth + load ── */
+  useEffect(() => {
+    const token   = localStorage.getItem("token");
+    const stored  = localStorage.getItem("company");
+    if (!token || !stored) { router.replace("/auth/login"); return; }
+    setCompany(JSON.parse(stored));
+    loadDashboard();
+  }, []);
 
-  /* ================= QR CODE FUNCTIONS ================= */
-  const loadPublicBookingInfo = async () => {
-    try {
-      setLoadingQR(true);
-      const response = await fetchPublicBookingInfo();
-      setPublicBookingInfo(response);
-    } catch (err) {
-      console.error("Failed to load QR code:", err);
-      showNotification(err?.message || "Failed to load QR code", "error");
-    } finally {
-      setLoadingQR(false);
-    }
-  };
-
-  const handleDownloadQR = async () => {
-    try {
-      await downloadQRCode(company?.name || "conference");
-      showNotification("QR code downloaded successfully!", "success");
-    } catch (err) {
-      console.error("Download error:", err);
-      showNotification(err?.message || "Failed to download QR code", "error");
-    }
-  };
-
-  const handleShareURL = async () => {
-    const url = publicBookingInfo?.publicUrl || 
-                `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
-    
-    try {
-      const result = await shareURL(url, `${company?.name} - Conference Room Booking`);
-      
-      if (result.success) {
-        if (result.method === "share") {
-          showNotification("Shared successfully!", "success");
-        } else {
-          showNotification("Link copied to clipboard!", "success");
-        }
-      }
-    } catch (err) {
-      console.error("Share error:", err);
-      showNotification(err?.message || "Failed to share link", "error");
-    }
-  };
-
-  const openQRPanel = () => {
-    if (!publicBookingInfo) {
-      loadPublicBookingInfo();
-    }
-    setQrPanelOpen(true);
-  };
-
-  /* ================= API CALLS ================= */
+  /* ── Load dashboard ── */
   const loadDashboard = async () => {
     try {
-      const [statsRes, roomsRes, allRoomsRes, bookingsRes, planRes] = await Promise.all([
+      const [statsRes, allRoomsRes, bookingsRes, planRes] = await Promise.all([
         apiFetch("/api/conference/dashboard"),
-        apiFetch("/api/conference/rooms"),
         apiFetch("/api/conference/rooms/all"),
         apiFetch("/api/conference/bookings"),
         apiFetch("/api/conference/plan-usage"),
       ]);
 
       setStats(statsRes);
-      setRooms(roomsRes || []);
-      
-      const roomsData = Array.isArray(allRoomsRes) ? allRoomsRes : (allRoomsRes?.rooms || []);
-      setAllRooms(roomsData);
-      
+      setAllRooms(Array.isArray(allRoomsRes) ? allRoomsRes : (allRoomsRes?.rooms || []));
       setBookings(bookingsRes || []);
       setPlan(planRes);
-
-      const bookingLimit =
-        planRes?.plan === "TRIAL" ? 100 :
-        planRes?.plan === "BUSINESS" ? 1000 :
-        Infinity;
-
-      setBookingPlan({
-        limit: bookingLimit,
-        used: statsRes.totalBookings || 0,
-        remaining:
-          bookingLimit === Infinity
-            ? null
-            : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
-      });
-
     } catch (err) {
-      console.error("Dashboard load error:", err);
       if (err?.message?.includes("expired") || err?.message?.includes("inactive")) {
-        showNotification(err.message, "error");
+        toast.warning("Plan Issue", err.message);
       } else {
         router.replace("/auth/login");
       }
@@ -196,948 +196,556 @@ export default function ConferenceDashboard() {
     }
   };
 
-  /* ================= LIFECYCLE ================= */
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    const storedCompany = localStorage.getItem("company");
-
-    if (!token || !storedCompany) {
-      router.replace("/auth/login");
-      return;
+  /* ── QR ── */
+  const loadQR = async () => {
+    try {
+      setLoadingQR(true);
+      const res = await fetchPublicBookingInfo();
+      setQrInfo(res);
+    } catch (err) {
+      toast.error("QR Failed", err?.message || "Could not load QR code");
+    } finally {
+      setLoadingQR(false);
     }
+  };
 
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard();
-  }, []);
+  const openQR = () => { if (!qrInfo) loadQR(); setRightOpen(true); };
 
-  /* ================= ACTIONS ================= */
-  const handleSyncRooms = async () => {
+  const handleDownloadQR = async () => {
+    try {
+      await downloadQRCode(company?.name || "conference");
+      toast.success("Downloaded", "QR code saved successfully.");
+    } catch (err) { toast.error("Download Failed", err?.message); }
+  };
+
+  const handleShare = async () => {
+    const url = qrInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company?.slug}`;
+    try {
+      const res = await shareURL(url, `${company?.name} — Conference Booking`);
+      if (res.success) toast.success(res.method === "share" ? "Shared!" : "Copied!", "Link is ready to share.");
+    } catch (err) { toast.error("Share Failed", err?.message); }
+  };
+
+  /* ── Sync ── */
+  const handleSync = async () => {
     try {
       setSyncing(true);
-      await apiFetch("/api/conference/sync-rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      
+      await apiFetch("/api/conference/sync-rooms", { method: "POST", headers: { "Content-Type": "application/json" } });
       await loadDashboard();
-      showNotification("Rooms synchronized successfully!", "success");
-    } catch (err) {
-      console.error("Sync error:", err);
-      showNotification(err?.message || "Failed to sync rooms", "error");
-    } finally {
-      setSyncing(false);
-    }
+      toast.success("Synced", "Room activations updated with current plan.");
+    } catch (err) { toast.error("Sync Failed", err?.message); }
+    finally { setSyncing(false); }
   };
 
-  const startEditRoom = (room) => {
-    if (!room.is_active) {
-      showNotification("This room is locked under your current plan. Please upgrade to edit.", "warning");
-      return;
-    }
-    
-    setEditingRoomId(room.id);
-    setEditName(room.room_name);
-    setEditCapacity(room.capacity || 0);
+  /* ── Edit room ── */
+  const startEdit = (room) => {
+    if (!room.is_active) { toast.warning("Locked", "Upgrade your plan to edit this room."); return; }
+    setEditId(room.id); setEditName(room.room_name); setEditCap(room.capacity ?? "");
   };
+  const cancelEdit = () => { setEditId(null); setEditName(""); setEditCap(""); };
 
-  const cancelEdit = () => {
-    setEditingRoomId(null);
-    setEditName("");
-    setEditCapacity(0);
-  };
-
-  const saveRoomChanges = async (roomId) => {
-    const newName = editName.trim();
-    const original = allRooms.find((r) => r.id === roomId);
-
-    if (!newName) {
-      showNotification("Room name cannot be empty", "error");
-      return;
-    }
-    
-    if (newName === original?.room_name && editCapacity === original?.capacity) {
-      cancelEdit();
-      return;
-    }
-
-    if (!original?.is_active) {
-      showNotification("This room is locked under your current plan. Please upgrade to edit.", "warning");
-      cancelEdit();
-      return;
-    }
-
+  const saveEdit = async (roomId) => {
+    const name = editName.trim();
+    if (!name) { toast.error("Required", "Room name cannot be empty."); return; }
+    const orig = allRooms.find((r) => r.id === roomId);
+    if (name === orig?.room_name && String(editCap) === String(orig?.capacity ?? "")) { cancelEdit(); return; }
     try {
       await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          room_name: newName,
-          capacity: editCapacity || 0
-        }),
+        method: "PATCH", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_name: name, capacity: parseInt(editCap) || 0 }),
       });
-
-      cancelEdit();
-      await loadDashboard();
-      showNotification("Room updated successfully!", "success");
-      
-    } catch (err) {
-      console.error("Update error:", err);
-      showNotification(err?.message || "Failed to update room", "error");
-      cancelEdit();
-    }
+      cancelEdit(); await loadDashboard();
+      toast.success("Updated", "Room details saved successfully.");
+    } catch (err) { toast.error("Update Failed", err?.message); cancelEdit(); }
   };
 
-  const deleteRoom = async () => {
-    if (!roomToDelete) return;
-
+  /* ── Delete room ── */
+  const handleDelete = async () => {
+    if (!deleteModal) return;
     try {
-      await apiFetch(`/api/conference/rooms/${roomToDelete.id}`, {
-        method: "DELETE",
-      });
-
-      await loadDashboard();
-      showNotification("Room deleted successfully!", "success");
-      
-    } catch (err) {
-      console.error("Delete error:", err);
-      showNotification(err?.message || "Failed to delete room", "error");
-    } finally {
-      setShowDeleteConfirm(false);
-      setRoomToDelete(null);
-    }
+      await apiFetch(`/api/conference/rooms/${deleteModal.id}`, { method: "DELETE" });
+      setDeleteModal(null); await loadDashboard();
+      toast.success("Deleted", `"${deleteModal.room_name}" has been removed.`);
+    } catch (err) { toast.error("Delete Failed", err?.message); setDeleteModal(null); }
   };
 
-  const confirmDeleteRoom = (room) => {
-    if (!room?.is_active) {
-      showNotification("Cannot delete locked rooms. Please upgrade your plan first.", "warning");
-      return;
+  /* ── Create room ── */
+  const handleCreate = async () => {
+    const name = newName.trim(), num = newNumber.trim();
+    if (!name || !num) { toast.error("Required", "Room name and number are required."); return; }
+    if (allRooms.some((r) => String(r.room_number) === num)) {
+      toast.error("Duplicate", "Room number already exists."); return;
     }
-    
-    setRoomToDelete(room);
-    setShowDeleteConfirm(true);
-  };
-
-  const createNewRoom = async () => {
-    const name = newRoomName.trim();
-    const number = newRoomNumber.trim();
-    const capacity = parseInt(newRoomCapacity) || 0;
-
-    if (!name || !number) {
-      showNotification("Room name and number are required", "error");
-      return;
-    }
-
-    if (allRooms.some(r => String(r.room_number) === String(number))) {
-      showNotification("Room number already exists. Please use a different number.", "error");
-      return;
-    }
-
-    setIsCreatingRoom(true);
-
     try {
-      const response = await apiFetch("/api/conference/rooms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          room_name: name,
-          room_number: number,
-          capacity: capacity,
-        }),
+      setCreating(true);
+      const res = await apiFetch("/api/conference/rooms", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ room_name: name, room_number: num, capacity: parseInt(newCap) || 0 }),
       });
-
-      setNewRoomName("");
-      setNewRoomNumber("");
-      setNewRoomCapacity("");
-      setShowAddRoomModal(false);
-      
+      setNewName(""); setNewNumber(""); setNewCap(""); setAddModal(false);
       await loadDashboard();
-      
-      // Show appropriate notification based on activation status
-      if (response?.isActive) {
-        showNotification("Room created and activated successfully!", "success");
-      } else {
-        showNotification("Room created successfully! This room is locked. Upgrade your plan to activate it.", "warning");
-      }
-    } catch (err) {
-      console.error("Create room error:", err);
-      showNotification(err?.message || "Failed to create room", "error");
-    } finally {
-      setIsCreatingRoom(false);
-    }
+      if (res?.isActive) toast.success("Room Created", `"${name}" is now active.`);
+      else toast.warning("Room Created (Locked)", "Upgrade your plan to activate this room.");
+    } catch (err) { toast.error("Create Failed", err?.message); }
+    finally { setCreating(false); }
   };
 
-  /* ================= COMPUTED DATA ================= */
-  const filteredBookings = useMemo(() => {
-    return bookings.filter((b) => {
-      const date = b.booking_date?.includes("T")
-        ? b.booking_date.split("T")[0]
-        : b.booking_date;
+  /* ── Book button ── */
+  const handleBook = () => {
+    if (isPlanExpired)      { toast.warning("Plan Expired", "Please renew your plan to book rooms."); return; }
+    if (isLimitExceeded)    { toast.warning("Limit Reached", "Upgrade your plan to continue booking."); return; }
+    if (noActiveRooms)      { toast.info("No Active Rooms", "Add and activate a room first."); return; }
+    router.push("/conference/bookings");
+  };
+
+  /* ── Computed ── */
+  const filteredBookings = useMemo(() =>
+    bookings.filter((b) => {
+      const date = b.booking_date?.split("T")[0] ?? b.booking_date;
       return date === selectedDate && b.status === "BOOKED";
-    });
-  }, [bookings, selectedDate]);
+    }), [bookings, selectedDate]);
 
-  const departmentStats = useMemo(() => {
-    const map = {};
-    filteredBookings.forEach((b) => {
-      const dep = b.department || "Unknown";
-      map[dep] = (map[dep] || 0) + 1;
-    });
-    return Object.entries(map);
+  const deptStats = useMemo(() => {
+    const m = {};
+    filteredBookings.forEach((b) => { const d = b.department || "Unknown"; m[d] = (m[d] || 0) + 1; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
   }, [filteredBookings]);
 
-  const isPlanExpired = useMemo(() => {
-    if (!plan) return false;
-    return plan.plan === "EXPIRED" || plan.status === "EXPIRED";
-  }, [plan]);
+  const bookingLimit   = plan?.plan === "TRIAL" ? 100 : plan?.plan === "BUSINESS" ? 1000 : Infinity;
+  const bookingUsed    = stats?.totalBookings || 0;
+  const bookingRem     = bookingLimit === Infinity ? null : Math.max(0, bookingLimit - bookingUsed);
+  const isPlanExpired  = plan?.plan === "EXPIRED" || plan?.status === "EXPIRED";
+  const isLimitExceeded = bookingLimit !== Infinity && bookingRem !== null && bookingRem <= 0;
+  const noActiveRooms  = plan?.activeRooms === 0;
+  const isBookDisabled = isPlanExpired || isLimitExceeded || noActiveRooms;
 
-  const isBookingLimitExceeded = useMemo(() => {
-    if (!bookingPlan) return false;
-    if (bookingPlan.limit === Infinity) return false;
-    return bookingPlan.remaining !== null && bookingPlan.remaining <= 0;
-  }, [bookingPlan]);
+  const roomLimit    = plan?.limit === "Unlimited" ? Infinity : parseInt(plan?.limit) || Infinity;
+  const roomTotal    = plan?.totalRooms || 0;
+  const roomActive   = plan?.activeRooms || 0;
+  const roomLocked   = plan?.lockedRooms || 0;
+  const canAddRoom   = roomLimit === Infinity || roomTotal < roomLimit;
 
-  const hasNoActiveRooms = useMemo(() => {
-    if (!plan) return false;
-    return plan.activeRooms === 0;
-  }, [plan]);
+  const roomPct    = roomLimit === Infinity ? 100 : Math.min(100, Math.round((roomActive / parseInt(plan?.limit)) * 100));
+  const bookingPct = bookingLimit === Infinity ? 100 : Math.min(100, Math.round((bookingUsed / bookingLimit) * 100));
 
-  const isBookingDisabled = useMemo(() => {
-    return isPlanExpired || isBookingLimitExceeded || hasNoActiveRooms;
-  }, [isPlanExpired, isBookingLimitExceeded, hasNoActiveRooms]);
+  const publicURL = qrInfo?.publicUrl || (company ? `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}` : "");
 
-  const getBookingDisabledMessage = () => {
-    if (isPlanExpired) return "Your plan has expired. Please upgrade to continue booking.";
-    if (isBookingLimitExceeded) return "Booking limit exceeded. Please upgrade your plan to continue booking.";
-    if (hasNoActiveRooms) return "No active rooms available. Please add and activate rooms to start booking.";
-    return "";
-  };
+  const disabledMsg = isPlanExpired ? "Plan expired — renew to unlock booking"
+    : isLimitExceeded ? "Booking limit reached — upgrade to continue"
+    : noActiveRooms ? "No active rooms — add a room to get started" : "";
 
-  const planUsage = useMemo(() => {
-    if (!plan) return null;
-    
-    const limit = plan.limit === "Unlimited" ? Infinity : parseInt(plan.limit);
-    const total = plan.totalRooms || 0;
-    const active = plan.activeRooms || 0;
-    const locked = plan.lockedRooms || 0;
-    const canAddMore = limit === Infinity || total < limit;
-    
-    return {
-      limit,
-      total,
-      active,
-      locked,
-      canAddMore,
-      slotsAvailable: limit === Infinity ? Infinity : Math.max(0, limit - total)
-    };
-  }, [plan]);
+  if (loading) return (
+    <div className={styles.container}>
+      <div className={styles.loadingState} style={{ height: "100vh" }}>
+        <div className={styles.spinner} /><p>Loading dashboard…</p>
+      </div>
+    </div>
+  );
 
-  if (loading) return <div className={styles.container}>Loading dashboard…</div>;
-  if (!company || !stats) return <div className={styles.container}>Unable to load dashboard</div>;
-
-  const publicURL = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
-
-  const roomPercentage =
-    plan?.limit === "Unlimited"
-      ? 100
-      : Math.min(100, Math.round((plan?.activeRooms / parseInt(plan?.limit)) * 100));
-
-  const bookingPercentage =
-    bookingPlan?.limit === Infinity
-      ? 100
-      : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
+  if (!company || !stats) return (
+    <div className={styles.container}>
+      <div className={styles.errorState} style={{ height: "100vh" }}>
+        <AlertCircle size={32} /><p>Unable to load dashboard</p>
+        <button className={styles.retryBtn} onClick={loadDashboard}>Retry</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className={styles.container}>
-      {/* NOTIFICATION POPUP */}
-      {notification.show && (
-        <div className={styles.notificationPopup}>
-          <div className={`${styles.notificationContent} ${styles[`notification${notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}`]}`}>
-            <span className={styles.notificationIcon}>
-              {notification.type === "success" ? "✓" :
-               notification.type === "error" ? "✕" :
-               notification.type === "warning" ? "⚠" : "ℹ"}
-            </span>
-            <span className={styles.notificationMessage}>{notification.message}</span>
-            <button 
-              className={styles.notificationClose}
-              onClick={() => setNotification({ show: false, message: "", type: "" })}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-      )}
 
-      {/* DELETE CONFIRMATION MODAL */}
-      {showDeleteConfirm && roomToDelete && (
-        <div className={styles.modalOverlay} onClick={() => setShowDeleteConfirm(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "450px" }}>
-            <div className={styles.modalHeader}>
-              <h3>Confirm Delete</h3>
-              <button 
-                className={styles.closeBtn}
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                ✖
-              </button>
-            </div>
+      {/* ── TOASTS ── */}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-            <div className={styles.modalBody}>
-              <p style={{ marginBottom: "20px", fontSize: "15px" }}>
-                Are you sure you want to delete <strong>"{roomToDelete.room_name}"</strong>?
-              </p>
-              <p style={{ marginBottom: "25px", color: "#ff1744", fontSize: "14px" }}>
-                ⚠️ This action cannot be undone.
-              </p>
-
-              <div className={styles.modalActions}>
-                <button
-                  className={styles.cancelBtn}
-                  onClick={() => setShowDeleteConfirm(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  className={styles.deleteBtn}
-                  onClick={deleteRoom}
-                  style={{ background: "#ff1744" }}
-                >
-                  Delete Room
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ADD ROOM MODAL */}
-      {showAddRoomModal && (
-        <div className={styles.modalOverlay} onClick={() => setShowAddRoomModal(false)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>Add New Conference Room</h3>
-              <button 
-                className={styles.closeBtn}
-                onClick={() => setShowAddRoomModal(false)}
-              >
-                ✖
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              {planUsage && !planUsage.canAddMore && (
-                <div className={styles.warningBox}>
-                  ⚠️ You've reached your plan limit of {planUsage.limit} rooms. Please upgrade to add more rooms.
-                </div>
-              )}
-
-              {planUsage && planUsage.locked > 0 && planUsage.canAddMore && (
-                <div className={styles.infoBox}>
-                  ℹ️ You have {planUsage.locked} locked room(s). 
-                  This new room will be activated automatically if slots are available.
-                </div>
-              )}
-
-              <div className={styles.formGroup}>
-                <label>Room Name *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Board Room"
-                  value={newRoomName}
-                  onChange={(e) => setNewRoomName(e.target.value)}
-                  maxLength={100}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Room Number *</label>
-                <input
-                  type="text"
-                  placeholder="e.g., 101, A1, CR-01"
-                  value={newRoomNumber}
-                  onChange={(e) => setNewRoomNumber(e.target.value)}
-                  maxLength={20}
-                />
-              </div>
-
-              <div className={styles.formGroup}>
-                <label>Capacity (Optional)</label>
-                <input
-                  type="number"
-                  placeholder="e.g., 10"
-                  value={newRoomCapacity}
-                  onChange={(e) => setNewRoomCapacity(e.target.value)}
-                  min="0"
-                  max="1000"
-                />
-              </div>
-
-              <div className={styles.modalActions}>
-                <button
-                  className={styles.cancelBtn}
-                  onClick={() => setShowAddRoomModal(false)}
-                  disabled={isCreatingRoom}
-                >
-                  Cancel
-                </button>
-                <button
-                  className={styles.primaryBtn}
-                  onClick={createNewRoom}
-                  disabled={isCreatingRoom || !newRoomName.trim() || !newRoomNumber.trim()}
-                >
-                  {isCreatingRoom ? "Creating..." : "Create Room"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* HEADER SECTION */}
+      {/* ── HEADER ── */}
       <header className={styles.header}>
         <div className={styles.leftHeader}>
-          <div className={styles.leftMenuTrigger} onClick={() => setSidePanelOpen(true)}>
-            <span></span><span></span><span></span>
-          </div>
-
-          <div>
-            <h2 className={styles.companyName}>{company.name}</h2>
+          <button className={styles.menuTrigger} onClick={() => setLeftOpen(true)} aria-label="Open room panel">
+            <span className={styles.menuLine}/><span className={styles.menuLine}/><span className={styles.menuLine}/>
+          </button>
+          <div className={styles.headerBrand}>
+            <h1 className={styles.companyName}>{company.name}</h1>
             <span className={styles.subText}>Conference Dashboard</span>
           </div>
         </div>
 
         <div className={styles.headerRight}>
-          <button
-            className={styles.qrBtn}
-            onClick={openQRPanel}
-            title="View QR Code & Share"
-          >
-            📱 QR Code
+          <button className={styles.qrBtn} onClick={openQR}>
+            <QrCode size={15} /> QR Code
           </button>
-
-          <img src={company.logo_url || "/logo.png"} className={styles.logo} alt="Company Logo" />
-          
-          <button
-            className={styles.logoBtn}
-            title="Back to Home"
-            onClick={() => router.push("/home")}
-          >
-            ↩
+          {company.logo_url && (
+            <img src={company.logo_url} alt={`${company.name} logo`} className={styles.logo} />
+          )}
+          <button className={styles.homeBtn} onClick={() => router.push("/home")}>
+            <Home size={14} /> Home
           </button>
         </div>
       </header>
 
-      {/* PUBLIC URL SECTION */}
-      <div className={styles.publicBox}>
-        <div className={styles.publicRow}>
-          <div style={{ flex: 1 }}>
-            <p className={styles.publicTitle}>Public Booking URL</p>
-            <a href={publicURL} target="_blank" className={styles.publicLink}>
-              {publicURL}
+      {/* ── PAGE CONTENT ── */}
+      <div className={styles.pageContent}>
+
+        {/* HERO BANNER */}
+        <div className={styles.heroBanner}>
+          <div className={styles.bannerLeft}>
+            <p className={styles.bannerLabel}>Public Booking URL</p>
+            <a href={publicURL} target="_blank" rel="noreferrer" className={styles.bannerUrl}>
+              {publicURL || "Loading…"}
             </a>
           </div>
-
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <button 
-              className={styles.shareBtn}
-              onClick={handleShareURL}
-              title="Share booking link"
-            >
-              🔗 Share
+          <div className={styles.bannerActions}>
+            <button className={styles.shareBtn} onClick={handleShare}>
+              <Share2 size={14} /> Share
             </button>
-
-            <button 
-              className={styles.bookBtn} 
-              onClick={() => {
-                if (isBookingDisabled) {
-                  showNotification(getBookingDisabledMessage(), "warning");
-                } else {
-                  router.push("/conference/bookings");
-                }
-              }}
-              disabled={isBookingDisabled}
-              style={{
-                opacity: isBookingDisabled ? 0.5 : 1,
-                cursor: isBookingDisabled ? "not-allowed" : "pointer",
-                background: isBookingDisabled ? "#666" : undefined
-              }}
-              title={isBookingDisabled ? getBookingDisabledMessage() : "Book a conference room"}
-            >
-              {isPlanExpired ? "Plan Expired" : 
-               isBookingLimitExceeded ? "Limit Exceeded" :
-               hasNoActiveRooms ? "No Active Rooms" : "Book"}
+            <button className={styles.bookBtn} onClick={handleBook} disabled={isBookDisabled}>
+              {isPlanExpired ? "Plan Expired" : isLimitExceeded ? "Limit Reached" : noActiveRooms ? "No Rooms" : "Book Room"}
             </button>
           </div>
-        </div>
-        
-        {isBookingDisabled && (
-          <div style={{
-            marginTop: "12px",
-            padding: "12px 16px",
-            background: isPlanExpired || isBookingLimitExceeded ? "rgba(255, 152, 0, 0.15)" : "rgba(33, 150, 243, 0.15)",
-            borderLeft: `4px solid ${isPlanExpired || isBookingLimitExceeded ? "#ff9800" : "#2196f3"}`,
-            borderRadius: "6px",
-            display: "flex",
-            alignItems: "center",
-            gap: "10px"
-          }}>
-            <span style={{ fontSize: "20px" }}>
-              {isPlanExpired || isBookingLimitExceeded ? "⚠️" : "ℹ️"}
-            </span>
-            <span style={{ 
-              color: isPlanExpired || isBookingLimitExceeded ? "#ff9800" : "#2196f3", 
-              fontWeight: 600, 
-              fontSize: "14px" 
-            }}>
-              {getBookingDisabledMessage()}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* BOOKING LIMITS / PROGRESS */}
-      {bookingPlan && (
-        <div className={styles.section}>
-          <h3>Conference Booking Usage</h3>
-          {bookingPlan.limit === Infinity ? (
-            <p>Unlimited Bookings Available 🎉</p>
-          ) : (
-            <p>
-              Used <b>{bookingPlan.used}</b> / {bookingPlan.limit} |
-              Remaining: <b style={{ color: isBookingLimitExceeded ? "#ff1744" : "#00c853" }}>
-                {bookingPlan.remaining}
-              </b>
-              {isBookingLimitExceeded && (
-                <span style={{ color: "#ff1744", marginLeft: "10px", fontWeight: 700 }}>
-                  ⚠️ Limit Exceeded
-                </span>
-              )}
-            </p>
-          )}
-          <div className={styles.barOuter}>
-            <div
-              className={styles.barInner}
-              style={{
-                width: bookingPercentage + "%",
-                background:
-                  bookingPercentage >= 100 ? "#ff1744" :
-                  bookingPercentage >= 90 ? "#ff9800" : 
-                  bookingPercentage >= 70 ? "#ffc107" : "#00c853",
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
-
-      {/* SLIDE-OUT PANEL: ROOM MANAGEMENT (LEFT) */}
-      {sidePanelOpen && (
-        <div className={styles.leftPanel}>
-          <div className={styles.leftPanelHeader}>
-            <h3>Plan & Room Settings</h3>
-            <button
-              className={styles.leftCloseBtn}
-              onClick={() => {
-                setSidePanelOpen(false);
-                cancelEdit();
-              }}
-            >
-              Close ✖
-            </button>
-          </div>
-
-          {plan && (
-            <div style={{ padding: "0 20px", marginBottom: 20 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10, gap: 10 }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: 0 }}>Plan: <b>{plan.plan}</b></p>
-                  {plan.limit === "Unlimited" ? (
-                    <p style={{ margin: "5px 0 0 0" }}>Unlimited Rooms 🎉</p>
-                  ) : (
-                    <>
-                      <p style={{ margin: "5px 0 0 0" }}>
-                        Active: <b>{plan.activeRooms}</b> / {plan.limit}
-                      </p>
-                      {plan.lockedRooms > 0 && (
-                        <p style={{ margin: "5px 0 0 0", color: "#ff9800" }}>
-                          🔒 Locked: <b>{plan.lockedRooms}</b>
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                
-                <div style={{ display: "flex", gap: 8, flexDirection: "column" }}>
-                  <button
-                    className={styles.syncBtn}
-                    onClick={handleSyncRooms}
-                    disabled={syncing}
-                    title="Sync room activation with current plan"
-                    style={{ 
-                      padding: "6px 12px",
-                      fontSize: 12,
-                      whiteSpace: "nowrap",
-                      opacity: syncing ? 0.6 : 1
-                    }}
-                  >
-                    {syncing ? "Syncing..." : "🔄 Sync"}
-                  </button>
-                  
-                  <button
-                    className={styles.addRoomBtn}
-                    onClick={() => setShowAddRoomModal(true)}
-                    title={planUsage && !planUsage.canAddMore ? "Plan limit reached" : "Add new room"}
-                    style={{ padding: "6px 12px", fontSize: 12, whiteSpace: "nowrap" }}
-                  >
-                    + Add Room
-                  </button>
-                </div>
-              </div>
-
-              <div className={styles.barOuter}>
-                <div
-                  className={styles.barInner}
-                  style={{
-                    width: roomPercentage + "%",
-                    background: roomPercentage >= 90 ? "#ff1744" : "#00c853",
-                  }}
-                ></div>
-              </div>
-
-              {planUsage && planUsage.slotsAvailable !== Infinity && (
-                <p style={{ margin: "10px 0 0 0", fontSize: 12, color: "#666" }}>
-                  {planUsage.slotsAvailable > 0 
-                    ? `${planUsage.slotsAvailable} slot(s) available for activation`
-                    : "No slots available - upgrade to activate more rooms"}
-                </p>
-              )}
+          {isBookDisabled && (
+            <div className={styles.bannerAlert}>
+              <AlertCircle size={15} />{disabledMsg}
             </div>
           )}
+        </div>
 
-          <div className={styles.leftPanelContent}>
-            <h4 style={{ padding: "0 20px", margin: "10px 0" }}>All Rooms</h4>
-            <ul className={styles.roomList}>
-              {allRooms.map((r) => (
-                <li 
-                  key={r.id}
-                  className={!r.is_active ? styles.lockedRoom : ""}
-                  style={{
-                    opacity: !r.is_active ? 0.6 : 1,
-                    background: !r.is_active ? "rgba(100, 100, 100, 0.15)" : "rgba(255, 255, 255, 0.08)"
-                  }}
-                >
-                  <div style={{ flex: 1, width: "100%" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
-                      <b style={{ color: !r.is_active ? "#999" : "#fff" }}>{r.room_name}</b>
-                      {!r.is_active && (
-                        <span className={styles.lockBadge}>
-                          🔒 Locked
-                        </span>
-                      )}
-                      {r.is_active && (
-                        <span className={styles.activeBadge}>
-                          ✓ Active
-                        </span>
-                      )}
-                    </div>
-                    <small style={{ color: !r.is_active ? "#999" : "#ccc" }}>
-                      #{r.room_number} • Capacity: {r.capacity || "N/A"}
-                    </small>
-
-                    {editingRoomId === r.id && (
-                      <div style={{ marginTop: 12, width: "100%" }}>
-                        <input
-                          style={{ width: "100%", marginBottom: 8 }}
-                          placeholder="Room name"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          autoFocus
-                        />
-                        <input
-                          style={{ width: "100%", marginBottom: 8 }}
-                          type="number"
-                          placeholder="Capacity"
-                          value={editCapacity}
-                          onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)}
-                        />
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button 
-                            onClick={() => saveRoomChanges(r.id)}
-                            style={{ flex: 1 }}
-                          >
-                            Save
-                          </button>
-                          <button 
-                            onClick={cancelEdit}
-                            style={{ flex: 1 }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {editingRoomId !== r.id && (
-                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                      <button
-                        disabled={!r.is_active}
-                        style={{
-                          opacity: !r.is_active ? 0.5 : 1,
-                          cursor: !r.is_active ? "not-allowed" : "pointer",
-                          padding: "8px 16px",
-                          fontSize: 12
-                        }}
-                        onClick={() => startEditRoom(r)}
-                        title={!r.is_active ? "Upgrade plan to edit this room" : "Edit room"}
-                      >
-                        Edit
-                      </button>
-                      
-                      <button
-                        disabled={!r.is_active}
-                        className={styles.deleteBtn}
-                        style={{
-                          opacity: !r.is_active ? 0.5 : 1,
-                          cursor: !r.is_active ? "not-allowed" : "pointer",
-                          padding: "8px 16px",
-                          fontSize: 12
-                        }}
-                        onClick={() => confirmDeleteRoom(r)}
-                        title={!r.is_active ? "Upgrade plan to delete this room" : "Delete room"}
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ))}
-
-              {allRooms.length === 0 && (
-                <li style={{ textAlign: "center", color: "#999", padding: 20 }}>
-                  No rooms yet. Click "Add Room" to create one.
-                </li>
-              )}
-            </ul>
+        {/* STATS */}
+        <div className={styles.statsGrid}>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><DoorOpen size={22} /></div>
+            <div className={styles.statBody}>
+              <p className={styles.statLabel}>Active Rooms</p>
+              <p className={styles.statValue}>{roomActive}</p>
+              {roomLocked > 0 && <span className={styles.statSub}>+{roomLocked} locked</span>}
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><CalendarClock size={22} /></div>
+            <div className={styles.statBody}>
+              <p className={styles.statLabel}>{filterDay.charAt(0).toUpperCase() + filterDay.slice(1)}'s Bookings</p>
+              <p className={styles.statValue}>{filteredBookings.length}</p>
+            </div>
+          </div>
+          <div className={styles.statCard}>
+            <div className={styles.statIcon}><Users size={22} /></div>
+            <div className={styles.statBody}>
+              <p className={styles.statLabel}>Active Departments</p>
+              <p className={styles.statValue}>{deptStats.length}</p>
+            </div>
           </div>
         </div>
-      )}
 
-      {/* SLIDE-OUT PANEL: QR CODE (RIGHT) - HORIZONTAL PANEL */}
-      {qrPanelOpen && (
-        <div className={styles.rightPanel}>
-          {/* Purple Header */}
-          <div className={styles.rightPanelHeader}>
-            <h3>Public Registration</h3>
-            <button
-              className={styles.rightCloseBtn}
-              onClick={() => setQrPanelOpen(false)}
-              title="Close"
-            >
-              ✖
-            </button>
+        {/* USAGE */}
+        <div className={styles.usageCard}>
+          <div className={styles.usageRow}>
+            <div className={styles.usageHeader}>
+              <span className={styles.usageTitle}>Room Usage</span>
+              <span className={styles.usageMeta}>
+                {plan?.limit === "Unlimited" ? "Unlimited" : `${roomActive} / ${plan?.limit} active`}
+                {roomLocked > 0 && <span className={styles.usageMetaWarn}> · {roomLocked} locked</span>}
+              </span>
+            </div>
+            <div className={styles.barOuter}>
+              <div className={styles.barInner} data-warn={barWarn(roomPct)} style={{ width: `${roomPct}%` }} />
+            </div>
           </div>
 
-          <div className={styles.rightPanelContent}>
-            {loadingQR ? (
-              <div className={styles.qrLoading}>
-                <div className={styles.spinner}></div>
-                <p style={{ marginTop: 16, color: "#999" }}>Loading QR Code...</p>
-              </div>
-            ) : publicBookingInfo ? (
-              <>
-                {/* QR Code Display */}
-                <div className={styles.qrCodeContainer}>
-                  <img 
-                    src={publicBookingInfo.qrCode} 
-                    alt="Conference Booking QR Code" 
-                    className={styles.qrCodeImage}
-                  />
-                  <p className={styles.qrDescription} style={{ 
-                    color: "#7a00ff", 
-                    fontWeight: 700, 
-                    fontSize: 18,
-                    marginTop: 16
-                  }}>
-                    Scan to register
-                  </p>
-                </div>
+          <div className={styles.divider} />
 
-                {/* Public URL Section */}
-                <div className={styles.publicUrlInfo}>
-                  <label className={styles.urlLabel}>Public Registration URL</label>
-                  <div className={styles.urlDisplay}>
-                    <code style={{ fontSize: 14 }}>{publicBookingInfo.publicUrl}</code>
-                  </div>
-                  <button
-                    onClick={handleShareURL}
-                    style={{
-                      marginTop: 12,
-                      padding: "12px 20px",
-                      background: "#7a00ff",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      width: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      fontSize: 14,
-                      transition: "all 0.3s ease"
-                    }}
-                    onMouseOver={(e) => e.currentTarget.style.background = "#6200cc"}
-                    onMouseOut={(e) => e.currentTarget.style.background = "#7a00ff"}
-                  >
-                    📋 Copy Link
-                  </button>
-                </div>
-
-                {/* Download Button */}
-                <div className={styles.qrActions}>
-                  <button
-                    className={styles.downloadQrBtn}
-                    onClick={handleDownloadQR}
-                    style={{
-                      background: "linear-gradient(135deg, #ffb703, #ff8c00)",
-                      color: "#000",
-                      fontWeight: 800,
-                      fontSize: 16,
-                      padding: "16px 24px"
-                    }}
-                  >
-                    💾 Download QR Code Image
-                  </button>
-                </div>
-
-                {/* Instructions Section */}
-                <div style={{
-                  background: "linear-gradient(135deg, #f0f0ff, #f8f8ff)",
-                  padding: 24,
-                  borderRadius: 16,
-                  borderLeft: "4px solid #7a00ff",
-                  marginTop: 24
-                }}>
-                  <h4 style={{ 
-                    color: "#7a00ff", 
-                    margin: "0 0 16px 0",
-                    fontSize: 18,
-                    fontWeight: 800
-                  }}>
-                    How to use:
-                  </h4>
-                  <ol style={{ 
-                    margin: 0, 
-                    paddingLeft: 20,
-                    color: "#2d3436",
-                    fontSize: 14,
-                    lineHeight: 1.8
-                  }}>
-                    <li style={{ marginBottom: 10 }}>
-                      <strong>Share QR code or URL with Employees</strong>
-                    </li>
-                    <li style={{ marginBottom: 10 }}>
-                      <strong>Authenticate with OTP</strong>
-                    </li>
-                    <li>
-                      <strong>Go ahead and Book the Conference Room</strong>
-                    </li>
-                  </ol>
-                </div>
-              </>
-            ) : (
-              <div className={styles.qrError}>
-                <p>Failed to load QR code</p>
-                <button onClick={loadPublicBookingInfo}>
-                  ↻ Retry
-                </button>
-              </div>
-            )}
+          <div className={styles.usageRow}>
+            <div className={styles.usageHeader}>
+              <span className={styles.usageTitle}>Booking Usage</span>
+              <span className={styles.usageMeta}>
+                {bookingLimit === Infinity ? "Unlimited" : `${bookingUsed} / ${bookingLimit} used`}
+                {isLimitExceeded && <span className={styles.usageMetaWarn}> · Limit reached</span>}
+              </span>
+            </div>
+            <div className={styles.barOuter}>
+              <div className={styles.barInner} data-warn={barWarn(bookingPct)} style={{ width: `${bookingPct}%` }} />
+            </div>
           </div>
         </div>
-      )}
 
-      {/* BOOKING FILTERS */}
-      <div className={styles.section}>
-        <h3>Bookings View</h3>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {["yesterday", "today", "tomorrow"].map((d) => (
+        {/* FILTER */}
+        <div className={styles.filterRow}>
+          {["yesterday","today","tomorrow"].map((d) => (
             <button
               key={d}
+              className={`${styles.filterTab}${filterDay === d ? " " + styles.active : ""}`}
               onClick={() => setFilterDay(d)}
-              style={{
-                background: filterDay === d ? "#7a00ff" : "#f0f0f0",
-                color: filterDay === d ? "#fff" : "#333",
-                padding: "8px 18px",
-                borderRadius: 30,
-                border: "none",
-                fontWeight: 600,
-                cursor: "pointer"
-              }}
             >
               {d.charAt(0).toUpperCase() + d.slice(1)}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* DASHBOARD KPIs */}
-      <div className={styles.statsGrid}>
-        <div className={styles.statCard}>
-          <span>Active Rooms</span>
-          <b>{plan?.activeRooms || 0}</b>
-          {plan && plan.lockedRooms > 0 && (
-            <small style={{ color: "#ff9800", fontSize: 11 }}>
-              +{plan.lockedRooms} locked
-            </small>
-          )}
-        </div>
-
-        <div className={styles.statCard}>
-          <span>{filterDay.toUpperCase()} Bookings</span>
-          <b>{filteredBookings.length}</b>
-        </div>
-
-        <div className={styles.statCard}>
-          <span>Active Departments</span>
-          <b>{departmentStats.length}</b>
-        </div>
-      </div>
-
-      {/* ANALYTICS: DEPARTMENTS */}
-      <div className={styles.section}>
-        <h3>Department Usage</h3>
-        {departmentStats.length === 0 ? (
-          <p>No activity recorded for this period.</p>
-        ) : (
-          <ul className={styles.roomList}>
-            {departmentStats.map(([dep, count]) => (
-              <li key={dep}>
-                <b>{dep}</b> — {count} bookings
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {/* BOOKINGS LIST */}
-      <div className={styles.section}>
-        <h3>Daily Schedule</h3>
-        {filteredBookings.length === 0 && <p>No bookings scheduled.</p>}
-        {filteredBookings.slice(0, 10).map((b) => (
-          <div key={b.id} className={styles.bookingRow}>
-            <div>
-              <b>{b.room_name}</b> (#{b.room_number})
-              <p style={{ margin: 0, fontSize: 12, color: "#666" }}>{formatNiceDate(b.booking_date)}</p>
-            </div>
-            <div>
-              {formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}
-            </div>
-            <div className={styles.status} style={{ fontWeight: 800, color: "#7a00ff" }}>{b.status}</div>
+        {/* BOOKINGS */}
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>Daily Schedule</h3>
+            <span className={styles.sectionMeta}>{fmtDate(selectedDate)}</span>
           </div>
-        ))}
+          <div className={styles.sectionBody}>
+            {filteredBookings.length === 0 ? (
+              <div className={styles.emptyState}>
+                <CalendarClock size={36} /><p>No bookings scheduled for this day.</p>
+              </div>
+            ) : (
+              <div className={styles.bookingList}>
+                {filteredBookings.slice(0, 12).map((b) => (
+                  <div key={b.id} className={styles.bookingRow}>
+                    <div>
+                      <p className={styles.bookingRoom}>{b.room_name} <span style={{ fontWeight:500, color:"var(--gray-400)", fontSize:"0.72rem" }}>#{b.room_number}</span></p>
+                      <p className={styles.bookingDate}>{fmtDate(b.booking_date)}</p>
+                    </div>
+                    <span className={styles.bookingTime}>{fmtTime(b.start_time)} – {fmtTime(b.end_time)}</span>
+                    <span className={styles.bookingStatus}>{b.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* DEPARTMENTS */}
+        <div className={styles.sectionCard}>
+          <div className={styles.sectionHeader}>
+            <h3 className={styles.sectionTitle}>Department Usage</h3>
+            <span className={styles.sectionMeta}>{deptStats.length} departments</span>
+          </div>
+          <div className={styles.sectionBody}>
+            {deptStats.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Users size={36} /><p>No department activity this period.</p>
+              </div>
+            ) : (
+              <div className={styles.deptList}>
+                {deptStats.map(([dep, count]) => (
+                  <div key={dep} className={styles.deptRow}>
+                    <span className={styles.deptName}>{dep}</span>
+                    <span className={styles.deptCount}>{count} {count === 1 ? "booking" : "bookings"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
       </div>
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          LEFT PANEL — Room Management
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {leftOpen && (
+        <>
+          <div className={styles.overlay} onClick={() => { setLeftOpen(false); cancelEdit(); }} />
+          <aside className={styles.leftPanel} role="dialog" aria-modal="true" aria-label="Room Management">
+            <div className={styles.panelHeader}>
+              <h3>Room Management</h3>
+              <button className={styles.closeBtn} onClick={() => { setLeftOpen(false); cancelEdit(); }} aria-label="Close">
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className={styles.panelBody}>
+              {/* Plan summary */}
+              <div className={styles.planSummary}>
+                <span className={styles.planBadge}>{plan?.plan || "Plan"}</span>
+                <p className={styles.planName}>{plan?.plan || "—"}</p>
+                <p className={styles.planMeta}>
+                  Active: <b>{roomActive}</b>
+                  {roomLimit !== Infinity && <> / {plan?.limit}</>}
+                  {roomLocked > 0 && <> · <span>{roomLocked} locked</span></>}
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className={styles.panelActions}>
+                <button className={`${styles.panelBtn} ${styles.secondary}`} onClick={handleSync} disabled={syncing}>
+                  <RefreshCw size={14} style={{ animation: syncing ? "spin 1s linear infinite" : "none" }} />
+                  {syncing ? "Syncing…" : "Sync Rooms"}
+                </button>
+                <button
+                  className={`${styles.panelBtn} ${styles.primary}`}
+                  onClick={() => setAddModal(true)}
+                  disabled={!canAddRoom}
+                  title={!canAddRoom ? "Plan limit reached" : undefined}
+                >
+                  <Plus size={14} /> Add Room
+                </button>
+              </div>
+
+              {/* Room list */}
+              <h4 style={{ margin: "0.25rem 0 0.25rem", fontSize: "0.78rem", fontWeight: 700, color: "var(--gray-500)", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                All Rooms ({allRooms.length})
+              </h4>
+              <div className={styles.roomList}>
+                {allRooms.length === 0 && (
+                  <div className={styles.emptyState}>
+                    <DoorOpen size={32} /><p>No rooms yet. Click "Add Room" to create one.</p>
+                  </div>
+                )}
+                {allRooms.map((r) => (
+                  <div key={r.id} className={`${styles.roomItem}${!r.is_active ? " " + styles.locked : ""}`}>
+                    <div className={styles.roomTop}>
+                      <span className={styles.roomItemName}>{r.room_name}</span>
+                      <span className={`${styles.badge} ${r.is_active ? styles.active : styles.locked}`}>
+                        {r.is_active ? "Active" : "🔒 Locked"}
+                      </span>
+                    </div>
+                    <p className={styles.roomSub}>#{r.room_number} · Capacity: {r.capacity || "N/A"}</p>
+
+                    {editId === r.id ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                        <input className={styles.editInput} value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Room name" />
+                        <input className={styles.editInput} type="number" value={editCap} onChange={(e) => setEditCap(e.target.value)} placeholder="Capacity" min={0} />
+                        <div className={styles.roomControls}>
+                          <button className={`${styles.iconBtn} ${styles.save}`} onClick={() => saveEdit(r.id)} title="Save"><Check size={14} /></button>
+                          <button className={`${styles.iconBtn} ${styles.cancel}`} onClick={cancelEdit} title="Cancel"><X size={14} /></button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={styles.roomControls}>
+                        <button className={`${styles.iconBtn} ${styles.edit}`} onClick={() => startEdit(r)} disabled={!r.is_active} title="Edit"><Pencil size={13} /></button>
+                        <button
+                          className={`${styles.iconBtn} ${styles.del}`}
+                          onClick={() => { if (!r.is_active) { toast.warning("Locked", "Upgrade to delete locked rooms."); return; } setDeleteModal(r); }}
+                          disabled={!r.is_active} title="Delete"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          RIGHT PANEL — QR Code
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {rightOpen && (
+        <>
+          <div className={styles.overlay} onClick={() => setRightOpen(false)} />
+          <aside className={styles.rightPanel} role="dialog" aria-modal="true" aria-label="QR Code Panel">
+            <div className={styles.panelHeader}>
+              <h3>Public Registration</h3>
+              <button className={styles.closeBtn} onClick={() => setRightOpen(false)} aria-label="Close"><X size={17} /></button>
+            </div>
+
+            <div className={styles.rightPanelBody}>
+              {loadingQR ? (
+                <div className={styles.loadingState}><div className={styles.spinner} /><p>Loading QR code…</p></div>
+              ) : qrInfo ? (
+                <>
+                  <div className={styles.qrWrapper}>
+                    <img src={qrInfo.qrCode} alt="Conference Booking QR Code" className={styles.qrImage} />
+                    <p className={styles.qrCaption}>Scan to register & book</p>
+                  </div>
+
+                  <div className={styles.urlBox}>
+                    <p className={styles.urlBoxLabel}>Public Booking URL</p>
+                    <p className={styles.urlBoxValue}>{qrInfo.publicUrl}</p>
+                  </div>
+
+                  <button className={`${styles.fullBtn} ${styles.purple}`} onClick={handleShare}>
+                    <Share2 size={16} /> Copy Link
+                  </button>
+
+                  <button className={`${styles.fullBtn} ${styles.amber}`} onClick={handleDownloadQR}>
+                    <Download size={16} /> Download QR Code
+                  </button>
+
+                  <div className={styles.instructionBox}>
+                    <h4>How it works</h4>
+                    <ol>
+                      <li>Share the QR code or URL with your employees</li>
+                      <li>They authenticate using OTP</li>
+                      <li>They select and book an available conference room</li>
+                    </ol>
+                  </div>
+                </>
+              ) : (
+                <div className={styles.errorState}>
+                  <AlertCircle size={28} /><p>Failed to load QR code</p>
+                  <button className={styles.retryBtn} onClick={loadQR}>Retry</button>
+                </div>
+              )}
+            </div>
+          </aside>
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          MODAL — Add Room
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {addModal && (
+        <div className={styles.modalOverlay} onClick={() => setAddModal(false)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Add New Room</h3>
+              <button className={styles.closeBtn} onClick={() => setAddModal(false)}><X size={17} /></button>
+            </div>
+            <div className={styles.modalBody}>
+              {!canAddRoom && (
+                <div className={`${styles.alertInModal} ${styles.warn}`}>
+                  <AlertCircle size={15} /> You've reached your plan limit of {plan?.limit} rooms. Upgrade to add more.
+                </div>
+              )}
+              {roomLocked > 0 && canAddRoom && (
+                <div className={`${styles.alertInModal} ${styles.info}`}>
+                  <Info size={15} /> You have {roomLocked} locked room(s). This room will activate if a slot is available.
+                </div>
+              )}
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Room Name *</label>
+                <input className={styles.formInput} placeholder="e.g. Board Room" value={newName} onChange={(e) => setNewName(e.target.value)} maxLength={100} />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Room Number *</label>
+                <input className={styles.formInput} placeholder="e.g. 101, A1, CR-01" value={newNumber} onChange={(e) => setNewNumber(e.target.value)} maxLength={20} />
+              </div>
+              <div className={styles.formGroup}>
+                <label className={styles.formLabel}>Capacity (optional)</label>
+                <input className={styles.formInput} type="number" placeholder="e.g. 10" value={newCap} onChange={(e) => setNewCap(e.target.value)} min={0} max={1000} />
+              </div>
+              <div className={styles.modalActions}>
+                <button className={styles.btnCancel} onClick={() => setAddModal(false)} disabled={creating}>Cancel</button>
+                <button className={styles.btnPrimary} onClick={handleCreate} disabled={creating || !newName.trim() || !newNumber.trim()}>
+                  {creating ? "Creating…" : "Create Room"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════
+          MODAL — Delete Confirm
+         ═══════════════════════════════════════════════════════════════════════ */}
+      {deleteModal && (
+        <div className={styles.modalOverlay} onClick={() => setDeleteModal(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className={styles.modalHeader}>
+              <h3>Delete Room</h3>
+              <button className={styles.closeBtn} onClick={() => setDeleteModal(null)}><X size={17} /></button>
+            </div>
+            <div className={styles.modalBody}>
+              <p className={styles.deleteWarning}>
+                Are you sure you want to delete <strong>"{deleteModal.room_name}"</strong>?<br /><br />
+                This action cannot be undone. All associated bookings may be affected.
+              </p>
+              <div className={styles.modalActions}>
+                <button className={styles.btnCancel} onClick={() => setDeleteModal(null)}>Cancel</button>
+                <button className={styles.btnDanger} onClick={handleDelete}>Delete Room</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
