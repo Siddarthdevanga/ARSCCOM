@@ -26,24 +26,29 @@ const formatISTTime = (value) => {
   }
 };
 
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good Morning";
+  if (hour < 17) return "Good Afternoon";
+  return "Good Evening";
+};
+
 export default function VisitorDashboard() {
   const router = useRouter();
 
-  const [company, setCompany] = useState(null);
-  const [stats, setStats] = useState({ today: 0, inside: 0, out: 0 });
-  const [activeVisitors, setActiveVisitors] = useState([]);
+  const [company, setCompany]                     = useState(null);
+  const [stats, setStats]                         = useState({ today: 0, inside: 0, out: 0 });
+  const [activeVisitors, setActiveVisitors]       = useState([]);
   const [checkedOutVisitors, setCheckedOutVisitors] = useState([]);
-  const [checkingOut, setCheckingOut] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [plan, setPlan] = useState(null);
+  const [checkingOut, setCheckingOut]             = useState(null);
+  const [loading, setLoading]                     = useState(true);
+  const [plan, setPlan]                           = useState(null);
 
-  /* ================= SLIDING PANEL STATE ================= */
-  const [panelOpen, setPanelOpen] = useState(false);
-  const [publicUrl, setPublicUrl] = useState("");
-  const [qrCodeImage, setQrCodeImage] = useState("");
-  const [loadingQR, setLoadingQR] = useState(false);
+  const [panelOpen, setPanelOpen]       = useState(false);
+  const [publicUrl, setPublicUrl]       = useState("");
+  const [qrCodeImage, setQrCodeImage]   = useState("");
+  const [loadingQR, setLoadingQR]       = useState(false);
 
-  /* ================= TOAST STATE ================= */
   const [toast, setToast] = useState({ show: false, message: "", type: "success" });
 
   const showToast = (message, type = "success") => {
@@ -149,14 +154,14 @@ export default function VisitorDashboard() {
         }
         showToast(data.message || "Failed to checkout visitor", "error");
       }
-    } catch (err) {
+    } catch {
       showToast("✗ Network error during checkout", "error");
     } finally {
       setCheckingOut(null);
     }
   };
 
-  /* ================= DOWNLOAD IMAGE ================= */
+  /* ================= DOWNLOAD QR IMAGE ================= */
   const downloadImage = async () => {
     if (!qrCodeImage || !company) return;
     try {
@@ -170,8 +175,8 @@ export default function VisitorDashboard() {
       ctx.fillRect(0, 0, 800, 1000);
 
       const gradient = ctx.createLinearGradient(0, 0, 800, 120);
-      gradient.addColorStop(0, "#3c007a");
-      gradient.addColorStop(1, "#6200d6");
+      gradient.addColorStop(0, "#4a00b4");
+      gradient.addColorStop(1, "#7a00ff");
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, 800, 120);
 
@@ -200,7 +205,7 @@ export default function VisitorDashboard() {
         } catch {}
       }
 
-      ctx.fillStyle = "#3c007a";
+      ctx.fillStyle = "#1a0038";
       ctx.font = "bold 28px Arial";
       ctx.textAlign = "left";
       ctx.fillText("Visitor Registration", 50, 180);
@@ -218,19 +223,20 @@ export default function VisitorDashboard() {
       });
 
       ctx.font = "16px Arial";
-      ctx.fillStyle = "#3c007a";
+      ctx.fillStyle = "#1a0038";
       ctx.fillText("Instructions for Visitors:", 50, 650);
       ctx.font = "14px Arial";
       ctx.fillStyle = "#666666";
-      ["1. Scan the QR code with your phone camera",
-       "2. Or visit the URL above in your browser",
-       "3. Enter your email to receive verification code",
-       "4. Complete the registration form",
-       "5. Capture your photo",
-       "6. Receive your digital visitor pass via email"
+      [
+        "1. Scan the QR code with your phone camera",
+        "2. Or visit the URL above in your browser",
+        "3. Enter your email to receive verification code",
+        "4. Complete the registration form",
+        "5. Capture your photo",
+        "6. Receive your digital visitor pass via email",
       ].forEach((line, i) => ctx.fillText(line, 70, 685 + i * 30));
 
-      ctx.fillStyle = "#f8f4ff";
+      ctx.fillStyle = "#f8f5ff";
       ctx.fillRect(0, 900, 800, 100);
       ctx.fillStyle = "#6200d6";
       ctx.font = "bold 20px Arial";
@@ -249,7 +255,7 @@ export default function VisitorDashboard() {
         URL.revokeObjectURL(url);
         showToast("✓ QR code downloaded!", "success");
       });
-    } catch (err) {
+    } catch {
       showToast("✗ Failed to generate image", "error");
     }
   };
@@ -282,7 +288,7 @@ export default function VisitorDashboard() {
   }, [plan]);
 
   const planBarColor =
-    planPercentage >= 90 ? "#d62000" :
+    planPercentage >= 90 ? "#cc1100" :
     planPercentage >= 70 ? "#f0a500" :
     "#00b894";
 
@@ -298,14 +304,14 @@ export default function VisitorDashboard() {
   return (
     <div className={styles.container}>
 
-      {/* ================= TOAST ================= */}
+      {/* ===== TOAST ===== */}
       {toast.show && (
         <div className={`${styles.toast} ${styles[`toast${toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}`]}`}>
           {toast.message}
         </div>
       )}
 
-      {/* ================= SLIDING PANEL ================= */}
+      {/* ===== SLIDING PANEL ===== */}
       <div className={`${styles.slidingPanel} ${panelOpen ? styles.panelOpen : ""}`}>
         <div className={styles.panelHeader}>
           <h3>Public Registration</h3>
@@ -355,19 +361,23 @@ export default function VisitorDashboard() {
         </div>
       </div>
 
-      {/* ================= PANEL TOGGLE ================= */}
+      {/* ===== PANEL TOGGLE TAB ===== */}
       {!panelOpen && (
-        <button className={styles.panelToggleBtn} onClick={() => setPanelOpen(true)} title="Show Public Registration">
+        <button
+          className={styles.panelToggleBtn}
+          onClick={() => setPanelOpen(true)}
+          title="Show Public Registration"
+        >
           📱 QR Code
         </button>
       )}
 
-      {/* ================= OVERLAY ================= */}
+      {/* ===== OVERLAY ===== */}
       {panelOpen && (
         <div className={styles.panelOverlay} onClick={() => setPanelOpen(false)} />
       )}
 
-      {/* ================= HEADER ================= */}
+      {/* ===== HEADER (white navbar like home page) ===== */}
       <header className={styles.header}>
         <div className={styles.logoText}>{company.name}</div>
         <div className={styles.rightHeader}>
@@ -376,16 +386,46 @@ export default function VisitorDashboard() {
             alt="Company Logo"
             className={styles.companyLogo}
           />
-          <button className={styles.backBtn} onClick={() => router.push("/home")}>← Back</button>
+          <button className={styles.backBtn} onClick={() => router.push("/home")}>
+            ← Back
+          </button>
         </div>
       </header>
 
-      {/* ================= PAGE BODY ================= */}
-      <main className={styles.pageBody}>
+      {/* ===== HERO (purple gradient like home page) ===== */}
+      <section className={styles.hero}>
+        <div className={styles.heroGreeting}>{getGreeting()}</div>
+        <h1 className={styles.heroTitle}>
+          Visitor <span>Dashboard</span>
+        </h1>
+        <p className={styles.heroSub}>Monitor check-ins and manage visitors in real time</p>
 
-        {/* TITLE ROW */}
-        <div className={styles.titleRow}>
-          <h1 className={styles.pageTitle}>Visitor Dashboard</h1>
+        <div className={styles.heroStats}>
+          <div className={styles.heroStatCard}>
+            <div className={styles.heroStatLabel}>Visitors Today</div>
+            <div className={styles.heroStatValue}>{stats.today}</div>
+          </div>
+          <div className={styles.heroStatCard}>
+            <div className={styles.heroStatLabel}>Currently Inside</div>
+            <div className={styles.heroStatValue}>{stats.inside}</div>
+          </div>
+          <div className={styles.heroStatCard}>
+            <div className={styles.heroStatLabel}>Checked Out</div>
+            <div className={styles.heroStatValue}>{stats.out}</div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== ACTION BAR ===== */}
+      <div className={styles.actionBar}>
+        <h2 className={styles.pageTitle}>Visitor Log</h2>
+        <div className={styles.actionButtons}>
+          <button
+            className={styles.qrBtn}
+            onClick={() => setPanelOpen(true)}
+          >
+            📱 QR Code
+          </button>
           <button
             className={styles.newBtn}
             disabled={limitReached}
@@ -394,60 +434,54 @@ export default function VisitorDashboard() {
             + New Visitor
           </button>
         </div>
+      </div>
 
-        {/* UPGRADE MESSAGE */}
-        {limitReached && (
-          <div className={styles.upgradeMsg}>
-            Trial limit reached. Please upgrade your plan to register more visitors.
-          </div>
-        )}
+      {/* ===== UPGRADE MESSAGE ===== */}
+      {limitReached && (
+        <div className={styles.upgradeMsg}>
+          Trial limit reached. Please upgrade your plan to register more visitors.
+        </div>
+      )}
 
-        {/* PLAN BAR */}
-        {isTrial && (
-          <section className={styles.planBarWrapper}>
-            <div className={styles.planHeader}>
-              <span className={styles.planName}>Trial Plan</span>
-              <span className={styles.planRemaining}>{plan.remaining} Remaining</span>
-            </div>
-            <div className={styles.planBarBg}>
-              <div
-                className={styles.planBarFill}
-                style={{ width: `${planPercentage}%`, background: planBarColor }}
-              />
-            </div>
-            <div className={styles.planFooter}>
-              <span>{plan.used} / {plan.limit} Used</span>
-              {plan.trialEndsAt && (
-                <span>Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}</span>
-              )}
-            </div>
-          </section>
-        )}
+      {/* ===== PLAN BAR ===== */}
+      {isTrial && (
+        <div className={styles.planBarWrapper}>
+          <div className={styles.planHeader}>
+            <span className={styles.planName}>Trial Plan</span>
+            <span>{plan.remaining} visitors remaining</span>
+          </div>
+          <div className={styles.planBarBg}>
+            <div
+              className={styles.planBarFill}
+              style={{ width: `${planPercentage}%`, background: planBarColor }}
+            />
+          </div>
+          <div className={styles.planFooter}>
+            <span>{plan.used} / {plan.limit} used</span>
+            {plan.trialEndsAt && (
+              <span>Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}</span>
+            )}
+          </div>
+        </div>
+      )}
 
-        {/* KPI CARDS */}
-        <section className={styles.topStats}>
-          <div className={styles.bigCard}>
-            <h4>Visitors Today</h4>
-            <p>{stats.today}</p>
-          </div>
-          <div className={styles.bigCard}>
-            <h4>Currently Inside</h4>
-            <p>{stats.inside}</p>
-          </div>
-          <div className={styles.bigCard}>
-            <h4>Checked Out Today</h4>
-            <p>{stats.out}</p>
-          </div>
-        </section>
-
-        {/* TABLES */}
-        <section className={styles.tablesRow}>
+      {/* ===== MAIN CONTENT ===== */}
+      <main className={styles.mainContent}>
+        <div className={styles.tablesRow}>
 
           {/* ACTIVE VISITORS */}
           <div className={styles.tableCard}>
-            <h3>Currently Inside ({activeVisitors.length})</h3>
+            <div className={styles.cardHeader}>
+              <span className={styles.cardDot} />
+              <h3 className={styles.cardTitle}>Currently Inside</h3>
+              <span className={styles.cardCount}>{activeVisitors.length}</span>
+            </div>
+
             {activeVisitors.length === 0 ? (
-              <div className={styles.emptyState}>No visitors currently inside</div>
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>👥</span>
+                No visitors currently inside
+              </div>
             ) : (
               <div className={styles.tableScroll}>
                 <table className={styles.table}>
@@ -463,7 +497,7 @@ export default function VisitorDashboard() {
                   <tbody>
                     {activeVisitors.map((v) => (
                       <tr key={v.visitor_code || v.id}>
-                        <td>{v.visitor_code}</td>
+                        <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
                         <td>{v.name}</td>
                         <td>{v.phone}</td>
                         <td>{formatISTTime(v.check_in || v.checkIn)}</td>
@@ -486,9 +520,17 @@ export default function VisitorDashboard() {
 
           {/* CHECKED OUT VISITORS */}
           <div className={styles.tableCard}>
-            <h3>Checked Out Today ({checkedOutVisitors.length})</h3>
+            <div className={styles.cardHeader}>
+              <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
+              <h3 className={styles.cardTitle}>Checked Out Today</h3>
+              <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{checkedOutVisitors.length}</span>
+            </div>
+
             {checkedOutVisitors.length === 0 ? (
-              <div className={styles.emptyState}>No visitors checked out today</div>
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>✓</span>
+                No checkouts yet today
+              </div>
             ) : (
               <div className={styles.tableScroll}>
                 <table className={styles.table}>
@@ -503,7 +545,7 @@ export default function VisitorDashboard() {
                   <tbody>
                     {checkedOutVisitors.map((v) => (
                       <tr key={v.visitor_code || v.id}>
-                        <td>{v.visitor_code}</td>
+                        <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
                         <td>{v.name}</td>
                         <td>{v.phone}</td>
                         <td>{formatISTTime(v.check_out || v.checkOut)}</td>
@@ -515,16 +557,19 @@ export default function VisitorDashboard() {
             )}
           </div>
 
-        </section>
+        </div>
 
         {/* DEBUG (dev only) */}
         {process.env.NODE_ENV === "development" && (
-          <div style={{ background: "#f8f4ff", padding: "10px", margin: "16px 0", fontSize: "12px", borderRadius: "8px", border: "1px solid #e8d8ff", color: "#555" }}>
+          <div style={{
+            background: "#f8f5ff", padding: "10px", fontSize: "12px",
+            borderRadius: "8px", border: "1px solid #ede8f8", color: "#888"
+          }}>
             <strong>🔧 Debug:</strong> Active: {activeVisitors.length} | Out: {checkedOutVisitors.length} | Stats: {JSON.stringify(stats)}
           </div>
         )}
-
       </main>
+
     </div>
   );
 }
