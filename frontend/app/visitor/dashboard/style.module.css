@@ -1,12 +1,12 @@
 /* ======================================================
    PROMEET VISITOR DASHBOARD — REFINED
-   3-dot nav (40% screen), lite purple cards,
-   hidden scrollbar, no Visitor Log bar
+   3-dot nav LEFT side (40%), QR only, no greeting,
+   lite purple cards, all scrollbars hidden
 ====================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
-/* ================= GLOBAL ================= */
+/* ================= GLOBAL SCROLLBAR KILL ================= */
 :global(html),
 :global(body) {
   height: 100%;
@@ -18,6 +18,11 @@
 }
 
 :global(body::-webkit-scrollbar) { display: none; }
+:global(*::-webkit-scrollbar)    { display: none; }
+:global(*) {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
 
 /* ================= ROOT CONTAINER ================= */
 .container {
@@ -102,7 +107,7 @@
 .headerLeft {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .logoText {
@@ -166,7 +171,7 @@
   color: #fff;
 }
 
-/* ================= 3-DOT HAMBURGER BUTTON ================= */
+/* ================= 3-DOT HAMBURGER (LEFT side) ================= */
 .hamburgerBtn {
   background: none;
   border: none;
@@ -179,7 +184,6 @@
   padding: 8px;
   border-radius: 10px;
   transition: background 0.2s;
-  margin-left: 4px;
 }
 
 .hamburgerBtn:hover { background: #f3f0fb; }
@@ -208,25 +212,25 @@
   to   { opacity: 1; }
 }
 
-/* ================= NAV PANEL (40% screen, slides from right) ================= */
+/* ================= NAV PANEL (LEFT, 40% screen, QR only) ================= */
 .navPanel {
   position: fixed;
   top: 0;
-  right: -42%;
+  left: -42%;
   width: 40%;
   min-width: 300px;
   max-width: 480px;
   height: 100vh;
   background: #fff;
   z-index: 950;
-  transition: right 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: -8px 0 40px rgba(98, 0, 214, 0.15);
+  transition: left 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 8px 0 40px rgba(98, 0, 214, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
-.navPanelOpen { right: 0; }
+.navPanelOpen { left: 0; }
 
 .navPanelHeader {
   background: linear-gradient(135deg, #4a00b4, #7a00ff);
@@ -268,98 +272,16 @@
 .navPanelBody {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding: 16px 20px;
+  padding: 20px 22px;
   -webkit-overflow-scrolling: touch;
 }
 
 .navPanelBody::-webkit-scrollbar { display: none; }
 
-/* Nav menu items */
-.navMenu {
-  list-style: none;
-  margin: 0 0 8px;
-  padding: 0;
-}
-
-.navMenu li {
-  border-bottom: 1px solid #f3f0fb;
-}
-
-.navMenu li:last-child { border-bottom: none; }
-
-.navMenuItem {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 15px 10px;
-  width: 100%;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-family: 'Nunito', sans-serif;
-  font-weight: 700;
-  font-size: 0.92rem;
-  color: #1a0038;
-  border-radius: 10px;
-  transition: background 0.15s;
-  text-align: left;
-}
-
-.navMenuItem:hover { background: #f8f5ff; }
-
-.navIcon {
-  width: 38px;
-  height: 38px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.1rem;
-  flex-shrink: 0;
-}
-
-.navIconQr       { background: #f0e6ff; }
-.navIconHome     { background: #fff0d6; }
-.navIconSettings { background: #e8fff5; }
-
-.navChevron {
-  margin-left: auto;
-  font-size: 1.4rem;
-  color: #c0b8d8;
-  transition: transform 0.25s;
-  line-height: 1;
-}
-
-.navChevronOpen { transform: rotate(90deg); color: #6200d6; }
-
-.navDivider {
-  height: 1px;
-  background: #ede8f8;
-  margin: 8px 0 16px;
-}
-
-.navSectionLabel {
-  font-size: 0.68rem;
-  font-weight: 800;
-  color: #9980c8;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  margin-bottom: 12px;
-  padding: 0 8px;
-}
-
-/* QR section inside nav */
-.navQRSection {
-  animation: fadeSlideIn 0.3s ease;
-}
-
-@keyframes fadeSlideIn {
-  from { opacity: 0; transform: translateY(-8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
+/* QR loading */
 .navQRLoading {
   display: flex;
   flex-direction: column;
@@ -387,6 +309,7 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* QR card */
 .qrSection {
   text-align: center;
   margin-bottom: 1.5rem;
@@ -414,6 +337,7 @@
   text-transform: uppercase;
 }
 
+/* URL section */
 .urlSection { margin-bottom: 1.25rem; }
 
 .urlSection label {
@@ -473,6 +397,7 @@
 
 .downloadPdfBtn:hover { background: #d68f00; transform: translateY(-2px); }
 
+/* Instructions */
 .navInstructions {
   background: #f8f5ff;
   border-radius: 14px;
@@ -499,10 +424,10 @@
 
 .navInstructions li { margin-bottom: 0.2rem; }
 
-/* ================= HERO ================= */
+/* ================= HERO (no greeting) ================= */
 .hero {
   background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
-  padding: 40px 36px 48px;
+  padding: 36px 36px 48px;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -532,30 +457,6 @@
   pointer-events: none;
 }
 
-.heroGreeting {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  padding: 6px 16px;
-  border-radius: 50px;
-  margin-bottom: 14px;
-}
-
-.heroGreeting::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f0a500;
-  flex-shrink: 0;
-}
-
 .heroTitle {
   font-size: 2.4rem;
   font-weight: 900;
@@ -570,7 +471,7 @@
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.95rem;
   font-weight: 600;
-  margin: 0 0 30px;
+  margin: 0 0 28px;
 }
 
 /* Hero KPI row */
@@ -765,7 +666,7 @@
   opacity: 0.45;
 }
 
-/* Table scroll */
+/* Table scroll (hidden scrollbar) */
 .tableScroll {
   flex: 1;
   overflow-x: auto;
@@ -845,7 +746,7 @@
 }
 
 @media (max-width: 900px) {
-  .hero { padding: 32px 28px 40px; }
+  .hero { padding: 28px 28px 40px; }
   .upgradeMsg { margin: 12px 28px 0; }
   .planBarWrapper { margin: 12px 28px 0; }
   .mainContent { padding: 20px 28px 40px; }
@@ -858,7 +759,7 @@
   .newBtn { padding: 7px 14px; font-size: 12px; }
   .backBtn { padding: 7px 14px; font-size: 12px; }
 
-  .hero { padding: 28px 20px 36px; }
+  .hero { padding: 24px 20px 32px; }
   .heroTitle { font-size: 1.6rem; }
   .heroStats { grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .heroStatCard { padding: 14px 12px; border-radius: 14px; }
@@ -873,8 +774,8 @@
   .table th { font-size: 9px; }
   .table td { font-size: 12px; }
 
-  /* Nav panel goes full width on mobile */
-  .navPanel { width: 85%; min-width: unset; }
+  /* Nav panel full width on mobile */
+  .navPanel { width: 85%; min-width: unset; left: -90%; }
 
   .toast { top: 14px; right: 14px; left: 14px; min-width: auto; }
 }
