@@ -899,13 +899,3 @@
 
   .pageTitle { font-size: 1.4rem; }
 }
-
-/* ================= UTILITY — hidden scrollbars everywhere ================= */
-* {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-*::-webkit-scrollbar {
-  display: none;
-}
