@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -35,16 +35,19 @@ const getGreeting = () => {
 
 export default function VisitorDashboard() {
   const router = useRouter();
+  const scrollBodyRef = useRef(null);
 
-  const [company, setCompany]                     = useState(null);
-  const [stats, setStats]                         = useState({ today: 0, inside: 0, out: 0 });
-  const [activeVisitors, setActiveVisitors]       = useState([]);
+  const [company, setCompany]                       = useState(null);
+  const [stats, setStats]                           = useState({ today: 0, inside: 0, out: 0 });
+  const [activeVisitors, setActiveVisitors]         = useState([]);
   const [checkedOutVisitors, setCheckedOutVisitors] = useState([]);
-  const [checkingOut, setCheckingOut]             = useState(null);
-  const [loading, setLoading]                     = useState(true);
-  const [plan, setPlan]                           = useState(null);
+  const [checkingOut, setCheckingOut]               = useState(null);
+  const [loading, setLoading]                       = useState(true);
+  const [plan, setPlan]                             = useState(null);
 
-  const [panelOpen, setPanelOpen]       = useState(false);
+  /* Nav panel state (replaces old sliding panel + action bar) */
+  const [navOpen, setNavOpen]           = useState(false);
+  const [showQRInNav, setShowQRInNav]   = useState(false);
   const [publicUrl, setPublicUrl]       = useState("");
   const [qrCodeImage, setQrCodeImage]   = useState("");
   const [loadingQR, setLoadingQR]       = useState(false);
@@ -139,7 +142,7 @@ export default function VisitorDashboard() {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/checkout`,
         {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         }
       );
       const data = await res.json();
@@ -202,7 +205,7 @@ export default function VisitorDashboard() {
             logoImg.onerror = () => resolve();
             setTimeout(resolve, 5000);
           });
-        } catch {}
+        } catch { /* ignore logo error */ }
       }
 
       ctx.fillStyle = "#1a0038";
@@ -237,7 +240,7 @@ export default function VisitorDashboard() {
       ].forEach((line, i) => ctx.fillText(line, 70, 685 + i * 30));
 
       ctx.fillStyle = "#f8f5ff";
-      ctx.fillRect(0, 900, 800, 100);
+      ctx.fillRect(0, 0, 800, 100);
       ctx.fillStyle = "#6200d6";
       ctx.font = "bold 20px Arial";
       ctx.textAlign = "center";
@@ -278,6 +281,11 @@ export default function VisitorDashboard() {
     router.push("/visitor/primary_details");
   };
 
+  /* ================= NAV HELPERS ================= */
+  const openNav = () => setNavOpen(true);
+  const closeNav = () => { setNavOpen(false); setShowQRInNav(false); };
+  const toggleQRInNav = () => setShowQRInNav((prev) => !prev);
+
   /* ================= PLAN HELPERS ================= */
   const isTrial = plan?.plan === "TRIAL";
   const limitReached = isTrial && plan?.remaining === 0;
@@ -311,121 +319,104 @@ export default function VisitorDashboard() {
         </div>
       )}
 
-      {/* ===== SLIDING PANEL ===== */}
-      <div className={`${styles.slidingPanel} ${panelOpen ? styles.panelOpen : ""}`}>
-        <div className={styles.panelHeader}>
-          <h3>Public Registration</h3>
-          <button className={styles.panelCloseBtn} onClick={() => setPanelOpen(false)}>✕</button>
+      {/* ===== NAV OVERLAY ===== */}
+      {navOpen && (
+        <div className={styles.navOverlay} onClick={closeNav} />
+      )}
+
+      {/* ===== 3-DOT NAV PANEL (40% width, slides from right) ===== */}
+      <div className={`${styles.navPanel} ${navOpen ? styles.navPanelOpen : ""}`}>
+        <div className={styles.navPanelHeader}>
+          <h3>Menu</h3>
+          <button className={styles.navCloseBtn} onClick={closeNav}>✕</button>
         </div>
 
-        <div className={styles.panelContent}>
-          {loadingQR ? (
-            <div className={styles.panelLoading}>
-              <div className={styles.spinner} />
-              <p>Loading QR Code…</p>
-            </div>
-          ) : (
-            <>
-              {qrCodeImage && (
-                <div className={styles.qrSection}>
-                  <img src={qrCodeImage} alt="QR Code" className={styles.qrImage} />
-                  <p className={styles.qrHint}>Scan to register</p>
-                </div>
-              )}
-
-              {publicUrl && (
-                <div className={styles.urlSection}>
-                  <label>Public Registration URL</label>
-                  <div className={styles.urlBox}>
-                    <input type="text" value={publicUrl} readOnly className={styles.urlInput} />
-                    <button className={styles.copyBtn} onClick={copyURL} title="Copy URL">📋</button>
-                  </div>
-                </div>
-              )}
-
-              <button className={styles.downloadPdfBtn} onClick={downloadImage}>
-                📄 Download QR Code Image
+        <div className={styles.navPanelBody}>
+          {/* Nav menu items */}
+          <ul className={styles.navMenu}>
+            <li>
+              <button className={styles.navMenuItem} onClick={toggleQRInNav}>
+                <span className={`${styles.navIcon} ${styles.navIconQr}`}>📱</span>
+                <span>QR Code / Public Registration</span>
+                <span className={`${styles.navChevron} ${showQRInNav ? styles.navChevronOpen : ""}`}>›</span>
               </button>
+            </li>
+            <li>
+              <button className={styles.navMenuItem} onClick={() => { closeNav(); router.push("/home"); }}>
+                <span className={`${styles.navIcon} ${styles.navIconHome}`}>🏠</span>
+                <span>Home</span>
+              </button>
+            </li>
+            <li>
+              <button className={styles.navMenuItem} onClick={() => { closeNav(); router.push("/settings"); }}>
+                <span className={`${styles.navIcon} ${styles.navIconSettings}`}>⚙️</span>
+                <span>Settings</span>
+              </button>
+            </li>
+          </ul>
 
-              <div className={styles.panelInstructions}>
-                <h4>How to use:</h4>
-                <ol>
-                  <li>Share QR code or URL with visitors</li>
-                  <li>Visitors scan QR or visit URL</li>
-                  <li>Complete online registration</li>
-                  <li>Receive digital pass via email</li>
-                </ol>
-              </div>
-            </>
+          <div className={styles.navDivider} />
+
+          {/* QR Section (expandable inside nav) */}
+          {showQRInNav && (
+            <div className={styles.navQRSection}>
+              <div className={styles.navSectionLabel}>Public Registration</div>
+
+              {loadingQR ? (
+                <div className={styles.navQRLoading}>
+                  <div className={styles.spinner} />
+                  <p>Loading QR Code…</p>
+                </div>
+              ) : (
+                <>
+                  {qrCodeImage && (
+                    <div className={styles.qrSection}>
+                      <img src={qrCodeImage} alt="QR Code" className={styles.qrImage} />
+                      <p className={styles.qrHint}>Scan to register</p>
+                    </div>
+                  )}
+
+                  {publicUrl && (
+                    <div className={styles.urlSection}>
+                      <label>Public Registration URL</label>
+                      <div className={styles.urlBox}>
+                        <input type="text" value={publicUrl} readOnly className={styles.urlInput} />
+                        <button className={styles.copyBtn} onClick={copyURL} title="Copy URL">📋</button>
+                      </div>
+                    </div>
+                  )}
+
+                  <button className={styles.downloadPdfBtn} onClick={downloadImage}>
+                    📄 Download QR Code Image
+                  </button>
+
+                  <div className={styles.navInstructions}>
+                    <h4>How to use:</h4>
+                    <ol>
+                      <li>Share QR code or URL with visitors</li>
+                      <li>Visitors scan QR or visit URL</li>
+                      <li>Complete online registration</li>
+                      <li>Receive digital pass via email</li>
+                    </ol>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>
 
-      {/* ===== PANEL TOGGLE TAB ===== */}
-      {!panelOpen && (
-        <button
-          className={styles.panelToggleBtn}
-          onClick={() => setPanelOpen(true)}
-          title="Show Public Registration"
-        >
-          📱 QR Code
-        </button>
-      )}
-
-      {/* ===== OVERLAY ===== */}
-      {panelOpen && (
-        <div className={styles.panelOverlay} onClick={() => setPanelOpen(false)} />
-      )}
-
-      {/* ===== HEADER (white navbar like home page) ===== */}
+      {/* ===== HEADER (with + New Visitor and Back + 3-dot menu) ===== */}
       <header className={styles.header}>
-        <div className={styles.logoText}>{company.name}</div>
+        <div className={styles.headerLeft}>
+          <div className={styles.logoText}>{company.name}</div>
+        </div>
         <div className={styles.rightHeader}>
           <img
             src={company.logo_url || "/logo.png"}
             alt="Company Logo"
             className={styles.companyLogo}
           />
-          <button className={styles.backBtn} onClick={() => router.push("/home")}>
-            ← Back
-          </button>
-        </div>
-      </header>
-
-      {/* ===== HERO (purple gradient like home page) ===== */}
-      <section className={styles.hero}>
-        <div className={styles.heroGreeting}>{getGreeting()}</div>
-        <h1 className={styles.heroTitle}>
-          Visitor <span>Dashboard</span>
-        </h1>
-        <p className={styles.heroSub}>Monitor check-ins and manage visitors in real time</p>
-
-        <div className={styles.heroStats}>
-          <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Visitors Today</div>
-            <div className={styles.heroStatValue}>{stats.today}</div>
-          </div>
-          <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Currently Inside</div>
-            <div className={styles.heroStatValue}>{stats.inside}</div>
-          </div>
-          <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Checked Out</div>
-            <div className={styles.heroStatValue}>{stats.out}</div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== ACTION BAR ===== */}
-      <div className={styles.actionBar}>
-        <h2 className={styles.pageTitle}>Visitor Log</h2>
-        <div className={styles.actionButtons}>
-          <button
-            className={styles.qrBtn}
-            onClick={() => setPanelOpen(true)}
-          >
-            📱 QR Code
-          </button>
           <button
             className={styles.newBtn}
             disabled={limitReached}
@@ -433,143 +424,170 @@ export default function VisitorDashboard() {
           >
             + New Visitor
           </button>
+          <button className={styles.backBtn} onClick={() => router.push("/home")}>
+            ← Back
+          </button>
+          {/* 3-dot hamburger button */}
+          <button className={styles.hamburgerBtn} onClick={openNav} title="Menu">
+            <span className={styles.dot} />
+            <span className={styles.dot} />
+            <span className={styles.dot} />
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* ===== UPGRADE MESSAGE ===== */}
-      {limitReached && (
-        <div className={styles.upgradeMsg}>
-          Trial limit reached. Please upgrade your plan to register more visitors.
-        </div>
-      )}
+      {/* ===== SCROLLABLE BODY ===== */}
+      <div className={styles.scrollBody} ref={scrollBodyRef}>
 
-      {/* ===== PLAN BAR ===== */}
-      {isTrial && (
-        <div className={styles.planBarWrapper}>
-          <div className={styles.planHeader}>
-            <span className={styles.planName}>Trial Plan</span>
-            <span>{plan.remaining} visitors remaining</span>
-          </div>
-          <div className={styles.planBarBg}>
-            <div
-              className={styles.planBarFill}
-              style={{ width: `${planPercentage}%`, background: planBarColor }}
-            />
-          </div>
-          <div className={styles.planFooter}>
-            <span>{plan.used} / {plan.limit} used</span>
-            {plan.trialEndsAt && (
-              <span>Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}</span>
-            )}
-          </div>
-        </div>
-      )}
+        {/* ===== HERO (purple gradient) ===== */}
+        <section className={styles.hero}>
+          <div className={styles.heroGreeting}>{getGreeting()}</div>
+          <h1 className={styles.heroTitle}>
+            Visitor <span>Dashboard</span>
+          </h1>
+          <p className={styles.heroSub}>Monitor check-ins and manage visitors in real time</p>
 
-      {/* ===== MAIN CONTENT ===== */}
-      <main className={styles.mainContent}>
-        <div className={styles.tablesRow}>
-
-          {/* ACTIVE VISITORS */}
-          <div className={styles.tableCard}>
-            <div className={styles.cardHeader}>
-              <span className={styles.cardDot} />
-              <h3 className={styles.cardTitle}>Currently Inside</h3>
-              <span className={styles.cardCount}>{activeVisitors.length}</span>
+          <div className={styles.heroStats}>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Visitors Today</div>
+              <div className={styles.heroStatValue}>{stats.today}</div>
             </div>
-
-            {activeVisitors.length === 0 ? (
-              <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>👥</span>
-                No visitors currently inside
-              </div>
-            ) : (
-              <div className={styles.tableScroll}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Check-in</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {activeVisitors.map((v) => (
-                      <tr key={v.visitor_code || v.id}>
-                        <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
-                        <td>{v.name}</td>
-                        <td>{v.phone}</td>
-                        <td>{formatISTTime(v.check_in || v.checkIn)}</td>
-                        <td>
-                          <button
-                            className={styles.checkoutBtn}
-                            disabled={checkingOut === v.visitor_code}
-                            onClick={() => handleCheckout(v.visitor_code)}
-                          >
-                            {checkingOut === v.visitor_code ? "…" : "Checkout"}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* CHECKED OUT VISITORS */}
-          <div className={styles.tableCard}>
-            <div className={styles.cardHeader}>
-              <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
-              <h3 className={styles.cardTitle}>Checked Out Today</h3>
-              <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{checkedOutVisitors.length}</span>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Currently Inside</div>
+              <div className={styles.heroStatValue}>{stats.inside}</div>
             </div>
-
-            {checkedOutVisitors.length === 0 ? (
-              <div className={styles.emptyState}>
-                <span className={styles.emptyIcon}>✓</span>
-                No checkouts yet today
-              </div>
-            ) : (
-              <div className={styles.tableScroll}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Code</th>
-                      <th>Name</th>
-                      <th>Phone</th>
-                      <th>Check-out</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {checkedOutVisitors.map((v) => (
-                      <tr key={v.visitor_code || v.id}>
-                        <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
-                        <td>{v.name}</td>
-                        <td>{v.phone}</td>
-                        <td>{formatISTTime(v.check_out || v.checkOut)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Checked Out</div>
+              <div className={styles.heroStatValue}>{stats.out}</div>
+            </div>
           </div>
+        </section>
 
-        </div>
-
-        {/* DEBUG (dev only) */}
-        {process.env.NODE_ENV === "development" && (
-          <div style={{
-            background: "#f8f5ff", padding: "10px", fontSize: "12px",
-            borderRadius: "8px", border: "1px solid #ede8f8", color: "#888"
-          }}>
-            <strong>🔧 Debug:</strong> Active: {activeVisitors.length} | Out: {checkedOutVisitors.length} | Stats: {JSON.stringify(stats)}
+        {/* ===== UPGRADE MESSAGE ===== */}
+        {limitReached && (
+          <div className={styles.upgradeMsg}>
+            Trial limit reached. Please upgrade your plan to register more visitors.
           </div>
         )}
-      </main>
 
+        {/* ===== PLAN BAR ===== */}
+        {isTrial && (
+          <div className={styles.planBarWrapper}>
+            <div className={styles.planHeader}>
+              <span className={styles.planName}>Trial Plan</span>
+              <span>{plan.remaining} visitors remaining</span>
+            </div>
+            <div className={styles.planBarBg}>
+              <div
+                className={styles.planBarFill}
+                style={{ width: `${planPercentage}%`, background: planBarColor }}
+              />
+            </div>
+            <div className={styles.planFooter}>
+              <span>{plan.used} / {plan.limit} used</span>
+              {plan.trialEndsAt && (
+                <span>Expires: {new Date(plan.trialEndsAt).toLocaleDateString()}</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ===== MAIN CONTENT (cards directly, no Visitor Log bar) ===== */}
+        <main className={styles.mainContent}>
+          <div className={styles.tablesRow}>
+
+            {/* ACTIVE VISITORS (lite purple card) */}
+            <div className={styles.tableCard}>
+              <div className={styles.cardHeader}>
+                <span className={styles.cardDot} />
+                <h3 className={styles.cardTitle}>Currently Inside</h3>
+                <span className={styles.cardCount}>{activeVisitors.length}</span>
+              </div>
+
+              {activeVisitors.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.emptyIcon}>👥</span>
+                  No visitors currently inside
+                </div>
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Check-in</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activeVisitors.map((v) => (
+                        <tr key={v.visitor_code || v.id}>
+                          <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
+                          <td>{v.name}</td>
+                          <td>{v.phone}</td>
+                          <td>{formatISTTime(v.check_in || v.checkIn)}</td>
+                          <td>
+                            <button
+                              className={styles.checkoutBtn}
+                              disabled={checkingOut === v.visitor_code}
+                              onClick={() => handleCheckout(v.visitor_code)}
+                            >
+                              {checkingOut === v.visitor_code ? "…" : "Checkout"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* CHECKED OUT VISITORS (lite purple card) */}
+            <div className={styles.tableCard}>
+              <div className={styles.cardHeader}>
+                <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
+                <h3 className={styles.cardTitle}>Checked Out Today</h3>
+                <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{checkedOutVisitors.length}</span>
+              </div>
+
+              {checkedOutVisitors.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.emptyIcon}>✓</span>
+                  No checkouts yet today
+                </div>
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Phone</th>
+                        <th>Check-out</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {checkedOutVisitors.map((v) => (
+                        <tr key={v.visitor_code || v.id}>
+                          <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
+                          <td>{v.name}</td>
+                          <td>{v.phone}</td>
+                          <td>{formatISTTime(v.check_out || v.checkOut)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+          </div>
+        </main>
+
+      </div>
     </div>
   );
 }
