@@ -3,69 +3,216 @@ import { db } from "../config/db.js";
 
 const router = express.Router();
 
+/* =====================================================
+   CONSTANTS
+===================================================== */
 const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_SUPER_SECRET";
+const SUCCESS_EVENTS = ["payment_success", "subscription_activated"];
+const SUCCESS_STATUSES = ["paid", "success", "completed"];
 
-router.post("/zoho/push", async (req, res) => {
+/* =====================================================
+   PLAN DURATION HELPER
+===================================================== */
+function getPlanDuration(plan) {
+  if (!plan) return 30;
+  const p = plan.toLowerCase();
+  if (p === "trial") return 15;
+  return 30; // business & enterprise both get 30 days
+}
+
+/* =====================================================
+   ZOHO PAYMENT PUSH WEBHOOK
+   URL → /api/webhook/zoho/push
+===================================================== */
+router.post("/push", async (req, res) => {
   try {
-    const key = req.headers["x-webhook-key"];
+    console.log("📩 ZOHO WEBHOOK RECEIVED");
+    console.log("📦 Payload:", req.body);
 
-    if (!key || key !== WEBHOOK_KEY) {
-      console.log("❌ Invalid webhook key");
-      return res.status(401).json({ message: "Invalid webhook key" });
+    /* ================================
+       SECURITY CHECK
+    ================================= */
+    const incomingKey = req.headers["x-webhook-key"];
+    if (!incomingKey || incomingKey !== WEBHOOK_KEY) {
+      console.warn("🚫 Invalid webhook key");
+      return res.status(401).json({ success: false });
     }
 
-    console.log("📩 Incoming Zoho Push Payload:", req.body);
+    /* ================================
+       NORMALIZE EVENT TYPE
+    ================================= */
+    const eventType =
+      (req.body?.event_type || req.body?.eventType || "").toLowerCase();
 
-    const body = req.body || {};
-    const customerId =
-      body?.customer?.customer_id ||
-      body?.customer_id ||
-      body?.payment?.customer_id ||
+    /* ================================
+       EXTRACT CUSTOMER ID (ROBUST)
+    ================================= */
+    let customerId = null;
+
+    const extractCustomerId = (source) => {
+      if (!source) return null;
+
+      if (typeof source === "string") {
+        try {
+          return JSON.parse(source)?.customer_id || null;
+        } catch {
+          const match = source.match(/customer_id["']?\s*[:=]\s*["']?(\d{6,})/);
+          return match?.[1] || null;
+        }
+      }
+
+      if (typeof source === "object") {
+        return source.customer_id || null;
+      }
+
+      return null;
+    };
+
+    customerId =
+      extractCustomerId(req.body?.customer) ||
+      extractCustomerId(req.body) ||
       null;
+
+    console.log("🧾 Customer ID:", customerId);
 
     if (!customerId) {
-      console.log("❌ Customer ID missing");
-      return res.status(400).json({ message: "customer id missing" });
+      console.error("❌ customer_id missing");
+      return res.status(400).json({ success: false, message: "customer_id missing" });
     }
 
-    const status =
-      body?.payment?.payment_status?.toLowerCase() ||
-      body?.payment?.status?.toLowerCase() ||
-      null;
+    /* ================================
+       PAYMENT STATUS
+    ================================= */
+    let paymentStatus = null;
 
-    if (!status) {
-      return res.json({ message: "no status found" });
-    }
+    try {
+      const payment =
+        typeof req.body?.payment === "string"
+          ? JSON.parse(req.body.payment)
+          : req.body?.payment;
 
-    if (status !== "paid" && status !== "success") {
-      console.log("⚠ Payment not successful");
-      return res.json({ message: "ignored - not paid" });
-    }
+      paymentStatus =
+        payment?.payment_status?.toLowerCase() ||
+        payment?.status?.toLowerCase() ||
+        null;
+    } catch {}
 
-    console.log("🎉 PAYMENT SUCCESS FOR CUSTOMER:", customerId);
+    console.log("💳 Payment Status:", paymentStatus);
+    console.log("📢 Event Type:", eventType);
 
-    const [result] = await db.query(
+    /* ================================
+       FETCH COMPANY
+    ================================= */
+    const [[company]] = await db.query(
       `
-      UPDATE companies
-      SET subscription_status='active',
-          plan='business',
-          updated_at = NOW()
-      WHERE zoho_customer_id=?
+      SELECT 
+        id,
+        plan,
+        subscription_status,
+        pending_upgrade_plan
+      FROM companies
+      WHERE zoho_customer_id = ?
+      LIMIT 1
       `,
       [customerId]
     );
 
-    if (!result.affectedRows) {
-      console.log("❌ Company not found");
-      return res.json({ message: "company not found" });
+    if (!company) {
+      console.warn("⚠️ Company not found — ignoring webhook");
+      return res.json({ success: true });
     }
 
-    console.log("✅ Company subscription updated");
-    res.json({ success: true, message: "payment processed" });
+    console.log("🏢 Company ID:", company.id);
+    console.log("📋 Current Plan:", company.plan);
+    console.log("📊 Current Status:", company.subscription_status);
+    if (company.pending_upgrade_plan) {
+      console.log("🔄 Pending Upgrade:", company.pending_upgrade_plan);
+    }
 
+    /* ================================
+       PREVENT DOUBLE ACTIVATION
+    ================================= */
+    if (company.subscription_status === "active" && !company.pending_upgrade_plan) {
+      console.log("🔁 Subscription already active and no pending upgrade — skipping");
+      return res.json({ success: true });
+    }
+
+    /* ================================
+       SUCCESS CHECK
+    ================================= */
+    const isSuccess =
+      SUCCESS_EVENTS.includes(eventType) ||
+      SUCCESS_STATUSES.includes(paymentStatus);
+
+    if (!isSuccess) {
+      console.log("ℹ️ Payment not successful — ignoring");
+      return res.json({ success: true });
+    }
+
+    /* ================================
+       DETERMINE PLAN TO ACTIVATE
+       FIX: Preserve existing plan (especially enterprise)
+    ================================= */
+    const planToActivate = company.pending_upgrade_plan || company.plan || "trial";
+    console.log("🎯 Plan to Activate:", planToActivate);
+
+    /* ================================
+       CALCULATE EXPIRY
+       FIX: trial = 15 days, business & enterprise = 30 days
+    ================================= */
+    const now = new Date();
+    const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
+    const durationDays = getPlanDuration(planToActivate);
+    const end = new Date(now.getTime() + durationDays * 86400000);
+    const endSQL = end.toISOString().slice(0, 19).replace("T", " ");
+
+    console.log("💰 Payment Date:", nowSQL);
+    console.log("📅 Expires On:", endSQL);
+    console.log("📆 Duration:", durationDays, "days");
+
+    /* ================================
+       ACTIVATE SUBSCRIPTION
+    ================================= */
+    console.log("✨ Activating subscription...");
+
+    if (planToActivate.toLowerCase() === "trial") {
+      // Trial — uses trial_ends_at
+      await db.query(
+        `UPDATE companies SET
+          subscription_status = 'active',
+          plan = 'trial',
+          pending_upgrade_plan = NULL,
+          trial_ends_at = ?,
+          last_payment_created_at = ?,
+          updated_at = NOW()
+        WHERE id = ?`,
+        [endSQL, nowSQL, company.id]
+      );
+    } else {
+      // FIX: Business AND Enterprise both use subscription_ends_at with 30 days
+      await db.query(
+        `UPDATE companies SET
+          subscription_status = 'active',
+          plan = ?,
+          pending_upgrade_plan = NULL,
+          subscription_ends_at = ?,
+          last_payment_created_at = ?,
+          updated_at = NOW()
+        WHERE id = ?`,
+        [planToActivate, endSQL, nowSQL, company.id]
+      );
+    }
+
+    if (company.pending_upgrade_plan) {
+      console.log(`🎉 UPGRADE COMPLETED: ${company.plan} → ${planToActivate}`);
+    } else {
+      console.log("🎉 SUBSCRIPTION ACTIVATED:", planToActivate);
+    }
+
+    return res.json({ success: true });
   } catch (err) {
-    console.error("❌ PUSH ERROR", err);
-    res.status(500).json({ message: "failed" });
+    console.error("❌ ZOHO WEBHOOK ERROR:", err);
+    return res.status(500).json({ success: false });
   }
 });
 
