@@ -310,7 +310,7 @@ export default function VisitorDashboard() {
         <div className={styles.navOverlay} onClick={() => setNavOpen(false)} />
       )}
 
-      {/* ===== NAV PANEL (LEFT, 40%, QR only) ===== */}
+      {/* ===== NAV PANEL (LEFT, QR only) ===== */}
       <div className={`${styles.navPanel} ${navOpen ? styles.navPanelOpen : ""}`}>
         <div className={styles.navPanelHeader}>
           <h3>📱 QR Code</h3>
@@ -363,6 +363,7 @@ export default function VisitorDashboard() {
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
+          {/* 3-dot hamburger on LEFT */}
           <button className={styles.hamburgerBtn} onClick={() => setNavOpen(true)} title="QR Code">
             <span className={styles.dot} />
             <span className={styles.dot} />
