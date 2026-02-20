@@ -1,7 +1,7 @@
 /* ======================================================
    PROMEET VISITOR DASHBOARD — REFINED
-   3-dot nav LEFT side (40%), QR only, no greeting,
-   lite purple cards, all scrollbars hidden
+   3-dot nav LEFT (transform-based), QR only, no greeting,
+   lite purple cards, all scrollbars hidden everywhere
 ====================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -15,23 +15,26 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
   -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 :global(body::-webkit-scrollbar) { display: none; }
-:global(*::-webkit-scrollbar)    { display: none; }
+:global(*::-webkit-scrollbar)    { display: none !important; }
 :global(*) {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 /* ================= ROOT CONTAINER ================= */
 .container {
   height: 100vh;
+  height: 100dvh;
   background: #f3f0fb;
   font-family: 'Nunito', sans-serif;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 /* ================= SCROLL BODY ================= */
@@ -40,11 +43,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
-
-.scrollBody::-webkit-scrollbar { display: none; }
 
 /* ================= LOADING ================= */
 .loading {
@@ -108,6 +107,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .logoText {
@@ -115,12 +115,16 @@
   font-weight: 800;
   color: #1a0038;
   letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .rightHeader {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .companyLogo {
@@ -181,12 +185,15 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 8px;
+  padding: 10px;
   border-radius: 10px;
   transition: background 0.2s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .hamburgerBtn:hover { background: #f3f0fb; }
+.hamburgerBtn:active { background: #ede8f8; }
 
 .dot {
   display: block;
@@ -194,7 +201,6 @@
   height: 5px;
   border-radius: 50%;
   background: #1a0038;
-  transition: background 0.2s;
 }
 
 /* ================= NAV OVERLAY ================= */
@@ -203,8 +209,10 @@
   inset: 0;
   background: rgba(26, 0, 56, 0.5);
   backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   z-index: 900;
   animation: fadeInOverlay 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @keyframes fadeInOverlay {
@@ -212,25 +220,34 @@
   to   { opacity: 1; }
 }
 
-/* ================= NAV PANEL (LEFT, 40% screen, QR only) ================= */
+/* ===========================================================
+   NAV PANEL — slides from LEFT using transform (not left)
+   This ensures it works on all devices including mobile Safari
+=========================================================== */
 .navPanel {
   position: fixed;
   top: 0;
-  left: -42%;
-  width: 40%;
-  min-width: 300px;
-  max-width: 480px;
+  left: 0;
+  width: 38%;
+  min-width: 280px;
+  max-width: 440px;
   height: 100vh;
+  height: 100dvh;
   background: #fff;
   z-index: 950;
-  transition: left 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 8px 0 40px rgba(98, 0, 214, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
 }
 
-.navPanelOpen { left: 0; }
+.navPanelOpen {
+  transform: translateX(0) !important;
+}
 
 .navPanelHeader {
   background: linear-gradient(135deg, #4a00b4, #7a00ff);
@@ -252,8 +269,8 @@
   background: rgba(255, 255, 255, 0.15);
   border: none;
   color: #fff;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   cursor: pointer;
   font-size: 1.1rem;
@@ -262,6 +279,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.25s;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .navCloseBtn:hover {
@@ -273,13 +291,9 @@
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  padding: 20px 22px;
+  padding: 20px 22px 40px;
   -webkit-overflow-scrolling: touch;
 }
-
-.navPanelBody::-webkit-scrollbar { display: none; }
 
 /* QR loading */
 .navQRLoading {
@@ -376,6 +390,7 @@
   font-size: 1rem;
   transition: background 0.2s;
   flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .copyBtn:hover { background: #4a00a8; }
@@ -393,6 +408,7 @@
   transition: all 0.2s;
   margin-bottom: 1.25rem;
   font-family: 'Nunito', sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .downloadPdfBtn:hover { background: #d68f00; transform: translateY(-2px); }
@@ -488,6 +504,7 @@
   border-radius: 18px;
   padding: 18px 20px;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   transition: all 0.25s;
 }
 
@@ -666,17 +683,13 @@
   opacity: 0.45;
 }
 
-/* Table scroll (hidden scrollbar) */
+/* Table scroll */
 .tableScroll {
   flex: 1;
   overflow-x: auto;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
-
-.tableScroll::-webkit-scrollbar { display: none; }
 
 /* ================= TABLE ================= */
 .table {
@@ -731,6 +744,7 @@
   font-size: 11px;
   font-family: 'Nunito', sans-serif;
   white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checkoutBtn:hover:not(:disabled) {
@@ -753,7 +767,7 @@
 }
 
 @media (max-width: 768px) {
-  .header { padding: 0 16px; height: 52px; }
+  .header { padding: 0 14px; height: 52px; }
   .logoText { font-size: 0.82rem; }
   .companyLogo { width: 56px; height: 30px; }
   .newBtn { padding: 7px 14px; font-size: 12px; }
@@ -774,14 +788,25 @@
   .table th { font-size: 9px; }
   .table td { font-size: 12px; }
 
-  /* Nav panel full width on mobile */
-  .navPanel { width: 85%; min-width: unset; left: -90%; }
+  /* Nav panel — 80vw on tablet/mobile */
+  .navPanel {
+    width: 80vw;
+    min-width: unset;
+    max-width: unset;
+  }
+
+  .qrImage { width: 180px; height: 180px; }
 
   .toast { top: 14px; right: 14px; left: 14px; min-width: auto; }
 }
 
 @media (max-width: 480px) {
+  .header { padding: 0 10px; height: 50px; gap: 6px; }
+  .headerLeft { gap: 8px; }
+  .logoText { font-size: 0.75rem; }
+
   .heroTitle { font-size: 1.35rem; }
+  .heroSub { font-size: 0.82rem; margin-bottom: 20px; }
   .heroStats { grid-template-columns: 1fr; gap: 8px; }
   .heroStatCard {
     display: flex;
@@ -797,5 +822,15 @@
   .rightHeader { gap: 6px; }
   .companyLogo { display: none; }
   .newBtn { padding: 6px 12px; font-size: 11px; }
-  .backBtn { padding: 6px 12px; font-size: 11px; }
+  .backBtn { padding: 6px 10px; font-size: 11px; }
+
+  /* Nav panel — 85vw on small phones */
+  .navPanel {
+    width: 85vw;
+  }
+
+  .navPanelHeader { padding: 16px 18px; }
+  .navPanelBody { padding: 16px 16px 32px; }
+  .qrImage { width: 160px; height: 160px; }
+  .qrSection { padding: 1rem; }
 }
