@@ -1,133 +1,350 @@
-/* ================= PAGE ================= */
-.page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
-  font-family: "Segoe UI", Arial, sans-serif;
+/* ======================================================
+   PROMEET — VISITOR PRIMARY DETAILS
+   Matches dashboard theme: Nunito, purple gradient hero,
+   lite purple card, hidden scrollbar, fully dynamic
+====================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+/* ================= GLOBAL SCROLLBAR KILL ================= */
+:global(html),
+:global(body) {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
+}
+
+:global(body::-webkit-scrollbar) { display: none; }
+:global(*::-webkit-scrollbar)    { display: none !important; }
+:global(*) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* ================= ROOT CONTAINER ================= */
+.container {
+  height: 100vh;
+  height: 100dvh;
+  background: #f3f0fb;
+  font-family: 'Nunito', sans-serif;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
-/* ================= HEADER ================= */
-.header {
-  height: 84px;
-  padding: 0 56px;
+/* ================= SCROLL BODY ================= */
+.scrollBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ================= LOADING ================= */
+.loading {
   display: flex;
   align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #6200d6;
+  background: #f3f0fb;
+  letter-spacing: 1px;
+}
+
+/* ================= HEADER (matches dashboard) ================= */
+.header {
+  height: 58px;
+  background: #fff;
+  display: flex;
   justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #e8e0f5;
+  position: sticky;
+  top: 0;
+  z-index: 300;
   flex-shrink: 0;
 }
 
-.companyName {
-  color: #ffffff;
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: 1px;
-  white-space: nowrap;
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
 
-.logo {
+.logoText {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1a0038;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rightHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.companyLogo {
+  width: 72px;
   height: 36px;
-  width: auto;
   object-fit: contain;
 }
 
-/* ================= CENTER ================= */
-.center {
+.backBtn {
+  background: transparent;
+  color: #6200d6;
+  border: 2px solid #6200d6;
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.backBtn:hover {
+  background: #6200d6;
+  color: #fff;
+}
+
+/* ================= HERO (purple gradient, compact) ================= */
+.hero {
+  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  padding: 32px 36px 36px;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  bottom: -80px;
+  left: -30px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.04);
+  pointer-events: none;
+}
+
+.heroTitle {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 4px;
+  line-height: 1.15;
+}
+
+.heroTitle span { color: #f0a500; }
+
+.heroSub {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 24px;
+}
+
+/* ================= STEP INDICATOR ================= */
+.steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  max-width: 360px;
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stepNum {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s;
+}
+
+.stepLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  letter-spacing: 0.3px;
+}
+
+.stepActive .stepNum {
+  background: #f0a500;
+  color: #1a0038;
+  border-color: #f0a500;
+  box-shadow: 0 0 0 4px rgba(240, 165, 0, 0.25);
+}
+
+.stepActive .stepLabel {
+  color: #fff;
+}
+
+.stepLine {
   flex: 1;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 12px;
+  min-width: 30px;
+}
+
+/* ================= MAIN CONTENT ================= */
+.mainContent {
+  padding: 28px 36px 48px;
   display: flex;
   justify-content: center;
+}
+
+/* ================= FORM CARD (lite purple, matches dashboard) ================= */
+.formCard {
+  width: 100%;
+  max-width: 640px;
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 22px;
+  padding: 28px 32px 36px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98, 0, 214, 0.06);
+  transition: box-shadow 0.3s;
+}
+
+.formCard:hover {
+  box-shadow: 0 8px 32px rgba(98, 0, 214, 0.12);
+}
+
+.cardHeader {
+  display: flex;
   align-items: center;
-  padding: 32px 20px;
-  overflow: hidden;
+  gap: 10px;
+  margin-bottom: 24px;
 }
 
-/* ================= CARD ================= */
-.card {
-  width: 720px;
-  background: #ffffff;
-  padding: 48px 56px;
-  border-radius: 28px;
-  box-shadow: 0 30px 64px rgba(0, 0, 0, 0.35);
-  max-height: calc(100vh - 160px);
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-  box-sizing: border-box;
+.cardDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6200d6;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(98, 0, 214, 0.15);
 }
 
-.card::-webkit-scrollbar {
-  display: none !important;
-}
-
-/* ================= TEXT ================= */
-.title {
-  font-size: 30px;
-  font-weight: 800;
-  color: #3c007a;
-  margin-bottom: 4px;
-}
-
-.subtitle {
-  font-size: 15px;
-  color: #666;
-  margin-bottom: 32px;
+.cardTitle {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #1a0038;
+  margin: 0;
 }
 
 /* ================= ERROR ================= */
 .error {
-  background: #ffecec;
-  color: #c40000;
-  padding: 12px;
-  border-radius: 10px;
-  font-size: 14px;
-  margin-bottom: 18px;
+  background: #fff0f0;
+  color: #cc1100;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 20px;
   text-align: center;
+  border-left: 4px solid #cc1100;
 }
 
-/* ================= LABEL ================= */
+/* ================= FORM GROUP ================= */
+.formGroup {
+  margin-bottom: 0;
+}
+
 .label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #3c007a;
+  font-size: 12px;
+  font-weight: 800;
+  color: #6200d6;
   margin-bottom: 6px;
   display: block;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
-/* ================= INPUT ================= */
+.req {
+  color: #cc1100;
+}
+
 .input {
   width: 100%;
   height: 48px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid #ccc;
+  padding: 0 16px;
+  border-radius: 14px;
+  border: 1.5px solid #ddd2f0;
   font-size: 14px;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
   margin-bottom: 18px;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
   display: block;
-  background: #ffffff;
-  color: #1a1a1a;
-  -webkit-text-fill-color: #1a1a1a;
+  background: #fff;
+  color: #1a0038;
+  -webkit-text-fill-color: #1a0038;
   opacity: 1;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .input::placeholder {
-  color: #aaa;
+  color: #b8a8d8;
+  font-weight: 600;
   opacity: 1;
 }
 
 .input:focus {
   outline: none;
-  border-color: #7a00ff;
-  box-shadow: 0 0 0 2px rgba(122, 0, 255, 0.15);
+  border-color: #6200d6;
+  box-shadow: 0 0 0 3px rgba(98, 0, 214, 0.1);
+  background: #faf8ff;
 }
 
 /* ================= ROW ================= */
 .row {
   display: flex;
-  gap: 18px;
+  gap: 16px;
   width: 100%;
 }
 
@@ -137,49 +354,80 @@
   box-sizing: border-box;
 }
 
-/* ================= BUTTON ================= */
+/* ================= NEXT BUTTON ================= */
 .nextBtn {
-  margin-top: 24px;
-  height: 54px;
+  margin-top: 8px;
+  height: 52px;
   width: 100%;
   border: none;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #7a00ff, #5a00c2);
-  color: #ffffff;
-  font-size: 16px;
-  font-weight: 700;
+  border-radius: 50px;
+  background: #6200d6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
   cursor: pointer;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: all 0.25s ease;
   display: block;
   box-sizing: border-box;
+  box-shadow: 0 4px 16px rgba(98, 0, 214, 0.3);
+  letter-spacing: 0.3px;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nextBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 14px 28px rgba(122, 0, 255, 0.45);
+  background: #4a00a8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(98, 0, 214, 0.4);
 }
 
 .nextBtn:active {
   transform: translateY(0);
+  box-shadow: 0 4px 16px rgba(98, 0, 214, 0.3);
 }
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
-  .card {
-    width: 100%;
-    padding: 36px;
-  }
+  .hero { padding: 28px 28px 32px; }
+  .mainContent { padding: 22px 28px 40px; }
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+  .header { padding: 0 16px; height: 52px; }
+  .logoText { font-size: 0.82rem; }
+  .companyLogo { width: 56px; height: 30px; }
+  .backBtn { padding: 7px 14px; font-size: 12px; }
+
+  .hero { padding: 24px 20px 28px; }
+  .heroTitle { font-size: 1.5rem; }
+  .heroSub { font-size: 0.82rem; margin-bottom: 18px; }
+
+  .mainContent { padding: 18px 20px 36px; }
+  .formCard { padding: 22px 20px 30px; border-radius: 18px; }
+}
+
+@media (max-width: 480px) {
+  .header { padding: 0 12px; height: 50px; }
+  .logoText { font-size: 0.75rem; }
+  .companyLogo { display: none; }
+  .backBtn { padding: 6px 12px; font-size: 11px; }
+
+  .hero { padding: 20px 16px 24px; }
+  .heroTitle { font-size: 1.3rem; }
+
+  .steps { max-width: 100%; }
+  .stepLabel { font-size: 10px; }
+  .stepNum { width: 26px; height: 26px; font-size: 11px; }
+  .stepLine { min-width: 20px; margin: 0 8px; }
+
+  .mainContent { padding: 14px 16px 32px; }
+  .formCard { padding: 18px 16px 26px; }
+
   .row {
     flex-direction: column;
     gap: 0;
   }
-  .companyName {
-    font-size: 22px;
-  }
-  .header {
-    padding: 0 20px;
-  }
+
+  .input { height: 46px; font-size: 13px; }
+  .nextBtn { height: 48px; font-size: 14px; }
 }
