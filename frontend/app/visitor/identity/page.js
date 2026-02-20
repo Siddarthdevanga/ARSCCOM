@@ -55,7 +55,7 @@ export default function VisitorIdentity() {
   /* ================= CLEANUP ================= */
   useEffect(() => {
     return () => {
-      stream?.getTracks().forEach(track => track.stop());
+      stream?.getTracks().forEach((track) => track.stop());
     };
   }, [stream]);
 
@@ -64,9 +64,8 @@ export default function VisitorIdentity() {
     setError("");
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true
+        video: true,
       });
-
       setStream(mediaStream);
       setCameraActive(true);
     } catch {
@@ -75,37 +74,31 @@ export default function VisitorIdentity() {
   };
 
   const stopCamera = () => {
-    stream?.getTracks().forEach(track => track.stop());
+    stream?.getTracks().forEach((track) => track.stop());
     setStream(null);
     setCameraActive(false);
   };
 
   const capturePhoto = () => {
     if (!canvasRef.current || !videoRef.current) return;
-
     const canvas = canvasRef.current;
     const video = videoRef.current;
-
     canvas.width = 400;
     canvas.height = 300;
-
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, 400, 300);
-
     setPhoto(canvas.toDataURL("image/jpeg"));
     stopCamera();
   };
 
-/* ================= VALIDATION ================= */
-const validateAll = () => {
-  if (!photo) {
-    setError("Visitor photo is required");
-    return false;
-  }
-
-  // ID is now OPTIONAL
-  return true;
-};
+  /* ================= VALIDATION ================= */
+  const validateAll = () => {
+    if (!photo) {
+      setError("Visitor photo is required");
+      return false;
+    }
+    return true;
+  };
 
   /* ================= GENERATE PASS ================= */
   const handleGeneratePass = async () => {
@@ -125,31 +118,25 @@ const validateAll = () => {
 
       if (!validateAll()) return;
 
-      /* Convert photo to File */
-      const blob = await fetch(photo).then(r => r.blob());
+      const blob = await fetch(photo).then((r) => r.blob());
       const file = new File([blob], "visitor.jpg", { type: "image/jpeg" });
 
       const formData = new FormData();
 
-      /* Primary */
       formData.append("name", primary.name);
       formData.append("phone", primary.phone);
       formData.append("email", primary.email || "");
 
-      /* Secondary */
       Object.entries(secondary).forEach(([key, value]) => {
         if (Array.isArray(value)) {
-          value.forEach(v => formData.append(key, v));
+          value.forEach((v) => formData.append(key, v));
         } else {
           formData.append(key, value || "");
         }
       });
 
-      /* Identity */
       formData.append("idType", idType);
       formData.append("idNumber", idNumber);
-
-      /* Photo */
       formData.append("photo", file);
 
       const res = await fetch(
@@ -157,9 +144,9 @@ const validateAll = () => {
         {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-          body: formData
+          body: formData,
         }
       );
 
@@ -176,92 +163,155 @@ const validateAll = () => {
     }
   };
 
-  if (!company) return null;
+  if (!company) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.loading}>Loading…</div>
+      </div>
+    );
+  }
 
-  /* ================= UI ================= */
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.companyName}>{company?.name}</div>
 
-        <img
-          src={company?.logo_url || "/logo.png"}
-          alt={`${company?.name || "Company"} Logo`}
-          className={styles.logo}
-        />
+      {/* ===== HEADER ===== */}
+      <header className={styles.header}>
+        <div className={styles.headerLeft}>
+          <div className={styles.logoText}>{company.name}</div>
+        </div>
+        <div className={styles.rightHeader}>
+          <img
+            src={company.logo_url || "/logo.png"}
+            alt="Company Logo"
+            className={styles.companyLogo}
+          />
+          <button
+            className={styles.backBtn}
+            onClick={() => router.push("/visitor/secondary_details")}
+          >
+            ← Back
+          </button>
+        </div>
       </header>
 
-      <div className={styles.card}>
-        <h2 className={styles.title}>Visitor Identity Verification</h2>
+      {/* ===== SCROLLABLE BODY ===== */}
+      <div className={styles.scrollBody}>
 
-        {error && <div className={styles.errorBox}>{error}</div>}
+        {/* ===== HERO ===== */}
+        <section className={styles.hero}>
+          <h1 className={styles.heroTitle}>
+            Identity <span>Verification</span>
+          </h1>
+          <p className={styles.heroSub}>Capture photo and verify identity</p>
 
-        <div className={styles.mainLayout}>
-          {/* CAMERA */}
-          <div className={styles.leftPane}>
-            <div className={styles.cameraContainer}>
-              {!cameraActive && !photo && (
-                <button className={styles.startBtn} onClick={startCamera}>
-                  Start Camera
-                </button>
-              )}
-
-              {cameraActive && (
-                <>
-                  <video ref={videoRef} className={styles.video} />
-                  <button
-                    className={styles.captureBtn}
-                    onClick={capturePhoto}
-                  >
-                    Capture Photo
-                  </button>
-                </>
-              )}
-
-              {photo && (
-                <>
-                  <img src={photo} className={styles.preview} alt="Visitor" />
-                  <button
-                    className={styles.retakeBtn}
-                    onClick={() => setPhoto(null)}
-                  >
-                    Retake Photo
-                  </button>
-                </>
-              )}
+          <div className={styles.steps}>
+            <div className={`${styles.step} ${styles.stepDone}`}>
+              <span className={styles.stepNum}>✓</span>
+              <span className={styles.stepLabel}>Primary</span>
+            </div>
+            <div className={styles.stepLine} />
+            <div className={`${styles.step} ${styles.stepDone}`}>
+              <span className={styles.stepNum}>✓</span>
+              <span className={styles.stepLabel}>Secondary</span>
+            </div>
+            <div className={styles.stepLine} />
+            <div className={`${styles.step} ${styles.stepActive}`}>
+              <span className={styles.stepNum}>3</span>
+              <span className={styles.stepLabel}>Identity</span>
             </div>
           </div>
+        </section>
 
-          {/* ID DETAILS */}
-          <div className={styles.rightPane}>
-            <select
-              className={styles.input}
-              value={idType}
-              onChange={e => setIdType(e.target.value)}
-            >
-              <option value="">Select ID Proof</option>
-              <option value="aadhaar">Aadhaar</option>
-              <option value="pan">PAN</option>
-              <option value="passport">Passport</option>
-            </select>
+        {/* ===== FORM CARD ===== */}
+        <main className={styles.mainContent}>
+          <div className={styles.formCard}>
 
-            <input
-              className={styles.input}
-              placeholder="ID Number"
-              value={idNumber}
-              onChange={e => setIdNumber(e.target.value)}
-            />
+            {error && <div className={styles.error}>{error}</div>}
 
-            <button
-              className={styles.generateBtn}
-              onClick={handleGeneratePass}
-            >
-              Generate Pass
-            </button>
+            <div className={styles.mainLayout}>
+
+              {/* ── LEFT: Camera ── */}
+              <div className={styles.leftPane}>
+                <div className={styles.sectionHeader}>
+                  <span className={styles.cardDot} />
+                  <h3 className={styles.cardTitle}>Visitor Photo</h3>
+                </div>
+
+                <div className={styles.cameraContainer}>
+                  {!cameraActive && !photo && (
+                    <div className={styles.cameraIdle}>
+                      <div className={styles.cameraIcon}>📷</div>
+                      <p className={styles.cameraIdleText}>Take a visitor photo</p>
+                      <button className={styles.startBtn} onClick={startCamera}>
+                        Start Camera
+                      </button>
+                    </div>
+                  )}
+
+                  {cameraActive && (
+                    <>
+                      <video ref={videoRef} className={styles.video} />
+                      <button className={styles.captureBtn} onClick={capturePhoto}>
+                        Capture Photo
+                      </button>
+                    </>
+                  )}
+
+                  {photo && (
+                    <>
+                      <img src={photo} className={styles.preview} alt="Visitor" />
+                      <button
+                        className={styles.retakeBtn}
+                        onClick={() => setPhoto(null)}
+                      >
+                        Retake Photo
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* ── RIGHT: ID Details ── */}
+              <div className={styles.rightPane}>
+                <div className={styles.sectionHeader}>
+                  <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
+                  <h3 className={styles.cardTitle}>ID Proof (Optional)</h3>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>ID Type</label>
+                  <select
+                    className={styles.input}
+                    value={idType}
+                    onChange={(e) => setIdType(e.target.value)}
+                  >
+                    <option value="">Select ID Proof</option>
+                    <option value="aadhaar">Aadhaar</option>
+                    <option value="pan">PAN</option>
+                    <option value="passport">Passport</option>
+                  </select>
+                </div>
+
+                <div className={styles.field}>
+                  <label className={styles.label}>ID Number</label>
+                  <input
+                    className={styles.input}
+                    placeholder="Enter ID number"
+                    value={idNumber}
+                    onChange={(e) => setIdNumber(e.target.value)}
+                  />
+                </div>
+
+                <button className={styles.generateBtn} onClick={handleGeneratePass}>
+                  Generate Pass →
+                </button>
+              </div>
+            </div>
+
+            <canvas ref={canvasRef} hidden />
           </div>
-        </div>
+        </main>
 
-        <canvas ref={canvasRef} hidden />
       </div>
     </div>
   );
