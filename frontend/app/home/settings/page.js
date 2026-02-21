@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { 
-  Building2, User, Lock, Eye, EyeOff, Upload, Edit2, Check, X, Loader2
+import {
+  Building2, User, Lock, Eye, EyeOff, Upload, Edit2, Check, X, Loader2,
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -85,10 +85,10 @@ export default function SettingsPage() {
   };
 
   const showSuccess = (msg) => { setSuccessMsg(msg); setTimeout(() => setSuccessMsg(""), 4000); };
-  const showError   = (msg) => { setErrorMsg(msg);   setTimeout(() => setErrorMsg(""),   5000); };
+  const showError = (msg) => { setErrorMsg(msg); setTimeout(() => setErrorMsg(""), 5000); };
 
   /* ── Company Name ── */
-  const startEditCompanyName  = () => { setTempCompanyName(companyName); setEditingCompanyName(true); };
+  const startEditCompanyName = () => { setTempCompanyName(companyName); setEditingCompanyName(true); };
   const cancelEditCompanyName = () => { setEditingCompanyName(false); setTempCompanyName(""); };
   const saveCompanyName = async () => {
     if (!tempCompanyName.trim()) { showError("Company name is required"); return; }
@@ -113,7 +113,7 @@ export default function SettingsPage() {
   };
 
   /* ── WhatsApp ── */
-  const startEditWhatsapp  = () => { setTempWhatsapp(whatsappUrl); setEditingWhatsapp(true); };
+  const startEditWhatsapp = () => { setTempWhatsapp(whatsappUrl); setEditingWhatsapp(true); };
   const cancelEditWhatsapp = () => { setEditingWhatsapp(false); setTempWhatsapp(""); };
   const saveWhatsapp = async () => {
     try {
@@ -137,7 +137,7 @@ export default function SettingsPage() {
   };
 
   /* ── User Name ── */
-  const startEditUserName  = () => { setTempUserName(userName); setEditingUserName(true); };
+  const startEditUserName = () => { setTempUserName(userName); setEditingUserName(true); };
   const cancelEditUserName = () => { setEditingUserName(false); setTempUserName(""); };
   const saveUserName = async () => {
     if (!tempUserName.trim()) { showError("Name is required"); return; }
@@ -158,7 +158,7 @@ export default function SettingsPage() {
   };
 
   /* ── User Phone ── */
-  const startEditUserPhone  = () => { setTempUserPhone(userPhone); setEditingUserPhone(true); };
+  const startEditUserPhone = () => { setTempUserPhone(userPhone); setEditingUserPhone(true); };
   const cancelEditUserPhone = () => { setEditingUserPhone(false); setTempUserPhone(""); };
   const saveUserPhone = async () => {
     if (!tempUserPhone.trim()) { showError("Phone is required"); return; }
@@ -234,7 +234,6 @@ export default function SettingsPage() {
     finally { setSavingPassword(false); }
   };
 
-  const handleBack   = () => router.push("/home");
   const handleLogout = () => {
     if (confirm("Are you sure you want to logout?")) {
       localStorage.clear();
@@ -245,292 +244,261 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.loadingContainer}>
+        <div className={styles.loadingState}>
           <div className={styles.spinner} />
-          <p>Loading settings...</p>
+          Loading settings…
         </div>
       </div>
     );
   }
 
+  /* ── Inline Editable Field ── */
+  const EditableField = ({ label, value, editing, temp, setTemp, startEdit, cancelEditFn, saveFn, saving, placeholder, type = "text" }) => (
+    <div className={styles.fieldGroup}>
+      <label className={styles.fieldLabel}>{label}</label>
+      {!editing ? (
+        <div className={styles.fieldDisplay}>
+          <span className={styles.fieldValue} title={value || "Not set"}>{value || "Not set"}</span>
+          <button className={styles.editBtn} onClick={startEdit} aria-label={`Edit ${label}`}>
+            <Edit2 size={14} />
+          </button>
+        </div>
+      ) : (
+        <div className={styles.fieldEdit}>
+          <input
+            type={type}
+            value={temp}
+            onChange={(e) => setTemp(e.target.value)}
+            className={styles.input}
+            placeholder={placeholder}
+            autoFocus
+          />
+          <div className={styles.fieldActions}>
+            <button className={styles.saveFieldBtn} onClick={saveFn} disabled={saving}>
+              {saving ? <Loader2 size={13} className={styles.spinning} /> : <Check size={13} />}
+            </button>
+            <button className={styles.cancelFieldBtn} onClick={cancelEditFn} disabled={saving}>
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className={styles.container}>
 
-      {/* ── Header ── */}
+      {/* ===== HEADER ===== */}
       <header className={styles.header}>
-        <button className={styles.backBtn} onClick={handleBack} aria-label="Back to home">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          <span>Back</span>
-        </button>
-
-        <div className={styles.companyInfo}>
-          {company?.logo_url && (
-            <img src={company.logo_url} alt={`${company.name} logo`} className={styles.companyLogoHeader} />
-          )}
-          <h1 className={styles.companyName}>{company?.name}</h1>
+        <div className={styles.headerLeft}>
+          <div className={styles.logoText}>{company?.name}</div>
         </div>
-
-        <button className={styles.logoutBtn} onClick={handleLogout} title="Logout" aria-label="Logout">
-          <span>Logout</span>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/>
-            <line x1="21" y1="12" x2="9" y2="12"/>
-          </svg>
-        </button>
+        <div className={styles.rightHeader}>
+          {company?.logo_url && (
+            <img src={company.logo_url} alt="Logo" className={styles.companyLogo} />
+          )}
+          <button className={styles.logoutBtn} onClick={handleLogout}>Logout</button>
+          <button className={styles.backBtn} onClick={() => router.push("/home")}>← Back</button>
+        </div>
       </header>
 
-      {/* ── Main ── */}
-      <main className={styles.main}>
-        <div className={styles.settingsView}>
+      {/* ===== SCROLL BODY ===== */}
+      <div className={styles.scrollBody}>
 
-          {/* Page Header */}
-          <div className={styles.settingsHeader}>
-            <div className={styles.settingsHeaderIcon}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="3"/>
-                <path d="M12 1v6m0 6v6m5.196-13.804l-4.242 4.242m-2.828 2.828l-4.242 4.242M23 12h-6m-6 0H1m13.804-5.196l-4.242 4.242m-2.828 2.828l-4.242 4.242"/>
-              </svg>
-            </div>
-            <div>
-              <h2 className={styles.settingsTitle}>My Account Settings</h2>
-              <p className={styles.settingsSubtitle}>Manage your company and profile information</p>
-            </div>
-          </div>
+        {/* ===== HERO ===== */}
+        <section className={styles.hero}>
+          <h1 className={styles.heroTitle}>Account <span>Settings</span></h1>
+          <p className={styles.heroSub}>Manage your company and profile information</p>
+        </section>
 
-          {/* Notifications */}
-          {successMsg && (
-            <div className={styles.notification} data-type="success">
-              <Check size={18} /><span>{successMsg}</span>
-            </div>
-          )}
-          {errorMsg && (
-            <div className={styles.notification} data-type="error">
-              <X size={18} /><span>{errorMsg}</span>
-            </div>
-          )}
+        {/* ===== TOASTS ===== */}
+        {successMsg && <div className={`${styles.toast} ${styles.toastSuccess}`}><Check size={15} /> {successMsg}</div>}
+        {errorMsg && <div className={`${styles.toast} ${styles.toastError}`}><X size={15} /> {errorMsg}</div>}
 
-          {/* Settings Grid */}
-          <div className={styles.settingsContent}>
+        {/* ===== MAIN CONTENT ===== */}
+        <main className={styles.mainContent}>
+          <div className={styles.settingsGrid}>
 
             {/* ── COMPANY SETTINGS ── */}
-            <div className={styles.settingsSection}>
-              <div className={styles.settingsSectionTitle}>
-                <Building2 size={20} />
-                <h3>Company Settings</h3>
+            <div className={styles.settingsCard}>
+              <div className={styles.sectionHeader}>
+                <span className={styles.cardDot} />
+                <Building2 size={15} className={styles.sectionIcon} />
+                <h3 className={styles.cardTitle}>Company Settings</h3>
               </div>
 
-              {/* Company Name */}
-              <div className={styles.fieldGroup}>
-                <label>Company Name *</label>
-                {!editingCompanyName ? (
-                  <div className={styles.fieldDisplay}>
-                    <span className={styles.fieldValue} title={companyName}>{companyName}</span>
-                    <button className={styles.editBtn} onClick={startEditCompanyName} aria-label="Edit company name">
-                      <Edit2 size={15} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.fieldEdit}>
-                    <input type="text" value={tempCompanyName} onChange={(e) => setTempCompanyName(e.target.value)} className={styles.input} autoFocus />
-                    <div className={styles.fieldActions}>
-                      <button className={styles.saveBtn} onClick={saveCompanyName} disabled={savingCompanyName}>
-                        {savingCompanyName ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
-                      </button>
-                      <button className={styles.cancelBtn} onClick={cancelEditCompanyName} disabled={savingCompanyName}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <EditableField
+                label="Company Name *"
+                value={companyName}
+                editing={editingCompanyName}
+                temp={tempCompanyName}
+                setTemp={setTempCompanyName}
+                startEdit={startEditCompanyName}
+                cancelEditFn={cancelEditCompanyName}
+                saveFn={saveCompanyName}
+                saving={savingCompanyName}
+                placeholder="Company name"
+              />
 
-              {/* WhatsApp URL */}
-              <div className={styles.fieldGroup}>
-                <label>WhatsApp URL (Optional)</label>
-                {!editingWhatsapp ? (
-                  <div className={styles.fieldDisplay}>
-                    {/* title attr shows full URL on hover */}
-                    <span className={styles.fieldValue} title={whatsappUrl || "Not set"}>
-                      {whatsappUrl || "Not set"}
-                    </span>
-                    <button className={styles.editBtn} onClick={startEditWhatsapp} aria-label="Edit WhatsApp URL">
-                      <Edit2 size={15} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.fieldEdit}>
-                    <input
-                      type="url"
-                      value={tempWhatsapp}
-                      onChange={(e) => setTempWhatsapp(e.target.value)}
-                      placeholder="https://api.whatsapp.com/send/?phone=91..."
-                      className={styles.input}
-                      autoFocus
-                    />
-                    <div className={styles.fieldActions}>
-                      <button className={styles.saveBtn} onClick={saveWhatsapp} disabled={savingWhatsapp}>
-                        {savingWhatsapp ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
-                      </button>
-                      <button className={styles.cancelBtn} onClick={cancelEditWhatsapp} disabled={savingWhatsapp}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <p className={styles.fieldHelp}>Used in visitor pass emails</p>
-              </div>
+              <EditableField
+                label="WhatsApp URL"
+                value={whatsappUrl}
+                editing={editingWhatsapp}
+                temp={tempWhatsapp}
+                setTemp={setTempWhatsapp}
+                startEdit={startEditWhatsapp}
+                cancelEditFn={cancelEditWhatsapp}
+                saveFn={saveWhatsapp}
+                saving={savingWhatsapp}
+                placeholder="https://api.whatsapp.com/send/?phone=91…"
+                type="url"
+              />
+              <p className={styles.fieldHelp}>Used in visitor pass emails</p>
 
-              {/* Company Logo */}
+              {/* Logo */}
               <div className={styles.fieldGroup}>
-                <label>Company Logo</label>
+                <label className={styles.fieldLabel}>Company Logo</label>
                 {logoPreview && (
-                  <div className={styles.logoPreview}>
-                    <img src={logoPreview} alt="Logo preview" />
-                  </div>
+                  <div className={styles.logoPreview}><img src={logoPreview} alt="Logo preview" /></div>
                 )}
                 <label htmlFor="logo-upload" className={styles.uploadBtn}>
-                  <Upload size={14} />
-                  <span>{logoFile ? "Change Logo" : "Upload Logo"}</span>
+                  <Upload size={13} /> {logoFile ? "Change Logo" : "Upload Logo"}
                 </label>
                 <input id="logo-upload" type="file" accept="image/*" onChange={handleLogoChange} style={{ display: "none" }} />
                 {logoFile && (
                   <>
                     <p className={styles.fileSelected} title={logoFile.name}>{logoFile.name}</p>
                     <button className={styles.saveLogoBtn} onClick={uploadLogo} disabled={savingLogo}>
-                      {savingLogo ? <><Loader2 size={14} className={styles.spinning} /> Uploading...</> : "Save Logo"}
+                      {savingLogo ? <><Loader2 size={13} className={styles.spinning} /> Uploading…</> : "Save Logo"}
                     </button>
                   </>
                 )}
-                <p className={styles.fieldHelp}>Max 5MB • JPG, PNG, WEBP</p>
+                <p className={styles.fieldHelp}>Max 5MB · JPG, PNG, WEBP</p>
               </div>
             </div>
 
             {/* ── USER PROFILE ── */}
-            <div className={styles.settingsSection}>
-              <div className={styles.settingsSectionTitle}>
-                <User size={20} />
-                <h3>User Profile</h3>
+            <div className={styles.settingsCard}>
+              <div className={styles.sectionHeader}>
+                <span className={`${styles.cardDot} ${styles.dotGreen}`} />
+                <User size={15} className={styles.sectionIcon} />
+                <h3 className={styles.cardTitle}>User Profile</h3>
               </div>
 
-              {/* Full Name */}
-              <div className={styles.fieldGroup}>
-                <label>Full Name *</label>
-                {!editingUserName ? (
-                  <div className={styles.fieldDisplay}>
-                    <span className={styles.fieldValue} title={userName}>{userName}</span>
-                    <button className={styles.editBtn} onClick={startEditUserName} aria-label="Edit name">
-                      <Edit2 size={15} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.fieldEdit}>
-                    <input type="text" value={tempUserName} onChange={(e) => setTempUserName(e.target.value)} className={styles.input} autoFocus />
-                    <div className={styles.fieldActions}>
-                      <button className={styles.saveBtn} onClick={saveUserName} disabled={savingUserName}>
-                        {savingUserName ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
-                      </button>
-                      <button className={styles.cancelBtn} onClick={cancelEditUserName} disabled={savingUserName}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <EditableField
+                label="Full Name *"
+                value={userName}
+                editing={editingUserName}
+                temp={tempUserName}
+                setTemp={setTempUserName}
+                startEdit={startEditUserName}
+                cancelEditFn={cancelEditUserName}
+                saveFn={saveUserName}
+                saving={savingUserName}
+                placeholder="Your name"
+              />
 
-              {/* Phone */}
-              <div className={styles.fieldGroup}>
-                <label>Phone Number</label>
-                {!editingUserPhone ? (
-                  <div className={styles.fieldDisplay}>
-                    <span className={styles.fieldValue} title={userPhone}>{userPhone}</span>
-                    <button className={styles.editBtn} onClick={startEditUserPhone} aria-label="Edit phone">
-                      <Edit2 size={15} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className={styles.fieldEdit}>
-                    <input type="tel" value={tempUserPhone} onChange={(e) => setTempUserPhone(e.target.value)} className={styles.input} autoFocus />
-                    <div className={styles.fieldActions}>
-                      <button className={styles.saveBtn} onClick={saveUserPhone} disabled={savingUserPhone}>
-                        {savingUserPhone ? <Loader2 size={14} className={styles.spinning} /> : <Check size={14} />}
-                      </button>
-                      <button className={styles.cancelBtn} onClick={cancelEditUserPhone} disabled={savingUserPhone}>
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              <EditableField
+                label="Phone Number"
+                value={userPhone}
+                editing={editingUserPhone}
+                temp={tempUserPhone}
+                setTemp={setTempUserPhone}
+                startEdit={startEditUserPhone}
+                cancelEditFn={cancelEditUserPhone}
+                saveFn={saveUserPhone}
+                saving={savingUserPhone}
+                placeholder="Phone number"
+                type="tel"
+              />
 
-              {/* Email — read only */}
               <div className={styles.fieldGroup}>
-                <label>Email Address 🔒</label>
+                <label className={styles.fieldLabel}>Email 🔒</label>
                 <div className={styles.fieldDisplay}>
-                  <span className={styles.fieldValue} style={{ color: "#999" }} title={userEmail}>{userEmail}</span>
+                  <span className={styles.fieldValue} style={{ color: "#b8a8d8" }} title={userEmail}>{userEmail}</span>
                 </div>
-                <p className={styles.fieldHelp}>Email cannot be changed (security)</p>
+                <p className={styles.fieldHelp}>Email cannot be changed</p>
               </div>
             </div>
 
             {/* ── CHANGE PASSWORD ── */}
-            <div className={`${styles.settingsSection} ${styles.fullWidth}`}>
-              <div className={styles.settingsSectionTitle}>
-                <Lock size={20} />
-                <h3>Change Password</h3>
+            <div className={`${styles.settingsCard} ${styles.fullWidth}`}>
+              <div className={styles.sectionHeader}>
+                <span className={`${styles.cardDot} ${styles.dotGold}`} />
+                <Lock size={15} className={styles.sectionIcon} />
+                <h3 className={styles.cardTitle}>Change Password</h3>
               </div>
 
-              <div className={styles.fieldGroup}>
-                <label>Current Password *</label>
-                <div className={styles.passwordInput}>
-                  <input type={showCurrentPassword ? "text" : "password"} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Enter current password" className={styles.input} />
-                  <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className={styles.passwordToggle}>
-                    {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              <div className={styles.passwordGrid}>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Current Password *</label>
+                  <div className={styles.passwordWrap}>
+                    <input
+                      type={showCurrentPassword ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Current password"
+                      className={styles.input}
+                    />
+                    <button type="button" onClick={() => setShowCurrentPassword(!showCurrentPassword)} className={styles.passwordToggle}>
+                      {showCurrentPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.fieldGroup}>
-                <label>New Password *</label>
-                <div className={styles.passwordInput}>
-                  <input type={showNewPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Min 8 characters" className={styles.input} />
-                  <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className={styles.passwordToggle}>
-                    {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>New Password *</label>
+                  <div className={styles.passwordWrap}>
+                    <input
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Min 8 characters"
+                      className={styles.input}
+                    />
+                    <button type="button" onClick={() => setShowNewPassword(!showNewPassword)} className={styles.passwordToggle}>
+                      {showNewPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div className={styles.fieldGroup}>
-                <label>Confirm New Password *</label>
-                <div className={styles.passwordInput}>
-                  <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password" className={styles.input} />
-                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.passwordToggle}>
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+                <div className={styles.fieldGroup}>
+                  <label className={styles.fieldLabel}>Confirm Password *</label>
+                  <div className={styles.passwordWrap}>
+                    <input
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                      className={styles.input}
+                    />
+                    <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className={styles.passwordToggle}>
+                      {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                    <p className={styles.fieldError}>Passwords do not match</p>
+                  )}
                 </div>
-                {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                  <p className={styles.fieldError}>Passwords do not match</p>
-                )}
               </div>
 
               <div className={styles.infoBox}>
-                <Lock size={16} />
+                <Lock size={14} />
                 <p>Password must be at least 8 characters. You'll receive a confirmation email.</p>
               </div>
 
-              <button className={styles.primaryBtn} onClick={handleChangePassword} disabled={savingPassword}>
+              <button className={styles.changePassBtn} onClick={handleChangePassword} disabled={savingPassword}>
                 {savingPassword
-                  ? <><Loader2 size={16} className={styles.spinning} /> Changing...</>
-                  : <><Lock size={16} /> Change Password</>
+                  ? <><Loader2 size={14} className={styles.spinning} /> Changing…</>
+                  : <><Lock size={14} /> Change Password</>
                 }
               </button>
             </div>
 
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
