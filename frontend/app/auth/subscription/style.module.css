@@ -1,193 +1,433 @@
-/* =========================
-   GLOBAL PAGE + SCROLL
-========================= */
-html,
-body {
+/* ======================================================
+   PROMEET — SUBSCRIPTION PAGE
+   Visitor dashboard theme: Nunito, purple gradient hero,
+   lite purple cards, hidden scrollbar (scrolling works)
+====================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+/* ================= GLOBAL SCROLLBAR KILL ================= */
+:global(html),
+:global(body) {
   height: 100%;
   margin: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;          /* Firefox hide scrollbar */
-  -ms-overflow-style: none;       /* Old Edge / IE hide scrollbar */
+  padding: 0;
+  overflow: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
-
-/* Hide scrollbar globally (Chrome / Safari / Edge) */
-*::-webkit-scrollbar {
-  display: none !important;
-}
-
-/* =========================
-   PAGE BACKGROUND
-========================= */
-.container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #8a2be2);
-  color: white;
-  font-family: Arial, sans-serif;
+:global(html::-webkit-scrollbar),
+:global(body::-webkit-scrollbar) { display: none !important; }
+:global(*::-webkit-scrollbar) { display: none !important; }
+:global(*) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
   box-sizing: border-box;
+}
 
+/* ================= ROOT ================= */
+.container {
+  height: 100vh;
+  height: 100dvh;
+  background: #f3f0fb;
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ================= SCROLL BODY ================= */
+.scrollBody {
+  flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
-/* =========================
-   HEADER
-========================= */
+/* ================= HEADER ================= */
 .header {
-  padding: 18px 40px;
+  height: 58px;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #e8e0f5;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  flex-shrink: 0;
+}
+.headerLeft {
   display: flex;
   align-items: center;
+  gap: 12px;
+  min-width: 0;
 }
-
-.logo {
-  font-size: 26px;
-  font-weight: bold;
-  letter-spacing: 1.5px;
+.logoText {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1a0038;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-/* =========================
-   TITLE
-========================= */
-.title {
-  text-align: center;
-  font-size: 28px;
-  margin: 6px 0 22px;
-  font-weight: bold;
-}
-
-/* =========================
-   ERROR
-========================= */
-.error {
-  text-align: center;
-  background: rgba(255, 0, 0, 0.18);
-  padding: 10px 14px;
-  border-radius: 10px;
-  max-width: 520px;
-  margin: auto;
-  color: #ffbaba;
-  font-size: 14px;
-}
-
-/* =========================
-   PLAN GRID
-========================= */
-.planGrid {
+.rightHeader {
   display: flex;
-  justify-content: center;
-  gap: 26px;
-  max-width: 1200px;
-  margin: 10px auto 40px auto;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.companyLogo {
+  width: 72px;
+  height: 36px;
+  object-fit: contain;
 }
 
-/* =========================
-   PLAN CARD
-========================= */
-.card {
-  background: white;
-  width: 300px;
-  padding: 22px 20px;
-  border-radius: 16px;
+/* ================= HERO ================= */
+.hero {
+  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  padding: 36px 36px 42px;
   text-align: center;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
-  color: #333;
-  border: 2px solid transparent;
-  transition: 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+.heroTitle {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.15;
+  position: relative;
+}
+.heroTitle span {
+  color: #f0a500;
+}
+.heroSub {
+  color: rgba(255,255,255,0.72);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  position: relative;
 }
 
-.card:hover {
-  transform: translateY(-4px);
+/* ================= ERROR ================= */
+.errorBox {
+  margin: 16px 36px 0;
+  padding: 12px 18px;
+  background: #fff0f0;
+  color: #cc1100;
+  font-size: 13px;
+  font-weight: 700;
+  border-left: 4px solid #cc1100;
+  border-radius: 0 12px 12px 0;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.cardHighlight {
-  border: 2px solid #7a00ff;
+/* ================= MAIN CONTENT ================= */
+.mainContent {
+  padding: 28px 36px 56px;
+}
+
+/* ================= PLAN GRID ================= */
+.planGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+  max-width: 1080px;
+  margin: 0 auto;
+  align-items: start;
+}
+
+/* ================= PLAN CARD ================= */
+.planCard {
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 22px;
+  padding: 28px 24px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
+}
+.planCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 12px 40px rgba(98,0,214,0.14);
+}
+
+/* ── Highlighted card ── */
+.planHighlight {
+  border-color: #6200d6;
+  box-shadow: 0 8px 32px rgba(98,0,214,0.15);
+  background: linear-gradient(145deg, #f0e6ff 0%, #e8dcf8 100%);
   transform: scale(1.03);
 }
-
-/* =========================
-   PLAN CONTENT
-========================= */
-.planName {
-  font-size: 20px;
-  font-weight: bold;
-  color: #4b008f;
-  margin-bottom: 6px;
+.planHighlight:hover {
+  transform: scale(1.03) translateY(-6px);
+  box-shadow: 0 16px 48px rgba(98,0,214,0.22);
 }
 
-.price {
-  font-size: 28px;
-  font-weight: bold;
+/* ── Badge ── */
+.badge {
+  position: absolute;
+  top: 14px;
+  right: -32px;
+  background: #f0a500;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 4px 40px;
+  transform: rotate(45deg);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  box-shadow: 0 2px 8px rgba(240,165,0,0.3);
+}
+
+/* ── Plan header with dot ── */
+.planHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.planDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dotPurple {
+  background: #6200d6;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.15);
+}
+.dotGreen {
+  background: #00b894;
+  box-shadow: 0 0 0 3px rgba(0,184,148,0.15);
+}
+.dotGold {
+  background: #f0a500;
+  box-shadow: 0 0 0 3px rgba(240,165,0,0.15);
+}
+.planName {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #1a0038;
+  margin: 0;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
+/* ── Price ── */
+.priceBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
   margin-bottom: 2px;
 }
-
-.price span {
-  font-size: 13px;
-  color: #777;
+.priceValue {
+  font-size: 2.4rem;
+  font-weight: 900;
+  color: #1a0038;
+  line-height: 1.1;
+}
+.pricePeriod {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #9980c8;
+}
+.planSub {
+  font-size: 0.82rem;
+  color: #9980c8;
+  font-weight: 600;
+  margin: 0 0 16px;
 }
 
-.subText {
-  font-size: 13px;
-  margin-bottom: 14px;
-  color: #666;
+/* ── Divider ── */
+.divider {
+  height: 1.5px;
+  background: linear-gradient(90deg, transparent, #ddd2f0, transparent);
+  margin-bottom: 16px;
 }
 
-/* =========================
-   FEATURES
-========================= */
+/* ── Features ── */
 .features {
   list-style: none;
-  padding-left: 0;
-  margin-bottom: 18px;
-  text-align: left;
+  padding: 0;
+  margin: 0 0 20px;
+}
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #3a2060;
+  border-bottom: 1px solid rgba(221,210,240,0.5);
+}
+.featureItem:last-child {
+  border-bottom: none;
+}
+.featureCheck {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,184,148,0.12);
+  color: #00b894;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 900;
+  flex-shrink: 0;
 }
 
-.features li {
-  margin-bottom: 7px;
-  font-size: 14px;
-}
-
-/* =========================
-   BUTTON
-========================= */
-.btn {
+/* ── Plan button ── */
+.planBtn {
   width: 100%;
-  padding: 12px;
-  background: #7a00ff;
-  color: white;
-  border: none;
-  border-radius: 9px;
-  font-size: 16px;
+  height: 48px;
+  border: 2px solid #6200d6;
+  border-radius: 50px;
+  background: transparent;
+  color: #6200d6;
+  font-size: 14px;
+  font-weight: 800;
   cursor: pointer;
-  transition: 0.25s ease;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.25s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
-
-.btn:hover {
-  background: #5c00c7;
+.planBtn:hover:not(:disabled) {
+  background: #6200d6;
+  color: #fff;
   transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(98,0,214,0.3);
+}
+.planBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
-@media (max-width: 1024px) {
-  .planGrid {
-    gap: 16px;
-  }
+/* ── Highlighted button (filled) ── */
+.planBtnHighlight {
+  background: #6200d6;
+  color: #fff;
+  border-color: #6200d6;
+  box-shadow: 0 4px 16px rgba(98,0,214,0.3);
+}
+.planBtnHighlight:hover:not(:disabled) {
+  background: #4a00a8;
+  border-color: #4a00a8;
+  box-shadow: 0 8px 24px rgba(98,0,214,0.4);
+}
 
-  .card {
-    width: 270px;
+/* ── Button spinner ── */
+.btnSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 960px) {
+  .planGrid {
+    grid-template-columns: 1fr 1fr;
+    max-width: 680px;
+  }
+  /* Enterprise card spans full on 2-col */
+  .planCard:last-child {
+    grid-column: 1 / -1;
+    max-width: 340px;
+    justify-self: center;
+  }
+  .planHighlight {
+    transform: scale(1.0);
+  }
+  .planHighlight:hover {
+    transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 900px) {
+  .hero { padding: 28px 28px 34px; }
+  .errorBox { margin-left: 28px; margin-right: 28px; }
+  .mainContent { padding: 22px 28px 48px; }
+}
+
+@media (max-width: 680px) {
+  .planGrid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+  .planCard:last-child {
+    max-width: none;
+  }
+  .planHighlight {
+    transform: none;
+  }
+  .planHighlight:hover {
+    transform: translateY(-6px);
   }
 }
 
 @media (max-width: 768px) {
-  .planGrid {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .card {
-    width: 90%;
-  }
+  .header { padding: 0 16px; height: 52px; }
+  .logoText { font-size: 0.82rem; }
+  .companyLogo { width: 56px; height: 30px; }
+  .hero { padding: 24px 20px 30px; }
+  .heroTitle { font-size: 1.6rem; }
+  .errorBox { margin-left: 20px; margin-right: 20px; }
+  .mainContent { padding: 20px 20px 40px; }
+  .planCard { padding: 24px 20px; border-radius: 18px; }
 }
 
+@media (max-width: 480px) {
+  .header { padding: 0 12px; height: 50px; }
+  .logoText { font-size: 0.75rem; }
+  .companyLogo { display: none; }
+  .hero { padding: 18px 16px 24px; }
+  .heroTitle { font-size: 1.3rem; }
+  .heroSub { font-size: 0.82rem; }
+  .errorBox { margin-left: 16px; margin-right: 16px; font-size: 12px; }
+  .mainContent { padding: 16px 16px 36px; }
+  .planCard { padding: 20px 16px; }
+  .priceValue { font-size: 2rem; }
+  .planBtn { height: 44px; font-size: 13px; }
+  .badge { font-size: 9px; top: 12px; right: -34px; }
+}
