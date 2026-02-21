@@ -155,22 +155,18 @@ export default function Home() {
   const [company,     setCompany]     = useState(null);
   const [currentView, setCurrentView] = useState("home");
 
-  // Subscription panel
   const [showMenu,    setShowMenu]    = useState(false);
   const [subData,     setSubData]     = useState(null);
   const [loadingSub,  setLoadingSub]  = useState(false);
   const [subError,    setSubError]    = useState("");
 
-  // Upgrade
   const [upgradingBusiness,   setUpgradingBusiness]   = useState(false);
   const [upgradingEnterprise, setUpgradingEnterprise] = useState(false);
 
-  // Reports
   const [exportStats,   setExportStats]   = useState(null);
   const [loadingStats,  setLoadingStats]  = useState(false);
   const [downloading,   setDownloading]   = useState(false);
 
-  /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token          = localStorage.getItem("token");
@@ -180,7 +176,6 @@ export default function Home() {
     catch { localStorage.clear(); router.replace("/auth/login"); }
   }, [router]);
 
-  /* ── Fetch Subscription ───────────────────────────────────────────── */
   const fetchSubscription = async () => {
     try {
       setLoadingSub(true);
@@ -201,7 +196,6 @@ export default function Home() {
     }
   };
 
-  /* ── Fetch Export Stats ───────────────────────────────────────────── */
   const fetchExportStats = async () => {
     try {
       setLoadingStats(true);
@@ -219,7 +213,6 @@ export default function Home() {
     }
   };
 
-  /* ── Download ─────────────────────────────────────────────────────── */
   const handleDownload = async (type) => {
     const map = {
       visitors: { endpoint: "/api/exports/visitors",           label: "Visitor Records" },
@@ -265,7 +258,6 @@ export default function Home() {
     }
   };
 
-  /* ── Upgrade ──────────────────────────────────────────────────────── */
   const handleUpgradeBusiness = async () => {
     try {
       setUpgradingBusiness(true);
@@ -302,7 +294,6 @@ export default function Home() {
     }
   };
 
-  /* ── View Handlers ────────────────────────────────────────────────── */
   const handleOpenMenu = () => { setShowMenu(true); fetchSubscription(); };
 
   const handleOpenReports = () => {
@@ -322,7 +313,6 @@ export default function Home() {
     }
   };
 
-  /* ── Derived State ────────────────────────────────────────────────── */
   const currentPlan   = subData?.PLAN?.toLowerCase()   || "";
   const currentStatus = subData?.STATUS?.toLowerCase() || "";
 
@@ -337,10 +327,8 @@ export default function Home() {
   return (
     <div className={styles.container}>
 
-      {/* ── TOASTS ── */}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
-      {/* ── HEADER ── */}
       <header className={styles.header}>
         {currentView !== "home" ? (
           <button className={styles.backBtn} onClick={handleBackToHome} aria-label="Back">
@@ -376,10 +364,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* ── MAIN ── */}
       <main className={styles.main}>
 
-        {/* HOME VIEW */}
         {currentView === "home" && (
           <>
             <div className={styles.welcomeSection}>
@@ -437,7 +423,6 @@ export default function Home() {
           </>
         )}
 
-        {/* REPORTS VIEW */}
         {currentView === "reports" && (
           <div className={styles.reportsView}>
             <div className={styles.reportsHeader}>
@@ -535,7 +520,6 @@ export default function Home() {
 
       </main>
 
-      {/* ── SLIDE PANEL ── */}
       {showMenu && (
         <>
           <div className={styles.overlay} onClick={() => setShowMenu(false)} aria-hidden="true"/>
@@ -565,7 +549,6 @@ export default function Home() {
 
               {subData && (
                 <>
-                  {/* Plan Card */}
                   <div className={styles.currentPlanCard}>
                     <div className={styles.planBadge}><span>Current Plan</span></div>
                     <h4 className={styles.currentPlanName}>{subData.PLAN || "—"}</h4>
@@ -575,7 +558,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Details */}
                   <div className={styles.detailsSection}>
                     <h5 className={styles.sectionTitle}>Subscription Details</h5>
                     {subData.ZOHO_CUSTOMER_ID && (
@@ -604,7 +586,6 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Nav Items */}
                   <div className={styles.menuSection}>
                     <button className={styles.menuItem} onClick={handleOpenReports}>
                       <div className={styles.menuItemIcon}><FileSpreadsheet size={18}/></div>
@@ -625,7 +606,6 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {/* Renewal */}
                   {needsRenewal && (
                     <div className={styles.renewalSection}>
                       <div className={styles.alertBox}>
@@ -641,7 +621,6 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* Upgrade */}
                   {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
                     <div className={styles.upgradeSection}>
                       <div className={styles.sectionHeader}>
