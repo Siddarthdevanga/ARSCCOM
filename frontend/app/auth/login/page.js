@@ -69,10 +69,10 @@ export default function LoginPage() {
       const status = company?.subscription_status?.toLowerCase() || "pending";
 
       if (["active", "trial"].includes(status)) {
-        const successMessage = status === "trial" 
-          ? "Login successful! Welcome to your trial period." 
+        const successMessage = status === "trial"
+          ? "Login successful! Welcome to your trial period."
           : "Login successful! Welcome back.";
-        
+
         setError(successMessage);
         setIsRedirecting(true);
         setTimeout(() => router.replace("/home"), 800);
@@ -112,23 +112,23 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
-      {/* LEFT BRANDING SECTION - 65% */}
+      {/* LEFT BRANDING SECTION */}
       <div className={styles.leftSection}>
         <nav className={styles.topNav}>
-          <button 
-            className={activeTab === "about" ? styles.activeNavBtn : ""} 
+          <button
+            className={activeTab === "about" ? styles.activeNavBtn : ""}
             onClick={() => setActiveTab(activeTab === "about" ? null : "about")}
           >
             ABOUT
           </button>
-          <button 
-            className={activeTab === "plans" ? styles.activeNavBtn : ""} 
+          <button
+            className={activeTab === "plans" ? styles.activeNavBtn : ""}
             onClick={() => setActiveTab(activeTab === "plans" ? null : "plans")}
           >
             PLANS
           </button>
-          <button 
-            className={activeTab === "contact" ? styles.activeNavBtn : ""} 
+          <button
+            className={activeTab === "contact" ? styles.activeNavBtn : ""}
             onClick={() => setActiveTab(activeTab === "contact" ? null : "contact")}
           >
             CONTACT
@@ -161,27 +161,13 @@ export default function LoginPage() {
                 <div className={styles.dropdownSection}>
                   <h2>About Promeet</h2>
                   <p>
-                    Promeet is a secure Visitor & Conference Management Platform designed to 
+                    Promeet is a secure Visitor & Conference Management Platform designed to
                     digitalize visitor flow, improve security, and enhance organizational efficiency.
                   </p>
                   <p>
-                    Transform your workplace with seamless visitor management, automated meeting 
+                    Transform your workplace with seamless visitor management, automated meeting
                     coordination, and intelligent space utilization — all in one powerful platform.
                   </p>
-                  <div className={styles.statsGrid}>
-                    <div className={styles.statItem}>
-                      <strong>99.9%</strong>
-                      <span>Uptime</span>
-                    </div>
-                    <div className={styles.statItem}>
-                      <strong>500+</strong>
-                      <span>Companies</span>
-                    </div>
-                    <div className={styles.statItem}>
-                      <strong>50K+</strong>
-                      <span>Daily Visitors</span>
-                    </div>
-                  </div>
                 </div>
               )}
 
@@ -281,7 +267,7 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* RIGHT LOGIN SECTION - 35% */}
+      {/* RIGHT LOGIN SECTION */}
       <div className={styles.rightSection}>
         <div className={styles.loginCard}>
           <h2 className={styles.loginTitle}>LOGIN TO YOUR ACCOUNT</h2>
