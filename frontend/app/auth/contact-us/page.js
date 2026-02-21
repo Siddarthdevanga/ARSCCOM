@@ -25,7 +25,7 @@ export default function ContactUs() {
         {/* ===== HERO ===== */}
         <section className={styles.hero}>
           <h1 className={styles.heroTitle}>Get in <span>Touch</span></h1>
-          <p className={styles.heroSub}>Enterprise plans, onboarding, demos — we're here to help</p>
+          <p className={styles.heroSub}>Plan Details, Onboarding, Demos — we're here to help</p>
         </section>
 
         {/* ===== MAIN CONTENT ===== */}
