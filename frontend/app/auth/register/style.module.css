@@ -1,202 +1,272 @@
-/* ================= GLOBAL STYLES ================= */
+/* ======================================================
+   PROMEET — REGISTER PAGE
+   Visitor dashboard theme: Nunito, purple gradient hero,
+   lite purple card, hidden scrollbar (scrolling works)
+====================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+/* ================= GLOBAL SCROLLBAR KILL ================= */
 :global(html),
 :global(body) {
   height: 100%;
-  overflow: hidden;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
-
+:global(html::-webkit-scrollbar),
+:global(body::-webkit-scrollbar) { display: none !important; }
+:global(*::-webkit-scrollbar) { display: none !important; }
 :global(*) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
   box-sizing: border-box;
 }
 
-/* ================= PAGE ================= */
-.page {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff, #5a00c2);
-  background-size: 200% 200%;
-  animation: gradientShift 8s ease infinite;
+/* ================= ROOT ================= */
+.container {
+  height: 100vh;
+  height: 100dvh;
+  background: #f3f0fb;
+  font-family: 'Nunito', sans-serif;
   display: flex;
-  justify-content: center;
-  align-items: center;
-  padding-top: 90px;
-  padding-bottom: 40px;
-  font-family: "Segoe UI", "Inter", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-@keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+/* ================= SCROLL BODY ================= */
+.scrollBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ================= HEADER ================= */
 .header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  padding: 20px 40px;
+  height: 58px;
+  background: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(60, 0, 122, 0.95);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  padding: 0 24px;
+  border-bottom: 1px solid #e8e0f5;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  flex-shrink: 0;
 }
-
-.brand {
-  color: #ffffff;
-  font-size: 28px;
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.logoText {
+  font-size: 1rem;
   font-weight: 900;
+  color: #6200d6;
   letter-spacing: 1.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-
-.backButton {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 20px;
-  border-radius: 8px;
+.rightHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.backBtn {
+  background: transparent;
+  color: #6200d6;
+  border: 2px solid #6200d6;
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.3s ease;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.backBtn:hover {
+  background: #6200d6;
+  color: #fff;
 }
 
-.backButton:hover {
-  background: rgba(255, 255, 255, 0.25);
-  transform: translateX(-4px);
+/* ================= HERO ================= */
+.hero {
+  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  padding: 32px 36px 36px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+.heroTitle {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.15;
+  position: relative;
+}
+.heroTitle span { color: #f0a500; }
+.heroSub {
+  color: rgba(255,255,255,0.72);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+  position: relative;
 }
 
-/* ================= CARD ================= */
-.card {
-  width: 920px;
-  background: #ffffff;
-  padding: 40px 48px;
-  border-radius: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  max-height: calc(100vh - 140px);
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
+/* ================= MAIN CONTENT ================= */
+.mainContent {
+  padding: 24px 36px 56px;
+  display: flex;
+  justify-content: center;
 }
 
-/* HIDE SCROLLBAR - Touch Based Only */
-.card::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
+/* ================= FORM CARD ================= */
+.formCard {
+  width: 100%;
+  max-width: 780px;
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 22px;
+  padding: 28px 32px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  transition: box-shadow 0.3s;
 }
-
-.card {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-/* ================= TEXT ================= */
-.title {
-  font-size: 28px;
-  font-weight: 800;
-  color: #3c007a;
-  margin: 0 0 8px 0;
-}
-
-.subtitle {
-  font-size: 15px;
-  color: #666;
-  line-height: 1.6;
-  margin: 0 0 30px 0;
+.formCard:hover {
+  box-shadow: 0 8px 32px rgba(98,0,214,0.12);
 }
 
 /* ================= FORM ================= */
 .form {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
 }
 
-/* ================= FORM FIELD ================= */
-.formField {
+/* ================= SECTION HEADERS ================= */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 2px;
+  padding-bottom: 10px;
+  border-bottom: 1.5px solid rgba(98,0,214,0.1);
+}
+.cardDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6200d6;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.15);
+}
+.dotGreen {
+  background: #00b894;
+  box-shadow: 0 0 0 3px rgba(0,184,148,0.15);
+}
+.dotGold {
+  background: #f0a500;
+  box-shadow: 0 0 0 3px rgba(240,165,0,0.15);
+}
+.cardTitle {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #1a0038;
+  margin: 0;
+}
+
+/* ================= FIELDS ================= */
+.field {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
-
-.label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #3c007a;
-  margin-bottom: 8px;
+.fieldLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #6200d6;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
-
-/* ================= INPUT ================= */
 .input {
   width: 100%;
   height: 46px;
-  padding: 0 16px;
+  padding: 0 14px;
   border-radius: 12px;
-  border: 2px solid #e0e0e0;
-  font-size: 14px;
-  font-family: inherit;
-  transition: all 0.3s ease;
-  background: #fafafa;
+  border: 1.5px solid #ddd2f0;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
+  background: #fff;
+  color: #1a0038;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
 }
-
-.input:hover {
-  border-color: #bbb;
+.input:hover:not(:disabled) {
+  border-color: #c8b8e8;
 }
-
 .input:focus {
   outline: none;
-  border-color: #7a00ff;
-  background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(122, 0, 255, 0.1);
+  border-color: #6200d6;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.1);
+  background: #faf8ff;
 }
-
 .input:disabled {
-  background: #f5f5f5;
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.6;
+  background: #f3f0fb;
 }
-
 .input::placeholder {
-  color: #aaa;
+  color: #b8a8d8;
+  font-weight: 600;
 }
 
 /* ================= ROWS ================= */
 .row2 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }
 
 /* ================= LOGO UPLOAD ================= */
-.logoUploadContainer {
+.logoUpload {
   position: relative;
   width: 100%;
-  min-height: 180px;
-  border: 2px dashed #d0d0d0;
-  border-radius: 12px;
+  min-height: 160px;
+  border: 2px dashed #ddd2f0;
+  border-radius: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 24px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  background: #fafafa;
+  transition: all 0.25s;
+  background: #fff;
 }
-
-.logoUploadContainer:hover {
-  border-color: #7a00ff;
-  background: #f5f0ff;
+.logoUpload:hover {
+  border-color: #6200d6;
+  background: #faf8ff;
 }
-
 .fileInput {
   position: absolute;
   inset: 0;
@@ -205,23 +275,20 @@
   opacity: 0;
   cursor: pointer;
 }
-
-.logoUploadPlaceholder {
+.logoPlaceholder {
   text-align: center;
-  color: #666;
   pointer-events: none;
 }
-
-.logoUploadPlaceholder p {
-  font-size: 15px;
-  font-weight: 600;
-  color: #3c007a;
-  margin: 0 0 6px 0;
+.logoPlaceholder p {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6200d6;
+  margin: 0 0 4px;
 }
-
-.logoUploadPlaceholder small {
-  font-size: 13px;
-  color: #888;
+.logoPlaceholder small {
+  font-size: 12px;
+  color: #9980c8;
+  font-weight: 600;
 }
 
 /* ================= LOGO PREVIEW ================= */
@@ -229,239 +296,169 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   width: 100%;
 }
-
-.logoPreviewImage {
-  max-width: 200px;
-  max-height: 150px;
+.logoImg {
+  max-width: 180px;
+  max-height: 130px;
   object-fit: contain;
-  border-radius: 12px;
-  border: 2px solid #e0e0e0;
+  border-radius: 14px;
+  border: 1.5px solid #ede8f8;
   padding: 8px;
   background: #fff;
 }
-
-.removeLogoButton {
-  background: #ff1744;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
+.removeLogo {
+  background: transparent;
+  color: #cc1100;
+  border: 2px solid #f0d0d0;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 12px;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.3s ease;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
 }
-
-.removeLogoButton:hover {
-  background: #d50000;
-  transform: scale(1.05);
+.removeLogo:hover:not(:disabled) {
+  background: #cc1100;
+  color: #fff;
+  border-color: #cc1100;
 }
-
-.removeLogoButton:disabled {
+.removeLogo:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* ================= ALERTS ================= */
-.alert {
-  padding: 14px 18px;
-  border-radius: 12px;
-  font-size: 14px;
-  background: #fdecea;
-  border-left: 4px solid #d32f2f;
-  color: #b71c1c;
-  animation: slideIn 0.3s ease;
-}
-
-.alertSuccess {
-  background: #e8f5e9;
-  border-left-color: #4caf50;
-  color: #2e7d32;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ================= SUBMIT BUTTON ================= */
-.submitButton {
-  width: 100%;
-  height: 52px;
-  border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #7a00ff, #5a00c2);
-  color: white;
-  font-size: 16px;
+/* ================= MESSAGES ================= */
+.errorBox {
+  padding: 12px 16px;
+  background: #fff0f0;
+  color: #cc1100;
+  font-size: 13px;
   font-weight: 700;
+  border-left: 4px solid #cc1100;
+  border-radius: 0 12px 12px 0;
+  animation: fadeIn 0.3s ease;
+}
+.successBox {
+  padding: 12px 16px;
+  background: #e6f9f0;
+  color: #00875a;
+  font-size: 13px;
+  font-weight: 700;
+  border-left: 4px solid #00b894;
+  border-radius: 0 12px 12px 0;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= SUBMIT ================= */
+.submitBtn {
+  width: 100%;
+  height: 50px;
+  border: none;
+  border-radius: 50px;
+  background: #6200d6;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
   cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(98,0,214,0.3);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(122, 0, 255, 0.3);
-  margin-top: 8px;
+  gap: 8px;
+  margin-top: 4px;
 }
-
-.submitButton:hover:not(:disabled) {
+.submitBtn:hover:not(:disabled) {
+  background: #4a00a8;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(122, 0, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(98,0,214,0.4);
 }
-
-.submitButton:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.submitButton:disabled {
-  opacity: 0.6;
+.submitBtn:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
-  transform: none;
 }
 
 /* ================= SPINNER ================= */
-.spinner {
-  width: 18px;
-  height: 18px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  border-top-color: white;
+.btnSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
+@keyframes spin { to { transform: rotate(360deg); } }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ================= FORM FOOTER ================= */
+/* ================= FOOTER ================= */
 .formFooter {
-  margin-top: 16px;
-  padding-top: 20px;
-  border-top: 1px solid #e0e0e0;
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1.5px solid rgba(98,0,214,0.1);
   text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: #9980c8;
 }
-
-.footerText {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
-}
-
-.linkButton {
+.linkBtn {
   background: none;
   border: none;
-  color: #7a00ff;
-  font-weight: 600;
+  color: #6200d6;
+  font-weight: 800;
   cursor: pointer;
-  text-decoration: none;
-  transition: all 0.2s ease;
-  padding: 0;
   font-size: inherit;
+  font-family: 'Nunito', sans-serif;
+  padding: 0;
+  transition: all 0.2s;
 }
-
-.linkButton:hover:not(:disabled) {
-  color: #5a00c2;
+.linkBtn:hover:not(:disabled) {
+  color: #4a00a8;
   text-decoration: underline;
 }
-
-.linkButton:disabled {
+.linkBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width: 960px) {
-  .page {
-    padding-top: 80px;
-    padding-bottom: 20px;
-  }
 
-  .header {
-    padding: 16px 24px;
-  }
-
-  .brand {
-    font-size: 24px;
-  }
-
-  .backButton {
-    font-size: 13px;
-    padding: 8px 16px;
-  }
-
-  .card {
-    width: 94%;
-    max-height: calc(100vh - 120px);
-    padding: 28px 24px;
-  }
-
-  .row2 {
-    grid-template-columns: 1fr;
-  }
-
-  .title {
-    font-size: 24px;
-  }
-
-  .subtitle {
-    font-size: 14px;
-  }
+@media (max-width: 900px) {
+  .hero { padding: 28px 28px 32px; }
+  .mainContent { padding: 22px 28px 48px; }
 }
 
-@media (max-width: 600px) {
-  .page {
-    padding-top: 70px;
-  }
+@media (max-width: 768px) {
+  .header { padding: 0 16px; height: 52px; }
+  .logoText { font-size: 0.88rem; }
+  .backBtn { padding: 7px 14px; font-size: 12px; }
+  .hero { padding: 24px 20px 28px; }
+  .heroTitle { font-size: 1.5rem; }
+  .mainContent { padding: 20px 20px 40px; }
+  .formCard { padding: 24px 22px; border-radius: 18px; }
+  .row2 { grid-template-columns: 1fr; }
+}
 
-  .header {
-    padding: 12px 16px;
-  }
-
-  .brand {
-    font-size: 20px;
-  }
-
-  .backButton {
-    font-size: 12px;
-    padding: 6px 12px;
-  }
-
-  .card {
-    width: 96%;
-    padding: 24px 20px;
-    border-radius: 16px;
-  }
-
-  .title {
-    font-size: 22px;
-  }
-
-  .subtitle {
-    font-size: 13px;
-  }
-
-  .input {
-    height: 44px;
-    font-size: 13px;
-  }
-
-  .submitButton {
-    height: 48px;
-    font-size: 15px;
-  }
-
-  .logoUploadContainer {
-    min-height: 160px;
-  }
+@media (max-width: 480px) {
+  .header { padding: 0 12px; height: 50px; }
+  .logoText { font-size: 0.8rem; }
+  .backBtn { padding: 6px 12px; font-size: 11px; }
+  .hero { padding: 18px 16px 22px; }
+  .heroTitle { font-size: 1.25rem; }
+  .heroSub { font-size: 0.82rem; }
+  .mainContent { padding: 16px 16px 36px; }
+  .formCard { padding: 20px 16px; }
+  .input { height: 42px; font-size: 12px; }
+  .submitBtn { height: 46px; font-size: 14px; }
+  .logoUpload { min-height: 140px; padding: 18px; }
+  .logoImg { max-width: 140px; max-height: 100px; }
 }
 
 /* ================= ACCESSIBILITY ================= */
@@ -476,10 +473,10 @@
 }
 
 .input:focus-visible,
-.submitButton:focus-visible,
-.backButton:focus-visible,
-.removeLogoButton:focus-visible,
-.linkButton:focus-visible {
-  outline: 3px solid #7a00ff;
+.submitBtn:focus-visible,
+.backBtn:focus-visible,
+.removeLogo:focus-visible,
+.linkBtn:focus-visible {
+  outline: 3px solid #6200d6;
   outline-offset: 2px;
 }
