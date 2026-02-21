@@ -9,10 +9,11 @@ export default function SubscriptionPage() {
 
   const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
+  const [company, setCompany] = useState(null);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
-    "https://www.wheelbrand.in";
+    "https://www.promeet.zodopt.com";
 
   /* ======================================================
         VALIDATE LOGIN + SUBSCRIPTION STATUS
@@ -28,23 +29,21 @@ export default function SubscriptionPage() {
       const stored = localStorage.getItem("company");
       if (!stored) return;
 
-      let company = {};
+      let comp = {};
       try {
-        company = JSON.parse(stored);
+        comp = JSON.parse(stored);
+        setCompany(comp);
       } catch {}
 
       const status =
-        company?.subscription_status?.toLowerCase() || "pending";
+        comp?.subscription_status?.toLowerCase() || "pending";
 
       console.log("🔎 SUBSCRIPTION PAGE STATUS:", status);
 
-      // Already subscribed → Go home
       if (["active", "trial"].includes(status)) {
         router.replace("/home");
         return;
       }
-
-      // Expired / cancelled stay on page to renew
     } catch {
       router.replace("/auth/login");
     }
@@ -59,7 +58,6 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
-    // ENTERPRISE → Contact Page (correct absolute route)
     if (plan === "enterprise") {
       router.push("/auth/contact-us");
       setLoadingPlan("");
@@ -89,13 +87,11 @@ export default function SubscriptionPage() {
         data = await res.json();
       } catch {}
 
-      // Session expired
       if (res.status === 401) {
         router.replace("/auth/login");
         return;
       }
 
-      // Backend denied
       if (res.status === 403) {
         setError(
           data?.message || "Subscription already active or not allowed."
@@ -110,12 +106,6 @@ export default function SubscriptionPage() {
         return;
       }
 
-      /**
-       * Expected backend return:
-       * success: true
-       * reused: true (if old pending payment link used)
-       * url: "redirect-payment-url"
-       */
       if (data?.url) {
         window.location.href = data.url;
         return;
@@ -131,95 +121,143 @@ export default function SubscriptionPage() {
   };
 
   /* ======================================================
+        PLAN DATA
+  ====================================================== */
+  const plans = [
+    {
+      key: "free",
+      name: "TRIAL",
+      price: "₹49",
+      period: "",
+      sub: "Valid for 15 days",
+      color: "purple",
+      features: [
+        "100 Visitor Bookings",
+        "100 Conference Bookings",
+        "2 Conference Rooms",
+        "Email Support",
+      ],
+      btnText: "Proceed to Payment",
+      highlight: false,
+    },
+    {
+      key: "business",
+      name: "BUSINESS",
+      price: "₹500",
+      period: "/ month",
+      sub: "Best for growing teams",
+      color: "green",
+      features: [
+        "Unlimited Visitors",
+        "1000 Conference Bookings",
+        "6 Conference Rooms",
+        "Priority Support",
+      ],
+      btnText: "Proceed to Payment",
+      highlight: true,
+    },
+    {
+      key: "enterprise",
+      name: "ENTERPRISE",
+      price: "Custom",
+      period: "Pricing",
+      sub: "Tailored for large organizations",
+      color: "gold",
+      features: [
+        "Unlimited Visitors",
+        "Unlimited Conference Bookings",
+        "Unlimited Conference Rooms",
+        "Dedicated Support",
+      ],
+      btnText: "Contact Us",
+      highlight: false,
+    },
+  ];
+
+  /* ======================================================
         UI
   ====================================================== */
   return (
     <div className={styles.container}>
-      {/* HEADER */}
+
+      {/* ===== HEADER ===== */}
       <header className={styles.header}>
-        <div className={styles.logo}>PROMEET</div>
+        <div className={styles.headerLeft}>
+          <div className={styles.logoText}>{company?.name || "PROMEET"}</div>
+        </div>
+        <div className={styles.rightHeader}>
+          {company?.logo_url && (
+            <img src={company.logo_url} alt="Logo" className={styles.companyLogo} />
+          )}
+        </div>
       </header>
 
-      <h2 className={styles.title}>Choose Your Subscription Plan</h2>
+      {/* ===== SCROLL BODY ===== */}
+      <div className={styles.scrollBody}>
 
-      {error && <div className={styles.error}>{error}</div>}
+        {/* ===== HERO ===== */}
+        <section className={styles.hero}>
+          <h1 className={styles.heroTitle}>Choose Your <span>Plan</span></h1>
+          <p className={styles.heroSub}>Select the subscription that fits your team</p>
+        </section>
 
-      <div className={styles.planGrid}>
-        {/* ================= TRIAL ================= */}
-        <div className={styles.card}>
-          <h3 className={styles.planName}>TRIAL</h3>
-          <p className={styles.price}>₹49</p>
-          <p className={styles.subText}>Valid for 15 days</p>
+        {/* ===== ERROR ===== */}
+        {error && <div className={styles.errorBox}>{error}</div>}
 
-          <ul className={styles.features}>
-            <li>• 100 Visitor Bookings</li>
-            <li>• 100 Conference Bookings</li>
-            <li>•  2 Conference Rooms</li>
-            <li>• Email Support</li>
-          </ul>
+        {/* ===== PLAN CARDS ===== */}
+        <main className={styles.mainContent}>
+          <div className={styles.planGrid}>
+            {plans.map((plan) => (
+              <div
+                key={plan.key}
+                className={`${styles.planCard} ${plan.highlight ? styles.planHighlight : ""}`}
+              >
+                {/* Badge for highlighted */}
+                {plan.highlight && <div className={styles.badge}>Most Popular</div>}
 
-          <button
-            className={styles.btn}
-            disabled={loadingPlan === "free"}
-            onClick={() => choosePlan("free")}
-          >
-            {loadingPlan === "free"
-              ? "Processing..."
-              : "Proceed to Payment"}
-          </button>
-        </div>
+                {/* Plan dot + name */}
+                <div className={styles.planHeader}>
+                  <span className={`${styles.planDot} ${styles[`dot${plan.color.charAt(0).toUpperCase() + plan.color.slice(1)}`]}`} />
+                  <h3 className={styles.planName}>{plan.name}</h3>
+                </div>
 
-        {/* ================= BUSINESS ================= */}
-        <div className={`${styles.card} ${styles.cardHighlight}`}>
-          <h3 className={styles.planName}>BUSINESS</h3>
-          <p className={styles.price}>
-            ₹500 <span>/ month</span>
-          </p>
-          <p className={styles.subText}>Best for growing teams</p>
+                {/* Price */}
+                <div className={styles.priceBlock}>
+                  <span className={styles.priceValue}>{plan.price}</span>
+                  {plan.period && <span className={styles.pricePeriod}>{plan.period}</span>}
+                </div>
+                <p className={styles.planSub}>{plan.sub}</p>
 
-          <ul className={styles.features}>
-            <li>• Unlimited Visitors</li>
-            <li>• 1000 Conference Bookings</li>
-            <li>• 6 Conference Rooms</li>
-            <li>• Priority Support</li>
-          </ul>
+                {/* Divider */}
+                <div className={styles.divider} />
 
-          <button
-            className={styles.btn}
-            disabled={loadingPlan === "business"}
-            onClick={() => choosePlan("business")}
-          >
-            {loadingPlan === "business"
-              ? "Processing..."
-              : "Proceed to Payment"}
-          </button>
-        </div>
+                {/* Features */}
+                <ul className={styles.features}>
+                  {plan.features.map((f, i) => (
+                    <li key={i} className={styles.featureItem}>
+                      <span className={styles.featureCheck}>✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
 
-        {/* ================= ENTERPRISE ================= */}
-        <div className={styles.card}>
-          <h3 className={styles.planName}>ENTERPRISE</h3>
-          <p className={styles.price}>Custom Pricing</p>
-          <p className={styles.subText}>
-            Tailored for large organizations
-          </p>
-
-          <ul className={styles.features}>
-            <li>• Unlimited Visitors</li>
-            <li>• Unlimited Conference Bookings</li>
-            <li>• Unmimited Conference Rooms</li>
-            <li>• Dedicated Support</li>
-          </ul>
-
-          <button
-            className={styles.btn}
-            disabled={loadingPlan === "enterprise"}
-            onClick={() => choosePlan("enterprise")}
-          >
-            Contact Us
-          </button>
-        </div>
+                {/* CTA */}
+                <button
+                  className={`${styles.planBtn} ${plan.highlight ? styles.planBtnHighlight : ""}`}
+                  disabled={loadingPlan === plan.key}
+                  onClick={() => choosePlan(plan.key)}
+                >
+                  {loadingPlan === plan.key ? (
+                    <><span className={styles.btnSpinner} /> Processing…</>
+                  ) : (
+                    plan.btnText
+                  )}
+                </button>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     </div>
   );
 }
-
