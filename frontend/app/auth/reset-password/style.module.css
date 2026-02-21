@@ -1,205 +1,430 @@
-/* ======= STOP PAGE SCROLL COMPLETELY ======= */
-html, body {
+/* ======================================================
+   PROMEET — RESET PASSWORD
+   Visitor dashboard theme: Nunito, purple gradient hero,
+   lite purple card, hidden scrollbar (scrolling works)
+====================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+/* ================= GLOBAL SCROLLBAR KILL ================= */
+:global(html),
+:global(body) {
   height: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
-  font-family: "Segoe UI", Arial, sans-serif;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+:global(html::-webkit-scrollbar),
+:global(body::-webkit-scrollbar) { display: none !important; }
+:global(*::-webkit-scrollbar) { display: none !important; }
+:global(*) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  box-sizing: border-box;
 }
 
-/* ================= PAGE ================= */
-.page {
+/* ================= ROOT ================= */
+.container {
   height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
+  height: 100dvh;
+  background: #f3f0fb;
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ================= SCROLL BODY ================= */
+.scrollBody {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ================= LOADING ================= */
+.loadingState {
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  min-height: 100vh;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #6200d6;
 }
 
-/* ================= BRAND ================= */
-.brand {
-  position: absolute;
-  top: 22px;
-  left: 40px;
-  color: #fff;
-  font-size: 30px;
+/* ================= HEADER ================= */
+.header {
+  height: 58px;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #e8e0f5;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  flex-shrink: 0;
+}
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.logoText {
+  font-size: 1rem;
   font-weight: 900;
-  letter-spacing: .5px;
+  color: #6200d6;
+  letter-spacing: 1.5px;
 }
-
-/* ================= CARD ================= */
-.card {
-  width: 620px;
-  background: #ffffff;
-  padding: 32px 36px;
-  border-radius: 22px;
-  box-shadow: 0 22px 46px rgba(0,0,0,0.28);
-  max-height: calc(100vh - 140px);
-  overflow: hidden;
+.rightHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
 }
-
-/* ================= TEXT ================= */
-.title {
-  font-size: 26px;
-  font-weight: 900;
-  color: #3c007a;
-  margin-bottom: 4px;
-}
-
-.subtitle {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 12px;
-}
-
-/* ================= LABEL ================= */
-.label {
+.backBtn {
+  background: transparent;
+  color: #6200d6;
+  border: 2px solid #6200d6;
+  padding: 8px 18px;
+  border-radius: 50px;
   font-size: 13px;
   font-weight: 700;
-  color: #3c007a;
-  margin-bottom: 6px;
-  display: block;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.backBtn:hover {
+  background: #6200d6;
+  color: #fff;
 }
 
-/* ================= INPUT ================= */
+/* ================= HERO ================= */
+.hero {
+  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  padding: 34px 36px 38px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.06);
+  pointer-events: none;
+}
+.heroTitle {
+  font-size: 2rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.15;
+  position: relative;
+}
+.heroTitle span {
+  color: #f0a500;
+}
+.heroSub {
+  color: rgba(255,255,255,0.75);
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin: 0;
+  position: relative;
+}
+.heroSub strong {
+  color: #fff;
+  font-weight: 800;
+}
+
+/* ================= MAIN CONTENT ================= */
+.mainContent {
+  padding: 28px 36px 56px;
+  display: flex;
+  justify-content: center;
+}
+
+/* ================= FORM CARD ================= */
+.formCard {
+  width: 100%;
+  max-width: 560px;
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 22px;
+  padding: 28px 30px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  transition: box-shadow 0.3s;
+}
+.formCard:hover {
+  box-shadow: 0 8px 32px rgba(98,0,214,0.12);
+}
+
+/* ================= SECTION HEADER ================= */
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.cardDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6200d6;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.15);
+}
+.cardTitle {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #1a0038;
+  margin: 0;
+}
+
+/* ================= MESSAGES ================= */
+.errorBox {
+  padding: 12px 16px;
+  background: #fff0f0;
+  color: #cc1100;
+  font-size: 13px;
+  font-weight: 700;
+  border-left: 4px solid #cc1100;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 14px;
+  animation: fadeIn 0.3s ease;
+}
+.successBox {
+  padding: 12px 16px;
+  background: #e6f9f0;
+  color: #00875a;
+  font-size: 13px;
+  font-weight: 700;
+  border-left: 4px solid #00b894;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 14px;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ================= TIMER BAR ================= */
+.timerBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 18px;
+  transition: all 0.3s;
+}
+.timerDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.timerWaiting {
+  background: #fff8e1;
+  color: #b8860b;
+  border: 1.5px solid #f0dca0;
+}
+.timerWaiting .timerDot {
+  background: #f0a500;
+  box-shadow: 0 0 0 3px rgba(240,165,0,0.2);
+  animation: pulse 1.2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.timerReady {
+  background: #e6f9f0;
+  color: #00875a;
+  border: 1.5px solid #b8e8d0;
+}
+.timerReady .timerDot {
+  background: #00b894;
+  box-shadow: 0 0 0 3px rgba(0,184,148,0.2);
+}
+
+/* ================= FORM FIELDS ================= */
+.field {
+  margin-bottom: 14px;
+  flex: 1;
+  min-width: 0;
+}
+.fieldLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #6200d6;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
 .input {
   width: 100%;
-  height: 44px;
-  padding: 0 12px;
-  margin-bottom: 14px;
+  height: 46px;
+  padding: 0 14px;
   border-radius: 12px;
-  border: 1.2px solid #ccc;
-  font-size: 14px;
-  transition: border .2s ease, box-shadow .2s ease;
+  border: 1.5px solid #ddd2f0;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Nunito', sans-serif;
+  background: #fff;
+  color: #1a0038;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
 }
-
 .input:focus {
   outline: none;
-  border-color: #7a00ff;
-  box-shadow: 0 0 0 3px rgba(122, 0, 255, .15);
+  border-color: #6200d6;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.1);
+  background: #faf8ff;
+}
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f0fb;
+}
+.input::placeholder {
+  color: #b8a8d8;
+  font-weight: 600;
 }
 
 /* ================= PASSWORD ROW ================= */
-.row {
+.passwordRow {
   display: flex;
-  gap: 16px;
+  gap: 14px;
 }
 
-.col {
-  flex: 1;
-}
-
-/* ================= BUTTON ================= */
-.button {
-  margin-top: 6px;
+/* ================= SUBMIT BUTTON ================= */
+.submitBtn {
   width: 100%;
   height: 48px;
   border: none;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #7a00ff, #5a00c2);
-  color: white;
-  font-size: 15px;
+  border-radius: 50px;
+  background: #6200d6;
+  color: #fff;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease, opacity .15s;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.25s;
+  box-shadow: 0 4px 16px rgba(98,0,214,0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
 }
-
-.button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 20px rgba(0,0,0,.25);
+.submitBtn:hover:not(:disabled) {
+  background: #4a00a8;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(98,0,214,0.4);
 }
-
-.button:disabled {
-  opacity: .6;
+.submitBtn:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
-/* ================= TIMER TEXT ================= */
-.info {
-  text-align: left;
-  color: #3c007a;
-  font-size: 14px;
-  font-weight: 800;
-  margin: 12px 0 6px 0;
+/* ================= SPINNER ================= */
+.btnSpinner {
+  width: 16px;
+  height: 16px;
+  border: 2.5px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
 }
-
-.waiting {
-  color: #ff9800;
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ================= RESEND BUTTON ================= */
 .resendBtn {
+  width: 100%;
+  height: 44px;
   margin-top: 10px;
-  padding: 10px 18px;
-  border-radius: 12px;
-  border: none;
-  background: rgba(122, 0, 255, 0.12);
-  color: #7a00ff;
+  border: 2px solid #ddd2f0;
+  border-radius: 50px;
+  background: #fff;
+  color: #6200d6;
+  font-size: 13px;
   font-weight: 800;
-  font-size: 14px;
   cursor: pointer;
-  transition: 0.2s ease;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
 }
-
 .resendBtn:hover:not(:disabled) {
-  background: rgba(122,0,255,0.22);
+  background: #f4eeff;
+  border-color: #6200d6;
   transform: translateY(-1px);
 }
-
 .resendBtn:disabled {
-  opacity: .6;
+  opacity: 0.4;
   cursor: not-allowed;
-  background: rgba(0,0,0,0.08);
+  background: #f8f5ff;
 }
 
-/* ================= ALERTS ================= */
-.error {
-  background: #fdecea;
-  color: #b71c1c;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-.success {
-  background: #e8f5e9;
-  color: #1b5e20;
-  padding: 10px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 10px;
-}
-
-/* ================= BACK ================= */
-.back {
+/* ================= BACK LINK ================= */
+.backLink {
   margin-top: 18px;
   text-align: center;
-  font-size: 14px;
-  color: #5a00c2;
-  cursor: pointer;
+  font-size: 13px;
   font-weight: 700;
+  color: #6200d6;
+  cursor: pointer;
+  transition: all 0.2s;
 }
-
-.back:hover {
+.backLink:hover {
+  color: #4a00a8;
   text-decoration: underline;
 }
 
 /* ================= RESPONSIVE ================= */
-@media (max-width: 720px) {
-  .card {
-    width: 90%;
-    padding: 26px 24px;
-  }
 
-  .brand {
-    left: 20px;
-    font-size: 24px;
-  }
+@media (max-width: 900px) {
+  .hero { padding: 28px 28px 32px; }
+  .mainContent { padding: 24px 28px 48px; }
+}
 
-  .row {
-    flex-direction: column;
-  }
+@media (max-width: 768px) {
+  .header { padding: 0 16px; height: 52px; }
+  .logoText { font-size: 0.88rem; }
+  .backBtn { padding: 7px 14px; font-size: 12px; }
+  .hero { padding: 24px 20px 28px; }
+  .heroTitle { font-size: 1.5rem; }
+  .mainContent { padding: 22px 20px 40px; }
+  .formCard { padding: 24px 22px; border-radius: 18px; }
+  .passwordRow { flex-direction: column; gap: 0; }
+}
+
+@media (max-width: 480px) {
+  .header { padding: 0 12px; height: 50px; }
+  .logoText { font-size: 0.8rem; }
+  .backBtn { padding: 6px 12px; font-size: 11px; }
+  .hero { padding: 18px 16px 22px; }
+  .heroTitle { font-size: 1.25rem; }
+  .heroSub { font-size: 0.82rem; }
+  .mainContent { padding: 18px 16px 36px; }
+  .formCard { padding: 20px 16px; }
+  .input { height: 42px; font-size: 12px; }
+  .submitBtn { height: 44px; font-size: 13px; }
+  .resendBtn { height: 40px; font-size: 12px; }
+  .timerBar { font-size: 11px; padding: 8px 12px; }
 }
