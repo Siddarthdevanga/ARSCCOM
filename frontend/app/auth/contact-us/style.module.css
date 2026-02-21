@@ -1,133 +1,390 @@
-/* =========================
-   GLOBAL SCROLL — ALWAYS HIDE
-========================= */
-html,
-body {
+/* ======================================================
+   PROMEET — CONTACT US PAGE
+   Visitor dashboard theme: Nunito, purple gradient hero,
+   lite purple cards, hidden scrollbar (scrolling works)
+====================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+/* ================= GLOBAL SCROLLBAR KILL ================= */
+:global(html),
+:global(body) {
   height: 100%;
   margin: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-
-  /* Hide scrollbar everywhere */
-  scrollbar-width: none;          /* Firefox */
-  -ms-overflow-style: none;       /* Old Edge / IE */
+  padding: 0;
+  overflow: hidden;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+:global(html::-webkit-scrollbar),
+:global(body::-webkit-scrollbar) { display: none !important; }
+:global(*::-webkit-scrollbar) { display: none !important; }
+:global(*) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  box-sizing: border-box;
 }
 
-/* Chrome / Safari / Edge */
-*::-webkit-scrollbar {
-  display: none !important;
-}
-
-/* =========================
-   PAGE BACKGROUND
-========================= */
+/* ================= ROOT ================= */
 .container {
-  min-height: 100vh;
-  background: linear-gradient(135deg, #3c007a, #7a00ff);
-  font-family: "Segoe UI", Arial, sans-serif;
-  color: white;
-
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* =========================
-   LAYOUT
-========================= */
-.bodyWrapper {
+  height: 100vh;
+  height: 100dvh;
+  background: #f3f0fb;
+  font-family: 'Nunito', sans-serif;
   display: flex;
-  gap: 30px;
-  padding: 40px 60px;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-/* =========================
-   LEFT PANEL
-========================= */
-.leftCard {
-  flex: 2;
-  background: white;
-  color: #222;
-  border-radius: 20px;
-  padding: 30px 32px;
-  box-shadow: 0 25px 60px rgba(0,0,0,.35);
-  height: 80vh;
-
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.leftCard h1,
-.leftCard h3 {
-  color: #4b008f;
-}
-
-.leftCard p {
-  font-size: 15px;
-  line-height: 1.6;
-}
-
-.leftCard li {
-  margin-bottom: 10px;
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-/* =========================
-   RIGHT PANEL
-========================= */
-.rightCard {
+/* ================= SCROLL BODY ================= */
+.scrollBody {
   flex: 1;
-  background: white;
-  color: #333;
-  border-radius: 20px;
-  padding: 30px;
-  box-shadow: 0 25px 60px rgba(0,0,0,.35);
-  height: 80vh;
-
   overflow-y: auto;
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
-.rightCard h2 {
-  color: #4b008f;
+/* ================= HEADER ================= */
+.header {
+  height: 58px;
+  background: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid #e8e0f5;
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  flex-shrink: 0;
+}
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.logoText {
+  font-size: 1rem;
+  font-weight: 900;
+  color: #6200d6;
+  letter-spacing: 1.5px;
+}
+.rightHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.backBtn {
+  background: transparent;
+  color: #6200d6;
+  border: 2px solid #6200d6;
+  padding: 8px 18px;
+  border-radius: 50px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.backBtn:hover {
+  background: #6200d6;
+  color: #fff;
+}
+
+/* ================= HERO ================= */
+.hero {
+  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  padding: 36px 36px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  left: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  right: -60px;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  pointer-events: none;
+}
+.heroTitle {
+  font-size: 2.2rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 6px;
+  line-height: 1.15;
+  position: relative;
+}
+.heroTitle span {
+  color: #f0a500;
+}
+.heroSub {
+  color: rgba(255,255,255,0.72);
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+  position: relative;
+}
+
+/* ================= MAIN CONTENT ================= */
+.mainContent {
+  padding: 24px 36px 56px;
+}
+
+/* ================= LAYOUT GRID ================= */
+.layoutGrid {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+/* ================= CARDS ================= */
+.infoCard,
+.contactCard {
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 22px;
+  padding: 28px 28px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  transition: box-shadow 0.3s;
+}
+.infoCard:hover,
+.contactCard:hover {
+  box-shadow: 0 8px 32px rgba(98,0,214,0.12);
+}
+
+/* ================= SECTION HEADER ================= */
+.sectionHeader,
+.whyHeader,
+.ctaLine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.whyHeader {
+  margin-top: 24px;
+}
+.ctaLine {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1.5px solid rgba(98,0,214,0.1);
+}
+.cardDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #6200d6;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.15);
+}
+.dotGreen {
+  background: #00b894;
+  box-shadow: 0 0 0 3px rgba(0,184,148,0.15);
+}
+.dotGold {
+  background: #f0a500;
+  box-shadow: 0 0 0 3px rgba(240,165,0,0.15);
+}
+.cardTitle {
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #1a0038;
+  margin: 0;
+}
+
+/* ================= INFO CARD CONTENT ================= */
+.infoHeading {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #6200d6;
+  margin: 0 0 12px;
+  line-height: 1.3;
+}
+.infoPara {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  color: #3a2060;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+.infoPara strong {
+  color: #1a0038;
+  font-weight: 800;
+}
+
+/* ================= FEATURE LIST ================= */
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.featureItem {
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1.5px solid #ede8f8;
+  border-radius: 16px;
+  transition: all 0.2s;
+}
+.featureItem:hover {
+  border-color: #ddd2f0;
+  box-shadow: 0 4px 16px rgba(98,0,214,0.08);
+  transform: translateY(-2px);
+}
+.featureIcon {
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(98,0,214,0.06);
+  border-radius: 12px;
+}
+.featureItem strong {
+  display: block;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #1a0038;
+  margin-bottom: 3px;
+}
+.featureItem p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #666;
+  font-weight: 600;
+}
+
+/* ================= CONTACT CARD ================= */
+.contactSub {
+  font-size: 0.88rem;
+  color: #9980c8;
+  font-weight: 600;
+  margin: 0 0 20px;
 }
 
 .contactBox {
-  margin-top: 20px;
-  padding: 14px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 16px 18px;
+  background: #fff;
+  border: 1.5px solid #ede8f8;
+  border-radius: 16px;
+  margin-bottom: 12px;
+  transition: all 0.2s;
+}
+.contactBox:hover {
+  border-color: #ddd2f0;
+  box-shadow: 0 4px 16px rgba(98,0,214,0.08);
+}
+.contactIcon {
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  background: #f7f7ff;
-  border: 1px solid rgba(0,0,0,0.18);
+  background: linear-gradient(135deg, #6200d6, #8a2be2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
 }
-
-.contactBox span {
-  font-size: 13px;
-  color: #666;
-}
-
-.contactBox strong {
+.contactLabel {
   display: block;
-  margin-top: 5px;
-  font-size: 15px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #9980c8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+.contactValue {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1a0038;
 }
 
-.note {
-  margin-top: 30px;
-  font-size: 14px;
-  color: #444;
+/* ================= NOTE BOX ================= */
+.noteBox {
+  margin-top: 24px;
+  padding: 16px 18px;
+  background: rgba(98,0,214,0.04);
+  border-left: 4px solid #6200d6;
+  border-radius: 0 14px 14px 0;
+}
+.noteBox p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: #4a00a8;
+  font-weight: 600;
 }
 
-/* =========================
-   RESPONSIVE
-========================= */
-@media(max-width: 1024px){
-  .bodyWrapper {
-    flex-direction: column;
-    padding: 20px;
-  }
+/* ================= RESPONSIVE ================= */
 
-  .leftCard,
-  .rightCard {
-    height: auto;
+@media (max-width: 1100px) {
+  .layoutGrid {
+    grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 900px) {
+  .hero { padding: 28px 28px 34px; }
+  .mainContent { padding: 20px 28px 48px; }
+}
+
+@media (max-width: 768px) {
+  .header { padding: 0 16px; height: 52px; }
+  .logoText { font-size: 0.88rem; }
+  .backBtn { padding: 7px 14px; font-size: 12px; }
+  .hero { padding: 24px 20px 30px; }
+  .heroTitle { font-size: 1.6rem; }
+  .mainContent { padding: 18px 20px 40px; }
+  .infoCard, .contactCard { padding: 22px 20px; border-radius: 18px; }
+  .infoHeading { font-size: 1.1rem; }
+  .featureItem { padding: 12px 14px; }
+  .featureIcon { width: 36px; height: 36px; font-size: 1.3rem; }
+}
+
+@media (max-width: 480px) {
+  .header { padding: 0 12px; height: 50px; }
+  .logoText { font-size: 0.8rem; }
+  .backBtn { padding: 6px 12px; font-size: 11px; }
+  .hero { padding: 18px 16px 24px; }
+  .heroTitle { font-size: 1.3rem; }
+  .heroSub { font-size: 0.82rem; }
+  .mainContent { padding: 14px 16px 36px; }
+  .infoCard, .contactCard { padding: 18px 14px; }
+  .infoHeading { font-size: 1rem; }
+  .featureItem { gap: 10px; padding: 10px 12px; }
+  .featureIcon { width: 32px; height: 32px; font-size: 1.1rem; border-radius: 10px; }
+  .featureItem strong { font-size: 0.82rem; }
+  .featureItem p { font-size: 0.75rem; }
+  .contactBox { padding: 12px 14px; }
+  .contactIcon { width: 36px; height: 36px; font-size: 1rem; }
 }
