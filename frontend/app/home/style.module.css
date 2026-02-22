@@ -1,8 +1,23 @@
 /* ============================================================================
-   PROMEET — Home Page style.module.css  v3
+   PROMEET — Home Page style.module.css  v4
    Theme: Deep Purple #6A0DAD / #8B2BE2 + Amber #F5A623
-   Updated: White-bg buttons → Purple; font colors adjusted accordingly
+   Refined: Global scrollbar kill, dynamic sizing, slide panel responsive
    ============================================================================ */
+
+/* ── GLOBAL SCROLLBAR KILL ─────────────────────────────────────────────────── */
+:global(html),
+:global(body) {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+:global(*::-webkit-scrollbar) { display: none !important; }
+:global(*) {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  box-sizing: border-box;
+}
 
 /* ── CSS Custom Properties ─────────────────────────────────────────────────── */
 :root {
@@ -39,13 +54,11 @@
   --info:        #2563EB;
   --info-bg:     #DBEAFE;
 
-  /* Gradients */
   --grad-brand:      linear-gradient(135deg, #4A00A0 0%, #6A0DAD 35%, #8B2BE2 70%, #A855F7 100%);
   --grad-brand-dark: linear-gradient(135deg, #2D0070 0%, #4A00A0 50%, #6A0DAD 100%);
   --grad-amber:      linear-gradient(135deg, #D97706 0%, #F59E0B 60%, #FBBF24 100%);
   --grad-card:       linear-gradient(145deg, rgba(255,255,255,1) 0%, rgba(245,243,255,0.6) 100%);
 
-  /* Shadows */
   --shadow-xs: 0 1px 3px rgba(74,0,160,0.06), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-sm: 0 2px 8px rgba(74,0,160,0.1), 0 1px 4px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 20px rgba(74,0,160,0.15), 0 2px 8px rgba(0,0,0,0.08);
@@ -54,12 +67,10 @@
   --shadow-amber: 0 4px 20px rgba(245,158,11,0.4);
   --shadow-purple: 0 4px 20px rgba(139,43,226,0.4);
 
-  /* Borders */
   --border-light: rgba(107,19,196,0.1);
   --border-med:   rgba(107,19,196,0.18);
   --border-str:   rgba(107,19,196,0.28);
 
-  /* Radii */
   --r-xs:   4px;
   --r-sm:   8px;
   --r:      12px;
@@ -80,72 +91,57 @@
   from { opacity: 0 }
   to   { opacity: 1 }
 }
-
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px) }
   to   { opacity: 1; transform: translateY(0) }
 }
-
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-10px) }
   to   { opacity: 1; transform: translateY(0) }
 }
-
 @keyframes slideInLeft {
   from { opacity: 0; transform: translateX(-100%) }
   to   { opacity: 1; transform: translateX(0) }
 }
-
 @keyframes popIn {
   from { opacity: 0; transform: scale(0.88) }
   to   { opacity: 1; transform: scale(1) }
 }
-
 @keyframes orbDrift {
   0%, 100% { transform: translate(0, 0) scale(1) }
   33%       { transform: translate(40px, -25px) scale(1.06) }
   66%       { transform: translate(-20px, 15px) scale(0.96) }
 }
-
 @keyframes spin {
   to { transform: rotate(360deg) }
 }
-
 @keyframes toastIn {
   from { opacity: 0; transform: translateX(120%); }
   to   { opacity: 1; transform: translateX(0); }
 }
-
 @keyframes toastOut {
   from { opacity: 1; transform: translateX(0); }
   to   { opacity: 0; transform: translateX(120%); }
 }
-
 @keyframes toastProgress {
   from { width: 100%; }
   to   { width: 0%; }
 }
-
 @keyframes panelSlide {
   from { transform: translateX(-100%); opacity: 0 }
   to   { transform: translateX(0);     opacity: 1 }
 }
-
 @keyframes pulse {
   0%, 100% { opacity: 1 }
   50%       { opacity: 0.5 }
-}
-
-@keyframes shimmer {
-  0%   { background-position: -200% 0 }
-  100% { background-position:  200% 0 }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ROOT CONTAINER
    ═══════════════════════════════════════════════════════════════════════════ */
 .container {
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   flex-direction: column;
   background: var(--gray-50);
@@ -153,23 +149,33 @@
   color: var(--gray-900);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow: hidden;
   position: relative;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TOAST NOTIFICATIONS — Right-side stack, rich design
+   SCROLL BODY
+   ═══════════════════════════════════════════════════════════════════════════ */
+.scrollBody {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TOAST NOTIFICATIONS
    ═══════════════════════════════════════════════════════════════════════════ */
 .toastContainer {
   position: fixed;
-  top: 1.25rem;
-  right: 1.25rem;
+  top: clamp(0.75rem, 2vh, 1.25rem);
+  right: clamp(0.5rem, 2vw, 1.25rem);
   z-index: 9999;
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: clamp(0.4rem, 1vh, 0.625rem);
   pointer-events: none;
-  width: clamp(280px, 90vw, 360px);
+  width: clamp(260px, 85vw, 360px);
 }
 
 .toast {
@@ -182,21 +188,18 @@
   border: 1px solid var(--gray-200);
   position: relative;
 }
-
-.toast.exiting {
-  animation: toastOut 0.28s ease forwards;
-}
+.toast.exiting { animation: toastOut 0.28s ease forwards; }
 
 .toastInner {
   display: flex;
   align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.875rem 1rem 0.875rem 0.875rem;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  padding: clamp(0.65rem, 1.5vh, 0.875rem) clamp(0.65rem, 1.5vw, 1rem);
 }
 
 .toastIconWrap {
-  width: 34px;
-  height: 34px;
+  width: clamp(28px, 5vw, 34px);
+  height: clamp(28px, 5vw, 34px);
   border-radius: var(--r-sm);
   display: flex;
   align-items: center;
@@ -204,24 +207,11 @@
   flex-shrink: 0;
 }
 
-.toast[data-type="success"] .toastIconWrap {
-  background: var(--success-bg);
-  color: var(--success);
-}
-.toast[data-type="error"] .toastIconWrap {
-  background: var(--error-bg);
-  color: var(--error);
-}
-.toast[data-type="warning"] .toastIconWrap {
-  background: var(--warning-bg);
-  color: var(--warning);
-}
-.toast[data-type="info"] .toastIconWrap {
-  background: var(--info-bg);
-  color: var(--info);
-}
+.toast[data-type="success"] .toastIconWrap { background: var(--success-bg); color: var(--success); }
+.toast[data-type="error"]   .toastIconWrap { background: var(--error-bg);   color: var(--error); }
+.toast[data-type="warning"] .toastIconWrap { background: var(--warning-bg); color: var(--warning); }
+.toast[data-type="info"]    .toastIconWrap { background: var(--info-bg);    color: var(--info); }
 
-/* Coloured left border stripe */
 .toast[data-type="success"] { border-left: 3px solid var(--success); }
 .toast[data-type="error"]   { border-left: 3px solid var(--error); }
 .toast[data-type="warning"] { border-left: 3px solid var(--warning); }
@@ -230,7 +220,7 @@
 .toastBody { flex: 1; min-width: 0; }
 
 .toastTitle {
-  font-size: 0.85rem;
+  font-size: clamp(0.75rem, 1.8vw, 0.85rem);
   font-weight: 700;
   color: var(--gray-900);
   margin: 0 0 0.15rem;
@@ -238,7 +228,7 @@
 }
 
 .toastMessage {
-  font-size: 0.775rem;
+  font-size: clamp(0.68rem, 1.6vw, 0.775rem);
   color: var(--gray-500);
   margin: 0;
   line-height: 1.45;
@@ -256,23 +246,12 @@
   align-items: center;
   justify-content: center;
   transition: all var(--t);
-  margin-top: -0.1rem;
 }
-.toastClose:hover {
-  background: var(--gray-100);
-  color: var(--gray-700);
-}
+.toastClose:hover { background: var(--gray-100); color: var(--gray-700); }
 
-/* Progress bar */
-.toastProgress {
-  height: 3px;
-  background: var(--gray-100);
-}
+.toastProgress { height: 3px; background: var(--gray-100); }
 
-.toastProgressBar {
-  height: 100%;
-  animation: toastProgress linear both;
-}
+.toastProgressBar { height: 100%; animation: toastProgress linear both; }
 
 .toast[data-type="success"] .toastProgressBar { background: var(--success); }
 .toast[data-type="error"]   .toastProgressBar { background: var(--error); }
@@ -286,18 +265,17 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  height: 64px;
+  height: clamp(52px, 8vh, 64px);
   background: var(--white);
   border-bottom: 1px solid var(--border-light);
   display: flex;
   align-items: center;
-  padding: 0 1.5rem;
-  gap: 1rem;
+  padding: 0 clamp(0.875rem, 3vw, 1.5rem);
+  gap: clamp(0.5rem, 2vw, 1rem);
   box-shadow: 0 1px 0 var(--border-light), 0 4px 16px rgba(74,0,160,0.06);
   flex-shrink: 0;
 }
 
-/* Brand stripe top */
 .header::before {
   content: '';
   position: absolute;
@@ -306,18 +284,17 @@
   background: var(--grad-brand);
 }
 
-/* ── Company Block ───────────────────────────────────────────────────────── */
 .companyInfo {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: clamp(0.4rem, 1.2vw, 0.625rem);
   flex: 1;
   justify-content: center;
   min-width: 0;
 }
 
 .companyLogoHeader {
-  height: 32px;
+  height: clamp(26px, 4vh, 32px);
   width: auto;
   object-fit: contain;
   border-radius: var(--r-sm);
@@ -325,7 +302,7 @@
 }
 
 .companyName {
-  font-size: clamp(0.875rem, 2.5vw, 1.05rem);
+  font-size: clamp(0.8rem, 2.5vw, 1.05rem);
   font-weight: 700;
   color: var(--purple-800);
   letter-spacing: -0.015em;
@@ -335,7 +312,6 @@
   margin: 0;
 }
 
-/* ── Header Actions ──────────────────────────────────────────────────────── */
 .headerActions {
   display: flex;
   align-items: center;
@@ -344,18 +320,17 @@
   flex-shrink: 0;
 }
 
-/* UPDATED: Logout button — purple background, white text */
 .logoutBtn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.45rem 0.9rem;
+  padding: clamp(0.35rem, 0.8vh, 0.45rem) clamp(0.6rem, 1.5vw, 0.9rem);
   background: var(--grad-brand);
   border: 1.5px solid var(--purple-700);
   border-radius: var(--r-full);
   color: var(--white);
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: clamp(0.7rem, 1.6vw, 0.78rem);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--t);
@@ -370,11 +345,9 @@
   transform: translateY(-1px);
 }
 
-/* ── Menu Button ─────────────────────────────────────────────────────────── */
-/* UPDATED: starts as purple filled */
 .menuBtn {
-  width: 2.125rem;
-  height: 2.125rem;
+  width: clamp(1.875rem, 5vw, 2.125rem);
+  height: clamp(1.875rem, 5vw, 2.125rem);
   padding: 0;
   background: var(--purple-700);
   border: 1.5px solid var(--purple-700);
@@ -393,7 +366,6 @@
   border-color: var(--purple-900);
   transform: scale(1.06);
 }
-.menuBtn:hover .menuDots span { background: var(--white); }
 
 .menuDots {
   display: flex;
@@ -410,19 +382,17 @@
   transition: background var(--t);
 }
 
-/* ── Back Button ─────────────────────────────────────────────────────────── */
-/* UPDATED: purple filled */
 .backBtn {
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.875rem;
+  padding: clamp(0.3rem, 0.8vh, 0.4rem) clamp(0.6rem, 1.5vw, 0.875rem);
   background: var(--purple-700);
   border: 1.5px solid var(--purple-700);
   border-radius: var(--r-full);
   color: var(--white);
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: clamp(0.7rem, 1.6vw, 0.78rem);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--t);
@@ -430,7 +400,6 @@
 }
 .backBtn:hover {
   background: var(--purple-900);
-  color: var(--white);
   border-color: var(--purple-900);
   transform: translateX(-2px);
   box-shadow: 0 4px 18px rgba(107,19,196,0.4);
@@ -452,7 +421,7 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 .welcomeSection {
   background: var(--grad-brand);
-  padding: clamp(2.5rem, 7vw, 5rem) clamp(1.5rem, 5vw, 4rem) clamp(2.25rem, 6vw, 4rem);
+  padding: clamp(2rem, 6vh, 5rem) clamp(1.25rem, 5vw, 4rem) clamp(1.75rem, 5vh, 4rem);
   position: relative;
   overflow: hidden;
   text-align: center;
@@ -461,7 +430,8 @@
 .welcomeSection::before {
   content: '';
   position: absolute;
-  width: 450px; height: 450px;
+  width: clamp(250px, 40vw, 450px);
+  height: clamp(250px, 40vw, 450px);
   top: -160px; right: -100px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(245,158,11,0.22) 0%, transparent 65%);
@@ -472,7 +442,8 @@
 .welcomeSection::after {
   content: '';
   position: absolute;
-  width: 350px; height: 350px;
+  width: clamp(200px, 30vw, 350px);
+  height: clamp(200px, 30vw, 350px);
   bottom: -120px; left: -80px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 65%);
@@ -486,7 +457,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: clamp(0.3rem, 1vh, 0.5rem);
 }
 
 .greetingChip {
@@ -496,8 +467,8 @@
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.22);
   border-radius: var(--r-full);
-  padding: 0.3rem 0.875rem;
-  font-size: 0.72rem;
+  padding: clamp(0.2rem, 0.5vh, 0.3rem) clamp(0.6rem, 1.5vw, 0.875rem);
+  font-size: clamp(0.62rem, 1.4vw, 0.72rem);
   font-weight: 600;
   color: rgba(255,255,255,0.85);
   letter-spacing: 0.06em;
@@ -514,7 +485,7 @@
 }
 
 .welcomeTitle {
-  font-size: clamp(1.875rem, 5.5vw, 3rem);
+  font-size: clamp(1.5rem, 5.5vw, 3rem);
   font-weight: 900;
   color: var(--white);
   letter-spacing: -0.03em;
@@ -530,7 +501,7 @@
 }
 
 .welcomeSubtitle {
-  font-size: clamp(0.85rem, 2vw, 0.95rem);
+  font-size: clamp(0.78rem, 2vw, 0.95rem);
   color: rgba(255,255,255,0.65);
   margin: 0.25rem 0 0;
   letter-spacing: 0.02em;
@@ -543,23 +514,21 @@
 .cardGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-  gap: clamp(1rem, 2.5vw, 1.375rem);
-  padding: clamp(1.75rem, 4vw, 2.75rem) clamp(1.25rem, 5vw, 3rem);
+  gap: clamp(0.875rem, 2.5vw, 1.375rem);
+  padding: clamp(1.25rem, 4vw, 2.75rem) clamp(1rem, 5vw, 3rem);
   max-width: 860px;
   margin: 0 auto;
   width: 100%;
-  box-sizing: border-box;
 }
 
-/* UPDATED: Module cards — purple tinted background instead of white */
 .moduleCard {
   background: linear-gradient(145deg, #f8f5ff 0%, #ede9fe 100%);
   border: 1.5px solid var(--border-med);
   border-radius: var(--r-xl);
-  padding: clamp(1.25rem, 3vw, 1.75rem);
+  padding: clamp(1rem, 3vw, 1.75rem);
   display: flex;
   align-items: center;
-  gap: 1.125rem;
+  gap: clamp(0.75rem, 2vw, 1.125rem);
   cursor: pointer;
   transition: transform var(--t-spring), box-shadow var(--t), border-color var(--t), background var(--t);
   box-shadow: var(--shadow-sm);
@@ -589,14 +558,11 @@
   background: linear-gradient(145deg, #ede9fe 0%, #ddd6fe 100%);
 }
 .moduleCard:hover::before { transform: scaleY(1); }
-
-.moduleCard:focus-visible {
-  box-shadow: 0 0 0 3px rgba(107,19,196,0.28);
-}
+.moduleCard:focus-visible { box-shadow: 0 0 0 3px rgba(107,19,196,0.28); }
 
 .cardIcon {
-  width: 58px;
-  height: 58px;
+  width: clamp(44px, 8vw, 58px);
+  height: clamp(44px, 8vw, 58px);
   border-radius: var(--r-lg);
   background: var(--grad-brand);
   color: var(--white);
@@ -614,18 +580,16 @@
 
 .cardContent { flex: 1; min-width: 0; }
 
-/* UPDATED: card title — deeper purple for contrast on purple-tinted bg */
 .cardTitle {
-  font-size: clamp(1rem, 2.5vw, 1.1rem);
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
   font-weight: 700;
   color: var(--purple-900);
-  margin: 0 0 0.3rem;
+  margin: 0 0 clamp(0.15rem, 0.5vh, 0.3rem);
   letter-spacing: -0.015em;
 }
 
-/* UPDATED: card description — purple-700 instead of gray-500 */
 .cardDescription {
-  font-size: clamp(0.775rem, 1.8vw, 0.85rem);
+  font-size: clamp(0.72rem, 1.8vw, 0.85rem);
   color: var(--purple-700);
   margin: 0;
   line-height: 1.5;
@@ -633,7 +597,7 @@
 }
 
 .cardArrow {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
   color: var(--purple-400);
   transition: all var(--t);
   flex-shrink: 0;
@@ -647,27 +611,27 @@
    REPORTS VIEW
    ═══════════════════════════════════════════════════════════════════════════ */
 .reportsView {
-  padding: clamp(1.5rem, 3vw, 2.25rem) clamp(1.25rem, 5vw, 3rem);
+  padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 5vw, 3rem);
   max-width: 860px;
   margin: 0 auto;
   width: 100%;
-  box-sizing: border-box;
   animation: fadeIn 0.3s ease;
 }
 
 .reportsHeader {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  padding: 1.25rem 1.5rem;
+  gap: clamp(0.75rem, 2vw, 1rem);
+  margin-bottom: clamp(1rem, 3vh, 1.5rem);
+  padding: clamp(0.875rem, 2vh, 1.25rem) clamp(1rem, 3vw, 1.5rem);
   background: var(--grad-brand);
   border-radius: var(--r-xl);
   box-shadow: var(--shadow-md);
 }
 
 .reportsHeaderIcon {
-  width: 50px; height: 50px;
+  width: clamp(40px, 7vw, 50px);
+  height: clamp(40px, 7vw, 50px);
   border-radius: var(--r-lg);
   background: rgba(255,255,255,0.18);
   border: 1.5px solid rgba(255,255,255,0.28);
@@ -679,7 +643,7 @@
 }
 
 .reportsTitle {
-  font-size: clamp(1.1rem, 3vw, 1.35rem);
+  font-size: clamp(1rem, 3vw, 1.35rem);
   font-weight: 800;
   color: var(--white);
   margin: 0 0 0.2rem;
@@ -687,45 +651,43 @@
 }
 
 .reportsSubtitle {
-  font-size: 0.78rem;
+  font-size: clamp(0.68rem, 1.6vw, 0.78rem);
   color: rgba(255,255,255,0.65);
   margin: 0;
 }
 
-/* ── Loading State ───────────────────────────────────────────────────────── */
 .loadingState {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.875rem;
-  padding: 3.5rem 1rem;
+  padding: clamp(2rem, 5vh, 3.5rem) 1rem;
   color: var(--gray-400);
-  font-size: 0.875rem;
+  font-size: clamp(0.78rem, 1.8vw, 0.875rem);
 }
 
 .spinner {
-  width: 30px; height: 30px;
+  width: clamp(24px, 5vw, 30px);
+  height: clamp(24px, 5vw, 30px);
   border-radius: 50%;
   border: 3px solid var(--purple-100);
   border-top-color: var(--purple-600);
   animation: spin 0.7s linear infinite;
 }
 
-/* ── Stats Overview ──────────────────────────────────────────────────────── */
 .statsOverview {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(0.625rem, 2vw, 1rem);
+  margin-bottom: clamp(1rem, 3vh, 1.5rem);
 }
 
-/* UPDATED: stat cards — purple tinted bg */
 .statCard {
   display: flex;
   align-items: center;
-  gap: 0.875rem;
-  padding: 1rem 1.25rem;
+  gap: clamp(0.5rem, 1.5vw, 0.875rem);
+  padding: clamp(0.625rem, 1.5vh, 1rem) clamp(0.75rem, 2vw, 1.25rem);
   background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
   border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
@@ -736,7 +698,7 @@
 .statCard svg { color: var(--purple-600); flex-shrink: 0; }
 
 .statLabel {
-  font-size: 0.625rem;
+  font-size: clamp(0.5rem, 1.2vw, 0.625rem);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -745,7 +707,7 @@
 }
 
 .statValue {
-  font-size: 1.625rem;
+  font-size: clamp(1.125rem, 3.5vw, 1.625rem);
   font-weight: 900;
   color: var(--purple-800);
   margin: 0;
@@ -753,23 +715,21 @@
   line-height: 1;
 }
 
-/* ── Reports Grid ────────────────────────────────────────────────────────── */
 .reportsGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: clamp(0.625rem, 2vw, 1rem);
+  margin-bottom: clamp(0.625rem, 2vh, 1rem);
 }
 
-/* UPDATED: report cards — purple tinted bg */
 .reportCard {
   background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
   border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
-  padding: 1.25rem;
+  padding: clamp(0.875rem, 2vh, 1.25rem);
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: clamp(0.5rem, 1.5vh, 0.875rem);
   box-shadow: var(--shadow-xs);
   transition: transform var(--t), box-shadow var(--t), border-color var(--t);
   animation: slideUp 0.35s ease both;
@@ -791,12 +751,12 @@
 .reportHeader {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
 }
 
-/* UPDATED: report icon — purple filled */
 .reportIcon {
-  width: 42px; height: 42px;
+  width: clamp(34px, 6vw, 42px);
+  height: clamp(34px, 6vw, 42px);
   border-radius: var(--r);
   background: var(--purple-700);
   border: 1.5px solid var(--purple-700);
@@ -816,34 +776,32 @@
 }
 .reportCard:hover .reportIcon { transform: scale(1.06); }
 
-/* UPDATED: report header text — darker purple for contrast */
 .reportHeader h6 {
-  font-size: 0.9rem;
+  font-size: clamp(0.78rem, 1.8vw, 0.9rem);
   font-weight: 700;
   color: var(--purple-900);
   margin: 0 0 0.2rem;
 }
 
 .reportMeta {
-  font-size: 0.71rem;
+  font-size: clamp(0.62rem, 1.4vw, 0.71rem);
   color: var(--purple-600);
   margin: 0;
   opacity: 0.8;
 }
 
-/* UPDATED: download button — purple filled, white text */
 .downloadBtn {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.6rem 1rem;
+  padding: clamp(0.45rem, 1vh, 0.6rem) clamp(0.75rem, 2vw, 1rem);
   background: var(--grad-brand);
   border: 1.5px solid var(--purple-700);
   border-radius: var(--r-sm);
   color: var(--white);
   font-family: var(--font-sans);
-  font-size: 0.78rem;
+  font-size: clamp(0.7rem, 1.6vw, 0.78rem);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--t);
@@ -857,10 +815,7 @@
   box-shadow: 0 4px 20px rgba(107,19,196,0.5);
   transform: translateY(-1px);
 }
-.downloadBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+.downloadBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .primaryDownloadBtn {
   background: var(--grad-amber);
@@ -875,20 +830,20 @@
   transform: translateY(-1px);
 }
 
-/* ── Info Box ────────────────────────────────────────────────────────────── */
 .infoBox {
   display: flex;
   align-items: flex-start;
-  gap: 0.625rem;
-  padding: 0.875rem 1rem;
+  gap: clamp(0.4rem, 1vw, 0.625rem);
+  padding: clamp(0.625rem, 1.5vh, 0.875rem) clamp(0.75rem, 2vw, 1rem);
   background: var(--purple-50);
   border: 1px solid var(--border-med);
   border-radius: var(--r);
-  font-size: 0.78rem;
+  font-size: clamp(0.68rem, 1.6vw, 0.78rem);
   color: var(--purple-800);
   line-height: 1.55;
 }
 .infoBox svg { color: var(--purple-600); flex-shrink: 0; margin-top: 1px; }
+.infoBox p { margin: 0; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SLIDE PANEL
@@ -903,11 +858,10 @@
   animation: fadeIn 0.2s ease;
 }
 
-/* UPDATED: slide panel — purple-tinted bg instead of pure white */
 .slidePanel {
   position: fixed;
   top: 0; left: 0; bottom: 0;
-  width: clamp(300px, 85vw, 376px);
+  width: clamp(280px, 85vw, 376px);
   background: linear-gradient(180deg, #f5f3ff 0%, #faf9ff 100%);
   z-index: 500;
   display: flex;
@@ -931,14 +885,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.125rem 1.25rem 1rem;
+  padding: clamp(0.875rem, 2vh, 1.125rem) clamp(1rem, 3vw, 1.25rem);
   border-bottom: 1px solid var(--border-med);
   flex-shrink: 0;
   background: var(--grad-brand);
 }
 
 .panelHeader h3 {
-  font-size: 1.1rem;
+  font-size: clamp(0.95rem, 2.5vw, 1.1rem);
   font-weight: 800;
   color: var(--white);
   margin: 0;
@@ -946,7 +900,8 @@
 }
 
 .closeBtn {
-  width: 1.875rem; height: 1.875rem;
+  width: clamp(1.625rem, 4vw, 1.875rem);
+  height: clamp(1.625rem, 4vw, 1.875rem);
   padding: 0;
   background: rgba(255,255,255,0.18);
   border: 1px solid rgba(255,255,255,0.28);
@@ -963,33 +918,30 @@
 .panelBody {
   flex: 1;
   overflow-y: auto;
-  padding: 1.25rem;
+  -webkit-overflow-scrolling: touch;
+  padding: clamp(0.875rem, 2vh, 1.25rem);
   display: flex;
   flex-direction: column;
-  gap: 1.125rem;
-  scrollbar-width: thin;
-  scrollbar-color: var(--purple-100) transparent;
+  gap: clamp(0.75rem, 2vh, 1.125rem);
+  min-height: 0;
 }
-.panelBody::-webkit-scrollbar { width: 4px; }
-.panelBody::-webkit-scrollbar-thumb { background: var(--purple-300, #c4b5fd); border-radius: 4px; }
 
-/* ── Error State ─────────────────────────────────────────────────────────── */
 .errorState {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding: 2rem 1rem;
+  padding: clamp(1.25rem, 3vh, 2rem) 1rem;
   text-align: center;
   color: var(--error);
-  font-size: 0.85rem;
+  font-size: clamp(0.75rem, 1.8vw, 0.85rem);
 }
 
 /* ── Current Plan Card ───────────────────────────────────────────────────── */
 .currentPlanCard {
   background: var(--grad-brand);
   border-radius: var(--r-lg);
-  padding: 1.25rem;
+  padding: clamp(0.875rem, 2vh, 1.25rem);
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-md);
@@ -998,18 +950,16 @@
   content: '';
   position: absolute;
   bottom: -35px; right: -35px;
-  width: 130px; height: 130px;
+  width: clamp(90px, 20vw, 130px);
+  height: clamp(90px, 20vw, 130px);
   border-radius: 50%;
   background: rgba(245,158,11,0.18);
   pointer-events: none;
 }
 
-.planBadge {
-  display: inline-block;
-  margin-bottom: 0.5rem;
-}
+.planBadge { display: inline-block; margin-bottom: clamp(0.3rem, 0.8vh, 0.5rem); }
 .planBadge span {
-  font-size: 0.56rem;
+  font-size: clamp(0.5rem, 1.2vw, 0.56rem);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -1021,10 +971,10 @@
 }
 
 .currentPlanName {
-  font-size: 1.625rem;
+  font-size: clamp(1.25rem, 4vw, 1.625rem);
   font-weight: 900;
   color: var(--white);
-  margin: 0 0 0.5rem;
+  margin: 0 0 clamp(0.3rem, 0.8vh, 0.5rem);
   letter-spacing: -0.02em;
   text-transform: uppercase;
 }
@@ -1033,17 +983,16 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.78rem;
+  font-size: clamp(0.68rem, 1.6vw, 0.78rem);
   font-weight: 600;
   background: rgba(255,255,255,0.14);
-  padding: 0.3rem 0.7rem;
+  padding: clamp(0.2rem, 0.5vh, 0.3rem) clamp(0.5rem, 1.2vw, 0.7rem);
   border-radius: var(--r-full);
   border: 1px solid rgba(255,255,255,0.2);
   color: var(--white);
 }
 
 /* ── Details Section ─────────────────────────────────────────────────────── */
-/* UPDATED: details section — purple-tinted */
 .detailsSection {
   background: var(--purple-50);
   border: 1px solid var(--border-med);
@@ -1052,13 +1001,13 @@
 }
 
 .sectionTitle {
-  font-size: 0.575rem;
+  font-size: clamp(0.5rem, 1.2vw, 0.575rem);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.14em;
   color: var(--purple-700);
   margin: 0;
-  padding: 0.55rem 0.875rem;
+  padding: clamp(0.4rem, 1vh, 0.55rem) clamp(0.625rem, 1.5vw, 0.875rem);
   background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
   border-bottom: 1px solid var(--border-med);
 }
@@ -1067,21 +1016,21 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.6rem 0.875rem;
+  padding: clamp(0.4rem, 1vh, 0.6rem) clamp(0.625rem, 1.5vw, 0.875rem);
   border-bottom: 1px solid var(--border-light);
   gap: 0.5rem;
 }
 .detailRow:last-child { border-bottom: none; }
 
 .detailLabel {
-  font-size: 0.72rem;
+  font-size: clamp(0.62rem, 1.4vw, 0.72rem);
   color: var(--purple-600);
   font-weight: 500;
   flex-shrink: 0;
 }
 
 .detailValue {
-  font-size: 0.78rem;
+  font-size: clamp(0.68rem, 1.6vw, 0.78rem);
   color: var(--purple-900);
   font-weight: 600;
   text-align: right;
@@ -1091,15 +1040,14 @@
 .menuSection {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: clamp(0.25rem, 0.6vh, 0.35rem);
 }
 
-/* UPDATED: menu items — purple tinted bg, purple text */
 .menuItem {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.8rem 0.875rem;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  padding: clamp(0.6rem, 1.5vh, 0.8rem) clamp(0.625rem, 1.5vw, 0.875rem);
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
   border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
@@ -1115,9 +1063,9 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* UPDATED: menu item icon — purple filled */
 .menuItemIcon {
-  width: 38px; height: 38px;
+  width: clamp(32px, 6vw, 38px);
+  height: clamp(32px, 6vw, 38px);
   border-radius: var(--r-sm);
   background: var(--purple-700);
   border: 1px solid var(--purple-700);
@@ -1137,10 +1085,9 @@
 
 .menuItemContent { flex: 1; min-width: 0; }
 
-/* UPDATED: menu item title — purple-900, switches white on hover */
 .menuItemTitle {
   display: block;
-  font-size: 0.85rem;
+  font-size: clamp(0.75rem, 1.8vw, 0.85rem);
   font-weight: 700;
   color: var(--purple-900);
   margin-bottom: 0.1rem;
@@ -1148,10 +1095,9 @@
 }
 .menuItem:hover .menuItemTitle { color: var(--white); }
 
-/* UPDATED: menu item subtitle — purple, switches to semi-white on hover */
 .menuItemSubtitle {
   display: block;
-  font-size: 0.69rem;
+  font-size: clamp(0.6rem, 1.4vw, 0.69rem);
   color: var(--purple-600);
   transition: color var(--t);
 }
@@ -1171,14 +1117,14 @@
 .renewalSection {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: clamp(0.5rem, 1.2vh, 0.75rem);
 }
 
 .alertBox {
   display: flex;
   align-items: flex-start;
-  gap: 0.625rem;
-  padding: 0.875rem;
+  gap: clamp(0.4rem, 1vw, 0.625rem);
+  padding: clamp(0.625rem, 1.5vh, 0.875rem);
   background: var(--error-bg);
   border: 1px solid rgba(220,38,38,0.2);
   border-radius: var(--r);
@@ -1186,14 +1132,14 @@
 }
 
 .alertTitle {
-  font-size: 0.85rem;
+  font-size: clamp(0.75rem, 1.8vw, 0.85rem);
   font-weight: 700;
   margin: 0 0 0.2rem;
   color: var(--error);
 }
 
 .alertText {
-  font-size: 0.75rem;
+  font-size: clamp(0.65rem, 1.5vw, 0.75rem);
   color: var(--gray-500);
   margin: 0;
   line-height: 1.45;
@@ -1201,13 +1147,13 @@
 
 .primaryBtn {
   width: 100%;
-  padding: 0.75rem 1.25rem;
+  padding: clamp(0.6rem, 1.5vh, 0.75rem) clamp(1rem, 2.5vw, 1.25rem);
   background: var(--grad-brand);
   border: none;
   border-radius: var(--r);
   color: var(--white);
   font-family: var(--font-sans);
-  font-size: 0.875rem;
+  font-size: clamp(0.78rem, 1.8vw, 0.875rem);
   font-weight: 700;
   cursor: pointer;
   transition: all var(--t);
@@ -1223,7 +1169,7 @@
 .upgradeSection {
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: clamp(0.5rem, 1.2vh, 0.875rem);
 }
 
 .sectionHeader {
@@ -1233,7 +1179,7 @@
 }
 .sectionHeader svg { flex-shrink: 0; color: var(--purple-600); }
 .sectionHeader h5 {
-  font-size: 0.875rem;
+  font-size: clamp(0.78rem, 1.8vw, 0.875rem);
   font-weight: 800;
   color: var(--purple-900);
   margin: 0;
@@ -1241,23 +1187,22 @@
 }
 
 .sectionDescription {
-  font-size: 0.75rem;
+  font-size: clamp(0.65rem, 1.5vw, 0.75rem);
   color: var(--purple-700);
   margin: 0;
   line-height: 1.5;
   opacity: 0.8;
 }
 
-/* ── Plan Cards ──────────────────────────────────────────────────────────── */
-/* UPDATED: plan cards — purple tinted */
+/* ── Upgrade Plan Cards ──────────────────────────────────────────────────── */
 .upgradePlanCard {
   background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
   border: 1.5px solid var(--border-med);
   border-radius: var(--r-lg);
-  padding: 1.125rem;
+  padding: clamp(0.875rem, 2vh, 1.125rem);
   display: flex;
   flex-direction: column;
-  gap: 0.875rem;
+  gap: clamp(0.5rem, 1.2vh, 0.875rem);
   box-shadow: var(--shadow-xs);
   transition: all var(--t);
 }
@@ -1273,9 +1218,9 @@
 }
 .enterprisePlan:hover { border-color: var(--amber-500); }
 
-/* UPDATED: plan icon wrapper — purple filled */
 .planIconWrapper {
-  width: 42px; height: 42px;
+  width: clamp(34px, 6vw, 42px);
+  height: clamp(34px, 6vw, 42px);
   border-radius: var(--r);
   background: var(--purple-700);
   border: 1.5px solid var(--purple-700);
@@ -1297,56 +1242,62 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
-/* UPDATED: plan info heading — deep purple */
+
 .planInfo h6 {
-  font-size: 0.95rem;
+  font-size: clamp(0.82rem, 2vw, 0.95rem);
   font-weight: 800;
   color: var(--purple-900);
   margin: 0;
 }
 
 .planPricing { display: flex; align-items: baseline; gap: 0.15rem; }
+
 .price {
-  font-size: 1.25rem;
+  font-size: clamp(1rem, 3vw, 1.25rem);
   font-weight: 900;
   color: var(--purple-800);
   letter-spacing: -0.02em;
 }
-.period { font-size: 0.68rem; color: var(--purple-500); }
+
+.period {
+  font-size: clamp(0.58rem, 1.3vw, 0.68rem);
+  color: var(--purple-500);
+}
+
 .customPrice {
-  font-size: 0.8rem;
+  font-size: clamp(0.7rem, 1.6vw, 0.8rem);
   font-weight: 700;
   color: var(--amber-600);
 }
 
-/* UPDATED: feature list — purple text */
 .featureList {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: clamp(0.2rem, 0.5vh, 0.3rem);
 }
 .featureList li {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  font-size: 0.75rem;
+  font-size: clamp(0.65rem, 1.5vw, 0.75rem);
   color: var(--purple-800);
 }
 .featureList li svg { color: var(--success); flex-shrink: 0; }
 
 .upgradeBtn {
   width: 100%;
-  padding: 0.7rem 1rem;
+  padding: clamp(0.5rem, 1.2vh, 0.7rem) 1rem;
   background: var(--grad-brand);
   border: none;
   border-radius: var(--r-sm);
   color: var(--white);
   font-family: var(--font-sans);
-  font-size: 0.82rem;
+  font-size: clamp(0.72rem, 1.7vw, 0.82rem);
   font-weight: 700;
   cursor: pointer;
   transition: all var(--t);
@@ -1383,34 +1334,14 @@
    RESPONSIVE
    ═══════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .header { height: 56px; padding: 0 1rem; }
-  .companyName { font-size: 0.875rem; }
   .logoutBtn span { display: none; }
   .logoutBtn { padding: 0.45rem 0.6rem; }
-  .cardGrid { padding: 1.25rem 1rem; }
-  .reportsView { padding: 1.25rem 1rem; }
-  .statsOverview { grid-template-columns: 1fr 1fr; }
   .reportsGrid { grid-template-columns: 1fr; }
-  .slidePanel { width: min(340px, 92vw); }
-  .toastContainer { right: 0.875rem; }
 }
 
 @media (max-width: 480px) {
-  .header { height: 52px; padding: 0 0.875rem; }
-  .welcomeSection { padding: 2.25rem 1rem 1.75rem; }
-  .welcomeTitle { font-size: 1.625rem; }
-  .cardGrid { gap: 0.875rem; padding: 1.125rem 1rem; }
-  .moduleCard { padding: 1rem; gap: 0.875rem; }
-  .cardIcon { width: 46px; height: 46px; border-radius: var(--r); }
-  .cardTitle { font-size: 0.95rem; }
-  .statsOverview { gap: 0.75rem; }
-  .statCard { padding: 0.75rem; gap: 0.625rem; }
-  .statValue { font-size: 1.375rem; }
-  .reportsHeader { padding: 1rem; }
-  .reportsTitle { font-size: 1.1rem; }
   .slidePanel { width: 100vw; }
   .planInfo { flex-direction: column; gap: 0.2rem; }
-  .toastContainer { right: 0.5rem; left: 0.5rem; width: auto; }
 }
 
 @media (min-width: 1200px) {
