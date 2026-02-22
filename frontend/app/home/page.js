@@ -167,6 +167,7 @@ export default function Home() {
   const [loadingStats,  setLoadingStats]  = useState(false);
   const [downloading,   setDownloading]   = useState(false);
 
+  /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token          = localStorage.getItem("token");
@@ -176,6 +177,7 @@ export default function Home() {
     catch { localStorage.clear(); router.replace("/auth/login"); }
   }, [router]);
 
+  /* ── Fetch Subscription ───────────────────────────────────────────── */
   const fetchSubscription = async () => {
     try {
       setLoadingSub(true);
@@ -196,6 +198,7 @@ export default function Home() {
     }
   };
 
+  /* ── Fetch Export Stats ───────────────────────────────────────────── */
   const fetchExportStats = async () => {
     try {
       setLoadingStats(true);
@@ -213,6 +216,7 @@ export default function Home() {
     }
   };
 
+  /* ── Download ─────────────────────────────────────────────────────── */
   const handleDownload = async (type) => {
     const map = {
       visitors: { endpoint: "/api/exports/visitors",           label: "Visitor Records" },
@@ -258,6 +262,7 @@ export default function Home() {
     }
   };
 
+  /* ── Upgrade ──────────────────────────────────────────────────────── */
   const handleUpgradeBusiness = async () => {
     try {
       setUpgradingBusiness(true);
@@ -294,6 +299,7 @@ export default function Home() {
     }
   };
 
+  /* ── View Handlers ────────────────────────────────────────────────── */
   const handleOpenMenu = () => { setShowMenu(true); fetchSubscription(); };
 
   const handleOpenReports = () => {
@@ -313,6 +319,7 @@ export default function Home() {
     }
   };
 
+  /* ── Derived State ────────────────────────────────────────────────── */
   const currentPlan   = subData?.PLAN?.toLowerCase()   || "";
   const currentStatus = subData?.STATUS?.toLowerCase() || "";
 
@@ -329,6 +336,7 @@ export default function Home() {
 
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
+      {/* ── HEADER ── */}
       <header className={styles.header}>
         {currentView !== "home" ? (
           <button className={styles.backBtn} onClick={handleBackToHome} aria-label="Back">
@@ -364,162 +372,168 @@ export default function Home() {
         </div>
       </header>
 
-      <main className={styles.main}>
+      {/* ── SCROLL BODY ── */}
+      <div className={styles.scrollBody}>
+        <main className={styles.main}>
 
-        {currentView === "home" && (
-          <>
-            <div className={styles.welcomeSection}>
-              <div className={styles.heroContent}>
-                <div className={styles.greetingChip}>
-                  <span className={styles.greetingDot}/>
-                  {getGreeting()}
-                </div>
-                <h2 className={styles.welcomeTitle}>
-                  Welcome, <em>{company.name}</em>
-                </h2>
-                <p className={styles.welcomeSubtitle}>
-                  Select a module to continue
-                </p>
-              </div>
-            </div>
-
-            <div className={styles.cardGrid}>
-              <div
-                className={styles.moduleCard}
-                onClick={() => router.push("/visitor/dashboard")}
-                role="button"
-                tabIndex={0}
-                aria-label="Visitor Management"
-                onKeyDown={(e) => e.key === "Enter" && router.push("/visitor/dashboard")}
-              >
-                <div className={styles.cardIcon}><Users size={28}/></div>
-                <div className={styles.cardContent}>
-                  <h3 className={styles.cardTitle}>Visitor Management</h3>
-                  <p className={styles.cardDescription}>
-                    Check-ins, ID verification & digital passes
+          {/* HOME VIEW */}
+          {currentView === "home" && (
+            <>
+              <div className={styles.welcomeSection}>
+                <div className={styles.heroContent}>
+                  <div className={styles.greetingChip}>
+                    <span className={styles.greetingDot}/>
+                    {getGreeting()}
+                  </div>
+                  <h2 className={styles.welcomeTitle}>
+                    Welcome, <em>{company.name}</em>
+                  </h2>
+                  <p className={styles.welcomeSubtitle}>
+                    Select a module to continue
                   </p>
                 </div>
-                <span className={styles.cardArrow}>→</span>
               </div>
 
-              <div
-                className={styles.moduleCard}
-                onClick={() => router.push("/conference/dashboard")}
-                role="button"
-                tabIndex={0}
-                aria-label="Conference Booking"
-                onKeyDown={(e) => e.key === "Enter" && router.push("/conference/dashboard")}
-              >
-                <div className={styles.cardIcon}><DoorOpen size={28}/></div>
-                <div className={styles.cardContent}>
-                  <h3 className={styles.cardTitle}>Conference Booking</h3>
-                  <p className={styles.cardDescription}>
-                    Schedule meetings & manage rooms
-                  </p>
+              <div className={styles.cardGrid}>
+                <div
+                  className={styles.moduleCard}
+                  onClick={() => router.push("/visitor/dashboard")}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Visitor Management"
+                  onKeyDown={(e) => e.key === "Enter" && router.push("/visitor/dashboard")}
+                >
+                  <div className={styles.cardIcon}><Users size={28}/></div>
+                  <div className={styles.cardContent}>
+                    <h3 className={styles.cardTitle}>Visitor Management</h3>
+                    <p className={styles.cardDescription}>
+                      Check-ins, ID verification & digital passes
+                    </p>
+                  </div>
+                  <span className={styles.cardArrow}>→</span>
                 </div>
-                <span className={styles.cardArrow}>→</span>
+
+                <div
+                  className={styles.moduleCard}
+                  onClick={() => router.push("/conference/dashboard")}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Conference Booking"
+                  onKeyDown={(e) => e.key === "Enter" && router.push("/conference/dashboard")}
+                >
+                  <div className={styles.cardIcon}><DoorOpen size={28}/></div>
+                  <div className={styles.cardContent}>
+                    <h3 className={styles.cardTitle}>Conference Booking</h3>
+                    <p className={styles.cardDescription}>
+                      Schedule meetings & manage rooms
+                    </p>
+                  </div>
+                  <span className={styles.cardArrow}>→</span>
+                </div>
               </div>
+            </>
+          )}
+
+          {/* REPORTS VIEW */}
+          {currentView === "reports" && (
+            <div className={styles.reportsView}>
+              <div className={styles.reportsHeader}>
+                <div className={styles.reportsHeaderIcon}>
+                  <FileSpreadsheet size={28}/>
+                </div>
+                <div>
+                  <h2 className={styles.reportsTitle}>Reports & Analytics</h2>
+                  <p className={styles.reportsSubtitle}>Download and export your data</p>
+                </div>
+              </div>
+
+              {loadingStats && (
+                <div className={styles.loadingState}>
+                  <div className={styles.spinner}/>
+                  <p>Loading statistics...</p>
+                </div>
+              )}
+
+              {exportStats && (
+                <>
+                  <div className={styles.statsOverview}>
+                    <div className={styles.statCard}>
+                      <Users size={22}/>
+                      <div>
+                        <p className={styles.statLabel}>Total Visitors</p>
+                        <p className={styles.statValue}>{exportStats.visitors?.total ?? 0}</p>
+                      </div>
+                    </div>
+                    <div className={styles.statCard}>
+                      <DoorOpen size={22}/>
+                      <div>
+                        <p className={styles.statLabel}>Total Bookings</p>
+                        <p className={styles.statValue}>{exportStats.bookings?.total ?? 0}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={styles.reportsGrid}>
+                    <div className={styles.reportCard}>
+                      <div className={styles.reportHeader}>
+                        <div className={styles.reportIcon}><Users size={22}/></div>
+                        <div>
+                          <h6>Visitor Records</h6>
+                          <p className={styles.reportMeta}>
+                            {exportStats.visitors?.active ?? 0} active · {exportStats.visitors?.total ?? 0} total
+                          </p>
+                        </div>
+                      </div>
+                      <button className={styles.downloadBtn} onClick={() => handleDownload("visitors")} disabled={downloading}>
+                        <Download size={15}/>
+                        {downloading ? "Downloading..." : "Download"}
+                      </button>
+                    </div>
+
+                    <div className={styles.reportCard}>
+                      <div className={styles.reportHeader}>
+                        <div className={styles.reportIcon}><DoorOpen size={22}/></div>
+                        <div>
+                          <h6>Conference Bookings</h6>
+                          <p className={styles.reportMeta}>
+                            {exportStats.bookings?.upcoming ?? 0} upcoming · {exportStats.bookings?.total ?? 0} total
+                          </p>
+                        </div>
+                      </div>
+                      <button className={styles.downloadBtn} onClick={() => handleDownload("bookings")} disabled={downloading}>
+                        <Download size={15}/>
+                        {downloading ? "Downloading..." : "Download"}
+                      </button>
+                    </div>
+
+                    <div className={`${styles.reportCard} ${styles.premiumReport}`}>
+                      <div className={styles.reportHeader}>
+                        <div className={styles.reportIcon}><FileSpreadsheet size={22}/></div>
+                        <div>
+                          <h6>Complete Report</h6>
+                          <p className={styles.reportMeta}>All data · multi-sheet Excel file</p>
+                        </div>
+                      </div>
+                      <button className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`} onClick={() => handleDownload("all")} disabled={downloading}>
+                        <Download size={15}/>
+                        {downloading ? "Downloading..." : "Download All"}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.infoBox}>
+                    <FileSpreadsheet size={15}/>
+                    <p>Reports export as .xlsx with professional formatting and colour-coded status indicators.</p>
+                  </div>
+                </>
+              )}
             </div>
-          </>
-        )}
+          )}
 
-        {currentView === "reports" && (
-          <div className={styles.reportsView}>
-            <div className={styles.reportsHeader}>
-              <div className={styles.reportsHeaderIcon}>
-                <FileSpreadsheet size={28}/>
-              </div>
-              <div>
-                <h2 className={styles.reportsTitle}>Reports & Analytics</h2>
-                <p className={styles.reportsSubtitle}>Download and export your data</p>
-              </div>
-            </div>
+        </main>
+      </div>
 
-            {loadingStats && (
-              <div className={styles.loadingState}>
-                <div className={styles.spinner}/>
-                <p>Loading statistics...</p>
-              </div>
-            )}
-
-            {exportStats && (
-              <>
-                <div className={styles.statsOverview}>
-                  <div className={styles.statCard}>
-                    <Users size={22}/>
-                    <div>
-                      <p className={styles.statLabel}>Total Visitors</p>
-                      <p className={styles.statValue}>{exportStats.visitors?.total ?? 0}</p>
-                    </div>
-                  </div>
-                  <div className={styles.statCard}>
-                    <DoorOpen size={22}/>
-                    <div>
-                      <p className={styles.statLabel}>Total Bookings</p>
-                      <p className={styles.statValue}>{exportStats.bookings?.total ?? 0}</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.reportsGrid}>
-                  <div className={styles.reportCard}>
-                    <div className={styles.reportHeader}>
-                      <div className={styles.reportIcon}><Users size={22}/></div>
-                      <div>
-                        <h6>Visitor Records</h6>
-                        <p className={styles.reportMeta}>
-                          {exportStats.visitors?.active ?? 0} active · {exportStats.visitors?.total ?? 0} total
-                        </p>
-                      </div>
-                    </div>
-                    <button className={styles.downloadBtn} onClick={() => handleDownload("visitors")} disabled={downloading}>
-                      <Download size={15}/>
-                      {downloading ? "Downloading..." : "Download"}
-                    </button>
-                  </div>
-
-                  <div className={styles.reportCard}>
-                    <div className={styles.reportHeader}>
-                      <div className={styles.reportIcon}><DoorOpen size={22}/></div>
-                      <div>
-                        <h6>Conference Bookings</h6>
-                        <p className={styles.reportMeta}>
-                          {exportStats.bookings?.upcoming ?? 0} upcoming · {exportStats.bookings?.total ?? 0} total
-                        </p>
-                      </div>
-                    </div>
-                    <button className={styles.downloadBtn} onClick={() => handleDownload("bookings")} disabled={downloading}>
-                      <Download size={15}/>
-                      {downloading ? "Downloading..." : "Download"}
-                    </button>
-                  </div>
-
-                  <div className={`${styles.reportCard} ${styles.premiumReport}`}>
-                    <div className={styles.reportHeader}>
-                      <div className={styles.reportIcon}><FileSpreadsheet size={22}/></div>
-                      <div>
-                        <h6>Complete Report</h6>
-                        <p className={styles.reportMeta}>All data · multi-sheet Excel file</p>
-                      </div>
-                    </div>
-                    <button className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`} onClick={() => handleDownload("all")} disabled={downloading}>
-                      <Download size={15}/>
-                      {downloading ? "Downloading..." : "Download All"}
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.infoBox}>
-                  <FileSpreadsheet size={15}/>
-                  <p>Reports export as .xlsx with professional formatting and colour-coded status indicators.</p>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-      </main>
-
+      {/* ── SLIDE PANEL ── */}
       {showMenu && (
         <>
           <div className={styles.overlay} onClick={() => setShowMenu(false)} aria-hidden="true"/>
@@ -677,7 +691,7 @@ export default function Home() {
                   {currentPlan === "enterprise" && currentStatus === "active" && (
                     <div className={styles.infoBox}>
                       <Crown size={16}/>
-                      <p>You're on our premium Enterprise plan with full feature access. Contact support for custom requirements.</p>
+                      <p>You&apos;re on our premium Enterprise plan with full feature access. Contact support for custom requirements.</p>
                     </div>
                   )}
                 </>
