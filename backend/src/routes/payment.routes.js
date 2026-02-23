@@ -8,11 +8,26 @@ const router = express.Router();
 /**
  * SUBSCRIPTION PAYMENT FLOW
  *
- * TRIAL     → ₹49  (Processing Fee)
- * BUSINESS  → ₹500 / Month
+ * TRIAL     → ₹49  base + 18% GST = ₹57.82
+ * BUSINESS  → ₹500 base + 18% GST = ₹590.00
  *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
+
+const GST_RATE = 0.18; // 18%
+
+/** Returns { base, gst, total } all as 2-dp strings */
+const calcGST = (baseAmount) => {
+  const base  = Number(baseAmount);
+  const gst   = +(base * GST_RATE).toFixed(2);
+  const total = +(base + gst).toFixed(2);
+  return {
+    base:  base.toFixed(2),
+    gst:   gst.toFixed(2),
+    total: total.toFixed(2),
+  };
+};
+
 router.post("/subscribe", authenticate, async (req, res) => {
   try {
     const { plan } = req.body;
@@ -84,11 +99,15 @@ router.post("/subscribe", authenticate, async (req, res) => {
         console.log("🔍 Zoho payment link status:", linkStatus);
 
         if (["created", "sent"].includes(linkStatus)) {
+          // ── Return pricing breakdown so frontend can display it ──
+          const planBase = plan === "business" ? 500 : 49;
+          const pricing  = calcGST(planBase);
           return res.json({
             success: true,
-            reused: true,
+            reused:  true,
             message: "Existing payment link still valid",
-            url: data.payment_link.url
+            url:     data.payment_link.url,
+            pricing,
           });
         }
 
@@ -119,28 +138,21 @@ router.post("/subscribe", authenticate, async (req, res) => {
       );
     }
 
-    /* ================= PLAN PRICING ================= */
-    const pricing = {
-      free: {
-        payment_amount: 49.0,
-        description: "PROMEET Trial Processing Fee"
-      },
-      business: {
-        payment_amount: 500.0,
-        description: "PROMEET Business Subscription"
-      }
+    /* ================= PLAN PRICING (with GST) ================= */
+    const planConfig = {
+      free:     { base: 49,  description: "PROMEET Trial Processing Fee" },
+      business: { base: 500, description: "PROMEET Business Subscription" },
     };
 
-    const selected = pricing[plan];
+    const selected = planConfig[plan];
     if (!selected) {
       return res.status(400).json({ success: false, message: "Invalid plan pricing" });
     }
 
-    /**
-     * ZOHO STRICT
-     * MUST BE STRING "49.00" / "500.00"
-     */
-    const payment_amount = Number(selected.payment_amount).toFixed(2);
+    const pricing = calcGST(selected.base);
+
+    // Zoho requires amount as string "590.00"
+    const payment_amount = pricing.total;
 
     if (!payment_amount || Number(payment_amount) <= 0) {
       return res.status(400).json({
@@ -150,17 +162,17 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     console.log(
-      `💳 Creating Zoho Payment Link → ₹${payment_amount} (${plan}) for Company ${companyId}`
+      `💳 Creating Zoho Payment Link → Base ₹${pricing.base} + GST ₹${pricing.gst} = ₹${pricing.total} (${plan}) for Company ${companyId}`
     );
 
     const payload = {
-      customer_id: customerId,
-      customer_name: companyName,
-      currency_code: "INR",
-      payment_amount,              // <-- REQUIRED FIELD ✔
-      description: selected.description,
+      customer_id:       customerId,
+      customer_name:     companyName,
+      currency_code:     "INR",
+      payment_amount,                    // total including 18% GST
+      description:       `${selected.description} (incl. 18% GST)`,
       is_partial_payment: false,
-      reference_id: `COMP-${companyId}-${Date.now()}`
+      reference_id:      `COMP-${companyId}-${Date.now()}`
     };
 
     console.log("📤 ZOHO PAYMENT PAYLOAD:", payload);
@@ -204,20 +216,18 @@ router.post("/subscribe", authenticate, async (req, res) => {
     );
 
     return res.json({
-      success: true,
-      message: "Payment link generated successfully",
-      url: link.url
+      success:  true,
+      message:  "Payment link generated successfully",
+      url:      link.url,
+      pricing,          // { base, gst, total } — use in frontend to display breakdown
     });
 
   } catch (err) {
     console.error("❌ SUBSCRIPTION ERROR →", err?.response?.data || err);
 
     return res.status(500).json({
-      success: false,
-      message:
-        err?.response?.data?.message ||
-        err?.message ||
-        "Subscription failed"
+      success:  false,
+      message:  err?.response?.data?.message || err?.message || "Subscription failed"
     });
   }
 });
