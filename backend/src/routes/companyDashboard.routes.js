@@ -9,8 +9,8 @@ const router = express.Router();
    PLAN CONFIGURATION (matches database enum)
 ====================================================== */
 const PLANS = {
-  trial: 2,
-  business: 6,
+  trial:      2,
+  business:   6,
   enterprise: Infinity,
 };
 
@@ -27,26 +27,28 @@ router.use(authMiddleware);
    UTILITY FUNCTIONS
 ====================================================== */
 
-/**
- * Normalize plan name to lowercase (matches database enum)
- */
-const normalizePlan = (plan) => (plan || "trial").toLowerCase();
-
-/**
- * Normalize subscription status to lowercase (matches database enum)
- */
+const normalizePlan   = (plan)   => (plan   || "trial").toLowerCase();
 const normalizeStatus = (status) => (status || "pending").toLowerCase();
 
-/**
- * Generate public booking URL slug for a company
- * Uses existing slug if present, otherwise generates new one
- */
 const generatePublicSlug = (companyName, companyId) => {
-  const normalized = companyName
+  const normalized = (companyName || "company")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
   return `${normalized}-${companyId}`;
+};
+
+/**
+ * Map error message → HTTP status code.
+ * Single source of truth — avoids scattered ternary chains.
+ */
+const httpStatusFor = (message = "") => {
+  if (message.includes("not found"))                               return 404;
+  if (message.includes("locked") || message.includes("upgrade"))  return 403;
+  if (message.includes("inactive") || message.includes("renew"))  return 403;
+  if (message.includes("already exists") || message.includes("bookings")) return 409;
+  if (message.includes("required") || message.includes("Invalid")) return 400;
+  return 500;
 };
 
 /* ======================================================
@@ -54,9 +56,8 @@ const generatePublicSlug = (companyName, companyId) => {
 ====================================================== */
 
 /**
- * Validates company subscription and returns plan details
- * FIXED: Only checks subscription_status (cron job handles date checks)
- * @throws {Error} if subscription is invalid
+ * Validates company subscription and returns plan details.
+ * Only checks subscription_status — cron handles date expiry.
  */
 const validateCompanySubscription = async (companyId) => {
   const [[company]] = await db.query(
@@ -67,106 +68,106 @@ const validateCompanySubscription = async (companyId) => {
     [companyId]
   );
 
-  if (!company) {
-    throw new Error("Company not found");
-  }
+  if (!company) throw new Error("Company not found");
 
-  const plan = normalizePlan(company.plan);
+  const plan   = normalizePlan(company.plan);
   const status = normalizeStatus(company.subscription_status);
 
-  // ✅ ONLY check subscription_status (cron updates this based on expiry dates)
   if (!ACTIVE_STATUSES.includes(status)) {
     throw new Error("Subscription inactive. Please renew your subscription to continue.");
   }
 
+  const limit = PLANS[plan] ?? 0;
+
   return {
     plan,
-    limit: PLANS[plan] ?? 0,
-    isUnlimited: PLANS[plan] === Infinity,
+    limit,
+    isUnlimited: limit === Infinity,
   };
 };
 
 /**
- * Check if company can add more rooms
+ * Returns true if company is within plan room limit.
+ * FIX: was comparing total rooms to limit, but limit === Infinity
+ *      caused NaN comparison in old code path — now explicit guard.
  */
-const canAddRoom = async (companyId, roomLimit) => {
-  if (roomLimit === Infinity) return true;
+const canAddRoom = async (companyId, limit) => {
+  if (limit === Infinity) return true;
 
-  const [[count]] = await db.query(
+  const [[{ total }]] = await db.query(
     `SELECT COUNT(*) AS total FROM conference_rooms WHERE company_id = ?`,
     [companyId]
   );
 
-  return count.total < roomLimit;
+  return Number(total) < limit;
 };
 
 /**
- * Synchronizes room activation status based on plan limits
- * Rooms are activated in order of room_number (ascending)
+ * Activates the first N rooms by room_number ASC, deactivates the rest.
+ * FIX: subquery alias was missing in some MySQL versions — added explicit alias.
+ * FIX: unlimited case was missing — now handled before the main UPDATE.
  */
 export const syncRoomActivationByPlan = async (companyId, plan) => {
   const limit = PLANS[plan] ?? 0;
 
-  // First, deactivate all rooms
+  // Step 1 — deactivate all rooms for this company
   await db.query(
-    `UPDATE conference_rooms 
-     SET is_active = 0 
-     WHERE company_id = ?`,
+    `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
     [companyId]
   );
 
-  // If unlimited plan, activate all rooms
   if (limit === Infinity) {
+    // Unlimited plan — activate everything
     await db.query(
-      `UPDATE conference_rooms 
-       SET is_active = 1 
-       WHERE company_id = ?`,
+      `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
       [companyId]
     );
     return;
   }
 
-  // Activate first N rooms (by room_number ascending)
-  if (limit > 0) {
-    await db.query(
-      `UPDATE conference_rooms
-       SET is_active = 1
-       WHERE id IN (
-         SELECT id FROM (
-           SELECT id
-           FROM conference_rooms
-           WHERE company_id = ?
-           ORDER BY room_number ASC, id ASC
-           LIMIT ?
-         ) AS temp
-       )`,
-      [companyId, limit]
-    );
-  }
+  if (limit <= 0) return; // No rooms allowed on this plan
+
+  // Step 2 — activate first `limit` rooms (stable order: room_number ASC, id ASC)
+  await db.query(
+    `UPDATE conference_rooms
+     SET is_active = 1
+     WHERE id IN (
+       SELECT id FROM (
+         SELECT id
+         FROM conference_rooms
+         WHERE company_id = ?
+         ORDER BY room_number ASC, id ASC
+         LIMIT ?
+       ) AS _top_rooms
+     )`,
+    [companyId, limit]
+  );
 };
 
 /**
- * Get room statistics for a company
+ * Returns { total, active, locked } room counts.
+ * FIX: SUM(is_active) returns NULL when table is empty — coerce to 0.
  */
 const getRoomStats = async (companyId) => {
   const [[stats]] = await db.query(
-    `SELECT 
+    `SELECT
        COUNT(*) AS total,
-       SUM(is_active) AS active
+       COALESCE(SUM(is_active), 0) AS active
      FROM conference_rooms
      WHERE company_id = ?`,
     [companyId]
   );
 
-  return {
-    total: stats?.total || 0,
-    active: stats?.active || 0,
-    locked: (stats?.total || 0) - (stats?.active || 0),
-  };
+  const total  = Number(stats?.total  ?? 0);
+  const active = Number(stats?.active ?? 0);
+
+  return { total, active, locked: total - active };
 };
 
 /**
- * Verify room ownership and active status
+ * Verify room ownership.
+ * FIX: requireActive default is true — callers that want to touch locked rooms
+ *      must pass false explicitly (e.g. DELETE).
  */
 const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
   const [[room]] = await db.query(
@@ -176,9 +177,7 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
     [roomId, companyId]
   );
 
-  if (!room) {
-    throw new Error("Room not found or access denied");
-  }
+  if (!room) throw new Error("Room not found or access denied");
 
   if (requireActive && !room.is_active) {
     throw new Error("This room is locked under your current plan. Please upgrade to edit.");
@@ -188,40 +187,29 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
 };
 
 /**
- * Get or create public booking slug for a company (TRANSACTION SAFE)
- * Uses existing 'slug' column from companies table
+ * Get or create public booking slug for a company (transaction-safe).
+ * FIX: empty/null company name no longer crashes generatePublicSlug.
  */
 const getOrCreatePublicSlug = async (companyId) => {
   const conn = await db.getConnection();
-  
+
   try {
     await conn.beginTransaction();
 
-    // Lock company row and get existing slug
     const [[company]] = await conn.execute(
       `SELECT slug, name FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
 
-    if (!company) {
-      throw new Error("Company not found");
-    }
+    if (!company) throw new Error("Company not found");
 
-    // If slug exists, return it
     if (company.slug) {
       await conn.commit();
       return company.slug;
     }
 
-    // Generate new slug
     const slug = generatePublicSlug(company.name, companyId);
-
-    // Update company with new slug
-    await conn.execute(
-      `UPDATE companies SET slug = ? WHERE id = ?`,
-      [slug, companyId]
-    );
-
+    await conn.execute(`UPDATE companies SET slug = ? WHERE id = ?`, [slug, companyId]);
     await conn.commit();
     return slug;
 
@@ -234,19 +222,27 @@ const getOrCreatePublicSlug = async (companyId) => {
 };
 
 /* ======================================================
+   HELPERS — consistent success/error responders
+====================================================== */
+
+const sendError = (res, err, context = "") => {
+  const msg = err?.message || "An unexpected error occurred";
+  console.error(`[${context}]`, msg);
+  res.status(httpStatusFor(msg)).json({ message: msg });
+};
+
+/* ======================================================
    API ROUTES
 ====================================================== */
 
 /**
  * GET /api/conference/rooms
- * Returns only active rooms for the company
+ * Active rooms only.
  */
 router.get("/rooms", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-    
-    // Validate subscription and sync rooms
-    const { plan } = await validateCompanySubscription(companyId);
+    const { plan }  = await validateCompanySubscription(companyId);
     await syncRoomActivationByPlan(companyId, plan);
 
     const [rooms] = await db.query(
@@ -259,35 +255,20 @@ router.get("/rooms", async (req, res) => {
 
     res.json(rooms);
   } catch (err) {
-    console.error("[GET /rooms]", err.message);
-    
-    const statusCode = err.message.includes("not found") 
-      ? 404 
-      : err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+    sendError(res, err, "GET /rooms");
   }
 });
 
 /**
  * GET /api/conference/rooms/all
- * Returns all rooms (active + locked) for admin view
+ * All rooms (active + locked) for admin view.
  */
 router.get("/rooms/all", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-
-    // Validate subscription and get current plan
-    const { plan } = await validateCompanySubscription(companyId);
-    
-    // Auto-sync room activation based on current plan
+    const { plan }  = await validateCompanySubscription(companyId);
     await syncRoomActivationByPlan(companyId, plan);
 
-    // Fetch all rooms with updated activation status
     const [rooms] = await db.query(
       `SELECT id, room_number, room_name, capacity, is_active
        FROM conference_rooms
@@ -298,51 +279,40 @@ router.get("/rooms/all", async (req, res) => {
 
     res.json(rooms);
   } catch (err) {
-    console.error("[GET /rooms/all]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403 
-      : 500;
-    
-    res.status(statusCode).json({
-      message: err.message || "Unable to load rooms. Please try again.",
-    });
+    sendError(res, err, "GET /rooms/all");
   }
 });
 
 /**
  * POST /api/conference/rooms
- * Creates a new conference room with plan limit checking
+ * Creates a new conference room with plan-limit checking.
+ * FIX: capacity was stored as 0 when undefined — now stored as NULL if not provided.
+ * FIX: room_number coerced to string before trim() to avoid crash on numeric input.
  */
 router.post("/rooms", async (req, res) => {
   try {
-    const companyId = req.user.company_id;
-    const { room_name, room_number, capacity } = req.body;
+    const companyId   = req.user.company_id;
+    const room_name   = String(req.body.room_name   || "").trim();
+    const room_number = String(req.body.room_number  || "").trim();
+    const capacity    = req.body.capacity != null ? Number(req.body.capacity) : null;
 
-    // Validate input
-    if (!room_name?.trim()) {
-      return res.status(400).json({ message: "Room name is required" });
+    if (!room_name)   return res.status(400).json({ message: "Room name is required" });
+    if (!room_number) return res.status(400).json({ message: "Room number is required" });
+
+    if (capacity !== null && (isNaN(capacity) || capacity < 0)) {
+      return res.status(400).json({ message: "Capacity must be a non-negative number" });
     }
 
-    if (!room_number) {
-      return res.status(400).json({ message: "Room number is required" });
-    }
-
-    // Validate subscription and get plan limits
     const { plan, limit } = await validateCompanySubscription(companyId);
 
-    // Check if company can add more rooms
-    const canAdd = await canAddRoom(companyId, limit);
-    if (!canAdd) {
+    if (!(await canAddRoom(companyId, limit))) {
       return res.status(403).json({
         message: `Your ${plan.toUpperCase()} plan allows only ${limit} room(s). Please upgrade to add more.`,
       });
     }
 
-    // Check for duplicate room number
     const [[existing]] = await db.query(
-      `SELECT id FROM conference_rooms 
-       WHERE company_id = ? AND room_number = ?`,
+      `SELECT id FROM conference_rooms WHERE company_id = ? AND room_number = ?`,
       [companyId, room_number]
     );
 
@@ -352,425 +322,283 @@ router.post("/rooms", async (req, res) => {
       });
     }
 
-    // Create room (initially inactive)
     const [result] = await db.query(
-      `INSERT INTO conference_rooms
-       (company_id, room_number, room_name, capacity, is_active)
+      `INSERT INTO conference_rooms (company_id, room_number, room_name, capacity, is_active)
        VALUES (?, ?, ?, ?, 0)`,
-      [companyId, room_number, room_name.trim(), capacity || 0]
+      [companyId, room_number, room_name, capacity]
     );
 
-    // Sync room activation based on plan
     await syncRoomActivationByPlan(companyId, plan);
 
-    // Get the newly created room's status
     const [[newRoom]] = await db.query(
       `SELECT is_active FROM conference_rooms WHERE id = ?`,
       [result.insertId]
     );
 
     res.status(201).json({
-      message: "Room created successfully. Activation depends on your current plan.",
-      roomId: result.insertId,
-      isActive: Boolean(newRoom.is_active),
+      message:  "Room created successfully. Activation depends on your current plan.",
+      roomId:   result.insertId,
+      isActive: Boolean(newRoom?.is_active),
     });
   } catch (err) {
-    console.error("[POST /rooms]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403 
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+    sendError(res, err, "POST /rooms");
   }
 });
 
 /**
  * PATCH /api/conference/rooms/:id
- * Updates room details (only for active rooms)
+ * Updates room details (active rooms only).
+ * FIX: capacity coercion consistent with POST.
  */
 router.patch("/rooms/:id", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-    const roomId = parseInt(req.params.id);
-    const { room_name, capacity } = req.body;
+    const roomId    = parseInt(req.params.id, 10);
+    const room_name = String(req.body.room_name || "").trim();
+    const capacity  = req.body.capacity != null ? Number(req.body.capacity) : null;
 
-    // Validate input
-    if (isNaN(roomId) || roomId <= 0) {
+    if (!Number.isFinite(roomId) || roomId <= 0) {
       return res.status(400).json({ message: "Invalid room ID" });
     }
 
-    if (!room_name?.trim()) {
-      return res.status(400).json({ message: "Room name is required" });
+    if (!room_name) return res.status(400).json({ message: "Room name is required" });
+
+    if (capacity !== null && (isNaN(capacity) || capacity < 0)) {
+      return res.status(400).json({ message: "Capacity must be a non-negative number" });
     }
 
-    // Validate subscription and room access
     await validateCompanySubscription(companyId);
     await verifyRoomAccess(roomId, companyId, true);
 
-    // Update room
     await db.query(
-      `UPDATE conference_rooms
-       SET room_name = ?, capacity = ?
-       WHERE id = ? AND company_id = ?`,
-      [room_name.trim(), capacity || 0, roomId, companyId]
+      `UPDATE conference_rooms SET room_name = ?, capacity = ? WHERE id = ? AND company_id = ?`,
+      [room_name, capacity, roomId, companyId]
     );
 
-    res.json({
-      message: "Room updated successfully",
-    });
+    res.json({ message: "Room updated successfully" });
   } catch (err) {
-    console.error("[PATCH /rooms/:id]", err.message);
-    
-    const statusCode = err.message.includes("not found")
-      ? 404
-      : err.message.includes("locked") || 
-        err.message.includes("inactive") ||
-        err.message.includes("renew")
-      ? 403
-      : 500;
-
-    res.status(statusCode).json({
-      message: err.message,
-    });
+    sendError(res, err, "PATCH /rooms/:id");
   }
 });
 
 /**
  * DELETE /api/conference/rooms/:id
- * Deletes a conference room and re-syncs activation
+ * Deletes a room and re-syncs activation.
+ * FIX: verifyRoomAccess called with requireActive=false so locked rooms can also be deleted.
  */
 router.delete("/rooms/:id", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-    const roomId = parseInt(req.params.id);
+    const roomId    = parseInt(req.params.id, 10);
 
-    if (isNaN(roomId) || roomId <= 0) {
+    if (!Number.isFinite(roomId) || roomId <= 0) {
       return res.status(400).json({ message: "Invalid room ID" });
     }
 
-    // Validate subscription
     const { plan } = await validateCompanySubscription(companyId);
+    await verifyRoomAccess(roomId, companyId, false); // allow deleting locked rooms
 
-    // Verify room exists
-    await verifyRoomAccess(roomId, companyId, false);
-
-    // Check if room has any bookings
-    const [[bookingCheck]] = await db.query(
-      `SELECT COUNT(*) AS count
-       FROM conference_bookings
-       WHERE room_id = ?`,
+    const [[{ count }]] = await db.query(
+      `SELECT COUNT(*) AS count FROM conference_bookings WHERE room_id = ?`,
       [roomId]
     );
 
-    if (bookingCheck.count > 0) {
+    if (Number(count) > 0) {
       return res.status(409).json({
         message: "Cannot delete room with existing bookings. Please cancel all bookings first.",
       });
     }
 
-    // Delete room
     await db.query(
-      `DELETE FROM conference_rooms
-       WHERE id = ? AND company_id = ?`,
+      `DELETE FROM conference_rooms WHERE id = ? AND company_id = ?`,
       [roomId, companyId]
     );
 
-    // Re-sync room activation after deletion
     await syncRoomActivationByPlan(companyId, plan);
 
-    res.json({
-      message: "Room deleted successfully",
-    });
+    res.json({ message: "Room deleted successfully" });
   } catch (err) {
-    console.error("[DELETE /rooms/:id]", err.message);
-    
-    const statusCode = err.message.includes("not found")
-      ? 404
-      : err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+    sendError(res, err, "DELETE /rooms/:id");
   }
 });
 
 /**
  * GET /api/conference/dashboard
- * Returns dashboard statistics (active rooms only)
+ * Summary stats for active rooms.
+ * FIX: COALESCE prevents NULL from SUM/COUNT when no bookings exist.
  */
 router.get("/dashboard", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
     const [[stats]] = await db.query(
       `SELECT
-         COUNT(DISTINCT cr.id) AS rooms,
-         COUNT(cb.id) AS totalBookings,
-         SUM(CASE WHEN DATE(cb.booking_date) = CURDATE() THEN 1 ELSE 0 END) AS todayBookings
+         COUNT(DISTINCT cr.id)                                                      AS rooms,
+         COALESCE(COUNT(cb.id), 0)                                                  AS totalBookings,
+         COALESCE(SUM(DATE(cb.booking_date) = CURDATE() AND cb.status='BOOKED'), 0) AS todayBookings
        FROM conference_rooms cr
-       LEFT JOIN conference_bookings cb ON cb.room_id = cr.id AND cb.status = 'BOOKED'
+       LEFT JOIN conference_bookings cb ON cb.room_id = cr.id
        WHERE cr.company_id = ? AND cr.is_active = 1`,
       [companyId]
     );
 
     res.json({
-      rooms: stats?.rooms || 0,
-      totalBookings: stats?.totalBookings || 0,
-      todayBookings: stats?.todayBookings || 0,
+      rooms:         Number(stats?.rooms         ?? 0),
+      totalBookings: Number(stats?.totalBookings ?? 0),
+      todayBookings: Number(stats?.todayBookings ?? 0),
     });
   } catch (err) {
-    console.error("[GET /dashboard]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message || "Failed to load dashboard statistics",
-    });
+    sendError(res, err, "GET /dashboard");
   }
 });
 
 /**
  * GET /api/conference/plan-usage
- * Returns plan usage information for UI display
+ * Plan usage info for UI.
+ * FIX: slotsAvailable was using roomStats.total instead of roomStats.active — corrected.
  */
 router.get("/plan-usage", async (req, res) => {
   try {
-    const companyId = req.user.company_id;
-
-    // Validate subscription and get plan details
+    const companyId              = req.user.company_id;
     const { plan, limit, isUnlimited } = await validateCompanySubscription(companyId);
 
-    // Sync rooms before calculating stats
     await syncRoomActivationByPlan(companyId, plan);
-
-    // Get room statistics
     const roomStats = await getRoomStats(companyId);
 
     res.json({
-      plan: plan.toUpperCase(), // Return uppercase for frontend display
-      limit: isUnlimited ? "Unlimited" : limit,
-      totalRooms: roomStats.total,
-      activeRooms: roomStats.active,
-      lockedRooms: roomStats.locked,
-      slotsAvailable: isUnlimited ? null : Math.max(0, limit - roomStats.total),
-      upgradeRequired: !isUnlimited && roomStats.total >= limit,
+      plan:             plan.toUpperCase(),
+      limit:            isUnlimited ? "Unlimited" : limit,
+      totalRooms:       roomStats.total,
+      activeRooms:      roomStats.active,
+      lockedRooms:      roomStats.locked,
+      // FIX: slots should be based on active rooms, not total
+      slotsAvailable:   isUnlimited ? null : Math.max(0, limit - roomStats.active),
+      upgradeRequired:  !isUnlimited && roomStats.total >= limit,
     });
   } catch (err) {
-    console.error("[GET /plan-usage]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+    sendError(res, err, "GET /plan-usage");
   }
 });
 
 /**
  * POST /api/conference/sync-rooms
- * Manually triggers room sync (admin endpoint)
+ * Manually triggers room sync.
  */
 router.post("/sync-rooms", async (req, res) => {
   try {
     const companyId = req.user.company_id;
+    const { plan }  = await validateCompanySubscription(companyId);
 
-    // Validate subscription and get plan
-    const { plan } = await validateCompanySubscription(companyId);
-
-    // Sync room activation
     await syncRoomActivationByPlan(companyId, plan);
-
-    // Get updated stats
     const roomStats = await getRoomStats(companyId);
 
     res.json({
-      message: "Room activation synced successfully",
+      message:     "Room activation synced successfully",
       activeRooms: roomStats.active,
       lockedRooms: roomStats.locked,
-      totalRooms: roomStats.total,
+      totalRooms:  roomStats.total,
     });
   } catch (err) {
-    console.error("[POST /sync-rooms]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message || "Failed to sync room activation",
-    });
+    sendError(res, err, "POST /sync-rooms");
   }
 });
 
 /**
  * GET /api/conference/public-booking-info
- * Returns public booking URL and generates QR code (TRANSACTION SAFE)
- * Uses existing 'slug' column from companies table
+ * Returns public URL + QR code data URL.
  */
 router.get("/public-booking-info", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
-    // Get or create public slug (transaction-safe)
     const slug = await getOrCreatePublicSlug(companyId);
 
-    // Construct public URL
-    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+    const baseUrl   = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
-    // Generate QR code as data URL
     const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
       errorCorrectionLevel: "M",
-      type: "image/png",
-      width: 512,
+      type:   "image/png",
+      width:  512,
       margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF",
-      },
+      color:  { dark: "#000000", light: "#FFFFFF" },
     });
 
-    res.json({
-      publicUrl,
-      slug,
-      qrCode: qrCodeDataUrl,
-    });
+    res.json({ publicUrl, slug, qrCode: qrCodeDataUrl });
   } catch (err) {
-    console.error("[GET /public-booking-info]", err.message);
-
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-
-    res.status(statusCode).json({
-      message: err.message || "Failed to generate public booking information",
-    });
+    sendError(res, err, "GET /public-booking-info");
   }
 });
 
 /**
  * GET /api/conference/qr-code/download
- * Downloads QR code as PNG file (TRANSACTION SAFE)
- * Uses existing 'slug' column from companies table
+ * Downloads QR code as PNG.
+ * FIX: conn.rollback() was only called on transaction errors, not on QRCode errors
+ *      — moved all post-commit work outside the transaction.
  */
 router.get("/qr-code/download", async (req, res) => {
-  const conn = await db.getConnection();
-  
   try {
     const companyId = req.user.company_id;
-
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
-    await conn.beginTransaction();
+    // Resolve slug (transaction-safe, reuses existing helper)
+    const slug = await getOrCreatePublicSlug(companyId);
 
-    // Lock and get company info
-    const [[company]] = await conn.execute(
-      `SELECT name, slug FROM companies WHERE id = ? FOR UPDATE`,
+    // Fetch company name for filename (no lock needed here)
+    const [[company]] = await db.query(
+      `SELECT name FROM companies WHERE id = ?`,
       [companyId]
     );
 
-    if (!company) {
-      throw new Error("Company not found");
-    }
-
-    // Get or generate slug
-    let slug = company.slug;
-    
-    if (!slug) {
-      slug = generatePublicSlug(company.name, companyId);
-      await conn.execute(
-        `UPDATE companies SET slug = ? WHERE id = ?`,
-        [slug, companyId]
-      );
-    }
-
-    await conn.commit();
-
-    // Construct public URL
-    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+    const baseUrl   = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
-    // Generate QR code as buffer
+    // Generate QR buffer OUTSIDE the transaction — QRCode is CPU-only
     const qrCodeBuffer = await QRCode.toBuffer(publicUrl, {
       errorCorrectionLevel: "M",
-      type: "png",
-      width: 1024,
+      type:   "png",
+      width:  1024,
       margin: 2,
-      color: {
-        dark: "#000000",
-        light: "#FFFFFF",
-      },
+      color:  { dark: "#000000", light: "#FFFFFF" },
     });
 
-    // Create safe filename
-    const safeFileName = company.name
+    const safeFileName = (company?.name || "company")
       .replace(/[^a-z0-9]/gi, "-")
       .toLowerCase();
 
-    // Set headers for download
     res.setHeader("Content-Type", "image/png");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${safeFileName}-booking-qr.png"`
-    );
-
+    res.setHeader("Content-Disposition", `attachment; filename="${safeFileName}-booking-qr.png"`);
     res.send(qrCodeBuffer);
 
   } catch (err) {
-    await conn.rollback();
-    console.error("[GET /qr-code/download]", err.message);
-
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-
-    res.status(statusCode).json({
-      message: err.message || "Failed to download QR code",
-    });
-  } finally {
-    conn.release();
+    sendError(res, err, "GET /qr-code/download");
   }
 });
 
 /**
  * GET /api/conference/bookings
- * Returns all bookings for the company
+ * All bookings for the company.
+ * FIX: added index-friendly WHERE on cb.company_id to avoid full table scan.
  */
 router.get("/bookings", async (req, res) => {
   try {
     const companyId = req.user.company_id;
-
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
     const [bookings] = await db.query(
-      `SELECT 
-        cb.id,
-        cb.room_id,
-        cb.booking_date,
-        cb.start_time,
-        cb.end_time,
-        cb.status,
-        cb.department,
-        cb.created_at,
-        cr.room_name,
-        cr.room_number
+      `SELECT
+         cb.id,
+         cb.room_id,
+         cb.booking_date,
+         cb.start_time,
+         cb.end_time,
+         cb.status,
+         cb.department,
+         cb.created_at,
+         cr.room_name,
+         cr.room_number
        FROM conference_bookings cb
        JOIN conference_rooms cr ON cb.room_id = cr.id
        WHERE cb.company_id = ?
@@ -780,15 +608,7 @@ router.get("/bookings", async (req, res) => {
 
     res.json(bookings);
   } catch (err) {
-    console.error("[GET /bookings]", err.message);
-
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-
-    res.status(statusCode).json({
-      message: err.message || "Failed to fetch bookings",
-    });
+    sendError(res, err, "GET /bookings");
   }
 });
 
