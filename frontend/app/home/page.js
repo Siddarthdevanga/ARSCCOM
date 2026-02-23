@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Settings,
   Info,
+  LogOut,
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -28,18 +29,21 @@ let toastId = 0;
 function useToast() {
   const [toasts, setToasts] = useState([]);
 
-  const addToast = useCallback(({ type = "info", title, message, duration = 4000 }) => {
+  const addToast = useCallback(({ type = "info", title, message, duration = 4000, actions }) => {
     const id = ++toastId;
-    setToasts((prev) => [...prev, { id, type, title, message, duration, exiting: false }]);
+    setToasts((prev) => [...prev, { id, type, title, message, duration, actions, exiting: false }]);
 
-    setTimeout(() => {
-      setToasts((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, exiting: true } : t))
-      );
+    // Only auto-dismiss if no actions (confirmation toasts stay until user acts)
+    if (!actions) {
       setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, 300);
-    }, duration);
+        setToasts((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, exiting: true } : t))
+        );
+        setTimeout(() => {
+          setToasts((prev) => prev.filter((t) => t.id !== id));
+        }, 300);
+      }, duration);
+    }
 
     return id;
   }, []);
@@ -58,6 +62,8 @@ function useToast() {
     error:   (title, message, opts) => addToast({ type: "error",   title, message, ...opts }),
     warning: (title, message, opts) => addToast({ type: "warning", title, message, ...opts }),
     info:    (title, message, opts) => addToast({ type: "info",    title, message, ...opts }),
+    confirm: (title, message, onConfirm, onCancel) =>
+      addToast({ type: "warning", title, message, actions: { onConfirm, onCancel } }),
   };
 
   return { toasts, toast, removeToast };
@@ -98,20 +104,45 @@ function ToastContainer({ toasts, removeToast }) {
                 <p className={styles.toastTitle}>{t.title || TOAST_LABELS[t.type]}</p>
                 {t.message && <p className={styles.toastMessage}>{t.message}</p>}
               </div>
-              <button
-                className={styles.toastClose}
-                onClick={() => removeToast(t.id)}
-                aria-label="Dismiss"
-              >
-                <X size={14} />
-              </button>
+              {/* Only show X close on non-confirmation toasts */}
+              {!t.actions && (
+                <button
+                  className={styles.toastClose}
+                  onClick={() => removeToast(t.id)}
+                  aria-label="Dismiss"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
-            <div className={styles.toastProgress}>
-              <div
-                className={styles.toastProgressBar}
-                style={{ animationDuration: `${t.duration}ms` }}
-              />
-            </div>
+
+            {/* Confirmation action buttons */}
+            {t.actions && (
+              <div className={styles.toastActions}>
+                <button
+                  className={styles.toastActionConfirm}
+                  onClick={() => { removeToast(t.id); t.actions.onConfirm?.(); }}
+                >
+                  <LogOut size={13} /> Yes, Logout
+                </button>
+                <button
+                  className={styles.toastActionCancel}
+                  onClick={() => { removeToast(t.id); t.actions.onCancel?.(); }}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
+
+            {/* Progress bar only for auto-dismiss toasts */}
+            {!t.actions && (
+              <div className={styles.toastProgress}>
+                <div
+                  className={styles.toastProgressBar}
+                  style={{ animationDuration: `${t.duration}ms` }}
+                />
+              </div>
+            )}
           </div>
         );
       })}
@@ -219,7 +250,7 @@ export default function Home() {
   /* ── Download ─────────────────────────────────────────────────────── */
   const handleDownload = async (type) => {
     const map = {
-      visitors: { endpoint: "/api/exports/visitors",           label: "Visitor Records" },
+      visitors: { endpoint: "/api/exports/visitors",            label: "Visitor Records" },
       bookings: { endpoint: "/api/exports/conference-bookings", label: "Conference Bookings" },
       all:      { endpoint: "/api/exports/all",                 label: "Complete Report" },
     };
@@ -236,9 +267,9 @@ export default function Home() {
         throw new Error(err?.message || "Download failed");
       }
 
-      const blob              = await res.blob();
+      const blob               = await res.blob();
       const contentDisposition = res.headers.get("content-disposition");
-      let filename            = `${label.replace(/\s+/g, "-")}-${Date.now()}.xlsx`;
+      let filename             = `${label.replace(/\s+/g, "-")}-${Date.now()}.xlsx`;
       if (contentDisposition) {
         const m = contentDisposition.match(/filename="(.+)"/);
         if (m) filename = m[1];
@@ -300,23 +331,26 @@ export default function Home() {
   };
 
   /* ── View Handlers ────────────────────────────────────────────────── */
-  const handleOpenMenu = () => { setShowMenu(true); fetchSubscription(); };
-
-  const handleOpenReports = () => {
-    setShowMenu(false);
-    setCurrentView("reports");
-    fetchExportStats();
-  };
-
+  const handleOpenMenu     = () => { setShowMenu(true); fetchSubscription(); };
+  const handleOpenReports  = () => { setShowMenu(false); setCurrentView("reports"); fetchExportStats(); };
   const handleOpenSettings = () => { setShowMenu(false); router.push("/home/settings"); };
   const handleBackToHome   = () => setCurrentView("home");
   const handleRenew        = () => { setShowMenu(false); router.push("/auth/subscription"); };
 
+  /* ── Logout — toast confirmation instead of browser confirm() ─────── */
   const handleLogout = () => {
-    if (confirm("Are you sure you want to logout?")) {
-      localStorage.clear();
-      router.replace("/auth/login");
-    }
+    toast.confirm(
+      "Confirm Logout",
+      "Are you sure you want to log out?",
+      () => {
+        // onConfirm
+        localStorage.clear();
+        router.replace("/auth/login");
+      },
+      () => {
+        // onCancel — do nothing, toast already dismissed
+      }
+    );
   };
 
   /* ── Derived State ────────────────────────────────────────────────── */
@@ -403,7 +437,7 @@ export default function Home() {
                   aria-label="Visitor Management"
                   onKeyDown={(e) => e.key === "Enter" && router.push("/visitor/dashboard")}
                 >
-                  <div className={styles.cardIcon}><Users size={28}/></div>
+                  <div className={styles.cardIcon}><Users size={32}/></div>
                   <div className={styles.cardContent}>
                     <h3 className={styles.cardTitle}>Visitor Management</h3>
                     <p className={styles.cardDescription}>
@@ -421,7 +455,7 @@ export default function Home() {
                   aria-label="Conference Booking"
                   onKeyDown={(e) => e.key === "Enter" && router.push("/conference/dashboard")}
                 >
-                  <div className={styles.cardIcon}><DoorOpen size={28}/></div>
+                  <div className={styles.cardIcon}><DoorOpen size={32}/></div>
                   <div className={styles.cardContent}>
                     <h3 className={styles.cardTitle}>Conference Booking</h3>
                     <p className={styles.cardDescription}>
