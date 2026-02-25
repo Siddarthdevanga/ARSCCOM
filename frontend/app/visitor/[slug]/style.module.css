@@ -1,176 +1,130 @@
-/* ===== GLOBAL RESET & SCROLLBAR ===== */
-:global(*) {
+/* ================================================
+   DESIGN TOKENS
+   Palette: deep indigo + violet accent + clean white
+   Tone: refined, professional, trustworthy
+================================================ */
+:root {
+  --brand-primary: #667eea;
+  --brand-secondary: #764ba2;
+  --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f5f0ff 100%);
+
+  --success: #4caf50;
+  --success-bg: #f0faf0;
+  --success-border: #a5d6a7;
+
+  --error: #e53e3e;
+  --error-bg: #fff5f5;
+  --error-border: #feb2b2;
+
+  --text-primary: #1a1a2e;
+  --text-secondary: #4a5568;
+  --text-muted: #718096;
+  --text-disabled: #a0aec0;
+
+  --bg-page: #f7f8fc;
+  --bg-card: #ffffff;
+  --bg-input: #fafafa;
+  --bg-disabled: #f5f5f5;
+
+  --border: #e2e8f0;
+  --border-focus: #667eea;
+  --border-radius-sm: 0.5rem;
+  --border-radius-md: 0.875rem;
+  --border-radius-lg: 1.25rem;
+  --border-radius-xl: 1.75rem;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 16px rgba(102, 126, 234, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 40px rgba(102, 126, 234, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(102, 126, 234, 0.2);
+
+  --font-sans: "DM Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+
+  --transition: 0.2s ease;
+  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ================================================
+   GOOGLE FONT IMPORT
+================================================ */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap");
+
+/* ================================================
+   RESET / BASE
+================================================ */
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-:global(html),
-:global(body) {
-  height: 100%;
-  margin: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", sans-serif;
-}
+/* ================================================
+   HIDE SCROLLBAR — GLOBALLY
+   Scrolling fully works; bar is just invisible.
+   Covers Chrome/Safari, Firefox, and IE/Edge legacy.
+================================================ */
 
-:global(body::-webkit-scrollbar) {
-  width: 8px;
-}
-
-:global(body::-webkit-scrollbar-track) {
+/* Chrome, Safari, Opera, Edge (Chromium) */
+::-webkit-scrollbar {
+  width: 0px;
+  height: 0px;
   background: transparent;
 }
 
-:global(body::-webkit-scrollbar-thumb) {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-:global(body::-webkit-scrollbar-thumb:hover) {
-  background: rgba(255, 255, 255, 0.5);
+::-webkit-scrollbar-thumb {
+  background: transparent;
 }
 
-/* ================= PAGE ================= */
+/* Firefox */
+* {
+  scrollbar-width: none;
+}
+
+/* IE / legacy Edge */
+* {
+  -ms-overflow-style: none;
+}
+
+/* ================================================
+   PAGE LAYOUT
+================================================ */
 .page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: clamp(1rem, 3vh, 2rem);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  min-height: 100dvh;
+  overflow-y: scroll;
+  background: var(--bg-page);
+  background-image:
+    radial-gradient(ellipse at 20% 0%, rgba(102, 126, 234, 0.08) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(118, 75, 162, 0.06) 0%, transparent 60%);
+  background-attachment: fixed;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.page::-webkit-scrollbar {
-  width: 8px;
-}
-
-.page::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.page::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 4px;
-}
-
-.page::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
-
-/* ================= LOADING CONTAINER ================= */
-.loadingContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.spinner {
-  width: clamp(40px, 8vw, 50px);
-  height: clamp(40px, 8vw, 50px);
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { 
-    transform: rotate(360deg); 
-  }
-}
-
-/* ================= CONTAINER ================= */
 .container {
-  max-width: 1000px;
+  max-width: 560px;
+  width: 100%;
   margin: 0 auto;
-}
-
-/* ================= HEADER ================= */
-.header {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-radius: clamp(0.875rem, 1.5vw, 1rem);
-  padding: clamp(1.25rem, 2.5vh, 1.5rem) clamp(1.5rem, 3vw, 2rem);
-  margin-bottom: clamp(1.5rem, 3vh, 2rem);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  padding: 0 1rem 3rem;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  gap: 1rem;
+  flex-direction: column;
+  animation: fadeSlideIn 0.4s ease both;
 }
 
-.logoText {
-  font-size: clamp(1.25rem, 3vw, 1.75rem);
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.5px;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.logo {
-  height: clamp(36px, 8vw, 50px);
-  max-width: clamp(140px, 30vw, 180px);
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
-}
-
-/* ================= CARD COMPONENTS ================= */
-.card {
-  background: #ffffff;
-  border-radius: clamp(1rem, 2vw, 1.25rem);
-  padding: clamp(1.5rem, 3.5vh, 2.5rem);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  animation: fadeInUp 0.4s ease;
-}
-
-.authCard {
-  max-width: 500px;
-  margin: clamp(2rem, 6vh, 4rem) auto;
-  background: #ffffff;
-  border-radius: clamp(1rem, 2vw, 1.25rem);
-  padding: clamp(2rem, 4vh, 3rem);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  animation: fadeInUp 0.4s ease;
-}
-
-.title {
-  font-size: clamp(1.375rem, 3vw, 1.75rem);
-  font-weight: 800;
-  margin-bottom: clamp(1.5rem, 3vh, 2rem);
-  color: #667eea;
-  text-align: center;
-}
-
-.authHeader {
-  text-align: center;
-  margin-bottom: clamp(1.75rem, 3.5vh, 2.5rem);
-}
-
-.authHeader h2 {
-  font-size: clamp(1.5rem, 3.5vw, 2rem);
-  font-weight: 800;
-  color: #667eea;
-  margin-bottom: clamp(0.5rem, 1vh, 0.75rem);
-  line-height: 1.2;
-}
-
-.authHeader p {
-  color: #666;
-  font-size: clamp(0.9rem, 2vw, 1rem);
-  line-height: 1.6;
-}
-
-@keyframes fadeInUp {
+@keyframes fadeSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(16px);
   }
   to {
     opacity: 1;
@@ -178,544 +132,591 @@
   }
 }
 
-/* ================= FORM ELEMENTS ================= */
+/* ================================================
+   HEADER
+================================================ */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.5rem 0 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.5rem;
+}
+
+.logoText {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.logo {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+/* ================================================
+   CARDS
+================================================ */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--border-radius-xl);
+  border: 1px solid var(--border);
+  padding: 2rem 1.75rem;
+  box-shadow: var(--shadow-md);
+  transition: box-shadow var(--transition-slow);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.authCard {
+  background: var(--bg-card);
+  border-radius: var(--border-radius-xl);
+  border: 1px solid var(--border);
+  padding: 2.25rem 2rem;
+  box-shadow: var(--shadow-md);
+  margin-top: 0.5rem;
+}
+
+.authHeader {
+  text-align: center;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.authHeader h2 {
+  font-size: clamp(1.35rem, 3vw, 1.6rem);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
+.authHeader p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+/* ================================================
+   TITLES
+================================================ */
+.title {
+  font-size: clamp(1.2rem, 2.5vw, 1.4rem);
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.875rem;
+  border-bottom: 2px solid;
+  border-image: var(--brand-gradient) 1;
+  line-height: 1.3;
+}
+
+/* ================================================
+   FORM ELEMENTS
+================================================ */
 .formGroup {
-  margin-bottom: clamp(1.25rem, 2.5vh, 1.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
 }
 
 .formGroup label {
-  display: block;
+  font-size: 0.8rem;
   font-weight: 600;
-  font-size: clamp(0.875rem, 1.8vw, 0.95rem);
-  color: #333;
-  margin-bottom: clamp(0.5rem, 1vh, 0.65rem);
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
-.input,
-.select {
+.input {
   width: 100%;
-  padding: clamp(0.875rem, 1.8vh, 1rem) clamp(1rem, 2vw, 1.25rem);
-  border-radius: clamp(0.625rem, 1.2vw, 0.75rem);
-  border: 2px solid #e0e0e0;
-  font-size: clamp(0.9rem, 1.9vw, 1rem);
+  padding: 0.7rem 0.9rem;
+  font-size: 0.925rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--border-radius-md);
   outline: none;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+  -webkit-appearance: none;
+}
+
+.input:focus {
+  border-color: var(--border-focus);
   background: #fff;
-  transition: all 0.2s ease;
-  font-family: inherit;
-  color: #333;
-  box-sizing: border-box;
+  box-shadow: var(--shadow-focus);
 }
 
-.input:focus,
-.select:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.input:disabled {
-  background: #f5f5f5;
+.input:disabled,
+.input[readonly] {
+  background: var(--bg-disabled);
+  color: var(--text-disabled);
   cursor: not-allowed;
-  opacity: 0.7;
+  border-color: var(--border);
 }
 
 .input::placeholder {
-  color: #999;
+  color: var(--text-disabled);
+  font-size: 0.875rem;
 }
 
 .select {
+  width: 100%;
+  padding: 0.7rem 2.25rem 0.7rem 0.9rem;
+  font-size: 0.925rem;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--border-radius-md);
+  outline: none;
   cursor: pointer;
+  -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 1rem center;
-  background-size: 1.25rem;
-  padding-right: 3rem;
+  background-position: right 0.85rem center;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition);
 }
 
-/* ================= CHECKBOX GROUP ================= */
+.select:focus {
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+  background-color: #fff;
+}
+
+/* ================================================
+   GRID LAYOUT (3-col fields)
+================================================ */
+.gridRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.75rem;
+}
+
+.gridRow .input {
+  margin-bottom: 0;
+}
+
+/* ================================================
+   CHECKBOXES
+================================================ */
 .checkboxGroup {
   display: flex;
-  gap: clamp(1.25rem, 2.5vw, 2rem);
   flex-wrap: wrap;
-  margin: clamp(1.25rem, 2.5vh, 1.5rem) 0 clamp(1.5rem, 3vh, 2rem) 0;
+  gap: 0.6rem;
+  margin: 0.75rem 0 1.25rem;
 }
 
 .checkboxLabel {
   display: flex;
   align-items: center;
-  gap: clamp(0.5rem, 1vw, 0.65rem);
-  cursor: pointer;
-  font-size: clamp(0.9rem, 1.9vw, 1rem);
-  color: #333;
+  gap: 0.5rem;
+  padding: 0.45rem 0.875rem;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: 2rem;
+  font-size: 0.85rem;
   font-weight: 500;
-  transition: color 0.2s ease;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color var(--transition),
+    background var(--transition),
+    color var(--transition),
+    box-shadow var(--transition);
 }
 
 .checkboxLabel:hover {
-  color: #667eea;
+  border-color: var(--brand-primary);
+  background: rgba(102, 126, 234, 0.04);
 }
 
 .checkboxLabel input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--brand-primary);
   cursor: pointer;
-  width: clamp(18px, 3.5vw, 20px);
-  height: clamp(18px, 3.5vw, 20px);
-  accent-color: #667eea;
+  flex-shrink: 0;
 }
 
-/* ================= BUTTONS ================= */
+/* Pill highlight when checked */
+.checkboxLabel:has(input:checked) {
+  border-color: var(--brand-primary);
+  background: rgba(102, 126, 234, 0.08);
+  color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.12);
+}
+
+/* ================================================
+   BUTTONS
+================================================ */
 .primaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   width: 100%;
-  padding: clamp(1rem, 2vh, 1.125rem) clamp(1.5rem, 3vw, 1.75rem);
-  border-radius: clamp(0.625rem, 1.2vw, 0.75rem);
-  border: none;
-  font-size: clamp(0.95rem, 2vw, 1.05rem);
+  padding: 0.8rem 1.5rem;
+  font-size: 0.925rem;
+  font-family: var(--font-sans);
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
   color: #fff;
+  background: var(--brand-gradient);
+  border: none;
+  border-radius: var(--border-radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  font-family: inherit;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.01em;
+  transition:
+    opacity var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+  position: relative;
+  overflow: hidden;
+  margin-top: 0.5rem;
 }
 
-.primaryBtn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+.primaryBtn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0);
+  transition: background var(--transition);
+}
+
+.primaryBtn:hover:not(:disabled)::after {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .primaryBtn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(1px);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
 
 .primaryBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
+  box-shadow: none;
   transform: none;
 }
 
 .secondaryBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
   width: 100%;
-  padding: clamp(1rem, 2vh, 1.125rem) clamp(1.5rem, 3vw, 1.75rem);
-  border-radius: clamp(0.625rem, 1.2vw, 0.75rem);
-  border: 2px solid #667eea;
-  font-size: clamp(0.95rem, 2vw, 1.05rem);
-  font-weight: 700;
-  background: #fff;
-  color: #667eea;
+  padding: 0.75rem 1.5rem;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1.5px solid var(--border);
+  border-radius: var(--border-radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: clamp(0.5rem, 1vh, 0.75rem);
-  font-family: inherit;
-  letter-spacing: 0.3px;
+  transition:
+    border-color var(--transition),
+    color var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
+  margin-top: 0.5rem;
 }
 
 .secondaryBtn:hover:not(:disabled) {
-  background: #f8f9ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  border-color: var(--brand-primary);
+  color: var(--brand-primary);
+  background: rgba(102, 126, 234, 0.04);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08);
 }
 
 .secondaryBtn:active:not(:disabled) {
-  transform: translateY(0);
+  transform: translateY(1px);
 }
 
 .secondaryBtn:disabled {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
-  transform: none;
 }
 
-/* ================= MESSAGES ================= */
+/* ================================================
+   MESSAGES
+================================================ */
 .errorMsg {
-  background: linear-gradient(135deg, #ffebee, #ffcdd2);
-  color: #c62828;
-  padding: clamp(0.875rem, 1.8vh, 1rem) clamp(1rem, 2vw, 1.25rem);
-  border-radius: clamp(0.625rem, 1.2vw, 0.75rem);
-  font-weight: 600;
-  font-size: clamp(0.875rem, 1.8vw, 0.95rem);
-  margin-bottom: clamp(1.25rem, 2.5vh, 1.5rem);
-  border-left: 4px solid #f44336;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: var(--border-radius-sm);
+  color: var(--error);
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
   line-height: 1.5;
-  animation: slideIn 0.3s ease;
+  animation: shakeIn 0.35s ease both;
+}
+
+.errorMsg::before {
+  content: "⚠";
+  flex-shrink: 0;
+  font-size: 0.9rem;
+  margin-top: 0.05em;
+}
+
+@keyframes shakeIn {
+  0%   { transform: translateX(0); opacity: 0; }
+  20%  { transform: translateX(-4px); }
+  40%  { transform: translateX(4px); }
+  60%  { transform: translateX(-2px); }
+  80%  { transform: translateX(2px); }
+  100% { transform: translateX(0); opacity: 1; }
 }
 
 .successMsg {
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  color: #2e7d32;
-  padding: clamp(1rem, 2vh, 1.25rem);
-  border-radius: clamp(0.625rem, 1.2vw, 0.75rem);
-  font-weight: 600;
-  font-size: clamp(0.875rem, 1.8vw, 0.95rem);
-  margin-bottom: clamp(1.25rem, 2.5vh, 1.5rem);
-  border-left: 4px solid #4caf50;
-  line-height: 1.5;
-  animation: slideIn 0.3s ease;
-  text-align: center;
+  background: var(--success-bg);
+  border: 1.5px solid var(--success-border);
+  border-radius: var(--border-radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+@keyframes popIn {
+  from { transform: scale(0.92); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
 }
 
-/* ================= CAMERA SECTION ================= */
+/* ================================================
+   CAMERA
+================================================ */
 .cameraContainer {
-  border: 2px dashed #e0e0e0;
-  border-radius: clamp(0.875rem, 1.5vw, 1rem);
-  padding: clamp(1.25rem, 2.5vh, 1.5rem);
-  min-height: clamp(300px, 50vh, 380px);
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: var(--brand-gradient-soft);
+  border: 1.5px dashed rgba(102, 126, 234, 0.35);
+  border-radius: var(--border-radius-lg);
+  margin-bottom: 1.25rem;
+  min-height: 140px;
   justify-content: center;
-  gap: clamp(0.875rem, 1.8vh, 1rem);
-  background: #fafafa;
-  transition: all 0.3s ease;
+  transition: border-color var(--transition);
 }
 
-.cameraContainer:hover {
-  border-color: #667eea;
-  background: #f8f9ff;
+.cameraContainer:has(video) {
+  border-style: solid;
+  border-color: var(--brand-primary);
+  background: #000;
+  padding: 0;
+  overflow: hidden;
 }
 
-/* ================= GRID LAYOUTS ================= */
-.gridRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: clamp(1rem, 2vw, 1.5rem);
-  margin-bottom: clamp(1.25rem, 2.5vh, 1.75rem);
+.cameraContainer:has(img) {
+  border-style: solid;
+  border-color: var(--success);
+  background: var(--success-bg);
+  padding: 0.5rem;
 }
 
-/* ================= WHATSAPP SECTION ================= */
+/* ================================================
+   WHATSAPP SECTION
+================================================ */
 .whatsappSection {
-  background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
-  border: 2px solid #4caf50;
-  border-radius: clamp(0.875rem, 1.5vw, 1rem);
-  padding: clamp(1.25rem, 2.5vh, 1.5rem);
-  margin-bottom: clamp(1.5rem, 3vh, 2rem);
-  text-align: left;
-  animation: fadeInScale 0.4s ease;
+  background: linear-gradient(135deg, #e8f8ef 0%, #d4f1e0 100%);
+  border: 1.5px solid #a8e6c1;
+  border-radius: var(--border-radius-lg);
+  padding: 1.25rem 1.5rem;
+  margin: 1.25rem 0;
 }
 
 .whatsappHeader {
   display: flex;
   align-items: center;
-  gap: clamp(0.625rem, 1.2vw, 0.75rem);
-  margin-bottom: clamp(0.875rem, 1.8vh, 1rem);
+  gap: 0.875rem;
+  margin-bottom: 1rem;
 }
 
 .whatsappIcon {
-  width: clamp(36px, 7vw, 40px);
-  height: clamp(36px, 7vw, 40px);
+  width: 44px;
+  height: 44px;
+  background: #25d366;
   border-radius: 50%;
-  background: #25d366;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-size: 1.25rem;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
-}
-
-.whatsappTitle {
-  margin: 0;
-  font-size: clamp(0.95rem, 2vw, 1rem);
-  font-weight: 700;
-  color: #2e7d32;
-  line-height: 1.3;
-}
-
-.whatsappSubtitle {
-  margin: 0;
-  font-size: clamp(0.8rem, 1.7vw, 0.85rem);
-  color: #558b2f;
-  line-height: 1.3;
-}
-
-.whatsappBtn {
-  width: 100%;
-  padding: clamp(0.875rem, 1.8vh, 1rem);
-  background: #25d366;
-  color: white;
-  border: none;
-  border-radius: clamp(0.5rem, 1vw, 0.625rem);
-  font-size: clamp(0.9rem, 1.9vw, 0.95rem);
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(0.375rem, 0.8vw, 0.5rem);
-  transition: all 0.3s ease;
-  font-family: inherit;
-  letter-spacing: 0.3px;
   box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
 }
 
+.whatsappTitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1b5e20;
+  margin-bottom: 0.15rem;
+  letter-spacing: -0.01em;
+}
+
+.whatsappSubtitle {
+  font-size: 0.8rem;
+  color: #388e3c;
+}
+
+.whatsappBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.9rem;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  border: none;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  transition:
+    opacity var(--transition),
+    transform var(--transition),
+    box-shadow var(--transition);
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+}
+
 .whatsappBtn:hover {
-  background: #20ba5a;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
 }
 
 .whatsappBtn:active {
   transform: translateY(0);
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
 }
 
-@keyframes fadeInScale {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* ================================================
+   LOADING
+================================================ */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: var(--bg-page);
 }
 
-/* ================= UTILITY CLASSES ================= */
+.spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid rgba(102, 126, 234, 0.15);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ================================================
+   TEXT UTILITIES
+================================================ */
 .textCenter {
   text-align: center;
 }
 
-/* ================= RESPONSIVE DESIGN ================= */
-
-/* Large Tablets (768px - 1024px) */
-@media (max-width: 1024px) {
-  .container {
-    max-width: 900px;
-  }
+/* ================================================
+   SUCCESS CHECKMARK ANIMATION
+================================================ */
+@keyframes checkmarkDraw {
+  from { transform: scale(0) rotate(-10deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
 }
 
-/* Tablet Portrait & Mobile Landscape (640px - 768px) */
-@media (max-width: 768px) {
-  .page {
-    padding: clamp(1rem, 2vh, 1.5rem);
+.successIcon {
+  display: inline-block;
+  animation: checkmarkDraw 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* ================================================
+   RESPONSIVE
+================================================ */
+@media (max-width: 480px) {
+  .container {
+    padding: 0 0.75rem 2.5rem;
   }
 
-  .header {
-    padding: clamp(1rem, 2vh, 1.25rem) clamp(1.25rem, 2.5vw, 1.5rem);
-    flex-direction: column;
-    gap: clamp(0.75rem, 1.5vh, 1rem);
-    text-align: center;
-  }
-
-  .logoText {
-    font-size: clamp(1.25rem, 2.8vw, 1.5rem);
-  }
-
-  .logo {
-    height: clamp(36px, 7vw, 42px);
-  }
-
-  .card {
-    padding: clamp(1.5rem, 3vh, 2rem);
-  }
-
+  .card,
   .authCard {
-    padding: clamp(2rem, 4vh, 2.5rem);
-    margin: clamp(2rem, 4vh, 3rem) auto;
-  }
-
-  .title,
-  .authHeader h2 {
-    font-size: clamp(1.375rem, 3vw, 1.5rem);
+    padding: 1.5rem 1.25rem;
+    border-radius: var(--border-radius-lg);
   }
 
   .gridRow {
     grid-template-columns: 1fr;
-    gap: clamp(1rem, 2vh, 1.25rem);
-  }
-
-  .checkboxGroup {
-    gap: clamp(1.25rem, 2.5vw, 1.5rem);
-  }
-}
-
-/* Mobile Portrait (up to 640px) */
-@media (max-width: 640px) {
-  .page {
-    padding: clamp(0.75rem, 1.5vh, 1rem);
-  }
-
-  .header {
-    padding: clamp(0.875rem, 1.8vh, 1rem);
-    margin-bottom: clamp(1.25rem, 2.5vh, 1.5rem);
-  }
-
-  .logoText {
-    font-size: clamp(1.125rem, 2.5vw, 1.25rem);
-  }
-
-  .logo {
-    height: clamp(32px, 6.5vw, 36px);
-  }
-
-  .card {
-    padding: clamp(1.25rem, 2.5vh, 1.5rem);
-  }
-
-  .authCard {
-    padding: clamp(1.75rem, 3.5vh, 2rem);
-    margin: clamp(1.5rem, 3vh, 2rem) auto;
-  }
-
-  .title {
-    font-size: clamp(1.125rem, 2.5vw, 1.25rem);
-    margin-bottom: clamp(1.25rem, 2.5vh, 1.5rem);
-  }
-
-  .authHeader h2 {
-    font-size: clamp(1.375rem, 3vw, 1.5rem);
-  }
-
-  .authHeader p {
-    font-size: clamp(0.85rem, 1.8vw, 0.9rem);
-  }
-
-  .input,
-  .select {
-    padding: clamp(0.75rem, 1.5vh, 0.875rem) clamp(0.875rem, 1.8vw, 1rem);
-    font-size: clamp(0.875rem, 1.8vw, 0.95rem);
   }
 
   .primaryBtn,
   .secondaryBtn {
-    padding: clamp(0.875rem, 1.8vh, 1rem) clamp(1.125rem, 2.3vw, 1.25rem);
-    font-size: clamp(0.9rem, 1.9vw, 1rem);
-  }
-
-  .formGroup {
-    margin-bottom: clamp(1.125rem, 2.3vh, 1.5rem);
-  }
-
-  .cameraContainer {
-    min-height: clamp(280px, 45vh, 320px);
-    padding: clamp(1rem, 2vh, 1.25rem);
-  }
-
-  .checkboxGroup {
-    gap: clamp(1rem, 2vw, 1.25rem);
-    flex-direction: column;
-  }
-
-  .checkboxLabel {
-    font-size: clamp(0.875rem, 1.8vw, 0.95rem);
-  }
-}
-
-/* Small Mobile (up to 375px) */
-@media (max-width: 375px) {
-  .page {
-    padding: clamp(0.625rem, 1.2vh, 0.75rem);
-  }
-
-  .header {
-    padding: clamp(0.75rem, 1.5vh, 0.875rem);
-  }
-
-  .card {
-    padding: clamp(1rem, 2vh, 1.25rem);
-  }
-
-  .authCard {
-    padding: clamp(1.5rem, 3vh, 1.75rem);
-    margin: clamp(1.25rem, 2.5vh, 1.5rem) auto;
+    padding: 0.8rem 1.25rem;
+    font-size: 0.9rem;
   }
 
   .title {
-    font-size: clamp(1rem, 2.2vw, 1.125rem);
-  }
-
-  .authHeader h2 {
-    font-size: clamp(1.25rem, 2.8vw, 1.375rem);
-  }
-
-  .input,
-  .select {
-    padding: clamp(0.625rem, 1.3vh, 0.75rem) clamp(0.75rem, 1.5vw, 0.875rem);
-    font-size: clamp(0.8rem, 1.7vw, 0.9rem);
-  }
-
-  .primaryBtn,
-  .secondaryBtn,
-  .whatsappBtn {
-    padding: clamp(0.75rem, 1.5vh, 0.875rem) clamp(0.875rem, 1.8vw, 1rem);
-    font-size: clamp(0.85rem, 1.8vw, 0.95rem);
+    font-size: 1.15rem;
   }
 }
 
-/* ================= PRINT STYLES ================= */
-@media print {
-  .page {
-    background: white;
-    padding: 0;
-  }
-
-  .header,
-  .primaryBtn,
-  .secondaryBtn,
-  .whatsappSection {
-    display: none;
-  }
-
-  .card,
-  .authCard {
-    box-shadow: none;
-    border: 1px solid #ddd;
+@media (min-width: 481px) and (max-width: 640px) {
+  .gridRow {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* ================= ACCESSIBILITY ================= */
-@media (prefers-reduced-motion: reduce) {
-  .spinner,
-  .card,
-  .authCard,
-  .errorMsg,
-  .successMsg,
-  .whatsappSection {
-    animation: none;
-  }
-
-  .primaryBtn,
-  .secondaryBtn,
-  .input,
-  .select,
-  .whatsappBtn,
-  .cameraContainer {
-    transition: none;
-  }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-  .input,
-  .select {
-    border-width: 3px;
-  }
-
-  .primaryBtn,
-  .secondaryBtn,
-  .whatsappBtn {
-    border: 3px solid currentColor;
-  }
-}
-
-/* ================= FOCUS VISIBLE ================= */
-.input:focus-visible,
-.select:focus-visible,
+/* ================================================
+   FOCUS VISIBLE (accessibility)
+================================================ */
 .primaryBtn:focus-visible,
 .secondaryBtn:focus-visible,
 .whatsappBtn:focus-visible,
-.checkboxLabel input[type="checkbox"]:focus-visible {
-  outline: 3px solid #667eea;
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
+}
+
+/* ================================================
+   PRINT
+================================================ */
+@media print {
+  .primaryBtn,
+  .secondaryBtn,
+  .whatsappBtn {
+    display: none;
+  }
+  .page {
+    background: white;
+  }
 }
