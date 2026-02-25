@@ -1,9 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap");
-
 /* ================================================
    DESIGN TOKENS
-   Palette: deep indigo + violet accent + clean white
-   Tone: refined, professional, trustworthy
+   Font (DM Sans) loaded via globals.css — not here.
+   No bare * selectors, no @import — CSS Modules safe.
 ================================================ */
 :root {
   --brand-primary: #667eea;
@@ -48,50 +46,6 @@
   --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-
-
-/* ================================================
-   RESET / BASE
-================================================ */
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-/* ================================================
-   HIDE SCROLLBAR — GLOBALLY
-   Scrolling fully works; bar is just invisible.
-   Covers Chrome/Safari, Firefox, and IE/Edge legacy.
-================================================ */
-
-/* Chrome, Safari, Opera, Edge (Chromium) */
-:global(::-webkit-scrollbar) {
-  width: 0px;
-  height: 0px;
-  background: transparent;
-}
-
-:global(::-webkit-scrollbar-track) {
-  background: transparent;
-}
-
-:global(::-webkit-scrollbar-thumb) {
-  background: transparent;
-}
-
-/* Firefox */
-:global(*) {
-  scrollbar-width: none;
-}
-
-/* IE / legacy Edge */
-:global(*) {
-  -ms-overflow-style: none;
-}
-
 /* ================================================
    PAGE LAYOUT
 ================================================ */
@@ -121,14 +75,8 @@
 }
 
 @keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* ================================================
@@ -357,7 +305,6 @@
   flex-shrink: 0;
 }
 
-/* Pill highlight when checked */
 .checkboxLabel:has(input:checked) {
   border-color: var(--brand-primary);
   background: rgba(102, 126, 234, 0.08);
@@ -651,7 +598,7 @@
 ================================================ */
 @keyframes checkmarkDraw {
   from { transform: scale(0) rotate(-10deg); opacity: 0; }
-  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
 .successIcon {
@@ -715,6 +662,7 @@
   .whatsappBtn {
     display: none;
   }
+
   .page {
     background: white;
   }
