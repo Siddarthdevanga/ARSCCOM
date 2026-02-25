@@ -8,7 +8,9 @@ import styles from "./style.module.css";
    CONSTANTS
 =============================================== */
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-const FETCH_TIMEOUT_MS = 15000; // 15s — handles slow mobile networks
+const FETCH_TIMEOUT_MS = 15_000;
+const UPLOAD_TIMEOUT_MS = 30_000;
+const TOTAL_FORM_STEPS = 4; // steps 1-3 are form steps; step 4 is success
 
 /* ===============================================
    FETCH HELPER — PUBLIC (no JWT, with timeout)
@@ -21,7 +23,7 @@ const publicFetch = async (url, options = {}) => {
     const res = await fetch(`${API}${url}`, {
       ...options,
       signal: controller.signal,
-      credentials: "omit", // never send cookies/tokens on public routes
+      credentials: "omit",
     });
 
     clearTimeout(timer);
@@ -46,6 +48,90 @@ const publicFetch = async (url, options = {}) => {
 };
 
 /* ===============================================
+   STEP PROGRESS BAR
+=============================================== */
+const StepProgress = ({ currentStep }) => {
+  // Only show progress during form steps (1-3)
+  if (currentStep === 0 || currentStep === 4) return null;
+
+  const labels = ["Details", "Info", "Photo"];
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        gap: "0.5rem",
+        padding: "1rem 1.5rem 0",
+      }}
+    >
+      {labels.map((label, i) => {
+        const stepNum = i + 1;
+        const isActive = currentStep === stepNum;
+        const isDone = currentStep > stepNum;
+        return (
+          <div
+            key={label}
+            style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}
+          >
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "4px",
+              }}
+            >
+              <div
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: isDone
+                    ? "#4caf50"
+                    : isActive
+                    ? "#667eea"
+                    : "#ddd",
+                  color: "#fff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.8rem",
+                  fontWeight: 700,
+                  transition: "background 0.3s",
+                }}
+              >
+                {isDone ? "✓" : stepNum}
+              </div>
+              <span
+                style={{
+                  fontSize: "0.7rem",
+                  color: isActive ? "#667eea" : isDone ? "#4caf50" : "#999",
+                  fontWeight: isActive ? 700 : 400,
+                }}
+              >
+                {label}
+              </span>
+            </div>
+            {i < labels.length - 1 && (
+              <div
+                style={{
+                  width: 40,
+                  height: 2,
+                  background: isDone ? "#4caf50" : "#ddd",
+                  marginBottom: 16,
+                  transition: "background 0.3s",
+                }}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* ===============================================
    COMPONENT
 =============================================== */
 export default function PublicVisitorRegistration() {
@@ -53,7 +139,7 @@ export default function PublicVisitorRegistration() {
   const router = useRouter();
   const slug = params?.slug;
 
-  /* ================= STATE ================= */
+  /* ── State ── */
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -61,14 +147,14 @@ export default function PublicVisitorRegistration() {
   const [error, setError] = useState("");
   const [visitorCode, setVisitorCode] = useState("");
 
-  /* ================= OTP STATE ================= */
+  /* ── OTP State ── */
   const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otpToken, setOtpToken] = useState("");
   const [resendTimer, setResendTimer] = useState(0);
 
-  /* ================= FORM DATA ================= */
+  /* ── Form Data ── */
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -87,14 +173,18 @@ export default function PublicVisitorRegistration() {
     idNumber: "",
   });
 
+  /* ── Photo / Camera ── */
   const [photo, setPhoto] = useState(null);
+  const [photoBlob, setPhotoBlob] = useState(null); // store blob directly — no re-fetch needed
   const [cameraActive, setCameraActive] = useState(false);
   const [stream, setStream] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  /* ================= LOAD COMPANY INFO ================= */
+  /* ─────────────────────────────────────────────
+     LOAD COMPANY INFO
+  ───────────────────────────────────────────── */
   useEffect(() => {
     if (!slug) return;
 
@@ -115,14 +205,18 @@ export default function PublicVisitorRegistration() {
     fetchCompanyInfo();
   }, [slug]);
 
-  /* ================= RESEND TIMER ================= */
+  /* ─────────────────────────────────────────────
+     RESEND TIMER
+  ───────────────────────────────────────────── */
   useEffect(() => {
     if (resendTimer <= 0) return;
-    const timer = setTimeout(() => setResendTimer((t) => t - 1), 1000);
-    return () => clearTimeout(timer);
+    const id = setTimeout(() => setResendTimer((t) => t - 1), 1000);
+    return () => clearTimeout(id);
   }, [resendTimer]);
 
-  /* ================= CAMERA SETUP ================= */
+  /* ─────────────────────────────────────────────
+     CAMERA SETUP
+  ───────────────────────────────────────────── */
   useEffect(() => {
     if (cameraActive && stream && videoRef.current) {
       videoRef.current.srcObject = stream;
@@ -134,14 +228,25 @@ export default function PublicVisitorRegistration() {
     }
   }, [cameraActive, stream]);
 
-  /* ================= CLEANUP ================= */
+  /* ─────────────────────────────────────────────
+     STREAM CLEANUP on unmount
+  ───────────────────────────────────────────── */
   useEffect(() => {
     return () => {
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
   }, [stream]);
 
-  /* ================= HANDLERS ================= */
+  /* ─────────────────────────────────────────────
+     SCROLL TO TOP on step change
+  ───────────────────────────────────────────── */
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
+
+  /* ─────────────────────────────────────────────
+     HANDLERS
+  ───────────────────────────────────────────── */
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -156,7 +261,17 @@ export default function PublicVisitorRegistration() {
     }));
   }, []);
 
-  /* ================= OTP ================= */
+  const goBack = useCallback(() => {
+    setError("");
+    setStep((prev) => Math.max(prev - 1, 1));
+  }, []);
+
+  /* ─────────────────────────────────────────────
+     OTP HANDLERS
+     Note: not wrapped in useCallback because they use
+     latest state from closure and are called directly
+     from event handlers — no child component deps.
+  ───────────────────────────────────────────── */
   const handleSendOTP = async () => {
     const trimmedEmail = email.trim().toLowerCase();
 
@@ -187,7 +302,7 @@ export default function PublicVisitorRegistration() {
 
   const handleVerifyOTP = async () => {
     if (!otp.trim() || otp.length !== 6) {
-      setError("Please enter 6-digit OTP");
+      setError("Please enter the 6-digit code");
       return;
     }
 
@@ -210,18 +325,26 @@ export default function PublicVisitorRegistration() {
     }
   };
 
-  /* ================= CAMERA ================= */
+  /* ─────────────────────────────────────────────
+     CAMERA HANDLERS
+  ───────────────────────────────────────────── */
   const startCamera = async () => {
     setError("");
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+        video: {
+          facingMode: "user",
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+        },
       });
       setStream(mediaStream);
       setCameraActive(true);
     } catch (err) {
       console.error("[CAMERA] Access error:", err);
-      setError("Camera access denied. Please allow camera permissions and try again.");
+      setError(
+        "Camera access denied. Please allow camera permissions and try again."
+      );
     }
   };
 
@@ -235,16 +358,39 @@ export default function PublicVisitorRegistration() {
 
   const capturePhoto = useCallback(() => {
     if (!canvasRef.current || !videoRef.current) return;
+
     const canvas = canvasRef.current;
     const video = videoRef.current;
     canvas.width = 400;
     canvas.height = 300;
     canvas.getContext("2d").drawImage(video, 0, 0, 400, 300);
-    setPhoto(canvas.toDataURL("image/jpeg", 0.9));
+
+    // Store preview URL for display
+    const previewUrl = canvas.toDataURL("image/jpeg", 0.9);
+    setPhoto(previewUrl);
+
+    // Store blob directly — avoids re-fetching from memory on submit
+    canvas.toBlob(
+      (blob) => setPhotoBlob(blob),
+      "image/jpeg",
+      0.9
+    );
+
     stopCamera();
   }, [stopCamera]);
 
-  /* ================= VALIDATION ================= */
+  const retakePhoto = useCallback(() => {
+    setPhoto(null);
+    setPhotoBlob(null);
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    }
+  }, []);
+
+  /* ─────────────────────────────────────────────
+     VALIDATION
+  ───────────────────────────────────────────── */
   const validateStep = useCallback(() => {
     setError("");
 
@@ -267,24 +413,28 @@ export default function PublicVisitorRegistration() {
     }
 
     if (step === 3) {
-      if (!photo) {
+      if (!photo || !photoBlob) {
         setError("Visitor photo is required");
         return false;
       }
     }
 
     return true;
-  }, [step, formData, photo]);
+  }, [step, formData, photo, photoBlob]);
 
-  /* ================= NAVIGATION ================= */
+  /* ─────────────────────────────────────────────
+     NAVIGATION
+  ───────────────────────────────────────────── */
   const handleNext = useCallback(() => {
     if (validateStep()) {
+      setError("");
       setStep((prev) => prev + 1);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [validateStep]);
 
-  /* ================= SUBMIT ================= */
+  /* ─────────────────────────────────────────────
+     SUBMIT
+  ───────────────────────────────────────────── */
   const handleSubmit = async () => {
     if (!validateStep()) return;
 
@@ -292,28 +442,29 @@ export default function PublicVisitorRegistration() {
       setSubmitting(true);
       setError("");
 
-      const blob = await fetch(photo).then((r) => r.blob());
-      const file = new File([blob], "visitor.jpg", { type: "image/jpeg" });
+      // Use the pre-captured blob — no re-fetch from data URL needed
+      const file = new File([photoBlob], "visitor.jpg", { type: "image/jpeg" });
 
       const fd = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
-        fd.append(key, key === "belongings"
-          ? (Array.isArray(value) ? value.join(", ") : "")
-          : (value || "")
+        fd.append(
+          key,
+          key === "belongings"
+            ? Array.isArray(value) ? value.join(", ") : ""
+            : value || ""
         );
       });
       fd.append("photo", file);
 
-      // Use AbortController for timeout on submit too
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 30000); // 30s for file upload
+      const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
       let data;
       try {
         const res = await fetch(`${API}/api/public/visitor/${slug}/register`, {
           method: "POST",
           headers: { "otp-token": otpToken },
-          // ✅ NO Content-Type — browser sets it automatically with boundary for FormData
+          // ✅ No Content-Type header — browser sets multipart/form-data with boundary automatically
           body: fd,
           credentials: "omit",
           signal: controller.signal,
@@ -323,7 +474,8 @@ export default function PublicVisitorRegistration() {
         data = await res.json();
 
         if (!res.ok || !data.success) {
-          throw new Error(data.message || "Registration failed");
+          // Surface 403 (subscription/trial errors) with their message directly
+          throw new Error(data.message || "Registration failed. Please try again.");
         }
       } catch (err) {
         clearTimeout(timer);
@@ -335,7 +487,6 @@ export default function PublicVisitorRegistration() {
 
       setVisitorCode(data.visitorCode);
       setStep(4);
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err) {
       console.error("[VISITOR_REG] Registration error:", err);
       setError(err.message || "Failed to register. Please try again.");
@@ -344,19 +495,27 @@ export default function PublicVisitorRegistration() {
     }
   };
 
-  /* ================= WHATSAPP ================= */
+  /* ─────────────────────────────────────────────
+     WHATSAPP
+  ───────────────────────────────────────────── */
   const handleWhatsAppContact = useCallback(() => {
     if (company?.whatsapp_url) {
       window.open(company.whatsapp_url, "_blank", "noopener,noreferrer");
     }
   }, [company]);
 
-  /* ================= RESET ================= */
+  /* ─────────────────────────────────────────────
+     RESET
+  ───────────────────────────────────────────── */
   const handleReset = useCallback(() => {
     if (stream) {
       stream.getTracks().forEach((t) => t.stop());
       setStream(null);
       setCameraActive(false);
+    }
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext("2d");
+      ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
     setStep(0);
     setEmail("");
@@ -370,21 +529,44 @@ export default function PublicVisitorRegistration() {
       personToMeet: "", purpose: "", belongings: [], idType: "", idNumber: "",
     });
     setPhoto(null);
+    setPhotoBlob(null);
     setVisitorCode("");
     setError("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
   }, [stream]);
 
-  /* ================= KEYBOARD ================= */
-  const handleEmailKeyPress = useCallback((e) => {
+  /* ─────────────────────────────────────────────
+     KEYBOARD HANDLERS
+     Defined after send/verify to avoid stale closure.
+     Use inline handlers in JSX or define here referencing
+     the functions directly (non-memoized is fine here).
+  ───────────────────────────────────────────── */
+  const handleEmailKeyDown = (e) => {
     if (e.key === "Enter" && !submitting) handleSendOTP();
-  }, [submitting, handleSendOTP]);
+  };
 
-  const handleOTPKeyPress = useCallback((e) => {
+  const handleOTPKeyDown = (e) => {
     if (e.key === "Enter" && otp.length === 6 && !submitting) handleVerifyOTP();
-  }, [otp, submitting, handleVerifyOTP]);
+  };
 
-  /* ================= LOADING ================= */
+  /* ─────────────────────────────────────────────
+     SHARED HEADER
+  ───────────────────────────────────────────── */
+  const Header = () => (
+    <header className={styles.header}>
+      <div className={styles.logoText}>{company?.name}</div>
+      {company?.logo_url && (
+        <img
+          src={company.logo_url}
+          alt={`${company.name} logo`}
+          className={styles.logo}
+        />
+      )}
+    </header>
+  );
+
+  /* ─────────────────────────────────────────────
+     LOADING STATE
+  ───────────────────────────────────────────── */
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -393,7 +575,9 @@ export default function PublicVisitorRegistration() {
     );
   }
 
-  /* ================= FATAL ERROR (no company) ================= */
+  /* ─────────────────────────────────────────────
+     FATAL ERROR (no company found)
+  ───────────────────────────────────────────── */
   if (!company) {
     return (
       <div className={styles.page}>
@@ -410,21 +594,13 @@ export default function PublicVisitorRegistration() {
     );
   }
 
-  /* ================= SHARED HEADER ================= */
-  const Header = () => (
-    <header className={styles.header}>
-      <div className={styles.logoText}>{company?.name}</div>
-      {company?.logo_url && (
-        <img src={company.logo_url} alt="Company Logo" className={styles.logo} />
-      )}
-    </header>
-  );
-
-  /* ================= RENDER ================= */
+  /* ─────────────────────────────────────────────
+     RENDER
+  ───────────────────────────────────────────── */
   return (
     <div className={styles.page}>
 
-      {/* ── STEP 0: EMAIL VERIFICATION ────────────────── */}
+      {/* ── STEP 0: EMAIL VERIFICATION ── */}
       {step === 0 && (
         <div className={styles.container}>
           <Header />
@@ -446,14 +622,18 @@ export default function PublicVisitorRegistration() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    onKeyPress={handleEmailKeyPress}
+                    onKeyDown={handleEmailKeyDown}
                     placeholder="your.email@example.com"
                     disabled={submitting}
                     autoComplete="email"
                     autoCapitalize="none"
                   />
                 </div>
-                <button className={styles.primaryBtn} onClick={handleSendOTP} disabled={submitting}>
+                <button
+                  className={styles.primaryBtn}
+                  onClick={handleSendOTP}
+                  disabled={submitting || !email.trim()}
+                >
                   {submitting ? "Sending..." : "Send Verification Code"}
                 </button>
               </>
@@ -467,13 +647,20 @@ export default function PublicVisitorRegistration() {
                     type="text"
                     inputMode="numeric"
                     value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                    onKeyPress={handleOTPKeyPress}
+                    onChange={(e) =>
+                      setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    onKeyDown={handleOTPKeyDown}
                     placeholder="123456"
                     maxLength={6}
                     disabled={submitting}
                     autoComplete="one-time-code"
-                    style={{ letterSpacing: "8px", fontSize: "1.25rem", textAlign: "center", fontWeight: "700" }}
+                    style={{
+                      letterSpacing: "8px",
+                      fontSize: "1.25rem",
+                      textAlign: "center",
+                      fontWeight: "700",
+                    }}
                   />
                 </div>
 
@@ -493,14 +680,31 @@ export default function PublicVisitorRegistration() {
                   {resendTimer > 0 ? `Resend Code in ${resendTimer}s` : "Resend Code"}
                 </button>
 
-                <p style={{ textAlign: "center", marginTop: "1rem", fontSize: "0.9rem", color: "#666" }}>
-                  Code sent to: <strong>{email}</strong><br />
+                <p
+                  style={{
+                    textAlign: "center",
+                    marginTop: "1rem",
+                    fontSize: "0.9rem",
+                    color: "#666",
+                  }}
+                >
+                  Code sent to: <strong>{email}</strong>
+                  <br />
                   <button
-                    onClick={() => { setOtpSent(false); setOtp(""); setError(""); }}
+                    onClick={() => {
+                      setOtpSent(false);
+                      setOtp("");
+                      setError("");
+                    }}
                     style={{
-                      color: "#667eea", cursor: "pointer", textDecoration: "underline",
-                      fontSize: "0.85rem", background: "none", border: "none",
-                      padding: 0, marginTop: "0.5rem",
+                      color: "#667eea",
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      fontSize: "0.85rem",
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      marginTop: "0.5rem",
                     }}
                   >
                     Change email
@@ -512,10 +716,11 @@ export default function PublicVisitorRegistration() {
         </div>
       )}
 
-      {/* ── STEP 1: PRIMARY DETAILS ───────────────────── */}
+      {/* ── STEP 1: PRIMARY DETAILS ── */}
       {step === 1 && (
         <div className={styles.container}>
           <Header />
+          <StepProgress currentStep={step} />
           <main className={styles.card}>
             <h2 className={styles.title}>Primary Details</h2>
             {error && <div className={styles.errorMsg}>{error}</div>}
@@ -523,77 +728,155 @@ export default function PublicVisitorRegistration() {
             <div className={styles.formGroup}>
               <label htmlFor="name">Full Name *</label>
               <input
-                id="name" className={styles.input} type="text" name="name"
-                value={formData.name} onChange={handleInputChange}
-                placeholder="Enter your full name" autoComplete="name"
+                id="name"
+                className={styles.input}
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                placeholder="Enter your full name"
+                autoComplete="name"
               />
             </div>
 
             <div className={styles.formGroup}>
               <label htmlFor="phone">Phone Number *</label>
               <input
-                id="phone" className={styles.input} type="tel" name="phone"
-                value={formData.phone} onChange={handleInputChange}
-                placeholder="+1234567890" autoComplete="tel" inputMode="tel"
+                id="phone"
+                className={styles.input}
+                type="tel"
+                name="phone"
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="+1234567890"
+                autoComplete="tel"
+                inputMode="tel"
               />
             </div>
 
             <div className={styles.formGroup}>
               <label>Email Address (Verified ✓)</label>
               <input
-                className={styles.input} type="email" value={email}
-                disabled readOnly
-                style={{ background: "#f5f5f5", cursor: "not-allowed", color: "#555" }}
+                className={styles.input}
+                type="email"
+                value={email}
+                disabled
+                readOnly
+                style={{
+                  background: "#f5f5f5",
+                  cursor: "not-allowed",
+                  color: "#555",
+                }}
               />
             </div>
 
-            <button className={styles.primaryBtn} onClick={handleNext} style={{ width: "100%" }}>
+            <button
+              className={styles.primaryBtn}
+              onClick={handleNext}
+              style={{ width: "100%" }}
+            >
               Next →
             </button>
           </main>
         </div>
       )}
 
-      {/* ── STEP 2: SECONDARY DETAILS ─────────────────── */}
+      {/* ── STEP 2: SECONDARY DETAILS ── */}
       {step === 2 && (
         <div className={styles.container}>
           <Header />
+          <StepProgress currentStep={step} />
           <main className={styles.card}>
             <h2 className={styles.title}>Secondary Details</h2>
             {error && <div className={styles.errorMsg}>{error}</div>}
 
             <div className={styles.gridRow}>
-              <input className={styles.input} name="fromCompany" value={formData.fromCompany}
-                onChange={handleInputChange} placeholder="From Company" autoComplete="organization" />
-              <input className={styles.input} name="department" value={formData.department}
-                onChange={handleInputChange} placeholder="Department" />
-              <input className={styles.input} name="designation" value={formData.designation}
-                onChange={handleInputChange} placeholder="Designation" />
+              <input
+                className={styles.input}
+                name="fromCompany"
+                value={formData.fromCompany}
+                onChange={handleInputChange}
+                placeholder="From Company"
+                autoComplete="organization"
+              />
+              <input
+                className={styles.input}
+                name="department"
+                value={formData.department}
+                onChange={handleInputChange}
+                placeholder="Department"
+              />
+              <input
+                className={styles.input}
+                name="designation"
+                value={formData.designation}
+                onChange={handleInputChange}
+                placeholder="Designation"
+              />
             </div>
 
             <div className={styles.formGroup}>
-              <input className={styles.input} name="address" value={formData.address}
-                onChange={handleInputChange} placeholder="Organization Address"
-                autoComplete="street-address" />
+              <input
+                className={styles.input}
+                name="address"
+                value={formData.address}
+                onChange={handleInputChange}
+                placeholder="Organization Address"
+                autoComplete="street-address"
+              />
             </div>
 
             <div className={styles.gridRow}>
-              <input className={styles.input} name="city" value={formData.city}
-                onChange={handleInputChange} placeholder="City" autoComplete="address-level2" />
-              <input className={styles.input} name="state" value={formData.state}
-                onChange={handleInputChange} placeholder="State" autoComplete="address-level1" />
-              <input className={styles.input} name="postalCode" value={formData.postalCode}
-                onChange={handleInputChange} placeholder="Postal Code" autoComplete="postal-code"
-                inputMode="numeric" />
+              <input
+                className={styles.input}
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                placeholder="City"
+                autoComplete="address-level2"
+              />
+              <input
+                className={styles.input}
+                name="state"
+                value={formData.state}
+                onChange={handleInputChange}
+                placeholder="State"
+                autoComplete="address-level1"
+              />
+              <input
+                className={styles.input}
+                name="postalCode"
+                value={formData.postalCode}
+                onChange={handleInputChange}
+                placeholder="Postal Code"
+                autoComplete="postal-code"
+                inputMode="numeric"
+              />
             </div>
 
             <div className={styles.gridRow}>
-              <input className={styles.input} name="country" value={formData.country}
-                onChange={handleInputChange} placeholder="Country" autoComplete="country-name" />
-              <input className={styles.input} name="personToMeet" value={formData.personToMeet}
-                onChange={handleInputChange} placeholder="Person to Meet *" />
-              <input className={styles.input} name="purpose" value={formData.purpose}
-                onChange={handleInputChange} placeholder="Purpose of Visit" />
+              <input
+                className={styles.input}
+                name="country"
+                value={formData.country}
+                onChange={handleInputChange}
+                placeholder="Country"
+                autoComplete="country-name"
+              />
+              <input
+                className={styles.input}
+                name="personToMeet"
+                value={formData.personToMeet}
+                onChange={handleInputChange}
+                placeholder="Person to Meet *"
+              />
+              <input
+                className={styles.input}
+                name="purpose"
+                value={formData.purpose}
+                onChange={handleInputChange}
+                placeholder="Purpose of Visit"
+              />
             </div>
 
             <div className={styles.checkboxGroup}>
@@ -609,36 +892,67 @@ export default function PublicVisitorRegistration() {
               ))}
             </div>
 
-            <button className={styles.primaryBtn} onClick={handleNext} style={{ width: "100%" }}>
-              Next →
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
+              <button
+                className={styles.secondaryBtn}
+                onClick={goBack}
+                style={{ flex: 1 }}
+              >
+                ← Back
+              </button>
+              <button
+                className={styles.primaryBtn}
+                onClick={handleNext}
+                style={{ flex: 2 }}
+              >
+                Next →
+              </button>
+            </div>
           </main>
         </div>
       )}
 
-      {/* ── STEP 3: IDENTITY + PHOTO ──────────────────── */}
+      {/* ── STEP 3: IDENTITY + PHOTO ── */}
       {step === 3 && (
         <div className={styles.container}>
           <Header />
+          <StepProgress currentStep={step} />
           <main className={styles.card}>
             <h2 className={styles.title}>Identity Verification</h2>
             {error && <div className={styles.errorMsg}>{error}</div>}
 
             <div className={styles.cameraContainer}>
               {!cameraActive && !photo && (
-                <button type="button" className={styles.primaryBtn}
-                  onClick={startCamera} style={{ maxWidth: "300px" }}>
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  onClick={startCamera}
+                  style={{ maxWidth: "300px" }}
+                >
                   📷 Start Camera
                 </button>
               )}
 
               {cameraActive && (
                 <>
-                  <video ref={videoRef} autoPlay playsInline muted
-                    style={{ width: "100%", maxWidth: "400px", borderRadius: "0.75rem",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                  <button type="button" className={styles.primaryBtn}
-                    onClick={capturePhoto} style={{ maxWidth: "300px" }}>
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    style={{
+                      width: "100%",
+                      maxWidth: "400px",
+                      borderRadius: "0.75rem",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.primaryBtn}
+                    onClick={capturePhoto}
+                    style={{ maxWidth: "300px" }}
+                  >
                     📸 Capture Photo
                   </button>
                 </>
@@ -646,11 +960,22 @@ export default function PublicVisitorRegistration() {
 
               {photo && (
                 <>
-                  <img src={photo} alt="Captured visitor photo"
-                    style={{ width: "100%", maxWidth: "400px", borderRadius: "0.75rem",
-                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)" }} />
-                  <button type="button" className={styles.secondaryBtn}
-                    onClick={() => setPhoto(null)} style={{ maxWidth: "300px", marginTop: 0 }}>
+                  <img
+                    src={photo}
+                    alt="Captured visitor photo"
+                    style={{
+                      width: "100%",
+                      maxWidth: "400px",
+                      borderRadius: "0.75rem",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    className={styles.secondaryBtn}
+                    onClick={retakePhoto}
+                    style={{ maxWidth: "300px", marginTop: 0 }}
+                  >
                     🔄 Retake Photo
                   </button>
                 </>
@@ -659,8 +984,13 @@ export default function PublicVisitorRegistration() {
 
             <div className={styles.formGroup}>
               <label htmlFor="idType">ID Proof Type</label>
-              <select id="idType" className={styles.select} name="idType"
-                value={formData.idType} onChange={handleInputChange}>
+              <select
+                id="idType"
+                className={styles.select}
+                name="idType"
+                value={formData.idType}
+                onChange={handleInputChange}
+              >
                 <option value="">Select ID Proof (Optional)</option>
                 <option value="aadhaar">Aadhaar</option>
                 <option value="pan">PAN Card</option>
@@ -672,51 +1002,110 @@ export default function PublicVisitorRegistration() {
 
             <div className={styles.formGroup}>
               <label htmlFor="idNumber">ID Number</label>
-              <input id="idNumber" className={styles.input} name="idNumber"
-                value={formData.idNumber} onChange={handleInputChange}
-                placeholder="ID Number (Optional)" />
+              <input
+                id="idNumber"
+                className={styles.input}
+                name="idNumber"
+                value={formData.idNumber}
+                onChange={handleInputChange}
+                placeholder="ID Number (Optional)"
+              />
             </div>
 
-            <button className={styles.primaryBtn} onClick={handleSubmit}
-              disabled={!photo || submitting} style={{ width: "100%" }}>
-              {submitting ? "Submitting..." : "✓ Submit"}
-            </button>
+            <canvas
+              ref={canvasRef}
+              style={{ display: "none" }}
+              aria-hidden="true"
+            />
 
-            <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
+            <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
+              <button
+                className={styles.secondaryBtn}
+                onClick={goBack}
+                style={{ flex: 1 }}
+                disabled={submitting}
+              >
+                ← Back
+              </button>
+              <button
+                className={styles.primaryBtn}
+                onClick={handleSubmit}
+                disabled={!photo || !photoBlob || submitting}
+                style={{ flex: 2 }}
+              >
+                {submitting ? "Submitting..." : "✓ Submit"}
+              </button>
+            </div>
           </main>
         </div>
       )}
 
-      {/* ── STEP 4: SUCCESS ───────────────────────────── */}
+      {/* ── STEP 4: SUCCESS ── */}
       {step === 4 && (
         <div className={styles.container}>
           <Header />
           <div className={styles.authCard}>
             <div className={styles.textCenter}>
-              <div style={{ fontSize: "4rem", marginBottom: "1rem", color: "#4caf50" }}>✓</div>
-              <h2 style={{ color: "#4caf50", marginBottom: "1rem",
-                fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 800 }}>
+              <div
+                style={{ fontSize: "4rem", marginBottom: "1rem", color: "#4caf50" }}
+              >
+                ✓
+              </div>
+              <h2
+                style={{
+                  color: "#4caf50",
+                  marginBottom: "1rem",
+                  fontSize: "clamp(1.5rem, 3.5vw, 2rem)",
+                  fontWeight: 800,
+                }}
+              >
                 Registration Successful!
               </h2>
-              <p style={{ fontSize: "clamp(0.9rem, 2vw, 1rem)", color: "#666",
-                marginBottom: "2rem", lineHeight: 1.6 }}>
+              <p
+                style={{
+                  fontSize: "clamp(0.9rem, 2vw, 1rem)",
+                  color: "#666",
+                  marginBottom: "2rem",
+                  lineHeight: 1.6,
+                }}
+              >
                 Your visitor pass has been sent to your email.
               </p>
 
               <div className={styles.successMsg}>
-                <p style={{ margin: 0, fontSize: "0.9rem", fontWeight: 600, color: "#2e7d32" }}>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: "0.9rem",
+                    fontWeight: 600,
+                    color: "#2e7d32",
+                  }}
+                >
                   Visitor ID
                 </p>
-                <p style={{ margin: "0.5rem 0 0 0",
-                  fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 800,
-                  color: "#667eea", letterSpacing: "2px" }}>
+                <p
+                  style={{
+                    margin: "0.5rem 0 0 0",
+                    fontSize: "clamp(1.5rem, 3.5vw, 2rem)",
+                    fontWeight: 800,
+                    color: "#667eea",
+                    letterSpacing: "2px",
+                  }}
+                >
                   {visitorCode}
                 </p>
               </div>
 
-              <p style={{ fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)", color: "#888",
-                lineHeight: 1.6, marginBottom: "2rem" }}>
-                Please show this ID at the reception desk.<br />
+              <p
+                style={{
+                  fontSize: "clamp(0.85rem, 1.8vw, 0.95rem)",
+                  color: "#888",
+                  lineHeight: 1.6,
+                  marginBottom: "2rem",
+                }}
+              >
+                Please show this ID at the reception desk.
+                <br />
                 Check your email <strong>({email})</strong> for the digital pass.
               </p>
 
@@ -725,18 +1114,30 @@ export default function PublicVisitorRegistration() {
                   <div className={styles.whatsappHeader}>
                     <div className={styles.whatsappIcon}>📱</div>
                     <div>
-                      <h3 className={styles.whatsappTitle}>Stay Connected With Us</h3>
-                      <p className={styles.whatsappSubtitle}>Contact on WhatsApp</p>
+                      <h3 className={styles.whatsappTitle}>
+                        Stay Connected With Us
+                      </h3>
+                      <p className={styles.whatsappSubtitle}>
+                        Contact on WhatsApp
+                      </p>
                     </div>
                   </div>
-                  <button onClick={handleWhatsAppContact} className={styles.whatsappBtn} type="button">
+                  <button
+                    onClick={handleWhatsAppContact}
+                    className={styles.whatsappBtn}
+                    type="button"
+                  >
                     <span style={{ fontSize: "1.25rem" }}>💬</span>
                     Contact on WhatsApp
                   </button>
                 </div>
               )}
 
-              <button className={styles.primaryBtn} onClick={handleReset} type="button">
+              <button
+                className={styles.primaryBtn}
+                onClick={handleReset}
+                type="button"
+              >
                 ✓ Done
               </button>
             </div>
