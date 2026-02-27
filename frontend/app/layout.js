@@ -1,7 +1,7 @@
 import Script from 'next/script';
 import './globals.css';
 
-const GA_ID = 'G-QGBT88DMG1';
+const GA_ID = 'AW-17980176621';
 
 export const metadata = {
   title: 'Promeet',
@@ -13,8 +13,7 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body>
         {children}
-
-        {/* ── Google Analytics ── */}
+        {/* ── Google Tag (Ads) ── */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"
@@ -24,7 +23,7 @@ export default function RootLayout({ children }) {
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
-            gtag('config', '${GA_ID}', { page_path: window.location.pathname });
+            gtag('config', '${GA_ID}');
           `}
         </Script>
       </body>
