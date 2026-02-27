@@ -7,7 +7,7 @@ import './landing.css';
 
 
 /* ── Google Analytics helpers ─────────────────────────── */
-const GA_ID = 'G-QGBT88DMG1';
+const GA_ID = 'AW-17980176621';
 
 /** Fire a GA4 event. Safe — no-ops if gtag hasn't loaded yet. */
 const gaEvent = (eventName, params = {}) => {
