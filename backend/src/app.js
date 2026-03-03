@@ -18,6 +18,7 @@ import billingCron from "./routes/billingCron.route.js";
 import billingSyncRoutes from "./routes/billingSync.route.js";
 import exportsRoutes from "./routes/exports.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
+import superAdminRoutes from "./routes/superadmin.routes.js";
 
 const app = express();
 
@@ -56,7 +57,6 @@ app.use(
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  // ✅ REMOVED bare IP entries — phones should always use the domain
   "https://wheelbrand.in",
   "https://www.wheelbrand.in",
   "https://promeet.zodopt.com",
@@ -65,17 +65,14 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (mobile apps, Postman, curl, QR scanner)
     if (!origin) return callback(null, true);
 
-    // Strip port 443 from origin if present (some mobile browsers add it)
     const normalizedOrigin = origin.replace(/:443$/, "").replace(/:80$/, "");
 
     if (allowedOrigins.includes(normalizedOrigin)) {
       return callback(null, true);
     }
 
-    // Log blocked origins always (not just dev) so you can catch new issues
     console.warn(`⚠️ CORS blocked: ${origin}`);
     return callback(new Error("CORS policy violation"), false);
   },
@@ -87,8 +84,8 @@ const corsOptions = {
     "X-Requested-With",
     "Accept",
     "Origin",
-    "otp-token",          // ✅ FIX: required for visitor registration
-    "x-access-token",     // ✅ FIX: fallback token header used in auth middleware
+    "otp-token",
+    "x-access-token",
   ],
   exposedHeaders: [
     "Content-Range",
@@ -119,7 +116,6 @@ app.use(express.urlencoded({ extended: true, limit: "25mb" }));
 
 /* ================= LOGGING ================= */
 app.use((req, res, next) => {
-  // Always log CORS origin in production so you can catch phone issues
   const origin = req.headers.origin || "no-origin";
   if (IS_PRODUCTION && req.path.includes("/api/public")) {
     console.log(`[PUBLIC] ${req.method} ${req.path} | Origin: ${origin}`);
@@ -174,6 +170,11 @@ app.use("/api/settings", settingsRoutes);
 app.use("/api/billing/repair", billingRepair);
 app.use("/api/billing/cron", billingCron);
 app.use("/api/webhook", webhookRoutes);
+
+/* =====================================================
+   SUPERADMIN ROUTES
+===================================================== */
+app.use("/api/superadmin", superAdminRoutes);
 
 /* ================= 404 HANDLER ================= */
 app.use((req, res) => {
