@@ -1,5 +1,6 @@
 import { db } from "../config/db.js";
 import bcrypt from "bcrypt";
+import { sendEmail } from "../utils/mailer.js";
 
 /* ── Inlined from conference routes (not exported from a controller file) ── */
 const PLAN_ROOM_LIMITS = { trial: 2, business: 6, enterprise: Infinity };
@@ -255,7 +256,6 @@ export const forgotPassword = async (email) => {
   );
 
   // Send email
-  const { sendEmail } = await import("../utils/mailer.js");
   await sendEmail({
     to: cleanEmail,
     subject: "PROMEET SuperAdmin — Password Reset Code",
