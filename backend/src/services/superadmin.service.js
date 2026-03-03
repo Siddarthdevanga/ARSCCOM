@@ -120,6 +120,105 @@ export const getCompanyDetail = async (companyId) => {
 };
 
 /* ======================================================
+   UPDATE COMPANY
+   Supports: company name, company id (cascaded), user email
+====================================================== */
+export const updateCompany = async (companyId, { newCompanyId, name, userEmail, newUserEmail }) => {
+  const conn = await db.getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    // Verify company exists
+    const [[company]] = await conn.execute(
+      `SELECT id, name FROM companies WHERE id = ? LIMIT 1`,
+      [companyId]
+    );
+    if (!company) throw new Error("Company not found");
+
+    // ── 1. Update company name ──────────────────────────────
+    if (name && name.trim() !== company.name) {
+      await conn.execute(
+        `UPDATE companies SET name = ?, updated_at = NOW() WHERE id = ?`,
+        [name.trim(), companyId]
+      );
+    }
+
+    // ── 2. Update user email ────────────────────────────────
+    if (userEmail && newUserEmail) {
+      const cleanOld = userEmail.trim().toLowerCase();
+      const cleanNew = newUserEmail.trim().toLowerCase();
+
+      if (cleanOld !== cleanNew) {
+        // Check target email isn't already taken
+        const [conflict] = await conn.execute(
+          `SELECT id FROM users WHERE email = ? LIMIT 1`,
+          [cleanNew]
+        );
+        if (conflict.length) throw new Error("Email already in use by another account");
+
+        const [result] = await conn.execute(
+          `UPDATE users SET email = ? WHERE email = ? AND company_id = ?`,
+          [cleanNew, cleanOld, companyId]
+        );
+        if (result.affectedRows === 0)
+          throw new Error("User not found in this company with that email");
+      }
+    }
+
+    // ── 3. Change company ID (full cascade) ─────────────────
+    //    company.id is a PK referenced by many FK columns.
+    //    We must update all child tables first, then the PK.
+    if (newCompanyId && Number(newCompanyId) !== Number(companyId)) {
+      const nid = Number(newCompanyId);
+
+      // Ensure new ID isn't already taken
+      const [[idConflict]] = await conn.execute(
+        `SELECT id FROM companies WHERE id = ? LIMIT 1`,
+        [nid]
+      );
+      if (idConflict) throw new Error(`Company ID ${nid} is already in use`);
+
+      // Temporarily disable FK checks for this connection only
+      await conn.execute(`SET FOREIGN_KEY_CHECKS = 0`);
+
+      const childTables = [
+        { table: "users",               col: "company_id" },
+        { table: "conference_rooms",     col: "company_id" },
+        { table: "conference_bookings",  col: "company_id" },
+        { table: "visitors",             col: "company_id" },
+        { table: "visitor_otp",          col: "company_id" },
+        { table: "public_booking_otp",   col: "company_id" },
+        { table: "upgrade_requests",     col: "company_id" },
+        { table: "webhook_events",       col: "company_id" },
+      ];
+
+      for (const { table, col } of childTables) {
+        await conn.execute(
+          `UPDATE \`${table}\` SET \`${col}\` = ? WHERE \`${col}\` = ?`,
+          [nid, companyId]
+        ).catch(() => {}); // skip if table doesn't exist
+      }
+
+      // Update the PK itself
+      await conn.execute(
+        `UPDATE companies SET id = ?, updated_at = NOW() WHERE id = ?`,
+        [nid, companyId]
+      );
+
+      await conn.execute(`SET FOREIGN_KEY_CHECKS = 1`);
+    }
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+};
+
+/* ======================================================
    UPDATE PLAN
    Changes plan + syncs room activation
 ====================================================== */
