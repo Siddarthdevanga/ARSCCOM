@@ -11,6 +11,12 @@ const router = express.Router();
 // POST /api/superadmin/login
 router.post("/login", ctrl.login);
 
+// POST /api/superadmin/forgot-password
+router.post("/forgot-password", ctrl.forgotPassword);
+
+// POST /api/superadmin/reset-password
+router.post("/reset-password", ctrl.resetPassword);
+
 /* ======================================================
    PROTECTED — superadmin JWT required
 ====================================================== */
