@@ -12,12 +12,12 @@ const fmt = (val) => (val === null || val === undefined ? "-" : val);
 
 const statusColor = (status) => {
   switch ((status || "").toLowerCase()) {
-    case "active":   return styles.badgeActive;
-    case "trial":    return styles.badgeTrial;
-    case "expired":  return styles.badgeExpired;
-    case "cancelled":return styles.badgeCancelled;
-    case "pending":  return styles.badgePending;
-    default:         return styles.badgePending;
+    case "active":    return styles.badgeActive;
+    case "trial":     return styles.badgeTrial;
+    case "expired":   return styles.badgeExpired;
+    case "cancelled": return styles.badgeCancelled;
+    case "pending":   return styles.badgePending;
+    default:          return styles.badgePending;
   }
 };
 
@@ -30,27 +30,37 @@ const planColor = (plan) => {
 };
 
 /* ======================================================
-   MODAL — Plan Controls
+   MODAL
 ====================================================== */
 function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
   const [tab, setTab]         = useState("overview");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg]         = useState(null);
 
-  const [plan, setPlan]                   = useState(company.plan || "trial");
-  const [status, setStatus]               = useState(company.subscription_status || "pending");
-  const [trialEndsAt, setTrialEndsAt]     = useState(company.trial_ends_at?.slice(0, 10) || "");
-  const [subEndsAt, setSubEndsAt]         = useState(company.subscription_ends_at?.slice(0, 10) || "");
+  // plan / status / dates
+  const [plan, setPlan]               = useState(company.plan || "trial");
+  const [status, setStatus]           = useState(company.subscription_status || "pending");
+  const [trialEndsAt, setTrialEndsAt] = useState(company.trial_ends_at?.slice(0, 10) || "");
+  const [subEndsAt, setSubEndsAt]     = useState(company.subscription_ends_at?.slice(0, 10) || "");
+
+  // edit fields
+  const [editName,       setEditName]       = useState(company.name || "");
+  const [editCompanyId,  setEditCompanyId]  = useState(company.id || "");
+  const [editUserEmail,  setEditUserEmail]  = useState("");
+  const [editNewEmail,   setEditNewEmail]   = useState("");
 
   const call = async (endpoint, method = "PATCH", body = {}) => {
     setLoading(true);
     setMsg(null);
     try {
-      const res = await fetch(`${apiBase}/api/superadmin/companies/${company.id}/${endpoint}`, {
-        method,
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
+      const res = await fetch(
+        `${apiBase}/api/superadmin/companies/${company.id}/${endpoint}`,
+        {
+          method,
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
+      );
       const data = await res.json();
       setMsg({ type: res.ok ? "success" : "error", text: data.message });
       if (res.ok) onRefresh();
@@ -61,9 +71,35 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
     }
   };
 
+  const handleUpdateCompany = async () => {
+    const body = {};
+
+    const trimmedName = editName.trim();
+    if (trimmedName && trimmedName !== company.name) body.name = trimmedName;
+
+    const newId = Number(editCompanyId);
+    if (newId && newId !== Number(company.id)) body.newCompanyId = newId;
+
+    if (editUserEmail.trim() && editNewEmail.trim()) {
+      body.userEmail    = editUserEmail.trim().toLowerCase();
+      body.newUserEmail = editNewEmail.trim().toLowerCase();
+    }
+
+    if (!Object.keys(body).length) {
+      setMsg({ type: "error", text: "No changes detected" });
+      return;
+    }
+
+    await call("update", "PATCH", body);
+  };
+
+  const TABS = ["overview", "edit", "plan", "dates", "danger"];
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+
+        {/* HEADER */}
         <div className={styles.modalHeader}>
           <div>
             <h2 className={styles.modalTitle}>{company.name}</h2>
@@ -74,7 +110,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
 
         {/* TABS */}
         <div className={styles.tabs}>
-          {["overview", "plan", "dates", "danger"].map((t) => (
+          {TABS.map((t) => (
             <button
               key={t}
               className={`${styles.tab} ${tab === t ? styles.tabActive : ""}`}
@@ -93,20 +129,20 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
 
         <div className={styles.modalBody}>
 
-          {/* OVERVIEW TAB */}
+          {/* ── OVERVIEW ── */}
           {tab === "overview" && (
             <div className={styles.overviewGrid}>
               {[
-                ["Plan",           <span className={`${styles.badge} ${planColor(company.plan)}`}>{(company.plan||"trial").toUpperCase()}</span>],
-                ["Status",         <span className={`${styles.badge} ${statusColor(company.subscription_status)}`}>{company.subscription_status||"-"}</span>],
-                ["Suspended",      company.is_suspended ? <span className={styles.badgeCancelled}>YES</span> : <span className={styles.badgeActive}>NO</span>],
-                ["Trial Ends",     fmt(company.trial_ends_at?.slice(0,10))],
-                ["Sub Ends",       fmt(company.subscription_ends_at?.slice(0,10))],
-                ["Rooms",          company.total_rooms],
-                ["Bookings",       company.total_bookings],
-                ["Visitors",       company.total_visitors],
-                ["Users",          company.total_users],
-                ["Registered",     company.created_at?.slice(0,10)],
+                ["Plan",       <span className={`${styles.badge} ${planColor(company.plan)}`}>{(company.plan || "trial").toUpperCase()}</span>],
+                ["Status",     <span className={`${styles.badge} ${statusColor(company.subscription_status)}`}>{company.subscription_status || "-"}</span>],
+                ["Suspended",  company.is_suspended ? <span className={styles.badgeCancelled}>YES</span> : <span className={styles.badgeActive}>NO</span>],
+                ["Trial Ends", fmt(company.trial_ends_at?.slice(0, 10))],
+                ["Sub Ends",   fmt(company.subscription_ends_at?.slice(0, 10))],
+                ["Rooms",      company.total_rooms],
+                ["Bookings",   company.total_bookings],
+                ["Visitors",   company.total_visitors],
+                ["Users",      company.total_users],
+                ["Registered", company.created_at?.slice(0, 10)],
               ].map(([label, val]) => (
                 <div key={label} className={styles.overviewItem}>
                   <span className={styles.overviewLabel}>{label}</span>
@@ -116,7 +152,65 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
             </div>
           )}
 
-          {/* PLAN TAB */}
+          {/* ── EDIT ── */}
+          {tab === "edit" && (
+            <div className={styles.formSection}>
+
+              <label className={styles.label}>Company Name</label>
+              <input
+                type="text"
+                className={styles.input}
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                placeholder="Company name"
+              />
+
+              <div className={styles.divider} />
+
+              <label className={styles.label}>Change Company ID</label>
+              <input
+                type="number"
+                className={styles.input}
+                value={editCompanyId}
+                onChange={(e) => setEditCompanyId(e.target.value)}
+                placeholder="New company ID"
+              />
+              <p className={styles.hintText}>
+                ⚠ This cascades the new ID across all related tables. Use with caution.
+              </p>
+
+              <div className={styles.divider} />
+
+              <label className={styles.label}>Change User Email</label>
+              <input
+                type="email"
+                className={styles.input}
+                value={editUserEmail}
+                onChange={(e) => setEditUserEmail(e.target.value)}
+                placeholder="Current email"
+              />
+              <input
+                type="email"
+                className={styles.input}
+                value={editNewEmail}
+                onChange={(e) => setEditNewEmail(e.target.value)}
+                placeholder="New email"
+                style={{ marginTop: 8 }}
+              />
+
+              <div className={styles.divider} />
+
+              <button
+                className={styles.btnPrimary}
+                disabled={loading}
+                onClick={handleUpdateCompany}
+              >
+                {loading ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          )}
+
+          {/* ── PLAN ── */}
           {tab === "plan" && (
             <div className={styles.formSection}>
               <label className={styles.label}>Change Plan</label>
@@ -145,7 +239,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
             </div>
           )}
 
-          {/* DATES TAB */}
+          {/* ── DATES ── */}
           {tab === "dates" && (
             <div className={styles.formSection}>
               <label className={styles.label}>Extend Trial Until</label>
@@ -174,7 +268,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
             </div>
           )}
 
-          {/* DANGER TAB */}
+          {/* ── DANGER ── */}
           {tab === "danger" && (
             <div className={styles.formSection}>
               <button
@@ -213,6 +307,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
@@ -226,15 +321,15 @@ export default function SuperAdminDashboard() {
   const router  = useRouter();
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  const [token,     setToken]     = useState(null);
-  const [admin,     setAdmin]     = useState(null);
-  const [companies, setCompanies] = useState([]);
-  const [loading,   setLoading]   = useState(true);
-  const [selected,  setSelected]  = useState(null);
-  const [search,    setSearch]    = useState("");
-  const [filterPlan, setFilterPlan] = useState("all");
+  const [token,        setToken]        = useState(null);
+  const [admin,        setAdmin]        = useState(null);
+  const [companies,    setCompanies]    = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [selected,     setSelected]     = useState(null);
+  const [search,       setSearch]       = useState("");
+  const [filterPlan,   setFilterPlan]   = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
-  const [toast, setToast] = useState({ show: false, message: "", type: "success" });
+  const [toast,        setToast]        = useState({ show: false, message: "", type: "success" });
 
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
@@ -289,10 +384,10 @@ export default function SuperAdminDashboard() {
   };
 
   /* ── STATS ── */
-  const totalCompanies  = companies.length;
-  const activeCount     = companies.filter((c) => c.subscription_status === "active").length;
-  const trialCount      = companies.filter((c) => c.subscription_status === "trial").length;
-  const suspendedCount  = companies.filter((c) => c.is_suspended).length;
+  const totalCompanies = companies.length;
+  const activeCount    = companies.filter((c) => c.subscription_status === "active").length;
+  const trialCount     = companies.filter((c) => c.subscription_status === "trial").length;
+  const suspendedCount = companies.filter((c) => c.is_suspended).length;
 
   /* ── FILTER ── */
   const filtered = companies.filter((c) => {
@@ -441,10 +536,10 @@ export default function SuperAdminDashboard() {
                           {c.is_suspended && <span className={styles.suspendedTag}>SUSPENDED</span>}
                         </div>
                       </td>
-                      <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan||"trial").toUpperCase()}</span></td>
-                      <td><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status||"-"}</span></td>
-                      <td className={styles.dateCell}>{c.trial_ends_at?.slice(0,10) || "-"}</td>
-                      <td className={styles.dateCell}>{c.subscription_ends_at?.slice(0,10) || "-"}</td>
+                      <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
+                      <td><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status || "-"}</span></td>
+                      <td className={styles.dateCell}>{c.trial_ends_at?.slice(0, 10) || "-"}</td>
+                      <td className={styles.dateCell}>{c.subscription_ends_at?.slice(0, 10) || "-"}</td>
                       <td className={styles.numCell}>{c.total_rooms}</td>
                       <td className={styles.numCell}>{c.total_bookings}</td>
                       <td className={styles.numCell}>{c.total_visitors}</td>
