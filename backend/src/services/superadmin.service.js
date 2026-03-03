@@ -1,6 +1,40 @@
 import { db } from "../config/db.js";
 import bcrypt from "bcrypt";
-import { syncRoomActivationByPlan } from "../controllers/conferenceBooking.controller.js";
+
+/* ── Inlined from conference routes (not exported from a controller file) ── */
+const PLAN_ROOM_LIMITS = { trial: 2, business: 6, enterprise: Infinity };
+
+const syncRoomActivationByPlan = async (companyId, plan) => {
+  const limit = PLAN_ROOM_LIMITS[(plan || "trial").toLowerCase()] ?? 2;
+
+  await db.execute(
+    `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
+    [companyId]
+  );
+
+  if (limit === Infinity) {
+    await db.execute(
+      `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
+      [companyId]
+    );
+    return;
+  }
+
+  if (limit > 0) {
+    await db.execute(
+      `UPDATE conference_rooms SET is_active = 1
+       WHERE id IN (
+         SELECT id FROM (
+           SELECT id FROM conference_rooms
+           WHERE company_id = ?
+           ORDER BY room_number ASC, id ASC
+           LIMIT ?
+         ) AS t
+       )`,
+      [companyId, limit]
+    );
+  }
+};
 
 /* ======================================================
    SUPERADMIN LOGIN
