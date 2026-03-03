@@ -5,36 +5,51 @@ import * as ctrl from "../controllers/superadmin.controller.js";
 const router = express.Router();
 
 /* ======================================================
-   PUBLIC — no auth required
+   PUBLIC — no auth
 ====================================================== */
-router.post("/login",          ctrl.login);
+
+// POST /api/superadmin/login
+router.post("/login", ctrl.login);
+
+// POST /api/superadmin/forgot-password
 router.post("/forgot-password", ctrl.forgotPassword);
-router.post("/reset-password",  ctrl.resetPassword);
+
+// POST /api/superadmin/reset-password
+router.post("/reset-password", ctrl.resetPassword);
 
 /* ======================================================
    PROTECTED — superadmin JWT required
 ====================================================== */
 router.use(authenticateSuperAdmin);
 
-// ── Dashboard ──────────────────────────────────────────
+// GET  /api/superadmin/dashboard
 router.get("/dashboard", ctrl.dashboard);
 
-// ── Company CRUD ───────────────────────────────────────
-router.get   ("/companies/:id",        ctrl.companyDetail);
-router.patch ("/companies/:id/update", ctrl.updateCompany);
-router.delete("/companies/:id",        ctrl.deleteCompany);
+// GET  /api/superadmin/companies/:id
+router.get("/companies/:id", ctrl.companyDetail);
 
-// ── Plan & Status ──────────────────────────────────────
-router.patch("/companies/:id/plan",   ctrl.updatePlan);
+// PATCH /api/superadmin/companies/:id/plan
+router.patch("/companies/:id/plan", ctrl.updatePlan);
+
+// PATCH /api/superadmin/companies/:id/status
 router.patch("/companies/:id/status", ctrl.updateStatus);
 
-// ── Dates ─────────────────────────────────────────────
-router.patch("/companies/:id/extend-trial",        ctrl.extendTrial);
-router.patch("/companies/:id/subscription-dates",  ctrl.updateSubscriptionDates);
+// PATCH /api/superadmin/companies/:id/extend-trial
+router.patch("/companies/:id/extend-trial", ctrl.extendTrial);
 
-// ── Lifecycle ─────────────────────────────────────────
+// PATCH /api/superadmin/companies/:id/subscription-dates
+router.patch("/companies/:id/subscription-dates", ctrl.updateSubscriptionDates);
+
+// POST  /api/superadmin/companies/:id/force-cancel
 router.post("/companies/:id/force-cancel", ctrl.forceCancel);
-router.post("/companies/:id/suspend",      ctrl.suspendCompany);
-router.post("/companies/:id/unsuspend",    ctrl.unsuspendCompany);
+
+// POST  /api/superadmin/companies/:id/suspend
+router.post("/companies/:id/suspend", ctrl.suspendCompany);
+
+// POST  /api/superadmin/companies/:id/unsuspend
+router.post("/companies/:id/unsuspend", ctrl.unsuspendCompany);
+
+// DELETE /api/superadmin/companies/:id
+router.delete("/companies/:id", ctrl.deleteCompany);
 
 export default router;
