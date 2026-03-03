@@ -108,6 +108,23 @@ export const companyDetail = async (req, res) => {
 };
 
 /* ======================================================
+   COMPANY USERS
+   GET /api/superadmin/companies/:id/users
+====================================================== */
+export const companyUsers = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    const users = await service.getCompanyUsers(companyId);
+    return res.status(200).json({ success: true, users });
+  } catch (err) {
+    console.error("SUPERADMIN COMPANY USERS ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
    UPDATE COMPANY
    PATCH /api/superadmin/companies/:id/update
    body: { name?, newCompanyId?, userEmail?, newUserEmail? }
