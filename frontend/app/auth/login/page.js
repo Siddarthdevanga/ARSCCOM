@@ -34,6 +34,26 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      /* ── 1. Try SuperAdmin login first ── */
+      const saRes = await fetch(`${API_BASE}/api/superadmin/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail, password }),
+      });
+
+      if (saRes.ok) {
+        const saData = await saRes.json();
+        if (saData?.user?.role === "superadmin") {
+          localStorage.setItem("sa_token", saData.token);
+          localStorage.setItem("sa_admin", JSON.stringify(saData.user));
+          setError("SuperAdmin login successful! Redirecting…");
+          setIsRedirecting(true);
+          setTimeout(() => router.replace("/superadmin/dashboard"), 800);
+          return;
+        }
+      }
+
+      /* ── 2. Regular company login ── */
       const res = await fetch(`${API_BASE}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -72,7 +92,6 @@ export default function LoginPage() {
         const successMessage = status === "trial"
           ? "Login successful! Welcome to your trial period."
           : "Login successful! Welcome back.";
-
         setError(successMessage);
         setIsRedirecting(true);
         setTimeout(() => router.replace("/home"), 800);
@@ -99,14 +118,11 @@ export default function LoginPage() {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === "Enter" && !loading && !isRedirecting) {
-      handleLogin();
-    }
+    if (e.key === "Enter" && !loading && !isRedirecting) handleLogin();
   };
 
-  const isSuccessMessage = (msg) => {
-    return msg.includes("successful") || msg.includes("Welcome");
-  };
+  const isSuccessMessage = (msg) =>
+    msg.includes("successful") || msg.includes("Welcome") || msg.includes("SuperAdmin");
 
   const isDisabled = loading || isRedirecting;
 
