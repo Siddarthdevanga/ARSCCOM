@@ -49,6 +49,27 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
   const [editUserEmail,  setEditUserEmail]  = useState("");
   const [editNewEmail,   setEditNewEmail]   = useState("");
 
+  // users list for email picker
+  const [users,       setUsers]       = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+
+  // fetch users when Edit tab opens
+  useEffect(() => {
+    if (tab !== "edit") return;
+    setUsersLoading(true);
+    fetch(`${apiBase}/api/superadmin/companies/${company.id}/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        const list = d.users || [];
+        setUsers(list);
+        if (list.length > 0 && !editUserEmail) setEditUserEmail(list[0].email);
+      })
+      .catch(() => {})
+      .finally(() => setUsersLoading(false));
+  }, [tab]);
+
   const call = async (endpoint, method = "PATCH", body = {}) => {
     setLoading(true);
     setMsg(null);
@@ -182,21 +203,32 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
               <div className={styles.divider} />
 
               <label className={styles.label}>Change User Email</label>
-              <input
-                type="email"
-                className={styles.input}
-                value={editUserEmail}
-                onChange={(e) => setEditUserEmail(e.target.value)}
-                placeholder="Current email"
-              />
-              <input
-                type="email"
-                className={styles.input}
-                value={editNewEmail}
-                onChange={(e) => setEditNewEmail(e.target.value)}
-                placeholder="New email"
-                style={{ marginTop: 8 }}
-              />
+              {usersLoading ? (
+                <p className={styles.hintText}>Loading users…</p>
+              ) : users.length === 0 ? (
+                <p className={styles.hintText}>No users found for this company</p>
+              ) : (
+                <div className={styles.inputGroup}>
+                  <select
+                    className={styles.select}
+                    value={editUserEmail}
+                    onChange={(e) => setEditUserEmail(e.target.value)}
+                  >
+                    {users.map((u) => (
+                      <option key={u.id} value={u.email}>
+                        {u.name ? `${u.name} — ${u.email}` : u.email}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    type="email"
+                    className={styles.input}
+                    value={editNewEmail}
+                    onChange={(e) => setEditNewEmail(e.target.value)}
+                    placeholder="New email address"
+                  />
+                </div>
+              )}
 
               <div className={styles.divider} />
 
@@ -340,14 +372,14 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
     const a = localStorage.getItem("sa_admin");
-    if (!t || !a) { router.replace("/superadmin/login"); return; }
+    if (!t || !a) { router.replace("/auth/login"); return; }
     try {
       setToken(t);
       setAdmin(JSON.parse(a));
     } catch {
       localStorage.removeItem("sa_token");
       localStorage.removeItem("sa_admin");
-      router.replace("/superadmin/login");
+      router.replace("/auth/login");
     }
   }, [router]);
 
@@ -362,7 +394,7 @@ export default function SuperAdminDashboard() {
       if (res.status === 401 || res.status === 403) {
         localStorage.removeItem("sa_token");
         localStorage.removeItem("sa_admin");
-        router.replace("/superadmin/login");
+        router.replace("/auth/login");
         return;
       }
       const data = await res.json();
@@ -380,7 +412,7 @@ export default function SuperAdminDashboard() {
   const logout = () => {
     localStorage.removeItem("sa_token");
     localStorage.removeItem("sa_admin");
-    router.replace("/superadmin/login");
+    router.replace("/auth/login");
   };
 
   /* ── STATS ── */
