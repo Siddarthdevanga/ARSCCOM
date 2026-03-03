@@ -30,9 +30,8 @@ export const resetPassword = async (req, res) => {
     const code     = req.body?.code?.trim();
     const password = req.body?.password?.trim();
 
-    if (!email || !code || !password) {
+    if (!email || !code || !password)
       return res.status(400).json({ success: false, message: "Email, code and password are required" });
-    }
 
     await service.resetPassword({ email, code, password });
     return res.status(200).json({ success: true, message: "Password updated successfully" });
@@ -51,9 +50,8 @@ export const login = async (req, res) => {
     const email    = req.body?.email?.trim().toLowerCase();
     const password = req.body?.password?.trim();
 
-    if (!email || !password) {
+    if (!email || !password)
       return res.status(400).json({ success: false, message: "Email and password are required" });
-    }
 
     const user = await service.superAdminLogin({ email, password });
 
@@ -136,17 +134,14 @@ export const updateCompany = async (req, res) => {
 
     const { name, newCompanyId, userEmail, newUserEmail } = req.body;
 
-    if (!name && !newCompanyId && !(userEmail && newUserEmail)) {
+    if (!name && !newCompanyId && !(userEmail && newUserEmail))
       return res.status(400).json({ success: false, message: "At least one field to update is required" });
-    }
 
-    if (newCompanyId && isNaN(parseInt(newCompanyId))) {
+    if (newCompanyId && isNaN(parseInt(newCompanyId)))
       return res.status(400).json({ success: false, message: "Invalid new company ID" });
-    }
 
-    if ((userEmail && !newUserEmail) || (!userEmail && newUserEmail)) {
+    if ((userEmail && !newUserEmail) || (!userEmail && newUserEmail))
       return res.status(400).json({ success: false, message: "Both userEmail and newUserEmail are required to update email" });
-    }
 
     await service.updateCompany(companyId, { name, newCompanyId, userEmail, newUserEmail });
     return res.status(200).json({ success: true, message: "Company updated successfully" });
@@ -206,11 +201,11 @@ export const updateStatus = async (req, res) => {
 ====================================================== */
 export const extendTrial = async (req, res) => {
   try {
-    const companyId        = parseInt(req.params.id);
+    const companyId         = parseInt(req.params.id);
     const { trial_ends_at } = req.body;
 
-    if (isNaN(companyId))  return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!trial_ends_at)    return res.status(400).json({ success: false, message: "trial_ends_at is required" });
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!trial_ends_at)   return res.status(400).json({ success: false, message: "trial_ends_at is required" });
 
     await service.extendTrial(companyId, trial_ends_at);
     return res.status(200).json({ success: true, message: `Trial extended to ${trial_ends_at}` });
@@ -227,11 +222,11 @@ export const extendTrial = async (req, res) => {
 ====================================================== */
 export const updateSubscriptionDates = async (req, res) => {
   try {
-    const companyId                              = parseInt(req.params.id);
+    const companyId                                    = parseInt(req.params.id);
     const { subscription_ends_at, subscription_start } = req.body;
 
-    if (isNaN(companyId))       return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!subscription_ends_at)  return res.status(400).json({ success: false, message: "subscription_ends_at is required" });
+    if (isNaN(companyId))      return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!subscription_ends_at) return res.status(400).json({ success: false, message: "subscription_ends_at is required" });
 
     await service.updateSubscriptionDates(companyId, { subscription_ends_at, subscription_start });
     return res.status(200).json({ success: true, message: "Subscription dates updated" });
