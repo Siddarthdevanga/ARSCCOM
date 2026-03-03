@@ -219,6 +219,88 @@ export const setSuspension = async (companyId, suspend) => {
 };
 
 /* ======================================================
+   FORGOT PASSWORD (superadmin — no company JOIN)
+====================================================== */
+export const forgotPassword = async (email) => {
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail) throw new Error("Email is required");
+
+  const [rows] = await db.execute(
+    `SELECT id, reset_last_sent FROM users
+     WHERE email = ? AND role = 'superadmin' LIMIT 1`,
+    [cleanEmail]
+  );
+
+  if (!rows.length) return { sent: true }; // don't leak
+
+  const user = rows[0];
+
+  // 30s cooldown
+  if (user.reset_last_sent) {
+    const [[wait]] = await db.query(
+      `SELECT GREATEST(0, 30 - TIMESTAMPDIFF(SECOND, reset_last_sent, NOW())) AS w
+       FROM users WHERE id = ?`,
+      [user.id]
+    );
+    if (wait.w > 0) return { sent: false, waitSeconds: wait.w };
+  }
+
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+  await db.execute(
+    `UPDATE users
+     SET reset_code = ?, reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE), reset_last_sent = NOW()
+     WHERE id = ?`,
+    [code, user.id]
+  );
+
+  // Send email
+  const { sendEmail } = await import("../utils/mailer.js");
+  await sendEmail({
+    to: cleanEmail,
+    subject: "PROMEET SuperAdmin — Password Reset Code",
+    html: `
+      <p>Hello <b>SuperAdmin</b>,</p>
+      <p>Your password reset code is:</p>
+      <div style="background:#f8f9ff;border-left:4px solid #6c2bd9;padding:20px;margin:20px 0;text-align:center;">
+        <h2 style="color:#6c2bd9;margin:0;letter-spacing:4px;font-size:32px;">${code}</h2>
+      </div>
+      <p>Valid for <b>10 minutes</b>. Do not share this code.</p>
+    `,
+  }).catch(console.error);
+
+  return { sent: true };
+};
+
+/* ======================================================
+   RESET PASSWORD (superadmin)
+====================================================== */
+export const resetPassword = async ({ email, code, password }) => {
+  const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail || !code || !password) throw new Error("All fields required");
+  if (password.length < 8) throw new Error("Password must be at least 8 characters");
+
+  const [rows] = await db.execute(
+    `SELECT id, reset_code FROM users
+     WHERE email = ? AND role = 'superadmin' AND reset_expires > NOW() LIMIT 1`,
+    [cleanEmail]
+  );
+
+  if (!rows.length || rows[0].reset_code !== code.toUpperCase()) {
+    throw new Error("Invalid or expired reset code");
+  }
+
+  const hash = await bcrypt.hash(password, 10);
+
+  await db.execute(
+    `UPDATE users
+     SET password_hash = ?, reset_code = NULL, reset_expires = NULL, reset_last_sent = NULL
+     WHERE id = ?`,
+    [hash, rows[0].id]
+  );
+};
+
+/* ======================================================
    DELETE COMPANY (full cascade, FK-safe)
 ====================================================== */
 export const deleteCompany = async (companyId) => {
