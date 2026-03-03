@@ -316,15 +316,13 @@ export const deleteCompany = async (companyId) => {
     );
     if (!company) throw new Error("Company not found");
 
-    // 1. visitor_otp (linked to visitors via phone/email, safest to delete by company visitors)
+    // 1. visitor_otp — has company_id directly
     await conn.execute(
-      `DELETE vo FROM visitor_otp vo
-       INNER JOIN visitors v ON v.phone = vo.phone
-       WHERE v.company_id = ?`,
+      `DELETE FROM visitor_otp WHERE company_id = ?`,
       [companyId]
     );
 
-    // 2. public_booking_otp (linked to company slug/id)
+    // 2. public_booking_otp
     await conn.execute(
       `DELETE FROM public_booking_otp WHERE company_id = ?`,
       [companyId]
@@ -348,24 +346,25 @@ export const deleteCompany = async (companyId) => {
       [companyId]
     );
 
-    // 6. upgrade_requests (if linked)
+    // 6. upgrade_requests
     await conn.execute(
       `DELETE FROM upgrade_requests WHERE company_id = ?`,
       [companyId]
-    ).catch(() => {}); // table may not have company_id FK, ignore if fails
+    ).catch(() => {});
 
-    // 7. webhook_events (if linked)
+    // 7. webhook_events
     await conn.execute(
       `DELETE FROM webhook_events WHERE company_id = ?`,
       [companyId]
     ).catch(() => {});
 
-    // 8. password_resets for users of this company
+    // 8. password_resets — linked via user_id, delete by joining users
     await conn.execute(
-      `UPDATE users SET reset_code = NULL, reset_expires = NULL, reset_last_sent = NULL
-       WHERE company_id = ?`,
+      `DELETE pr FROM password_resets pr
+       INNER JOIN users u ON u.id = pr.user_id
+       WHERE u.company_id = ?`,
       [companyId]
-    );
+    ).catch(() => {});
 
     // 9. users
     await conn.execute(
