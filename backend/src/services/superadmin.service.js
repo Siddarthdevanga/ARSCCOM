@@ -132,7 +132,6 @@ export const updatePlan = async (companyId, plan) => {
     [plan, companyId]
   );
 
-  // Sync room activation to match new plan limits
   await syncRoomActivationByPlan(companyId, plan);
 };
 
@@ -175,24 +174,17 @@ export const updateSubscriptionDates = async (companyId, { subscription_start, s
   const endDate = new Date(subscription_ends_at);
   if (isNaN(endDate.getTime())) throw new Error("Invalid subscription_ends_at date");
 
-  let sql, params;
-
   if (subscription_start) {
     const startDate = new Date(subscription_start);
     if (isNaN(startDate.getTime())) throw new Error("Invalid subscription_start date");
-
-    sql = `UPDATE companies
-           SET subscription_ends_at = ?, updated_at = NOW()
-           WHERE id = ?`;
-    params = [subscription_ends_at, companyId];
-  } else {
-    sql = `UPDATE companies
-           SET subscription_ends_at = ?, updated_at = NOW()
-           WHERE id = ?`;
-    params = [subscription_ends_at, companyId];
   }
 
-  await db.execute(sql, params);
+  await db.execute(
+    `UPDATE companies
+     SET subscription_ends_at = ?, updated_at = NOW()
+     WHERE id = ?`,
+    [subscription_ends_at, companyId]
+  );
 };
 
 /* ======================================================
@@ -255,7 +247,6 @@ export const forgotPassword = async (email) => {
     [code, user.id]
   );
 
-  // Send email
   await sendEmail({
     to: cleanEmail,
     subject: "PROMEET SuperAdmin — Password Reset Code",
@@ -316,7 +307,7 @@ export const deleteCompany = async (companyId) => {
     );
     if (!company) throw new Error("Company not found");
 
-    // 1. visitor_otp — has company_id directly
+    // 1. visitor_otp
     await conn.execute(
       `DELETE FROM visitor_otp WHERE company_id = ?`,
       [companyId]
@@ -334,13 +325,22 @@ export const deleteCompany = async (companyId) => {
       [companyId]
     );
 
-    // 4. conference_bookings
+    // 4. conference_bookings — MUST come before conference_rooms
+    //    FK: conference_bookings.room_id → conference_rooms.id
     await conn.execute(
       `DELETE FROM conference_bookings WHERE company_id = ?`,
       [companyId]
     );
 
-    // 5. conference_rooms
+    // 4b. safety net: catch any bookings tied via room_id but missing company_id
+    await conn.execute(
+      `DELETE cb FROM conference_bookings cb
+       INNER JOIN conference_rooms cr ON cr.id = cb.room_id
+       WHERE cr.company_id = ?`,
+      [companyId]
+    ).catch(() => {});
+
+    // 5. conference_rooms — safe to delete now that bookings are gone
     await conn.execute(
       `DELETE FROM conference_rooms WHERE company_id = ?`,
       [companyId]
@@ -358,7 +358,7 @@ export const deleteCompany = async (companyId) => {
       [companyId]
     ).catch(() => {});
 
-    // 8. password_resets — linked via user_id, delete by joining users
+    // 8. password_resets — linked via user_id
     await conn.execute(
       `DELETE pr FROM password_resets pr
        INNER JOIN users u ON u.id = pr.user_id
