@@ -19,6 +19,8 @@ router.use(authenticateSuperAdmin);
 router.get("/dashboard", ctrl.dashboard);
 // GET  /api/superadmin/companies/:id
 router.get("/companies/:id", ctrl.companyDetail);
+// GET  /api/superadmin/companies/:id/users
+router.get("/companies/:id/users", ctrl.companyUsers);
 // PATCH /api/superadmin/companies/:id/update
 router.patch("/companies/:id/update", ctrl.updateCompany);
 // PATCH /api/superadmin/companies/:id/plan
