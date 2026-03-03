@@ -460,7 +460,7 @@ export default function SuperAdminDashboard() {
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
             <Image
-              src="/s3://arsccom-assets/PROMEET/EMAILS LOGO.png"
+              src="/Brand Logo.png"
               alt="Promeet Logo"
               width={280}
               height={90}
