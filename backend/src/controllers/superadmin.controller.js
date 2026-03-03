@@ -4,6 +4,45 @@ import * as service from "../services/superadmin.service.js";
 const JWT_EXPIRY = "12h";
 
 /* ======================================================
+   FORGOT PASSWORD
+   POST /api/superadmin/forgot-password
+====================================================== */
+export const forgotPassword = async (req, res) => {
+  try {
+    const email = req.body?.email?.trim().toLowerCase();
+    if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+    await service.forgotPassword(email);
+    return res.status(200).json({ success: true, message: "If the email exists, a reset code has been sent" });
+  } catch (err) {
+    console.error("SUPERADMIN FORGOT PASSWORD ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   RESET PASSWORD
+   POST /api/superadmin/reset-password
+====================================================== */
+export const resetPassword = async (req, res) => {
+  try {
+    const email = req.body?.email?.trim().toLowerCase();
+    const code  = req.body?.code?.trim();
+    const password = req.body?.password?.trim();
+
+    if (!email || !code || !password) {
+      return res.status(400).json({ success: false, message: "Email, code and password are required" });
+    }
+
+    await service.resetPassword({ email, code, password });
+    return res.status(200).json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    console.error("SUPERADMIN RESET PASSWORD ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
    LOGIN
    POST /api/superadmin/login
 ====================================================== */
