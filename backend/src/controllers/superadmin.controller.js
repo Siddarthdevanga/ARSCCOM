@@ -1,525 +1,308 @@
-import { db } from "../config/db.js";
-import bcrypt from "bcrypt";
-import { sendEmail } from "../utils/mailer.js";
+import jwt from "jsonwebtoken";
+import * as service from "../services/superadmin.service.js";
 
-/* ── Inlined from conference routes (not exported from a controller file) ── */
-const PLAN_ROOM_LIMITS = { trial: 2, business: 6, enterprise: Infinity };
+const JWT_EXPIRY = "12h";
 
-const syncRoomActivationByPlan = async (companyId, plan) => {
-  const limit = PLAN_ROOM_LIMITS[(plan || "trial").toLowerCase()] ?? 2;
+/* ======================================================
+   FORGOT PASSWORD
+   POST /api/superadmin/forgot-password
+====================================================== */
+export const forgotPassword = async (req, res) => {
+  try {
+    const email = req.body?.email?.trim().toLowerCase();
+    if (!email) return res.status(400).json({ success: false, message: "Email is required" });
 
-  await db.execute(
-    `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
-    [companyId]
-  );
+    await service.forgotPassword(email);
+    return res.status(200).json({ success: true, message: "If the email exists, a reset code has been sent" });
+  } catch (err) {
+    console.error("SUPERADMIN FORGOT PASSWORD ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
 
-  if (limit === Infinity) {
-    await db.execute(
-      `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
-      [companyId]
+/* ======================================================
+   RESET PASSWORD
+   POST /api/superadmin/reset-password
+====================================================== */
+export const resetPassword = async (req, res) => {
+  try {
+    const email    = req.body?.email?.trim().toLowerCase();
+    const code     = req.body?.code?.trim();
+    const password = req.body?.password?.trim();
+
+    if (!email || !code || !password) {
+      return res.status(400).json({ success: false, message: "Email, code and password are required" });
+    }
+
+    await service.resetPassword({ email, code, password });
+    return res.status(200).json({ success: true, message: "Password updated successfully" });
+  } catch (err) {
+    console.error("SUPERADMIN RESET PASSWORD ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   LOGIN
+   POST /api/superadmin/login
+====================================================== */
+export const login = async (req, res) => {
+  try {
+    const email    = req.body?.email?.trim().toLowerCase();
+    const password = req.body?.password?.trim();
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: "Email and password are required" });
+    }
+
+    const user = await service.superAdminLogin({ email, password });
+
+    const token = jwt.sign(
+      { userId: user.id, email: user.email, role: "superadmin" },
+      process.env.JWT_SECRET,
+      { expiresIn: JWT_EXPIRY }
     );
-    return;
-  }
 
-  if (limit > 0) {
-    // LIMIT cannot be a bound parameter inside a subquery in MySQL —
-    // cast to integer and inline it directly to avoid mysqld_stmt_execute error.
-    const safeLimit = parseInt(limit, 10);
-    await db.query(
-      `UPDATE conference_rooms SET is_active = 1
-       WHERE id IN (
-         SELECT id FROM (
-           SELECT id FROM conference_rooms
-           WHERE company_id = ?
-           ORDER BY room_number ASC, id ASC
-           LIMIT ${safeLimit}
-         ) AS t
-       )`,
-      [companyId]
-    );
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+      user: { id: user.id, email: user.email, name: user.name, role: "superadmin" },
+    });
+  } catch (err) {
+    console.error("SUPERADMIN LOGIN ERROR:", err.message);
+    return res.status(401).json({ success: false, message: err.message || "Login failed" });
   }
 };
 
 /* ======================================================
-   SUPERADMIN LOGIN
+   DASHBOARD
+   GET /api/superadmin/dashboard
 ====================================================== */
-export const superAdminLogin = async ({ email, password }) => {
-  const cleanEmail = email?.trim().toLowerCase();
-
-  if (!cleanEmail || !password) {
-    throw new Error("Email and password are required");
+export const dashboard = async (req, res) => {
+  try {
+    const companies = await service.getDashboard();
+    return res.status(200).json({ success: true, companies });
+  } catch (err) {
+    console.error("SUPERADMIN DASHBOARD ERROR:", err.message);
+    return res.status(500).json({ success: false, message: "Failed to load dashboard" });
   }
-
-  const [rows] = await db.execute(
-    `SELECT id, email, name, password_hash, role, is_active
-     FROM users
-     WHERE email = ? AND role = 'superadmin'
-     LIMIT 1`,
-    [cleanEmail]
-  );
-
-  if (!rows.length) throw new Error("Invalid credentials");
-
-  const user = rows[0];
-
-  if (!user.is_active) throw new Error("Account is inactive. Contact support.");
-
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) throw new Error("Invalid credentials");
-
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: "superadmin",
-  };
 };
 
 /* ======================================================
-   DASHBOARD — aggregated counts per company
+   COMPANY DETAIL
+   GET /api/superadmin/companies/:id
 ====================================================== */
-export const getDashboard = async () => {
-  const [rows] = await db.execute(
-    `SELECT
-       c.id,
-       c.name,
-       c.slug,
-       c.plan,
-       c.subscription_status,
-       c.is_suspended,
-       c.trial_ends_at,
-       c.subscription_ends_at,
-       c.created_at,
-       (SELECT COUNT(*) FROM conference_rooms  cr WHERE cr.company_id = c.id) AS total_rooms,
-       (SELECT COUNT(*) FROM conference_bookings cb WHERE cb.company_id = c.id) AS total_bookings,
-       (SELECT COUNT(*) FROM visitors          v  WHERE v.company_id  = c.id) AS total_visitors,
-       (SELECT COUNT(*) FROM users             u  WHERE u.company_id  = c.id) AS total_users
-     FROM companies c
-     ORDER BY c.created_at DESC`
-  );
+export const companyDetail = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
 
-  return rows;
+    const company = await service.getCompanyDetail(companyId);
+    return res.status(200).json({ success: true, company });
+  } catch (err) {
+    console.error("SUPERADMIN COMPANY DETAIL ERROR:", err.message);
+    const status = err.message === "Company not found" ? 404 : 500;
+    return res.status(status).json({ success: false, message: err.message });
+  }
 };
 
 /* ======================================================
-   SINGLE COMPANY DETAIL
+   COMPANY USERS
+   GET /api/superadmin/companies/:id/users
 ====================================================== */
-export const getCompanyDetail = async (companyId) => {
-  const [[company]] = await db.execute(
-    `SELECT
-       c.*,
-       (SELECT COUNT(*) FROM conference_rooms  cr WHERE cr.company_id = c.id) AS total_rooms,
-       (SELECT COUNT(*) FROM conference_bookings cb WHERE cb.company_id = c.id) AS total_bookings,
-       (SELECT COUNT(*) FROM visitors          v  WHERE v.company_id  = c.id) AS total_visitors,
-       (SELECT COUNT(*) FROM users             u  WHERE u.company_id  = c.id) AS total_users
-     FROM companies c
-     WHERE c.id = ?
-     LIMIT 1`,
-    [companyId]
-  );
+export const companyUsers = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
 
-  if (!company) throw new Error("Company not found");
-  return company;
-};
-
-/* ======================================================
-   HELPERS
-====================================================== */
-const toSlug = (str) =>
-  str
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")   // remove special chars
-    .replace(/\s+/g, "-")            // spaces → hyphens
-    .replace(/-+/g, "-")             // collapse multiple hyphens
-    .replace(/^-+|-+$/g, "");        // trim leading/trailing hyphens
-
-/* ======================================================
-   GET COMPANY USERS  (used by Edit tab to show current emails)
-====================================================== */
-export const getCompanyUsers = async (companyId) => {
-  const [rows] = await db.execute(
-    `SELECT id, name, email, role, is_active
-     FROM users
-     WHERE company_id = ?
-     ORDER BY id ASC`,
-    [companyId]
-  );
-  return rows;
+    const users = await service.getCompanyUsers(companyId);
+    return res.status(200).json({ success: true, users });
+  } catch (err) {
+    console.error("SUPERADMIN COMPANY USERS ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
 };
 
 /* ======================================================
    UPDATE COMPANY
-   Supports: company name (+ auto slug), company id (cascaded), user email
+   PATCH /api/superadmin/companies/:id/update
+   body: { name?, newCompanyId?, userEmail?, newUserEmail? }
 ====================================================== */
-export const updateCompany = async (companyId, { newCompanyId, name, userEmail, newUserEmail }) => {
-  const conn = await db.getConnection();
-
+export const updateCompany = async (req, res) => {
   try {
-    await conn.beginTransaction();
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
 
-    // Verify company exists
-    const [[company]] = await conn.execute(
-      `SELECT id, name, slug FROM companies WHERE id = ? LIMIT 1`,
-      [companyId]
-    );
-    if (!company) throw new Error("Company not found");
+    const { name, newCompanyId, userEmail, newUserEmail } = req.body;
 
-    // ── 1. Update company name + auto-generate slug ─────────
-    if (name && name.trim() !== company.name) {
-      const newSlug = toSlug(name);
-
-      // Ensure slug is unique (exclude current company)
-      const [[slugConflict]] = await conn.execute(
-        `SELECT id FROM companies WHERE slug = ? AND id != ? LIMIT 1`,
-        [newSlug, companyId]
-      );
-      if (slugConflict) throw new Error(`Slug "${newSlug}" is already in use by another company`);
-
-      await conn.execute(
-        `UPDATE companies SET name = ?, slug = ?, updated_at = NOW() WHERE id = ?`,
-        [name.trim(), newSlug, companyId]
-      );
+    if (!name && !newCompanyId && !(userEmail && newUserEmail)) {
+      return res.status(400).json({ success: false, message: "At least one field to update is required" });
     }
 
-    // ── 2. Update user email ────────────────────────────────
-    if (userEmail && newUserEmail) {
-      const cleanOld = userEmail.trim().toLowerCase();
-      const cleanNew = newUserEmail.trim().toLowerCase();
-
-      if (cleanOld !== cleanNew) {
-        // Check target email isn't already taken
-        const [conflict] = await conn.execute(
-          `SELECT id FROM users WHERE email = ? LIMIT 1`,
-          [cleanNew]
-        );
-        if (conflict.length) throw new Error("Email already in use by another account");
-
-        const [result] = await conn.execute(
-          `UPDATE users SET email = ? WHERE email = ? AND company_id = ?`,
-          [cleanNew, cleanOld, companyId]
-        );
-        if (result.affectedRows === 0)
-          throw new Error("User not found in this company with that email");
-      }
+    if (newCompanyId && isNaN(parseInt(newCompanyId))) {
+      return res.status(400).json({ success: false, message: "Invalid new company ID" });
     }
 
-    // ── 3. Change company ID (full cascade) ─────────────────
-    //    company.id is a PK referenced by many FK columns.
-    //    We must update all child tables first, then the PK.
-    if (newCompanyId && Number(newCompanyId) !== Number(companyId)) {
-      const nid = Number(newCompanyId);
-
-      // Ensure new ID isn't already taken
-      const [[idConflict]] = await conn.execute(
-        `SELECT id FROM companies WHERE id = ? LIMIT 1`,
-        [nid]
-      );
-      if (idConflict) throw new Error(`Company ID ${nid} is already in use`);
-
-      // Temporarily disable FK checks for this connection only
-      await conn.execute(`SET FOREIGN_KEY_CHECKS = 0`);
-
-      const childTables = [
-        { table: "users",               col: "company_id" },
-        { table: "conference_rooms",     col: "company_id" },
-        { table: "conference_bookings",  col: "company_id" },
-        { table: "visitors",             col: "company_id" },
-        { table: "visitor_otp",          col: "company_id" },
-        { table: "public_booking_otp",   col: "company_id" },
-        { table: "upgrade_requests",     col: "company_id" },
-        { table: "webhook_events",       col: "company_id" },
-      ];
-
-      for (const { table, col } of childTables) {
-        await conn.execute(
-          `UPDATE \`${table}\` SET \`${col}\` = ? WHERE \`${col}\` = ?`,
-          [nid, companyId]
-        ).catch(() => {}); // skip if table doesn't exist
-      }
-
-      // Update the PK itself
-      await conn.execute(
-        `UPDATE companies SET id = ?, updated_at = NOW() WHERE id = ?`,
-        [nid, companyId]
-      );
-
-      await conn.execute(`SET FOREIGN_KEY_CHECKS = 1`);
+    if ((userEmail && !newUserEmail) || (!userEmail && newUserEmail)) {
+      return res.status(400).json({ success: false, message: "Both userEmail and newUserEmail are required to update email" });
     }
 
-    await conn.commit();
+    await service.updateCompany(companyId, { name, newCompanyId, userEmail, newUserEmail });
+    return res.status(200).json({ success: true, message: "Company updated successfully" });
   } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
+    console.error("SUPERADMIN UPDATE COMPANY ERROR:", err.message);
+    const status = err.message === "Company not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message });
   }
 };
 
 /* ======================================================
    UPDATE PLAN
-   Changes plan + syncs room activation
+   PATCH /api/superadmin/companies/:id/plan
+   body: { plan: "trial" | "business" | "enterprise" }
 ====================================================== */
-export const updatePlan = async (companyId, plan) => {
-  const validPlans = ["trial", "business", "enterprise"];
-  if (!validPlans.includes(plan)) throw new Error("Invalid plan");
+export const updatePlan = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const { plan }  = req.body;
 
-  await db.execute(
-    `UPDATE companies SET plan = ?, updated_at = NOW() WHERE id = ?`,
-    [plan, companyId]
-  );
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!plan)             return res.status(400).json({ success: false, message: "plan is required" });
 
-  await syncRoomActivationByPlan(companyId, plan);
+    await service.updatePlan(companyId, plan.toLowerCase());
+    return res.status(200).json({ success: true, message: `Plan updated to ${plan}` });
+  } catch (err) {
+    console.error("SUPERADMIN UPDATE PLAN ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };
 
 /* ======================================================
    UPDATE SUBSCRIPTION STATUS
+   PATCH /api/superadmin/companies/:id/status
+   body: { status: "pending" | "trial" | "active" | "cancelled" | "expired" }
 ====================================================== */
-export const updateSubscriptionStatus = async (companyId, status) => {
-  const validStatuses = ["pending", "trial", "active", "cancelled", "expired"];
-  if (!validStatuses.includes(status)) throw new Error("Invalid subscription status");
+export const updateStatus = async (req, res) => {
+  try {
+    const companyId  = parseInt(req.params.id);
+    const { status } = req.body;
 
-  await db.execute(
-    `UPDATE companies SET subscription_status = ?, updated_at = NOW() WHERE id = ?`,
-    [status, companyId]
-  );
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!status)           return res.status(400).json({ success: false, message: "status is required" });
+
+    await service.updateSubscriptionStatus(companyId, status.toLowerCase());
+    return res.status(200).json({ success: true, message: `Status updated to ${status}` });
+  } catch (err) {
+    console.error("SUPERADMIN UPDATE STATUS ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };
 
 /* ======================================================
    EXTEND TRIAL
+   PATCH /api/superadmin/companies/:id/extend-trial
+   body: { trial_ends_at: "2025-12-31" }
 ====================================================== */
-export const extendTrial = async (companyId, trialEndsAt) => {
-  if (!trialEndsAt) throw new Error("trial_ends_at date is required");
+export const extendTrial = async (req, res) => {
+  try {
+    const companyId        = parseInt(req.params.id);
+    const { trial_ends_at } = req.body;
 
-  const date = new Date(trialEndsAt);
-  if (isNaN(date.getTime())) throw new Error("Invalid date format");
+    if (isNaN(companyId))  return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!trial_ends_at)    return res.status(400).json({ success: false, message: "trial_ends_at is required" });
 
-  await db.execute(
-    `UPDATE companies
-     SET trial_ends_at = ?, subscription_status = 'trial', updated_at = NOW()
-     WHERE id = ?`,
-    [trialEndsAt, companyId]
-  );
+    await service.extendTrial(companyId, trial_ends_at);
+    return res.status(200).json({ success: true, message: `Trial extended to ${trial_ends_at}` });
+  } catch (err) {
+    console.error("SUPERADMIN EXTEND TRIAL ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
 };
 
 /* ======================================================
    UPDATE SUBSCRIPTION DATES
+   PATCH /api/superadmin/companies/:id/subscription-dates
+   body: { subscription_ends_at: "2025-12-31", subscription_start?: "2025-01-01" }
 ====================================================== */
-export const updateSubscriptionDates = async (companyId, { subscription_start, subscription_ends_at }) => {
-  if (!subscription_ends_at) throw new Error("subscription_ends_at is required");
-
-  const endDate = new Date(subscription_ends_at);
-  if (isNaN(endDate.getTime())) throw new Error("Invalid subscription_ends_at date");
-
-  if (subscription_start) {
-    const startDate = new Date(subscription_start);
-    if (isNaN(startDate.getTime())) throw new Error("Invalid subscription_start date");
-  }
-
-  await db.execute(
-    `UPDATE companies
-     SET subscription_ends_at = ?, updated_at = NOW()
-     WHERE id = ?`,
-    [subscription_ends_at, companyId]
-  );
-};
-
-/* ======================================================
-   FORCE CANCEL SUBSCRIPTION
-====================================================== */
-export const forceCancel = async (companyId) => {
-  await db.execute(
-    `UPDATE companies
-     SET subscription_status = 'cancelled',
-         pending_upgrade_plan = NULL,
-         updated_at = NOW()
-     WHERE id = ?`,
-    [companyId]
-  );
-};
-
-/* ======================================================
-   SUSPEND / UNSUSPEND COMPANY
-====================================================== */
-export const setSuspension = async (companyId, suspend) => {
-  await db.execute(
-    `UPDATE companies SET is_suspended = ?, updated_at = NOW() WHERE id = ?`,
-    [suspend ? 1 : 0, companyId]
-  );
-};
-
-/* ======================================================
-   FORGOT PASSWORD (superadmin — no company JOIN)
-====================================================== */
-export const forgotPassword = async (email) => {
-  const cleanEmail = email?.trim().toLowerCase();
-  if (!cleanEmail) throw new Error("Email is required");
-
-  const [rows] = await db.execute(
-    `SELECT id, reset_last_sent FROM users
-     WHERE email = ? AND role = 'superadmin' LIMIT 1`,
-    [cleanEmail]
-  );
-
-  if (!rows.length) return { sent: true }; // don't leak
-
-  const user = rows[0];
-
-  // 30s cooldown
-  if (user.reset_last_sent) {
-    const [[wait]] = await db.query(
-      `SELECT GREATEST(0, 30 - TIMESTAMPDIFF(SECOND, reset_last_sent, NOW())) AS w
-       FROM users WHERE id = ?`,
-      [user.id]
-    );
-    if (wait.w > 0) return { sent: false, waitSeconds: wait.w };
-  }
-
-  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-  await db.execute(
-    `UPDATE users
-     SET reset_code = ?, reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE), reset_last_sent = NOW()
-     WHERE id = ?`,
-    [code, user.id]
-  );
-
-  await sendEmail({
-    to: cleanEmail,
-    subject: "PROMEET SuperAdmin — Password Reset Code",
-    html: `
-      <p>Hello <b>SuperAdmin</b>,</p>
-      <p>Your password reset code is:</p>
-      <div style="background:#f8f9ff;border-left:4px solid #6c2bd9;padding:20px;margin:20px 0;text-align:center;">
-        <h2 style="color:#6c2bd9;margin:0;letter-spacing:4px;font-size:32px;">${code}</h2>
-      </div>
-      <p>Valid for <b>10 minutes</b>. Do not share this code.</p>
-    `,
-  }).catch(console.error);
-
-  return { sent: true };
-};
-
-/* ======================================================
-   RESET PASSWORD (superadmin)
-====================================================== */
-export const resetPassword = async ({ email, code, password }) => {
-  const cleanEmail = email?.trim().toLowerCase();
-  if (!cleanEmail || !code || !password) throw new Error("All fields required");
-  if (password.length < 8) throw new Error("Password must be at least 8 characters");
-
-  const [rows] = await db.execute(
-    `SELECT id, reset_code FROM users
-     WHERE email = ? AND role = 'superadmin' AND reset_expires > NOW() LIMIT 1`,
-    [cleanEmail]
-  );
-
-  if (!rows.length || rows[0].reset_code !== code.toUpperCase()) {
-    throw new Error("Invalid or expired reset code");
-  }
-
-  const hash = await bcrypt.hash(password, 10);
-
-  await db.execute(
-    `UPDATE users
-     SET password_hash = ?, reset_code = NULL, reset_expires = NULL, reset_last_sent = NULL
-     WHERE id = ?`,
-    [hash, rows[0].id]
-  );
-};
-
-/* ======================================================
-   DELETE COMPANY (full cascade, FK-safe)
-====================================================== */
-export const deleteCompany = async (companyId) => {
-  const conn = await db.getConnection();
-
+export const updateSubscriptionDates = async (req, res) => {
   try {
-    await conn.beginTransaction();
+    const companyId                              = parseInt(req.params.id);
+    const { subscription_ends_at, subscription_start } = req.body;
 
-    // Verify company exists
-    const [[company]] = await conn.execute(
-      `SELECT id FROM companies WHERE id = ? LIMIT 1`,
-      [companyId]
-    );
-    if (!company) throw new Error("Company not found");
+    if (isNaN(companyId))       return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!subscription_ends_at)  return res.status(400).json({ success: false, message: "subscription_ends_at is required" });
 
-    // 1. visitor_otp
-    await conn.execute(
-      `DELETE FROM visitor_otp WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // 2. public_booking_otp
-    await conn.execute(
-      `DELETE FROM public_booking_otp WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // 3. visitors
-    await conn.execute(
-      `DELETE FROM visitors WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // 4. conference_bookings — MUST come before conference_rooms
-    //    FK: conference_bookings.room_id → conference_rooms.id
-    await conn.execute(
-      `DELETE FROM conference_bookings WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // 4b. safety net: catch any bookings tied via room_id but missing company_id
-    await conn.execute(
-      `DELETE cb FROM conference_bookings cb
-       INNER JOIN conference_rooms cr ON cr.id = cb.room_id
-       WHERE cr.company_id = ?`,
-      [companyId]
-    ).catch(() => {});
-
-    // 5. conference_rooms — safe to delete now that bookings are gone
-    await conn.execute(
-      `DELETE FROM conference_rooms WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // 6. upgrade_requests
-    await conn.execute(
-      `DELETE FROM upgrade_requests WHERE company_id = ?`,
-      [companyId]
-    ).catch(() => {});
-
-    // 7. webhook_events
-    await conn.execute(
-      `DELETE FROM webhook_events WHERE company_id = ?`,
-      [companyId]
-    ).catch(() => {});
-
-    // 8. password_resets — linked via user_id
-    await conn.execute(
-      `DELETE pr FROM password_resets pr
-       INNER JOIN users u ON u.id = pr.user_id
-       WHERE u.company_id = ?`,
-      [companyId]
-    ).catch(() => {});
-
-    // 9. users
-    await conn.execute(
-      `DELETE FROM users WHERE company_id = ?`,
-      [companyId]
-    );
-
-    // 10. company
-    await conn.execute(
-      `DELETE FROM companies WHERE id = ?`,
-      [companyId]
-    );
-
-    await conn.commit();
+    await service.updateSubscriptionDates(companyId, { subscription_ends_at, subscription_start });
+    return res.status(200).json({ success: true, message: "Subscription dates updated" });
   } catch (err) {
-    await conn.rollback();
-    throw err;
-  } finally {
-    conn.release();
+    console.error("SUPERADMIN UPDATE DATES ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   FORCE CANCEL
+   POST /api/superadmin/companies/:id/force-cancel
+====================================================== */
+export const forceCancel = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    await service.forceCancel(companyId);
+    return res.status(200).json({ success: true, message: "Subscription force cancelled" });
+  } catch (err) {
+    console.error("SUPERADMIN FORCE CANCEL ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   SUSPEND / UNSUSPEND
+   POST /api/superadmin/companies/:id/suspend
+   POST /api/superadmin/companies/:id/unsuspend
+====================================================== */
+export const suspendCompany = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    await service.setSuspension(companyId, true);
+    return res.status(200).json({ success: true, message: "Company suspended" });
+  } catch (err) {
+    console.error("SUPERADMIN SUSPEND ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+export const unsuspendCompany = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    await service.setSuspension(companyId, false);
+    return res.status(200).json({ success: true, message: "Company unsuspended" });
+  } catch (err) {
+    console.error("SUPERADMIN UNSUSPEND ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   DELETE COMPANY
+   DELETE /api/superadmin/companies/:id
+====================================================== */
+export const deleteCompany = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    await service.deleteCompany(companyId);
+    return res.status(200).json({ success: true, message: "Company and all related data permanently deleted" });
+  } catch (err) {
+    console.error("SUPERADMIN DELETE COMPANY ERROR:", err.message);
+    const status = err.message === "Company not found" ? 404 : 500;
+    return res.status(status).json({ success: false, message: err.message });
   }
 };
