@@ -2,19 +2,38 @@ import { db } from "../config/db.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/mailer.js";
 
-/* ── Inlined from conference routes (not exported from a controller file) ── */
+/* ======================================================
+   CONSTANTS & HELPERS
+====================================================== */
 const PLAN_ROOM_LIMITS = { trial: 2, business: 6, enterprise: Infinity };
 
+const toSlug = (str) =>
+  str
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+/* ======================================================
+   SYNC ROOM ACTIVATION BY PLAN
+   — called after every plan change
+   — LIMIT must be inlined as an integer literal;
+     MySQL rejects bound ? params for LIMIT in subqueries
+====================================================== */
 const syncRoomActivationByPlan = async (companyId, plan) => {
   const limit = PLAN_ROOM_LIMITS[(plan || "trial").toLowerCase()] ?? 2;
 
-  await db.execute(
+  // Step 1: deactivate all rooms for this company
+  await db.query(
     `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,
     [companyId]
   );
 
+  // Step 2: reactivate up to the plan limit
   if (limit === Infinity) {
-    await db.execute(
+    await db.query(
       `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
       [companyId]
     );
@@ -22,17 +41,18 @@ const syncRoomActivationByPlan = async (companyId, plan) => {
   }
 
   if (limit > 0) {
-    await db.execute(
+    const safeLimit = parseInt(limit, 10); // guaranteed integer — never user input
+    await db.query(
       `UPDATE conference_rooms SET is_active = 1
        WHERE id IN (
          SELECT id FROM (
            SELECT id FROM conference_rooms
            WHERE company_id = ?
            ORDER BY room_number ASC, id ASC
-           LIMIT ?
+           LIMIT ${safeLimit}
          ) AS t
        )`,
-      [companyId, limit]
+      [companyId]
     );
   }
 };
@@ -42,12 +62,9 @@ const syncRoomActivationByPlan = async (companyId, plan) => {
 ====================================================== */
 export const superAdminLogin = async ({ email, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
+  if (!cleanEmail || !password) throw new Error("Email and password are required");
 
-  if (!cleanEmail || !password) {
-    throw new Error("Email and password are required");
-  }
-
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `SELECT id, email, name, password_hash, role, is_active
      FROM users
      WHERE email = ? AND role = 'superadmin'
@@ -58,25 +75,19 @@ export const superAdminLogin = async ({ email, password }) => {
   if (!rows.length) throw new Error("Invalid credentials");
 
   const user = rows[0];
-
   if (!user.is_active) throw new Error("Account is inactive. Contact support.");
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw new Error("Invalid credentials");
 
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: "superadmin",
-  };
+  return { id: user.id, email: user.email, name: user.name, role: "superadmin" };
 };
 
 /* ======================================================
    DASHBOARD — aggregated counts per company
 ====================================================== */
 export const getDashboard = async () => {
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `SELECT
        c.id,
        c.name,
@@ -87,14 +98,13 @@ export const getDashboard = async () => {
        c.trial_ends_at,
        c.subscription_ends_at,
        c.created_at,
-       (SELECT COUNT(*) FROM conference_rooms  cr WHERE cr.company_id = c.id) AS total_rooms,
+       (SELECT COUNT(*) FROM conference_rooms   cr WHERE cr.company_id = c.id) AS total_rooms,
        (SELECT COUNT(*) FROM conference_bookings cb WHERE cb.company_id = c.id) AS total_bookings,
-       (SELECT COUNT(*) FROM visitors          v  WHERE v.company_id  = c.id) AS total_visitors,
-       (SELECT COUNT(*) FROM users             u  WHERE u.company_id  = c.id) AS total_users
+       (SELECT COUNT(*) FROM visitors            v  WHERE v.company_id  = c.id) AS total_visitors,
+       (SELECT COUNT(*) FROM users               u  WHERE u.company_id  = c.id) AS total_users
      FROM companies c
      ORDER BY c.created_at DESC`
   );
-
   return rows;
 };
 
@@ -102,40 +112,28 @@ export const getDashboard = async () => {
    SINGLE COMPANY DETAIL
 ====================================================== */
 export const getCompanyDetail = async (companyId) => {
-  const [[company]] = await db.execute(
+  const [rows] = await db.query(
     `SELECT
        c.*,
-       (SELECT COUNT(*) FROM conference_rooms  cr WHERE cr.company_id = c.id) AS total_rooms,
+       (SELECT COUNT(*) FROM conference_rooms   cr WHERE cr.company_id = c.id) AS total_rooms,
        (SELECT COUNT(*) FROM conference_bookings cb WHERE cb.company_id = c.id) AS total_bookings,
-       (SELECT COUNT(*) FROM visitors          v  WHERE v.company_id  = c.id) AS total_visitors,
-       (SELECT COUNT(*) FROM users             u  WHERE u.company_id  = c.id) AS total_users
+       (SELECT COUNT(*) FROM visitors            v  WHERE v.company_id  = c.id) AS total_visitors,
+       (SELECT COUNT(*) FROM users               u  WHERE u.company_id  = c.id) AS total_users
      FROM companies c
      WHERE c.id = ?
      LIMIT 1`,
     [companyId]
   );
 
-  if (!company) throw new Error("Company not found");
-  return company;
+  if (!rows.length) throw new Error("Company not found");
+  return rows[0];
 };
 
 /* ======================================================
-   HELPERS
-====================================================== */
-const toSlug = (str) =>
-  str
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")   // remove special chars
-    .replace(/\s+/g, "-")            // spaces → hyphens
-    .replace(/-+/g, "-")             // collapse multiple hyphens
-    .replace(/^-+|-+$/g, "");        // trim leading/trailing hyphens
-
-/* ======================================================
-   GET COMPANY USERS  (used by Edit tab to show current emails)
+   GET COMPANY USERS — for Edit tab email picker
 ====================================================== */
 export const getCompanyUsers = async (companyId) => {
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `SELECT id, name, email, role, is_active
      FROM users
      WHERE company_id = ?
@@ -147,7 +145,7 @@ export const getCompanyUsers = async (companyId) => {
 
 /* ======================================================
    UPDATE COMPANY
-   Supports: company name (+ auto slug), company id (cascaded), user email
+   Supports: name (+ auto slug), company ID (cascaded), user email
 ====================================================== */
 export const updateCompany = async (companyId, { newCompanyId, name, userEmail, newUserEmail }) => {
   const conn = await db.getConnection();
@@ -156,43 +154,42 @@ export const updateCompany = async (companyId, { newCompanyId, name, userEmail, 
     await conn.beginTransaction();
 
     // Verify company exists
-    const [[company]] = await conn.execute(
+    const [companyRows] = await conn.query(
       `SELECT id, name, slug FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
-    if (!company) throw new Error("Company not found");
+    if (!companyRows.length) throw new Error("Company not found");
+    const company = companyRows[0];
 
-    // ── 1. Update company name + auto-generate slug ─────────
+    // ── 1. Update name + auto-generate slug ─────────────────
     if (name && name.trim() !== company.name) {
       const newSlug = toSlug(name);
 
-      // Ensure slug is unique (exclude current company)
-      const [[slugConflict]] = await conn.execute(
+      const [slugConflict] = await conn.query(
         `SELECT id FROM companies WHERE slug = ? AND id != ? LIMIT 1`,
         [newSlug, companyId]
       );
-      if (slugConflict) throw new Error(`Slug "${newSlug}" is already in use by another company`);
+      if (slugConflict.length) throw new Error(`Slug "${newSlug}" is already in use by another company`);
 
-      await conn.execute(
+      await conn.query(
         `UPDATE companies SET name = ?, slug = ?, updated_at = NOW() WHERE id = ?`,
         [name.trim(), newSlug, companyId]
       );
     }
 
-    // ── 2. Update user email ────────────────────────────────
+    // ── 2. Update user email ─────────────────────────────────
     if (userEmail && newUserEmail) {
       const cleanOld = userEmail.trim().toLowerCase();
       const cleanNew = newUserEmail.trim().toLowerCase();
 
       if (cleanOld !== cleanNew) {
-        // Check target email isn't already taken
-        const [conflict] = await conn.execute(
+        const [conflict] = await conn.query(
           `SELECT id FROM users WHERE email = ? LIMIT 1`,
           [cleanNew]
         );
         if (conflict.length) throw new Error("Email already in use by another account");
 
-        const [result] = await conn.execute(
+        const [result] = await conn.query(
           `UPDATE users SET email = ? WHERE email = ? AND company_id = ?`,
           [cleanNew, cleanOld, companyId]
         );
@@ -201,47 +198,42 @@ export const updateCompany = async (companyId, { newCompanyId, name, userEmail, 
       }
     }
 
-    // ── 3. Change company ID (full cascade) ─────────────────
-    //    company.id is a PK referenced by many FK columns.
-    //    We must update all child tables first, then the PK.
+    // ── 3. Change company ID (full cascade) ──────────────────
     if (newCompanyId && Number(newCompanyId) !== Number(companyId)) {
       const nid = Number(newCompanyId);
 
-      // Ensure new ID isn't already taken
-      const [[idConflict]] = await conn.execute(
+      const [idConflict] = await conn.query(
         `SELECT id FROM companies WHERE id = ? LIMIT 1`,
         [nid]
       );
-      if (idConflict) throw new Error(`Company ID ${nid} is already in use`);
+      if (idConflict.length) throw new Error(`Company ID ${nid} is already in use`);
 
-      // Temporarily disable FK checks for this connection only
-      await conn.execute(`SET FOREIGN_KEY_CHECKS = 0`);
+      await conn.query(`SET FOREIGN_KEY_CHECKS = 0`);
 
       const childTables = [
-        { table: "users",               col: "company_id" },
-        { table: "conference_rooms",     col: "company_id" },
-        { table: "conference_bookings",  col: "company_id" },
-        { table: "visitors",             col: "company_id" },
-        { table: "visitor_otp",          col: "company_id" },
-        { table: "public_booking_otp",   col: "company_id" },
-        { table: "upgrade_requests",     col: "company_id" },
-        { table: "webhook_events",       col: "company_id" },
+        "users",
+        "conference_rooms",
+        "conference_bookings",
+        "visitors",
+        "visitor_otp",
+        "public_booking_otp",
+        "upgrade_requests",
+        "webhook_events",
       ];
 
-      for (const { table, col } of childTables) {
-        await conn.execute(
-          `UPDATE \`${table}\` SET \`${col}\` = ? WHERE \`${col}\` = ?`,
+      for (const table of childTables) {
+        await conn.query(
+          `UPDATE \`${table}\` SET company_id = ? WHERE company_id = ?`,
           [nid, companyId]
-        ).catch(() => {}); // skip if table doesn't exist
+        ).catch(() => {});
       }
 
-      // Update the PK itself
-      await conn.execute(
+      await conn.query(
         `UPDATE companies SET id = ?, updated_at = NOW() WHERE id = ?`,
         [nid, companyId]
       );
 
-      await conn.execute(`SET FOREIGN_KEY_CHECKS = 1`);
+      await conn.query(`SET FOREIGN_KEY_CHECKS = 1`);
     }
 
     await conn.commit();
@@ -254,14 +246,13 @@ export const updateCompany = async (companyId, { newCompanyId, name, userEmail, 
 };
 
 /* ======================================================
-   UPDATE PLAN
-   Changes plan + syncs room activation
+   UPDATE PLAN + sync room activation
 ====================================================== */
 export const updatePlan = async (companyId, plan) => {
   const validPlans = ["trial", "business", "enterprise"];
   if (!validPlans.includes(plan)) throw new Error("Invalid plan");
 
-  await db.execute(
+  await db.query(
     `UPDATE companies SET plan = ?, updated_at = NOW() WHERE id = ?`,
     [plan, companyId]
   );
@@ -276,7 +267,7 @@ export const updateSubscriptionStatus = async (companyId, status) => {
   const validStatuses = ["pending", "trial", "active", "cancelled", "expired"];
   if (!validStatuses.includes(status)) throw new Error("Invalid subscription status");
 
-  await db.execute(
+  await db.query(
     `UPDATE companies SET subscription_status = ?, updated_at = NOW() WHERE id = ?`,
     [status, companyId]
   );
@@ -291,7 +282,7 @@ export const extendTrial = async (companyId, trialEndsAt) => {
   const date = new Date(trialEndsAt);
   if (isNaN(date.getTime())) throw new Error("Invalid date format");
 
-  await db.execute(
+  await db.query(
     `UPDATE companies
      SET trial_ends_at = ?, subscription_status = 'trial', updated_at = NOW()
      WHERE id = ?`,
@@ -313,10 +304,8 @@ export const updateSubscriptionDates = async (companyId, { subscription_start, s
     if (isNaN(startDate.getTime())) throw new Error("Invalid subscription_start date");
   }
 
-  await db.execute(
-    `UPDATE companies
-     SET subscription_ends_at = ?, updated_at = NOW()
-     WHERE id = ?`,
+  await db.query(
+    `UPDATE companies SET subscription_ends_at = ?, updated_at = NOW() WHERE id = ?`,
     [subscription_ends_at, companyId]
   );
 };
@@ -325,7 +314,7 @@ export const updateSubscriptionDates = async (companyId, { subscription_start, s
    FORCE CANCEL SUBSCRIPTION
 ====================================================== */
 export const forceCancel = async (companyId) => {
-  await db.execute(
+  await db.query(
     `UPDATE companies
      SET subscription_status = 'cancelled',
          pending_upgrade_plan = NULL,
@@ -339,44 +328,45 @@ export const forceCancel = async (companyId) => {
    SUSPEND / UNSUSPEND COMPANY
 ====================================================== */
 export const setSuspension = async (companyId, suspend) => {
-  await db.execute(
+  await db.query(
     `UPDATE companies SET is_suspended = ?, updated_at = NOW() WHERE id = ?`,
     [suspend ? 1 : 0, companyId]
   );
 };
 
 /* ======================================================
-   FORGOT PASSWORD (superadmin — no company JOIN)
+   FORGOT PASSWORD
 ====================================================== */
 export const forgotPassword = async (email) => {
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail) throw new Error("Email is required");
 
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `SELECT id, reset_last_sent FROM users
      WHERE email = ? AND role = 'superadmin' LIMIT 1`,
     [cleanEmail]
   );
 
-  if (!rows.length) return { sent: true }; // don't leak
+  if (!rows.length) return { sent: true }; // silent — don't leak existence
 
   const user = rows[0];
 
-  // 30s cooldown
   if (user.reset_last_sent) {
-    const [[wait]] = await db.query(
+    const [wait] = await db.query(
       `SELECT GREATEST(0, 30 - TIMESTAMPDIFF(SECOND, reset_last_sent, NOW())) AS w
        FROM users WHERE id = ?`,
       [user.id]
     );
-    if (wait.w > 0) return { sent: false, waitSeconds: wait.w };
+    if (wait[0].w > 0) return { sent: false, waitSeconds: wait[0].w };
   }
 
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
 
-  await db.execute(
+  await db.query(
     `UPDATE users
-     SET reset_code = ?, reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE), reset_last_sent = NOW()
+     SET reset_code = ?,
+         reset_expires = DATE_ADD(NOW(), INTERVAL 10 MINUTE),
+         reset_last_sent = NOW()
      WHERE id = ?`,
     [code, user.id]
   );
@@ -398,14 +388,14 @@ export const forgotPassword = async (email) => {
 };
 
 /* ======================================================
-   RESET PASSWORD (superadmin)
+   RESET PASSWORD
 ====================================================== */
 export const resetPassword = async ({ email, code, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail || !code || !password) throw new Error("All fields required");
   if (password.length < 8) throw new Error("Password must be at least 8 characters");
 
-  const [rows] = await db.execute(
+  const [rows] = await db.query(
     `SELECT id, reset_code FROM users
      WHERE email = ? AND role = 'superadmin' AND reset_expires > NOW() LIMIT 1`,
     [cleanEmail]
@@ -417,9 +407,12 @@ export const resetPassword = async ({ email, code, password }) => {
 
   const hash = await bcrypt.hash(password, 10);
 
-  await db.execute(
+  await db.query(
     `UPDATE users
-     SET password_hash = ?, reset_code = NULL, reset_expires = NULL, reset_last_sent = NULL
+     SET password_hash = ?,
+         reset_code = NULL,
+         reset_expires = NULL,
+         reset_last_sent = NULL
      WHERE id = ?`,
     [hash, rows[0].id]
   );
@@ -434,66 +427,43 @@ export const deleteCompany = async (companyId) => {
   try {
     await conn.beginTransaction();
 
-    // Verify company exists
-    const [[company]] = await conn.execute(
+    const [check] = await conn.query(
       `SELECT id FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
-    if (!company) throw new Error("Company not found");
+    if (!check.length) throw new Error("Company not found");
 
     // 1. visitor_otp
-    await conn.execute(
-      `DELETE FROM visitor_otp WHERE company_id = ?`,
-      [companyId]
-    );
+    await conn.query(`DELETE FROM visitor_otp WHERE company_id = ?`, [companyId]);
 
     // 2. public_booking_otp
-    await conn.execute(
-      `DELETE FROM public_booking_otp WHERE company_id = ?`,
-      [companyId]
-    );
+    await conn.query(`DELETE FROM public_booking_otp WHERE company_id = ?`, [companyId]);
 
     // 3. visitors
-    await conn.execute(
-      `DELETE FROM visitors WHERE company_id = ?`,
-      [companyId]
-    );
+    await conn.query(`DELETE FROM visitors WHERE company_id = ?`, [companyId]);
 
-    // 4. conference_bookings — MUST come before conference_rooms
-    //    FK: conference_bookings.room_id → conference_rooms.id
-    await conn.execute(
-      `DELETE FROM conference_bookings WHERE company_id = ?`,
-      [companyId]
-    );
+    // 4. conference_bookings — MUST come before rooms (FK: room_id → conference_rooms.id)
+    await conn.query(`DELETE FROM conference_bookings WHERE company_id = ?`, [companyId]);
 
-    // 4b. safety net: catch any bookings tied via room_id but missing company_id
-    await conn.execute(
+    // 4b. safety net: orphaned bookings linked via room_id with no company_id
+    await conn.query(
       `DELETE cb FROM conference_bookings cb
        INNER JOIN conference_rooms cr ON cr.id = cb.room_id
        WHERE cr.company_id = ?`,
       [companyId]
     ).catch(() => {});
 
-    // 5. conference_rooms — safe to delete now that bookings are gone
-    await conn.execute(
-      `DELETE FROM conference_rooms WHERE company_id = ?`,
-      [companyId]
-    );
+    // 5. conference_rooms
+    await conn.query(`DELETE FROM conference_rooms WHERE company_id = ?`, [companyId]);
 
     // 6. upgrade_requests
-    await conn.execute(
-      `DELETE FROM upgrade_requests WHERE company_id = ?`,
-      [companyId]
-    ).catch(() => {});
+    await conn.query(`DELETE FROM upgrade_requests WHERE company_id = ?`, [companyId]).catch(() => {});
 
     // 7. webhook_events
-    await conn.execute(
-      `DELETE FROM webhook_events WHERE company_id = ?`,
-      [companyId]
-    ).catch(() => {});
+    await conn.query(`DELETE FROM webhook_events WHERE company_id = ?`, [companyId]).catch(() => {});
 
-    // 8. password_resets — linked via user_id
-    await conn.execute(
+    // 8. password_resets (linked via user_id)
+    await conn.query(
       `DELETE pr FROM password_resets pr
        INNER JOIN users u ON u.id = pr.user_id
        WHERE u.company_id = ?`,
@@ -501,16 +471,10 @@ export const deleteCompany = async (companyId) => {
     ).catch(() => {});
 
     // 9. users
-    await conn.execute(
-      `DELETE FROM users WHERE company_id = ?`,
-      [companyId]
-    );
+    await conn.query(`DELETE FROM users WHERE company_id = ?`, [companyId]);
 
     // 10. company
-    await conn.execute(
-      `DELETE FROM companies WHERE id = ?`,
-      [companyId]
-    );
+    await conn.query(`DELETE FROM companies WHERE id = ?`, [companyId]);
 
     await conn.commit();
   } catch (err) {
