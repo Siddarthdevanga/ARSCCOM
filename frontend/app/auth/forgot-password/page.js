@@ -11,6 +11,8 @@ export default function ForgotPassword() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
+
   const handleSubmit = async () => {
     setError("");
     setSuccess("");
@@ -23,14 +25,29 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/forgot-password`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: normalizedEmail }),
-        }
-      );
+      /* ── 1. Try superadmin endpoint first ── */
+      const saRes = await fetch(`${API_BASE}/api/superadmin/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+
+      const saData = await saRes.json();
+
+      if (saRes.ok && saData.success) {
+        setSuccess("If the email exists, a reset code has been sent.");
+        setTimeout(() => {
+          router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}&type=superadmin`);
+        }, 1500);
+        return;
+      }
+
+      /* ── 2. Fall through to regular user ── */
+      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
 
       const contentType = res.headers.get("content-type");
       let data = {};
@@ -41,16 +58,13 @@ export default function ForgotPassword() {
         throw new Error(text || "Server returned an invalid response");
       }
 
-      if (!res.ok) {
-        throw new Error(data.message || "Unable to process request");
-      }
+      if (!res.ok) throw new Error(data.message || "Unable to process request");
 
       setSuccess("If the email exists, a reset code has been sent.");
       setTimeout(() => {
-        router.push(
-          `/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}`
-        );
+        router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
       }, 1500);
+
     } catch (err) {
       setError(err.message || "Unable to connect to server");
     } finally {
@@ -84,20 +98,16 @@ export default function ForgotPassword() {
         <main className={styles.mainContent}>
           <div className={styles.formCard}>
 
-            {/* Section header */}
             <div className={styles.sectionHeader}>
               <span className={styles.cardDot} />
               <h3 className={styles.cardTitle}>Reset Your Password</h3>
             </div>
 
-            {/* Lock icon */}
             <div className={styles.lockIcon}>🔐</div>
 
-            {/* Messages */}
             {error && <div className={styles.errorBox}>{error}</div>}
             {success && <div className={styles.successBox}>✓ {success}</div>}
 
-            {/* Email field */}
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Email Address *</label>
               <input
@@ -107,10 +117,10 @@ export default function ForgotPassword() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
               />
             </div>
 
-            {/* Submit */}
             <button
               className={styles.submitBtn}
               onClick={handleSubmit}
@@ -123,7 +133,6 @@ export default function ForgotPassword() {
               )}
             </button>
 
-            {/* Back link */}
             <div className={styles.backLink} onClick={() => router.push("/auth/login")}>
               ← Back to Login
             </div>
