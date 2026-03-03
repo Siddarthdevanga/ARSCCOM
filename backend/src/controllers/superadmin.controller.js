@@ -26,8 +26,8 @@ export const forgotPassword = async (req, res) => {
 ====================================================== */
 export const resetPassword = async (req, res) => {
   try {
-    const email = req.body?.email?.trim().toLowerCase();
-    const code  = req.body?.code?.trim();
+    const email    = req.body?.email?.trim().toLowerCase();
+    const code     = req.body?.code?.trim();
     const password = req.body?.password?.trim();
 
     if (!email || !code || !password) {
@@ -48,7 +48,7 @@ export const resetPassword = async (req, res) => {
 ====================================================== */
 export const login = async (req, res) => {
   try {
-    const email = req.body?.email?.trim().toLowerCase();
+    const email    = req.body?.email?.trim().toLowerCase();
     const password = req.body?.password?.trim();
 
     if (!email || !password) {
@@ -108,6 +108,39 @@ export const companyDetail = async (req, res) => {
 };
 
 /* ======================================================
+   UPDATE COMPANY
+   PATCH /api/superadmin/companies/:id/update
+   body: { name?, newCompanyId?, userEmail?, newUserEmail? }
+====================================================== */
+export const updateCompany = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    const { name, newCompanyId, userEmail, newUserEmail } = req.body;
+
+    if (!name && !newCompanyId && !(userEmail && newUserEmail)) {
+      return res.status(400).json({ success: false, message: "At least one field to update is required" });
+    }
+
+    if (newCompanyId && isNaN(parseInt(newCompanyId))) {
+      return res.status(400).json({ success: false, message: "Invalid new company ID" });
+    }
+
+    if ((userEmail && !newUserEmail) || (!userEmail && newUserEmail)) {
+      return res.status(400).json({ success: false, message: "Both userEmail and newUserEmail are required to update email" });
+    }
+
+    await service.updateCompany(companyId, { name, newCompanyId, userEmail, newUserEmail });
+    return res.status(200).json({ success: true, message: "Company updated successfully" });
+  } catch (err) {
+    console.error("SUPERADMIN UPDATE COMPANY ERROR:", err.message);
+    const status = err.message === "Company not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
    UPDATE PLAN
    PATCH /api/superadmin/companies/:id/plan
    body: { plan: "trial" | "business" | "enterprise" }
@@ -115,10 +148,10 @@ export const companyDetail = async (req, res) => {
 export const updatePlan = async (req, res) => {
   try {
     const companyId = parseInt(req.params.id);
-    const { plan } = req.body;
+    const { plan }  = req.body;
 
     if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!plan) return res.status(400).json({ success: false, message: "plan is required" });
+    if (!plan)             return res.status(400).json({ success: false, message: "plan is required" });
 
     await service.updatePlan(companyId, plan.toLowerCase());
     return res.status(200).json({ success: true, message: `Plan updated to ${plan}` });
@@ -135,11 +168,11 @@ export const updatePlan = async (req, res) => {
 ====================================================== */
 export const updateStatus = async (req, res) => {
   try {
-    const companyId = parseInt(req.params.id);
+    const companyId  = parseInt(req.params.id);
     const { status } = req.body;
 
     if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!status) return res.status(400).json({ success: false, message: "status is required" });
+    if (!status)           return res.status(400).json({ success: false, message: "status is required" });
 
     await service.updateSubscriptionStatus(companyId, status.toLowerCase());
     return res.status(200).json({ success: true, message: `Status updated to ${status}` });
@@ -156,11 +189,11 @@ export const updateStatus = async (req, res) => {
 ====================================================== */
 export const extendTrial = async (req, res) => {
   try {
-    const companyId = parseInt(req.params.id);
+    const companyId        = parseInt(req.params.id);
     const { trial_ends_at } = req.body;
 
-    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!trial_ends_at) return res.status(400).json({ success: false, message: "trial_ends_at is required" });
+    if (isNaN(companyId))  return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!trial_ends_at)    return res.status(400).json({ success: false, message: "trial_ends_at is required" });
 
     await service.extendTrial(companyId, trial_ends_at);
     return res.status(200).json({ success: true, message: `Trial extended to ${trial_ends_at}` });
@@ -177,11 +210,11 @@ export const extendTrial = async (req, res) => {
 ====================================================== */
 export const updateSubscriptionDates = async (req, res) => {
   try {
-    const companyId = parseInt(req.params.id);
+    const companyId                              = parseInt(req.params.id);
     const { subscription_ends_at, subscription_start } = req.body;
 
-    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!subscription_ends_at) return res.status(400).json({ success: false, message: "subscription_ends_at is required" });
+    if (isNaN(companyId))       return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (!subscription_ends_at)  return res.status(400).json({ success: false, message: "subscription_ends_at is required" });
 
     await service.updateSubscriptionDates(companyId, { subscription_ends_at, subscription_start });
     return res.status(200).json({ success: true, message: "Subscription dates updated" });
