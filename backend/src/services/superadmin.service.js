@@ -120,8 +120,34 @@ export const getCompanyDetail = async (companyId) => {
 };
 
 /* ======================================================
+   HELPERS
+====================================================== */
+const toSlug = (str) =>
+  str
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")   // remove special chars
+    .replace(/\s+/g, "-")            // spaces → hyphens
+    .replace(/-+/g, "-")             // collapse multiple hyphens
+    .replace(/^-+|-+$/g, "");        // trim leading/trailing hyphens
+
+/* ======================================================
+   GET COMPANY USERS  (used by Edit tab to show current emails)
+====================================================== */
+export const getCompanyUsers = async (companyId) => {
+  const [rows] = await db.execute(
+    `SELECT id, name, email, role, is_active
+     FROM users
+     WHERE company_id = ?
+     ORDER BY id ASC`,
+    [companyId]
+  );
+  return rows;
+};
+
+/* ======================================================
    UPDATE COMPANY
-   Supports: company name, company id (cascaded), user email
+   Supports: company name (+ auto slug), company id (cascaded), user email
 ====================================================== */
 export const updateCompany = async (companyId, { newCompanyId, name, userEmail, newUserEmail }) => {
   const conn = await db.getConnection();
@@ -131,16 +157,25 @@ export const updateCompany = async (companyId, { newCompanyId, name, userEmail, 
 
     // Verify company exists
     const [[company]] = await conn.execute(
-      `SELECT id, name FROM companies WHERE id = ? LIMIT 1`,
+      `SELECT id, name, slug FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
     if (!company) throw new Error("Company not found");
 
-    // ── 1. Update company name ──────────────────────────────
+    // ── 1. Update company name + auto-generate slug ─────────
     if (name && name.trim() !== company.name) {
+      const newSlug = toSlug(name);
+
+      // Ensure slug is unique (exclude current company)
+      const [[slugConflict]] = await conn.execute(
+        `SELECT id FROM companies WHERE slug = ? AND id != ? LIMIT 1`,
+        [newSlug, companyId]
+      );
+      if (slugConflict) throw new Error(`Slug "${newSlug}" is already in use by another company`);
+
       await conn.execute(
-        `UPDATE companies SET name = ?, updated_at = NOW() WHERE id = ?`,
-        [name.trim(), companyId]
+        `UPDATE companies SET name = ?, slug = ?, updated_at = NOW() WHERE id = ?`,
+        [name.trim(), newSlug, companyId]
       );
     }
 
