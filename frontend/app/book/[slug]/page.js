@@ -928,7 +928,7 @@ export default function PublicConferenceBooking() {
             {getGreeting()}
           </div>
           <h2 className={styles.heroBannerTitle}>
-            Welcome, <span>{company.name}</span>
+            Welcome, <span>Let's Get This Meeting Rolling</span>
           </h2>
           <p className={styles.heroBannerSub}>
             {otpVerified ? "Select a room and time slot to book your conference room" : "Verify your email to start booking conference rooms"}
