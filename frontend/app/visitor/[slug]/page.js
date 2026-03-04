@@ -126,7 +126,7 @@ const Navbar = ({ company }) => (
 /* ===============================================
    HERO BANNER — Step 0 only
 =============================================== */
-const HeroBanner = () => (
+const HeroBanner = ({ company }) => (
   <div className={styles.heroBanner}>
     <div className={styles.heroBannerContent}>
       <div className={styles.heroBannerGreeting}>
@@ -566,7 +566,7 @@ export default function PublicVisitorRegistration() {
       {step === 0 && (
         <>
           <Navbar company={company} />
-          <HeroBanner />
+          <HeroBanner company={company} />
           <div className={styles.container}>
             <div className={styles.authCard}>
               <div className={styles.authHeader}>
