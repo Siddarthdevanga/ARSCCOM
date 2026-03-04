@@ -78,15 +78,83 @@ const normalizeStatus = (status) => (status || "pending").toLowerCase();
 ====================================================== */
 
 /**
- * Generate a branded QR code image with company branding
- * Similar to the reference design with company name header
+ * Draw company name in header with auto font-size shrink + two-line wrap.
+ * Returns the actual pixel height used so callers can adjust layout if needed.
+ */
+const drawCompanyNameInHeader = (ctx, companyName, canvasWidth, headerHeight) => {
+  const maxWidth = canvasWidth - 80; // 40px padding each side
+  const nameUpper = companyName.toUpperCase();
+
+  ctx.fillStyle = "#FFFFFF";
+  ctx.textAlign = "center";
+
+  /* ── Step 1: try to fit on one line, shrinking from 48 → 24 px ── */
+  let fontSize = 48;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+
+  while (ctx.measureText(nameUpper).width > maxWidth && fontSize > 24) {
+    fontSize -= 1;
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  }
+
+  if (ctx.measureText(nameUpper).width <= maxWidth) {
+    // Fits on one line — vertically centre inside header
+    ctx.fillText(nameUpper, canvasWidth / 2, headerHeight / 2 + fontSize / 3);
+    return;
+  }
+
+  /* ── Step 2: wrap into two lines ── */
+  const words = nameUpper.split(" ");
+
+  // Try every split point and pick the one whose longest line is shortest
+  let bestSplit = Math.ceil(words.length / 2);
+  let bestMaxW = Infinity;
+
+  for (let i = 1; i < words.length; i++) {
+    const l1 = words.slice(0, i).join(" ");
+    const l2 = words.slice(i).join(" ");
+    fontSize = 36;
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    const maxW = Math.max(ctx.measureText(l1).width, ctx.measureText(l2).width);
+    if (maxW < bestMaxW) {
+      bestMaxW = maxW;
+      bestSplit = i;
+    }
+  }
+
+  const line1 = words.slice(0, bestSplit).join(" ");
+  const line2 = words.slice(bestSplit).join(" ");
+
+  // Shrink font until both lines fit
+  fontSize = 36;
+  ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  while (
+    Math.max(ctx.measureText(line1).width, ctx.measureText(line2).width) > maxWidth &&
+    fontSize > 16
+  ) {
+    fontSize -= 1;
+    ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+  }
+
+  const lineGap = fontSize + 8;
+  const totalTextH = lineGap * 2;
+  const startY = (headerHeight - totalTextH) / 2 + fontSize;
+
+  ctx.fillText(line1, canvasWidth / 2, startY);
+  ctx.fillText(line2, canvasWidth / 2, startY + lineGap);
+};
+
+/**
+ * Generate a branded QR code image with company branding.
+ * Similar to the reference design with company name header.
  */
 const generateBrandedQRCode = async (url, companyName, isConference = true) => {
   try {
     // Canvas dimensions
     const width = 800;
     const height = 1000;
-    
+    const headerHeight = 120;
+
     // Create canvas
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
@@ -96,21 +164,19 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     ctx.fillRect(0, 0, width, height);
 
     // Header - Purple gradient
-    const gradient = ctx.createLinearGradient(0, 0, width, 120);
+    const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
     gradient.addColorStop(0, "#6a1b9a");
     gradient.addColorStop(1, "#8e24aa");
     ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, 120);
+    ctx.fillRect(0, 0, width, headerHeight);
 
-    // Company Name in header
-    ctx.fillStyle = "#FFFFFF";
-    ctx.font = "bold 48px Arial, sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(companyName.toUpperCase(), width / 2, 75);
+    // ── Company Name (auto-fit, no clipping) ──
+    drawCompanyNameInHeader(ctx, companyName, width, headerHeight);
 
     // Title
     ctx.fillStyle = "#6a1b9a";
     ctx.font = "bold 36px Arial, sans-serif";
+    ctx.textAlign = "center";
     const title = isConference ? "Conference Room Booking" : "Visitor Registration";
     ctx.fillText(title, width / 2, 180);
 
@@ -119,16 +185,17 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     ctx.font = "20px Arial, sans-serif";
     ctx.fillText("Scan QR Code or Visit:", width / 2, 230);
 
-    // URL
+    // URL (truncate if too long)
     ctx.fillStyle = "#7a00ff";
     ctx.font = "bold 18px Arial, sans-serif";
     const maxUrlWidth = width - 100;
     let displayUrl = url;
-    let urlMetrics = ctx.measureText(displayUrl);
-    
-    // Truncate URL if too long
-    if (urlMetrics.width > maxUrlWidth) {
-      while (ctx.measureText(displayUrl + "...").width > maxUrlWidth && displayUrl.length > 20) {
+
+    if (ctx.measureText(displayUrl).width > maxUrlWidth) {
+      while (
+        ctx.measureText(displayUrl + "...").width > maxUrlWidth &&
+        displayUrl.length > 20
+      ) {
         displayUrl = displayUrl.substring(0, displayUrl.length - 1);
       }
       displayUrl += "...";
@@ -156,33 +223,39 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
 
     // Instructions section
     const instructionsY = qrY + qrSize + 50;
-    
+
     ctx.fillStyle = "#6a1b9a";
     ctx.font = "bold 24px Arial, sans-serif";
     ctx.textAlign = "left";
-    ctx.fillText("Instructions for " + (isConference ? "Employees:" : "Visitors:"), 80, instructionsY);
+    ctx.fillText(
+      "Instructions for " + (isConference ? "Employees:" : "Visitors:"),
+      80,
+      instructionsY
+    );
 
     // Instruction items
     ctx.fillStyle = "#333333";
     ctx.font = "18px Arial, sans-serif";
-    const instructions = isConference ? [
-      "1. Scan the QR code with your phone camera",
-      "2. Or visit the URL above in your browser",
-      "3. Authenticate with OTP",
-      "4. Select available room and time slot",
-      "5. Complete the booking form",
-      "6. Receive booking confirmation via email"
-    ] : [
-      "1. Scan the QR code with your phone camera",
-      "2. Or visit the URL above in your browser",
-      "3. Enter your email to receive verification code",
-      "4. Complete the registration form",
-      "5. Capture your photo",
-      "6. Receive your digital visitor pass via email"
-    ];
+    const instructions = isConference
+      ? [
+          "1. Scan the QR code with your phone camera",
+          "2. Or visit the URL above in your browser",
+          "3. Authenticate with OTP",
+          "4. Select available room and time slot",
+          "5. Complete the booking form",
+          "6. Receive booking confirmation via email",
+        ]
+      : [
+          "1. Scan the QR code with your phone camera",
+          "2. Or visit the URL above in your browser",
+          "3. Enter your email to receive verification code",
+          "4. Complete the registration form",
+          "5. Capture your photo",
+          "6. Receive your digital visitor pass via email",
+        ];
 
     let instructionY = instructionsY + 35;
-    instructions.forEach(instruction => {
+    instructions.forEach((instruction) => {
       ctx.fillText(instruction, 80, instructionY);
       instructionY += 30;
     });
@@ -190,15 +263,21 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     // Footer
     ctx.fillStyle = "#e0e0e0";
     ctx.fillRect(0, height - 80, width, 80);
-    
+
     ctx.fillStyle = "#7a00ff";
     ctx.font = "bold 28px Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("PROMEET", width / 2, height - 45);
-    
+
     ctx.fillStyle = "#666666";
     ctx.font = "16px Arial, sans-serif";
-    ctx.fillText(isConference ? "Conference Booking Platform" : "Visitor and Conference Booking Platform", width / 2, height - 20);
+    ctx.fillText(
+      isConference
+        ? "Conference Booking Platform"
+        : "Visitor and Conference Booking Platform",
+      width / 2,
+      height - 20
+    );
 
     return canvas.toBuffer("image/png");
   } catch (error) {
@@ -297,8 +376,8 @@ const getCompanyInfo = async (companyId) => {
 };
 
 /**
- * Validates company subscription and returns plan details
- * FIXED: Only checks subscription_status (cron job handles date checks)
+ * Validates company subscription and returns plan details.
+ * Only checks subscription_status (cron job handles date checks).
  */
 const validateCompanySubscription = async (companyId) => {
   try {
@@ -315,7 +394,6 @@ const validateCompanySubscription = async (companyId) => {
     const plan = normalizePlan(company.plan);
     const status = normalizeStatus(company.subscription_status);
 
-    // ✅ ONLY check subscription_status (cron updates this based on expiry dates)
     if (!ACTIVE_STATUSES.includes(status)) {
       throw new Error("Subscription inactive. Please renew your subscription to continue.");
     }
@@ -386,7 +464,7 @@ export const syncRoomActivationByPlan = async (companyId, plan) => {
       [companyId]
     );
 
-    // ✅ If unlimited (Enterprise), activate ALL rooms
+    // If unlimited (Enterprise), activate ALL rooms
     if (limit === Infinity) {
       await db.query(
         `UPDATE conference_rooms SET is_active = 1 WHERE company_id = ?`,
@@ -442,12 +520,12 @@ const verifyRoomAccess = async (roomId, companyId, requireActive = true) => {
 };
 
 /**
- * Get or create public booking slug (TRANSACTION SAFE)
- * Uses existing 'slug' column from companies table
+ * Get or create public booking slug (TRANSACTION SAFE).
+ * Uses existing 'slug' column from companies table.
  */
 const getOrCreatePublicSlug = async (companyId) => {
   const conn = await db.getConnection();
-  
+
   try {
     await conn.beginTransaction();
 
@@ -478,7 +556,6 @@ const getOrCreatePublicSlug = async (companyId) => {
 
     await conn.commit();
     return slug;
-
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -494,7 +571,8 @@ const getOrCreatePublicSlug = async (companyId) => {
 router.get("/plan-usage", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
-    const { plan, roomLimit, bookingLimit, isUnlimited } = await validateCompanySubscription(companyId);
+    const { plan, roomLimit, bookingLimit, isUnlimited } =
+      await validateCompanySubscription(companyId);
     const roomStats = await getRoomStats(companyId);
 
     const [[bookingCount]] = await db.query(
@@ -503,7 +581,7 @@ router.get("/plan-usage", async (req, res) => {
     );
 
     res.json({
-      plan: plan.toUpperCase(), // Return uppercase for frontend display
+      plan: plan.toUpperCase(),
       limit: isUnlimited ? "Unlimited" : roomLimit,
       totalRooms: roomStats.total,
       activeRooms: roomStats.active,
@@ -515,11 +593,10 @@ router.get("/plan-usage", async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /plan-usage]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
+
+    const statusCode =
+      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+
     res.status(statusCode).json({ message: err.message });
   }
 });
@@ -552,13 +629,12 @@ router.get("/dashboard", async (req, res) => {
     });
   } catch (err) {
     console.error("[GET /dashboard]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({ 
-      message: err.message || "Failed to load dashboard statistics" 
+
+    const statusCode =
+      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+
+    res.status(statusCode).json({
+      message: err.message || "Failed to load dashboard statistics",
     });
   }
 });
@@ -578,16 +654,14 @@ router.get("/rooms", async (req, res) => {
     res.json(rooms || []);
   } catch (err) {
     console.error("[GET /rooms]", err.message);
-    
-    const statusCode = err.message.includes("not found") 
-      ? 404 
+
+    const statusCode = err.message.includes("not found")
+      ? 404
       : err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+
+    res.status(statusCode).json({ message: err.message });
   }
 });
 
@@ -649,10 +723,8 @@ router.post("/rooms", async (req, res) => {
       [companyId, room_number, room_name.trim(), capacity || 0]
     );
 
-    // ✅ Sync room activation after creating new room
     await syncRoomActivationByPlan(companyId, plan);
 
-    // Get the newly created room's activation status
     const [[newRoom]] = await db.query(
       `SELECT is_active FROM conference_rooms WHERE id = ?`,
       [result.insertId]
@@ -665,14 +737,11 @@ router.post("/rooms", async (req, res) => {
     });
   } catch (err) {
     console.error("[POST /rooms]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+
+    const statusCode =
+      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+
+    res.status(statusCode).json({ message: err.message });
   }
 });
 
@@ -734,7 +803,8 @@ router.delete("/rooms/:id", async (req, res) => {
 
     if (bookingCheck.count > 0) {
       return res.status(409).json({
-        message: "Cannot delete room with existing bookings. Please cancel all bookings first.",
+        message:
+          "Cannot delete room with existing bookings. Please cancel all bookings first.",
       });
     }
 
@@ -743,22 +813,19 @@ router.delete("/rooms/:id", async (req, res) => {
       [roomId, companyId]
     );
 
-    // ✅ Re-sync room activation after deletion
     await syncRoomActivationByPlan(companyId, plan);
 
     res.json({ message: "Room deleted successfully" });
   } catch (err) {
     console.error("[DELETE /rooms/:id]", err.message);
-    
+
     const statusCode = err.message.includes("not found")
       ? 404
       : err.message.includes("inactive") || err.message.includes("renew")
       ? 403
       : 500;
-      
-    res.status(statusCode).json({
-      message: err.message,
-    });
+
+    res.status(statusCode).json({ message: err.message });
   }
 });
 
@@ -812,7 +879,15 @@ router.post("/bookings", async (req, res) => {
       });
     }
 
-    let { room_id, booked_by, department, purpose = "", booking_date, start_time, end_time } = req.body;
+    let {
+      room_id,
+      booked_by,
+      department,
+      purpose = "",
+      booking_date,
+      start_time,
+      end_time,
+    } = req.body;
 
     if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time) {
       return res.status(400).json({ message: "All required fields must be provided" });
@@ -853,7 +928,16 @@ router.post("/bookings", async (req, res) => {
       `INSERT INTO conference_bookings
        (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [companyId, room_id, booked_by, department.trim(), purpose.trim(), booking_date, start_time, end_time]
+      [
+        companyId,
+        room_id,
+        booked_by,
+        department.trim(),
+        purpose.trim(),
+        booking_date,
+        start_time,
+        end_time,
+      ]
     );
 
     await conn.commit();
@@ -881,14 +965,11 @@ router.post("/bookings", async (req, res) => {
   } catch (err) {
     await conn.rollback();
     console.error("[POST /bookings]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({ 
-      message: err.message || "Unable to create booking" 
-    });
+
+    const statusCode =
+      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+
+    res.status(statusCode).json({ message: err.message || "Unable to create booking" });
   } finally {
     conn.release();
   }
@@ -1008,10 +1089,9 @@ router.post("/sync-rooms", async (req, res) => {
 
     await syncRoomActivationByPlan(companyId, plan);
 
-    // Get updated room stats
     const roomStats = await getRoomStats(companyId);
 
-    res.json({ 
+    res.json({
       message: "Room activation synced successfully",
       plan: plan.toUpperCase(),
       totalRooms: roomStats.total,
@@ -1020,13 +1100,12 @@ router.post("/sync-rooms", async (req, res) => {
     });
   } catch (err) {
     console.error("[POST /sync-rooms]", err.message);
-    
-    const statusCode = err.message.includes("inactive") || err.message.includes("renew")
-      ? 403
-      : 500;
-      
-    res.status(statusCode).json({ 
-      message: err.message || "Failed to sync room activation" 
+
+    const statusCode =
+      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+
+    res.status(statusCode).json({
+      message: err.message || "Failed to sync room activation",
     });
   }
 });
@@ -1043,10 +1122,8 @@ router.get("/public-booking-info", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
 
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
-    // Get company info
     const [[company]] = await db.query(
       `SELECT name, slug FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
@@ -1056,14 +1133,14 @@ router.get("/public-booking-info", async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    // Get or create public slug (transaction-safe)
     const slug = await getOrCreatePublicSlug(companyId);
 
-    // Construct public URL
-    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.promeet.zodopt.com";
+    const baseUrl =
+      process.env.PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "https://www.promeet.zodopt.com";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
-    // Generate QR code as data URL
     const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
       errorCorrectionLevel: "M",
       type: "image/png",
@@ -1084,10 +1161,8 @@ router.get("/public-booking-info", async (req, res) => {
   } catch (error) {
     console.error("[GET /public-booking-info]", error.message);
 
-    const statusCode = error.message.includes("inactive") || 
-                       error.message.includes("renew")
-      ? 403
-      : 500;
+    const statusCode =
+      error.message.includes("inactive") || error.message.includes("renew") ? 403 : 500;
 
     res.status(statusCode).json({
       message: error.message || "Failed to generate public booking information",
@@ -1103,10 +1178,8 @@ router.get("/qr-code/download", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
 
-    // Validate subscription
     await validateCompanySubscription(companyId);
 
-    // Get company info
     const [[company]] = await db.query(
       `SELECT name, slug FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
@@ -1123,10 +1196,7 @@ router.get("/qr-code/download", async (req, res) => {
       try {
         await conn.beginTransaction();
         slug = `${company.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${companyId}`;
-        await conn.execute(
-          `UPDATE companies SET slug = ? WHERE id = ?`,
-          [slug, companyId]
-        );
+        await conn.execute(`UPDATE companies SET slug = ? WHERE id = ?`, [slug, companyId]);
         await conn.commit();
       } catch (err) {
         await conn.rollback();
@@ -1136,19 +1206,16 @@ router.get("/qr-code/download", async (req, res) => {
       }
     }
 
-    // Construct public URL
-    const baseUrl = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.promeet.zodopt.com";
+    const baseUrl =
+      process.env.PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "https://www.promeet.zodopt.com";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
-    // Generate branded QR code image
     const qrCodeBuffer = await generateBrandedQRCode(publicUrl, company.name, true);
 
-    // Create safe filename
-    const safeFileName = company.name
-      .replace(/[^a-z0-9]/gi, "-")
-      .toLowerCase();
+    const safeFileName = company.name.replace(/[^a-z0-9]/gi, "-").toLowerCase();
 
-    // Set headers for download
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
@@ -1156,14 +1223,11 @@ router.get("/qr-code/download", async (req, res) => {
     );
 
     res.send(qrCodeBuffer);
-
   } catch (error) {
     console.error("[GET /qr-code/download]", error.message);
 
-    const statusCode = error.message.includes("inactive") || 
-                       error.message.includes("renew")
-      ? 403
-      : 500;
+    const statusCode =
+      error.message.includes("inactive") || error.message.includes("renew") ? 403 : 500;
 
     res.status(statusCode).json({
       message: error.message || "Failed to download QR code",
