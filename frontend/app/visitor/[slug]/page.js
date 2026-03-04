@@ -569,11 +569,9 @@ export default function PublicVisitorRegistration() {
           <HeroBanner company={company} />
           <div className={styles.container}>
             <div className={styles.authCard}>
-              <div className={styles.authHeader}>
-                <h2>Welcome to {company?.name}!</h2>
-                <p>Please verify your email to start visitor registration.</p>
-              </div>
-
+              <p style={{ textAlign: "center", color: "#6b7280", fontSize: "0.9rem", marginBottom: "1.25rem", lineHeight: 1.6 }}>
+                Enter your email to receive a verification code
+              </p>
               {error && <div className={styles.errorMsg}>{error}</div>}
 
               {!otpSent ? (
