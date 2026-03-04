@@ -94,7 +94,6 @@ const Modal = ({ isOpen, onClose, title, children, type = "info", size = "medium
       document.addEventListener('keydown', handleEscape);
       document.body.style.overflow = 'hidden';
       
-      // Focus management
       setTimeout(() => {
         const focusableElement = modalRef.current?.querySelector('button, input, select');
         focusableElement?.focus();
@@ -157,7 +156,6 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
   const scrollContainerRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Get current time in minutes (rounded up to next 15-min slot)
   const getCurrentMinutes = () => {
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -167,13 +165,11 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
   const filteredOptions = useMemo(() => {
     let options = TIME_OPTIONS;
 
-    // Filter based on current time if it's today's date
     if (currentDate === today && !minTime) {
       const nowMinutes = getCurrentMinutes();
       options = options.filter(t => t.minutes >= nowMinutes);
     }
 
-    // Filter based on minTime (for end time)
     if (minTime) {
       const minMinutes = ampmToMinutes(minTime);
       options = options.filter(t => t.minutes > minMinutes);
@@ -182,7 +178,6 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
     return options;
   }, [minTime, currentDate, today]);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -199,7 +194,6 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
     };
   }, [isOpen]);
 
-  // Auto-scroll to selected value
   useEffect(() => {
     if (isOpen && scrollContainerRef.current && value) {
       const selectedIndex = filteredOptions.findIndex(t => t.value === value);
@@ -284,6 +278,16 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
 };
 
 /* ======================================================
+   GREETING HELPER
+====================================================== */
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "GOOD MORNING";
+  if (hour < 17) return "GOOD AFTERNOON";
+  return "GOOD EVENING";
+};
+
+/* ======================================================
    MAIN COMPONENT
 ====================================================== */
 export default function PublicConferenceBooking() {
@@ -315,11 +319,9 @@ export default function PublicConferenceBooking() {
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
-  // Enhanced state management
   const [toast, setToast] = useState({ show: false, message: "", type: "info" });
   const [formErrors, setFormErrors] = useState({});
 
-  // Modal states
   const [confirmModal, setConfirmModal] = useState({ isOpen: false, data: null });
   const [rescheduleModal, setRescheduleModal] = useState({ isOpen: false, data: null });
   const [cancelModal, setCancelModal] = useState({ isOpen: false, data: null });
@@ -357,17 +359,14 @@ export default function PublicConferenceBooking() {
     try {
       const data = await response.json();
       
-      // Handle subscription-specific errors more subtly for public interface
       if (response.status === 403 && data.code) {
         switch (data.code) {
           case "SUBSCRIPTION_EXPIRED":
           case "TRIAL_EXPIRED":
-            // For public users, show a subtle message instead of aggressive upgrade prompts
             showToast("Service temporarily unavailable. Please contact the organization.", "info");
             break;
           case "BOOKING_LIMIT_REACHED":
           case "ROOM_LIMIT_REACHED":
-            // Show a more user-friendly message for booking limits
             showToast("Booking unavailable at this time. Please try again later or contact support.", "warning");
             break;
           default:
@@ -419,15 +418,12 @@ export default function PublicConferenceBooking() {
         const response = await fetch(`${API}/api/public/conference/company/${slug}/rooms`);
         
         if (!response.ok) {
-          // Even if there are plan restrictions, we gracefully handle the error
           console.log("[ROOMS_API_ERROR] Status:", response.status);
           
-          // For any API errors, we'll show a subtle toast but continue
           if (response.status === 403) {
             showToast("Some features may be limited. Contact your organization if you need assistance.", "info");
           }
           
-          // Set empty array if we can't load rooms
           setRooms([]);
           return;
         }
@@ -678,7 +674,6 @@ export default function PublicConferenceBooking() {
       );
 
       if (!response.ok) {
-        // Handle subscription errors more gracefully for public users
         if (response.status === 403) {
           const data = await response.json();
           if (data.code && (data.code.includes("SUBSCRIPTION") || data.code.includes("TRIAL") || data.code.includes("LIMIT"))) {
@@ -701,7 +696,6 @@ export default function PublicConferenceBooking() {
         message: "Your conference room has been booked successfully! A confirmation email has been sent to you."
       });
 
-      // Reset form
       setStartTime("");
       setEndTime("");
       setDepartment("");
@@ -893,38 +887,54 @@ export default function PublicConferenceBooking() {
         onHide={hideToast}
       />
 
+      {/* ================= HEADER — matches SaaS nav bar ================= */}
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
+            {company.logo_url && (
+              <img
+                src={company.logo_url}
+                alt={`${company.name} logo`}
+                className={styles.logo}
+              />
+            )}
             <h1>{company.name}</h1>
-            <p className={styles.subtitle}>Conference Room Booking</p>
+            <span className={styles.subtitle}>Conference Booking</span>
           </div>
 
           <div className={styles.headerRight}>
             {otpVerified && (
               <>
                 <span className={styles.userEmail}>{email}</span>
-                <button 
-                  className={styles.logoutBtn} 
-                  onClick={handleLogout} 
+                <button
+                  className={styles.logoutBtn}
+                  onClick={handleLogout}
                   title="Logout"
                   aria-label="Logout"
                 >
-                  <span>⎋</span>
+                  Logout ⎋
                 </button>
               </>
-            )}
-
-            {company.logo_url && (
-              <img 
-                src={company.logo_url} 
-                alt={`${company.name} logo`} 
-                className={styles.logo} 
-              />
             )}
           </div>
         </div>
       </header>
+
+      {/* ================= HERO BANNER — matches SaaS welcome section ================= */}
+      <div className={styles.heroBanner}>
+        <div className={styles.heroBannerContent}>
+          <div className={styles.heroBannerGreeting}>
+            <span className={styles.heroBannerDot}></span>
+            {getGreeting()}
+          </div>
+          <h2 className={styles.heroBannerTitle}>
+            Welcome, <span>{company.name}</span>
+          </h2>
+          <p className={styles.heroBannerSub}>
+            {otpVerified ? "Select a room and time slot to book your conference room" : "Verify your email to start booking conference rooms"}
+          </p>
+        </div>
+      </div>
 
       {/* ================= OTP VERIFICATION SECTION ================= */}
       {!otpVerified ? (
