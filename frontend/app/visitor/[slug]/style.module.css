@@ -1,53 +1,48 @@
 /* ================================================
-   DESIGN TOKENS
-   Font (DM Sans) loaded via globals.css — not here.
-   No bare * selectors, no @import — CSS Modules safe.
+   DESIGN TOKENS — SaaS purple theme
 ================================================ */
 :root {
-  --brand-primary: #667eea;
-  --brand-secondary: #764ba2;
-  --brand-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --brand-gradient-soft: linear-gradient(135deg, #eef2ff 0%, #f5f0ff 100%);
+  --brand-primary:    #7c3aed;
+  --brand-dark:       #5b21b6;
+  --brand-light:      #a855f7;
+  --brand-gradient:   linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a855f7 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
 
-  --success: #4caf50;
-  --success-bg: #f0faf0;
-  --success-border: #a5d6a7;
+  --success:          #16a34a;
+  --success-bg:       #f0fdf4;
+  --success-border:   #86efac;
 
-  --error: #e53e3e;
-  --error-bg: #fff5f5;
-  --error-border: #feb2b2;
+  --error:            #dc2626;
+  --error-bg:         #fef2f2;
+  --error-border:     #fca5a5;
 
-  --text-primary: #1a1a2e;
-  --text-secondary: #4a5568;
-  --text-muted: #718096;
-  --text-disabled: #a0aec0;
+  --text-primary:     #1e1b4b;
+  --text-secondary:   #4b5563;
+  --text-muted:       #6b7280;
+  --text-disabled:    #a78bfa;
 
-  --bg-page: #f7f8fc;
-  --bg-card: #ffffff;
-  --bg-input: #fafafa;
-  --bg-disabled: #f5f5f5;
+  --bg-page:          #f0eef8;
+  --bg-card:          #ffffff;
+  --bg-input:         #faf9ff;
+  --bg-disabled:      #f5f3ff;
 
-  --border: #e2e8f0;
-  --border-focus: #667eea;
+  --border:           #ddd6fe;
+  --border-focus:     #7c3aed;
   --border-radius-sm: 0.5rem;
   --border-radius-md: 0.875rem;
   --border-radius-lg: 1.25rem;
-  --border-radius-xl: 1.75rem;
+  --border-radius-xl: 1.5rem;
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 16px rgba(102, 126, 234, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 10px 40px rgba(102, 126, 234, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-focus: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  --shadow-sm:    0 1px 3px rgba(91,33,182,0.06), 0 1px 2px rgba(91,33,182,0.04);
+  --shadow-md:    0 4px 16px rgba(91,33,182,0.1), 0 2px 6px rgba(91,33,182,0.06);
+  --shadow-lg:    0 10px 40px rgba(91,33,182,0.15), 0 4px 12px rgba(91,33,182,0.08);
+  --shadow-focus: 0 0 0 3px rgba(124,58,237,0.18);
 
-  --font-sans: "DM Sans", "Segoe UI", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Oxygen", sans-serif;
 
-  --transition: 0.2s ease;
-  --transition-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition:      0.2s ease;
+  --transition-slow: 0.35s cubic-bezier(0.4,0,0.2,1);
 
-  /* ── Fluid spacing scale ──
-     Interpolates between mobile and desktop values automatically.
-     clamp(min, preferred, max) */
   --space-xs:  clamp(0.25rem, 0.5vw,  0.5rem);
   --space-sm:  clamp(0.5rem,  1vw,    0.75rem);
   --space-md:  clamp(0.75rem, 1.5vw,  1rem);
@@ -55,13 +50,27 @@
   --space-xl:  clamp(1.25rem, 2.5vw,  2rem);
   --space-2xl: clamp(1.5rem,  3vw,    2.5rem);
 
-  /* ── Fluid card padding ── */
   --card-padding-x: clamp(1rem, 4vw, 2rem);
-  --card-padding-y: clamp(1.25rem, 3vw, 2.25rem);
+  --card-padding-y: clamp(1.25rem, 3vw, 2rem);
 
-  /* ── Container width: fluid from 100% → capped at 620px ── */
-  --container-max: 620px;
+  --container-max:     620px;
   --container-padding: clamp(0.75rem, 4vw, 1.5rem);
+}
+
+/* ================================================
+   SCROLLBAR — hidden everywhere, scroll works
+================================================ */
+*,
+*::before,
+*::after {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ================================================
@@ -69,13 +78,10 @@
 ================================================ */
 .page {
   min-height: 100vh;
-  min-height: 100dvh;         /* dynamic viewport — handles mobile browser chrome */
-  overflow-y: scroll;
+  min-height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
   background: var(--bg-page);
-  background-image:
-    radial-gradient(ellipse at 20% 0%,  rgba(102, 126, 234, 0.08) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 100%, rgba(118, 75, 162, 0.06)  0%, transparent 60%);
-  background-attachment: fixed;
   font-family: var(--font-sans);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -84,7 +90,7 @@
 
 .container {
   width: min(var(--container-max), 100%);
-  margin-inline: auto;                    /* logical-property centering */
+  margin-inline: auto;
   padding-inline: var(--container-padding);
   padding-bottom: clamp(2rem, 5vw, 4rem);
   display: flex;
@@ -98,21 +104,44 @@
 }
 
 /* ================================================
-   HEADER
+   STICKY NAVBAR — matches SaaS white nav
 ================================================ */
 .header {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 0 clamp(1rem, 4vw, 1.5rem);
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-block: clamp(1rem, 2.5vw, 1.75rem);
-  padding-block-end: clamp(0.75rem, 1.5vw, 1rem);
-  border-bottom: 1px solid var(--border);
-  margin-bottom: var(--space-lg);
-  gap: var(--space-md);
+  box-shadow: 0 1px 12px rgba(91,33,182,0.08);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  gap: 0.75rem;
+  /* header is NOT inside .container, so full-width */
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.logo {
+  height: clamp(28px, 5vw, 38px);
+  width: auto;
+  object-fit: contain;
+  border-radius: 5px;
+  flex-shrink: 0;
 }
 
 .logoText {
-  font-size: clamp(0.95rem, 2.5vw, 1.15rem);
+  font-size: clamp(0.875rem, 2.2vw, 1.05rem);
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.01em;
@@ -121,12 +150,91 @@
   text-overflow: ellipsis;
 }
 
-.logo {
-  height: clamp(28px, 5vw, 40px);
-  width: auto;
-  object-fit: contain;
-  border-radius: 6px;
+.headerBadge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand-primary);
+  background: #f0eef8;
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.625rem;
+  border-radius: 2rem;
+  white-space: nowrap;
   flex-shrink: 0;
+}
+
+/* ================================================
+   HERO BANNER — Step 0 only
+================================================ */
+.heroBanner {
+  background: var(--brand-gradient);
+  padding: clamp(1.75rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2rem);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.heroBanner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+.heroBannerContent {
+  position: relative;
+  z-index: 1;
+}
+
+.heroBannerGreeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.9rem;
+  border-radius: 2rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 0.875rem;
+}
+
+.heroBannerDot {
+  width: 7px;
+  height: 7px;
+  background: #fbbf24;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.7; transform: scale(1.35); }
+}
+
+.heroBannerTitle {
+  font-size: clamp(1.25rem, 4vw, 1.875rem);
+  font-weight: 900;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: -0.75px;
+  line-height: 1.2;
+}
+
+.heroBannerTitle span {
+  color: #fbbf24;
+}
+
+.heroBannerSub {
+  color: rgba(255,255,255,0.82);
+  font-size: clamp(0.825rem, 2vw, 0.95rem);
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 /* ================================================
@@ -139,10 +247,7 @@
   padding: var(--card-padding-y) var(--card-padding-x);
   box-shadow: var(--shadow-md);
   transition: box-shadow var(--transition-slow);
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
+  margin-top: clamp(1rem, 2.5vw, 1.5rem);
 }
 
 .authCard {
@@ -151,7 +256,7 @@
   border: 1px solid var(--border);
   padding: var(--card-padding-y) var(--card-padding-x);
   box-shadow: var(--shadow-md);
-  margin-top: var(--space-sm);
+  margin-top: clamp(1rem, 2.5vw, 1.5rem);
 }
 
 .authHeader {
@@ -162,7 +267,7 @@
 }
 
 .authHeader h2 {
-  font-size: clamp(1.25rem, 4vw, 1.65rem);
+  font-size: clamp(1.2rem, 4vw, 1.55rem);
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
@@ -171,7 +276,7 @@
 }
 
 .authHeader p {
-  font-size: clamp(0.825rem, 2vw, 0.925rem);
+  font-size: clamp(0.8rem, 2vw, 0.9rem);
   color: var(--text-muted);
   line-height: 1.6;
 }
@@ -180,16 +285,73 @@
    TITLES
 ================================================ */
 .title {
-  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+  font-size: clamp(1.05rem, 3.5vw, 1.35rem);
   font-weight: 800;
   color: var(--text-primary);
   letter-spacing: -0.02em;
   margin-bottom: var(--space-lg);
   padding-bottom: var(--space-md);
-  border-bottom: 2px solid;
+  border-bottom: 2px solid transparent;
   border-image: var(--brand-gradient) 1;
   line-height: 1.3;
 }
+
+/* ================================================
+   STEP PROGRESS
+================================================ */
+.stepProgress {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: clamp(0.875rem, 2vw, 1.25rem) var(--container-padding) 0;
+}
+
+.stepItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stepCircle {
+  width: clamp(24px, 4vw, 30px);
+  height: clamp(24px, 4vw, 30px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(0.7rem, 1.5vw, 0.8rem);
+  font-weight: 700;
+  color: #fff;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.stepCircleDone   { background: var(--success); }
+.stepCircleActive { background: var(--brand-primary); }
+.stepCircleIdle   { background: #d1d5db; }
+
+.stepLabel {
+  font-size: clamp(0.65rem, 1.4vw, 0.75rem);
+  font-weight: 600;
+  text-align: center;
+  margin-top: 3px;
+}
+
+.stepLabelActive   { color: var(--brand-primary); }
+.stepLabelDone     { color: var(--success); }
+.stepLabelIdle     { color: #9ca3af; }
+
+.stepConnector {
+  width: clamp(24px, 5vw, 44px);
+  height: 2px;
+  margin-bottom: 14px;
+  transition: background 0.3s;
+  flex-shrink: 0;
+}
+
+.stepConnectorDone { background: var(--success); }
+.stepConnectorIdle { background: #e5e7eb; }
 
 /* ================================================
    FORM ELEMENTS
@@ -202,10 +364,10 @@
 }
 
 .formGroup label {
-  font-size: clamp(0.7rem, 1.5vw, 0.8rem);
-  font-weight: 600;
+  font-size: clamp(0.68rem, 1.5vw, 0.78rem);
+  font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -224,8 +386,8 @@
     box-shadow var(--transition),
     background var(--transition);
   -webkit-appearance: none;
-  /* Prevents iOS zoom on focus (font-size must be ≥ 16px equivalent) */
   touch-action: manipulation;
+  box-sizing: border-box;
 }
 
 .input:focus {
@@ -237,7 +399,7 @@
 .input:disabled,
 .input[readonly] {
   background: var(--bg-disabled);
-  color: var(--text-disabled);
+  color: var(--text-muted);
   cursor: not-allowed;
   border-color: var(--border);
 }
@@ -260,13 +422,15 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23718096' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237c3aed' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.85rem center;
+  background-color: var(--bg-input);
   touch-action: manipulation;
   transition:
     border-color var(--transition),
     box-shadow var(--transition);
+  box-sizing: border-box;
 }
 
 .select:focus {
@@ -277,8 +441,6 @@
 
 /* ================================================
    GRID LAYOUT
-   auto-fill: fills available space, never wraps below 140px
-   On mobile it naturally becomes 1-col; tablet 2-col; desktop 3-col
 ================================================ */
 .gridRow {
   display: grid;
@@ -324,7 +486,7 @@
 
 .checkboxLabel:hover {
   border-color: var(--brand-primary);
-  background: rgba(102, 126, 234, 0.04);
+  background: rgba(124,58,237,0.04);
 }
 
 .checkboxLabel input[type="checkbox"] {
@@ -337,9 +499,9 @@
 
 .checkboxLabel:has(input:checked) {
   border-color: var(--brand-primary);
-  background: rgba(102, 126, 234, 0.08);
+  background: rgba(124,58,237,0.08);
   color: var(--brand-primary);
-  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.12);
+  box-shadow: 0 0 0 2px rgba(124,58,237,0.12);
 }
 
 /* ================================================
@@ -367,31 +529,32 @@
     opacity var(--transition),
     transform var(--transition),
     box-shadow var(--transition);
-  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+  box-shadow: 0 4px 14px rgba(91,33,182,0.32);
   position: relative;
   overflow: hidden;
   margin-top: var(--space-sm);
+  box-sizing: border-box;
 }
 
 .primaryBtn::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0);
+  background: rgba(255,255,255,0);
   transition: background var(--transition);
 }
 
 .primaryBtn:hover:not(:disabled)::after {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255,255,255,0.08);
 }
 
 .primaryBtn:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 2px 8px rgba(91,33,182,0.28);
 }
 
 .primaryBtn:disabled {
-  opacity: 0.55;
+  opacity: 0.52;
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
@@ -420,13 +583,14 @@
     background var(--transition),
     box-shadow var(--transition);
   margin-top: var(--space-sm);
+  box-sizing: border-box;
 }
 
 .secondaryBtn:hover:not(:disabled) {
   border-color: var(--brand-primary);
   color: var(--brand-primary);
-  background: rgba(102, 126, 234, 0.04);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.08);
+  background: rgba(124,58,237,0.04);
+  box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
 }
 
 .secondaryBtn:active:not(:disabled) {
@@ -479,7 +643,7 @@
   border-radius: var(--border-radius-lg);
   padding: clamp(1rem, 2.5vw, 1.35rem) clamp(1rem, 3vw, 1.5rem);
   margin: var(--space-lg) 0;
-  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 
 @keyframes popIn {
@@ -497,7 +661,7 @@
   gap: var(--space-md);
   padding: var(--space-lg);
   background: var(--brand-gradient-soft);
-  border: 1.5px dashed rgba(102, 126, 234, 0.35);
+  border: 1.5px dashed rgba(124,58,237,0.35);
   border-radius: var(--border-radius-lg);
   margin-bottom: var(--space-lg);
   min-height: clamp(120px, 20vw, 160px);
@@ -548,7 +712,7 @@
   justify-content: center;
   font-size: clamp(1rem, 2.5vw, 1.35rem);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+  box-shadow: 0 4px 12px rgba(37,211,102,0.3);
 }
 
 .whatsappTitle {
@@ -585,13 +749,13 @@
     opacity var(--transition),
     transform var(--transition),
     box-shadow var(--transition);
-  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+  box-shadow: 0 4px 14px rgba(37,211,102,0.35);
 }
 
 .whatsappBtn:hover {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+  box-shadow: 0 6px 20px rgba(37,211,102,0.4);
 }
 
 .whatsappBtn:active {
@@ -613,7 +777,7 @@
 .spinner {
   width: clamp(36px, 6vw, 50px);
   height: clamp(36px, 6vw, 50px);
-  border: 3px solid rgba(102, 126, 234, 0.15);
+  border: 3px solid rgba(124,58,237,0.15);
   border-top-color: var(--brand-primary);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
@@ -626,45 +790,32 @@
 /* ================================================
    TEXT UTILITIES
 ================================================ */
-.textCenter {
-  text-align: center;
-}
+.textCenter { text-align: center; }
 
 /* ================================================
-   SUCCESS CHECKMARK ANIMATION
+   SUCCESS ICON ANIMATION
 ================================================ */
 @keyframes checkmarkDraw {
   from { transform: scale(0) rotate(-10deg); opacity: 0; }
-  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
 }
 
 .successIcon {
   display: inline-block;
-  animation: checkmarkDraw 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: checkmarkDraw 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
 }
 
 /* ================================================
    RESPONSIVE BREAKPOINTS
-
-   Strategy: mobile-first with fluid clamp() doing
-   most of the work. Breakpoints only handle layout
-   structure changes (grid cols, padding bumps).
-
-   xs  : < 400px   (small phones — Galaxy A, iPhone SE)
-   sm  : 400–639px (standard phones)
-   md  : 640–767px (large phones / small tablets)
-   lg  : 768–1023px (tablets — iPad, Surface)
-   xl  : 1024px+   (desktop / large tablets)
 ================================================ */
 
-/* ── xs: very small phones ── */
+/* xs — very small phones */
 @media (max-width: 399px) {
   .card,
   .authCard {
-    border-radius: var(--border-radius-lg);
+    border-radius: 0;
     border-left: none;
     border-right: none;
-    border-radius: 0;
     box-shadow: none;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
@@ -675,7 +826,7 @@
   }
 
   .header {
-    padding-inline: 0.75rem;
+    padding: 0 0.75rem;
   }
 
   .gridRow {
@@ -683,51 +834,40 @@
   }
 }
 
-/* ── sm: standard phones ── */
+/* sm — standard phones */
 @media (min-width: 400px) and (max-width: 639px) {
   .gridRow {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* ── md: large phones / phablets ── */
+/* md — large phones */
 @media (min-width: 640px) and (max-width: 767px) {
   .gridRow {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* ── lg: tablets ── */
+/* lg — tablets */
 @media (min-width: 768px) and (max-width: 1023px) {
   .gridRow {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  /* On tablet the card can breathe more */
   .card,
   .authCard {
-    padding: 2.5rem 2.25rem;
+    padding: 2.25rem 2rem;
   }
 }
 
-/* ── xl: desktop ── */
+/* xl — desktop */
 @media (min-width: 1024px) {
   .gridRow {
     grid-template-columns: repeat(3, 1fr);
   }
-
-  /* Subtle hover lift on desktop only (not touch) */
-  .card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-lg);
-  }
 }
 
-/* ================================================
-   TOUCH DEVICE OVERRIDES
-   Disable hover states on touch to prevent sticky
-   hover after tap on iOS/Android.
-================================================ */
+/* Touch devices — disable sticky hovers */
 @media (hover: none) and (pointer: coarse) {
   .card:hover {
     transform: none;
@@ -748,15 +888,11 @@
   .whatsappBtn:hover {
     opacity: 1;
     transform: none;
-    box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);
+    box-shadow: 0 4px 14px rgba(37,211,102,0.35);
   }
 }
 
-/* ================================================
-   LANDSCAPE PHONES
-   Short viewport — reduce vertical spacing so form
-   doesn't require excessive scrolling.
-================================================ */
+/* Landscape phones */
 @media (max-height: 500px) and (orientation: landscape) {
   .authHeader {
     margin-bottom: 1rem;
@@ -774,11 +910,13 @@
   .cameraContainer {
     min-height: 80px;
   }
+
+  .heroBanner {
+    padding: 1rem;
+  }
 }
 
-/* ================================================
-   FOCUS VISIBLE (accessibility — keyboard nav)
-================================================ */
+/* Focus visible — accessibility */
 .primaryBtn:focus-visible,
 .secondaryBtn:focus-visible,
 .whatsappBtn:focus-visible,
@@ -788,9 +926,7 @@
   outline-offset: 2px;
 }
 
-/* ================================================
-   PRINT
-================================================ */
+/* Print */
 @media print {
   .primaryBtn,
   .secondaryBtn,
