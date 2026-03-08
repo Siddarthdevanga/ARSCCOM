@@ -18,6 +18,7 @@ import {
   Settings,
   Info,
   LogOut,
+  UserCog,
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -33,7 +34,6 @@ function useToast() {
     const id = ++toastId;
     setToasts((prev) => [...prev, { id, type, title, message, duration, actions, exiting: false }]);
 
-    // Only auto-dismiss if no actions (confirmation toasts stay until user acts)
     if (!actions) {
       setTimeout(() => {
         setToasts((prev) =>
@@ -104,7 +104,6 @@ function ToastContainer({ toasts, removeToast }) {
                 <p className={styles.toastTitle}>{t.title || TOAST_LABELS[t.type]}</p>
                 {t.message && <p className={styles.toastMessage}>{t.message}</p>}
               </div>
-              {/* Only show X close on non-confirmation toasts */}
               {!t.actions && (
                 <button
                   className={styles.toastClose}
@@ -116,7 +115,6 @@ function ToastContainer({ toasts, removeToast }) {
               )}
             </div>
 
-            {/* Confirmation action buttons */}
             {t.actions && (
               <div className={styles.toastActions}>
                 <button
@@ -134,7 +132,6 @@ function ToastContainer({ toasts, removeToast }) {
               </div>
             )}
 
-            {/* Progress bar only for auto-dismiss toasts */}
             {!t.actions && (
               <div className={styles.toastProgress}>
                 <div
@@ -331,25 +328,20 @@ export default function Home() {
   };
 
   /* ── View Handlers ────────────────────────────────────────────────── */
-  const handleOpenMenu     = () => { setShowMenu(true); fetchSubscription(); };
-  const handleOpenReports  = () => { setShowMenu(false); setCurrentView("reports"); fetchExportStats(); };
-  const handleOpenSettings = () => { setShowMenu(false); router.push("/home/settings"); };
-  const handleBackToHome   = () => setCurrentView("home");
-  const handleRenew        = () => { setShowMenu(false); router.push("/auth/subscription"); };
+  const handleOpenMenu      = () => { setShowMenu(true); fetchSubscription(); };
+  const handleOpenReports   = () => { setShowMenu(false); setCurrentView("reports"); fetchExportStats(); };
+  const handleOpenSettings  = () => { setShowMenu(false); router.push("/home/settings"); };
+  const handleOpenEmployees = () => { setShowMenu(false); router.push("/visitor/admin"); };
+  const handleBackToHome    = () => setCurrentView("home");
+  const handleRenew         = () => { setShowMenu(false); router.push("/auth/subscription"); };
 
-  /* ── Logout — toast confirmation instead of browser confirm() ─────── */
+  /* ── Logout ───────────────────────────────────────────────────────── */
   const handleLogout = () => {
     toast.confirm(
       "Confirm Logout",
       "Are you sure you want to log out?",
-      () => {
-        // onConfirm
-        localStorage.clear();
-        router.replace("/auth/login");
-      },
-      () => {
-        // onCancel — do nothing, toast already dismissed
-      }
+      () => { localStorage.clear(); router.replace("/auth/login"); },
+      () => {}
     );
   };
 
@@ -429,6 +421,7 @@ export default function Home() {
               </div>
 
               <div className={styles.cardGrid}>
+                {/* ── Visitor Management ── */}
                 <div
                   className={styles.moduleCard}
                   onClick={() => router.push("/visitor/dashboard")}
@@ -447,6 +440,7 @@ export default function Home() {
                   <span className={styles.cardArrow}>→</span>
                 </div>
 
+                {/* ── Conference Booking ── */}
                 <div
                   className={styles.moduleCard}
                   onClick={() => router.push("/conference/dashboard")}
@@ -460,6 +454,25 @@ export default function Home() {
                     <h3 className={styles.cardTitle}>Conference Booking</h3>
                     <p className={styles.cardDescription}>
                       Schedule meetings & manage rooms
+                    </p>
+                  </div>
+                  <span className={styles.cardArrow}>→</span>
+                </div>
+
+                {/* ── Employee Directory ── */}
+                <div
+                  className={styles.moduleCard}
+                  onClick={() => router.push("/visitor/admin")}
+                  role="button"
+                  tabIndex={0}
+                  aria-label="Employee Directory"
+                  onKeyDown={(e) => e.key === "Enter" && router.push("/visitor/admin")}
+                >
+                  <div className={styles.cardIcon}><UserCog size={32}/></div>
+                  <div className={styles.cardContent}>
+                    <h3 className={styles.cardTitle}>Employee Directory</h3>
+                    <p className={styles.cardDescription}>
+                      Manage staff employees visitors can meet
                     </p>
                   </div>
                   <span className={styles.cardArrow}>→</span>
@@ -635,6 +648,7 @@ export default function Home() {
                   </div>
 
                   <div className={styles.menuSection}>
+                    {/* Reports & Analytics */}
                     <button className={styles.menuItem} onClick={handleOpenReports}>
                       <div className={styles.menuItemIcon}><FileSpreadsheet size={18}/></div>
                       <div className={styles.menuItemContent}>
@@ -644,6 +658,17 @@ export default function Home() {
                       <ChevronRight size={16} className={styles.menuItemArrow}/>
                     </button>
 
+                    {/* Employee Directory — NEW */}
+                    <button className={styles.menuItem} onClick={handleOpenEmployees}>
+                      <div className={styles.menuItemIcon}><UserCog size={18}/></div>
+                      <div className={styles.menuItemContent}>
+                        <span className={styles.menuItemTitle}>Employee Directory</span>
+                        <span className={styles.menuItemSubtitle}>Manage staff visitors can meet</span>
+                      </div>
+                      <ChevronRight size={16} className={styles.menuItemArrow}/>
+                    </button>
+
+                    {/* My Account */}
                     <button className={styles.menuItem} onClick={handleOpenSettings}>
                       <div className={styles.menuItemIcon}><Settings size={18}/></div>
                       <div className={styles.menuItemContent}>
