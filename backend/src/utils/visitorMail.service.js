@@ -1,9 +1,6 @@
 import { sendEmail } from "../utils/mailer.js";
 import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
-/* ======================================================
-   IST FORMATTER
-====================================================== */
 const formatIST = (value) => {
   if (!value) return "-";
   try {
@@ -30,9 +27,6 @@ const formatIST = (value) => {
   }
 };
 
-/* ======================================================
-   EMAIL FOOTER
-====================================================== */
 export const emailFooter = (company = {}) => {
   const companyName = company?.name || "Promeet";
   const companyLogo = company?.logo_url || company?.logo || null;
@@ -49,22 +43,19 @@ ${companyLogo ? `<img src="${companyLogo}" alt="${companyName} Logo" style="marg
 </p>`;
 };
 
-/* ======================================================
-   SEND VISITOR PASS EMAIL
-====================================================== */
 export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
   if (!visitor.email) {
     console.log("[VISITOR_MAIL] No email provided, skipping");
     return;
   }
 
-  const companyName = company.name || "Promeet";
-  const visitorName = visitor.name || "Visitor";
-  const visitorCode = visitor.visitorCode || "-";
-  const phone = visitor.phone || "-";
+  const companyName  = company.name || "Promeet";
+  const visitorName  = visitor.name || "Visitor";
+  const visitorCode  = visitor.visitorCode || "-";
+  const phone        = visitor.phone || "-";
   const personToMeet = visitor.personToMeet || "Reception";
-  const purpose = visitor.purpose || "Visit";
-  const checkInTime = visitor.checkInDisplay || formatIST(visitor.checkIn);
+  const purpose      = visitor.purpose || "Visit";
+  const checkInTime  = visitor.checkInDisplay || formatIST(visitor.checkIn);
 
   console.log(`[VISITOR_MAIL] Preparing email for ${visitor.email}`);
 
@@ -109,9 +100,9 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
           <p>Hello <b>${visitorName}</b>,</p>
           <p>Welcome to <b>${companyName}</b>! Your visitor registration has been successfully processed.</p>
           <div class="success-badge">
-            <p style="margin:0;color:#2e7d32;font-weight:600;">✓ Registration Confirmed — Pass Issued</p>
+            <p style="margin:0;color:#2e7d32;font-weight:600;">&#10003; Registration Confirmed — Pass Issued</p>
           </div>
-          <h2>📋 Visit Details</h2>
+          <h2>Visit Details</h2>
           <table class="details-table">
             <tr><td class="label">Visitor ID</td><td><b style="color:#222;font-size:15px;">${visitorCode}</b></td></tr>
             <tr><td class="label">Visitor Name</td><td>${visitorName}</td></tr>
@@ -121,26 +112,26 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
             <tr><td class="label">Person to Meet</td><td>${personToMeet}</td></tr>
             <tr><td class="label">Purpose</td><td>${purpose}</td></tr>
           </table>
-          <h2>🎫 Your Digital Visitor Pass</h2>
+          <h2>Your Digital Visitor Pass</h2>
           <p>Your visitor pass is attached to this email. Please <b>show this pass at the reception</b> when requested.</p>
           <div class="warning-badge">
-            <p style="margin:0;color:#e65100;font-weight:600;">📱 Keep this email handy on your mobile device</p>
+            <p style="margin:0;color:#e65100;font-weight:600;">Keep this email handy on your mobile device</p>
           </div>
-          <h2>📌 Important Guidelines</h2>
+          <h2>Important Guidelines</h2>
           <ul>
             <li><b>Display your visitor pass</b> when entering or when requested by security.</li>
             <li><b>Check-out is mandatory</b> — Please inform reception when leaving.</li>
             <li><b>Follow company policies</b> — Adhere to all security protocols.</li>
           </ul>
           ${company.whatsapp_url ? `
-          <h2>📱 Stay Connected</h2>
+          <h2>Stay Connected</h2>
           <div class="whatsapp-badge">
             <p style="margin:0 0 15px 0;color:#2e7d32;font-weight:600;font-size:16px;">Join ${companyName} WhatsApp</p>
-            <a href="${company.whatsapp_url}" class="whatsapp-button" target="_blank">📱 Join WhatsApp Group</a>
+            <a href="${company.whatsapp_url}" class="whatsapp-button" target="_blank">Join WhatsApp Group</a>
             <p style="margin:15px 0 0 0;font-size:13px;color:#666;">Get instant updates and support during your visit</p>
           </div>` : ""}
           <div class="info-badge">
-            <p style="margin:0;color:#6c2bd9;font-weight:600;">📧 Need help? Contact ${companyName} reception for assistance.</p>
+            <p style="margin:0;color:#6c2bd9;font-weight:600;">Need help? Contact ${companyName} reception for assistance.</p>
           </div>
           <p style="margin-top:30px;">Thank you for visiting <b>${companyName}</b>.</p>
           ${emailFooter(company)}
@@ -153,14 +144,9 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
       : []
   });
 
-  console.log(`✅ [VISITOR_MAIL] Pass sent to ${visitor.email}`);
+  console.log(`[VISITOR_MAIL] Pass sent to ${visitor.email}`);
 };
 
-/* ======================================================
-   SEND EMPLOYEE NOTIFICATION EMAIL
-   — Sent to the employee when a visitor arrives to meet them
-   — Contains Accept / Decline one-click links
-====================================================== */
 export const sendEmployeeNotificationMail = async ({
   company = {},
   employee = {},
@@ -172,14 +158,33 @@ export const sendEmployeeNotificationMail = async ({
     return;
   }
 
-  const baseUrl = process.env.FRONTEND_URL || process.env.BACKEND_URL || "";
-  const acceptUrl = `${baseUrl}/api/visit-response/${responseToken}/accept`;
+  if (!responseToken) {
+    console.log("[EMP_MAIL] No response token, skipping");
+    return;
+  }
+
+  // BACKEND_URL first — /api/visit-response is an Express route, not a Next.js page
+  const baseUrl =
+    process.env.BACKEND_URL ||
+    process.env.API_BASE_URL ||
+    process.env.FRONTEND_URL ||
+    "";
+
+  if (!baseUrl) {
+    console.error("[EMP_MAIL] WARNING: No BACKEND_URL set — accept/decline links will be broken");
+  }
+
+  const acceptUrl  = `${baseUrl}/api/visit-response/${responseToken}/accept`;
   const declineUrl = `${baseUrl}/api/visit-response/${responseToken}/decline`;
 
-  const companyName = company.name || "Promeet";
+  const companyName  = company.name || "Promeet";
   const employeeName = employee.name || "there";
-  const visitorName = visitor.name || "A visitor";
-  const checkInTime = visitor.checkInDisplay || formatIST(visitor.checkIn);
+  const visitorName  = visitor.name || "A visitor";
+  const checkInTime  = visitor.checkInDisplay || formatIST(visitor.checkIn);
+
+  console.log(`[EMP_MAIL] Sending to ${employee.email}`);
+  console.log(`[EMP_MAIL] Accept  → ${acceptUrl}`);
+  console.log(`[EMP_MAIL] Decline → ${declineUrl}`);
 
   await sendEmail({
     to: employee.email,
@@ -262,15 +267,15 @@ export const sendEmployeeNotificationMail = async ({
             <p style="margin:0 0 20px;font-size:15px;font-weight:600;color:#333;">
               Please respond to this visit request:
             </p>
-            <a href="${acceptUrl}" class="btn btn-accept">✅ Accept Visit</a>
-            <a href="${declineUrl}" class="btn btn-decline">❌ Decline Visit</a>
+            <a href="${acceptUrl}" class="btn btn-accept">&#9989; Accept Visit</a>
+            <a href="${declineUrl}" class="btn btn-decline">&#10060; Decline Visit</a>
             <p style="margin:18px 0 0;font-size:12px;color:#999;">
               Click one of the buttons above. No login required.
             </p>
           </div>
 
           <div class="notice">
-            ⏰ This link is valid for <b>48 hours</b>. After that the admin can still update the status from the dashboard.
+            &#9200; This link is valid for <b>48 hours</b>. After that the admin can still update the status from the dashboard.
           </div>
 
           ${emailFooter(company)}
@@ -280,5 +285,5 @@ export const sendEmployeeNotificationMail = async ({
     `,
   });
 
-  console.log(`✅ [EMP_MAIL] Notification sent to ${employee.email}`);
+  console.log(`[EMP_MAIL] Notification sent to ${employee.email}`);
 };
