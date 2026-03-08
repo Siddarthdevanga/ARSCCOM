@@ -220,12 +220,16 @@ export const getVisitorDashboard = async (req, res) => {
       [companyId]
     );
 
-    // FIX 3: Added from_company to active visitor SELECT
+    // Datetime columns are stored as IST but MySQL returns them without a
+    // timezone suffix (e.g. "2026-03-08 23:45:00"). When JS does
+    // new Date("2026-03-08 23:45:00") it treats it as UTC, which shifts
+    // times after ~6:30 PM IST to the next calendar day on the frontend.
+    // Fix: tag every datetime with +05:30 in SQL so JS always parses as IST.
     const [activeVisitors] = await db.execute(
       `SELECT
          visitor_code, name, phone,
          from_company,
-         check_in,
+         DATE_FORMAT(check_in, '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
          visit_status,
          pass_mail_sent AS pass_issued,
          person_to_meet
@@ -235,15 +239,12 @@ export const getVisitorDashboard = async (req, res) => {
       [companyId]
     );
 
-    // FIX 2: Added check_in to checkedOut SELECT so duration can be calculated
-    // FIX 3: Added from_company
-    // FIX 5: Fixed date filter
     const [checkedOutVisitors] = await db.execute(
       `SELECT
          visitor_code, name, phone,
          from_company,
-         check_in,
-         check_out,
+         DATE_FORMAT(check_in,  '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
+         DATE_FORMAT(check_out, '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
          visit_status,
          pass_mail_sent AS pass_issued,
          person_to_meet
