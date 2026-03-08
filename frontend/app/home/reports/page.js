@@ -1,311 +1,577 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import {
+  ArrowLeft,
+  Download,
+  Users,
+  CalendarDays,
+  TrendingUp,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Activity,
+  BarChart2,
+  Building2,
+  FileDown,
+  RefreshCw,
+} from "lucide-react";
 import styles from "./style.module.css";
 
-export default function HomePage() {
-  const router = useRouter();
-  const [company, setCompany] = useState(null);
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [navOpen, setNavOpen] = useState(false);
-  const [toast, setToast] = useState(null);
-  const toastTimer = useRef(null);
-
-  const showToast = (msg, type = "success") => {
-    if (toastTimer.current) clearTimeout(toastTimer.current);
-    setToast({ msg, type });
-    toastTimer.current = setTimeout(() => setToast(null), 3200);
-  };
-
-  const getToken = () => localStorage.getItem("token");
-
-  useEffect(() => {
-    const token = getToken();
-    const stored = localStorage.getItem("company");
-    if (!token) { router.replace("/"); return; }
-    if (stored) {
-      try { setCompany(JSON.parse(stored)); } catch {}
-    }
-
-    fetch("/api/exports/stats", { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { setStats(d); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("company");
-    router.replace("/");
-  };
-
-  if (loading) return (
-    <div className={styles.loadingContainer}>
-      <div className={styles.spinner} />
+/* ═══════════════════════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════════════════════ */
+function Toast({ toast, onDismiss }) {
+  if (!toast) return null;
+  const Icon = toast.type === "error" ? XCircle : CheckCircle;
+  return (
+    <div className={`${styles.toast} ${styles[`toast_${toast.type}`]}`} role="alert">
+      <Icon size={16} />
+      <span>{toast.msg}</span>
+      <button className={styles.toastClose} onClick={onDismiss} aria-label="Dismiss">
+        <XCircle size={14} />
+      </button>
     </div>
   );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DONUT CHART — pure SVG
+═══════════════════════════════════════════════════════════════════ */
+const STATUS_META = {
+  pending:      { label: "Pending",      color: "#f59e0b" },
+  accepted:     { label: "Accepted",     color: "#10b981" },
+  declined:     { label: "Declined",     color: "#ef4444" },
+  checked_in:   { label: "Checked In",   color: "#6366f1" },
+  checked_out:  { label: "Checked Out",  color: "#8b5cf6" },
+  BOOKED:       { label: "Booked",       color: "#7c3aed" },
+  CANCELLED:    { label: "Cancelled",    color: "#ef4444" },
+  COMPLETED:    { label: "Completed",    color: "#10b981" },
+};
+
+function DonutChart({ data }) {
+  const total = data.reduce((s, d) => s + (d.count || 0), 0);
+
+  if (!total) {
+    return (
+      <div className={styles.emptyChart}>
+        <BarChart2 size={32} className={styles.emptyChartIcon} />
+        <p>No data available</p>
+      </div>
+    );
+  }
+
+  const r = 38, cx = 50, cy = 50;
+  const circumference = 2 * Math.PI * r;
+  let offset = 0;
+
+  const slices = data.map((d) => {
+    const key   = d.status || d.name;
+    const meta  = STATUS_META[key] || {};
+    const color = meta.color || "#a78bfa";
+    const dash  = (d.count / total) * circumference;
+    const slice = { ...d, dash, offset, color, label: meta.label || key };
+    offset += dash;
+    return slice;
+  });
+
+  return (
+    <div className={styles.donutWrap}>
+      <div className={styles.donutChart}>
+        <svg viewBox="0 0 100 100" className={styles.donutSvg}>
+          {slices.map((s, i) => (
+            <circle
+              key={i}
+              cx={cx} cy={cy} r={r}
+              fill="none"
+              stroke={s.color}
+              strokeWidth="16"
+              strokeDasharray={`${s.dash} ${circumference - s.dash}`}
+              strokeDashoffset={-s.offset + circumference * 0.25}
+              className={styles.donutSlice}
+            />
+          ))}
+          <text x={cx} y={cy - 6}  textAnchor="middle" className={styles.donutTotal}>{total}</text>
+          <text x={cx} y={cy + 9} textAnchor="middle" className={styles.donutLabel}>TOTAL</text>
+        </svg>
+      </div>
+      <div className={styles.donutLegend}>
+        {slices.map((s, i) => (
+          <div key={i} className={styles.legendRow}>
+            <span className={styles.legendDot} style={{ background: s.color }} />
+            <span className={styles.legendName}>{s.label}</span>
+            <span className={styles.legendCount}>{s.count}</span>
+            <span className={styles.legendPct}>{((s.count / total) * 100).toFixed(0)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BAR CHART — daily trend
+═══════════════════════════════════════════════════════════════════ */
+function BarChart({ data, color }) {
+  if (!data?.length) {
+    return (
+      <div className={styles.emptyChart}>
+        <Activity size={32} className={styles.emptyChartIcon} />
+        <p>No trend data available</p>
+      </div>
+    );
+  }
+
+  const max = Math.max(...data.map((d) => d.count), 1);
+
+  return (
+    <div className={styles.barChartOuter}>
+      <div className={styles.barChart}>
+        {data.map((d, i) => {
+          const heightPct = Math.max((d.count / max) * 100, 2);
+          const label = d.date
+            ? new Date(d.date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+            : "";
+          const showLabel = data.length <= 15 || i % Math.ceil(data.length / 10) === 0;
+          return (
+            <div key={i} className={styles.barCol} title={`${label}: ${d.count}`}>
+              <div
+                className={styles.bar}
+                style={{ height: `${heightPct}%`, background: color }}
+              />
+              {showLabel && <span className={styles.barTick}>{label}</span>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HORIZONTAL BAR LIST
+═══════════════════════════════════════════════════════════════════ */
+function HBarList({ data, accent }) {
+  if (!data?.length) {
+    return (
+      <div className={styles.emptyChart}>
+        <AlertCircle size={28} className={styles.emptyChartIcon} />
+        <p>No data available</p>
+      </div>
+    );
+  }
+
+  const max = Math.max(...data.map((d) => d.count), 1);
+
+  return (
+    <div className={styles.hBarList}>
+      {data.slice(0, 6).map((d, i) => (
+        <div key={i} className={styles.hBarItem}>
+          <div className={styles.hBarMeta}>
+            <span className={styles.hBarRank}>{i + 1}</span>
+            <span className={styles.hBarName}>{d.name || d.person_to_meet || "—"}</span>
+            <span className={styles.hBarVal}>{d.count}</span>
+          </div>
+          <div className={styles.hBarTrack}>
+            <div
+              className={styles.hBarFill}
+              style={{ width: `${(d.count / max) * 100}%`, background: accent }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   KPI CARD
+═══════════════════════════════════════════════════════════════════ */
+function KpiCard({ label, value, icon: Icon, accent, sub }) {
+  return (
+    <div className={styles.kpiCard}>
+      <div className={styles.kpiIcon} style={{ background: `${accent}18`, color: accent }}>
+        <Icon size={20} />
+      </div>
+      <div className={styles.kpiBody}>
+        <p className={styles.kpiLabel}>{label}</p>
+        <p className={styles.kpiValue} style={{ color: accent }}>{value ?? 0}</p>
+        {sub && <p className={styles.kpiSub}>{sub}</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   SECTION HEADING
+═══════════════════════════════════════════════════════════════════ */
+function SectionHeading({ icon: Icon, title, accent }) {
+  return (
+    <div className={styles.sectionHeading}>
+      <div className={styles.sectionHeadingIcon} style={{ background: `${accent}18`, color: accent }}>
+        <Icon size={18} />
+      </div>
+      <h2 className={styles.sectionHeadingText}>{title}</h2>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   MAIN PAGE
+═══════════════════════════════════════════════════════════════════ */
+export default function ReportsPage() {
+  const router = useRouter();
+  const [analytics, setAnalytics] = useState(null);
+  const [company,   setCompany]   = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [toast,     setToast]     = useState(null);
+  const [exporting, setExporting] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const timerRef = useRef(null);
+
+  const showToast = useCallback((msg, type = "success") => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setToast({ msg, type });
+    timerRef.current = setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  const loadAnalytics = useCallback(async (silent = false) => {
+    const token = localStorage.getItem("token");
+    if (!token) { router.replace("/auth/login"); return; }
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
+    try {
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/exports/analytics`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setAnalytics(data);
+    } catch {
+      showToast("Failed to load analytics data. Please try again.", "error");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [router, showToast]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("company");
+    if (stored) { try { setCompany(JSON.parse(stored)); } catch {} }
+    loadAnalytics();
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, [loadAnalytics]);
+
+  /* Export handler */
+  const handleExport = async (type) => {
+    const map = {
+      visitors: { endpoint: "/api/exports/visitors",            label: "Visitor Records" },
+      bookings: { endpoint: "/api/exports/conference-bookings", label: "Conference Bookings" },
+      all:      { endpoint: "/api/exports/all",                 label: "Complete Report" },
+    };
+    const { endpoint, label } = map[type] || {};
+    if (!endpoint) return;
+
+    try {
+      setExporting(type);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (!res.ok) throw new Error();
+
+      const blob = await res.blob();
+      const cd   = res.headers.get("content-disposition");
+      let filename = `${label.replace(/\s+/g, "-")}-${Date.now()}.xlsx`;
+      if (cd) { const m = cd.match(/filename="(.+)"/); if (m) filename = m[1]; }
+
+      const url = URL.createObjectURL(blob);
+      const a   = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      showToast(`${label} exported successfully.`, "success");
+    } catch {
+      showToast("Export failed. Please try again.", "error");
+    } finally {
+      setExporting(null);
+    }
+  };
+
+  /* ── Loading ── */
+  if (loading) {
+    return (
+      <div className={styles.loadingScreen}>
+        <div className={styles.loadingSpinner} />
+        <p className={styles.loadingText}>Loading analytics...</p>
+      </div>
+    );
+  }
+
+  const v = analytics?.visitors || {};
+  const b = analytics?.bookings  || {};
+
+  const visitStatusData   = (v.visitStatusBreakdown || []).map((d) => ({ ...d, status: d.status }));
+  const bookingStatusData = (b.statusBreakdown      || []).map((d) => ({ ...d, status: d.status, count: d.count }));
 
   return (
     <div className={styles.page}>
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
 
-      {/* ─── HEADER ─────────────────────────────────── */}
+      {/* ── HEADER ── */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          {company?.logo && (
-            <Image src={company.logo} alt="Logo" width={38} height={38}
-              className={styles.logo} unoptimized />
-          )}
-          <span className={styles.logoText}>{company?.name || "Dashboard"}</span>
-          <span className={styles.headerBadge}>HOME</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <button
-            onClick={() => setNavOpen(true)}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              display: "flex", flexDirection: "column", alignItems: "center",
-              gap: 4, padding: "8px 10px", borderRadius: 10,
-              transition: "background 0.2s",
-            }}
-            aria-label="Menu"
-          >
-            {[0,1,2].map(i => (
-              <span key={i} style={{ display: "block", width: 20, height: 2, background: "#7c3aed", borderRadius: 2 }} />
-            ))}
+          <button className={styles.backBtn} onClick={() => router.push("/home")} aria-label="Back to home">
+            <ArrowLeft size={16} />
+            <span>Back</span>
           </button>
+          <div className={styles.headerDivider} />
+          <span className={styles.headerTitle}>
+            {company?.name || "Dashboard"}
+          </span>
         </div>
+        <button
+          className={styles.refreshBtn}
+          onClick={() => loadAnalytics(true)}
+          disabled={refreshing}
+          aria-label="Refresh data"
+        >
+          <RefreshCw size={15} className={refreshing ? styles.spinning : ""} />
+          <span>Refresh</span>
+        </button>
       </header>
 
-      {/* ─── NAV OVERLAY ────────────────────────────── */}
-      {navOpen && (
-        <div
-          onClick={() => setNavOpen(false)}
-          style={{
-            position: "fixed", inset: 0,
-            background: "rgba(26,0,56,0.45)",
-            backdropFilter: "blur(4px)",
-            zIndex: 900, animation: "fadeIn 0.2s ease",
-          }}
-        />
-      )}
-
-      {/* ─── SLIDE PANEL ─────────────────────────────── */}
-      <div style={{
-        position: "fixed", top: 0, left: 0,
-        width: "min(320px, 85vw)", height: "100vh", height: "100dvh",
-        background: "#fff", zIndex: 950,
-        transform: navOpen ? "translateX(0)" : "translateX(-100%)",
-        transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
-        boxShadow: "8px 0 40px rgba(98,0,214,0.15)",
-        display: "flex", flexDirection: "column", overflow: "hidden",
-      }}>
-        {/* Panel Header */}
-        <div style={{
-          background: "linear-gradient(135deg, #4a00b4, #7a00ff)",
-          padding: "20px 24px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          flexShrink: 0,
-        }}>
-          <div>
-            <div style={{ color: "#fff", fontWeight: 900, fontSize: "1rem", fontFamily: "Nunito, sans-serif" }}>
-              {company?.name || "Menu"}
-            </div>
-            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.75rem", fontWeight: 600, marginTop: 2 }}>
-              Visitor Management
-            </div>
+      {/* ── HERO ── */}
+      <div className={styles.hero}>
+        <div className={styles.heroContent}>
+          <div className={styles.heroBadge}>
+            <TrendingUp size={13} />
+            Analytics &amp; Reports
           </div>
-          <button
-            onClick={() => setNavOpen(false)}
-            style={{
-              background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
-              width: 36, height: 36, borderRadius: "50%", cursor: "pointer",
-              fontSize: "1.1rem", fontWeight: 900, display: "flex",
-              alignItems: "center", justifyContent: "center", transition: "all 0.25s",
-            }}
-          >✕</button>
-        </div>
-
-        {/* Panel Nav Links */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 32px" }}>
-
-          {/* Section: Management */}
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1.2, textTransform: "uppercase", padding: "8px 8px 6px", marginBottom: 4 }}>
-            Management
-          </div>
-
-          {[
-            { icon: "🏠", label: "Dashboard", sub: "Overview & stats", href: "/home" },
-            { icon: "👥", label: "Visitors", sub: "Live visitor tracking", href: "/visitor/dashboard" },
-          ].map(item => (
-            <button key={item.href}
-              onClick={() => { setNavOpen(false); router.push(item.href); }}
-              style={{
-                width: "100%", background: "none", border: "none", cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 12, padding: "12px 10px",
-                borderRadius: 14, transition: "background 0.15s", marginBottom: 4,
-                textAlign: "left", fontFamily: "Nunito, sans-serif",
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = "#f3f0fb"}
-              onMouseLeave={e => e.currentTarget.style.background = "none"}
-            >
-              <span style={{ fontSize: "1.35rem", width: 36, textAlign: "center" }}>{item.icon}</span>
-              <div>
-                <div style={{ fontWeight: 800, fontSize: 13, color: "#1a0038" }}>{item.label}</div>
-                <div style={{ fontSize: 11, color: "#9980c8", fontWeight: 600 }}>{item.sub}</div>
-              </div>
-            </button>
-          ))}
-
-          <div style={{ height: 1, background: "#ede8f8", margin: "10px 0 14px" }} />
-
-          {/* Section: Analytics */}
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1.2, textTransform: "uppercase", padding: "0 8px 6px", marginBottom: 4 }}>
-            Analytics
-          </div>
-
-          <button
-            onClick={() => { setNavOpen(false); router.push("/home/reports"); }}
-            style={{
-              width: "100%", background: "linear-gradient(135deg, #f4eeff, #ede4fa)", border: "1.5px solid #ddd2f0",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "14px 14px",
-              borderRadius: 14, marginBottom: 8, textAlign: "left", fontFamily: "Nunito, sans-serif",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, #ede4fa, #ddd2f0)"; e.currentTarget.style.transform = "translateX(3px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, #f4eeff, #ede4fa)"; e.currentTarget.style.transform = "none"; }}
-          >
-            <span style={{ fontSize: "1.45rem", width: 36, textAlign: "center" }}>📊</span>
-            <div>
-              <div style={{ fontWeight: 900, fontSize: 13, color: "#1a0038" }}>Reports & Analytics</div>
-              <div style={{ fontSize: 11, color: "#6200d6", fontWeight: 700 }}>Charts, trends &amp; exports</div>
-            </div>
-            <span style={{ marginLeft: "auto", color: "#6200d6", fontSize: 14 }}>→</span>
-          </button>
-
-          <div style={{ height: 1, background: "#ede8f8", margin: "10px 0 14px" }} />
-
-          {/* Section: Settings */}
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1.2, textTransform: "uppercase", padding: "0 8px 6px", marginBottom: 4 }}>
-            Settings
-          </div>
-
-          <button
-            onClick={() => { setNavOpen(false); router.push("/visitor/admin"); }}
-            style={{
-              width: "100%", background: "linear-gradient(135deg, #f4eeff, #ede4fa)", border: "1.5px solid #ddd2f0",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "14px 14px",
-              borderRadius: 14, marginBottom: 8, textAlign: "left", fontFamily: "Nunito, sans-serif",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, #ede4fa, #ddd2f0)"; e.currentTarget.style.transform = "translateX(3px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, #f4eeff, #ede4fa)"; e.currentTarget.style.transform = "none"; }}
-          >
-            <span style={{ fontSize: "1.45rem", width: 36, textAlign: "center" }}>👤</span>
-            <div>
-              <div style={{ fontWeight: 900, fontSize: 13, color: "#1a0038" }}>Employee Directory</div>
-              <div style={{ fontSize: 11, color: "#6200d6", fontWeight: 700 }}>Manage who visitors can meet</div>
-            </div>
-            <span style={{ marginLeft: "auto", color: "#6200d6", fontSize: 14 }}>→</span>
-          </button>
-
-          <div style={{ height: 1, background: "#ede8f8", margin: "10px 0 14px" }} />
-
-          {/* Logout */}
-          <button
-            onClick={handleLogout}
-            style={{
-              width: "100%", background: "rgba(204,17,0,0.06)", border: "1.5px solid rgba(204,17,0,0.15)",
-              cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
-              borderRadius: 14, textAlign: "left", fontFamily: "Nunito, sans-serif",
-              transition: "all 0.2s", color: "#cc1100",
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = "rgba(204,17,0,0.1)"}
-            onMouseLeave={e => e.currentTarget.style.background = "rgba(204,17,0,0.06)"}
-          >
-            <span style={{ fontSize: "1.2rem", width: 36, textAlign: "center" }}>🚪</span>
-            <div style={{ fontWeight: 800, fontSize: 13 }}>Sign Out</div>
-          </button>
-        </div>
-      </div>
-
-      {/* ─── HERO BANNER ─────────────────────────────── */}
-      <div className={styles.heroBanner}>
-        <div className={styles.heroBannerContent}>
-          <div className={styles.heroBannerGreeting}>
-            <span className={styles.heroBannerDot} />
-            VISITOR MANAGEMENT
-          </div>
-          <h1 className={styles.heroBannerTitle}>
-            Welcome back, <span>{company?.name || "Admin"}</span>
+          <h1 className={styles.heroTitle}>
+            Business <span>Intelligence</span>
           </h1>
-          <p className={styles.heroBannerSub}>
-            Here&apos;s a quick overview of your workspace activity
+          <p className={styles.heroSub}>
+            Visitor activity and conference usage — last 30 days
           </p>
         </div>
+        <div className={styles.heroOrb1} aria-hidden="true" />
+        <div className={styles.heroOrb2} aria-hidden="true" />
       </div>
 
-      {/* ─── MAIN CONTENT ───────────────────────────── */}
-      <div className={styles.container}>
+      {/* ── BODY ── */}
+      <div className={styles.scrollBody}>
+        <div className={styles.content}>
 
-        {/* Stats Cards */}
-        <div className={styles.card} style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
-          {[
-            { label: "Total Visitors",    value: stats?.visitors?.total  ?? "—", color: "#7c3aed" },
-            { label: "Active Now",         value: stats?.visitors?.active ?? "—", color: "#f0a500" },
-            { label: "Total Bookings",     value: stats?.bookings?.total  ?? "—", color: "#3b82f6" },
-            { label: "Upcoming Bookings",  value: stats?.bookings?.upcoming ?? "—", color: "#00b894" },
-          ].map((s, i) => (
-            <div key={i} style={{
-              background: "linear-gradient(145deg, #f4eeff, #ece4fa)",
-              borderRadius: 16, padding: "18px 16px",
-              border: "1.5px solid #ddd2f0",
-            }}>
-              <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
-                {s.label}
+          {/* ══════════════════════════════════════════
+              VISITOR ANALYTICS
+          ══════════════════════════════════════════ */}
+          <section className={styles.section}>
+            <SectionHeading icon={Users} title="Visitor Analytics" accent="#7c3aed" />
+
+            <div className={styles.kpiGrid}>
+              <KpiCard label="Total Visitors"    value={v.total}   icon={Users}         accent="#7c3aed" />
+              <KpiCard label="Currently Inside"  value={v.active}  icon={Activity}      accent="#f59e0b" />
+              <KpiCard label="Today's Arrivals"  value={v.today}   icon={TrendingUp}    accent="#10b981" />
+              <KpiCard label="Pass Issued"       value={v.passIssued ?? v.total} icon={CheckCircle} accent="#6366f1" />
+            </div>
+
+            <div className={styles.chartRow}>
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Daily Visitor Trend</h3>
+                  <span className={styles.chartCardSub}>Last 30 days</span>
+                </div>
+                <BarChart
+                  data={v.dailyTrend || []}
+                  color="linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%)"
+                />
               </div>
-              <div style={{ fontSize: "2rem", fontWeight: 900, color: s.color, lineHeight: 1 }}>
-                {s.value}
+
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Visit Status</h3>
+                  <span className={styles.chartCardSub}>Breakdown</span>
+                </div>
+                <DonutChart data={visitStatusData} />
               </div>
             </div>
-          ))}
-        </div>
 
-        {/* Quick Actions */}
-        <div className={styles.card}>
-          <h2 className={styles.title}>Quick Actions</h2>
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-            {[
-              { label: "🧑‍💼 Visitor Dashboard",      href: "/visitor/dashboard", primary: true },
-              { label: "📊 Reports & Analytics",    href: "/home/reports",       primary: false },
-              { label: "👤 Employee Directory",      href: "/visitor/admin",      primary: false },
-            ].map((action) => (
-              <button
-                key={action.href}
-                className={action.primary ? styles.primaryBtn : styles.secondaryBtn}
-                onClick={() => router.push(action.href)}
-              >
-                {action.label}
-              </button>
-            ))}
-          </div>
-        </div>
+            <div className={styles.twoCol}>
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Top Employees Visited</h3>
+                  <span className={styles.chartCardSub}>By visitor count</span>
+                </div>
+                <HBarList
+                  data={v.topEmployees || []}
+                  accent="linear-gradient(90deg, #7c3aed, #a78bfa)"
+                />
+              </div>
 
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Visit Purposes</h3>
+                  <span className={styles.chartCardSub}>Most common reasons</span>
+                </div>
+                <HBarList
+                  data={v.topPurposes || []}
+                  accent="linear-gradient(90deg, #7c3aed, #a78bfa)"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════
+              CONFERENCE ANALYTICS
+          ══════════════════════════════════════════ */}
+          <section className={styles.section}>
+            <SectionHeading icon={CalendarDays} title="Conference Analytics" accent="#0ea5e9" />
+
+            <div className={styles.kpiGrid}>
+              <KpiCard label="Total Bookings"  value={b.total}     icon={CalendarDays}  accent="#0ea5e9" />
+              <KpiCard label="Upcoming"        value={b.upcoming}  icon={Clock}         accent="#f59e0b" />
+              <KpiCard label="Completed"       value={b.completed} icon={CheckCircle}   accent="#10b981" />
+              <KpiCard label="Cancelled"       value={b.cancelled} icon={XCircle}       accent="#ef4444" />
+            </div>
+
+            <div className={styles.chartRow}>
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Daily Booking Trend</h3>
+                  <span className={styles.chartCardSub}>Last 30 days</span>
+                </div>
+                <BarChart
+                  data={b.dailyTrend || []}
+                  color="linear-gradient(180deg, #0ea5e9 0%, #7dd3fc 100%)"
+                />
+              </div>
+
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Booking Status</h3>
+                  <span className={styles.chartCardSub}>Breakdown</span>
+                </div>
+                <DonutChart data={bookingStatusData} />
+              </div>
+            </div>
+
+            <div className={styles.twoCol}>
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Most Booked Rooms</h3>
+                  <span className={styles.chartCardSub}>By booking count</span>
+                </div>
+                <HBarList
+                  data={b.topRooms || []}
+                  accent="linear-gradient(90deg, #0ea5e9, #7dd3fc)"
+                />
+              </div>
+
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <h3 className={styles.chartCardTitle}>Bookings by Department</h3>
+                  <span className={styles.chartCardSub}>Top departments</span>
+                </div>
+                <HBarList
+                  data={b.byDepartment || []}
+                  accent="linear-gradient(90deg, #0ea5e9, #7dd3fc)"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* ══════════════════════════════════════════
+              EXPORT
+          ══════════════════════════════════════════ */}
+          <section className={styles.exportSection}>
+            <div className={styles.exportHeader}>
+              <div className={styles.exportIconWrap}>
+                <FileDown size={22} />
+              </div>
+              <div>
+                <h3 className={styles.exportTitle}>Export Reports</h3>
+                <p className={styles.exportSub}>
+                  Download formatted Excel workbooks with all data
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.exportCards}>
+              <div className={styles.exportCard}>
+                <div className={styles.exportCardIcon} style={{ background: "#7c3aed18", color: "#7c3aed" }}>
+                  <Users size={20} />
+                </div>
+                <div className={styles.exportCardBody}>
+                  <p className={styles.exportCardTitle}>Visitor Records</p>
+                  <p className={styles.exportCardSub}>
+                    All visitor data including check-in, check-out, pass status
+                  </p>
+                </div>
+                <button
+                  className={styles.exportBtn}
+                  onClick={() => handleExport("visitors")}
+                  disabled={!!exporting}
+                  style={{ "--accent": "#7c3aed" }}
+                >
+                  {exporting === "visitors" ? (
+                    <><RefreshCw size={14} className={styles.spinning} /> Exporting...</>
+                  ) : (
+                    <><Download size={14} /> Download</>
+                  )}
+                </button>
+              </div>
+
+              <div className={styles.exportCard}>
+                <div className={styles.exportCardIcon} style={{ background: "#0ea5e918", color: "#0ea5e9" }}>
+                  <CalendarDays size={20} />
+                </div>
+                <div className={styles.exportCardBody}>
+                  <p className={styles.exportCardTitle}>Conference Bookings</p>
+                  <p className={styles.exportCardSub}>
+                    Room bookings with schedules, departments and status
+                  </p>
+                </div>
+                <button
+                  className={styles.exportBtn}
+                  onClick={() => handleExport("bookings")}
+                  disabled={!!exporting}
+                  style={{ "--accent": "#0ea5e9" }}
+                >
+                  {exporting === "bookings" ? (
+                    <><RefreshCw size={14} className={styles.spinning} /> Exporting...</>
+                  ) : (
+                    <><Download size={14} /> Download</>
+                  )}
+                </button>
+              </div>
+
+              <div className={`${styles.exportCard} ${styles.exportCardFull}`}>
+                <div className={styles.exportCardIcon} style={{ background: "#f59e0b18", color: "#f59e0b" }}>
+                  <Building2 size={20} />
+                </div>
+                <div className={styles.exportCardBody}>
+                  <p className={styles.exportCardTitle}>Complete Report</p>
+                  <p className={styles.exportCardSub}>
+                    All data in a single multi-sheet Excel workbook
+                  </p>
+                </div>
+                <button
+                  className={`${styles.exportBtn} ${styles.exportBtnFull}`}
+                  onClick={() => handleExport("all")}
+                  disabled={!!exporting}
+                >
+                  {exporting === "all" ? (
+                    <><RefreshCw size={14} className={styles.spinning} /> Exporting...</>
+                  ) : (
+                    <><Download size={14} /> Download All</>
+                  )}
+                </button>
+              </div>
+            </div>
+          </section>
+
+        </div>
       </div>
-
-      {toast && (
-        <div style={{
-          position: "fixed", top: 20, right: 20,
-          padding: "14px 22px", borderRadius: 14, fontSize: 14, fontWeight: 700,
-          zIndex: 10000, minWidth: 240, textAlign: "center",
-          background: toast.type === "error" ? "#cc1100" : "#5b00c8",
-          color: "#fff", boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
-          animation: "slideIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
-        }}>
-          {toast.msg}
-        </div>
-      )}
     </div>
   );
 }
