@@ -38,6 +38,11 @@
   --shadow-lg:    0 10px 40px rgba(91,33,182,0.15), 0 4px 12px rgba(91,33,182,0.08);
   --shadow-focus: 0 0 0 3px rgba(124,58,237,0.18);
 
+  /* Autocomplete-specific tokens */
+  --ac-dropdown-shadow: 0 8px 32px rgba(91,33,182,0.18), 0 2px 8px rgba(91,33,182,0.1);
+  --ac-item-hover-bg:   #f5f3ff;
+  --ac-avatar-size:     30px;
+
   --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Oxygen", sans-serif;
 
   --transition:      0.2s ease;
@@ -106,7 +111,7 @@
 }
 
 /* ================================================
-   STICKY NAVBAR — matches SaaS white nav
+   STICKY NAVBAR
 ================================================ */
 .header {
   background: #fff;
@@ -121,7 +126,6 @@
   top: 0;
   z-index: 100;
   gap: 0.75rem;
-  /* header is NOT inside .container, so full-width */
   width: 100%;
   margin-bottom: 0;
 }
@@ -165,7 +169,7 @@
 }
 
 /* ================================================
-   HERO BANNER — Step 0 only
+   HERO BANNER
 ================================================ */
 .heroBanner {
   background: var(--brand-gradient);
@@ -227,9 +231,7 @@
   line-height: 1.2;
 }
 
-.heroBannerTitle span {
-  color: #fbbf24;
-}
+.heroBannerTitle span { color: #fbbf24; }
 
 .heroBannerSub {
   color: rgba(255,255,255,0.82);
@@ -340,9 +342,9 @@
   margin-top: 3px;
 }
 
-.stepLabelActive   { color: var(--brand-primary); }
-.stepLabelDone     { color: var(--success); }
-.stepLabelIdle     { color: #9ca3af; }
+.stepLabelActive { color: var(--brand-primary); }
+.stepLabelDone   { color: var(--success); }
+.stepLabelIdle   { color: #9ca3af; }
 
 .stepConnector {
   width: clamp(24px, 5vw, 44px);
@@ -443,12 +445,18 @@
 
 /* ================================================
    GRID LAYOUT
+   overflow:visible is critical — any overflow:hidden
+   here would clip the position:fixed autocomplete
+   dropdown (though fixed escapes it anyway, keeping
+   visible ensures stacking context is not created
+   accidentally by some browsers on grid containers).
 ================================================ */
 .gridRow {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
   gap: clamp(0.5rem, 1.5vw, 0.75rem);
   margin-bottom: var(--space-sm);
+  overflow: visible;
 }
 
 .gridRow .input {
@@ -595,9 +603,7 @@
   box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
 }
 
-.secondaryBtn:active:not(:disabled) {
-  transform: translateY(1px);
-}
+.secondaryBtn:active:not(:disabled) { transform: translateY(1px); }
 
 .secondaryBtn:disabled {
   opacity: 0.45;
@@ -760,9 +766,7 @@
   box-shadow: 0 6px 20px rgba(37,211,102,0.4);
 }
 
-.whatsappBtn:active {
-  transform: translateY(0);
-}
+.whatsappBtn:active { transform: translateY(0); }
 
 /* ================================================
    LOADING
@@ -785,18 +789,13 @@
   animation: spin 0.75s linear infinite;
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ================================================
    TEXT UTILITIES
 ================================================ */
 .textCenter { text-align: center; }
 
-/* ================================================
-   SUCCESS ICON ANIMATION
-================================================ */
 @keyframes checkmarkDraw {
   from { transform: scale(0) rotate(-10deg); opacity: 0; }
   to   { transform: scale(1) rotate(0deg);  opacity: 1; }
@@ -805,6 +804,207 @@
 .successIcon {
   display: inline-block;
   animation: checkmarkDraw 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+/* ================================================
+   EMPLOYEE AUTOCOMPLETE
+   All dropdown chrome is here — no inline styles
+   needed in the component beyond position:fixed
+   coordinates (which must be set via JS).
+================================================ */
+
+/* Wrapper — gives the input a positioning context
+   for the spinner and linked-tick overlays */
+.acWrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* The input when an employee is successfully linked —
+   adds a subtle green left-border accent */
+.acInputLinked {
+  border-color: var(--success) !important;
+  background: var(--success-bg) !important;
+}
+
+/* Spinner inside input — right side overlay */
+.acSpinner {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  border: 2px solid var(--border);
+  border-top-color: var(--brand-primary);
+  border-radius: 50%;
+  display: inline-block;
+  animation: acSpin 0.7s linear infinite;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+@keyframes acSpin {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Green tick overlay when employee is linked */
+.acLinkedTick {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 13px;
+  color: var(--success);
+  pointer-events: none;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── Dropdown container ──
+   position:fixed is set inline via JS (getBoundingClientRect).
+   These styles handle everything else.
+   z-index 9999 ensures it appears above header (z-index:100),
+   modals, and any stacking contexts created by transforms.
+─────────────────────────────────────────────────────────── */
+.acDropdown {
+  /* position + top/left/width set inline by JS */
+  position: fixed;
+  background: #fff;
+  border-radius: var(--border-radius-lg);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--ac-dropdown-shadow);
+  z-index: 9999;
+  overflow: hidden;
+  max-height: 232px;
+  overflow-y: auto;
+  /* Hidden scrollbar — consistent with rest of page */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Entrance animation */
+  animation: acDropIn 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
+  /* Ensure font is consistent */
+  font-family: var(--font-sans);
+}
+
+.acDropdown::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}
+
+@keyframes acDropIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scaleY(0.96);
+    transform-origin: top center;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    transform-origin: top center;
+  }
+}
+
+/* ── Result row ── */
+.acItem {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 14px;
+  cursor: pointer;
+  /* CSS hover — works on both mouse AND touch (tap) */
+  transition: background var(--transition);
+  border-bottom: 1px solid rgba(221,214,254,0.35);
+  /* Prevent text selection while clicking */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.acItem:last-child {
+  border-bottom: none;
+}
+
+.acItem:hover,
+.acItem:focus-visible {
+  background: var(--ac-item-hover-bg);
+  outline: none;
+}
+
+.acItem:active {
+  background: #ede9fe;
+}
+
+/* ── Avatar circle ── */
+.acAvatar {
+  width: var(--ac-avatar-size);
+  height: var(--ac-avatar-size);
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--brand-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  /* Subtle shadow on the avatar */
+  box-shadow: 0 2px 6px rgba(91,33,182,0.22);
+}
+
+/* ── Employee info ── */
+.acInfo {
+  flex: 1;
+  min-width: 0; /* allow text truncation inside flex */
+}
+
+.acName {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.acDept {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+/* ── Selected checkmark (shown on the right of the selected item) ── */
+.acTick {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--success);
+  font-weight: 700;
+  font-size: 12px;
+  padding-left: 6px;
+}
+
+/* ── No results / empty hint ── */
+.acEmpty {
+  padding: 14px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ── Separator between sections if needed ── */
+.acDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 2px 10px;
 }
 
 /* ================================================
@@ -833,6 +1033,12 @@
 
   .gridRow {
     grid-template-columns: 1fr;
+  }
+
+  /* On very small phones the fixed dropdown might extend off-screen.
+     Cap its left edge and width inside the viewport. */
+  .acDropdown {
+    max-width: calc(100vw - 1.5rem);
   }
 }
 
@@ -892,6 +1098,16 @@
     transform: none;
     box-shadow: 0 4px 14px rgba(37,211,102,0.35);
   }
+
+  /* On touch devices acItem :hover is triggered by tap — that's correct.
+     We remove the persistent hover state after the tap ends. */
+  .acItem:hover {
+    background: transparent;
+  }
+
+  .acItem:active {
+    background: var(--ac-item-hover-bg);
+  }
 }
 
 /* Landscape phones */
@@ -916,6 +1132,11 @@
   .heroBanner {
     padding: 1rem;
   }
+
+  /* Smaller dropdown in landscape to avoid covering the keyboard */
+  .acDropdown {
+    max-height: 160px;
+  }
 }
 
 /* Focus visible — accessibility */
@@ -938,5 +1159,9 @@
 
   .page {
     background: white;
+  }
+
+  .acDropdown {
+    display: none;
   }
 }
