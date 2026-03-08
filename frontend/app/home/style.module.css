@@ -385,13 +385,14 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MODULE CARDS
+   — now supports 3 cards: 1-col mobile → 2-col tablet → 3-col desktop
    ═══════════════════════════════════════════════════════════════════════════ */
 .cardGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: clamp(1rem,3vw,1.75rem);
   padding: clamp(1.75rem,5vw,3.5rem) clamp(1.25rem,5vw,3.5rem);
-  max-width: 960px; margin: 0 auto; width: 100%;
+  max-width: 1100px; margin: 0 auto; width: 100%;
 }
 
 .moduleCard {
@@ -406,6 +407,7 @@
   min-height: clamp(100px,14vh,140px);
 }
 .moduleCard:nth-child(2) { animation-delay: 0.1s; }
+.moduleCard:nth-child(3) { animation-delay: 0.18s; }
 .moduleCard::before {
   content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
   background: var(--grad-brand); transform: scaleY(0); transform-origin: bottom;
@@ -561,7 +563,7 @@
 .infoBox p { margin: 0; }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SLIDE PANEL — key fixes here
+   SLIDE PANEL
    ═══════════════════════════════════════════════════════════════════════════ */
 .overlay {
   position: fixed; inset: 0;
@@ -576,7 +578,6 @@
   background: linear-gradient(180deg, #f5f3ff 0%, #faf9ff 100%);
   z-index: 500; display: flex; flex-direction: column;
   box-shadow: var(--shadow-xl); border-right: 1px solid var(--border-med);
-  /* overflow:hidden on the PANEL itself clips the panelBody scrollbar track correctly */
   overflow: hidden;
   animation: panelSlide 0.3s cubic-bezier(0.34,1.2,0.64,1);
 }
@@ -604,28 +605,21 @@
 }
 .closeBtn:hover { background: rgba(255,255,255,0.3); }
 
-/* ── THE KEY FIX ── */
 .panelBody {
   flex: 1;
-  min-height: 0;                        /* crucial: allows flex child to shrink */
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  -webkit-overflow-scrolling: touch;    /* smooth momentum scroll on iOS */
-  overscroll-behavior: contain;         /* prevents page scroll bleed */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: clamp(0.875rem,2vh,1.25rem);
   display: flex;
   flex-direction: column;
   gap: clamp(0.75rem,2vh,1.125rem);
-  /* scrollbar hidden — all three methods */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.panelBody::-webkit-scrollbar {
-  display: none;
-  width: 0;
-  height: 0;
-}
-/* bottom breathing room so last card never clips */
+.panelBody::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .panelBody::after {
   content: '';
   display: block;
@@ -639,14 +633,13 @@
   color: var(--error); font-size: clamp(0.75rem,1.8vw,0.85rem);
 }
 
-/* ── Current Plan Card — never clipped ── */
 .currentPlanCard {
   background: var(--grad-brand);
   border-radius: var(--r-lg);
   padding: clamp(1rem,2.5vh,1.5rem) clamp(0.875rem,2.5vw,1.25rem);
   position: relative; overflow: hidden;
   box-shadow: var(--shadow-md);
-  flex-shrink: 0;           /* never squish this card */
+  flex-shrink: 0;
 }
 .currentPlanCard::after {
   content: ''; position: absolute; bottom: -35px; right: -35px;
@@ -675,7 +668,6 @@
   border-radius: var(--r-full); border: 1px solid rgba(255,255,255,0.2); color: var(--white);
 }
 
-/* ── Details Section ── */
 .detailsSection {
   background: var(--purple-50); border: 1px solid var(--border-med);
   border-radius: var(--r-lg); overflow: hidden; flex-shrink: 0;
@@ -700,11 +692,9 @@
 .detailValue {
   font-size: clamp(0.68rem,1.6vw,0.78rem); color: var(--purple-900);
   font-weight: 600; text-align: right;
-  /* prevent long IDs from overflowing */
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%;
 }
 
-/* ── Menu Items ── */
 .menuSection { display: flex; flex-direction: column; gap: clamp(0.25rem,0.6vh,0.35rem); flex-shrink: 0; }
 
 .menuItem {
@@ -732,7 +722,6 @@
 .menuItemArrow { color: var(--purple-500); flex-shrink: 0; transition: all var(--t); }
 .menuItem:hover .menuItemArrow { color: var(--white); transform: translateX(3px); }
 
-/* ── Renewal ── */
 .renewalSection { display: flex; flex-direction: column; gap: clamp(0.5rem,1.2vh,0.75rem); flex-shrink: 0; }
 
 .alertBox {
@@ -754,7 +743,6 @@
 }
 .primaryBtn:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); }
 
-/* ── Upgrade Section ── */
 .upgradeSection { display: flex; flex-direction: column; gap: clamp(0.5rem,1.2vh,0.875rem); flex-shrink: 0; }
 
 .sectionHeader { display: flex; align-items: center; gap: 0.5rem; }
@@ -821,6 +809,8 @@
   .logoutBtn { padding: 0.45rem 0.6rem; }
   .reportsGrid { grid-template-columns: 1fr; }
   .moduleCard { min-height: clamp(88px,12vh,120px); }
+  /* Stack all 3 cards on mobile */
+  .cardGrid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 480px) {
@@ -829,8 +819,14 @@
   .cardGrid { padding: clamp(1rem,3vw,1.5rem) clamp(0.875rem,3vw,1.25rem); }
 }
 
-@media (min-width: 1200px) {
-  .cardGrid { grid-template-columns: repeat(2,1fr); max-width: 900px; }
+/* 2-col tablet */
+@media (min-width: 769px) and (max-width: 1099px) {
+  .cardGrid { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* 3-col desktop */
+@media (min-width: 1100px) {
+  .cardGrid { grid-template-columns: repeat(3, 1fr); max-width: 1100px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
