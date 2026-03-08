@@ -14,38 +14,36 @@ import {
 const router = express.Router();
 
 /* ======================================================
-   PUBLIC — NO AUTH
+   ROUTE ORDER MATTERS IN EXPRESS.
+   Fixed/named routes MUST come before wildcard /:param
+   routes to prevent shadowing. All static segment routes
+   are registered first, wildcard routes last.
 ====================================================== */
+
+/* ── PUBLIC — NO AUTH ── */
 router.get("/public/code/:visitorCode", getPublicVisitorPass);
 
-/* ======================================================
-   CREATE VISITOR
-====================================================== */
+/* ── CREATE VISITOR ── */
 router.post("/", authenticate, upload.single("photo"), createVisitor);
 
-/* ======================================================
-   DASHBOARD
-====================================================== */
+/* ── DASHBOARD ── */
 router.get("/dashboard", authenticate, getVisitorDashboard);
 
-/* ======================================================
-   VISITOR PASS (ADMIN)
-====================================================== */
+/* ── VISITOR PASS (ADMIN) ── */
 router.get("/code/:visitorCode", authenticate, getVisitorPass);
 
-/* ======================================================
-   ADMIN — UPDATE VISIT STATUS (Accept / Decline)
-====================================================== */
+/* ── WILDCARD ROUTES — registered last to avoid shadowing ── */
+
+/* Admin accept / decline visit status */
 router.patch("/:visitorCode/visit-status", authenticate, updateVisitStatus);
 
-/* ======================================================
-   RESEND VISITOR PASS EMAIL
-====================================================== */
+/* Resend visitor pass email */
 router.post("/:visitorCode/resend", authenticate, resendVisitorPass);
 
-/* ======================================================
-   CHECKOUT
-====================================================== */
-router.post("/:visitorCode/checkout", authenticate, checkoutVisitor);
+/* Checkout — POST /api/visitors/:visitorCode/checkout */
+router.post("/:visitorCode/checkout", authenticate, (req, res, next) => {
+  console.log(`[CHECKOUT] Received: POST /api/visitors/${req.params.visitorCode}/checkout`);
+  next();
+}, checkoutVisitor);
 
 export default router;
