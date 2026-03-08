@@ -1,0 +1,371 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+
+/* ================= GLOBAL SCROLLBAR KILL ================= */
+:global(html), :global(body) {
+  height: 100%; margin: 0; padding: 0;
+  scrollbar-width: none; -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch; overflow: hidden;
+}
+:global(body::-webkit-scrollbar) { display: none; }
+:global(*::-webkit-scrollbar) { display: none !important; }
+:global(*) { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
+/* ================= ROOT ================= */
+.container {
+  height: 100vh; height: 100dvh;
+  background: #f3f0fb;
+  font-family: 'Nunito', sans-serif;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+
+.scrollBody {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ================= LOADING ================= */
+.loading {
+  display: flex; align-items: center; justify-content: center;
+  min-height: 100vh; font-size: 1.2rem; font-weight: 800;
+  color: #6200d6; background: #f3f0fb; letter-spacing: 1px;
+}
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 4px solid #ede8f8; border-top-color: #6200d6;
+  border-radius: 50%; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ================= HEADER ================= */
+.header {
+  height: 58px; background: #fff;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 24px; border-bottom: 1px solid #e8e0f5;
+  position: sticky; top: 0; z-index: 300; flex-shrink: 0;
+  box-shadow: 0 1px 12px rgba(98,0,214,0.06);
+}
+
+.headerLeft {
+  display: flex; align-items: center; gap: 12px; min-width: 0;
+}
+
+.logoText {
+  font-size: 0.95rem; font-weight: 800; color: #1a0038;
+  letter-spacing: 0.2px; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+.companyLogo { width: 72px; height: 36px; object-fit: contain; }
+
+.backBtn {
+  background: transparent; color: #6200d6;
+  border: 2px solid #6200d6; padding: 8px 20px;
+  border-radius: 50px; font-size: 13px; font-weight: 700;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  transition: all 0.2s; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+}
+.backBtn:hover { background: #6200d6; color: #fff; }
+
+/* ================= HERO ================= */
+.hero {
+  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  padding: 32px 36px 42px; position: relative; overflow: hidden; flex-shrink: 0;
+}
+.hero::after {
+  content: ''; position: absolute; top: -60px; right: -60px;
+  width: 300px; height: 300px; border-radius: 50%;
+  background: rgba(255,255,255,0.06); pointer-events: none;
+}
+.hero::before {
+  content: ''; position: absolute; bottom: -90px; left: -40px;
+  width: 220px; height: 220px; border-radius: 50%;
+  background: rgba(255,255,255,0.04); pointer-events: none;
+}
+
+.heroTitle {
+  font-size: 2.2rem; font-weight: 900; color: #fff;
+  margin: 0 0 6px; line-height: 1.15;
+}
+.heroTitle span { color: #f0a500; }
+.heroSub {
+  color: rgba(255,255,255,0.72); font-size: 0.92rem;
+  font-weight: 600; margin: 0;
+}
+
+/* ================= MAIN ================= */
+.mainContent {
+  padding: 24px 36px 48px;
+  display: flex; flex-direction: column; gap: 22px;
+}
+
+/* ================= SECTION TITLE ================= */
+.sectionTitle {
+  font-size: 1.05rem; font-weight: 900; color: #1a0038;
+  margin: 0 0 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.sectionDot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+}
+.sectionDotPurple { background: #6200d6; box-shadow: 0 0 0 3px rgba(98,0,214,0.15); }
+.sectionDotBlue   { background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+/* ================= STAT CARDS ROW ================= */
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.statCard {
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 18px; padding: 20px 22px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  transition: all 0.25s;
+}
+.statCard:hover { box-shadow: 0 8px 28px rgba(98,0,214,0.12); transform: translateY(-2px); }
+
+.statLabel {
+  font-size: 10px; font-weight: 800; color: #9980c8;
+  letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 8px;
+}
+.statValue {
+  font-size: 2.2rem; font-weight: 900; color: #6200d6; line-height: 1;
+}
+.statValueAmber { color: #f0a500; }
+.statValueGreen { color: #00b894; }
+
+/* ================= CHART CARD ================= */
+.chartCard {
+  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  border-radius: 22px; padding: 22px 24px;
+  border: 1.5px solid #ddd2f0;
+  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  transition: box-shadow 0.3s, transform 0.2s;
+}
+.chartCard:hover { box-shadow: 0 8px 32px rgba(98,0,214,0.12); transform: translateY(-2px); }
+
+.chartHeader {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+}
+.chartDot {
+  width: 10px; height: 10px; border-radius: 50%; background: #6200d6;
+  box-shadow: 0 0 0 3px rgba(98,0,214,0.15); flex-shrink: 0;
+}
+.chartDotBlue {
+  background: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+}
+.chartTitle { font-size: 0.92rem; font-weight: 900; color: #1a0038; margin: 0; }
+
+.chartsRow {
+  display: grid; grid-template-columns: 1.4fr 1fr; gap: 18px;
+}
+
+/* ================= BAR CHART ================= */
+.barChartWrap {
+  width: 100%; overflow-x: auto;
+}
+
+.barChart {
+  display: flex; align-items: flex-end; gap: 5px;
+  height: 120px; min-width: 0;
+}
+
+.barGroup {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px; flex: 1; min-width: 14px; cursor: default;
+}
+
+.bar {
+  width: 100%; background: linear-gradient(180deg, #7a00ff, #4a00b4);
+  border-radius: 5px 5px 0 0;
+  transition: all 0.3s; min-height: 3px;
+  position: relative;
+}
+.bar:hover { background: linear-gradient(180deg, #f0a500, #d68f00); }
+.bar:hover::after {
+  content: attr(data-val);
+  position: absolute; top: -22px; left: 50%;
+  transform: translateX(-50%);
+  background: #1a0038; color: #fff;
+  font-size: 9px; font-weight: 800;
+  padding: 2px 5px; border-radius: 4px;
+  white-space: nowrap; pointer-events: none;
+}
+
+.barLabel {
+  font-size: 8px; font-weight: 700; color: #9980c8;
+  text-align: center; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* ================= DONUT CHART ================= */
+.donutWrap {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+}
+
+.donutSvg { width: 110px; height: 110px; overflow: visible; }
+
+.donutLegend {
+  display: flex; flex-direction: column; gap: 6px; width: 100%;
+}
+
+.legendItem {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 700; color: #2a0050;
+}
+.legendDot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+}
+.legendCount {
+  margin-left: auto; font-size: 10px; font-weight: 800;
+  color: #9980c8; background: rgba(98,0,214,0.08);
+  padding: 1px 6px; border-radius: 6px;
+}
+
+/* ================= HORIZONTAL BAR LIST ================= */
+.hBarList {
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+.hBarRow {
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.hBarTop {
+  display: flex; justify-content: space-between;
+  font-size: 11px; font-weight: 700; color: #2a0050;
+}
+.hBarCount {
+  font-size: 11px; font-weight: 800; color: #6200d6;
+}
+
+.hBarTrack {
+  width: 100%; height: 7px; background: #e8e0f5; border-radius: 4px; overflow: hidden;
+}
+.hBarFill {
+  height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #6200d6, #c060ff);
+  transition: width 0.6s ease;
+}
+.hBarFillBlue {
+  background: linear-gradient(90deg, #3b82f6, #06b6d4);
+}
+
+/* ================= TWO COL GRID ================= */
+.twoCol { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.threeCol { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+
+/* ================= EXPORT SECTION ================= */
+.exportSection {
+  background: linear-gradient(145deg, #1a0038 0%, #3a0080 100%);
+  border-radius: 22px; padding: 28px 28px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  box-shadow: 0 8px 32px rgba(26,0,56,0.25);
+}
+
+.exportLeft {}
+.exportTitle {
+  font-size: 1.1rem; font-weight: 900; color: #fff; margin: 0 0 6px;
+}
+.exportSub {
+  font-size: 0.82rem; color: rgba(255,255,255,0.6); margin: 0; font-weight: 600;
+}
+
+.exportBtns {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+
+.exportBtn {
+  padding: 10px 20px; border-radius: 50px;
+  font-size: 13px; font-weight: 800;
+  cursor: pointer; font-family: 'Nunito', sans-serif;
+  transition: all 0.2s; white-space: nowrap;
+  display: flex; align-items: center; gap: 7px;
+  border: 2px solid transparent;
+}
+
+.exportBtnPrimary {
+  background: #f0a500; color: #1a0038; border-color: #f0a500;
+  box-shadow: 0 4px 16px rgba(240,165,0,0.35);
+}
+.exportBtnPrimary:hover:not(:disabled) {
+  background: #d68f00; border-color: #d68f00; transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(240,165,0,0.5);
+}
+
+.exportBtnOutline {
+  background: transparent; color: #fff; border-color: rgba(255,255,255,0.35);
+}
+.exportBtnOutline:hover:not(:disabled) {
+  background: rgba(255,255,255,0.1); border-color: #fff;
+  transform: translateY(-2px);
+}
+
+.exportBtn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+/* ================= EMPTY STATE ================= */
+.emptyState {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 16px; color: #b8a8d8;
+  font-size: 0.88rem; font-weight: 600; gap: 10px; text-align: center;
+}
+.emptyIcon { font-size: 2rem; opacity: 0.45; }
+
+/* ================= TOAST ================= */
+.toast {
+  position: fixed; top: 20px; right: 20px;
+  padding: 14px 22px; border-radius: 14px; font-size: 14px;
+  font-weight: 700; z-index: 10000; min-width: 240px; text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  animation: slideInToast 0.35s cubic-bezier(0.34,1.56,0.64,1),
+             slideOutToast 0.3s ease 2.7s forwards;
+}
+.toastSuccess { background: #5b00c8; color: #fff; }
+.toastError   { background: #cc1100; color: #fff; }
+@keyframes slideInToast {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOutToast {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(120%); opacity: 0; }
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1100px) {
+  .chartsRow { grid-template-columns: 1fr; }
+  .threeCol { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 900px) {
+  .hero { padding: 26px 28px 36px; }
+  .mainContent { padding: 20px 28px 40px; }
+  .twoCol { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .header { padding: 0 14px; height: 52px; }
+  .hero { padding: 22px 20px 30px; }
+  .heroTitle { font-size: 1.6rem; }
+  .mainContent { padding: 16px 20px 36px; gap: 16px; }
+  .statRow { grid-template-columns: 1fr 1fr; }
+  .threeCol { grid-template-columns: 1fr; }
+  .exportSection { flex-direction: column; align-items: flex-start; }
+  .companyLogo { display: none; }
+}
+
+@media (max-width: 480px) {
+  .heroTitle { font-size: 1.35rem; }
+  .statRow { grid-template-columns: 1fr; }
+  .exportBtns { flex-direction: column; width: 100%; }
+  .exportBtn { width: 100%; justify-content: center; }
+}
