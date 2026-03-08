@@ -38,10 +38,9 @@
   --shadow-lg:    0 10px 40px rgba(91,33,182,0.15), 0 4px 12px rgba(91,33,182,0.08);
   --shadow-focus: 0 0 0 3px rgba(124,58,237,0.18);
 
-  /* Autocomplete-specific tokens */
   --ac-dropdown-shadow: 0 8px 32px rgba(91,33,182,0.18), 0 2px 8px rgba(91,33,182,0.1);
   --ac-item-hover-bg:   #f5f3ff;
-  --ac-avatar-size:     30px;
+  --ac-avatar-size:     32px;
 
   --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Oxygen", sans-serif;
 
@@ -230,7 +229,6 @@
   letter-spacing: -0.75px;
   line-height: 1.2;
 }
-
 .heroBannerTitle span { color: #fbbf24; }
 
 .heroBannerSub {
@@ -252,6 +250,10 @@
   box-shadow: var(--shadow-md);
   transition: box-shadow var(--transition-slow);
   margin-top: clamp(1rem, 2.5vw, 1.5rem);
+  /* CRITICAL: must not create a stacking context that clips
+     the absolute-positioned autocomplete dropdown.
+     overflow:visible is the default for non-scroll elements
+     so we do NOT set overflow here. */
 }
 
 .authCard {
@@ -445,11 +447,9 @@
 
 /* ================================================
    GRID LAYOUT
-   overflow:visible is critical — any overflow:hidden
-   here would clip the position:fixed autocomplete
-   dropdown (though fixed escapes it anyway, keeping
-   visible ensures stacking context is not created
-   accidentally by some browsers on grid containers).
+   overflow:visible is MANDATORY — any overflow:hidden
+   or overflow:clip on this element or any ancestor
+   will clip the autocomplete dropdown.
 ================================================ */
 .gridRow {
   display: grid;
@@ -457,6 +457,8 @@
   gap: clamp(0.5rem, 1.5vw, 0.75rem);
   margin-bottom: var(--space-sm);
   overflow: visible;
+  /* Do NOT add contain, transform, filter, or will-change here —
+     they create a stacking context that can clip absolute children */
 }
 
 .gridRow .input {
@@ -554,9 +556,7 @@
   transition: background var(--transition);
 }
 
-.primaryBtn:hover:not(:disabled)::after {
-  background: rgba(255,255,255,0.08);
-}
+.primaryBtn:hover:not(:disabled)::after { background: rgba(255,255,255,0.08); }
 
 .primaryBtn:active:not(:disabled) {
   transform: translateY(1px);
@@ -791,9 +791,6 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ================================================
-   TEXT UTILITIES
-================================================ */
 .textCenter { text-align: center; }
 
 @keyframes checkmarkDraw {
@@ -808,26 +805,50 @@
 
 /* ================================================
    EMPLOYEE AUTOCOMPLETE
-   All dropdown chrome is here — no inline styles
-   needed in the component beyond position:fixed
-   coordinates (which must be set via JS).
+   ─────────────────────────────────────────────
+   ARCHITECTURE (position:absolute, NOT fixed):
+
+   The dropdown uses position:absolute relative to
+   .acWrapper which is position:relative.
+
+   For this to work without clipping, every ancestor
+   between .acWrapper and the scroll container must
+   have overflow:visible (the default). We enforce
+   this on .gridRow explicitly. The .card and
+   .container also must NOT set overflow:hidden —
+   see their rules above.
+
+   WHY NOT position:fixed?
+   Fixed position calculates coordinates from the
+   viewport at paint time. On mobile Safari, the
+   layout shift caused by the virtual keyboard
+   opening (and subsequent scroll) means the
+   coordinates captured by getBoundingClientRect()
+   are stale by the time the dropdown renders,
+   placing it in the wrong position (as seen in
+   the screenshot where it appeared 2 rows above
+   the actual input).
+
+   position:absolute always stays anchored to its
+   nearest positioned ancestor (.acWrapper), so it
+   moves correctly with the layout. No JS coordinate
+   calculation needed.
 ================================================ */
 
-/* Wrapper — gives the input a positioning context
-   for the spinner and linked-tick overlays */
+/* ── Wrapper — the positioning anchor ── */
 .acWrapper {
   position: relative;
   width: 100%;
+  /* MUST NOT set overflow:hidden or overflow:clip here */
 }
 
-/* The input when an employee is successfully linked —
-   adds a subtle green left-border accent */
+/* ── Input with linked-employee green accent ── */
 .acInputLinked {
   border-color: var(--success) !important;
   background: var(--success-bg) !important;
 }
 
-/* Spinner inside input — right side overlay */
+/* ── Spinner overlaid on right side of input ── */
 .acSpinner {
   position: absolute;
   right: 14px;
@@ -841,50 +862,61 @@
   display: inline-block;
   animation: acSpin 0.7s linear infinite;
   pointer-events: none;
-  flex-shrink: 0;
+  z-index: 2;
 }
 
 @keyframes acSpin {
   to { transform: translateY(-50%) rotate(360deg); }
 }
 
-/* Green tick overlay when employee is linked */
+/* ── Green ✓ when employee is linked ── */
 .acLinkedTick {
   position: absolute;
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
   font-size: 13px;
+  font-weight: 700;
   color: var(--success);
   pointer-events: none;
-  font-weight: 700;
   line-height: 1;
+  z-index: 2;
 }
 
-/* ── Dropdown container ──
-   position:fixed is set inline via JS (getBoundingClientRect).
-   These styles handle everything else.
-   z-index 9999 ensures it appears above header (z-index:100),
-   modals, and any stacking contexts created by transforms.
-─────────────────────────────────────────────────────────── */
+/* ── Dropdown list ──────────────────────────────
+   position:absolute — anchored to .acWrapper.
+   top:calc(100% + 5px) places it 5px below the
+   input's bottom edge, regardless of scroll or
+   keyboard state.
+   z-index:200 is enough to clear the form fields
+   (all z-index:auto / 0). The sticky header is
+   z-index:100, but the dropdown only appears when
+   the user is interacting with the form, not the
+   header, so no conflict.
+─────────────────────────────────────────────── */
 .acDropdown {
-  /* position + top/left/width set inline by JS */
-  position: fixed;
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;           /* stretches to full width of .acWrapper */
+  z-index: 200;
+
   background: #fff;
   border-radius: var(--border-radius-lg);
   border: 1.5px solid var(--border);
   box-shadow: var(--ac-dropdown-shadow);
-  z-index: 9999;
-  overflow: hidden;
+
   max-height: 232px;
   overflow-y: auto;
-  /* Hidden scrollbar — consistent with rest of page */
+  overflow-x: hidden;
+  /* Hidden scrollbar — consistent with page */
   scrollbar-width: none;
   -ms-overflow-style: none;
-  /* Entrance animation */
-  animation: acDropIn 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
-  /* Ensure font is consistent */
+
   font-family: var(--font-sans);
+
+  /* Entrance animation — subtle drop-in from above */
+  animation: acDropIn 0.16s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .acDropdown::-webkit-scrollbar {
@@ -895,7 +927,7 @@
 @keyframes acDropIn {
   from {
     opacity: 0;
-    transform: translateY(-6px) scaleY(0.96);
+    transform: translateY(-4px) scaleY(0.97);
     transform-origin: top center;
   }
   to {
@@ -912,22 +944,20 @@
   gap: 11px;
   padding: 10px 14px;
   cursor: pointer;
-  /* CSS hover — works on both mouse AND touch (tap) */
   transition: background var(--transition);
-  border-bottom: 1px solid rgba(221,214,254,0.35);
-  /* Prevent text selection while clicking */
+  border-bottom: 1px solid rgba(221,214,254,0.4);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 .acItem:last-child {
   border-bottom: none;
 }
 
-.acItem:hover,
-.acItem:focus-visible {
+/* CSS :hover — works on mouse AND tap (touch) */
+.acItem:hover {
   background: var(--ac-item-hover-bg);
-  outline: none;
 }
 
 .acItem:active {
@@ -948,14 +978,13 @@
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.02em;
-  /* Subtle shadow on the avatar */
   box-shadow: 0 2px 6px rgba(91,33,182,0.22);
 }
 
-/* ── Employee info ── */
+/* ── Text info ── */
 .acInfo {
   flex: 1;
-  min-width: 0; /* allow text truncation inside flex */
+  min-width: 0;
 }
 
 .acName {
@@ -979,19 +1008,19 @@
   line-height: 1.3;
 }
 
-/* ── Selected checkmark (shown on the right of the selected item) ── */
+/* ── Selected checkmark ── */
 .acTick {
   margin-left: auto;
   flex-shrink: 0;
   color: var(--success);
   font-weight: 700;
-  font-size: 12px;
+  font-size: 13px;
   padding-left: 6px;
 }
 
-/* ── No results / empty hint ── */
+/* ── No results hint ── */
 .acEmpty {
-  padding: 14px 16px;
+  padding: 16px;
   text-align: center;
   font-size: 12px;
   color: var(--text-muted);
@@ -1000,18 +1029,9 @@
   line-height: 1.5;
 }
 
-/* ── Separator between sections if needed ── */
-.acDivider {
-  height: 1px;
-  background: var(--border);
-  margin: 2px 10px;
-}
-
 /* ================================================
    RESPONSIVE BREAKPOINTS
 ================================================ */
-
-/* xs — very small phones */
 @media (max-width: 399px) {
   .card,
   .authCard {
@@ -1034,29 +1054,20 @@
   .gridRow {
     grid-template-columns: 1fr;
   }
-
-  /* On very small phones the fixed dropdown might extend off-screen.
-     Cap its left edge and width inside the viewport. */
-  .acDropdown {
-    max-width: calc(100vw - 1.5rem);
-  }
 }
 
-/* sm — standard phones */
 @media (min-width: 400px) and (max-width: 639px) {
   .gridRow {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* md — large phones */
 @media (min-width: 640px) and (max-width: 767px) {
   .gridRow {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* lg — tablets */
 @media (min-width: 768px) and (max-width: 1023px) {
   .gridRow {
     grid-template-columns: repeat(3, 1fr);
@@ -1068,14 +1079,13 @@
   }
 }
 
-/* xl — desktop */
 @media (min-width: 1024px) {
   .gridRow {
     grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* Touch devices — disable sticky hovers */
+/* Touch devices */
 @media (hover: none) and (pointer: coarse) {
   .card:hover {
     transform: none;
@@ -1099,8 +1109,7 @@
     box-shadow: 0 4px 14px rgba(37,211,102,0.35);
   }
 
-  /* On touch devices acItem :hover is triggered by tap — that's correct.
-     We remove the persistent hover state after the tap ends. */
+  /* On touch: hover state resets after tap, active shows feedback */
   .acItem:hover {
     background: transparent;
   }
@@ -1110,7 +1119,7 @@
   }
 }
 
-/* Landscape phones */
+/* Landscape phones — shrink dropdown so keyboard doesn't fully cover it */
 @media (max-height: 500px) and (orientation: landscape) {
   .authHeader {
     margin-bottom: 1rem;
@@ -1133,9 +1142,8 @@
     padding: 1rem;
   }
 
-  /* Smaller dropdown in landscape to avoid covering the keyboard */
   .acDropdown {
-    max-height: 160px;
+    max-height: 150px;
   }
 }
 
@@ -1149,19 +1157,15 @@
   outline-offset: 2px;
 }
 
-/* Print */
 @media print {
   .primaryBtn,
   .secondaryBtn,
-  .whatsappBtn {
+  .whatsappBtn,
+  .acDropdown {
     display: none;
   }
 
   .page {
     background: white;
-  }
-
-  .acDropdown {
-    display: none;
   }
 }
