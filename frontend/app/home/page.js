@@ -323,8 +323,7 @@ export default function Home() {
         <main className={styles.main}>
 
           {/* HOME VIEW */}
-          {currentView === "home" && (
-            <>
+          <>
               <div className={styles.welcomeSection}>
                 <div className={styles.heroContent}>
                   <div className={styles.greetingChip}>
@@ -380,7 +379,6 @@ export default function Home() {
                 </div>
               </div>
             </>
-          )}
 
         </main>
       </div>
