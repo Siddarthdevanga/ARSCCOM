@@ -13,7 +13,7 @@ import styles from "./style.module.css";
 =============================================== */
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
-const EmployeeAutocomplete = ({ slug, value, employeeId, onChange, onSelect }) => {
+const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect }) => {
   const [results, setResults]   = useState([]);
   const [open, setOpen]         = useState(false);
   const [fetching, setFetching] = useState(false);
@@ -35,19 +35,22 @@ const EmployeeAutocomplete = ({ slug, value, employeeId, onChange, onSelect }) =
     if (!q.trim()) { setResults([]); setOpen(false); return; }
     setFetching(true);
     try {
+      const token = localStorage.getItem("token");
       const res = await fetch(
-        `${API}/api/public/visitor/${slug}/employees?q=${encodeURIComponent(q)}`,
-        { credentials: "omit" }
+        `${API}/api/employees?search=${encodeURIComponent(q)}&limit=10`,
+        { headers: { Authorization: `Bearer ${token}` } }
       );
       const data = await res.json();
-      setResults(Array.isArray(data) ? data : []);
+      /* Support both array response and { employees: [] } shape */
+      const list = Array.isArray(data) ? data : (data.employees || []);
+      setResults(list.filter(e => e.is_active !== false));
       setOpen(true);
     } catch {
       setResults([]);
     } finally {
       setFetching(false);
     }
-  }, [slug]);
+  }, []);
 
   const handleChange = (e) => {
     const val = e.target.value;
@@ -176,9 +179,6 @@ export default function SecondaryDetails() {
   const [company,    setCompany]    = useState(null);
   const [isLoading,  setIsLoading]  = useState(true);
 
-  /* Slug needed for the autocomplete API call */
-  const [companySlug, setCompanySlug] = useState(null);
-
   /* Employee linked via autocomplete selection */
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
@@ -210,8 +210,6 @@ export default function SecondaryDetails() {
 
       const parsed = JSON.parse(storedCompany);
       setCompany(parsed);
-      /* slug may live at parsed.slug or parsed.visitor_slug */
-      setCompanySlug(parsed.slug || parsed.visitor_slug || null);
 
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {
@@ -437,22 +435,12 @@ export default function SecondaryDetails() {
                   Falls back to plain input if slug cannot be resolved
                   (e.g. admin-created visits without a public slug).
                 */}
-                {companySlug ? (
-                  <EmployeeAutocomplete
-                    slug={companySlug}
-                    value={form.personToMeet}
-                    employeeId={selectedEmployeeId}
-                    onChange={handlePersonToMeetChange}
-                    onSelect={handleEmployeeSelect}
-                  />
-                ) : (
-                  <input
-                    className={styles.input}
-                    value={form.personToMeet}
-                    onChange={(e) => updateField("personToMeet", e.target.value)}
-                    placeholder="Host name"
-                  />
-                )}
+                <EmployeeAutocomplete
+                  value={form.personToMeet}
+                  employeeId={selectedEmployeeId}
+                  onChange={handlePersonToMeetChange}
+                  onSelect={handleEmployeeSelect}
+                />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Purpose of Visit</label>
