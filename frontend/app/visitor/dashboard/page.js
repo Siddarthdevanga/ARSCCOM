@@ -170,7 +170,7 @@ export default function VisitorDashboard() {
           )}
           <button className={styles.newBtn}
             disabled={atLimit}
-            onClick={() => company?.slug && router.push(`/visitor/${company.slug}`)}>
+            onClick={() => router.push("/visitor/primary_details")}>
             + New Visit
           </button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>← Home</button>
