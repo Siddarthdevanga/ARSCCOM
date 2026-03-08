@@ -1,4 +1,4 @@
-"use client";
+="use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -184,10 +184,8 @@ export default function VisitorDashboard() {
   const active    = data?.activeVisitors    || [];
   const history   = data?.checkedOutVisitors || [];
 
-  // FIX 1: correct field names
-  const totalVisitors  = stats.totalVisitors    ?? 0;
-  const activeCount    = stats.activeVisitors   ?? 0;
-  const pendingCount   = stats.pendingVisits    ?? 0;
+  const totalVisitors = stats.totalVisitors  ?? 0;
+  const activeCount   = stats.activeVisitors ?? 0;
 
   // FIX 7: plan fields are now inlined in stats
   const planLimit = stats.planLimit        ?? 0;
@@ -272,7 +270,6 @@ export default function VisitorDashboard() {
         <h1 className={styles.heroTitle}>Visitor <span>Dashboard</span></h1>
         <p className={styles.heroSub}>Real-time overview of all visitors on premises</p>
         <div className={styles.heroStats}>
-          {/* FIX 1: correct variable names */}
           <div className={styles.heroStatCard}>
             <div className={styles.heroStatLabel}>Total Visitors</div>
             <div className={styles.heroStatValue}>{totalVisitors}</div>
@@ -282,8 +279,8 @@ export default function VisitorDashboard() {
             <div className={styles.heroStatValue}>{activeCount}</div>
           </div>
           <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Pending</div>
-            <div className={styles.heroStatValue}>{pendingCount}</div>
+            <div className={styles.heroStatLabel}>Checked Out</div>
+            <div className={styles.heroStatValue}>{stats.checkedOutToday ?? 0}</div>
           </div>
         </div>
       </div>
