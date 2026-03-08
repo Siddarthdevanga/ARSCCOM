@@ -5,13 +5,22 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import styles from "./style.module.css";
 
+/* ─── Base URL ───────────────────────────────────────
+   ALL fetch calls must use this prefix so requests go
+   to the Express backend, not the Next.js server.
+   Missing this prefix was causing all API calls to hit
+   Next.js → dashboard returned 401 redirect loop,
+   checkout returned 404.
+──────────────────────────────────────────────────── */
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
 /* ─── Visit Status Badge ─────────────────── */
 const VS_CONFIG = {
-  pending:     { label: "Pending",    bg: "rgba(240,165,0,0.12)",   color: "#c77800" },
-  accepted:    { label: "Accepted",   bg: "rgba(0,184,148,0.12)",   color: "#00a875" },
-  declined:    { label: "Declined",   bg: "rgba(204,17,0,0.1)",     color: "#cc1100" },
-  checked_in:  { label: "Checked In", bg: "rgba(59,130,246,0.12)",  color: "#2563eb" },
-  checked_out: { label: "Checked Out",bg: "rgba(98,0,214,0.1)",     color: "#6200d6" },
+  pending:     { label: "Pending",     bg: "rgba(240,165,0,0.12)",  color: "#c77800" },
+  accepted:    { label: "Accepted",    bg: "rgba(0,184,148,0.12)",  color: "#00a875" },
+  declined:    { label: "Declined",    bg: "rgba(204,17,0,0.1)",    color: "#cc1100" },
+  checked_in:  { label: "Checked In",  bg: "rgba(59,130,246,0.12)", color: "#2563eb" },
+  checked_out: { label: "Checked Out", bg: "rgba(98,0,214,0.1)",    color: "#6200d6" },
 };
 
 function VisitStatusBadge({ status }) {
@@ -30,17 +39,18 @@ function VisitStatusBadge({ status }) {
 
 export default function VisitorDashboard() {
   const router = useRouter();
-  const [data, setData] = useState(null);
-  const [company, setCompany] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [navOpen, setNavOpen] = useState(false);
-  const [qrUrl, setQrUrl] = useState(null);
-  const [regUrl, setRegUrl] = useState("");
-  const [toast, setToast] = useState(null);
-  const [checkingOut, setCheckingOut] = useState(null);
+  const [data,           setData]           = useState(null);
+  const [company,        setCompany]        = useState(null);
+  const [loading,        setLoading]        = useState(true);
+  const [navOpen,        setNavOpen]        = useState(false);
+  const [qrUrl,          setQrUrl]          = useState(null);
+  const [regUrl,         setRegUrl]         = useState("");
+  const [toast,          setToast]          = useState(null);
+  const [checkingOut,    setCheckingOut]    = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(null);
+
   const toastTimer = useRef(null);
-  const pollTimer = useRef(null);
+  const pollTimer  = useRef(null);
 
   const showToast = (msg, type = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -50,9 +60,15 @@ export default function VisitorDashboard() {
 
   const getToken = () => localStorage.getItem("token");
 
+  /* ─────────────────────────────────────────────
+     FETCH DASHBOARD
+     FIX: was fetch("/api/visitors/dashboard", ...)
+     Missing API prefix → request hit Next.js server
+     which has no such route → 401 → redirect loop.
+  ───────────────────────────────────────────── */
   const fetchDashboard = useCallback(async () => {
     try {
-      const res = await fetch("/api/visitors/dashboard", {
+      const res = await fetch(`${API}/api/visitors/dashboard`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (res.status === 401) { router.replace("/"); return; }
@@ -64,19 +80,18 @@ export default function VisitorDashboard() {
   }, [router]);
 
   useEffect(() => {
-    const token = getToken();
+    const token  = getToken();
     const stored = localStorage.getItem("company");
     if (!token) { router.replace("/"); return; }
 
-    let parsed = null;
     if (stored) {
-      try { parsed = JSON.parse(stored); setCompany(parsed); } catch {}
+      try { setCompany(JSON.parse(stored)); } catch {}
     }
 
     fetchDashboard().then(() => setLoading(false));
 
     /* Poll every 30s */
-    pollTimer.current = setInterval(fetchDashboard, 30000);
+    pollTimer.current = setInterval(fetchDashboard, 30_000);
     return () => clearInterval(pollTimer.current);
   }, [fetchDashboard]);
 
@@ -85,16 +100,23 @@ export default function VisitorDashboard() {
     if (!company?.slug) return;
     const url = `${window.location.origin}/visitor/${company.slug}`;
     setRegUrl(url);
-    QRCode.toDataURL(url, { width: 220, margin: 2, color: { dark: "#1a0038", light: "#ffffff" } })
-      .then(setQrUrl).catch(() => {});
+    QRCode.toDataURL(url, {
+      width: 220, margin: 2,
+      color: { dark: "#1a0038", light: "#ffffff" },
+    }).then(setQrUrl).catch(() => {});
   }, [company]);
 
-  /* Checkout */
+  /* ─────────────────────────────────────────────
+     CHECKOUT
+     FIX 1: was fetch("/api/visitors/...") → missing API prefix
+     FIX 2: was method "PATCH" → backend route is POST
+             POST /:visitorCode/checkout in visitor.routes.js
+  ───────────────────────────────────────────── */
   const handleCheckout = async (visitorCode) => {
     setCheckingOut(visitorCode);
     try {
-      const res = await fetch(`/api/visitors/${visitorCode}/checkout`, {
-        method: "PATCH",
+      const res = await fetch(`${API}/api/visitors/${visitorCode}/checkout`, {
+        method:  "POST",
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       if (!res.ok) throw new Error();
@@ -107,14 +129,20 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* Accept / Decline visit */
+  /* ─────────────────────────────────────────────
+     ACCEPT / DECLINE VISIT STATUS
+     FIX: was fetch("/api/visitors/...") → missing API prefix
+  ───────────────────────────────────────────── */
   const handleVisitStatus = async (visitorCode, status) => {
     const key = `${visitorCode}-${status}`;
     setUpdatingStatus(key);
     try {
-      const res = await fetch(`/api/visitors/${visitorCode}/visit-status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+      const res = await fetch(`${API}/api/visitors/${visitorCode}/visit-status`, {
+        method:  "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:  `Bearer ${getToken()}`,
+        },
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();
@@ -136,21 +164,23 @@ export default function VisitorDashboard() {
   const downloadPdf = () => {
     if (!qrUrl) return;
     const link = document.createElement("a");
-    link.href = qrUrl; link.download = "visitor-qr.png"; link.click();
+    link.href = qrUrl;
+    link.download = "visitor-qr.png";
+    link.click();
   };
 
   if (loading) return (
     <div className={styles.loading}><div className={styles.spinner} /></div>
   );
 
-  const stats = data?.stats || {};
-  const active = data?.activeVisitors || [];
-  const history = data?.checkedOutVisitors || [];
+  const stats     = data?.stats || {};
+  const active    = data?.activeVisitors || [];
+  const history   = data?.checkedOutVisitors || [];
   const planLimit = stats.planLimit || 0;
-  const planUsed = stats.planVisitorsUsed || 0;
-  const planPct = planLimit > 0 ? Math.min((planUsed / planLimit) * 100, 100) : 0;
+  const planUsed  = stats.planVisitorsUsed || 0;
+  const planPct   = planLimit > 0 ? Math.min((planUsed / planLimit) * 100, 100) : 0;
   const planColor = planPct > 85 ? "#cc1100" : planPct > 60 ? "#f0a500" : "#6200d6";
-  const atLimit = planLimit > 0 && planUsed >= planLimit;
+  const atLimit   = planLimit > 0 && planUsed >= planLimit;
 
   return (
     <div className={styles.container}>
@@ -165,15 +195,23 @@ export default function VisitorDashboard() {
         </div>
         <div className={styles.rightHeader}>
           {company?.logo && (
-            <Image src={company.logo} alt="Logo" width={72} height={36}
-              className={styles.companyLogo} unoptimized />
+            <Image
+              src={company.logo} alt="Logo"
+              width={72} height={36}
+              className={styles.companyLogo}
+              unoptimized
+            />
           )}
-          <button className={styles.newBtn}
+          <button
+            className={styles.newBtn}
             disabled={atLimit}
-            onClick={() => router.push("/visitor/primary_details")}>
+            onClick={() => router.push("/visitor/primary_details")}
+          >
             + New Visit
           </button>
-          <button className={styles.backBtn} onClick={() => router.push("/home")}>← Home</button>
+          <button className={styles.backBtn} onClick={() => router.push("/home")}>
+            ← Home
+          </button>
         </div>
       </header>
 
@@ -200,7 +238,9 @@ export default function VisitorDashboard() {
                   <button className={styles.copyBtn} onClick={copyUrl}>📋</button>
                 </div>
               </div>
-              <button className={styles.downloadPdfBtn} onClick={downloadPdf}>⬇ Download QR Image</button>
+              <button className={styles.downloadPdfBtn} onClick={downloadPdf}>
+                ⬇ Download QR Image
+              </button>
             </>
           ) : (
             <div className={styles.navQRLoading}>
@@ -255,7 +295,10 @@ export default function VisitorDashboard() {
             <span className={styles.planName}>{planUsed} / {planLimit} visits</span>
           </div>
           <div className={styles.planBarBg}>
-            <div className={styles.planBarFill} style={{ width: `${planPct}%`, background: planColor }} />
+            <div
+              className={styles.planBarFill}
+              style={{ width: `${planPct}%`, background: planColor }}
+            />
           </div>
           <div className={styles.planFooter}>
             <span>{Math.round(planPct)}% used</span>
@@ -275,6 +318,7 @@ export default function VisitorDashboard() {
                 <h2 className={styles.cardTitle}>Active Visitors</h2>
                 <span className={styles.cardCount}>{active.length}</span>
               </div>
+
               {active.length === 0 ? (
                 <div className={styles.emptyState}>
                   <span className={styles.emptyIcon}>🚶</span>No visitors currently in
@@ -294,17 +338,25 @@ export default function VisitorDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {active.map(v => {
-                        const isPending = (v.visit_status || "pending") === "pending";
+                      {active.map((v) => {
+                        const isPending  = (v.visit_status || "pending") === "pending";
                         const isUpdating = (s) => updatingStatus === `${v.visitor_code}-${s}`;
                         return (
                           <tr key={v.visitor_code}>
-                            <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
                             <td>
-                              <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>{v.name}</div>
-                              {v.from_company && <div style={{ fontSize: 11, color: "#9980c8" }}>{v.from_company}</div>}
+                              <span className={styles.visitorCode}>{v.visitor_code}</span>
                             </td>
-                            <td style={{ fontSize: 12, color: "#2a0050" }}>{v.person_to_meet || "—"}</td>
+                            <td>
+                              <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
+                                {v.name}
+                              </div>
+                              {v.from_company && (
+                                <div style={{ fontSize: 11, color: "#9980c8" }}>{v.from_company}</div>
+                              )}
+                            </td>
+                            <td style={{ fontSize: 12, color: "#2a0050" }}>
+                              {v.person_to_meet || "—"}
+                            </td>
                             <td>
                               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                                 <VisitStatusBadge status={v.visit_status || "pending"} />
@@ -319,7 +371,8 @@ export default function VisitorDashboard() {
                                         opacity: updatingStatus ? 0.6 : 1,
                                       }}
                                       disabled={!!updatingStatus}
-                                      onClick={() => handleVisitStatus(v.visitor_code, "accepted")}>
+                                      onClick={() => handleVisitStatus(v.visitor_code, "accepted")}
+                                    >
                                       {isUpdating("accepted") ? "…" : "✓ Accept"}
                                     </button>
                                     <button
@@ -331,7 +384,8 @@ export default function VisitorDashboard() {
                                         opacity: updatingStatus ? 0.6 : 1,
                                       }}
                                       disabled={!!updatingStatus}
-                                      onClick={() => handleVisitStatus(v.visitor_code, "declined")}>
+                                      onClick={() => handleVisitStatus(v.visitor_code, "declined")}
+                                    >
                                       {isUpdating("declined") ? "…" : "✕ Decline"}
                                     </button>
                                   </div>
@@ -341,7 +395,9 @@ export default function VisitorDashboard() {
                             <td>
                               <span style={{
                                 fontSize: 10, fontWeight: 800,
-                                background: v.pass_issued ? "rgba(0,184,148,0.12)" : "rgba(240,165,0,0.12)",
+                                background: v.pass_issued
+                                  ? "rgba(0,184,148,0.12)"
+                                  : "rgba(240,165,0,0.12)",
                                 color: v.pass_issued ? "#00a875" : "#c77800",
                                 padding: "3px 8px", borderRadius: 50,
                               }}>
@@ -350,13 +406,17 @@ export default function VisitorDashboard() {
                             </td>
                             <td style={{ fontSize: 12, color: "#9980c8" }}>
                               {v.check_in
-                                ? new Date(v.check_in).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true })
+                                ? new Date(v.check_in).toLocaleTimeString("en-US", {
+                                    hour: "2-digit", minute: "2-digit", hour12: true,
+                                  })
                                 : "—"}
                             </td>
                             <td>
-                              <button className={styles.checkoutBtn}
+                              <button
+                                className={styles.checkoutBtn}
                                 onClick={() => handleCheckout(v.visitor_code)}
-                                disabled={checkingOut === v.visitor_code}>
+                                disabled={checkingOut === v.visitor_code}
+                              >
                                 {checkingOut === v.visitor_code ? "…" : "Check Out"}
                               </button>
                             </td>
@@ -374,8 +434,11 @@ export default function VisitorDashboard() {
               <div className={styles.cardHeader}>
                 <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
                 <h2 className={styles.cardTitle}>Checked Out</h2>
-                <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{history.length}</span>
+                <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>
+                  {history.length}
+                </span>
               </div>
+
               {history.length === 0 ? (
                 <div className={styles.emptyState}>
                   <span className={styles.emptyIcon}>📋</span>No checkout history yet
@@ -393,24 +456,40 @@ export default function VisitorDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {history.map(v => {
+                      {history.map((v) => {
                         let duration = "—";
                         if (v.check_in && v.check_out) {
-                          const mins = Math.round((new Date(v.check_out) - new Date(v.check_in)) / 60000);
-                          duration = mins >= 60 ? `${Math.floor(mins / 60)}h ${mins % 60}m` : `${mins}m`;
+                          const mins = Math.round(
+                            (new Date(v.check_out) - new Date(v.check_in)) / 60_000
+                          );
+                          duration = mins >= 60
+                            ? `${Math.floor(mins / 60)}h ${mins % 60}m`
+                            : `${mins}m`;
                         }
                         return (
                           <tr key={v.visitor_code}>
-                            <td><span className={styles.visitorCode}>{v.visitor_code}</span></td>
                             <td>
-                              <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>{v.name}</div>
-                              {v.person_to_meet && <div style={{ fontSize: 11, color: "#9980c8" }}>→ {v.person_to_meet}</div>}
+                              <span className={styles.visitorCode}>{v.visitor_code}</span>
                             </td>
-                            <td><VisitStatusBadge status={v.visit_status || "checked_out"} /></td>
+                            <td>
+                              <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
+                                {v.name}
+                              </div>
+                              {v.person_to_meet && (
+                                <div style={{ fontSize: 11, color: "#9980c8" }}>
+                                  → {v.person_to_meet}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <VisitStatusBadge status={v.visit_status || "checked_out"} />
+                            </td>
                             <td style={{ fontSize: 12, color: "#2a0050" }}>{duration}</td>
                             <td style={{ fontSize: 11, color: "#9980c8" }}>
                               {v.check_in
-                                ? new Date(v.check_in).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                                ? new Date(v.check_in).toLocaleDateString("en-US", {
+                                    month: "short", day: "numeric",
+                                  })
                                 : "—"}
                             </td>
                           </tr>
@@ -421,16 +500,20 @@ export default function VisitorDashboard() {
                 </div>
               )}
             </div>
-          </div>
 
+          </div>
         </div>
       </div>
 
+      {/* TOAST */}
       {toast && (
-        <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
+        <div className={`${styles.toast} ${
+          toast.type === "error" ? styles.toastError : styles.toastSuccess
+        }`}>
           {toast.msg}
         </div>
       )}
+
     </div>
   );
 }
