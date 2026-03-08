@@ -4,109 +4,13 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styles from "./style.module.css";
 
-/* ─────────────────────────────────────────
-   DONUT CHART — SVG, pure CSS animated
-───────────────────────────────────────── */
-function DonutChart({ data, colors }) {
-  const total = data.reduce((s, d) => s + (d.count || 0), 0);
-  if (!total) return <div className={styles.emptyState}><span className={styles.emptyIcon}>📊</span>No data</div>;
-
-  const r = 40, cx = 55, cy = 55, circumference = 2 * Math.PI * r;
-  let offset = 0;
-  const slices = data.map((d, i) => {
-    const pct = d.count / total;
-    const dash = pct * circumference;
-    const slice = { ...d, dash, offset, pct, color: colors[i % colors.length] };
-    offset += dash;
-    return slice;
-  });
-
-  return (
-    <div className={styles.donutWrap}>
-      <svg viewBox="0 0 110 110" className={styles.donutSvg}>
-        {slices.map((s, i) => (
-          <circle key={i} cx={cx} cy={cy} r={r}
-            fill="none" stroke={s.color} strokeWidth="18"
-            strokeDasharray={`${s.dash} ${circumference - s.dash}`}
-            strokeDashoffset={-s.offset + circumference * 0.25}
-            style={{ transition: "stroke-dasharray 0.6s ease" }}
-          />
-        ))}
-        <text x={cx} y={cy - 5} textAnchor="middle" fontSize="14" fontWeight="900" fill="#1a0038">{total}</text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="8" fontWeight="700" fill="#9980c8">TOTAL</text>
-      </svg>
-      <div className={styles.donutLegend}>
-        {slices.map((s, i) => (
-          <div key={i} className={styles.legendItem}>
-            <span className={styles.legendDot} style={{ background: s.color }} />
-            <span>{s.status || s.name || "-"}</span>
-            <span className={styles.legendCount}>{s.count}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────
-   BAR CHART — daily trend
-───────────────────────────────────────── */
-function BarChart({ data, color = "#7a00ff" }) {
-  if (!data?.length) return <div className={styles.emptyState}><span className={styles.emptyIcon}>📈</span>No data</div>;
-  const max = Math.max(...data.map(d => d.count), 1);
-  return (
-    <div className={styles.barChartWrap}>
-      <div className={styles.barChart}>
-        {data.map((d, i) => {
-          const h = Math.max((d.count / max) * 110, 3);
-          const label = d.date ? new Date(d.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "-";
-          return (
-            <div key={i} className={styles.barGroup}>
-              <div className={styles.bar} data-val={d.count}
-                style={{ height: `${h}px`, background: `linear-gradient(180deg, ${color}, ${color}aa)` }} />
-              {i % 5 === 0 && <span className={styles.barLabel}>{label}</span>}
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────
-   H-BAR LIST
-───────────────────────────────────────── */
-function HBarList({ data, blue = false }) {
-  if (!data?.length) return <div className={styles.emptyState}><span className={styles.emptyIcon}>📋</span>No data</div>;
-  const max = Math.max(...data.map(d => d.count), 1);
-  return (
-    <div className={styles.hBarList}>
-      {data.map((d, i) => (
-        <div key={i} className={styles.hBarRow}>
-          <div className={styles.hBarTop}>
-            <span>{d.name || "-"}</span>
-            <span className={styles.hBarCount}>{d.count}</span>
-          </div>
-          <div className={styles.hBarTrack}>
-            <div className={blue ? styles.hBarFillBlue : styles.hBarFill}
-              style={{ width: `${(d.count / max) * 100}%` }} />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────
-   MAIN PAGE
-───────────────────────────────────────── */
-export default function ReportsPage() {
+export default function HomePage() {
   const router = useRouter();
-  const [analytics, setAnalytics] = useState(null);
   const [company, setCompany] = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [navOpen, setNavOpen] = useState(false);
   const [toast, setToast] = useState(null);
-  const [exporting, setExporting] = useState(null);
   const toastTimer = useRef(null);
 
   const showToast = (msg, type = "success") => {
@@ -115,242 +19,290 @@ export default function ReportsPage() {
     toastTimer.current = setTimeout(() => setToast(null), 3200);
   };
 
+  const getToken = () => localStorage.getItem("token");
+
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = getToken();
     const stored = localStorage.getItem("company");
     if (!token) { router.replace("/"); return; }
     if (stored) {
       try { setCompany(JSON.parse(stored)); } catch {}
     }
-    fetch("/api/exports/analytics", { headers: { Authorization: `Bearer ${token}` } })
+
+    fetch("/api/exports/stats", { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
-      .then(data => { setAnalytics(data); setLoading(false); })
-      .catch(() => { showToast("Failed to load analytics", "error"); setLoading(false); });
+      .then(d => { setStats(d); setLoading(false); })
+      .catch(() => setLoading(false));
   }, []);
 
-  const handleExport = async (type) => {
-    const token = localStorage.getItem("token");
-    const endpoints = {
-      visitors: "/api/exports/visitors",
-      bookings: "/api/exports/conference-bookings",
-      all: "/api/exports/all",
-    };
-    try {
-      setExporting(type);
-      const res = await fetch(endpoints[type], { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error();
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url; a.download = `${type}-report.xlsx`; a.click();
-      URL.revokeObjectURL(url);
-      showToast("Export downloaded!", "success");
-    } catch {
-      showToast("Export failed. Please try again.", "error");
-    } finally {
-      setExporting(null);
-    }
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("company");
+    router.replace("/");
   };
 
   if (loading) return (
-    <div className={styles.loading}>
+    <div className={styles.loadingContainer}>
       <div className={styles.spinner} />
     </div>
   );
 
-  const v = analytics?.visitors || {};
-  const b = analytics?.bookings || {};
-
-  const visitStatusColors = { pending: "#f0a500", accepted: "#00b894", declined: "#cc1100", checked_out: "#6200d6", checked_in: "#3b82f6" };
-  const visitStatusData = (v.visitStatusBreakdown || []).map(d => ({
-    ...d, color: visitStatusColors[d.status] || "#9980c8"
-  }));
-
-  const bookingStatusColors = { BOOKED: "#6200d6", CANCELLED: "#cc1100", COMPLETED: "#00b894" };
-  const bookingStatusData = (b.statusBreakdown || []).map(d => ({
-    ...d, name: d.status, color: bookingStatusColors[d.status] || "#9980c8"
-  }));
-
   return (
-    <div className={styles.container}>
-      {/* HEADER */}
+    <div className={styles.page}>
+
+      {/* ─── HEADER ─────────────────────────────────── */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           {company?.logo && (
             <Image src={company.logo} alt="Logo" width={38} height={38}
-              className={styles.companyLogo} unoptimized />
+              className={styles.logo} unoptimized />
           )}
           <span className={styles.logoText}>{company?.name || "Dashboard"}</span>
+          <span className={styles.headerBadge}>HOME</span>
         </div>
-        <button className={styles.backBtn} onClick={() => router.push("/home")}>
-          ← Back
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <button
+            onClick={() => setNavOpen(true)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              display: "flex", flexDirection: "column", alignItems: "center",
+              gap: 4, padding: "8px 10px", borderRadius: 10,
+              transition: "background 0.2s",
+            }}
+            aria-label="Menu"
+          >
+            {[0,1,2].map(i => (
+              <span key={i} style={{ display: "block", width: 20, height: 2, background: "#7c3aed", borderRadius: 2 }} />
+            ))}
+          </button>
+        </div>
       </header>
 
-      {/* HERO */}
-      <div className={styles.hero}>
-        <h1 className={styles.heroTitle}>
-          Analytics &amp; <span>Reports</span>
-        </h1>
-        <p className={styles.heroSub}>Insights across visitor activity and conference usage</p>
+      {/* ─── NAV OVERLAY ────────────────────────────── */}
+      {navOpen && (
+        <div
+          onClick={() => setNavOpen(false)}
+          style={{
+            position: "fixed", inset: 0,
+            background: "rgba(26,0,56,0.45)",
+            backdropFilter: "blur(4px)",
+            zIndex: 900, animation: "fadeIn 0.2s ease",
+          }}
+        />
+      )}
+
+      {/* ─── SLIDE PANEL ─────────────────────────────── */}
+      <div style={{
+        position: "fixed", top: 0, left: 0,
+        width: "min(320px, 85vw)", height: "100vh", height: "100dvh",
+        background: "#fff", zIndex: 950,
+        transform: navOpen ? "translateX(0)" : "translateX(-100%)",
+        transition: "transform 0.35s cubic-bezier(0.4,0,0.2,1)",
+        boxShadow: "8px 0 40px rgba(98,0,214,0.15)",
+        display: "flex", flexDirection: "column", overflow: "hidden",
+      }}>
+        {/* Panel Header */}
+        <div style={{
+          background: "linear-gradient(135deg, #4a00b4, #7a00ff)",
+          padding: "20px 24px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ color: "#fff", fontWeight: 900, fontSize: "1rem", fontFamily: "Nunito, sans-serif" }}>
+              {company?.name || "Menu"}
+            </div>
+            <div style={{ color: "rgba(255,255,255,0.65)", fontSize: "0.75rem", fontWeight: 600, marginTop: 2 }}>
+              Visitor Management
+            </div>
+          </div>
+          <button
+            onClick={() => setNavOpen(false)}
+            style={{
+              background: "rgba(255,255,255,0.15)", border: "none", color: "#fff",
+              width: 36, height: 36, borderRadius: "50%", cursor: "pointer",
+              fontSize: "1.1rem", fontWeight: 900, display: "flex",
+              alignItems: "center", justifyContent: "center", transition: "all 0.25s",
+            }}
+          >✕</button>
+        </div>
+
+        {/* Panel Nav Links */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "16px 16px 32px" }}>
+
+          {/* Section: Management */}
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1.2, textTransform: "uppercase", padding: "8px 8px 6px", marginBottom: 4 }}>
+            Management
+          </div>
+
+          {[
+            { icon: "🏠", label: "Dashboard", sub: "Overview & stats", href: "/home" },
+            { icon: "👥", label: "Visitors", sub: "Live visitor tracking", href: "/visitor/dashboard" },
+          ].map(item => (
+            <button key={item.href}
+              onClick={() => { setNavOpen(false); router.push(item.href); }}
+              style={{
+                width: "100%", background: "none", border: "none", cursor: "pointer",
+                display: "flex", alignItems: "center", gap: 12, padding: "12px 10px",
+                borderRadius: 14, transition: "background 0.15s", marginBottom: 4,
+                textAlign: "left", fontFamily: "Nunito, sans-serif",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f3f0fb"}
+              onMouseLeave={e => e.currentTarget.style.background = "none"}
+            >
+              <span style={{ fontSize: "1.35rem", width: 36, textAlign: "center" }}>{item.icon}</span>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: "#1a0038" }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: "#9980c8", fontWeight: 600 }}>{item.sub}</div>
+              </div>
+            </button>
+          ))}
+
+          <div style={{ height: 1, background: "#ede8f8", margin: "10px 0 14px" }} />
+
+          {/* Section: Analytics */}
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1.2, textTransform: "uppercase", padding: "0 8px 6px", marginBottom: 4 }}>
+            Analytics
+          </div>
+
+          <button
+            onClick={() => { setNavOpen(false); router.push("/home/reports"); }}
+            style={{
+              width: "100%", background: "linear-gradient(135deg, #f4eeff, #ede4fa)", border: "1.5px solid #ddd2f0",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "14px 14px",
+              borderRadius: 14, marginBottom: 8, textAlign: "left", fontFamily: "Nunito, sans-serif",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, #ede4fa, #ddd2f0)"; e.currentTarget.style.transform = "translateX(3px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, #f4eeff, #ede4fa)"; e.currentTarget.style.transform = "none"; }}
+          >
+            <span style={{ fontSize: "1.45rem", width: 36, textAlign: "center" }}>📊</span>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 13, color: "#1a0038" }}>Reports & Analytics</div>
+              <div style={{ fontSize: 11, color: "#6200d6", fontWeight: 700 }}>Charts, trends &amp; exports</div>
+            </div>
+            <span style={{ marginLeft: "auto", color: "#6200d6", fontSize: 14 }}>→</span>
+          </button>
+
+          <div style={{ height: 1, background: "#ede8f8", margin: "10px 0 14px" }} />
+
+          {/* Section: Settings */}
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1.2, textTransform: "uppercase", padding: "0 8px 6px", marginBottom: 4 }}>
+            Settings
+          </div>
+
+          <button
+            onClick={() => { setNavOpen(false); router.push("/visitor/admin"); }}
+            style={{
+              width: "100%", background: "linear-gradient(135deg, #f4eeff, #ede4fa)", border: "1.5px solid #ddd2f0",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "14px 14px",
+              borderRadius: 14, marginBottom: 8, textAlign: "left", fontFamily: "Nunito, sans-serif",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = "linear-gradient(135deg, #ede4fa, #ddd2f0)"; e.currentTarget.style.transform = "translateX(3px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "linear-gradient(135deg, #f4eeff, #ede4fa)"; e.currentTarget.style.transform = "none"; }}
+          >
+            <span style={{ fontSize: "1.45rem", width: 36, textAlign: "center" }}>👤</span>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 13, color: "#1a0038" }}>Employee Directory</div>
+              <div style={{ fontSize: 11, color: "#6200d6", fontWeight: 700 }}>Manage who visitors can meet</div>
+            </div>
+            <span style={{ marginLeft: "auto", color: "#6200d6", fontSize: 14 }}>→</span>
+          </button>
+
+          <div style={{ height: 1, background: "#ede8f8", margin: "10px 0 14px" }} />
+
+          {/* Logout */}
+          <button
+            onClick={handleLogout}
+            style={{
+              width: "100%", background: "rgba(204,17,0,0.06)", border: "1.5px solid rgba(204,17,0,0.15)",
+              cursor: "pointer", display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+              borderRadius: 14, textAlign: "left", fontFamily: "Nunito, sans-serif",
+              transition: "all 0.2s", color: "#cc1100",
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(204,17,0,0.1)"}
+            onMouseLeave={e => e.currentTarget.style.background = "rgba(204,17,0,0.06)"}
+          >
+            <span style={{ fontSize: "1.2rem", width: 36, textAlign: "center" }}>🚪</span>
+            <div style={{ fontWeight: 800, fontSize: 13 }}>Sign Out</div>
+          </button>
+        </div>
       </div>
 
-      <div className={styles.scrollBody}>
-        <div className={styles.mainContent}>
-
-          {/* ── VISITOR ANALYTICS ── */}
-          <div>
-            <p className={styles.sectionTitle}>
-              <span className={`${styles.sectionDot} ${styles.sectionDotPurple}`} />
-              Visitor Analytics
-            </p>
-
-            {/* KPI row */}
-            <div className={styles.statRow}>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>Total Visitors</div>
-                <div className={styles.statValue}>{v.total ?? 0}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>Currently In</div>
-                <div className={`${styles.statValue} ${styles.statValueAmber}`}>{v.active ?? 0}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>Today&apos;s Visitors</div>
-                <div className={`${styles.statValue} ${styles.statValueGreen}`}>{v.today ?? 0}</div>
-              </div>
-            </div>
-
-            {/* Daily trend + visit status */}
-            <div className={`${styles.chartsRow} ${styles.chartCard}`} style={{ marginTop: 14 }}>
-              <div>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDot} />
-                  <h3 className={styles.chartTitle}>Daily Visitor Trend — Last 30 Days</h3>
-                </div>
-                <BarChart data={v.dailyTrend || []} color="#7a00ff" />
-              </div>
-              <div>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDot} />
-                  <h3 className={styles.chartTitle}>Visit Status Breakdown</h3>
-                </div>
-                <DonutChart
-                  data={visitStatusData}
-                  colors={["#f0a500", "#00b894", "#cc1100", "#6200d6", "#3b82f6"]}
-                />
-              </div>
-            </div>
-
-            {/* Top employees + purposes */}
-            <div className={styles.twoCol} style={{ marginTop: 14 }}>
-              <div className={styles.chartCard}>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDot} />
-                  <h3 className={styles.chartTitle}>Top Employees Being Visited</h3>
-                </div>
-                <HBarList data={v.topEmployees || []} />
-              </div>
-              <div className={styles.chartCard}>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDot} />
-                  <h3 className={styles.chartTitle}>Most Common Visit Purposes</h3>
-                </div>
-                <HBarList data={v.topPurposes || []} />
-              </div>
-            </div>
+      {/* ─── HERO BANNER ─────────────────────────────── */}
+      <div className={styles.heroBanner}>
+        <div className={styles.heroBannerContent}>
+          <div className={styles.heroBannerGreeting}>
+            <span className={styles.heroBannerDot} />
+            VISITOR MANAGEMENT
           </div>
-
-          {/* ── CONFERENCE ANALYTICS ── */}
-          <div>
-            <p className={styles.sectionTitle}>
-              <span className={`${styles.sectionDot} ${styles.sectionDotBlue}`} />
-              Conference Analytics
-            </p>
-
-            {/* KPI row */}
-            <div className={styles.statRow}>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>Total Bookings</div>
-                <div className={styles.statValue}>{b.total ?? 0}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>Upcoming</div>
-                <div className={`${styles.statValue} ${styles.statValueAmber}`}>{b.upcoming ?? 0}</div>
-              </div>
-              <div className={styles.statCard}>
-                <div className={styles.statLabel}>Cancelled</div>
-                <div className={`${styles.statValue}`} style={{ color: "#cc1100" }}>{b.cancelled ?? 0}</div>
-              </div>
-            </div>
-
-            {/* Daily trend + status */}
-            <div className={`${styles.chartsRow} ${styles.chartCard}`} style={{ marginTop: 14 }}>
-              <div>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDotBlue} style={{ width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 0 3px rgba(59,130,246,0.15)", flexShrink: 0 }} />
-                  <h3 className={styles.chartTitle}>Daily Booking Trend — Last 30 Days</h3>
-                </div>
-                <BarChart data={b.dailyTrend || []} color="#3b82f6" />
-              </div>
-              <div>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDotBlue} style={{ width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 0 3px rgba(59,130,246,0.15)", flexShrink: 0 }} />
-                  <h3 className={styles.chartTitle}>Booking Status Breakdown</h3>
-                </div>
-                <DonutChart
-                  data={bookingStatusData}
-                  colors={["#6200d6", "#cc1100", "#00b894"]}
-                />
-              </div>
-            </div>
-
-            {/* Top rooms + by dept */}
-            <div className={styles.twoCol} style={{ marginTop: 14 }}>
-              <div className={styles.chartCard}>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDotBlue} style={{ width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 0 3px rgba(59,130,246,0.15)", flexShrink: 0 }} />
-                  <h3 className={styles.chartTitle}>Most Booked Rooms</h3>
-                </div>
-                <HBarList data={b.topRooms || []} blue />
-              </div>
-              <div className={styles.chartCard}>
-                <div className={styles.chartHeader}>
-                  <span className={styles.chartDotBlue} style={{ width: 10, height: 10, borderRadius: "50%", background: "#3b82f6", boxShadow: "0 0 0 3px rgba(59,130,246,0.15)", flexShrink: 0 }} />
-                  <h3 className={styles.chartTitle}>Bookings by Department</h3>
-                </div>
-                <HBarList data={b.byDepartment || []} blue />
-              </div>
-            </div>
-          </div>
-
-          {/* ── EXPORT ── */}
-          <div className={styles.exportSection}>
-            <div className={styles.exportLeft}>
-              <p className={styles.exportTitle}>Download Reports</p>
-              <p className={styles.exportSub}>Export full data as Excel workbooks</p>
-            </div>
-            <div className={styles.exportBtns}>
-              <button className={`${styles.exportBtn} ${styles.exportBtnPrimary}`}
-                onClick={() => handleExport("all")} disabled={!!exporting}>
-                {exporting === "all" ? "⏳ Exporting…" : "⬇ Full Report"}
-              </button>
-              <button className={`${styles.exportBtn} ${styles.exportBtnOutline}`}
-                onClick={() => handleExport("visitors")} disabled={!!exporting}>
-                {exporting === "visitors" ? "⏳…" : "👥 Visitors"}
-              </button>
-              <button className={`${styles.exportBtn} ${styles.exportBtnOutline}`}
-                onClick={() => handleExport("bookings")} disabled={!!exporting}>
-                {exporting === "bookings" ? "⏳…" : "📅 Bookings"}
-              </button>
-            </div>
-          </div>
-
+          <h1 className={styles.heroBannerTitle}>
+            Welcome back, <span>{company?.name || "Admin"}</span>
+          </h1>
+          <p className={styles.heroBannerSub}>
+            Here&apos;s a quick overview of your workspace activity
+          </p>
         </div>
+      </div>
+
+      {/* ─── MAIN CONTENT ───────────────────────────── */}
+      <div className={styles.container}>
+
+        {/* Stats Cards */}
+        <div className={styles.card} style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "1rem" }}>
+          {[
+            { label: "Total Visitors",    value: stats?.visitors?.total  ?? "—", color: "#7c3aed" },
+            { label: "Active Now",         value: stats?.visitors?.active ?? "—", color: "#f0a500" },
+            { label: "Total Bookings",     value: stats?.bookings?.total  ?? "—", color: "#3b82f6" },
+            { label: "Upcoming Bookings",  value: stats?.bookings?.upcoming ?? "—", color: "#00b894" },
+          ].map((s, i) => (
+            <div key={i} style={{
+              background: "linear-gradient(145deg, #f4eeff, #ece4fa)",
+              borderRadius: 16, padding: "18px 16px",
+              border: "1.5px solid #ddd2f0",
+            }}>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#9980c8", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
+                {s.label}
+              </div>
+              <div style={{ fontSize: "2rem", fontWeight: 900, color: s.color, lineHeight: 1 }}>
+                {s.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Actions */}
+        <div className={styles.card}>
+          <h2 className={styles.title}>Quick Actions</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {[
+              { label: "🧑‍💼 Visitor Dashboard",      href: "/visitor/dashboard", primary: true },
+              { label: "📊 Reports & Analytics",    href: "/home/reports",       primary: false },
+              { label: "👤 Employee Directory",      href: "/visitor/admin",      primary: false },
+            ].map((action) => (
+              <button
+                key={action.href}
+                className={action.primary ? styles.primaryBtn : styles.secondaryBtn}
+                onClick={() => router.push(action.href)}
+              >
+                {action.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
       </div>
 
       {toast && (
-        <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
+        <div style={{
+          position: "fixed", top: 20, right: 20,
+          padding: "14px 22px", borderRadius: 14, fontSize: 14, fontWeight: 700,
+          zIndex: 10000, minWidth: 240, textAlign: "center",
+          background: toast.type === "error" ? "#cc1100" : "#5b00c8",
+          color: "#fff", boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+          animation: "slideIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+        }}>
           {toast.msg}
         </div>
       )}
