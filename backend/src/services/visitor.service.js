@@ -14,32 +14,47 @@ const getISTDate = () => {
 };
 
 const formatISTForMySQL = (date) => {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const hours = String(date.getUTCHours()).padStart(2, "0");
+  const year    = date.getUTCFullYear();
+  const month   = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day     = String(date.getUTCDate()).padStart(2, "0");
+  const hours   = String(date.getUTCHours()).padStart(2, "0");
   const minutes = String(date.getUTCMinutes()).padStart(2, "0");
   const seconds = String(date.getUTCSeconds()).padStart(2, "0");
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 };
 
 const formatISTDateKey = (date) => {
-  const year = date.getUTCFullYear();
+  const year  = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
+  const day   = String(date.getUTCDate()).padStart(2, "0");
   return `${year}${month}${day}`;
 };
 
 const formatISTForDisplay = (date) => {
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const day = date.getUTCDate();
-  const month = months[date.getUTCMonth()];
-  const year = date.getUTCFullYear();
-  let hours = date.getUTCHours();
+  const months  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const day     = date.getUTCDate();
+  const month   = months[date.getUTCMonth()];
+  const year    = date.getUTCFullYear();
+  let hours     = date.getUTCHours();
   const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  hours = hours % 12 || 12;
+  const ampm    = hours >= 12 ? "PM" : "AM";
+  hours         = hours % 12 || 12;
   return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
+};
+
+/* ======================================================
+   SANITIZE EMPLOYEE ID
+   FormData sends everything as strings.
+   "null", "undefined", "", "0" must all become real null
+   so the DB lookup is never called with a garbage value,
+   which would silently fail and suppress the notification email.
+====================================================== */
+const sanitizeEmployeeId = (raw) => {
+  if (raw === null || raw === undefined) return null;
+  const str = String(raw).trim();
+  if (!str || str === "null" || str === "undefined" || str === "0") return null;
+  const n = parseInt(str, 10);
+  return isNaN(n) || n <= 0 ? null : n;
 };
 
 /* ======================================================
@@ -47,23 +62,26 @@ const formatISTForDisplay = (date) => {
 ====================================================== */
 export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
-  if (!file) throw new Error("Visitor photo is required");
+  if (!file)      throw new Error("Visitor photo is required");
 
   const {
     name, phone, email, fromCompany, department, designation,
     address, city, state, postalCode, country,
-    personToMeet, employeeId,
-    purpose, belongings, idType, idNumber,
+    personToMeet, purpose, belongings, idType, idNumber,
   } = data;
 
   if (!name?.trim() || !phone?.trim())
     throw new Error("Visitor name and phone are required");
 
-  const checkInIST = getISTDate();
+  // Sanitize before any use — protects against FormData string "null"
+  const employeeId = sanitizeEmployeeId(data.employeeId);
+
+  const checkInIST   = getISTDate();
   const checkInMySQL = formatISTForMySQL(checkInIST);
 
-  console.log("✅ Current IST Time:", formatISTForDisplay(checkInIST));
-  console.log("✅ MySQL Format:", checkInMySQL);
+  console.log("[VISITOR] IST Time:", formatISTForDisplay(checkInIST));
+  console.log("[VISITOR] MySQL:", checkInMySQL);
+  console.log("[VISITOR] employeeId raw:", data.employeeId, "→ sanitized:", employeeId);
 
   const conn = await db.getConnection();
 
@@ -79,7 +97,7 @@ export const saveVisitor = async (companyId, data, file) => {
 
     if (!company) throw new Error("Company not found");
 
-    const PLAN = (company.plan || "TRIAL").toUpperCase();
+    const PLAN   = (company.plan                || "TRIAL").toUpperCase();
     const STATUS = (company.subscription_status || "PENDING").toUpperCase();
 
     if (STATUS === "EXPIRED") {
@@ -137,9 +155,9 @@ export const saveVisitor = async (companyId, data, file) => {
     }
 
     /* ── Resolve employee ── */
-    let resolvedEmployeeId = null;
+    let resolvedEmployeeId    = null;
     let resolvedEmployeeEmail = null;
-    let resolvedEmployeeName = personToMeet || null;
+    let resolvedEmployeeName  = personToMeet || null;
 
     if (employeeId) {
       const [[emp]] = await conn.execute(
@@ -148,15 +166,20 @@ export const saveVisitor = async (companyId, data, file) => {
         [employeeId, companyId]
       );
       if (emp) {
-        resolvedEmployeeId = emp.id;
+        resolvedEmployeeId    = emp.id;
         resolvedEmployeeEmail = emp.email;
-        resolvedEmployeeName = emp.name;
+        resolvedEmployeeName  = emp.name;
+        console.log(`[VISITOR] Employee resolved: ${emp.name} <${emp.email}>`);
+      } else {
+        console.warn(`[VISITOR] Employee id=${employeeId} not found or inactive for company ${companyId}`);
       }
+    } else {
+      console.log(`[VISITOR] No employeeId — person_to_meet: "${resolvedEmployeeName || "none"}". No notification will be sent.`);
     }
 
     /* ── Generate response token ── */
-    const responseToken = crypto.randomBytes(32).toString("hex");
-    const tokenExpiresAt = new Date(checkInIST.getTime() + 48 * 60 * 60 * 1000);
+    const responseToken     = crypto.randomBytes(32).toString("hex");
+    const tokenExpiresAt    = new Date(checkInIST.getTime() + 48 * 60 * 60 * 1000);
     const tokenExpiresMySQL = formatISTForMySQL(tokenExpiresAt);
 
     /* ── Insert visitor ── */
@@ -174,21 +197,21 @@ export const saveVisitor = async (companyId, data, file) => {
         companyId,
         name.trim(),
         phone.trim(),
-        email || null,
-        fromCompany || null,
-        department || null,
-        designation || null,
-        address || null,
-        city || null,
-        state || null,
-        postalCode || null,
-        country || null,
+        email        || null,
+        fromCompany  || null,
+        department   || null,
+        designation  || null,
+        address      || null,
+        city         || null,
+        state        || null,
+        postalCode   || null,
+        country      || null,
         resolvedEmployeeName,
         resolvedEmployeeId,
-        purpose || null,
+        purpose      || null,
         Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
-        idType || null,
-        idNumber || null,
+        idType       || null,
+        idNumber     || null,
         checkInMySQL,
         responseToken,
         tokenExpiresMySQL,
@@ -206,7 +229,7 @@ export const saveVisitor = async (companyId, data, file) => {
     );
     const visitorCode = `CMP${companyId}-${dateKey}-${String(count).padStart(5, "0")}`;
 
-    console.log("✅ Generated Visitor Code:", visitorCode);
+    console.log("[VISITOR] Generated code:", visitorCode);
 
     /* ── Upload photo ── */
     const photoUrl = await uploadToS3(
@@ -220,8 +243,7 @@ export const saveVisitor = async (companyId, data, file) => {
     );
 
     await conn.commit();
-
-    console.log("✅ Visitor saved successfully with ID:", visitorId);
+    console.log("[VISITOR] Saved successfully, id:", visitorId);
 
     /* ── Fetch company info for emails ── */
     const [[companyInfo]] = await db.execute(
@@ -232,12 +254,12 @@ export const saveVisitor = async (companyId, data, file) => {
     /* ── Send visitor pass email (non-blocking) ── */
     if (email) {
       try {
-        console.log("📧 Sending visitor pass email to:", email);
+        console.log("[VISITOR] Sending pass email to:", email);
         await sendVisitorPassMail({
           company: {
-            id: companyId,
-            name: companyInfo.name,
-            logo: companyInfo.logo_url,
+            id:           companyId,
+            name:         companyInfo.name,
+            logo:         companyInfo.logo_url,
             whatsapp_url: companyInfo.whatsapp_url || null,
           },
           visitor: {
@@ -246,71 +268,71 @@ export const saveVisitor = async (companyId, data, file) => {
             phone,
             email,
             photoUrl,
-            checkIn: checkInMySQL,
+            checkIn:        checkInMySQL,
             checkInDisplay: formatISTForDisplay(checkInIST),
-            personToMeet: resolvedEmployeeName || "Reception",
-            purpose: purpose || "Visit",
+            personToMeet:   resolvedEmployeeName || "Reception",
+            purpose:        purpose || "Visit",
           },
         });
         await db.execute(
           `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
           [visitorId]
         );
-        console.log("✅ Visitor pass email sent");
+        console.log("[VISITOR] Pass email sent");
       } catch (err) {
-        console.error("❌ VISITOR PASS MAIL ERROR:", err.message);
+        console.error("[VISITOR] PASS MAIL ERROR:", err.message);
       }
     }
 
     /* ── Send employee notification email (non-blocking) ── */
     if (resolvedEmployeeEmail) {
       try {
-        console.log("📧 Sending employee notification to:", resolvedEmployeeEmail);
+        console.log("[VISITOR] Sending employee notification to:", resolvedEmployeeEmail);
         await sendEmployeeNotificationMail({
           company: {
-            id: companyId,
+            id:   companyId,
             name: companyInfo.name,
             logo: companyInfo.logo_url,
           },
           employee: {
-            name: resolvedEmployeeName,
+            name:  resolvedEmployeeName,
             email: resolvedEmployeeEmail,
           },
           visitor: {
             visitorCode,
             name,
             phone,
-            email: email || null,
+            email:       email || null,
             fromCompany: fromCompany || null,
-            purpose: purpose || "Visit",
-            checkIn: checkInMySQL,
+            purpose:     purpose || "Visit",
+            checkIn:        checkInMySQL,
             checkInDisplay: formatISTForDisplay(checkInIST),
             photoUrl,
           },
           responseToken,
         });
-        console.log("✅ Employee notification email sent");
+        console.log("[VISITOR] Employee notification sent");
       } catch (err) {
-        console.error("❌ EMPLOYEE NOTIFICATION MAIL ERROR:", err.message);
+        console.error("[VISITOR] EMPLOYEE NOTIFICATION MAIL ERROR:", err.message);
       }
     }
 
     return {
-      id: visitorId,
+      id:             visitorId,
       visitorCode,
       name,
       phone,
       email,
       photoUrl,
-      status: "IN",
-      visitStatus: "pending",
-      checkIn: checkInMySQL,
+      status:         "IN",
+      visitStatus:    "pending",
+      checkIn:        checkInMySQL,
       checkInDisplay: formatISTForDisplay(checkInIST),
     };
 
   } catch (err) {
     await conn.rollback();
-    console.error("❌ VISITOR SAVE ERROR:", err.message);
+    console.error("[VISITOR] SAVE ERROR:", err.message);
     throw err;
   } finally {
     conn.release();
