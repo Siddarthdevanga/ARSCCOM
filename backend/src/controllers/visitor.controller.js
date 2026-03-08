@@ -142,6 +142,46 @@ export const getPublicVisitorPass = async (req, res) => {
 
 /* =========================================================
    VISITOR DASHBOARD + PLAN USAGE
+
+   FIXES APPLIED:
+   ─────────────────────────────────────────────────────────
+   BUG 1 (Stats key mismatch):
+     Was returning { today, inside, out, pending }.
+     Frontend reads totalVisitors / activeVisitors / pendingVisits.
+     Fixed: return keys that match what the frontend expects.
+
+   BUG 2 (checkedOutVisitors missing check_in):
+     Duration calculation on frontend is:
+       new Date(v.check_out) - new Date(v.check_in)
+     check_in was not selected → always undefined → NaN → "—".
+     Fixed: added check_in to the checkedOut SELECT.
+
+   BUG 3 (activeVisitors missing from_company):
+     Frontend shows v.from_company as the sub-label under visitor name.
+     Was not selected in active query → always undefined → never shown.
+     Fixed: added from_company to both SELECT lists.
+
+   BUG 4 (CONVERT_TZ double-shifts checkout time by +5:30):
+     MySQL server timezone is already IST (confirmed by user: checkout
+     showed 5 hours ahead). CONVERT_TZ(NOW(), '+00:00', '+05:30') was
+     treating IST NOW() as if it were UTC and adding another +5:30.
+     Fixed: checkoutVisitor uses NOW() directly.
+     Date filters that used CONVERT_TZ on stored columns also fixed.
+
+   BUG 5 (checkedOut date filter wrong):
+     Was: DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) = CURDATE()
+     Same double-shift problem — stored value is already IST.
+     Fixed: DATE(check_out) = CURDATE()
+
+   BUG 6 (today filter wrong):
+     Was: DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) = CURDATE()
+     Fixed: DATE(check_in) = CURDATE()
+
+   BUG 7 (plan usage not reaching frontend):
+     Was returning plan as a separate top-level key that the frontend
+     never reads. Frontend expects stats.planLimit / stats.planVisitorsUsed.
+     Fixed: merge plan fields into the stats object.
+   ─────────────────────────────────────────────────────────
 ========================================================= */
 export const getVisitorDashboard = async (req, res) => {
   try {
@@ -151,26 +191,25 @@ export const getVisitorDashboard = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    // Today Visitors Count
+    // FIX 6: DATE(check_in) = CURDATE() — stored value is already IST, no conversion needed
     const [[today]] = await db.execute(
       `SELECT COUNT(*) AS count FROM visitors
-       WHERE company_id = ?
-         AND DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) = CURDATE()`,
+       WHERE company_id = ? AND DATE(check_in) = CURDATE()`,
       [companyId]
     );
 
-    // Currently Inside
+    // Currently inside (status = 'IN')
     const [[inside]] = await db.execute(
       `SELECT COUNT(*) AS count FROM visitors
        WHERE company_id = ? AND status = 'IN'`,
       [companyId]
     );
 
-    // Checked Out Today
+    // FIX 5: DATE(check_out) = CURDATE() — no CONVERT_TZ needed
     const [[out]] = await db.execute(
       `SELECT COUNT(*) AS count FROM visitors
        WHERE company_id = ? AND status = 'OUT'
-         AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) = CURDATE()`,
+         AND DATE(check_out) = CURDATE()`,
       [companyId]
     );
 
@@ -181,11 +220,14 @@ export const getVisitorDashboard = async (req, res) => {
       [companyId]
     );
 
-    // Active visitor list — now includes visit_status and pass_issued
+    // FIX 3: Added from_company to active visitor SELECT
     const [activeVisitors] = await db.execute(
       `SELECT
-         visitor_code, name, phone, check_in,
-         visit_status, pass_mail_sent AS pass_issued,
+         visitor_code, name, phone,
+         from_company,
+         check_in,
+         visit_status,
+         pass_mail_sent AS pass_issued,
          person_to_meet
        FROM visitors
        WHERE company_id = ? AND status = 'IN'
@@ -193,32 +235,43 @@ export const getVisitorDashboard = async (req, res) => {
       [companyId]
     );
 
-    // Checked out list — includes visit_status and pass_issued
+    // FIX 2: Added check_in to checkedOut SELECT so duration can be calculated
+    // FIX 3: Added from_company
+    // FIX 5: Fixed date filter
     const [checkedOutVisitors] = await db.execute(
       `SELECT
-         visitor_code, name, phone, check_out,
-         visit_status, pass_mail_sent AS pass_issued,
+         visitor_code, name, phone,
+         from_company,
+         check_in,
+         check_out,
+         visit_status,
+         pass_mail_sent AS pass_issued,
          person_to_meet
        FROM visitors
        WHERE company_id = ? AND status = 'OUT'
-         AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) = CURDATE()
+         AND DATE(check_out) = CURDATE()
        ORDER BY check_out DESC`,
       [companyId]
     );
 
+    // FIX 7: Get plan usage and merge into stats so frontend can read
+    // stats.planLimit and stats.planVisitorsUsed directly
     const plan = await getPlanUsage(companyId);
 
+    // FIX 1: Use key names that match what the frontend reads
     return res.json({
       success: true,
       stats: {
-        today: today.count,
-        inside: inside.count,
-        out: out.count,
-        pending: pending.count,
+        totalVisitors:    today.count,
+        activeVisitors:   inside.count,
+        checkedOutToday:  out.count,
+        pendingVisits:    pending.count,
+        // FIX 7: Plan fields inlined into stats
+        planLimit:        plan?.limit        ?? 0,
+        planVisitorsUsed: plan?.visitorsUsed ?? 0,
       },
-      plan,
       activeVisitors,
-      checkedOutVisitors
+      checkedOutVisitors,
     });
 
   } catch (error) {
@@ -255,7 +308,7 @@ export const updateVisitStatus = async (req, res) => {
     return res.json({
       success: true,
       message: `Visit ${status} successfully`,
-      visitStatus: status
+      visitStatus: status,
     });
 
   } catch (error) {
@@ -266,6 +319,12 @@ export const updateVisitStatus = async (req, res) => {
 
 /* =========================================================
    CHECKOUT VISITOR
+
+   FIX 4: Was CONVERT_TZ(NOW(), '+00:00', '+05:30')
+   MySQL server is already in IST so NOW() already returns IST.
+   CONVERT_TZ was treating the IST value as UTC and adding another
+   +5:30, causing checkout time to appear ~5.5 hours in the future.
+   Fix: use NOW() directly — it's already IST on this server.
 ========================================================= */
 export const checkoutVisitor = async (req, res) => {
   try {
@@ -278,15 +337,18 @@ export const checkoutVisitor = async (req, res) => {
 
     const [result] = await db.execute(
       `UPDATE visitors
-       SET status = 'OUT',
+       SET status       = 'OUT',
            visit_status = 'checked_out',
-           check_out = CONVERT_TZ(NOW(), '+00:00', '+05:30')
+           check_out    = NOW()
        WHERE visitor_code = ? AND company_id = ? AND status = 'IN'`,
       [visitorCode, companyId]
     );
 
     if (!result.affectedRows) {
-      return res.status(404).json({ success: false, message: "Visitor not found or already checked out" });
+      return res.status(404).json({
+        success: false,
+        message: "Visitor not found or already checked out",
+      });
     }
 
     return res.json({ success: true, message: "Visitor checked out successfully" });
@@ -335,34 +397,34 @@ export const resendVisitorPass = async (req, res) => {
     const formatISTForDisplay = (date) => {
       if (!date) return "-";
       const d = new Date(date);
-      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      const day = d.getDate();
-      const month = months[d.getMonth()];
-      const year = d.getFullYear();
-      let hours = d.getHours();
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const day     = d.getDate();
+      const month   = months[d.getMonth()];
+      const year    = d.getFullYear();
+      let hours     = d.getHours();
       const minutes = String(d.getMinutes()).padStart(2, "0");
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
+      const ampm    = hours >= 12 ? "PM" : "AM";
+      hours         = hours % 12 || 12;
       return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
     };
 
     await sendVisitorPassMail({
       company: {
-        id: visitor.company_id,
-        name: visitor.company_name,
-        logo: visitor.company_logo,
+        id:           visitor.company_id,
+        name:         visitor.company_name,
+        logo:         visitor.company_logo,
         whatsapp_url: visitor.company_whatsapp_url || null,
       },
       visitor: {
-        visitorCode: visitor.visitor_code,
-        name: visitor.name,
-        phone: visitor.phone,
-        email: visitor.email,
-        photoUrl: visitor.photo_url,
-        checkIn: visitor.check_in,
+        visitorCode:    visitor.visitor_code,
+        name:           visitor.name,
+        phone:          visitor.phone,
+        email:          visitor.email,
+        photoUrl:       visitor.photo_url,
+        checkIn:        visitor.check_in,
         checkInDisplay: formatISTForDisplay(visitor.check_in),
-        personToMeet: visitor.person_to_meet || "Reception",
-        purpose: visitor.purpose || "Visit",
+        personToMeet:   visitor.person_to_meet || "Reception",
+        purpose:        visitor.purpose || "Visit",
       },
     });
 
