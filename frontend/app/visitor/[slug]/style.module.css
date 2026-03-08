@@ -38,9 +38,9 @@
   --shadow-lg:    0 10px 40px rgba(91,33,182,0.15), 0 4px 12px rgba(91,33,182,0.08);
   --shadow-focus: 0 0 0 3px rgba(124,58,237,0.18);
 
-  --ac-dropdown-shadow: 0 8px 32px rgba(91,33,182,0.18), 0 2px 8px rgba(91,33,182,0.1);
+  --ac-dropdown-shadow: 0 8px 32px rgba(91,33,182,0.22), 0 2px 8px rgba(91,33,182,0.12);
   --ac-item-hover-bg:   #f5f3ff;
-  --ac-avatar-size:     32px;
+  --ac-avatar-size:     36px;
 
   --font-sans: "Segoe UI", -apple-system, BlinkMacSystemFont, "Roboto", "Oxygen", sans-serif;
 
@@ -62,7 +62,7 @@
 }
 
 /* ================================================
-   SCROLLBAR — hidden, scroll still works
+   SCROLLBAR — hidden
 ================================================ */
 .page,
 .page *,
@@ -71,7 +71,6 @@
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
 }
-
 .page::-webkit-scrollbar,
 .page *::-webkit-scrollbar {
   display: none !important;
@@ -126,7 +125,6 @@
   z-index: 100;
   gap: 0.75rem;
   width: 100%;
-  margin-bottom: 0;
 }
 
 .headerLeft {
@@ -186,10 +184,7 @@
   pointer-events: none;
 }
 
-.heroBannerContent {
-  position: relative;
-  z-index: 1;
-}
+.heroBannerContent { position: relative; z-index: 1; }
 
 .heroBannerGreeting {
   display: inline-flex;
@@ -248,12 +243,8 @@
   border: 1px solid var(--border);
   padding: var(--card-padding-y) var(--card-padding-x);
   box-shadow: var(--shadow-md);
-  transition: box-shadow var(--transition-slow);
   margin-top: clamp(1rem, 2.5vw, 1.5rem);
-  /* CRITICAL: must not create a stacking context that clips
-     the absolute-positioned autocomplete dropdown.
-     overflow:visible is the default for non-scroll elements
-     so we do NOT set overflow here. */
+  /* No overflow:hidden — never clip portal dropdown */
 }
 
 .authCard {
@@ -284,6 +275,14 @@
 .authHeader p {
   font-size: clamp(0.8rem, 2vw, 0.9rem);
   color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.authSubtitle {
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin-bottom: 1.25rem;
   line-height: 1.6;
 }
 
@@ -377,6 +376,32 @@
   text-transform: uppercase;
 }
 
+/* Person to Meet label — slightly more prominent */
+.meetLabel {
+  display: flex !important;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: clamp(0.72rem, 1.6vw, 0.82rem) !important;
+  font-weight: 800 !important;
+  color: var(--brand-primary) !important;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.meetLabelIcon {
+  font-size: 0.9rem;
+}
+
+.employeeLinkedHint {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--success);
+  margin: 0.25rem 0 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
 .input {
   width: 100%;
   padding: clamp(0.55rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 0.95rem);
@@ -415,6 +440,55 @@
   font-size: clamp(0.8rem, 1.8vw, 0.875rem);
 }
 
+/* OTP input — big centered digits */
+.otpInput {
+  width: 100%;
+  padding: clamp(0.7rem, 2vw, 1rem) clamp(0.75rem, 2vw, 0.95rem);
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1.5px solid var(--border);
+  border-radius: var(--border-radius-md);
+  outline: none;
+  letter-spacing: 10px;
+  text-align: center;
+  font-weight: 700;
+  transition:
+    border-color var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+  -webkit-appearance: none;
+  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+.otpInput:focus {
+  border-color: var(--border-focus);
+  background: #fff;
+  box-shadow: var(--shadow-focus);
+}
+
+.otpMeta {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  line-height: 1.7;
+}
+
+.textBtn {
+  color: var(--brand-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 0.825rem;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 0.5rem;
+  font-family: var(--font-sans);
+}
+
 .select {
   width: 100%;
   padding: clamp(0.55rem, 1.5vw, 0.75rem) 2.25rem clamp(0.55rem, 1.5vw, 0.75rem) clamp(0.75rem, 2vw, 0.95rem);
@@ -446,24 +520,42 @@
 }
 
 /* ================================================
-   GRID LAYOUT
-   overflow:visible is MANDATORY — any overflow:hidden
-   or overflow:clip on this element or any ancestor
-   will clip the autocomplete dropdown.
+   GRID LAYOUTS — never set overflow:hidden here
 ================================================ */
 .gridRow {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(140px, 100%), 1fr));
   gap: clamp(0.5rem, 1.5vw, 0.75rem);
   margin-bottom: var(--space-sm);
-  overflow: visible;
-  /* Do NOT add contain, transform, filter, or will-change here —
-     they create a stacking context that can clip absolute children */
 }
 
 .gridRow .input {
   margin-bottom: 0;
 }
+
+/* 2-column grid for Country + Purpose */
+.gridRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(0.5rem, 1.5vw, 0.75rem);
+  margin-bottom: var(--space-sm);
+}
+
+.gridRow2 .input {
+  margin-bottom: 0;
+}
+
+/* ================================================
+   BUTTON ROW
+================================================ */
+.btnRow {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.btnRow .secondaryBtn { flex: 1; margin-top: 0; }
+.btnRow .primaryBtn   { flex: 2; margin-top: 0; }
 
 /* ================================================
    CHECKBOXES
@@ -604,11 +696,7 @@
 }
 
 .secondaryBtn:active:not(:disabled) { transform: translateY(1px); }
-
-.secondaryBtn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
+.secondaryBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ================================================
    MESSAGES
@@ -677,19 +765,72 @@
   transition: border-color var(--transition);
 }
 
-.cameraContainer:has(video) {
-  border-style: solid;
-  border-color: var(--brand-primary);
-  background: #000;
-  padding: 0;
-  overflow: hidden;
+.cameraVideo {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-.cameraContainer:has(img) {
-  border-style: solid;
-  border-color: var(--success);
-  background: var(--success-bg);
-  padding: var(--space-sm);
+.cameraPhoto {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ================================================
+   SUCCESS SCREEN
+================================================ */
+.textCenter { text-align: center; }
+
+.successIconWrap {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  color: var(--success);
+  display: block;
+  animation: checkmarkDraw 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+
+@keyframes checkmarkDraw {
+  from { transform: scale(0) rotate(-10deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+.successHeading {
+  color: var(--success);
+  margin-bottom: 1rem;
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 800;
+}
+
+.successSub {
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  color: #6b7280;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.visitorIdLabel {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #166534;
+}
+
+.visitorIdCode {
+  margin: 0.5rem 0 0 0;
+  font-size: clamp(1.5rem, 3.5vw, 2rem);
+  font-weight: 800;
+  color: var(--brand-primary);
+  letter-spacing: 2px;
+}
+
+.successNote {
+  font-size: clamp(0.825rem, 1.8vw, 0.925rem);
+  color: #9ca3af;
+  line-height: 1.6;
+  margin-bottom: 2rem;
 }
 
 /* ================================================
@@ -791,71 +932,52 @@
 
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.textCenter { text-align: center; }
-
-@keyframes checkmarkDraw {
-  from { transform: scale(0) rotate(-10deg); opacity: 0; }
-  to   { transform: scale(1) rotate(0deg);  opacity: 1; }
-}
-
-.successIcon {
-  display: inline-block;
-  animation: checkmarkDraw 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
-}
-
 /* ================================================
    EMPLOYEE AUTOCOMPLETE
    ─────────────────────────────────────────────
-   ARCHITECTURE (position:absolute, NOT fixed):
+   ARCHITECTURE: Portal-based dropdown.
 
-   The dropdown uses position:absolute relative to
-   .acWrapper which is position:relative.
+   The PortalDropdown component renders into
+   document.body using React.createPortal().
+   This means the dropdown is completely outside
+   the form's DOM tree — no overflow:hidden, no
+   stacking context, no CSS Grid, no transform
+   on any ancestor can affect it.
 
-   For this to work without clipping, every ancestor
-   between .acWrapper and the scroll container must
-   have overflow:visible (the default). We enforce
-   this on .gridRow explicitly. The .card and
-   .container also must NOT set overflow:hidden —
-   see their rules above.
+   The dropdown uses position:fixed with coordinates
+   recalculated via getBoundingClientRect() on every:
+   - open event
+   - window scroll (capture phase)
+   - window resize
+   - visualViewport resize/scroll (mobile keyboard)
 
-   WHY NOT position:fixed?
-   Fixed position calculates coordinates from the
-   viewport at paint time. On mobile Safari, the
-   layout shift caused by the virtual keyboard
-   opening (and subsequent scroll) means the
-   coordinates captured by getBoundingClientRect()
-   are stale by the time the dropdown renders,
-   placing it in the wrong position (as seen in
-   the screenshot where it appeared 2 rows above
-   the actual input).
-
-   position:absolute always stays anchored to its
-   nearest positioned ancestor (.acWrapper), so it
-   moves correctly with the layout. No JS coordinate
-   calculation needed.
+   This guarantees the dropdown always appears
+   directly below the input regardless of scroll
+   position, keyboard state, or screen size.
 ================================================ */
 
-/* ── Wrapper — the positioning anchor ── */
+/* Wrapper — just needs position:relative for the
+   spinner and tick overlays. No overflow change. */
 .acWrapper {
   position: relative;
   width: 100%;
-  /* MUST NOT set overflow:hidden or overflow:clip here */
 }
 
-/* ── Input with linked-employee green accent ── */
+/* Input turns green when an employee is confirmed */
 .acInputLinked {
   border-color: var(--success) !important;
   background: var(--success-bg) !important;
+  padding-right: 2.5rem !important;
 }
 
-/* ── Spinner overlaid on right side of input ── */
+/* Searching spinner */
 .acSpinner {
   position: absolute;
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  width: 13px;
-  height: 13px;
+  width: 14px;
+  height: 14px;
   border: 2px solid var(--border);
   border-top-color: var(--brand-primary);
   border-radius: 50%;
@@ -869,65 +991,41 @@
   to { transform: translateY(-50%) rotate(360deg); }
 }
 
-/* ── Green ✓ when employee is linked ── */
+/* Green ✓ tick overlay */
 .acLinkedTick {
   position: absolute;
   right: 14px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 800;
   color: var(--success);
   pointer-events: none;
   line-height: 1;
   z-index: 2;
 }
 
-/* ── Dropdown list ──────────────────────────────
-   position:absolute — anchored to .acWrapper.
-   top:calc(100% + 5px) places it 5px below the
-   input's bottom edge, regardless of scroll or
-   keyboard state.
-   z-index:200 is enough to clear the form fields
-   (all z-index:auto / 0). The sticky header is
-   z-index:100, but the dropdown only appears when
-   the user is interacting with the form, not the
-   header, so no conflict.
+/* ── Portal dropdown shell ──────────────────────
+   Rendered by PortalDropdown into document.body.
+   Uses position:fixed with JS-calculated coords.
+   z-index:9999 clears everything on the page.
 ─────────────────────────────────────────────── */
 .acDropdown {
-  position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
-  right: 0;           /* stretches to full width of .acWrapper */
-  z-index: 200;
-
   background: #fff;
   border-radius: var(--border-radius-lg);
   border: 1.5px solid var(--border);
   box-shadow: var(--ac-dropdown-shadow);
-
-  max-height: 232px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  /* Hidden scrollbar — consistent with page */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-
+  overflow: hidden;   /* clip inner radius */
   font-family: var(--font-sans);
-
-  /* Entrance animation — subtle drop-in from above */
-  animation: acDropIn 0.16s cubic-bezier(0.4, 0, 0.2, 1) both;
-}
-
-.acDropdown::-webkit-scrollbar {
-  display: none;
-  width: 0;
+  /* Entrance animation */
+  animation: acDropIn 0.18s cubic-bezier(0.4, 0, 0.2, 1) both;
+  /* position:fixed and coords are set via inline style */
 }
 
 @keyframes acDropIn {
   from {
     opacity: 0;
-    transform: translateY(-4px) scaleY(0.97);
+    transform: translateY(-6px) scaleY(0.96);
     transform-origin: top center;
   }
   to {
@@ -937,34 +1035,43 @@
   }
 }
 
+/* Inner scroll container — separate from .acDropdown
+   so the border-radius clip on .acDropdown doesn't
+   hide the scrollbar-none effect */
+.acDropdownInner {
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.acDropdownInner::-webkit-scrollbar {
+  display: none;
+  width: 0;
+}
+
 /* ── Result row ── */
 .acItem {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 10px 14px;
+  gap: 12px;
+  padding: 12px 16px;
   cursor: pointer;
   transition: background var(--transition);
-  border-bottom: 1px solid rgba(221,214,254,0.4);
+  border-bottom: 1px solid rgba(221,214,254,0.35);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* min-height ensures easy tap target on mobile */
+  min-height: 56px;
 }
 
-.acItem:last-child {
-  border-bottom: none;
-}
+.acItem:last-child { border-bottom: none; }
+.acItem:hover      { background: var(--ac-item-hover-bg); }
+.acItem:active     { background: #ede9fe; }
 
-/* CSS :hover — works on mouse AND tap (touch) */
-.acItem:hover {
-  background: var(--ac-item-hover-bg);
-}
-
-.acItem:active {
-  background: #ede9fe;
-}
-
-/* ── Avatar circle ── */
+/* Avatar */
 .acAvatar {
   width: var(--ac-avatar-size);
   height: var(--ac-avatar-size);
@@ -975,21 +1082,18 @@
   align-items: center;
   justify-content: center;
   color: #fff;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: 0.02em;
   box-shadow: 0 2px 6px rgba(91,33,182,0.22);
 }
 
-/* ── Text info ── */
-.acInfo {
-  flex: 1;
-  min-width: 0;
-}
+/* Text */
+.acInfo { flex: 1; min-width: 0; }
 
 .acName {
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
@@ -998,31 +1102,31 @@
 }
 
 .acDept {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-muted);
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 1px;
+  margin-top: 2px;
   line-height: 1.3;
 }
 
-/* ── Selected checkmark ── */
+/* Selected tick */
 .acTick {
   margin-left: auto;
   flex-shrink: 0;
   color: var(--success);
-  font-weight: 700;
-  font-size: 13px;
-  padding-left: 6px;
+  font-weight: 800;
+  font-size: 14px;
+  padding-left: 8px;
 }
 
-/* ── No results hint ── */
+/* No results */
 .acEmpty {
-  padding: 16px;
+  padding: 20px 16px;
   text-align: center;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-muted);
   font-weight: 500;
   font-style: italic;
@@ -1054,24 +1158,35 @@
   .gridRow {
     grid-template-columns: 1fr;
   }
+
+  .gridRow2 {
+    grid-template-columns: 1fr;
+  }
+
+  .btnRow {
+    flex-direction: column;
+  }
+
+  .btnRow .secondaryBtn,
+  .btnRow .primaryBtn {
+    flex: unset;
+    width: 100%;
+  }
 }
 
 @media (min-width: 400px) and (max-width: 639px) {
-  .gridRow {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .gridRow  { grid-template-columns: repeat(2, 1fr); }
+  .gridRow2 { grid-template-columns: 1fr 1fr; }
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
-  .gridRow {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  .gridRow  { grid-template-columns: repeat(2, 1fr); }
+  .gridRow2 { grid-template-columns: 1fr 1fr; }
 }
 
-@media (min-width: 768px) and (max-width: 1023px) {
-  .gridRow {
-    grid-template-columns: repeat(3, 1fr);
-  }
+@media (min-width: 768px) {
+  .gridRow  { grid-template-columns: repeat(3, 1fr); }
+  .gridRow2 { grid-template-columns: 1fr 1fr; }
 
   .card,
   .authCard {
@@ -1079,22 +1194,9 @@
   }
 }
 
-@media (min-width: 1024px) {
-  .gridRow {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* Touch devices */
+/* Touch devices — remove hover states that get stuck */
 @media (hover: none) and (pointer: coarse) {
-  .card:hover {
-    transform: none;
-    box-shadow: var(--shadow-md);
-  }
-
-  .primaryBtn:hover:not(:disabled)::after {
-    background: transparent;
-  }
+  .primaryBtn:hover:not(:disabled)::after { background: transparent; }
 
   .secondaryBtn:hover:not(:disabled) {
     background: transparent;
@@ -1109,42 +1211,26 @@
     box-shadow: 0 4px 14px rgba(37,211,102,0.35);
   }
 
-  /* On touch: hover state resets after tap, active shows feedback */
-  .acItem:hover {
-    background: transparent;
-  }
-
-  .acItem:active {
-    background: var(--ac-item-hover-bg);
-  }
+  .acItem:hover { background: transparent; }
+  .acItem:active { background: var(--ac-item-hover-bg); }
 }
 
-/* Landscape phones — shrink dropdown so keyboard doesn't fully cover it */
+/* Landscape phones — reduce spacing */
 @media (max-height: 500px) and (orientation: landscape) {
   .authHeader {
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
   }
 
-  .formGroup {
-    margin-bottom: 0.6rem;
-  }
+  .formGroup { margin-bottom: 0.6rem; }
 
-  .container {
-    padding-bottom: 1.5rem;
-  }
+  .container { padding-bottom: 1.5rem; }
 
-  .cameraContainer {
-    min-height: 80px;
-  }
+  .cameraContainer { min-height: 80px; }
 
-  .heroBanner {
-    padding: 1rem;
-  }
+  .heroBanner { padding: 1rem; }
 
-  .acDropdown {
-    max-height: 150px;
-  }
+  .acDropdownInner { max-height: 160px; }
 }
 
 /* Focus visible — accessibility */
@@ -1152,6 +1238,7 @@
 .secondaryBtn:focus-visible,
 .whatsappBtn:focus-visible,
 .input:focus-visible,
+.otpInput:focus-visible,
 .select:focus-visible {
   outline: 2px solid var(--brand-primary);
   outline-offset: 2px;
@@ -1165,7 +1252,5 @@
     display: none;
   }
 
-  .page {
-    background: white;
-  }
+  .page { background: white; }
 }
