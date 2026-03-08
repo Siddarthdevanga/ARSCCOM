@@ -255,8 +255,13 @@ export const getVisitorDashboard = async (req, res) => {
     );
 
     // FIX 7: Get plan usage and merge into stats so frontend can read
-    // stats.planLimit and stats.planVisitorsUsed directly
+    // stats.planLimit and stats.planVisitorsUsed directly.
+    // plan.service returns { limit, used } — NOT { limit, visitorsUsed }.
+    // Non-trial plans return limit:"UNLIMITED" (string) — treat as 0 so
+    // the frontend skips rendering the plan bar (planLimit === 0 hides it).
     const plan = await getPlanUsage(companyId);
+    const planLimit        = typeof plan?.limit === "number" ? plan.limit : 0;
+    const planVisitorsUsed = plan?.used ?? 0;
 
     // FIX 1: Use key names that match what the frontend reads
     return res.json({
@@ -266,9 +271,8 @@ export const getVisitorDashboard = async (req, res) => {
         activeVisitors:   inside.count,
         checkedOutToday:  out.count,
         pendingVisits:    pending.count,
-        // FIX 7: Plan fields inlined into stats
-        planLimit:        plan?.limit        ?? 0,
-        planVisitorsUsed: plan?.visitorsUsed ?? 0,
+        planLimit,
+        planVisitorsUsed,
       },
       activeVisitors,
       checkedOutVisitors,
