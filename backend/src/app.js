@@ -19,6 +19,8 @@ import billingSyncRoutes from "./routes/billingSync.route.js";
 import exportsRoutes from "./routes/exports.routes.js";
 import settingsRoutes from "./routes/settings.routes.js";
 import superAdminRoutes from "./routes/superadmin.routes.js";
+import employeeRoutes from "./routes/employee.routes.js";
+import visitResponseRoutes from "./routes/visitResponse.routes.js";
 
 const app = express();
 
@@ -133,7 +135,7 @@ app.get("/health", (req, res) => {
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
     memory: {
-      used: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`,
+      used:  `${Math.round(process.memoryUsage().heapUsed  / 1024 / 1024)}MB`,
       total: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)}MB`,
     },
   });
@@ -155,11 +157,15 @@ app.get("/", (req, res) => {
 app.use("/api/public", visitorPublicRouter);
 app.use("/api/public/conference", conferencePublicRoutes);
 
+// Employee email accept/decline (tokenised — no login required)
+app.use("/api/visit-response", visitResponseRoutes);
+
 /* =====================================================
    PROTECTED ROUTES (REQUIRE AUTH)
 ===================================================== */
 app.use("/api/auth", authRoutes);
 app.use("/api/visitors", visitorRoutes);
+app.use("/api/employees", employeeRoutes);
 app.use("/api/conference", conferenceRoutes);
 app.use("/api/exports", exportsRoutes);
 app.use("/api/payment", paymentRoutes);
