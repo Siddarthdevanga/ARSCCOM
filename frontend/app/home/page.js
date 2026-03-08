@@ -181,8 +181,6 @@ export default function Home() {
   const { toasts, toast, removeToast } = useToast();
 
   const [company,     setCompany]     = useState(null);
-  const [currentView, setCurrentView] = useState("home");
-
   const [showMenu,    setShowMenu]    = useState(false);
   const [subData,     setSubData]     = useState(null);
   const [loadingSub,  setLoadingSub]  = useState(false);
@@ -190,10 +188,6 @@ export default function Home() {
 
   const [upgradingBusiness,   setUpgradingBusiness]   = useState(false);
   const [upgradingEnterprise, setUpgradingEnterprise] = useState(false);
-
-  const [exportStats,   setExportStats]   = useState(null);
-  const [loadingStats,  setLoadingStats]  = useState(false);
-  const [downloading,   setDownloading]   = useState(false);
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -223,70 +217,6 @@ export default function Home() {
       toast.error("Subscription Error", msg);
     } finally {
       setLoadingSub(false);
-    }
-  };
-
-  /* ── Fetch Export Stats ───────────────────────────────────────────── */
-  const fetchExportStats = async () => {
-    try {
-      setLoadingStats(true);
-      setExportStats(null);
-      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/exports/stats`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to load statistics");
-      setExportStats(data);
-    } catch (err) {
-      toast.error("Load Failed", err?.message || "Unable to fetch export statistics");
-    } finally {
-      setLoadingStats(false);
-    }
-  };
-
-  /* ── Download ─────────────────────────────────────────────────────── */
-  const handleDownload = async (type) => {
-    const map = {
-      visitors: { endpoint: "/api/exports/visitors",            label: "Visitor Records" },
-      bookings: { endpoint: "/api/exports/conference-bookings", label: "Conference Bookings" },
-      all:      { endpoint: "/api/exports/all",                 label: "Complete Report" },
-    };
-    const { endpoint, label } = map[type] || {};
-    if (!endpoint) { toast.error("Invalid Type"); return; }
-
-    try {
-      setDownloading(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err?.message || "Download failed");
-      }
-
-      const blob               = await res.blob();
-      const contentDisposition = res.headers.get("content-disposition");
-      let filename             = `${label.replace(/\s+/g, "-")}-${Date.now()}.xlsx`;
-      if (contentDisposition) {
-        const m = contentDisposition.match(/filename="(.+)"/);
-        if (m) filename = m[1];
-      }
-
-      const url = window.URL.createObjectURL(blob);
-      const a   = document.createElement("a");
-      a.href     = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-
-      toast.success("Download Complete", `${label} exported successfully.`);
-      fetchExportStats();
-    } catch (err) {
-      toast.error("Download Failed", err?.message || "Please try again.");
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -329,10 +259,9 @@ export default function Home() {
 
   /* ── View Handlers ────────────────────────────────────────────────── */
   const handleOpenMenu      = () => { setShowMenu(true); fetchSubscription(); };
-  const handleOpenReports   = () => { setShowMenu(false); setCurrentView("reports"); fetchExportStats(); };
+  const handleOpenReports   = () => { setShowMenu(false); router.push("/home/reports"); };
   const handleOpenSettings  = () => { setShowMenu(false); router.push("/home/settings"); };
   const handleOpenEmployees = () => { setShowMenu(false); router.push("/visitor/admin"); };
-  const handleBackToHome    = () => setCurrentView("home");
   const handleRenew         = () => { setShowMenu(false); router.push("/auth/subscription"); };
 
   /* ── Logout ───────────────────────────────────────────────────────── */
@@ -364,20 +293,11 @@ export default function Home() {
 
       {/* ── HEADER ── */}
       <header className={styles.header}>
-        {currentView !== "home" ? (
-          <button className={styles.backBtn} onClick={handleBackToHome} aria-label="Back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M19 12H5M12 19l-7-7 7-7"/>
-            </svg>
-            <span>Back</span>
-          </button>
-        ) : (
-          <button className={styles.menuBtn} onClick={handleOpenMenu} aria-label="Open menu">
-            <div className={styles.menuDots}>
-              <span/><span/><span/>
-            </div>
-          </button>
-        )}
+        <button className={styles.menuBtn} onClick={handleOpenMenu} aria-label="Open menu">
+          <div className={styles.menuDots}>
+            <span/><span/><span/>
+          </div>
+        </button>
 
         <div className={styles.companyInfo}>
           {company.logo_url && (
@@ -458,123 +378,8 @@ export default function Home() {
                   </div>
                   <span className={styles.cardArrow}>→</span>
                 </div>
-
-                {/* ── Employee Directory ── */}
-                <div
-                  className={styles.moduleCard}
-                  onClick={() => router.push("/visitor/admin")}
-                  role="button"
-                  tabIndex={0}
-                  aria-label="Employee Directory"
-                  onKeyDown={(e) => e.key === "Enter" && router.push("/visitor/admin")}
-                >
-                  <div className={styles.cardIcon}><UserCog size={32}/></div>
-                  <div className={styles.cardContent}>
-                    <h3 className={styles.cardTitle}>Employee Directory</h3>
-                    <p className={styles.cardDescription}>
-                      Manage staff employees visitors can meet
-                    </p>
-                  </div>
-                  <span className={styles.cardArrow}>→</span>
-                </div>
               </div>
             </>
-          )}
-
-          {/* REPORTS VIEW */}
-          {currentView === "reports" && (
-            <div className={styles.reportsView}>
-              <div className={styles.reportsHeader}>
-                <div className={styles.reportsHeaderIcon}>
-                  <FileSpreadsheet size={28}/>
-                </div>
-                <div>
-                  <h2 className={styles.reportsTitle}>Reports & Analytics</h2>
-                  <p className={styles.reportsSubtitle}>Download and export your data</p>
-                </div>
-              </div>
-
-              {loadingStats && (
-                <div className={styles.loadingState}>
-                  <div className={styles.spinner}/>
-                  <p>Loading statistics...</p>
-                </div>
-              )}
-
-              {exportStats && (
-                <>
-                  <div className={styles.statsOverview}>
-                    <div className={styles.statCard}>
-                      <Users size={22}/>
-                      <div>
-                        <p className={styles.statLabel}>Total Visitors</p>
-                        <p className={styles.statValue}>{exportStats.visitors?.total ?? 0}</p>
-                      </div>
-                    </div>
-                    <div className={styles.statCard}>
-                      <DoorOpen size={22}/>
-                      <div>
-                        <p className={styles.statLabel}>Total Bookings</p>
-                        <p className={styles.statValue}>{exportStats.bookings?.total ?? 0}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.reportsGrid}>
-                    <div className={styles.reportCard}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}><Users size={22}/></div>
-                        <div>
-                          <h6>Visitor Records</h6>
-                          <p className={styles.reportMeta}>
-                            {exportStats.visitors?.active ?? 0} active · {exportStats.visitors?.total ?? 0} total
-                          </p>
-                        </div>
-                      </div>
-                      <button className={styles.downloadBtn} onClick={() => handleDownload("visitors")} disabled={downloading}>
-                        <Download size={15}/>
-                        {downloading ? "Downloading..." : "Download"}
-                      </button>
-                    </div>
-
-                    <div className={styles.reportCard}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}><DoorOpen size={22}/></div>
-                        <div>
-                          <h6>Conference Bookings</h6>
-                          <p className={styles.reportMeta}>
-                            {exportStats.bookings?.upcoming ?? 0} upcoming · {exportStats.bookings?.total ?? 0} total
-                          </p>
-                        </div>
-                      </div>
-                      <button className={styles.downloadBtn} onClick={() => handleDownload("bookings")} disabled={downloading}>
-                        <Download size={15}/>
-                        {downloading ? "Downloading..." : "Download"}
-                      </button>
-                    </div>
-
-                    <div className={`${styles.reportCard} ${styles.premiumReport}`}>
-                      <div className={styles.reportHeader}>
-                        <div className={styles.reportIcon}><FileSpreadsheet size={22}/></div>
-                        <div>
-                          <h6>Complete Report</h6>
-                          <p className={styles.reportMeta}>All data · multi-sheet Excel file</p>
-                        </div>
-                      </div>
-                      <button className={`${styles.downloadBtn} ${styles.primaryDownloadBtn}`} onClick={() => handleDownload("all")} disabled={downloading}>
-                        <Download size={15}/>
-                        {downloading ? "Downloading..." : "Download All"}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className={styles.infoBox}>
-                    <FileSpreadsheet size={15}/>
-                    <p>Reports export as .xlsx with professional formatting and colour-coded status indicators.</p>
-                  </div>
-                </>
-              )}
-            </div>
           )}
 
         </main>
