@@ -5,13 +5,6 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import styles from "./style.module.css";
 
-/* ─── Base URL ───────────────────────────────────────
-   ALL fetch calls must use this prefix so requests go
-   to the Express backend, not the Next.js server.
-   Missing this prefix was causing all API calls to hit
-   Next.js → dashboard returned 401 redirect loop,
-   checkout returned 404.
-──────────────────────────────────────────────────── */
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 /* ─── Visit Status Badge ─────────────────── */
@@ -37,6 +30,31 @@ function VisitStatusBadge({ status }) {
   );
 }
 
+/* ─── Duration formatter ─────────────────── */
+const calcDuration = (checkIn, checkOut) => {
+  if (!checkIn || !checkOut) return "—";
+  const mins = Math.round((new Date(checkOut) - new Date(checkIn)) / 60_000);
+  if (isNaN(mins) || mins < 0) return "—";
+  if (mins >= 60) return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  return `${mins}m`;
+};
+
+/* ─── Time formatter ─────────────────────── */
+const fmtTime = (dt) => {
+  if (!dt) return "—";
+  return new Date(dt).toLocaleTimeString("en-IN", {
+    hour: "2-digit", minute: "2-digit", hour12: true,
+  });
+};
+
+/* ─── Date formatter ─────────────────────── */
+const fmtDate = (dt) => {
+  if (!dt) return "—";
+  return new Date(dt).toLocaleDateString("en-IN", {
+    month: "short", day: "numeric",
+  });
+};
+
 export default function VisitorDashboard() {
   const router = useRouter();
   const [data,           setData]           = useState(null);
@@ -60,12 +78,6 @@ export default function VisitorDashboard() {
 
   const getToken = () => localStorage.getItem("token");
 
-  /* ─────────────────────────────────────────────
-     FETCH DASHBOARD
-     FIX: was fetch("/api/visitors/dashboard", ...)
-     Missing API prefix → request hit Next.js server
-     which has no such route → 401 → redirect loop.
-  ───────────────────────────────────────────── */
   const fetchDashboard = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/visitors/dashboard`, {
@@ -89,13 +101,10 @@ export default function VisitorDashboard() {
     }
 
     fetchDashboard().then(() => setLoading(false));
-
-    /* Poll every 30s */
     pollTimer.current = setInterval(fetchDashboard, 30_000);
     return () => clearInterval(pollTimer.current);
   }, [fetchDashboard]);
 
-  /* Build QR when company slug known */
   useEffect(() => {
     if (!company?.slug) return;
     const url = `${window.location.origin}/visitor/${company.slug}`;
@@ -106,12 +115,6 @@ export default function VisitorDashboard() {
     }).then(setQrUrl).catch(() => {});
   }, [company]);
 
-  /* ─────────────────────────────────────────────
-     CHECKOUT
-     FIX 1: was fetch("/api/visitors/...") → missing API prefix
-     FIX 2: was method "PATCH" → backend route is POST
-             POST /:visitorCode/checkout in visitor.routes.js
-  ───────────────────────────────────────────── */
   const handleCheckout = async (visitorCode) => {
     setCheckingOut(visitorCode);
     try {
@@ -129,10 +132,6 @@ export default function VisitorDashboard() {
     }
   };
 
-  /* ─────────────────────────────────────────────
-     ACCEPT / DECLINE VISIT STATUS
-     FIX: was fetch("/api/visitors/...") → missing API prefix
-  ───────────────────────────────────────────── */
   const handleVisitStatus = async (visitorCode, status) => {
     const key = `${visitorCode}-${status}`;
     setUpdatingStatus(key);
@@ -173,11 +172,26 @@ export default function VisitorDashboard() {
     <div className={styles.loading}><div className={styles.spinner} /></div>
   );
 
+  /* ─────────────────────────────────────────────────────────
+     STATS — read keys returned by the fixed controller:
+       totalVisitors    (was: stats.totalVisitors  — prev: stats.today)
+       activeVisitors   (was: stats.activeVisitors — prev: stats.inside)
+       pendingVisits    (was: stats.pendingVisits  — prev: stats.pending)
+       planLimit        (now inlined into stats)
+       planVisitorsUsed (now inlined into stats)
+  ───────────────────────────────────────────────────────── */
   const stats     = data?.stats || {};
-  const active    = data?.activeVisitors || [];
+  const active    = data?.activeVisitors    || [];
   const history   = data?.checkedOutVisitors || [];
-  const planLimit = stats.planLimit || 0;
-  const planUsed  = stats.planVisitorsUsed || 0;
+
+  // FIX 1: correct field names
+  const totalVisitors  = stats.totalVisitors    ?? 0;
+  const activeCount    = stats.activeVisitors   ?? 0;
+  const pendingCount   = stats.pendingVisits    ?? 0;
+
+  // FIX 7: plan fields are now inlined in stats
+  const planLimit = stats.planLimit        ?? 0;
+  const planUsed  = stats.planVisitorsUsed ?? 0;
   const planPct   = planLimit > 0 ? Math.min((planUsed / planLimit) * 100, 100) : 0;
   const planColor = planPct > 85 ? "#cc1100" : planPct > 60 ? "#f0a500" : "#6200d6";
   const atLimit   = planLimit > 0 && planUsed >= planLimit;
@@ -195,18 +209,11 @@ export default function VisitorDashboard() {
         </div>
         <div className={styles.rightHeader}>
           {company?.logo && (
-            <Image
-              src={company.logo} alt="Logo"
-              width={72} height={36}
-              className={styles.companyLogo}
-              unoptimized
-            />
+            <Image src={company.logo} alt="Logo" width={72} height={36}
+              className={styles.companyLogo} unoptimized />
           )}
-          <button
-            className={styles.newBtn}
-            disabled={atLimit}
-            onClick={() => router.push("/visitor/primary_details")}
-          >
+          <button className={styles.newBtn} disabled={atLimit}
+            onClick={() => router.push("/visitor/primary_details")}>
             + New Visit
           </button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>
@@ -265,17 +272,18 @@ export default function VisitorDashboard() {
         <h1 className={styles.heroTitle}>Visitor <span>Dashboard</span></h1>
         <p className={styles.heroSub}>Real-time overview of all visitors on premises</p>
         <div className={styles.heroStats}>
+          {/* FIX 1: correct variable names */}
           <div className={styles.heroStatCard}>
             <div className={styles.heroStatLabel}>Total Visitors</div>
-            <div className={styles.heroStatValue}>{stats.totalVisitors ?? 0}</div>
+            <div className={styles.heroStatValue}>{totalVisitors}</div>
           </div>
           <div className={styles.heroStatCard}>
             <div className={styles.heroStatLabel}>Currently In</div>
-            <div className={styles.heroStatValue}>{stats.activeVisitors ?? 0}</div>
+            <div className={styles.heroStatValue}>{activeCount}</div>
           </div>
           <div className={styles.heroStatCard}>
             <div className={styles.heroStatLabel}>Pending</div>
-            <div className={styles.heroStatValue}>{stats.pendingVisits ?? 0}</div>
+            <div className={styles.heroStatValue}>{pendingCount}</div>
           </div>
         </div>
       </div>
@@ -295,10 +303,8 @@ export default function VisitorDashboard() {
             <span className={styles.planName}>{planUsed} / {planLimit} visits</span>
           </div>
           <div className={styles.planBarBg}>
-            <div
-              className={styles.planBarFill}
-              style={{ width: `${planPct}%`, background: planColor }}
-            />
+            <div className={styles.planBarFill}
+              style={{ width: `${planPct}%`, background: planColor }} />
           </div>
           <div className={styles.planFooter}>
             <span>{Math.round(planPct)}% used</span>
@@ -350,6 +356,7 @@ export default function VisitorDashboard() {
                               <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
                                 {v.name}
                               </div>
+                              {/* FIX 3: from_company now returned by controller */}
                               {v.from_company && (
                                 <div style={{ fontSize: 11, color: "#9980c8" }}>{v.from_company}</div>
                               )}
@@ -395,21 +402,16 @@ export default function VisitorDashboard() {
                             <td>
                               <span style={{
                                 fontSize: 10, fontWeight: 800,
-                                background: v.pass_issued
-                                  ? "rgba(0,184,148,0.12)"
-                                  : "rgba(240,165,0,0.12)",
-                                color: v.pass_issued ? "#00a875" : "#c77800",
+                                background: v.pass_issued ? "rgba(0,184,148,0.12)" : "rgba(240,165,0,0.12)",
+                                color:      v.pass_issued ? "#00a875" : "#c77800",
                                 padding: "3px 8px", borderRadius: 50,
                               }}>
                                 {v.pass_issued ? "✓ Sent" : "Pending"}
                               </span>
                             </td>
                             <td style={{ fontSize: 12, color: "#9980c8" }}>
-                              {v.check_in
-                                ? new Date(v.check_in).toLocaleTimeString("en-US", {
-                                    hour: "2-digit", minute: "2-digit", hour12: true,
-                                  })
-                                : "—"}
+                              {/* FIX: use fmtTime helper */}
+                              {fmtTime(v.check_in)}
                             </td>
                             <td>
                               <button
@@ -456,45 +458,34 @@ export default function VisitorDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {history.map((v) => {
-                        let duration = "—";
-                        if (v.check_in && v.check_out) {
-                          const mins = Math.round(
-                            (new Date(v.check_out) - new Date(v.check_in)) / 60_000
-                          );
-                          duration = mins >= 60
-                            ? `${Math.floor(mins / 60)}h ${mins % 60}m`
-                            : `${mins}m`;
-                        }
-                        return (
-                          <tr key={v.visitor_code}>
-                            <td>
-                              <span className={styles.visitorCode}>{v.visitor_code}</span>
-                            </td>
-                            <td>
-                              <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
-                                {v.name}
+                      {history.map((v) => (
+                        <tr key={v.visitor_code}>
+                          <td>
+                            <span className={styles.visitorCode}>{v.visitor_code}</span>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
+                              {v.name}
+                            </div>
+                            {v.person_to_meet && (
+                              <div style={{ fontSize: 11, color: "#9980c8" }}>
+                                → {v.person_to_meet}
                               </div>
-                              {v.person_to_meet && (
-                                <div style={{ fontSize: 11, color: "#9980c8" }}>
-                                  → {v.person_to_meet}
-                                </div>
-                              )}
-                            </td>
-                            <td>
-                              <VisitStatusBadge status={v.visit_status || "checked_out"} />
-                            </td>
-                            <td style={{ fontSize: 12, color: "#2a0050" }}>{duration}</td>
-                            <td style={{ fontSize: 11, color: "#9980c8" }}>
-                              {v.check_in
-                                ? new Date(v.check_in).toLocaleDateString("en-US", {
-                                    month: "short", day: "numeric",
-                                  })
-                                : "—"}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                            )}
+                          </td>
+                          <td>
+                            <VisitStatusBadge status={v.visit_status || "checked_out"} />
+                          </td>
+                          {/* FIX 2: calcDuration now works — check_in is returned by controller */}
+                          <td style={{ fontSize: 12, color: "#2a0050" }}>
+                            {calcDuration(v.check_in, v.check_out)}
+                          </td>
+                          {/* FIX 2: fmtDate now works — check_in returned */}
+                          <td style={{ fontSize: 11, color: "#9980c8" }}>
+                            {fmtDate(v.check_in)}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
