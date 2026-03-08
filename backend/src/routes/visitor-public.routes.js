@@ -2,6 +2,7 @@ import express from "express";
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
 import { sendEmail } from "../utils/mailer.js";
+import { searchEmployeesByCompany } from "../controllers/employee.controller.js";
 import multer from "multer";
 import QRCode from "qrcode";
 import crypto from "crypto";
@@ -30,10 +31,6 @@ const upload = multer({
   },
 });
 
-/**
- * Wraps multer in a middleware that properly surfaces errors
- * to the Express error pipeline instead of swallowing them.
- */
 const handleUpload = (req, res, next) => {
   upload.single("photo")(req, res, (err) => {
     if (err instanceof multer.MulterError) {
@@ -44,9 +41,7 @@ const handleUpload = (req, res, next) => {
       return res.status(400).json({ success: false, message });
     }
     if (err) {
-      return res
-        .status(400)
-        .json({ success: false, message: err.message || "File upload failed" });
+      return res.status(400).json({ success: false, message: err.message || "File upload failed" });
     }
     next();
   });
@@ -59,14 +54,12 @@ const emailFooter = (company = {}) => `
   <br/><br/>
   Regards,<br/>
   <strong>${company.name || "ProMeet Team"}</strong><br/>
-  ${
-    company.logo_url
-      ? `<img src="${company.logo_url}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
-      : ""
-  }
+  ${company.logo_url
+    ? `<img src="${company.logo_url}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
+    : ""}
   <hr style="margin-top:20px;" />
   <p style="font-size:13px;color:#666;margin-top:15px;line-height:1.5;">
-    This email was automatically sent from the Conference Room Booking Platform.<br/>
+    This email was automatically sent from the Visitor Management Platform.<br/>
     If you did not perform this action, please contact your administrator immediately.
   </p>
 `;
@@ -91,16 +84,11 @@ const otpEmailHtml = (otp, company) => `
 /* ======================================================
    UTILITIES
 ====================================================== */
-const normalizeSlug = (v) => String(v || "").trim().toLowerCase();
+const normalizeSlug  = (v) => String(v || "").trim().toLowerCase();
 const normalizeEmail = (v) => String(v || "").trim().toLowerCase();
-
-const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-const generateOTP = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
-
-const hashOTP = (otp) =>
-  crypto.createHash("sha256").update(otp).digest("hex");
+const isValidEmail   = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+const generateOTP    = () => Math.floor(100000 + Math.random() * 900000).toString();
+const hashOTP        = (otp) => crypto.createHash("sha256").update(otp).digest("hex");
 
 /* ======================================================
    COMPANY FETCH
@@ -133,13 +121,11 @@ const sendOtpMail = async (email, otp, company) => {
 ====================================================== */
 router.get("/visitor/:slug/info", async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const slug    = normalizeSlug(req.params.slug);
     const company = await getCompanyBySlug(slug);
 
     if (!company) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid registration link" });
+      return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
     const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
@@ -153,9 +139,9 @@ router.get("/visitor/:slug/info", async (req, res) => {
     return res.json({
       success: true,
       company: {
-        name: company.name,
-        logo_url: company.logo_url,
-        whatsapp_url: company.whatsapp_url || null,
+        name:          company.name,
+        logo_url:      company.logo_url,
+        whatsapp_url:  company.whatsapp_url || null,
       },
       qrCode,
       publicUrl,
@@ -172,7 +158,7 @@ router.get("/visitor/:slug/info", async (req, res) => {
 ====================================================== */
 router.get("/visitor/qr/:slug", async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const slug    = normalizeSlug(req.params.slug);
     const company = await getCompanyBySlug(slug);
 
     if (!company) {
@@ -188,14 +174,35 @@ router.get("/visitor/qr/:slug", async (req, res) => {
     });
 
     res.setHeader("Content-Type", "image/png");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="visitor-qr-${slug}.png"`
-    );
+    res.setHeader("Content-Disposition", `inline; filename="visitor-qr-${slug}.png"`);
     return res.send(qrBuffer);
   } catch (err) {
     console.error("[VISITOR][QR_DOWNLOAD]", err);
     return res.status(500).send("Failed to generate QR code");
+  }
+});
+
+/* ======================================================
+   EMPLOYEE AUTOCOMPLETE
+   GET /visitor/:slug/employees?q=name
+   — No auth required (used by public registration form)
+====================================================== */
+router.get("/visitor/:slug/employees", async (req, res) => {
+  try {
+    const slug    = normalizeSlug(req.params.slug);
+    const query   = String(req.query.q || "").trim();
+    const company = await getCompanyBySlug(slug);
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Invalid registration link" });
+    }
+
+    const employees = await searchEmployeesByCompany(company.id, query);
+
+    return res.json({ success: true, employees });
+  } catch (err) {
+    console.error("[VISITOR][EMPLOYEES_SEARCH]", err);
+    return res.status(500).json({ success: false, message: "Failed to fetch employees" });
   }
 });
 
@@ -205,20 +212,16 @@ router.get("/visitor/qr/:slug", async (req, res) => {
 ====================================================== */
 router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
-    const email = normalizeEmail(req.body.email);
+    const slug    = normalizeSlug(req.params.slug);
+    const email   = normalizeEmail(req.body.email);
 
     if (!isValidEmail(email)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Valid email address required" });
+      return res.status(400).json({ success: false, message: "Valid email address required" });
     }
 
     const company = await getCompanyBySlug(slug);
     if (!company) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid registration link" });
+      return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
     // Resend throttle check
@@ -232,9 +235,7 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     );
 
     if (last?.otp_last_sent_at) {
-      const elapsedSeconds =
-        (Date.now() - new Date(last.otp_last_sent_at).getTime()) / 1000;
-
+      const elapsedSeconds = (Date.now() - new Date(last.otp_last_sent_at).getTime()) / 1000;
       if (elapsedSeconds < OTP_RESEND_SECONDS) {
         const waitSeconds = Math.ceil(OTP_RESEND_SECONDS - elapsedSeconds);
         return res.status(429).json({
@@ -245,7 +246,7 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
       }
     }
 
-    const otp = generateOTP();
+    const otp     = generateOTP();
     const otpHash = hashOTP(otp);
 
     await db.query(
@@ -265,9 +266,7 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     });
   } catch (err) {
     console.error("[VISITOR][OTP_SEND]", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to send OTP. Please try again." });
+    return res.status(500).json({ success: false, message: "Failed to send OTP. Please try again." });
   }
 });
 
@@ -277,27 +276,21 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
 ====================================================== */
 router.post("/visitor/:slug/otp/verify", async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const slug  = normalizeSlug(req.params.slug);
     const email = normalizeEmail(req.body.email);
-    const otp = String(req.body.otp || "").trim();
+    const otp   = String(req.body.otp || "").trim();
 
     if (!isValidEmail(email)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Valid email address required" });
+      return res.status(400).json({ success: false, message: "Valid email address required" });
     }
 
     if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Please enter a valid 6-digit OTP" });
+      return res.status(400).json({ success: false, message: "Please enter a valid 6-digit OTP" });
     }
 
     const company = await getCompanyBySlug(slug);
     if (!company) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid registration link" });
+      return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
     const otpHash = hashOTP(otp);
@@ -332,7 +325,6 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
       });
     }
 
-    // Issue session token
     const sessionToken = crypto.randomBytes(32).toString("hex");
 
     await db.query(
@@ -351,9 +343,7 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
     });
   } catch (err) {
     console.error("[VISITOR][OTP_VERIFY]", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Verification failed. Please try again." });
+    return res.status(500).json({ success: false, message: "Verification failed. Please try again." });
   }
 });
 
@@ -368,10 +358,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     /* ── 1. Auth header check ── */
     const otpToken = (req.headers["otp-token"] || "").trim();
     if (!otpToken) {
-      return res.status(401).json({
-        success: false,
-        message: "OTP verification required",
-      });
+      return res.status(401).json({ success: false, message: "OTP verification required" });
     }
 
     /* ── 2. Session lookup with expiry window ── */
@@ -395,22 +382,17 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     /* ── 3. Company validation ── */
     const company = await getCompanyBySlug(slug);
     if (!company || company.id !== otpSession.company_id) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Invalid company" });
+      return res.status(404).json({ success: false, message: "Invalid company" });
     }
 
-    /* ── 4. Field validation — collect all errors upfront ── */
+    /* ── 4. Field validation ── */
     const validationErrors = [];
-    if (!req.body.name?.trim()) validationErrors.push("Visitor name is required");
+    if (!req.body.name?.trim())  validationErrors.push("Visitor name is required");
     if (!req.body.phone?.trim()) validationErrors.push("Phone number is required");
-    if (!req.file) validationErrors.push("Visitor photo is required");
+    if (!req.file)               validationErrors.push("Visitor photo is required");
 
     if (validationErrors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: validationErrors[0], // surface the first error; swap for `validationErrors` array if frontend handles multiple
-      });
+      return res.status(400).json({ success: false, message: validationErrors[0] });
     }
 
     /* ── 5. Build visitor payload ── */
@@ -427,6 +409,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       postalCode:   req.body.postalCode?.trim()   || null,
       country:      req.body.country?.trim()       || null,
       personToMeet: req.body.personToMeet?.trim() || null,
+      employeeId:   req.body.employeeId            || null,  // ← NEW: employee directory ID
       purpose:      req.body.purpose?.trim()       || null,
       belongings:   req.body.belongings            || null,
       idType:       req.body.idType?.trim()        || null,
@@ -436,7 +419,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     /* ── 6. Persist visitor ── */
     const visitor = await saveVisitor(otpSession.company_id, visitorData, req.file);
 
-    /* ── 7. Invalidate session immediately after successful registration ── */
+    /* ── 7. Invalidate session ── */
     await db.query(
       `UPDATE visitor_otp SET otp_session_token = NULL WHERE id = ?`,
       [otpSession.id]
@@ -450,16 +433,11 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
   } catch (err) {
     console.error("[VISITOR][REGISTER]", err);
 
-    // Known business-logic errors get a 403; everything else is a 500
-    const isKnownError = /trial|limit|expired|subscription/i.test(
-      err.message || ""
-    );
+    const isKnownError = /trial|limit|expired|subscription/i.test(err.message || "");
 
     return res.status(isKnownError ? 403 : 500).json({
       success: false,
-      message: isKnownError
-        ? err.message
-        : "Registration failed. Please try again.",
+      message: isKnownError ? err.message : "Registration failed. Please try again.",
     });
   }
 });
