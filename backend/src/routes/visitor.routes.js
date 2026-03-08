@@ -7,75 +7,45 @@ import {
   getPublicVisitorPass,
   getVisitorDashboard,
   checkoutVisitor,
-  resendVisitorPass  // ✅ NEW IMPORT
+  resendVisitorPass,
+  updateVisitStatus,
 } from "../controllers/visitor.controller.js";
 
 const router = express.Router();
 
 /* ======================================================
-   🌐 PUBLIC VISITOR PASS (NO AUTH)
-   - Safe public read-only access
-   - Used in Email + QR
+   PUBLIC — NO AUTH
 ====================================================== */
 router.get("/public/code/:visitorCode", getPublicVisitorPass);
 
 /* ======================================================
-   👤 CREATE VISITOR
-   POST /api/visitors
-   - Auth Required
-   - multipart/form-data
-   - photo field name = "photo"
+   CREATE VISITOR
 ====================================================== */
-router.post(
-  "/",
-  authenticate,
-  upload.single("photo"),
-  createVisitor
-);
+router.post("/", authenticate, upload.single("photo"), createVisitor);
 
 /* ======================================================
-   📊 VISITOR DASHBOARD (ADMIN)
-   GET /api/visitors/dashboard
+   DASHBOARD
 ====================================================== */
-router.get(
-  "/dashboard",
-  authenticate,
-  getVisitorDashboard
-);
+router.get("/dashboard", authenticate, getVisitorDashboard);
 
 /* ======================================================
-   🔒 SECURE ADMIN VISITOR PASS
-   GET /api/visitors/code/:visitorCode
-   - Requires auth
-   - Company isolated
+   VISITOR PASS (ADMIN)
 ====================================================== */
-router.get(
-  "/code/:visitorCode",
-  authenticate,
-  getVisitorPass
-);
+router.get("/code/:visitorCode", authenticate, getVisitorPass);
 
 /* ======================================================
-   📧 RESEND VISITOR PASS EMAIL
-   POST /api/visitors/:visitorCode/resend
-   - Requires auth
-   - Company isolated
-   - ✅ NEW ENDPOINT
+   ADMIN — UPDATE VISIT STATUS (Accept / Decline)
 ====================================================== */
-router.post(
-  "/:visitorCode/resend",
-  authenticate,
-  resendVisitorPass
-);
+router.patch("/:visitorCode/visit-status", authenticate, updateVisitStatus);
 
 /* ======================================================
-   🚪 CHECKOUT VISITOR
-   POST /api/visitors/:visitorCode/checkout
+   RESEND VISITOR PASS EMAIL
 ====================================================== */
-router.post(
-  "/:visitorCode/checkout",
-  authenticate,
-  checkoutVisitor
-);
+router.post("/:visitorCode/resend", authenticate, resendVisitorPass);
+
+/* ======================================================
+   CHECKOUT
+====================================================== */
+router.post("/:visitorCode/checkout", authenticate, checkoutVisitor);
 
 export default router;
