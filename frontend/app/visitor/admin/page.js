@@ -34,11 +34,11 @@ export default function AdminEmployeesPage() {
 
   const fetchEmployees = async () => {
     try {
-      const res = await fetch("/api/employees", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();
-      setEmployees(Array.isArray(data) ? data : []);
+      setEmployees(Array.isArray(data) ? data : (data.employees || []));
     } catch {
       showToast("Failed to load employees", "error");
     }
@@ -101,7 +101,8 @@ export default function AdminEmployeesPage() {
     setSaving(true); setFormError("");
     try {
       const method = modal === "edit" ? "PUT" : "POST";
-      const url = modal === "edit" ? `/api/employees/${editTarget.id}` : "/api/employees";
+      const base   = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+      const url    = modal === "edit" ? `${base}/api/employees/${editTarget.id}` : `${base}/api/employees`;
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
@@ -124,7 +125,7 @@ export default function AdminEmployeesPage() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      const res = await fetch(`/api/employees/${deleteTarget.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${deleteTarget.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${getToken()}` },
       });
