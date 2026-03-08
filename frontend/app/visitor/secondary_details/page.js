@@ -1,14 +1,186 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import styles from "./style.module.css";
 
+/* ===============================================
+   EMPLOYEE AUTOCOMPLETE
+   Drops in as a replacement for the bare
+   <input> in the "Person to Meet" field.
+   Falls back gracefully to freetext if no slug
+   or no matches found.
+=============================================== */
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
+
+const EmployeeAutocomplete = ({ slug, value, employeeId, onChange, onSelect }) => {
+  const [results, setResults]   = useState([]);
+  const [open, setOpen]         = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const debounceRef             = useRef(null);
+  const containerRef            = useRef(null);
+
+  /* Close on outside click */
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const search = useCallback(async (q) => {
+    if (!q.trim()) { setResults([]); setOpen(false); return; }
+    setFetching(true);
+    try {
+      const res = await fetch(
+        `${API}/api/public/visitor/${slug}/employees?q=${encodeURIComponent(q)}`,
+        { credentials: "omit" }
+      );
+      const data = await res.json();
+      setResults(Array.isArray(data) ? data : []);
+      setOpen(true);
+    } catch {
+      setResults([]);
+    } finally {
+      setFetching(false);
+    }
+  }, [slug]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    onChange(val);
+    /* Unlink employee when user edits freely */
+    if (employeeId) onSelect({ name: val, id: null });
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(val), 280);
+  };
+
+  const handleSelect = (emp) => {
+    onSelect({ name: emp.name, id: emp.id });
+    setOpen(false);
+    setResults([]);
+  };
+
+  const initials = (name) => {
+    if (!name) return "?";
+    const p = name.trim().split(" ");
+    return (p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]).toUpperCase();
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <div style={{ position: "relative" }}>
+        <input
+          className={styles.input}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onFocus={() => value.trim() && results.length > 0 && setOpen(true)}
+          placeholder="Host name"
+          autoComplete="off"
+        />
+        {/* Spinner while fetching */}
+        {fetching && (
+          <span style={{
+            position: "absolute", right: 14, top: "50%",
+            transform: "translateY(-50%)",
+            width: 13, height: 13,
+            border: "2px solid #ddd2f0", borderTopColor: "#6200d6",
+            borderRadius: "50%", display: "inline-block",
+            animation: "acSpin 0.7s linear infinite",
+            pointerEvents: "none",
+          }} />
+        )}
+        {/* Green tick when an employee is linked */}
+        {employeeId && !fetching && (
+          <span style={{
+            position: "absolute", right: 14, top: "50%",
+            transform: "translateY(-50%)",
+            fontSize: 13, color: "#00b894", pointerEvents: "none",
+          }}>✓</span>
+        )}
+      </div>
+
+      {/* Results dropdown */}
+      {open && results.length > 0 && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0,
+          background: "#fff", borderRadius: 14,
+          border: "1.5px solid #ddd2f0",
+          boxShadow: "0 8px 32px rgba(98,0,214,0.14)",
+          zIndex: 200, overflow: "hidden",
+          maxHeight: 220, overflowY: "auto",
+        }}>
+          {results.map((emp) => (
+            <div
+              key={emp.id}
+              onMouseDown={() => handleSelect(emp)}
+              style={{
+                display: "flex", alignItems: "center", gap: 11,
+                padding: "10px 14px", cursor: "pointer",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f8f5ff"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{
+                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                background: "linear-gradient(135deg, #7a00ff, #c060ff)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontSize: 11, fontWeight: 900,
+              }}>
+                {initials(emp.name)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 13, color: "#1a0038" }}>{emp.name}</div>
+                {emp.department && (
+                  <div style={{ fontSize: 11, color: "#9980c8", fontWeight: 600 }}>{emp.department}</div>
+                )}
+              </div>
+              {employeeId === emp.id && (
+                <span style={{ marginLeft: "auto", color: "#00b894", fontWeight: 800, fontSize: 12 }}>✓</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* No-match hint — visitor can still proceed with freetext */}
+      {open && results.length === 0 && !fetching && value.trim() && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0,
+          background: "#fff", borderRadius: 14,
+          border: "1.5px solid #ddd2f0",
+          padding: "13px 16px", textAlign: "center",
+          fontSize: 12, color: "#b8a8d8", fontWeight: 600,
+          zIndex: 200, boxShadow: "0 8px 32px rgba(98,0,214,0.1)",
+        }}>
+          No employees matched — your entry will still be saved
+        </div>
+      )}
+
+      <style>{`@keyframes acSpin { to { transform: translateY(-50%) rotate(360deg); } }`}</style>
+    </div>
+  );
+};
+
+/* ===============================================
+   PAGE COMPONENT
+=============================================== */
 export default function SecondaryDetails() {
   const router = useRouter();
 
-  const [company, setCompany] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [company,    setCompany]    = useState(null);
+  const [isLoading,  setIsLoading]  = useState(true);
+
+  /* Slug needed for the autocomplete API call */
+  const [companySlug, setCompanySlug] = useState(null);
+
+  /* Employee linked via autocomplete selection */
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   /* ================= FORM STATE ================= */
   const [form, setForm] = useState({
@@ -36,11 +208,19 @@ export default function SecondaryDetails() {
         return;
       }
 
-      setCompany(JSON.parse(storedCompany));
+      const parsed = JSON.parse(storedCompany);
+      setCompany(parsed);
+      /* slug may live at parsed.slug or parsed.visitor_slug */
+      setCompanySlug(parsed.slug || parsed.visitor_slug || null);
 
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {
-        setForm(JSON.parse(saved));
+        const parsedSaved = JSON.parse(saved);
+        setForm(parsedSaved);
+        /* Restore previously linked employee id */
+        if (parsedSaved._employeeId) {
+          setSelectedEmployeeId(parsedSaved._employeeId);
+        }
       }
     } catch (error) {
       console.error("Company context error:", error);
@@ -64,6 +244,17 @@ export default function SecondaryDetails() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  /* Autocomplete: user typing freely */
+  const handlePersonToMeetChange = (val) => {
+    setForm((prev) => ({ ...prev, personToMeet: val }));
+  };
+
+  /* Autocomplete: employee selected from dropdown */
+  const handleEmployeeSelect = ({ name, id }) => {
+    setForm((prev) => ({ ...prev, personToMeet: name }));
+    setSelectedEmployeeId(id);
+  };
+
   const toggleBelonging = (item) => {
     setForm((prev) => ({
       ...prev,
@@ -76,7 +267,14 @@ export default function SecondaryDetails() {
   const goBack = () => router.push("/visitor/primary_details");
 
   const goNext = () => {
-    localStorage.setItem("visitor_secondary", JSON.stringify(form));
+    /*
+      Persist form data + the linked employee id under the private _employeeId key.
+      The identity/submit page should read _employeeId and include it in the API payload.
+    */
+    localStorage.setItem(
+      "visitor_secondary",
+      JSON.stringify({ ...form, _employeeId: selectedEmployeeId })
+    );
     router.push("/visitor/identity");
   };
 
@@ -234,12 +432,27 @@ export default function SecondaryDetails() {
             <div className={styles.row2}>
               <div className={styles.field}>
                 <label className={styles.label}>Person to Meet</label>
-                <input
-                  className={styles.input}
-                  value={form.personToMeet}
-                  onChange={(e) => updateField("personToMeet", e.target.value)}
-                  placeholder="Host name"
-                />
+                {/*
+                  Autocomplete when slug is available.
+                  Falls back to plain input if slug cannot be resolved
+                  (e.g. admin-created visits without a public slug).
+                */}
+                {companySlug ? (
+                  <EmployeeAutocomplete
+                    slug={companySlug}
+                    value={form.personToMeet}
+                    employeeId={selectedEmployeeId}
+                    onChange={handlePersonToMeetChange}
+                    onSelect={handleEmployeeSelect}
+                  />
+                ) : (
+                  <input
+                    className={styles.input}
+                    value={form.personToMeet}
+                    onChange={(e) => updateField("personToMeet", e.target.value)}
+                    placeholder="Host name"
+                  />
+                )}
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Purpose of Visit</label>
