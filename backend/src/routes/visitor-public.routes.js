@@ -12,8 +12,8 @@ const router = express.Router();
 /* ======================================================
    CONSTANTS
 ====================================================== */
-const OTP_EXPIRY_MINUTES = 5;
-const OTP_RESEND_SECONDS = 30;
+const OTP_EXPIRY_MINUTES         = 5;
+const OTP_RESEND_SECONDS         = 30;
 const OTP_SESSION_EXPIRY_MINUTES = 30;
 
 /* ======================================================
@@ -21,23 +21,19 @@ const OTP_SESSION_EXPIRY_MINUTES = 30;
 ====================================================== */
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits:  { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only image files are allowed"));
-    }
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
   },
 });
 
 const handleUpload = (req, res, next) => {
   upload.single("photo")(req, res, (err) => {
     if (err instanceof multer.MulterError) {
-      const message =
-        err.code === "LIMIT_FILE_SIZE"
-          ? "Photo must be under 5 MB"
-          : `Upload error: ${err.message}`;
+      const message = err.code === "LIMIT_FILE_SIZE"
+        ? "Photo must be under 5 MB"
+        : `Upload error: ${err.message}`;
       return res.status(400).json({ success: false, message });
     }
     if (err) {
@@ -65,15 +61,13 @@ const emailFooter = (company = {}) => `
 `;
 
 const otpEmailHtml = (otp, company) => `
-  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
     <h2 style="color:#6c2bd9;">${company.name} – Visitor Verification</h2>
     <p style="font-size:16px;">Your verification code is:</p>
     <div style="background:#f7f7f7;padding:20px;text-align:center;border-radius:8px;margin:20px 0;">
       <h1 style="letter-spacing:8px;color:#6c2bd9;margin:0;font-size:36px;">${otp}</h1>
     </div>
-    <p style="color:#666;">
-      This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.
-    </p>
+    <p style="color:#666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
     <p style="color:#999;font-size:12px;margin-top:30px;">
       If you didn't request this code, please ignore this email.
     </p>
@@ -91,14 +85,26 @@ const generateOTP    = () => Math.floor(100000 + Math.random() * 900000).toStrin
 const hashOTP        = (otp) => crypto.createHash("sha256").update(otp).digest("hex");
 
 /* ======================================================
+   SANITIZE EMPLOYEE ID
+   FormData sends everything as strings.
+   "null", "undefined", "", "0" must all become real null
+   so saveVisitor never attempts a DB lookup with a garbage value.
+====================================================== */
+const sanitizeEmployeeId = (raw) => {
+  if (raw === null || raw === undefined) return null;
+  const str = String(raw).trim();
+  if (!str || str === "null" || str === "undefined" || str === "0") return null;
+  const n = parseInt(str, 10);
+  return isNaN(n) || n <= 0 ? null : n;
+};
+
+/* ======================================================
    COMPANY FETCH
 ====================================================== */
 const getCompanyBySlug = async (slug) => {
   const [[company]] = await db.query(
     `SELECT id, name, slug, logo_url, whatsapp_url
-     FROM companies
-     WHERE slug = ?
-     LIMIT 1`,
+     FROM companies WHERE slug = ? LIMIT 1`,
     [slug]
   );
   return company || null;
@@ -109,9 +115,9 @@ const getCompanyBySlug = async (slug) => {
 ====================================================== */
 const sendOtpMail = async (email, otp, company) => {
   await sendEmail({
-    to: email,
+    to:      email,
     subject: `Your Visitor Verification Code – ${company.name}`,
-    html: otpEmailHtml(otp, company),
+    html:    otpEmailHtml(otp, company),
   });
 };
 
@@ -129,19 +135,17 @@ router.get("/visitor/:slug/info", async (req, res) => {
     }
 
     const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
-
-    const qrCode = await QRCode.toDataURL(publicUrl, {
-      width: 400,
-      margin: 2,
+    const qrCode    = await QRCode.toDataURL(publicUrl, {
+      width: 400, margin: 2,
       color: { dark: "#3c007a", light: "#ffffff" },
     });
 
     return res.json({
       success: true,
       company: {
-        name:          company.name,
-        logo_url:      company.logo_url,
-        whatsapp_url:  company.whatsapp_url || null,
+        name:         company.name,
+        logo_url:     company.logo_url,
+        whatsapp_url: company.whatsapp_url || null,
       },
       qrCode,
       publicUrl,
@@ -161,15 +165,11 @@ router.get("/visitor/qr/:slug", async (req, res) => {
     const slug    = normalizeSlug(req.params.slug);
     const company = await getCompanyBySlug(slug);
 
-    if (!company) {
-      return res.status(404).send("Company not found");
-    }
+    if (!company) return res.status(404).send("Company not found");
 
     const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
-
-    const qrBuffer = await QRCode.toBuffer(publicUrl, {
-      width: 400,
-      margin: 2,
+    const qrBuffer  = await QRCode.toBuffer(publicUrl, {
+      width: 400, margin: 2,
       color: { dark: "#3c007a", light: "#ffffff" },
     });
 
@@ -185,7 +185,7 @@ router.get("/visitor/qr/:slug", async (req, res) => {
 /* ======================================================
    EMPLOYEE AUTOCOMPLETE
    GET /visitor/:slug/employees?q=name
-   — No auth required (used by public registration form)
+   No auth required — used by public registration form
 ====================================================== */
 router.get("/visitor/:slug/employees", async (req, res) => {
   try {
@@ -198,7 +198,6 @@ router.get("/visitor/:slug/employees", async (req, res) => {
     }
 
     const employees = await searchEmployeesByCompany(company.id, query);
-
     return res.json({ success: true, employees });
   } catch (err) {
     console.error("[VISITOR][EMPLOYEES_SEARCH]", err);
@@ -212,8 +211,8 @@ router.get("/visitor/:slug/employees", async (req, res) => {
 ====================================================== */
 router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
-    const slug    = normalizeSlug(req.params.slug);
-    const email   = normalizeEmail(req.body.email);
+    const slug  = normalizeSlug(req.params.slug);
+    const email = normalizeEmail(req.body.email);
 
     if (!isValidEmail(email)) {
       return res.status(400).json({ success: false, message: "Valid email address required" });
@@ -226,11 +225,9 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
 
     // Resend throttle check
     const [[last]] = await db.query(
-      `SELECT otp_last_sent_at
-       FROM visitor_otp
+      `SELECT otp_last_sent_at FROM visitor_otp
        WHERE email = ? AND company_id = ?
-       ORDER BY id DESC
-       LIMIT 1`,
+       ORDER BY id DESC LIMIT 1`,
       [email, company.id]
     );
 
@@ -252,16 +249,15 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     await db.query(
       `INSERT INTO visitor_otp
          (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at, verified)
-       VALUES
-         (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW(), 0)`,
+       VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW(), 0)`,
       [company.id, email, otpHash, OTP_EXPIRY_MINUTES]
     );
 
     await sendOtpMail(email, otp, company);
 
     return res.json({
-      success: true,
-      message: "OTP sent successfully",
+      success:     true,
+      message:     "OTP sent successfully",
       resendAfter: OTP_RESEND_SECONDS,
     });
   } catch (err) {
@@ -293,14 +289,11 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
-    const otpHash = hashOTP(otp);
-
+    const otpHash       = hashOTP(otp);
     const [[otpRecord]] = await db.query(
-      `SELECT id, otp_hash, otp_expires_at
-       FROM visitor_otp
+      `SELECT id, otp_hash, otp_expires_at FROM visitor_otp
        WHERE email = ? AND company_id = ? AND verified = 0
-       ORDER BY id DESC
-       LIMIT 1`,
+       ORDER BY id DESC LIMIT 1`,
       [email, company.id]
     );
 
@@ -329,17 +322,15 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
 
     await db.query(
       `UPDATE visitor_otp
-       SET verified = 1,
-           otp_session_token = ?,
-           verified_at = NOW()
+       SET verified = 1, otp_session_token = ?, verified_at = NOW()
        WHERE id = ?`,
       [sessionToken, otpRecord.id]
     );
 
     return res.json({
-      success: true,
+      success:  true,
       otpToken: sessionToken,
-      message: "OTP verified successfully",
+      message:  "OTP verified successfully",
     });
   } catch (err) {
     console.error("[VISITOR][OTP_VERIFY]", err);
@@ -363,8 +354,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
 
     /* ── 2. Session lookup with expiry window ── */
     const [[otpSession]] = await db.query(
-      `SELECT id, company_id, email
-       FROM visitor_otp
+      `SELECT id, company_id, email FROM visitor_otp
        WHERE otp_session_token = ?
          AND verified = 1
          AND verified_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
@@ -395,7 +385,11 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       return res.status(400).json({ success: false, message: validationErrors[0] });
     }
 
-    /* ── 5. Build visitor payload ── */
+    /* ── 5. Build visitor payload ──
+       sanitizeEmployeeId handles FormData string coercion:
+       "null", "undefined", "", "0" all become real null
+       so saveVisitor never runs a DB lookup with a garbage value.
+    ── */
     const visitorData = {
       name:         req.body.name.trim(),
       phone:        req.body.phone.trim(),
@@ -409,7 +403,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       postalCode:   req.body.postalCode?.trim()   || null,
       country:      req.body.country?.trim()       || null,
       personToMeet: req.body.personToMeet?.trim() || null,
-      employeeId:   req.body.employeeId            || null,  // ← NEW: employee directory ID
+      employeeId:   sanitizeEmployeeId(req.body.employeeId),
       purpose:      req.body.purpose?.trim()       || null,
       belongings:   req.body.belongings            || null,
       idType:       req.body.idType?.trim()        || null,
@@ -426,15 +420,13 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     );
 
     return res.json({
-      success: true,
-      message: "Visitor registered successfully. Pass sent to your email.",
+      success:     true,
+      message:     "Visitor registered successfully. Pass sent to your email.",
       visitorCode: visitor.visitorCode,
     });
   } catch (err) {
     console.error("[VISITOR][REGISTER]", err);
-
     const isKnownError = /trial|limit|expired|subscription/i.test(err.message || "");
-
     return res.status(isKnownError ? 403 : 500).json({
       success: false,
       message: isKnownError ? err.message : "Registration failed. Please try again.",
