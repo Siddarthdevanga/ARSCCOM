@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, createPortal } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -50,13 +51,18 @@ const getGreeting = () => {
 };
 
 /* ===============================================
-   PORTAL DROPDOWN — renders into document.body
-   so no parent overflow/stacking context can clip it.
-   Uses position:fixed with live getBoundingClientRect
-   recalculated on every open + scroll/resize.
+   PORTAL DROPDOWN
+   - Imports createPortal from "react-dom" (correct)
+   - mounted guard prevents SSR crash
+   - position:fixed with live getBoundingClientRect
+   - Recalculates on scroll, resize, visualViewport
 =============================================== */
 const PortalDropdown = ({ anchorRef, children, open }) => {
-  const [rect, setRect] = useState(null);
+  const [rect,    setRect]    = useState(null);
+  const [mounted, setMounted] = useState(false);
+
+  // SSR guard — document.body only exists client-side
+  useEffect(() => { setMounted(true); }, []);
 
   const updateRect = useCallback(() => {
     if (!anchorRef.current) return;
@@ -65,14 +71,12 @@ const PortalDropdown = ({ anchorRef, children, open }) => {
   }, [anchorRef]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
     updateRect();
     const onScroll = () => updateRect();
     const onResize = () => updateRect();
-    // Use capture:true so we catch scrolls inside any overflow container
     window.addEventListener("scroll", onScroll, true);
     window.addEventListener("resize", onResize);
-    // Also watch visualViewport for mobile keyboard
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", onResize);
       window.visualViewport.addEventListener("scroll", onScroll);
@@ -85,19 +89,19 @@ const PortalDropdown = ({ anchorRef, children, open }) => {
         window.visualViewport.removeEventListener("scroll", onScroll);
       }
     };
-  }, [open, updateRect]);
+  }, [open, mounted, updateRect]);
 
-  if (!open || !rect) return null;
+  if (!mounted || !open || !rect) return null;
 
   return createPortal(
     <div
       className={styles.acDropdown}
       style={{
         position: "fixed",
-        top:   rect.top,
-        left:  rect.left,
-        width: rect.width,
-        zIndex: 9999,
+        top:      rect.top,
+        left:     rect.left,
+        width:    rect.width,
+        zIndex:   9999,
       }}
     >
       {children}
@@ -108,9 +112,6 @@ const PortalDropdown = ({ anchorRef, children, open }) => {
 
 /* ===============================================
    EMPLOYEE AUTOCOMPLETE
-   Uses PortalDropdown so it escapes all overflow
-   contexts. Dropdown always appears directly below
-   the input on every screen / keyboard state.
 =============================================== */
 const EmployeeAutocomplete = ({
   slug, value, employeeId, onChange, onSelect, disabled,
@@ -126,10 +127,11 @@ const EmployeeAutocomplete = ({
   /* Close on outside click */
   useEffect(() => {
     const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        // Also allow clicks inside the portal dropdown
-        const dropdown = document.querySelector(`.${styles.acDropdownPortal}`);
-        if (dropdown && dropdown.contains(e.target)) return;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target) &&
+        !e.target.closest(`.${styles.acDropdown}`)
+      ) {
         setOpen(false);
       }
     };
@@ -150,7 +152,7 @@ const EmployeeAutocomplete = ({
       const list = Array.isArray(data)
         ? data
         : Array.isArray(data?.employees) ? data.employees
-        : Array.isArray(data?.data) ? data.data
+        : Array.isArray(data?.data)      ? data.data
         : [];
       setResults(list);
       setOpen(true);
@@ -190,7 +192,6 @@ const EmployeeAutocomplete = ({
 
   return (
     <div ref={containerRef} className={styles.acWrapper}>
-      {/* Input */}
       <input
         ref={inputRef}
         className={`${styles.input} ${employeeId ? styles.acInputLinked : ""}`}
@@ -199,20 +200,17 @@ const EmployeeAutocomplete = ({
         value={value}
         onChange={handleChange}
         onFocus={handleFocus}
-        placeholder="Person to Meet *"
+        placeholder="Type to search employee..."
         disabled={disabled}
         autoComplete="off"
       />
 
-      {/* Spinner */}
       {fetching && <span className={styles.acSpinner} aria-hidden="true" />}
 
-      {/* Linked tick */}
       {employeeId && !fetching && (
         <span className={styles.acLinkedTick} aria-label="Employee linked">✓</span>
       )}
 
-      {/* Portal dropdown — renders into document.body */}
       <PortalDropdown anchorRef={inputRef} open={showDropdown}>
         <div
           role="listbox"
@@ -768,7 +766,7 @@ export default function PublicVisitorRegistration() {
                   placeholder="Postal Code" autoComplete="postal-code" inputMode="numeric" />
               </div>
 
-              {/* Row 3: Country / Purpose (2-col grid) */}
+              {/* Row 3: Country / Purpose */}
               <div className={styles.gridRow2}>
                 <input className={styles.input} name="country"
                   value={formData.country} onChange={handleInputChange}
@@ -778,7 +776,7 @@ export default function PublicVisitorRegistration() {
                   placeholder="Purpose of Visit" />
               </div>
 
-              {/* Person to Meet — FULL WIDTH, outside grid, with portal dropdown */}
+              {/* Person to Meet — full width, outside any grid */}
               <div className={styles.formGroup}>
                 <label htmlFor="personToMeet" className={styles.meetLabel}>
                   <span className={styles.meetLabelIcon}>👤</span>
@@ -793,9 +791,7 @@ export default function PublicVisitorRegistration() {
                   disabled={submitting}
                 />
                 {selectedEmployeeId && (
-                  <p className={styles.employeeLinkedHint}>
-                    ✓ Employee linked successfully
-                  </p>
+                  <p className={styles.employeeLinkedHint}>✓ Employee linked successfully</p>
                 )}
               </div>
 
@@ -911,9 +907,7 @@ export default function PublicVisitorRegistration() {
                 <p className={styles.successNote}>
                   Please show this ID at the reception desk.
                   <br />
-                  Check your email{" "}
-                  <strong>({email})</strong>{" "}
-                  for the digital pass.
+                  Check your email <strong>({email})</strong> for the digital pass.
                 </p>
                 {company?.whatsapp_url?.trim() && (
                   <div className={styles.whatsappSection}>
