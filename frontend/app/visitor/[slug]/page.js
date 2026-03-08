@@ -55,6 +55,168 @@ const getGreeting = () => {
 };
 
 /* ===============================================
+   EMPLOYEE AUTOCOMPLETE
+   Replaces the bare <input name="personToMeet" />
+   in Step 2. Freetext still works if no match.
+=============================================== */
+const EmployeeAutocomplete = ({ slug, value, employeeId, onChange, onSelect, disabled }) => {
+  const [results, setResults]   = useState([]);
+  const [open, setOpen]         = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const debounceRef             = useRef(null);
+  const containerRef            = useRef(null);
+
+  /* Close on outside click */
+  useEffect(() => {
+    const handler = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const search = useCallback(async (q) => {
+    if (!q.trim()) { setResults([]); setOpen(false); return; }
+    setFetching(true);
+    try {
+      const res = await fetch(
+        `${API}/api/public/visitor/${slug}/employees?q=${encodeURIComponent(q)}`,
+        { credentials: "omit" }
+      );
+      const data = await res.json();
+      setResults(Array.isArray(data) ? data : []);
+      setOpen(true);
+    } catch {
+      setResults([]);
+    } finally {
+      setFetching(false);
+    }
+  }, [slug]);
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    onChange(val);
+    /* If user had a linked employee and starts typing, unlink */
+    if (employeeId) onSelect({ name: val, id: null });
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(val), 280);
+  };
+
+  const handleSelect = (emp) => {
+    onSelect({ name: emp.name, id: emp.id });
+    setOpen(false);
+    setResults([]);
+  };
+
+  const initials = (name) => {
+    if (!name) return "?";
+    const p = name.trim().split(" ");
+    return (p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]).toUpperCase();
+  };
+
+  return (
+    <div ref={containerRef} style={{ position: "relative" }}>
+      <div style={{ position: "relative" }}>
+        <input
+          className={styles.input}
+          type="text"
+          name="personToMeet"
+          value={value}
+          onChange={handleChange}
+          onFocus={() => value.trim() && results.length > 0 && setOpen(true)}
+          placeholder="Person to Meet *"
+          disabled={disabled}
+          autoComplete="off"
+        />
+        {/* Spinner while fetching */}
+        {fetching && (
+          <span style={{
+            position: "absolute", right: 14, top: "50%",
+            transform: "translateY(-50%)",
+            width: 13, height: 13,
+            border: "2px solid #ddd6fe", borderTopColor: "#7c3aed",
+            borderRadius: "50%", display: "inline-block",
+            animation: "acSpin 0.7s linear infinite",
+            pointerEvents: "none",
+          }} />
+        )}
+        {/* Green tick when an employee is linked */}
+        {employeeId && !fetching && (
+          <span style={{
+            position: "absolute", right: 14, top: "50%",
+            transform: "translateY(-50%)",
+            fontSize: 13, color: "#16a34a", pointerEvents: "none",
+          }}>✓</span>
+        )}
+      </div>
+
+      {/* Dropdown results */}
+      {open && results.length > 0 && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0,
+          background: "#fff", borderRadius: "0.875rem",
+          border: "1.5px solid #ddd6fe",
+          boxShadow: "0 8px 32px rgba(91,33,182,0.14)",
+          zIndex: 200, overflow: "hidden",
+          maxHeight: 224, overflowY: "auto",
+        }}>
+          {results.map((emp) => (
+            <div
+              key={emp.id}
+              onMouseDown={() => handleSelect(emp)}
+              style={{
+                display: "flex", alignItems: "center", gap: 11,
+                padding: "10px 14px", cursor: "pointer",
+                transition: "background 0.12s",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#f5f3ff"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <div style={{
+                width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                color: "#fff", fontSize: 11, fontWeight: 900,
+              }}>
+                {initials(emp.name)}
+              </div>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#1e1b4b" }}>{emp.name}</div>
+                {emp.department && (
+                  <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>{emp.department}</div>
+                )}
+              </div>
+              {employeeId === emp.id && (
+                <span style={{ marginLeft: "auto", color: "#16a34a", fontWeight: 700, fontSize: 12 }}>✓</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* No results hint */}
+      {open && results.length === 0 && !fetching && value.trim() && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 5px)", left: 0, right: 0,
+          background: "#fff", borderRadius: "0.875rem",
+          border: "1.5px solid #ddd6fe",
+          padding: "13px 16px", textAlign: "center",
+          fontSize: 12, color: "#9ca3af", fontWeight: 500,
+          zIndex: 200,
+          boxShadow: "0 8px 32px rgba(91,33,182,0.1)",
+        }}>
+          No employees matched — your entry will still be saved
+        </div>
+      )}
+
+      <style>{`@keyframes acSpin { to { transform: translateY(-50%) rotate(360deg); } }`}</style>
+    </div>
+  );
+};
+
+/* ===============================================
    STEP PROGRESS BAR — uses CSS module classes
 =============================================== */
 const StepProgress = ({ currentStep }) => {
@@ -173,6 +335,9 @@ export default function PublicVisitorRegistration() {
     personToMeet: "", purpose: "", belongings: [], idType: "", idNumber: "",
   });
 
+  /* ── Employee linked via autocomplete ── */
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+
   /* ── Photo / Camera ── */
   const [photo,        setPhoto]       = useState(null);
   const [photoBlob,    setPhotoBlob]   = useState(null);
@@ -250,6 +415,17 @@ export default function PublicVisitorRegistration() {
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  /* Autocomplete: text typed freely */
+  const handlePersonToMeetChange = useCallback((val) => {
+    setFormData((prev) => ({ ...prev, personToMeet: val }));
+  }, []);
+
+  /* Autocomplete: employee selected from dropdown */
+  const handleEmployeeSelect = useCallback(({ name, id }) => {
+    setFormData((prev) => ({ ...prev, personToMeet: name }));
+    setSelectedEmployeeId(id);
   }, []);
 
   const toggleBelonging = useCallback((item) => {
@@ -437,6 +613,11 @@ export default function PublicVisitorRegistration() {
       });
       fd.append("photo", file);
 
+      /* Append linked employee id when available */
+      if (selectedEmployeeId) {
+        fd.append("employeeId", String(selectedEmployeeId));
+      }
+
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
 
@@ -507,6 +688,7 @@ export default function PublicVisitorRegistration() {
       address: "", city: "", state: "", postalCode: "", country: "",
       personToMeet: "", purpose: "", belongings: [], idType: "", idNumber: "",
     });
+    setSelectedEmployeeId(null);
     setPhoto(null);
     setPhotoBlob(null);
     setVisitorCode("");
@@ -816,13 +998,17 @@ export default function PublicVisitorRegistration() {
                   placeholder="Country"
                   autoComplete="country-name"
                 />
-                <input
-                  className={styles.input}
-                  name="personToMeet"
+
+                {/* ── PERSON TO MEET: live employee autocomplete ── */}
+                <EmployeeAutocomplete
+                  slug={slug}
                   value={formData.personToMeet}
-                  onChange={handleInputChange}
-                  placeholder="Person to Meet *"
+                  employeeId={selectedEmployeeId}
+                  onChange={handlePersonToMeetChange}
+                  onSelect={handleEmployeeSelect}
+                  disabled={submitting}
                 />
+
                 <input
                   className={styles.input}
                   name="purpose"
