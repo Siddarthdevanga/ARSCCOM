@@ -17,23 +17,18 @@ const UPLOAD_TIMEOUT_MS = 30_000;
 const publicFetch = async (url, options = {}) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
   try {
     const res = await fetch(`${API}${url}`, {
       ...options,
       signal: controller.signal,
       credentials: "omit",
     });
-
     clearTimeout(timer);
-
     let data = null;
     try { data = await res.json(); } catch (_) {}
-
     if (!res.ok || (data && !data.success)) {
       throw new Error(data?.message || `Request failed (${res.status})`);
     }
-
     return data;
   } catch (err) {
     clearTimeout(timer);
@@ -56,14 +51,14 @@ const getGreeting = () => {
 
 /* ===============================================
    EMPLOYEE AUTOCOMPLETE
-   FIX 1: Normalises API response — handles both
-           raw array and { employees: [...] } shapes.
-           Previous code did Array.isArray(data) only,
-           so a wrapped response silently produced [].
-   FIX 2: Dropdown rendered via position:fixed with
-           getBoundingClientRect() so it is never
-           clipped by a parent overflow:hidden container
-           (e.g. the .gridRow layout wrapper).
+   FIX 1: Normalises response — handles raw array,
+           { employees:[] }, { data:[] } shapes.
+   FIX 2: Dropdown position:fixed via
+           getBoundingClientRect() — never clipped
+           by parent overflow:hidden.
+   FIX 3: All chrome uses CSS module classes —
+           CSS :hover instead of inline
+           onMouseEnter/Leave (works on touch too).
 =============================================== */
 const EmployeeAutocomplete = ({
   slug, value, employeeId, onChange, onSelect, disabled,
@@ -71,7 +66,6 @@ const EmployeeAutocomplete = ({
   const [results,  setResults]  = useState([]);
   const [open,     setOpen]     = useState(false);
   const [fetching, setFetching] = useState(false);
-  /* Position for fixed dropdown */
   const [dropPos,  setDropPos]  = useState({ top: 0, left: 0, width: 0 });
 
   const debounceRef  = useRef(null);
@@ -89,7 +83,7 @@ const EmployeeAutocomplete = ({
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  /* ── Reposition dropdown on scroll / resize ── */
+  /* ── Reposition on scroll / resize ── */
   useEffect(() => {
     if (!open) return;
     const reposition = () => {
@@ -98,33 +92,26 @@ const EmployeeAutocomplete = ({
       setDropPos({ top: r.bottom + 5, left: r.left, width: r.width });
     };
     reposition();
-    window.addEventListener("scroll",  reposition, true);
-    window.addEventListener("resize",  reposition);
+    window.addEventListener("scroll", reposition, true);
+    window.addEventListener("resize", reposition);
     return () => {
-      window.removeEventListener("scroll",  reposition, true);
-      window.removeEventListener("resize",  reposition);
+      window.removeEventListener("scroll", reposition, true);
+      window.removeEventListener("resize", reposition);
     };
   }, [open]);
 
-  /* ── Search ──
-     FIX: normalise response shape.
-     Backend may return:
-       - raw array:                    [{ id, name, department }, ...]
-       - wrapped:  { success, employees: [...] }
-       - wrapped:  { success, data: [...] }
-  ── */
+  /* ── Search — normalise response shape ── */
   const search = useCallback(async (q) => {
     if (!q.trim()) { setResults([]); setOpen(false); return; }
     setFetching(true);
     try {
-      const res  = await fetch(
+      const res = await fetch(
         `${API}/api/public/visitor/${slug}/employees?q=${encodeURIComponent(q)}`,
         { credentials: "omit" }
       );
       if (!res.ok) { setResults([]); setOpen(true); return; }
       const data = await res.json();
 
-      /* Normalise — accept array, .employees, or .data */
       const list = Array.isArray(data)
         ? data
         : Array.isArray(data?.employees)
@@ -136,14 +123,13 @@ const EmployeeAutocomplete = ({
       setResults(list);
       setOpen(true);
 
-      /* Capture dropdown position immediately after results arrive */
       if (inputRef.current) {
         const r = inputRef.current.getBoundingClientRect();
         setDropPos({ top: r.bottom + 5, left: r.left, width: r.width });
       }
     } catch {
       setResults([]);
-      setOpen(true); /* still open to show "no results" hint */
+      setOpen(true);
     } finally {
       setFetching(false);
     }
@@ -152,7 +138,7 @@ const EmployeeAutocomplete = ({
   const handleChange = (e) => {
     const val = e.target.value;
     onChange(val);
-    if (employeeId) onSelect({ name: val, id: null }); /* unlink */
+    if (employeeId) onSelect({ name: val, id: null });
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => search(val), 280);
   };
@@ -179,115 +165,77 @@ const EmployeeAutocomplete = ({
     return (p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]).toUpperCase();
   };
 
+  const showDropdown = open && (results.length > 0 || (!fetching && value.trim()));
+
   return (
-    <div ref={containerRef} style={{ position: "relative" }}>
-      <div style={{ position: "relative" }}>
-        <input
-          ref={inputRef}
-          className={styles.input}
-          type="text"
-          name="personToMeet"
-          value={value}
-          onChange={handleChange}
-          onFocus={handleFocus}
-          placeholder="Person to Meet *"
-          disabled={disabled}
-          autoComplete="off"
-        />
+    <div ref={containerRef} className={styles.acWrapper}>
 
-        {/* Spinner */}
-        {fetching && (
-          <span style={{
-            position: "absolute", right: 14, top: "50%",
-            transform: "translateY(-50%)",
-            width: 13, height: 13,
-            border: "2px solid #ddd6fe", borderTopColor: "#7c3aed",
-            borderRadius: "50%", display: "inline-block",
-            animation: "acSpin 0.7s linear infinite",
-            pointerEvents: "none",
-          }} />
-        )}
+      {/* ── Input ── */}
+      <input
+        ref={inputRef}
+        className={`${styles.input} ${employeeId ? styles.acInputLinked : ""}`}
+        type="text"
+        name="personToMeet"
+        value={value}
+        onChange={handleChange}
+        onFocus={handleFocus}
+        placeholder="Person to Meet *"
+        disabled={disabled}
+        autoComplete="off"
+      />
 
-        {/* Green tick when employee is linked */}
-        {employeeId && !fetching && (
-          <span style={{
-            position: "absolute", right: 14, top: "50%",
-            transform: "translateY(-50%)",
-            fontSize: 13, color: "#16a34a", pointerEvents: "none",
-          }}>✓</span>
-        )}
-      </div>
+      {/* ── Spinner ── */}
+      {fetching && <span className={styles.acSpinner} aria-hidden="true" />}
 
-      {/* ── Dropdown — position:fixed avoids overflow:hidden clipping ── */}
-      {open && (results.length > 0 || (!fetching && value.trim())) && (
+      {/* ── Linked tick ── */}
+      {employeeId && !fetching && (
+        <span className={styles.acLinkedTick} aria-label="Employee linked">✓</span>
+      )}
+
+      {/* ── Dropdown — position:fixed, coords set by JS ── */}
+      {showDropdown && (
         <div
-          style={{
-            position: "fixed",
-            top:   dropPos.top,
-            left:  dropPos.left,
-            width: dropPos.width,
-            background: "#fff",
-            borderRadius: "0.875rem",
-            border: "1.5px solid #ddd6fe",
-            boxShadow: "0 8px 32px rgba(91,33,182,0.14)",
-            zIndex: 9999,
-            overflow: "hidden",
-            maxHeight: 224,
-            overflowY: "auto",
-          }}
+          className={styles.acDropdown}
+          style={{ top: dropPos.top, left: dropPos.left, width: dropPos.width }}
+          role="listbox"
+          aria-label="Employee suggestions"
         >
           {results.length > 0 ? (
             results.map((emp) => (
               <div
                 key={emp.id}
+                className={styles.acItem}
                 onMouseDown={() => handleSelect(emp)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 11,
-                  padding: "10px 14px", cursor: "pointer",
-                  transition: "background 0.12s",
-                }}
-                onMouseEnter={e  => e.currentTarget.style.background = "#f5f3ff"}
-                onMouseLeave={e  => e.currentTarget.style.background = "transparent"}
+                role="option"
+                aria-selected={employeeId === emp.id}
+                tabIndex={-1}
               >
-                <div style={{
-                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
-                  background: "linear-gradient(135deg, #7c3aed, #a855f7)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  color: "#fff", fontSize: 11, fontWeight: 900,
-                }}>
+                {/* Avatar */}
+                <div className={styles.acAvatar} aria-hidden="true">
                   {initials(emp.name)}
                 </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: 13, color: "#1e1b4b" }}>
-                    {emp.name}
-                  </div>
+
+                {/* Name + dept */}
+                <div className={styles.acInfo}>
+                  <div className={styles.acName}>{emp.name}</div>
                   {emp.department && (
-                    <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 500 }}>
-                      {emp.department}
-                    </div>
+                    <div className={styles.acDept}>{emp.department}</div>
                   )}
                 </div>
+
+                {/* Selected tick */}
                 {employeeId === emp.id && (
-                  <span style={{
-                    marginLeft: "auto", color: "#16a34a",
-                    fontWeight: 700, fontSize: 12,
-                  }}>✓</span>
+                  <span className={styles.acTick} aria-label="Selected">✓</span>
                 )}
               </div>
             ))
           ) : (
-            /* No results hint */
-            <div style={{
-              padding: "13px 16px", textAlign: "center",
-              fontSize: 12, color: "#9ca3af", fontWeight: 500,
-            }}>
+            <div className={styles.acEmpty} role="status">
               No employees matched — your entry will still be saved
             </div>
           )}
         </div>
       )}
-
-      <style>{`@keyframes acSpin { to { transform: translateY(-50%) rotate(360deg); } }`}</style>
     </div>
   );
 };
@@ -341,11 +289,7 @@ const Navbar = ({ company }) => (
   <header className={styles.header}>
     <div className={styles.headerLeft}>
       {company?.logo_url && (
-        <img
-          src={company.logo_url}
-          alt={`${company.name} logo`}
-          className={styles.logo}
-        />
+        <img src={company.logo_url} alt={`${company.name} logo`} className={styles.logo} />
       )}
       <span className={styles.logoText}>{company?.name}</span>
     </div>
@@ -381,7 +325,6 @@ export default function PublicVisitorRegistration() {
   const router = useRouter();
   const slug   = params?.slug;
 
-  /* ── State ── */
   const [step,        setStep]        = useState(0);
   const [loading,     setLoading]     = useState(true);
   const [submitting,  setSubmitting]  = useState(false);
@@ -389,24 +332,20 @@ export default function PublicVisitorRegistration() {
   const [error,       setError]       = useState("");
   const [visitorCode, setVisitorCode] = useState("");
 
-  /* ── OTP ── */
   const [email,       setEmail]       = useState("");
   const [otp,         setOtp]         = useState("");
   const [otpSent,     setOtpSent]     = useState(false);
   const [otpToken,    setOtpToken]    = useState("");
   const [resendTimer, setResendTimer] = useState(0);
 
-  /* ── Form ── */
   const [formData, setFormData] = useState({
     name: "", phone: "", fromCompany: "", department: "", designation: "",
     address: "", city: "", state: "", postalCode: "", country: "",
     personToMeet: "", purpose: "", belongings: [], idType: "", idNumber: "",
   });
 
-  /* ── Employee linked via autocomplete ── */
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
-  /* ── Photo / Camera ── */
   const [photo,        setPhoto]        = useState(null);
   const [photoBlob,    setPhotoBlob]    = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -415,7 +354,6 @@ export default function PublicVisitorRegistration() {
   const videoRef  = useRef(null);
   const canvasRef = useRef(null);
 
-  /* ── Load company info ── */
   useEffect(() => {
     if (!slug) return;
     const fetchCompanyInfo = async () => {
@@ -433,14 +371,12 @@ export default function PublicVisitorRegistration() {
     fetchCompanyInfo();
   }, [slug]);
 
-  /* ── Resend timer ── */
   useEffect(() => {
     if (resendTimer <= 0) return;
     const id = setTimeout(() => setResendTimer((t) => t - 1), 1000);
     return () => clearTimeout(id);
   }, [resendTimer]);
 
-  /* ── Camera setup ── */
   useEffect(() => {
     if (cameraActive && stream && videoRef.current) {
       videoRef.current.srcObject   = stream;
@@ -450,17 +386,14 @@ export default function PublicVisitorRegistration() {
     }
   }, [cameraActive, stream]);
 
-  /* ── Stream cleanup ── */
   useEffect(() => {
     return () => { if (stream) stream.getTracks().forEach((t) => t.stop()); };
   }, [stream]);
 
-  /* ── Scroll to top on step change ── */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
-  /* ── Handlers ── */
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -489,20 +422,17 @@ export default function PublicVisitorRegistration() {
     setStep((prev) => Math.max(prev - 1, 1));
   }, []);
 
-  /* ── OTP ── */
   const handleSendOTP = async () => {
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setError("Valid email address required");
-      return;
+      setError("Valid email address required"); return;
     }
     try {
-      setError("");
-      setSubmitting(true);
+      setError(""); setSubmitting(true);
       const data = await publicFetch(`/api/public/visitor/${slug}/otp/send`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email: trimmedEmail }),
+        body: JSON.stringify({ email: trimmedEmail }),
       });
       setEmail(trimmedEmail);
       setOtpSent(true);
@@ -516,16 +446,14 @@ export default function PublicVisitorRegistration() {
 
   const handleVerifyOTP = async () => {
     if (!otp.trim() || otp.length !== 6) {
-      setError("Please enter the 6-digit code");
-      return;
+      setError("Please enter the 6-digit code"); return;
     }
     try {
-      setError("");
-      setSubmitting(true);
+      setError(""); setSubmitting(true);
       const data = await publicFetch(`/api/public/visitor/${slug}/otp/verify`, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email, otp }),
       });
       setOtpToken(data.otpToken);
       setStep(1);
@@ -536,7 +464,6 @@ export default function PublicVisitorRegistration() {
     }
   };
 
-  /* ── Camera ── */
   const startCamera = async () => {
     setError("");
     try {
@@ -576,7 +503,6 @@ export default function PublicVisitorRegistration() {
     }
   }, []);
 
-  /* ── Validation ── */
   const validateStep = useCallback(() => {
     setError("");
     if (step === 1) {
@@ -586,9 +512,7 @@ export default function PublicVisitorRegistration() {
       }
     }
     if (step === 2) {
-      if (!formData.personToMeet.trim()) {
-        setError("Person to meet is required"); return false;
-      }
+      if (!formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
     }
     if (step === 3) {
       if (!photo || !photoBlob) { setError("Visitor photo is required"); return false; }
@@ -600,16 +524,12 @@ export default function PublicVisitorRegistration() {
     if (validateStep()) { setError(""); setStep((prev) => prev + 1); }
   }, [validateStep]);
 
-  /* ── Submit ── */
   const handleSubmit = async () => {
     if (!validateStep()) return;
     try {
-      setSubmitting(true);
-      setError("");
-
+      setSubmitting(true); setError("");
       const file = new File([photoBlob], "visitor.jpg", { type: "image/jpeg" });
       const fd   = new FormData();
-
       Object.entries(formData).forEach(([key, value]) => {
         fd.append(
           key,
@@ -623,15 +543,11 @@ export default function PublicVisitorRegistration() {
 
       const controller = new AbortController();
       const timer      = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
-
       let data;
       try {
         const res = await fetch(`${API}/api/public/visitor/${slug}/register`, {
-          method:  "POST",
-          headers: { "otp-token": otpToken },
-          body:    fd,
-          credentials: "omit",
-          signal:  controller.signal,
+          method: "POST", headers: { "otp-token": otpToken },
+          body: fd, credentials: "omit", signal: controller.signal,
         });
         clearTimeout(timer);
         data = await res.json();
@@ -645,7 +561,6 @@ export default function PublicVisitorRegistration() {
         }
         throw err;
       }
-
       setVisitorCode(data.visitorCode);
       setStep(4);
     } catch (err) {
@@ -655,20 +570,17 @@ export default function PublicVisitorRegistration() {
     }
   };
 
-  /* ── WhatsApp ── */
   const handleWhatsAppContact = useCallback(() => {
     if (company?.whatsapp_url) window.open(company.whatsapp_url, "_blank", "noopener,noreferrer");
   }, [company]);
 
-  /* ── Reset ── */
   const handleReset = useCallback(() => {
     if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); setCameraActive(false); }
     if (canvasRef.current) {
       canvasRef.current.getContext("2d")
         .clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     }
-    setStep(0);
-    setEmail(""); setOtp(""); setOtpSent(false); setOtpToken(""); setResendTimer(0);
+    setStep(0); setEmail(""); setOtp(""); setOtpSent(false); setOtpToken(""); setResendTimer(0);
     setFormData({
       name: "", phone: "", fromCompany: "", department: "", designation: "",
       address: "", city: "", state: "", postalCode: "", country: "",
@@ -678,20 +590,15 @@ export default function PublicVisitorRegistration() {
     setPhoto(null); setPhotoBlob(null); setVisitorCode(""); setError("");
   }, [stream]);
 
-  /* ── Keyboard ── */
   const handleEmailKeyDown = (e) => { if (e.key === "Enter" && !submitting) handleSendOTP(); };
   const handleOTPKeyDown   = (e) => { if (e.key === "Enter" && otp.length === 6 && !submitting) handleVerifyOTP(); };
 
-  /* ── Loading ── */
   if (loading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.spinner} />
-      </div>
+      <div className={styles.loadingContainer}><div className={styles.spinner} /></div>
     );
   }
 
-  /* ── Fatal error ── */
   if (!company) {
     return (
       <div className={styles.page}>
@@ -718,36 +625,24 @@ export default function PublicVisitorRegistration() {
           <HeroBanner company={company} />
           <div className={styles.container}>
             <div className={styles.authCard}>
-              <p style={{
-                textAlign: "center", color: "#6b7280", fontSize: "0.9rem",
-                marginBottom: "1.25rem", lineHeight: 1.6,
-              }}>
+              <p style={{ textAlign:"center", color:"#6b7280", fontSize:"0.9rem", marginBottom:"1.25rem", lineHeight:1.6 }}>
                 Enter your email to receive a verification code
               </p>
               {error && <div className={styles.errorMsg}>{error}</div>}
-
               {!otpSent ? (
                 <>
                   <div className={styles.formGroup}>
                     <label htmlFor="email">Email Address *</label>
                     <input
-                      id="email"
-                      className={styles.input}
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      id="email" className={styles.input} type="email"
+                      value={email} onChange={(e) => setEmail(e.target.value)}
                       onKeyDown={handleEmailKeyDown}
                       placeholder="your.email@example.com"
-                      disabled={submitting}
-                      autoComplete="email"
-                      autoCapitalize="none"
+                      disabled={submitting} autoComplete="email" autoCapitalize="none"
                     />
                   </div>
-                  <button
-                    className={styles.primaryBtn}
-                    onClick={handleSendOTP}
-                    disabled={submitting || !email.trim()}
-                  >
+                  <button className={styles.primaryBtn} onClick={handleSendOTP}
+                    disabled={submitting || !email.trim()}>
                     {submitting ? "Sending..." : "Send Verification Code"}
                   </button>
                 </>
@@ -756,51 +651,29 @@ export default function PublicVisitorRegistration() {
                   <div className={styles.formGroup}>
                     <label htmlFor="otp">Enter 6-Digit Verification Code</label>
                     <input
-                      id="otp"
-                      className={styles.input}
-                      type="text"
-                      inputMode="numeric"
-                      value={otp}
+                      id="otp" className={styles.input} type="text"
+                      inputMode="numeric" value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       onKeyDown={handleOTPKeyDown}
-                      placeholder="123456"
-                      maxLength={6}
-                      disabled={submitting}
+                      placeholder="123456" maxLength={6} disabled={submitting}
                       autoComplete="one-time-code"
-                      style={{
-                        letterSpacing: "8px", fontSize: "1.25rem",
-                        textAlign: "center", fontWeight: "700",
-                      }}
+                      style={{ letterSpacing:"8px", fontSize:"1.25rem", textAlign:"center", fontWeight:"700" }}
                     />
                   </div>
-                  <button
-                    className={styles.primaryBtn}
-                    onClick={handleVerifyOTP}
-                    disabled={submitting || otp.length !== 6}
-                  >
+                  <button className={styles.primaryBtn} onClick={handleVerifyOTP}
+                    disabled={submitting || otp.length !== 6}>
                     {submitting ? "Verifying..." : "Verify Code"}
                   </button>
-                  <button
-                    className={styles.secondaryBtn}
-                    onClick={handleSendOTP}
-                    disabled={resendTimer > 0 || submitting}
-                  >
+                  <button className={styles.secondaryBtn} onClick={handleSendOTP}
+                    disabled={resendTimer > 0 || submitting}>
                     {resendTimer > 0 ? `Resend Code in ${resendTimer}s` : "Resend Code"}
                   </button>
-                  <p style={{
-                    textAlign: "center", marginTop: "1rem",
-                    fontSize: "0.875rem", color: "#6b7280",
-                  }}>
-                    Code sent to: <strong style={{ color: "#1e1b4b" }}>{email}</strong>
+                  <p style={{ textAlign:"center", marginTop:"1rem", fontSize:"0.875rem", color:"#6b7280" }}>
+                    Code sent to: <strong style={{ color:"#1e1b4b" }}>{email}</strong>
                     <br />
-                    <button
-                      onClick={() => { setOtpSent(false); setOtp(""); setError(""); }}
-                      style={{
-                        color: "#7c3aed", cursor: "pointer", textDecoration: "underline",
-                        fontSize: "0.825rem", background: "none", border: "none",
-                        padding: 0, marginTop: "0.5rem",
-                      }}
-                    >
+                    <button onClick={() => { setOtpSent(false); setOtp(""); setError(""); }}
+                      style={{ color:"#7c3aed", cursor:"pointer", textDecoration:"underline",
+                        fontSize:"0.825rem", background:"none", border:"none", padding:0, marginTop:"0.5rem" }}>
                       Change email
                     </button>
                   </p>
@@ -820,31 +693,23 @@ export default function PublicVisitorRegistration() {
             <main className={styles.card}>
               <h2 className={styles.title}>Primary Details</h2>
               {error && <div className={styles.errorMsg}>{error}</div>}
-
               <div className={styles.formGroup}>
                 <label htmlFor="name">Full Name *</label>
-                <input
-                  id="name" className={styles.input} type="text"
-                  name="name" value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter your full name" autoComplete="name"
-                />
+                <input id="name" className={styles.input} type="text" name="name"
+                  value={formData.name} onChange={handleInputChange}
+                  placeholder="Enter your full name" autoComplete="name" />
               </div>
               <div className={styles.formGroup}>
                 <label htmlFor="phone">Phone Number *</label>
-                <input
-                  id="phone" className={styles.input} type="tel"
-                  name="phone" value={formData.phone}
-                  onChange={handleInputChange}
-                  placeholder="+1234567890" autoComplete="tel" inputMode="tel"
-                />
+                <input id="phone" className={styles.input} type="tel" name="phone"
+                  value={formData.phone} onChange={handleInputChange}
+                  placeholder="+1234567890" autoComplete="tel" inputMode="tel" />
               </div>
               <div className={styles.formGroup}>
                 <label>Email Address (Verified ✓)</label>
                 <input className={styles.input} type="email" value={email} disabled readOnly />
               </div>
-
-              <button className={styles.primaryBtn} onClick={handleNext} style={{ width: "100%" }}>
+              <button className={styles.primaryBtn} onClick={handleNext} style={{ width:"100%" }}>
                 Next →
               </button>
             </main>
@@ -862,58 +727,40 @@ export default function PublicVisitorRegistration() {
               <h2 className={styles.title}>Secondary Details</h2>
               {error && <div className={styles.errorMsg}>{error}</div>}
 
-              {/* Organisation row — overflow:visible so dropdown can escape */}
-              <div className={styles.gridRow} style={{ overflow: "visible" }}>
-                <input
-                  className={styles.input} name="fromCompany"
+              <div className={styles.gridRow}>
+                <input className={styles.input} name="fromCompany"
                   value={formData.fromCompany} onChange={handleInputChange}
-                  placeholder="From Company" autoComplete="organization"
-                />
-                <input
-                  className={styles.input} name="department"
+                  placeholder="From Company" autoComplete="organization" />
+                <input className={styles.input} name="department"
                   value={formData.department} onChange={handleInputChange}
-                  placeholder="Department"
-                />
-                <input
-                  className={styles.input} name="designation"
+                  placeholder="Department" />
+                <input className={styles.input} name="designation"
                   value={formData.designation} onChange={handleInputChange}
-                  placeholder="Designation"
-                />
+                  placeholder="Designation" />
               </div>
 
               <div className={styles.formGroup}>
-                <input
-                  className={styles.input} name="address"
+                <input className={styles.input} name="address"
                   value={formData.address} onChange={handleInputChange}
-                  placeholder="Organization Address" autoComplete="street-address"
-                />
+                  placeholder="Organization Address" autoComplete="street-address" />
               </div>
 
-              <div className={styles.gridRow} style={{ overflow: "visible" }}>
-                <input
-                  className={styles.input} name="city"
+              <div className={styles.gridRow}>
+                <input className={styles.input} name="city"
                   value={formData.city} onChange={handleInputChange}
-                  placeholder="City" autoComplete="address-level2"
-                />
-                <input
-                  className={styles.input} name="state"
+                  placeholder="City" autoComplete="address-level2" />
+                <input className={styles.input} name="state"
                   value={formData.state} onChange={handleInputChange}
-                  placeholder="State" autoComplete="address-level1"
-                />
-                <input
-                  className={styles.input} name="postalCode"
+                  placeholder="State" autoComplete="address-level1" />
+                <input className={styles.input} name="postalCode"
                   value={formData.postalCode} onChange={handleInputChange}
-                  placeholder="Postal Code" autoComplete="postal-code" inputMode="numeric"
-                />
+                  placeholder="Postal Code" autoComplete="postal-code" inputMode="numeric" />
               </div>
 
-              {/* Visit details row — overflow:visible critical for dropdown */}
-              <div className={styles.gridRow} style={{ overflow: "visible" }}>
-                <input
-                  className={styles.input} name="country"
+              <div className={styles.gridRow}>
+                <input className={styles.input} name="country"
                   value={formData.country} onChange={handleInputChange}
-                  placeholder="Country" autoComplete="country-name"
-                />
+                  placeholder="Country" autoComplete="country-name" />
 
                 {/* ── Employee autocomplete ── */}
                 <EmployeeAutocomplete
@@ -925,33 +772,25 @@ export default function PublicVisitorRegistration() {
                   disabled={submitting}
                 />
 
-                <input
-                  className={styles.input} name="purpose"
+                <input className={styles.input} name="purpose"
                   value={formData.purpose} onChange={handleInputChange}
-                  placeholder="Purpose of Visit"
-                />
+                  placeholder="Purpose of Visit" />
               </div>
 
               <div className={styles.checkboxGroup}>
                 {["Laptop", "Bag", "Documents"].map((item) => (
                   <label key={item} className={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
+                    <input type="checkbox"
                       checked={formData.belongings.includes(item)}
-                      onChange={() => toggleBelonging(item)}
-                    />
+                      onChange={() => toggleBelonging(item)} />
                     {item}
                   </label>
                 ))}
               </div>
 
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
-                <button className={styles.secondaryBtn} onClick={goBack} style={{ flex: 1 }}>
-                  ← Back
-                </button>
-                <button className={styles.primaryBtn} onClick={handleNext} style={{ flex: 2 }}>
-                  Next →
-                </button>
+              <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
+                <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }}>← Back</button>
+                <button className={styles.primaryBtn} onClick={handleNext} style={{ flex:2 }}>Next →</button>
               </div>
             </main>
           </div>
@@ -970,45 +809,29 @@ export default function PublicVisitorRegistration() {
 
               <div className={styles.cameraContainer}>
                 {!cameraActive && !photo && (
-                  <button
-                    type="button" className={styles.primaryBtn}
-                    onClick={startCamera} style={{ maxWidth: "300px" }}
-                  >
+                  <button type="button" className={styles.primaryBtn}
+                    onClick={startCamera} style={{ maxWidth:"300px" }}>
                     📷 Start Camera
                   </button>
                 )}
                 {cameraActive && (
                   <>
-                    <video
-                      ref={videoRef} autoPlay playsInline muted
-                      style={{
-                        width: "100%", maxWidth: "400px",
-                        borderRadius: "0.75rem",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                      }}
-                    />
-                    <button
-                      type="button" className={styles.primaryBtn}
-                      onClick={capturePhoto} style={{ maxWidth: "300px" }}
-                    >
+                    <video ref={videoRef} autoPlay playsInline muted
+                      style={{ width:"100%", maxWidth:"400px", borderRadius:"0.75rem",
+                        boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }} />
+                    <button type="button" className={styles.primaryBtn}
+                      onClick={capturePhoto} style={{ maxWidth:"300px" }}>
                       📸 Capture Photo
                     </button>
                   </>
                 )}
                 {photo && (
                   <>
-                    <img
-                      src={photo} alt="Captured visitor photo"
-                      style={{
-                        width: "100%", maxWidth: "400px",
-                        borderRadius: "0.75rem",
-                        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                      }}
-                    />
-                    <button
-                      type="button" className={styles.secondaryBtn}
-                      onClick={retakePhoto} style={{ maxWidth: "300px", marginTop: 0 }}
-                    >
+                    <img src={photo} alt="Captured visitor photo"
+                      style={{ width:"100%", maxWidth:"400px", borderRadius:"0.75rem",
+                        boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }} />
+                    <button type="button" className={styles.secondaryBtn}
+                      onClick={retakePhoto} style={{ maxWidth:"300px", marginTop:0 }}>
                       🔄 Retake Photo
                     </button>
                   </>
@@ -1017,11 +840,8 @@ export default function PublicVisitorRegistration() {
 
               <div className={styles.formGroup}>
                 <label htmlFor="idType">ID Proof Type</label>
-                <select
-                  id="idType" className={styles.select}
-                  name="idType" value={formData.idType}
-                  onChange={handleInputChange}
-                >
+                <select id="idType" className={styles.select}
+                  name="idType" value={formData.idType} onChange={handleInputChange}>
                   <option value="">Select ID Proof (Optional)</option>
                   <option value="aadhaar">Aadhaar</option>
                   <option value="pan">PAN Card</option>
@@ -1033,28 +853,18 @@ export default function PublicVisitorRegistration() {
 
               <div className={styles.formGroup}>
                 <label htmlFor="idNumber">ID Number</label>
-                <input
-                  id="idNumber" className={styles.input}
-                  name="idNumber" value={formData.idNumber}
-                  onChange={handleInputChange}
-                  placeholder="ID Number (Optional)"
-                />
+                <input id="idNumber" className={styles.input} name="idNumber"
+                  value={formData.idNumber} onChange={handleInputChange}
+                  placeholder="ID Number (Optional)" />
               </div>
 
-              <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
+              <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
 
-              <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem" }}>
-                <button
-                  className={styles.secondaryBtn} onClick={goBack}
-                  style={{ flex: 1 }} disabled={submitting}
-                >
-                  ← Back
-                </button>
-                <button
-                  className={styles.primaryBtn} onClick={handleSubmit}
-                  disabled={!photo || !photoBlob || submitting}
-                  style={{ flex: 2 }}
-                >
+              <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
+                <button className={styles.secondaryBtn} onClick={goBack}
+                  style={{ flex:1 }} disabled={submitting}>← Back</button>
+                <button className={styles.primaryBtn} onClick={handleSubmit}
+                  disabled={!photo || !photoBlob || submitting} style={{ flex:2 }}>
                   {submitting ? "Submitting..." : "✓ Submit"}
                 </button>
               </div>
@@ -1070,39 +880,31 @@ export default function PublicVisitorRegistration() {
           <div className={styles.container}>
             <div className={styles.authCard}>
               <div className={styles.textCenter}>
-                <div style={{ fontSize: "4rem", marginBottom: "1rem", color: "#16a34a" }}>✓</div>
-                <h2 style={{
-                  color: "#16a34a", marginBottom: "1rem",
-                  fontSize: "clamp(1.5rem, 3.5vw, 2rem)", fontWeight: 800,
-                }}>
+                <div style={{ fontSize:"4rem", marginBottom:"1rem", color:"#16a34a" }}>✓</div>
+                <h2 style={{ color:"#16a34a", marginBottom:"1rem",
+                  fontSize:"clamp(1.5rem, 3.5vw, 2rem)", fontWeight:800 }}>
                   Registration Successful!
                 </h2>
-                <p style={{
-                  fontSize: "clamp(0.875rem, 2vw, 1rem)",
-                  color: "#6b7280", marginBottom: "2rem", lineHeight: 1.6,
-                }}>
+                <p style={{ fontSize:"clamp(0.875rem, 2vw, 1rem)", color:"#6b7280",
+                  marginBottom:"2rem", lineHeight:1.6 }}>
                   Your visitor pass has been sent to your email.
                 </p>
                 <div className={styles.successMsg}>
-                  <p style={{ margin: 0, fontSize: "0.875rem", fontWeight: 600, color: "#166534" }}>
+                  <p style={{ margin:0, fontSize:"0.875rem", fontWeight:600, color:"#166534" }}>
                     Visitor ID
                   </p>
-                  <p style={{
-                    margin: "0.5rem 0 0 0",
-                    fontSize: "clamp(1.5rem, 3.5vw, 2rem)",
-                    fontWeight: 800, color: "#7c3aed", letterSpacing: "2px",
-                  }}>
+                  <p style={{ margin:"0.5rem 0 0 0",
+                    fontSize:"clamp(1.5rem, 3.5vw, 2rem)",
+                    fontWeight:800, color:"#7c3aed", letterSpacing:"2px" }}>
                     {visitorCode}
                   </p>
                 </div>
-                <p style={{
-                  fontSize: "clamp(0.825rem, 1.8vw, 0.925rem)", color: "#9ca3af",
-                  lineHeight: 1.6, marginBottom: "2rem",
-                }}>
+                <p style={{ fontSize:"clamp(0.825rem, 1.8vw, 0.925rem)", color:"#9ca3af",
+                  lineHeight:1.6, marginBottom:"2rem" }}>
                   Please show this ID at the reception desk.
                   <br />
                   Check your email{" "}
-                  <strong style={{ color: "#4b5563" }}>({email})</strong>{" "}
+                  <strong style={{ color:"#4b5563" }}>({email})</strong>{" "}
                   for the digital pass.
                 </p>
                 {company?.whatsapp_url?.trim() && (
@@ -1114,12 +916,8 @@ export default function PublicVisitorRegistration() {
                         <p className={styles.whatsappSubtitle}>Contact on WhatsApp</p>
                       </div>
                     </div>
-                    <button
-                      onClick={handleWhatsAppContact}
-                      className={styles.whatsappBtn}
-                      type="button"
-                    >
-                      <span style={{ fontSize: "1.25rem" }}>💬</span>
+                    <button onClick={handleWhatsAppContact} className={styles.whatsappBtn} type="button">
+                      <span style={{ fontSize:"1.25rem" }}>💬</span>
                       Contact on WhatsApp
                     </button>
                   </div>
