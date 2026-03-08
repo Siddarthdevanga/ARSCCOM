@@ -28,25 +28,25 @@ export default function VisitorIdentity() {
   }, [router]);
 
   /* ================= IDENTITY ================= */
-  const [idType, setIdType] = useState("");
+  const [idType,   setIdType]   = useState("");
   const [idNumber, setIdNumber] = useState("");
 
   /* ================= CAMERA ================= */
   const [cameraActive, setCameraActive] = useState(false);
-  const [photo, setPhoto] = useState(null);
-  const [stream, setStream] = useState(null);
+  const [photo,        setPhoto]        = useState(null);
+  const [stream,       setStream]       = useState(null);
 
   /* ================= ERROR ================= */
   const [error, setError] = useState("");
 
-  const videoRef = useRef(null);
+  const videoRef  = useRef(null);
   const canvasRef = useRef(null);
 
   /* ================= ATTACH STREAM ================= */
   useEffect(() => {
     if (cameraActive && stream && videoRef.current) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.muted = true;
+      videoRef.current.srcObject   = stream;
+      videoRef.current.muted       = true;
       videoRef.current.playsInline = true;
       videoRef.current.play();
     }
@@ -63,9 +63,7 @@ export default function VisitorIdentity() {
   const startCamera = async () => {
     setError("");
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-      });
+      const mediaStream = await navigator.mediaDevices.getUserMedia({ video: true });
       setStream(mediaStream);
       setCameraActive(true);
     } catch {
@@ -82,11 +80,10 @@ export default function VisitorIdentity() {
   const capturePhoto = () => {
     if (!canvasRef.current || !videoRef.current) return;
     const canvas = canvasRef.current;
-    const video = videoRef.current;
-    canvas.width = 400;
+    const video  = videoRef.current;
+    canvas.width  = 400;
     canvas.height = 300;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, 400, 300);
+    canvas.getContext("2d").drawImage(video, 0, 0, 400, 300);
     setPhoto(canvas.toDataURL("image/jpeg"));
     stopCamera();
   };
@@ -105,7 +102,7 @@ export default function VisitorIdentity() {
     try {
       setError("");
 
-      const primaryRaw = localStorage.getItem("visitor_primary");
+      const primaryRaw   = localStorage.getItem("visitor_primary");
       const secondaryRaw = localStorage.getItem("visitor_secondary");
 
       if (!primaryRaw || !secondaryRaw) {
@@ -113,7 +110,7 @@ export default function VisitorIdentity() {
         return;
       }
 
-      const primary = JSON.parse(primaryRaw);
+      const primary   = JSON.parse(primaryRaw);
       const secondary = JSON.parse(secondaryRaw);
 
       if (!validateAll()) return;
@@ -123,30 +120,46 @@ export default function VisitorIdentity() {
 
       const formData = new FormData();
 
-      formData.append("name", primary.name);
+      /* ── Primary fields ── */
+      formData.append("name",  primary.name);
       formData.append("phone", primary.phone);
       formData.append("email", primary.email || "");
 
+      /* ── Secondary fields ──
+         FIX: _employeeId is a private key used to carry the linked employee
+         through localStorage. It must NOT be appended as-is — it would arrive
+         as "_employeeId" which the backend ignores (reads "employeeId").
+         We skip it here and append it explicitly as "employeeId" below.
+      ── */
       Object.entries(secondary).forEach(([key, value]) => {
+        if (key === "_employeeId") return; // handled separately below
         if (Array.isArray(value)) {
           value.forEach((v) => formData.append(key, v));
         } else {
-          formData.append(key, value || "");
+          formData.append(key, value ?? "");
         }
       });
 
-      formData.append("idType", idType);
+      /* ── Employee id — only append when a real id was linked ──
+         secondary._employeeId is null when visitor typed a free-text name
+         with no dropdown match. In that case we omit the field entirely so
+         visitor.service.js sanitizeEmployeeId() receives undefined → null,
+         skips the DB lookup, and no notification is sent (correct).
+      ── */
+      if (secondary._employeeId) {
+        formData.append("employeeId", String(secondary._employeeId));
+      }
+
+      formData.append("idType",   idType);
       formData.append("idNumber", idNumber);
-      formData.append("photo", file);
+      formData.append("photo",    file);
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors`,
         {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: formData,
+          method:  "POST",
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          body:    formData,
         }
       );
 
