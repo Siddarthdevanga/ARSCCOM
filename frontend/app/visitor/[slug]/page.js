@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { createPortal } from "react-dom";
 import { useParams, useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -51,67 +50,32 @@ const getGreeting = () => {
 };
 
 /* ===============================================
-   PORTAL DROPDOWN
-   - Imports createPortal from "react-dom" (correct)
-   - mounted guard prevents SSR crash
-   - position:fixed with live getBoundingClientRect
-   - Recalculates on scroll, resize, visualViewport
-=============================================== */
-const PortalDropdown = ({ anchorRef, children, open }) => {
-  const [rect,    setRect]    = useState(null);
-  const [mounted, setMounted] = useState(false);
-
-  // SSR guard — document.body only exists client-side
-  useEffect(() => { setMounted(true); }, []);
-
-  const updateRect = useCallback(() => {
-    if (!anchorRef.current) return;
-    const r = anchorRef.current.getBoundingClientRect();
-    setRect({ top: r.bottom + 4, left: r.left, width: r.width });
-  }, [anchorRef]);
-
-  useEffect(() => {
-    if (!open || !mounted) return;
-    updateRect();
-    const onScroll = () => updateRect();
-    const onResize = () => updateRect();
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onResize);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener("resize", onResize);
-      window.visualViewport.addEventListener("scroll", onScroll);
-    }
-    return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener("resize", onResize);
-        window.visualViewport.removeEventListener("scroll", onScroll);
-      }
-    };
-  }, [open, mounted, updateRect]);
-
-  if (!mounted || !open || !rect) return null;
-
-  return createPortal(
-    <div
-      className={styles.acDropdown}
-      style={{
-        position: "fixed",
-        top:      rect.top,
-        left:     rect.left,
-        width:    rect.width,
-        zIndex:   9999,
-      }}
-    >
-      {children}
-    </div>,
-    document.body
-  );
-};
-
-/* ===============================================
    EMPLOYEE AUTOCOMPLETE
+   ─────────────────────────────────────────────
+   ARCHITECTURE: Fully inline — NO portal, NO fixed,
+   NO getBoundingClientRect.
+
+   The dropdown renders as a normal block element
+   directly after the input inside .acWrapper.
+   The wrapper uses position:relative. The dropdown
+   uses position:absolute, top:100%, left:0, right:0.
+
+   The ONLY thing that can clip this is overflow:hidden
+   on an ancestor. We ensure none of our ancestors
+   have overflow:hidden — the .card, .container, and
+   .formGroup all use the default overflow:visible.
+
+   On mobile: because it is in normal flow (just
+   absolutely positioned), it scrolls with the page
+   naturally. No coordinate math needed. No keyboard
+   offset issues. No viewport shift problems.
+
+   The dropdown pushes DOWN the page — it does NOT
+   overlap siblings. This is intentional: on mobile
+   it is far more reliable than overlapping.
+   We achieve this by setting position:relative on
+   .acWrapper and using a padding-bottom technique
+   when the dropdown is open to reserve the space.
 =============================================== */
 const EmployeeAutocomplete = ({
   slug, value, employeeId, onChange, onSelect, disabled,
@@ -121,22 +85,22 @@ const EmployeeAutocomplete = ({
   const [fetching, setFetching] = useState(false);
 
   const debounceRef  = useRef(null);
-  const containerRef = useRef(null);
+  const wrapperRef   = useRef(null);
   const inputRef     = useRef(null);
 
-  /* Close on outside click */
+  /* Close on outside click / touch */
   useEffect(() => {
     const handler = (e) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target) &&
-        !e.target.closest(`.${styles.acDropdown}`)
-      ) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
         setOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, []);
 
   const search = useCallback(async (q) => {
@@ -169,85 +133,124 @@ const EmployeeAutocomplete = ({
     onChange(val);
     if (employeeId) onSelect({ name: val, id: null });
     clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(val), 280);
+    debounceRef.current = setTimeout(() => search(val), 300);
   };
 
   const handleSelect = (emp) => {
     onSelect({ name: emp.name, id: emp.id });
     setOpen(false);
     setResults([]);
+    // Blur input so mobile keyboard closes after selection
+    inputRef.current?.blur();
   };
 
   const handleFocus = () => {
     if (value.trim() && results.length > 0) setOpen(true);
   };
 
-  const initials = (name) => {
-    if (!name) return "?";
-    const p = name.trim().split(" ");
-    return (p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]).toUpperCase();
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") { setOpen(false); inputRef.current?.blur(); }
   };
 
-  const showDropdown = open && (results.length > 0 || (!fetching && value.trim()));
+  const initials = (name) => {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    return (parts.length >= 2
+      ? parts[0][0] + parts[1][0]
+      : parts[0].slice(0, 2)
+    ).toUpperCase();
+  };
+
+  const showDropdown = open && (results.length > 0 || (!fetching && value.trim().length > 0));
 
   return (
-    <div ref={containerRef} className={styles.acWrapper}>
-      <input
-        ref={inputRef}
-        className={`${styles.input} ${employeeId ? styles.acInputLinked : ""}`}
-        type="text"
-        name="personToMeet"
-        value={value}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        placeholder="Type to search employee..."
-        disabled={disabled}
-        autoComplete="off"
-      />
+    <div
+      ref={wrapperRef}
+      className={`${styles.acWrapper} ${showDropdown ? styles.acWrapperOpen : ""}`}
+    >
+      {/* Input row */}
+      <div className={styles.acInputRow}>
+        <input
+          ref={inputRef}
+          className={`${styles.input} ${styles.acInput} ${employeeId ? styles.acInputLinked : ""}`}
+          type="text"
+          name="personToMeet"
+          value={value}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onKeyDown={handleKeyDown}
+          placeholder="Search by name..."
+          disabled={disabled}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        {/* Status icons */}
+        {fetching && (
+          <span className={styles.acSpinner} aria-hidden="true" />
+        )}
+        {employeeId && !fetching && (
+          <span className={styles.acLinkedTick}>✓</span>
+        )}
+        {!employeeId && !fetching && value.trim() && (
+          <button
+            type="button"
+            className={styles.acClearBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onChange("");
+              onSelect({ name: "", id: null });
+              setResults([]);
+              setOpen(false);
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear"
+          >✕</button>
+        )}
+      </div>
 
-      {fetching && <span className={styles.acSpinner} aria-hidden="true" />}
-
-      {employeeId && !fetching && (
-        <span className={styles.acLinkedTick} aria-label="Employee linked">✓</span>
-      )}
-
-      <PortalDropdown anchorRef={inputRef} open={showDropdown}>
-        <div
-          role="listbox"
-          aria-label="Employee suggestions"
-          className={styles.acDropdownInner}
-        >
+      {/* Inline dropdown — renders in normal flow, no portal */}
+      {showDropdown && (
+        <div className={styles.acDropdown} role="listbox" aria-label="Employee suggestions">
           {results.length > 0 ? (
             results.map((emp) => (
-              <div
+              <button
                 key={emp.id}
-                className={styles.acItem}
+                type="button"
+                className={`${styles.acItem} ${employeeId === emp.id ? styles.acItemSelected : ""}`}
                 onMouseDown={(e) => { e.preventDefault(); handleSelect(emp); }}
+                onTouchEnd={(e)  => { e.preventDefault(); handleSelect(emp); }}
                 role="option"
                 aria-selected={employeeId === emp.id}
-                tabIndex={-1}
               >
-                <div className={styles.acAvatar} aria-hidden="true">
+                {/* Avatar */}
+                <span className={styles.acAvatar} aria-hidden="true">
                   {initials(emp.name)}
-                </div>
-                <div className={styles.acInfo}>
-                  <div className={styles.acName}>{emp.name}</div>
+                </span>
+
+                {/* Name + dept */}
+                <span className={styles.acInfo}>
+                  <span className={styles.acName}>{emp.name}</span>
                   {emp.department && (
-                    <div className={styles.acDept}>{emp.department}</div>
+                    <span className={styles.acDept}>{emp.department}</span>
                   )}
-                </div>
+                </span>
+
+                {/* Selected tick */}
                 {employeeId === emp.id && (
                   <span className={styles.acTick} aria-label="Selected">✓</span>
                 )}
-              </div>
+              </button>
             ))
           ) : (
-            <div className={styles.acEmpty} role="status">
-              No employees matched — your entry will still be saved
+            <div className={styles.acEmpty}>
+              <span className={styles.acEmptyIcon}>🔍</span>
+              <span>No employees found for &quot;{value}&quot;</span>
+              <span className={styles.acEmptyHint}>Your text will still be saved</span>
             </div>
           )}
         </div>
-      </PortalDropdown>
+      )}
     </div>
   );
 };
@@ -264,14 +267,10 @@ const StepProgress = ({ currentStep }) => {
         const stepNum    = i + 1;
         const isActive   = currentStep === stepNum;
         const isDone     = currentStep > stepNum;
-        const circleClass = isDone
-          ? styles.stepCircleDone
-          : isActive ? styles.stepCircleActive
-          : styles.stepCircleIdle;
-        const labelClass = isDone
-          ? styles.stepLabelDone
-          : isActive ? styles.stepLabelActive
-          : styles.stepLabelIdle;
+        const circleClass = isDone ? styles.stepCircleDone
+          : isActive ? styles.stepCircleActive : styles.stepCircleIdle;
+        const labelClass = isDone ? styles.stepLabelDone
+          : isActive ? styles.stepLabelActive : styles.stepLabelIdle;
         return (
           <div key={label} className={styles.stepItem}>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"3px" }}>
@@ -365,7 +364,7 @@ export default function PublicVisitorRegistration() {
 
   useEffect(() => {
     if (!slug) return;
-    const fetchCompanyInfo = async () => {
+    (async () => {
       try {
         setLoading(true); setError("");
         const data = await publicFetch(`/api/public/visitor/${slug}/info`);
@@ -375,8 +374,7 @@ export default function PublicVisitorRegistration() {
       } finally {
         setLoading(false);
       }
-    };
-    fetchCompanyInfo();
+    })();
   }, [slug]);
 
   useEffect(() => {
@@ -394,8 +392,8 @@ export default function PublicVisitorRegistration() {
     }
   }, [cameraActive, stream]);
 
-  useEffect(() => {
-    return () => { if (stream) stream.getTracks().forEach((t) => t.stop()); };
+  useEffect(() => () => {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
   }, [stream]);
 
   useEffect(() => {
@@ -404,31 +402,28 @@ export default function PublicVisitorRegistration() {
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((p) => ({ ...p, [name]: value }));
   }, []);
 
   const handlePersonToMeetChange = useCallback((val) => {
-    setFormData((prev) => ({ ...prev, personToMeet: val }));
+    setFormData((p) => ({ ...p, personToMeet: val }));
   }, []);
 
   const handleEmployeeSelect = useCallback(({ name, id }) => {
-    setFormData((prev) => ({ ...prev, personToMeet: name }));
+    setFormData((p) => ({ ...p, personToMeet: name }));
     setSelectedEmployeeId(id);
   }, []);
 
   const toggleBelonging = useCallback((item) => {
-    setFormData((prev) => ({
-      ...prev,
-      belongings: prev.belongings.includes(item)
-        ? prev.belongings.filter((b) => b !== item)
-        : [...prev.belongings, item],
+    setFormData((p) => ({
+      ...p,
+      belongings: p.belongings.includes(item)
+        ? p.belongings.filter((b) => b !== item)
+        : [...p.belongings, item],
     }));
   }, []);
 
-  const goBack = useCallback(() => {
-    setError("");
-    setStep((prev) => Math.max(prev - 1, 1));
-  }, []);
+  const goBack = useCallback(() => { setError(""); setStep((p) => Math.max(p - 1, 1)); }, []);
 
   const handleSendOTP = async () => {
     const trimmedEmail = email.trim().toLowerCase();
@@ -445,17 +440,12 @@ export default function PublicVisitorRegistration() {
       setEmail(trimmedEmail);
       setOtpSent(true);
       setResendTimer(data.resendAfter || 30);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
   };
 
   const handleVerifyOTP = async () => {
-    if (!otp.trim() || otp.length !== 6) {
-      setError("Please enter the 6-digit code"); return;
-    }
+    if (!otp.trim() || otp.length !== 6) { setError("Please enter the 6-digit code"); return; }
     try {
       setError(""); setSubmitting(true);
       const data = await publicFetch(`/api/public/visitor/${slug}/otp/verify`, {
@@ -465,21 +455,17 @@ export default function PublicVisitorRegistration() {
       });
       setOtpToken(data.otpToken);
       setStep(1);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
   };
 
   const startCamera = async () => {
     setError("");
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
+      const ms = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
       });
-      setStream(mediaStream);
-      setCameraActive(true);
+      setStream(ms); setCameraActive(true);
     } catch {
       setError("Camera access denied. Please allow camera permissions and try again.");
     }
@@ -494,8 +480,7 @@ export default function PublicVisitorRegistration() {
     if (!canvasRef.current || !videoRef.current) return;
     const canvas = canvasRef.current;
     const video  = videoRef.current;
-    canvas.width  = 400;
-    canvas.height = 300;
+    canvas.width = 400; canvas.height = 300;
     canvas.getContext("2d").drawImage(video, 0, 0, 400, 300);
     setPhoto(canvas.toDataURL("image/jpeg", 0.9));
     canvas.toBlob((blob) => setPhotoBlob(blob), "image/jpeg", 0.9);
@@ -503,54 +488,45 @@ export default function PublicVisitorRegistration() {
   }, [stopCamera]);
 
   const retakePhoto = useCallback(() => {
-    setPhoto(null);
-    setPhotoBlob(null);
-    if (canvasRef.current) {
-      canvasRef.current.getContext("2d")
-        .clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
+    setPhoto(null); setPhotoBlob(null);
+    canvasRef.current?.getContext("2d")
+      .clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
   }, []);
 
   const validateStep = useCallback(() => {
     setError("");
     if (step === 1) {
-      if (!formData.name.trim()) { setError("Visitor name is required"); return false; }
+      if (!formData.name.trim())  { setError("Visitor name is required"); return false; }
       if (!formData.phone.trim() || !/^\+?[\d\s\-()]{10,}$/.test(formData.phone)) {
-        setError("Valid phone number is required (min 10 digits)"); return false;
+        setError("Valid phone number required (min 10 digits)"); return false;
       }
     }
-    if (step === 2) {
-      if (!formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
+    if (step === 2 && !formData.personToMeet.trim()) {
+      setError("Person to meet is required"); return false;
     }
-    if (step === 3) {
-      if (!photo || !photoBlob) { setError("Visitor photo is required"); return false; }
+    if (step === 3 && (!photo || !photoBlob)) {
+      setError("Visitor photo is required"); return false;
     }
     return true;
   }, [step, formData, photo, photoBlob]);
 
   const handleNext = useCallback(() => {
-    if (validateStep()) { setError(""); setStep((prev) => prev + 1); }
+    if (validateStep()) { setError(""); setStep((p) => p + 1); }
   }, [validateStep]);
 
   const handleSubmit = async () => {
     if (!validateStep()) return;
     try {
       setSubmitting(true); setError("");
-      const file = new File([photoBlob], "visitor.jpg", { type: "image/jpeg" });
-      const fd   = new FormData();
-      Object.entries(formData).forEach(([key, value]) => {
-        fd.append(
-          key,
-          key === "belongings"
-            ? Array.isArray(value) ? value.join(", ") : ""
-            : value || ""
-        );
-      });
-      fd.append("photo", file);
+      const fd = new FormData();
+      fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
+      Object.entries(formData).forEach(([k, v]) =>
+        fd.append(k, k === "belongings" ? (Array.isArray(v) ? v.join(", ") : "") : v || "")
+      );
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
 
       const controller = new AbortController();
-      const timer      = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
       let data;
       try {
         const res = await fetch(`${API}/api/public/visitor/${slug}/register`, {
@@ -559,14 +535,12 @@ export default function PublicVisitorRegistration() {
         });
         clearTimeout(timer);
         data = await res.json();
-        if (!res.ok || !data.success) {
+        if (!res.ok || !data.success)
           throw new Error(data.message || "Registration failed. Please try again.");
-        }
       } catch (err) {
         clearTimeout(timer);
-        if (err.name === "AbortError") {
+        if (err.name === "AbortError")
           throw new Error("Upload timed out — please check your connection and try again");
-        }
         throw err;
       }
       setVisitorCode(data.visitorCode);
@@ -578,17 +552,13 @@ export default function PublicVisitorRegistration() {
     }
   };
 
-  const handleWhatsAppContact = useCallback(() => {
-    if (company?.whatsapp_url) window.open(company.whatsapp_url, "_blank", "noopener,noreferrer");
-  }, [company]);
-
   const handleReset = useCallback(() => {
-    if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); setCameraActive(false); }
-    if (canvasRef.current) {
-      canvasRef.current.getContext("2d")
-        .clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-    }
-    setStep(0); setEmail(""); setOtp(""); setOtpSent(false); setOtpToken(""); setResendTimer(0);
+    stream?.getTracks().forEach((t) => t.stop());
+    setStream(null); setCameraActive(false);
+    canvasRef.current?.getContext("2d")
+      .clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    setStep(0); setEmail(""); setOtp(""); setOtpSent(false);
+    setOtpToken(""); setResendTimer(0);
     setFormData({
       name: "", phone: "", fromCompany: "", department: "", designation: "",
       address: "", city: "", state: "", postalCode: "", country: "",
@@ -598,35 +568,28 @@ export default function PublicVisitorRegistration() {
     setPhoto(null); setPhotoBlob(null); setVisitorCode(""); setError("");
   }, [stream]);
 
-  const handleEmailKeyDown = (e) => { if (e.key === "Enter" && !submitting) handleSendOTP(); };
-  const handleOTPKeyDown   = (e) => { if (e.key === "Enter" && otp.length === 6 && !submitting) handleVerifyOTP(); };
+  if (loading) return (
+    <div className={styles.loadingContainer}><div className={styles.spinner} /></div>
+  );
 
-  if (loading) {
-    return (
-      <div className={styles.loadingContainer}><div className={styles.spinner} /></div>
-    );
-  }
-
-  if (!company) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.container}>
-          <div className={styles.authCard}>
-            <div className={styles.authHeader}>
-              <h2>⚠️ {error ? "Error" : "Not Found"}</h2>
-              <p>{error || "This registration link is invalid or has expired."}</p>
-            </div>
-            <button className={styles.primaryBtn} onClick={() => router.push("/")}>Go Home</button>
+  if (!company) return (
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <div className={styles.authCard}>
+          <div className={styles.authHeader}>
+            <h2>⚠️ {error ? "Error" : "Not Found"}</h2>
+            <p>{error || "This registration link is invalid or has expired."}</p>
           </div>
+          <button className={styles.primaryBtn} onClick={() => router.push("/")}>Go Home</button>
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
     <div className={styles.page}>
 
-      {/* ── STEP 0: EMAIL VERIFICATION ── */}
+      {/* ── STEP 0: EMAIL ── */}
       {step === 0 && (
         <>
           <Navbar company={company} />
@@ -641,13 +604,11 @@ export default function PublicVisitorRegistration() {
                 <>
                   <div className={styles.formGroup}>
                     <label htmlFor="email">Email Address *</label>
-                    <input
-                      id="email" className={styles.input} type="email"
+                    <input id="email" className={styles.input} type="email"
                       value={email} onChange={(e) => setEmail(e.target.value)}
-                      onKeyDown={handleEmailKeyDown}
+                      onKeyDown={(e) => e.key === "Enter" && !submitting && handleSendOTP()}
                       placeholder="your.email@example.com"
-                      disabled={submitting} autoComplete="email" autoCapitalize="none"
-                    />
+                      disabled={submitting} autoComplete="email" autoCapitalize="none" />
                   </div>
                   <button className={styles.primaryBtn} onClick={handleSendOTP}
                     disabled={submitting || !email.trim()}>
@@ -657,15 +618,13 @@ export default function PublicVisitorRegistration() {
               ) : (
                 <>
                   <div className={styles.formGroup}>
-                    <label htmlFor="otp">Enter 6-Digit Verification Code</label>
-                    <input
-                      id="otp" className={styles.otpInput} type="text"
+                    <label htmlFor="otp">6-Digit Verification Code</label>
+                    <input id="otp" className={styles.otpInput} type="text"
                       inputMode="numeric" value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      onKeyDown={handleOTPKeyDown}
+                      onKeyDown={(e) => e.key === "Enter" && otp.length === 6 && !submitting && handleVerifyOTP()}
                       placeholder="• • • • • •" maxLength={6} disabled={submitting}
-                      autoComplete="one-time-code"
-                    />
+                      autoComplete="one-time-code" />
                   </div>
                   <button className={styles.primaryBtn} onClick={handleVerifyOTP}
                     disabled={submitting || otp.length !== 6}>
@@ -673,11 +632,10 @@ export default function PublicVisitorRegistration() {
                   </button>
                   <button className={styles.secondaryBtn} onClick={handleSendOTP}
                     disabled={resendTimer > 0 || submitting}>
-                    {resendTimer > 0 ? `Resend Code in ${resendTimer}s` : "Resend Code"}
+                    {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend Code"}
                   </button>
                   <p className={styles.otpMeta}>
-                    Code sent to: <strong>{email}</strong>
-                    <br />
+                    Sent to: <strong>{email}</strong><br />
                     <button className={styles.textBtn}
                       onClick={() => { setOtpSent(false); setOtp(""); setError(""); }}>
                       Change email
@@ -712,12 +670,10 @@ export default function PublicVisitorRegistration() {
                   placeholder="+1234567890" autoComplete="tel" inputMode="tel" />
               </div>
               <div className={styles.formGroup}>
-                <label>Email Address (Verified ✓)</label>
+                <label>Email (Verified ✓)</label>
                 <input className={styles.input} type="email" value={email} disabled readOnly />
               </div>
-              <button className={styles.primaryBtn} onClick={handleNext} style={{ width:"100%" }}>
-                Next →
-              </button>
+              <button className={styles.primaryBtn} onClick={handleNext}>Next →</button>
             </main>
           </div>
         </>
@@ -733,7 +689,6 @@ export default function PublicVisitorRegistration() {
               <h2 className={styles.title}>Secondary Details</h2>
               {error && <div className={styles.errorMsg}>{error}</div>}
 
-              {/* Row 1: Company / Dept / Designation */}
               <div className={styles.gridRow}>
                 <input className={styles.input} name="fromCompany"
                   value={formData.fromCompany} onChange={handleInputChange}
@@ -746,14 +701,10 @@ export default function PublicVisitorRegistration() {
                   placeholder="Designation" />
               </div>
 
-              {/* Address */}
-              <div className={styles.formGroup}>
-                <input className={styles.input} name="address"
-                  value={formData.address} onChange={handleInputChange}
-                  placeholder="Organization Address" autoComplete="street-address" />
-              </div>
+              <input className={styles.input} style={{ marginBottom: "0.75rem" }}
+                name="address" value={formData.address} onChange={handleInputChange}
+                placeholder="Organization Address" autoComplete="street-address" />
 
-              {/* Row 2: City / State / Postal */}
               <div className={styles.gridRow}>
                 <input className={styles.input} name="city"
                   value={formData.city} onChange={handleInputChange}
@@ -763,10 +714,9 @@ export default function PublicVisitorRegistration() {
                   placeholder="State" autoComplete="address-level1" />
                 <input className={styles.input} name="postalCode"
                   value={formData.postalCode} onChange={handleInputChange}
-                  placeholder="Postal Code" autoComplete="postal-code" inputMode="numeric" />
+                  placeholder="Postal Code" inputMode="numeric" />
               </div>
 
-              {/* Row 3: Country / Purpose */}
               <div className={styles.gridRow2}>
                 <input className={styles.input} name="country"
                   value={formData.country} onChange={handleInputChange}
@@ -776,11 +726,10 @@ export default function PublicVisitorRegistration() {
                   placeholder="Purpose of Visit" />
               </div>
 
-              {/* Person to Meet — full width, outside any grid */}
-              <div className={styles.formGroup}>
-                <label htmlFor="personToMeet" className={styles.meetLabel}>
-                  <span className={styles.meetLabelIcon}>👤</span>
-                  Person to Meet *
+              {/* ── Person to Meet — full width with inline dropdown ── */}
+              <div className={styles.meetSection}>
+                <label className={styles.meetLabel}>
+                  <span>👤</span> Person to Meet *
                 </label>
                 <EmployeeAutocomplete
                   slug={slug}
@@ -791,11 +740,12 @@ export default function PublicVisitorRegistration() {
                   disabled={submitting}
                 />
                 {selectedEmployeeId && (
-                  <p className={styles.employeeLinkedHint}>✓ Employee linked successfully</p>
+                  <p className={styles.employeeLinkedHint}>
+                    ✓ Linked to employee record
+                  </p>
                 )}
               </div>
 
-              {/* Belongings */}
               <div className={styles.checkboxGroup}>
                 {["Laptop", "Bag", "Documents"].map((item) => (
                   <label key={item} className={styles.checkboxLabel}>
@@ -816,7 +766,7 @@ export default function PublicVisitorRegistration() {
         </>
       )}
 
-      {/* ── STEP 3: IDENTITY + PHOTO ── */}
+      {/* ── STEP 3: PHOTO + ID ── */}
       {step === 3 && (
         <>
           <Navbar company={company} />
@@ -829,7 +779,7 @@ export default function PublicVisitorRegistration() {
               <div className={styles.cameraContainer}>
                 {!cameraActive && !photo && (
                   <button type="button" className={styles.primaryBtn}
-                    onClick={startCamera} style={{ maxWidth:"300px" }}>
+                    onClick={startCamera} style={{ maxWidth: "280px" }}>
                     📷 Start Camera
                   </button>
                 )}
@@ -837,7 +787,7 @@ export default function PublicVisitorRegistration() {
                   <>
                     <video ref={videoRef} autoPlay playsInline muted className={styles.cameraVideo} />
                     <button type="button" className={styles.primaryBtn}
-                      onClick={capturePhoto} style={{ maxWidth:"300px" }}>
+                      onClick={capturePhoto} style={{ maxWidth: "280px" }}>
                       📸 Capture Photo
                     </button>
                   </>
@@ -846,7 +796,7 @@ export default function PublicVisitorRegistration() {
                   <>
                     <img src={photo} alt="Captured visitor" className={styles.cameraPhoto} />
                     <button type="button" className={styles.secondaryBtn}
-                      onClick={retakePhoto} style={{ maxWidth:"300px", marginTop:0 }}>
+                      onClick={retakePhoto} style={{ maxWidth: "280px", marginTop: 0 }}>
                       🔄 Retake Photo
                     </button>
                   </>
@@ -873,7 +823,7 @@ export default function PublicVisitorRegistration() {
                   placeholder="ID Number (Optional)" />
               </div>
 
-              <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
+              <canvas ref={canvasRef} style={{ display: "none" }} aria-hidden="true" />
 
               <div className={styles.btnRow}>
                 <button className={styles.secondaryBtn} onClick={goBack}
@@ -897,16 +847,13 @@ export default function PublicVisitorRegistration() {
               <div className={styles.textCenter}>
                 <div className={styles.successIconWrap}>✓</div>
                 <h2 className={styles.successHeading}>Registration Successful!</h2>
-                <p className={styles.successSub}>
-                  Your visitor pass has been sent to your email.
-                </p>
+                <p className={styles.successSub}>Your visitor pass has been sent to your email.</p>
                 <div className={styles.successMsg}>
                   <p className={styles.visitorIdLabel}>Visitor ID</p>
                   <p className={styles.visitorIdCode}>{visitorCode}</p>
                 </div>
                 <p className={styles.successNote}>
-                  Please show this ID at the reception desk.
-                  <br />
+                  Please show this ID at the reception desk.<br />
                   Check your email <strong>({email})</strong> for the digital pass.
                 </p>
                 {company?.whatsapp_url?.trim() && (
@@ -914,19 +861,18 @@ export default function PublicVisitorRegistration() {
                     <div className={styles.whatsappHeader}>
                       <div className={styles.whatsappIcon}>📱</div>
                       <div>
-                        <h3 className={styles.whatsappTitle}>Stay Connected With Us</h3>
+                        <h3 className={styles.whatsappTitle}>Stay Connected</h3>
                         <p className={styles.whatsappSubtitle}>Contact on WhatsApp</p>
                       </div>
                     </div>
-                    <button onClick={handleWhatsAppContact} className={styles.whatsappBtn} type="button">
-                      <span style={{ fontSize:"1.25rem" }}>💬</span>
-                      Contact on WhatsApp
+                    <button
+                      onClick={() => company?.whatsapp_url && window.open(company.whatsapp_url, "_blank", "noopener,noreferrer")}
+                      className={styles.whatsappBtn} type="button">
+                      <span>💬</span> Contact on WhatsApp
                     </button>
                   </div>
                 )}
-                <button className={styles.primaryBtn} onClick={handleReset} type="button">
-                  ✓ Done
-                </button>
+                <button className={styles.primaryBtn} onClick={handleReset}>✓ Done</button>
               </div>
             </div>
           </div>
