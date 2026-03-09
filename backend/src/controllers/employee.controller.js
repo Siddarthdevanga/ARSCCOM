@@ -146,10 +146,10 @@ export const searchEmployeesByCompany = async (companyId, query) => {
      FROM company_employees
      WHERE company_id = ?
        AND is_active = 1
-       AND name LIKE ?
+       AND (name LIKE ? OR department LIKE ?)
      ORDER BY name ASC
      LIMIT 10`,
-    [companyId, q]
+    [companyId, q, q]
   );
   return rows;
 };
