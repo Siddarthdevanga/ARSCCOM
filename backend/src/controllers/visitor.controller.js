@@ -194,25 +194,33 @@ export const getVisitorDashboard = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    // FIX 6: DATE(check_in) = CURDATE() — stored value is already IST, no conversion needed
+    // Use DATE(CONVERT_TZ(NOW(), @@session.time_zone, '+05:30')) as the IST
+    // "today" boundary. This works correctly regardless of whether the MySQL
+    // server timezone is IST or UTC — we always compare against the IST date.
+    // Stored check_in/check_out are already in IST (written via NOW() on an
+    // IST server, or via JS IST string), so we also convert them to IST before
+    // extracting the date portion.
     const [[today]] = await db.execute(
       `SELECT COUNT(*) AS count FROM visitors
-       WHERE company_id = ? AND DATE(check_in) = CURDATE()`,
+       WHERE company_id = ?
+         AND DATE(CONVERT_TZ(check_in, '+00:00', '+05:30')) =
+             DATE(CONVERT_TZ(NOW(),    '+00:00', '+05:30'))`,
       [companyId]
     );
 
-    // Currently inside (status = 'IN')
+    // Currently inside (status = 'IN') — no date filter needed
     const [[inside]] = await db.execute(
       `SELECT COUNT(*) AS count FROM visitors
        WHERE company_id = ? AND status = 'IN'`,
       [companyId]
     );
 
-    // FIX 5: DATE(check_out) = CURDATE() — no CONVERT_TZ needed
+    // Checked out today — compare check_out date in IST
     const [[out]] = await db.execute(
       `SELECT COUNT(*) AS count FROM visitors
        WHERE company_id = ? AND status = 'OUT'
-         AND DATE(check_out) = CURDATE()`,
+         AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) =
+             DATE(CONVERT_TZ(NOW(),     '+00:00', '+05:30'))`,
       [companyId]
     );
 
@@ -253,7 +261,8 @@ export const getVisitorDashboard = async (req, res) => {
          person_to_meet
        FROM visitors
        WHERE company_id = ? AND status = 'OUT'
-         AND DATE(check_out) = CURDATE()
+         AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) =
+             DATE(CONVERT_TZ(NOW(),     '+00:00', '+05:30'))
        ORDER BY check_out DESC`,
       [companyId]
     );
