@@ -43,8 +43,8 @@ export const getVisitorPass = async (req, res) => {
       `SELECT
         v.visitor_code, v.name, v.phone, v.email,
         v.id_type, v.id_number, v.photo_url,
-        DATE_FORMAT(v.check_in,  '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
-        DATE_FORMAT(v.check_out, '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
+        DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
+        DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
         v.person_to_meet, v.purpose,
         c.name AS company_name, c.logo_url AS company_logo
@@ -103,8 +103,8 @@ export const getPublicVisitorPass = async (req, res) => {
       `SELECT
         v.visitor_code, v.name, v.phone, v.email,
         v.photo_url,
-        DATE_FORMAT(v.check_in,  '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
-        DATE_FORMAT(v.check_out, '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
+        DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
+        DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
         c.name AS company_name, c.logo_url AS company_logo
        FROM visitors v
@@ -236,11 +236,14 @@ export const getVisitorDashboard = async (req, res) => {
     // new Date("2026-03-08 23:45:00") it treats it as UTC, which shifts
     // times after ~6:30 PM IST to the next calendar day on the frontend.
     // Fix: tag every datetime with +05:30 in SQL so JS always parses as IST.
+    // check_in/check_out are stored as UTC (MySQL server is UTC).
+    // CONVERT_TZ converts UTC→IST, DATE_FORMAT then tags with +05:30
+    // so the browser's new Date() parses it correctly as IST.
     const [activeVisitors] = await db.execute(
       `SELECT
          visitor_code, name, phone,
          from_company,
-         DATE_FORMAT(check_in, '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
+         DATE_FORMAT(CONVERT_TZ(check_in, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
          visit_status,
          pass_mail_sent AS pass_issued,
          person_to_meet
@@ -254,8 +257,8 @@ export const getVisitorDashboard = async (req, res) => {
       `SELECT
          visitor_code, name, phone,
          from_company,
-         DATE_FORMAT(check_in,  '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
-         DATE_FORMAT(check_out, '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
+         DATE_FORMAT(CONVERT_TZ(check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
+         DATE_FORMAT(CONVERT_TZ(check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
          visit_status,
          pass_mail_sent AS pass_issued,
          person_to_meet
