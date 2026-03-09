@@ -1,20 +1,40 @@
 import { db } from "../config/db.js";
 
 /* =========================================================
-   LIST EMPLOYEES
+   LIST EMPLOYEES  (also handles autocomplete search)
    GET /api/employees
+   GET /api/employees?search=hr&limit=10   ← autocomplete
 ========================================================= */
 export const listEmployees = async (req, res) => {
   try {
     const companyId = req.user?.companyId;
+    const search    = req.query.search?.trim() || "";
+    const limit     = Math.min(parseInt(req.query.limit) || 200, 200);
 
-    const [rows] = await db.execute(
-      `SELECT id, name, email, department, is_active, created_at
-       FROM company_employees
-       WHERE company_id = ?
-       ORDER BY name ASC`,
-      [companyId]
-    );
+    let rows;
+    if (search) {
+      // Autocomplete path — filter by name OR department, active only
+      const q = `%${search}%`;
+      [rows] = await db.execute(
+        `SELECT id, name, email, department, is_active, created_at
+         FROM company_employees
+         WHERE company_id = ?
+           AND is_active = 1
+           AND (name LIKE ? OR department LIKE ?)
+         ORDER BY name ASC
+         LIMIT ?`,
+        [companyId, q, q, limit]
+      );
+    } else {
+      // Full list path — returns all employees (for employee management page)
+      [rows] = await db.execute(
+        `SELECT id, name, email, department, is_active, created_at
+         FROM company_employees
+         WHERE company_id = ?
+         ORDER BY name ASC`,
+        [companyId]
+      );
+    }
 
     return res.json({ success: true, employees: rows });
   } catch (err) {
