@@ -40,20 +40,42 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
     setFetching(true);
     try {
       const token = localStorage.getItem("token");
-      const res = await fetch(
-        `${API}/api/employees?search=${encodeURIComponent(q)}&limit=10`,
-        { headers: { Authorization: `Bearer ${token}` }, credentials: "include" }
-      );
-      if (!res.ok) { setResults([]); setOpen(true); return; }
+      if (!token) {
+        console.warn("[AUTOCOMPLETE] No auth token in localStorage");
+        setResults([]); setOpen(true); return;
+      }
+
+      const url = `${API}/api/employees?search=${encodeURIComponent(q)}&limit=10`;
+      console.log("[AUTOCOMPLETE] Fetching:", url);
+
+      const res = await fetch(url, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        credentials: "omit",   // omit — we use Bearer header, not cookies
+      });
+
+      console.log("[AUTOCOMPLETE] Status:", res.status);
+
+      if (!res.ok) {
+        console.warn("[AUTOCOMPLETE] Non-OK response:", res.status);
+        setResults([]); setOpen(true); return;
+      }
+
       const data = await res.json();
-      const list = Array.isArray(data)               ? data
-        : Array.isArray(data?.employees)             ? data.employees
-        : Array.isArray(data?.data)                  ? data.data
-        : Array.isArray(data?.items)                 ? data.items
+      console.log("[AUTOCOMPLETE] Response:", data);
+
+      const list = Array.isArray(data)           ? data
+        : Array.isArray(data?.employees)         ? data.employees
+        : Array.isArray(data?.data)              ? data.data
+        : Array.isArray(data?.items)             ? data.items
         : [];
-      setResults(list.filter((e) => e.is_active !== false));
+
+      setResults(list);   // is_active filter already applied on backend
       setOpen(true);
-    } catch {
+    } catch (err) {
+      console.error("[AUTOCOMPLETE] Fetch error:", err);
       setResults([]); setOpen(true);
     } finally {
       setFetching(false);
