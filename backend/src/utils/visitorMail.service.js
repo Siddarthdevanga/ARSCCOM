@@ -13,7 +13,9 @@ const formatIST = (value) => {
       // "2026-03-09T07:43:00+05:30" — already tagged, parse as-is
       // Any other ISO string — parse as-is (already has offset or Z)
       if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)) {
-        date = new Date(raw.replace(" ", "T") + "+05:30");
+        // MySQL server is UTC — treat bare datetime string as UTC,
+        // toLocaleString with Asia/Kolkata will convert to IST for display
+        date = new Date(raw.replace(" ", "T") + "Z");
       } else {
         date = new Date(raw);
       }
