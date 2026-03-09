@@ -44,6 +44,7 @@ const fmtTime = (dt) => {
   if (!dt) return "—";
   return new Date(dt).toLocaleTimeString("en-IN", {
     hour: "2-digit", minute: "2-digit", hour12: true,
+    timeZone: "Asia/Kolkata",
   });
 };
 
@@ -52,6 +53,7 @@ const fmtDate = (dt) => {
   if (!dt) return "—";
   return new Date(dt).toLocaleDateString("en-IN", {
     month: "short", day: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 };
 
