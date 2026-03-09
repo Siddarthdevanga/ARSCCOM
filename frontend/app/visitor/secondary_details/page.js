@@ -8,26 +8,31 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 /* ─────────────────────────────────────────────────────────────────
    EMPLOYEE AUTOCOMPLETE — ADMIN FLOW
-
-   KEY FIX: Always render inside a plain formGroup div, NEVER
-   directly inside a gridRow. CSS Grid items use the grid container
-   as the offsetParent, causing position:absolute children to
-   measure from the wrong origin on mobile Safari.
+   Mirrors public page: debounce 300ms, clear button, keyboard
+   close, department badge, linked state, empty state.
+   Backend: GET /api/employees?search=<q>&limit=10  (auth required)
+   Response shape normalised: { employees: [] } | [] | { data: [] }
 ───────────────────────────────────────────────────────────────── */
-const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect }) => {
+const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled }) => {
   const [results,  setResults]  = useState([]);
   const [open,     setOpen]     = useState(false);
   const [fetching, setFetching] = useState(false);
 
   const debounceRef  = useRef(null);
-  const containerRef = useRef(null);
+  const wrapperRef   = useRef(null);
+  const inputRef     = useRef(null);
 
+  /* Close on outside click / touch */
   useEffect(() => {
     const handler = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) setOpen(false);
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
     };
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
   }, []);
 
   const search = useCallback(async (q) => {
@@ -37,16 +42,16 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect }) => {
       const token = localStorage.getItem("token");
       const res = await fetch(
         `${API}/api/employees?search=${encodeURIComponent(q)}&limit=10`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` }, credentials: "include" }
       );
       if (!res.ok) { setResults([]); setOpen(true); return; }
       const data = await res.json();
-      const raw = Array.isArray(data) ? data
-        : Array.isArray(data?.employees) ? data.employees
-        : Array.isArray(data?.data)      ? data.data
-        : Array.isArray(data?.items)     ? data.items
+      const list = Array.isArray(data)               ? data
+        : Array.isArray(data?.employees)             ? data.employees
+        : Array.isArray(data?.data)                  ? data.data
+        : Array.isArray(data?.items)                 ? data.items
         : [];
-      setResults(raw.filter((e) => e.is_active !== false));
+      setResults(list.filter((e) => e.is_active !== false));
       setOpen(true);
     } catch {
       setResults([]); setOpen(true);
@@ -59,54 +64,113 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect }) => {
     const val = e.target.value;
     onChange(val);
     if (employeeId) onSelect({ name: val, id: null });
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => search(val), 280);
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => search(val), 300);
   };
 
   const handleSelect = (emp) => {
     onSelect({ name: emp.name, id: emp.id });
-    setOpen(false); setResults([]);
+    setOpen(false);
+    setResults([]);
+    inputRef.current?.blur();
+  };
+
+  const handleFocus = () => {
+    if (value.trim() && results.length > 0) setOpen(true);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") { setOpen(false); inputRef.current?.blur(); }
   };
 
   const initials = (name) => {
     if (!name) return "?";
-    const p = name.trim().split(" ");
-    return (p.length >= 2 ? p[0][0] + p[1][0] : p[0][0]).toUpperCase();
+    const parts = name.trim().split(/\s+/);
+    return (parts.length >= 2
+      ? parts[0][0] + parts[1][0]
+      : parts[0].slice(0, 2)
+    ).toUpperCase();
   };
 
-  const showDropdown = open && (results.length > 0 || (!fetching && value.trim()));
+  const showDropdown = open && (results.length > 0 || (!fetching && value.trim().length > 0));
 
   return (
-    <div ref={containerRef} className={styles.acWrapper}>
-      <input
-        className={`${styles.input} ${employeeId ? styles.acInputLinked : ""}`}
-        type="text"
-        value={value}
-        onChange={handleChange}
-        onFocus={() => { if (value.trim() && results.length > 0) setOpen(true); }}
-        placeholder="Host name"
-        autoComplete="off"
-      />
+    <div
+      ref={wrapperRef}
+      className={`${styles.acWrapper} ${showDropdown ? styles.acWrapperOpen : ""}`}
+    >
+      {/* Input row */}
+      <div className={styles.acInputRow}>
+        <input
+          ref={inputRef}
+          className={`${styles.input} ${employeeId ? styles.acInputLinked : ""}`}
+          type="text"
+          value={value}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onKeyDown={handleKeyDown}
+          placeholder="Search by name or department..."
+          disabled={disabled}
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+        />
+        {fetching && (
+          <span className={styles.acSpinner} aria-hidden="true" />
+        )}
+        {employeeId && !fetching && (
+          <span className={styles.acLinkedTick}>✓</span>
+        )}
+        {!employeeId && !fetching && value.trim() && (
+          <button
+            type="button"
+            className={styles.acClearBtn}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              onChange("");
+              onSelect({ name: "", id: null });
+              setResults([]);
+              setOpen(false);
+              inputRef.current?.focus();
+            }}
+            aria-label="Clear"
+          >✕</button>
+        )}
+      </div>
 
-      {fetching && <span className={styles.acSpinner} aria-hidden="true" />}
-      {employeeId && !fetching && <span className={styles.acLinkedTick} aria-label="Linked">✓</span>}
-
+      {/* Dropdown */}
       {showDropdown && (
-        <div className={styles.acDropdown} role="listbox">
-          {results.length > 0 ? results.map((emp) => (
-            <div key={emp.id} className={styles.acItem}
-              onMouseDown={() => handleSelect(emp)}
-              role="option" aria-selected={employeeId === emp.id} tabIndex={-1}>
-              <div className={styles.acAvatar} aria-hidden="true">{initials(emp.name)}</div>
-              <div className={styles.acInfo}>
-                <div className={styles.acName}>{emp.name}</div>
-                {emp.department && <div className={styles.acDeptBadge}>{emp.department}</div>}
-              </div>
-              {employeeId === emp.id && <span className={styles.acTick}>✓</span>}
-            </div>
-          )) : (
-            <div className={styles.acEmpty} role="status">
-              No employees matched — your entry will still be saved
+        <div className={styles.acDropdown} role="listbox" aria-label="Employee suggestions">
+          {results.length > 0 ? (
+            results.map((emp) => (
+              <button
+                key={emp.id}
+                type="button"
+                className={`${styles.acItem} ${employeeId === emp.id ? styles.acItemSelected : ""}`}
+                onMouseDown={(e) => { e.preventDefault(); handleSelect(emp); }}
+                onTouchEnd={(e)  => { e.preventDefault(); handleSelect(emp); }}
+                role="option"
+                aria-selected={employeeId === emp.id}
+              >
+                <span className={styles.acAvatar} aria-hidden="true">
+                  {initials(emp.name)}
+                </span>
+                <span className={styles.acInfo}>
+                  <span className={styles.acName}>{emp.name}</span>
+                  {emp.department && (
+                    <span className={styles.acDeptBadge}>{emp.department}</span>
+                  )}
+                </span>
+                {employeeId === emp.id && (
+                  <span className={styles.acTick} aria-label="Selected">✓</span>
+                )}
+              </button>
+            ))
+          ) : (
+            <div className={styles.acEmpty}>
+              <span className={styles.acEmptyIcon}>🔍</span>
+              <span>No employees found for &quot;{value}&quot;</span>
+              <span className={styles.acEmptyHint}>Your text will still be saved</span>
             </div>
           )}
         </div>
@@ -123,6 +187,7 @@ export default function SecondaryDetails() {
 
   const [company,   setCompany]   = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error,     setError]     = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
 
   const [form, setForm] = useState({
@@ -168,6 +233,13 @@ export default function SecondaryDetails() {
   const goBack = () => router.push("/visitor/primary_details");
 
   const goNext = () => {
+    if (!form.personToMeet.trim()) {
+      setError("Person to Meet is required");
+      // Scroll to the field
+      document.querySelector("[data-meet-field]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    setError("");
     localStorage.setItem("visitor_secondary", JSON.stringify({ ...form, _employeeId: selectedEmployeeId }));
     router.push("/visitor/identity");
   };
@@ -209,6 +281,12 @@ export default function SecondaryDetails() {
 
         <main className={styles.mainContent}>
           <div className={styles.formCard}>
+
+            {error && (
+              <div className={styles.errorBanner} role="alert">
+                {error}
+              </div>
+            )}
 
             {/* Organisation */}
             <div className={styles.sectionHeader}>
@@ -278,17 +356,27 @@ export default function SecondaryDetails() {
               The position:absolute dropdown only works correctly relative
               to a plain block element — grid items misplace it on mobile.
             */}
-            <div className={styles.fullRow}>
-              <label className={styles.label}>Person to Meet</label>
+            <div className={styles.fullRow} data-meet-field>
+              <label className={styles.label}>
+                Person to Meet <span style={{ color: "#e53935" }}>*</span>
+              </label>
               <EmployeeAutocomplete
                 value={form.personToMeet}
                 employeeId={selectedEmployeeId}
-                onChange={(val) => updateField("personToMeet", val)}
+                onChange={(val) => { updateField("personToMeet", val); if (val.trim()) setError(""); }}
                 onSelect={({ name, id }) => {
                   updateField("personToMeet", name);
                   setSelectedEmployeeId(id);
+                  if (name.trim()) setError("");
                 }}
+                disabled={false}
               />
+              {!form.personToMeet.trim() && error && (
+                <p className={styles.fieldError}>Person to Meet is required</p>
+              )}
+              {selectedEmployeeId && (
+                <p className={styles.employeeLinkedHint}>✓ Linked to employee record</p>
+              )}
             </div>
 
             <div className={styles.fullRow} style={{ marginTop:"0.75rem" }}>
