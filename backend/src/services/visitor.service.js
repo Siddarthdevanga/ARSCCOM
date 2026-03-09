@@ -272,19 +272,27 @@ export const saveVisitor = async (companyId, data, file) => {
       [companyId]
     );
 
-    // Display formatter for emails — reads from the stored datetime directly
+    // Display formatter for emails.
+    // MySQL returns storedCheckIn as "YYYY-MM-DD HH:MM:SS" with no timezone.
+    // Appending +05:30 tells JS to parse it as IST, then toLocaleString
+    // with timeZone:"Asia/Kolkata" formats it correctly regardless of
+    // where the Node.js server is running.
     const formatForDisplay = (mysqlDatetime) => {
       if (!mysqlDatetime) return formatISTForDisplay(checkInIST);
-      const d = new Date(mysqlDatetime);
-      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-      const day    = d.getDate();
-      const month  = months[d.getMonth()];
-      const year   = d.getFullYear();
-      let hours    = d.getHours();
-      const mins   = String(d.getMinutes()).padStart(2, "0");
-      const ampm   = hours >= 12 ? "PM" : "AM";
-      hours        = hours % 12 || 12;
-      return `${day} ${month} ${year}, ${hours}:${mins} ${ampm}`;
+      const raw = String(mysqlDatetime).trim();
+      // Normalise: "2026-03-09 07:43:00" → "2026-03-09T07:43:00+05:30"
+      const iso = raw.includes("T") ? raw : raw.replace(" ", "T") + "+05:30";
+      const d   = new Date(iso);
+      if (isNaN(d.getTime())) return formatISTForDisplay(checkInIST);
+      return d.toLocaleString("en-IN", {
+        timeZone:  "Asia/Kolkata",
+        day:       "2-digit",
+        month:     "short",
+        year:      "numeric",
+        hour:      "2-digit",
+        minute:    "2-digit",
+        hour12:    true,
+      });
     };
 
     const checkInDisplay = formatForDisplay(storedCheckIn);
