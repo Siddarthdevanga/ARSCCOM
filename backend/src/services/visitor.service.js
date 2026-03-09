@@ -273,15 +273,15 @@ export const saveVisitor = async (companyId, data, file) => {
     );
 
     // Display formatter for emails.
-    // MySQL returns storedCheckIn as "YYYY-MM-DD HH:MM:SS" with no timezone.
-    // Appending +05:30 tells JS to parse it as IST, then toLocaleString
-    // with timeZone:"Asia/Kolkata" formats it correctly regardless of
-    // where the Node.js server is running.
+    // MySQL server is UTC — storedCheckIn is "YYYY-MM-DD HH:MM:SS" in UTC.
+    // Appending "Z" tells JS to parse it as UTC, then toLocaleString with
+    // timeZone:"Asia/Kolkata" converts it to IST for display.
     const formatForDisplay = (mysqlDatetime) => {
       if (!mysqlDatetime) return formatISTForDisplay(checkInIST);
       const raw = String(mysqlDatetime).trim();
-      // Normalise: "2026-03-09 07:43:00" → "2026-03-09T07:43:00+05:30"
-      const iso = raw.includes("T") ? raw : raw.replace(" ", "T") + "+05:30";
+      // "2026-03-09 09:37:00" (UTC) → "2026-03-09T09:37:00Z" → parsed as UTC
+      // toLocaleString with Asia/Kolkata then shows 3:07 PM IST correctly
+      const iso = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
       const d   = new Date(iso);
       if (isNaN(d.getTime())) return formatISTForDisplay(checkInIST);
       return d.toLocaleString("en-IN", {
