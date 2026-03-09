@@ -1,386 +1,302 @@
-import { db } from "../config/db.js";
-import { uploadToS3 } from "./s3.service.js";
-import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
-import { sendEmployeeNotificationMail } from "../utils/visitorMail.service.js";
-import crypto from "crypto";
+import { sendEmail } from "../utils/mailer.js";
+import { generateVisitorPassImage } from "./visitor-pass-image.js";
 
-/* ======================================================
-   IST HELPERS
-
-   IMPORTANT — WHY THESE ARE KEPT BUT check_in USES NOW():
-   ─────────────────────────────────────────────────────────
-   MySQL server timezone is IST (confirmed: checkout was appearing
-   5.5 hours ahead when CONVERT_TZ(NOW(), '+00:00', '+05:30') was
-   used — it was double-shifting an already-IST NOW()).
-
-   For check_in and check_out we now use MySQL NOW() directly,
-   since it already returns the correct IST time on this server.
-
-   These helpers are kept for:
-   - Display formatting in email (formatISTForDisplay)
-   - Visitor code date key (formatISTDateKey) — generates YYYYMMDD
-     from the current IST date for the visitor_code suffix
-   - token_expires_at calculation (tokenExpiresMySQL)
-====================================================== */
-const getISTDate = () => {
-  const now = new Date();
-  const istOffset = 5.5 * 60 * 60 * 1000;
-  return new Date(now.getTime() + istOffset);
-};
-
-const formatISTForMySQL = (date) => {
-  const year    = date.getUTCFullYear();
-  const month   = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day     = String(date.getUTCDate()).padStart(2, "0");
-  const hours   = String(date.getUTCHours()).padStart(2, "0");
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const seconds = String(date.getUTCSeconds()).padStart(2, "0");
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-};
-
-const formatISTDateKey = (date) => {
-  const year  = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day   = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}${month}${day}`;
-};
-
-const formatISTForDisplay = (date) => {
-  const months  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const day     = date.getUTCDate();
-  const month   = months[date.getUTCMonth()];
-  const year    = date.getUTCFullYear();
-  let hours     = date.getUTCHours();
-  const minutes = String(date.getUTCMinutes()).padStart(2, "0");
-  const ampm    = hours >= 12 ? "PM" : "AM";
-  hours         = hours % 12 || 12;
-  return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
-};
-
-/* ======================================================
-   SANITIZE EMPLOYEE ID
-====================================================== */
-const sanitizeEmployeeId = (raw) => {
-  if (raw === null || raw === undefined) return null;
-  const str = String(raw).trim();
-  if (!str || str === "null" || str === "undefined" || str === "0") return null;
-  const n = parseInt(str, 10);
-  return isNaN(n) || n <= 0 ? null : n;
-};
-
-/* ======================================================
-   SAVE VISITOR
-====================================================== */
-export const saveVisitor = async (companyId, data, file) => {
-  if (!companyId) throw new Error("Company ID is required");
-  if (!file)      throw new Error("Visitor photo is required");
-
-  const {
-    name, phone, email, fromCompany, department, designation,
-    address, city, state, postalCode, country,
-    personToMeet, purpose, belongings, idType, idNumber,
-  } = data;
-
-  if (!name?.trim() || !phone?.trim())
-    throw new Error("Visitor name and phone are required");
-
-  const employeeId = sanitizeEmployeeId(data.employeeId);
-
-  // Used for email display, visitor code date key, and token expiry only.
-  // check_in in DB is written as NOW() by MySQL (already IST on this server).
-  const checkInIST   = getISTDate();
-  const checkInMySQL = formatISTForMySQL(checkInIST); // used for token expiry + display only
-
-  console.log("[VISITOR] IST (for display):", formatISTForDisplay(checkInIST));
-  console.log("[VISITOR] employeeId raw:", data.employeeId, "→ sanitized:", employeeId);
-
-  const conn = await db.getConnection();
-
+const formatIST = (value) => {
+  if (!value) return "-";
   try {
-    await conn.beginTransaction();
-
-    /* ── Lock company ── */
-    const [[company]] = await conn.execute(
-      `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
-       FROM companies WHERE id = ? FOR UPDATE`,
-      [companyId]
-    );
-
-    if (!company) throw new Error("Company not found");
-
-    const PLAN   = (company.plan                || "TRIAL").toUpperCase();
-    const STATUS = (company.subscription_status || "PENDING").toUpperCase();
-
-    if (STATUS === "EXPIRED") {
-      const error = new Error("Your subscription has expired. Please renew to continue.");
-      error.code = "SUBSCRIPTION_EXPIRED";
-      error.redirectTo = "/auth/subscription";
-      throw error;
-    }
-
-    if (!["ACTIVE", "TRIAL"].includes(STATUS)) {
-      const error = new Error("Subscription inactive. Please activate your subscription.");
-      error.code = "SUBSCRIPTION_INACTIVE";
-      error.redirectTo = "/auth/subscription";
-      throw error;
-    }
-
-    if (PLAN === "TRIAL") {
-      if (!company.trial_ends_at) {
-        const error = new Error("Trial not initialized. Please contact support.");
-        error.code = "TRIAL_NOT_INITIALIZED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-      const trialEndsDate = new Date(company.trial_ends_at);
-      if (trialEndsDate < new Date()) {
-        const error = new Error("Your trial has expired. Please upgrade to continue.");
-        error.code = "TRIAL_EXPIRED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-      const [[{ total }]] = await conn.execute(
-        `SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? FOR UPDATE`,
-        [companyId]
-      );
-      if (total >= 100) {
-        const error = new Error("Trial limit reached (100 visitors). Please upgrade.");
-        error.code = "TRIAL_LIMIT_REACHED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
+    let date;
+    if (value instanceof Date) {
+      date = value;
     } else {
-      if (!company.subscription_ends_at) {
-        const error = new Error("Subscription not properly initialized. Please contact support.");
-        error.code = "SUBSCRIPTION_NOT_INITIALIZED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-      const subEndsDate = new Date(company.subscription_ends_at);
-      if (subEndsDate < new Date()) {
-        const error = new Error(`Your ${PLAN} subscription has expired. Please renew.`);
-        error.code = "SUBSCRIPTION_EXPIRED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-    }
-
-    /* ── Resolve employee ── */
-    let resolvedEmployeeId    = null;
-    let resolvedEmployeeEmail = null;
-    let resolvedEmployeeName  = personToMeet || null;
-
-    if (employeeId) {
-      const [[emp]] = await conn.execute(
-        `SELECT id, name, email FROM company_employees
-         WHERE id = ? AND company_id = ? AND is_active = 1`,
-        [employeeId, companyId]
-      );
-      if (emp) {
-        resolvedEmployeeId    = emp.id;
-        resolvedEmployeeEmail = emp.email;
-        resolvedEmployeeName  = emp.name;
-        console.log(`[VISITOR] Employee resolved: ${emp.name} <${emp.email}>`);
+      const raw = String(value).trim();
+      // "2026-03-09 07:43:00" — no timezone, stored as IST → append +05:30
+      // "2026-03-09T07:43:00+05:30" — already tagged, parse as-is
+      // Any other ISO string — parse as-is (already has offset or Z)
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(raw)) {
+        date = new Date(raw.replace(" ", "T") + "+05:30");
       } else {
-        console.warn(`[VISITOR] Employee id=${employeeId} not found or inactive for company ${companyId}`);
-      }
-    } else {
-      console.log(`[VISITOR] No employeeId — person_to_meet: "${resolvedEmployeeName || "none"}". No notification will be sent.`);
-    }
-
-    /* ── Generate response token (expires 48h from now) ── */
-    const responseToken     = crypto.randomBytes(32).toString("hex");
-    const tokenExpiresAt    = new Date(checkInIST.getTime() + 48 * 60 * 60 * 1000);
-    const tokenExpiresMySQL = formatISTForMySQL(tokenExpiresAt);
-
-    /* ── Insert visitor
-       FIX: check_in = NOW() — MySQL server is already in IST.
-       Previously used a manually computed IST string from JS which
-       could drift from server time. NOW() is always authoritative.
-    ── */
-    const [insertResult] = await conn.execute(
-      `INSERT INTO visitors (
-        company_id, name, phone, email, from_company, department, designation,
-        address, city, state, postal_code, country,
-        person_to_meet, employee_id, purpose, belongings,
-        id_type, id_number,
-        status, visit_status, check_in, pass_mail_sent,
-        response_token, response_token_expires_at
-      )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', 'pending', NOW(), 0, ?, ?)`,
-      [
-        companyId,
-        name.trim(),
-        phone.trim(),
-        email        || null,
-        fromCompany  || null,
-        department   || null,
-        designation  || null,
-        address      || null,
-        city         || null,
-        state        || null,
-        postalCode   || null,
-        country      || null,
-        resolvedEmployeeName,
-        resolvedEmployeeId,
-        purpose      || null,
-        Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
-        idType       || null,
-        idNumber     || null,
-        responseToken,
-        tokenExpiresMySQL,
-      ]
-    );
-
-    const visitorId = insertResult.insertId;
-
-    /* ── Visitor code — date key from IST ── */
-    const dateKey = formatISTDateKey(checkInIST);
-    const [[{ count }]] = await conn.execute(
-      `SELECT COUNT(*) AS count FROM visitors
-       WHERE company_id = ? AND DATE(check_in) = CURDATE()`,
-      [companyId]
-    );
-    const visitorCode = `CMP${companyId}-${dateKey}-${String(count).padStart(5, "0")}`;
-
-    console.log("[VISITOR] Generated code:", visitorCode);
-
-    /* ── Upload photo ── */
-    const photoUrl = await uploadToS3(
-      file,
-      `companies/${companyId}/visitors/${visitorCode}.jpg`
-    );
-
-    await conn.execute(
-      `UPDATE visitors SET visitor_code = ?, photo_url = ? WHERE id = ?`,
-      [visitorCode, photoUrl, visitorId]
-    );
-
-    /* ── Fetch actual check_in stored by MySQL for emails ── */
-    const [[inserted]] = await conn.execute(
-      `SELECT check_in FROM visitors WHERE id = ?`,
-      [visitorId]
-    );
-    const storedCheckIn = inserted?.check_in;
-
-    await conn.commit();
-    console.log("[VISITOR] Saved successfully, id:", visitorId);
-
-    /* ── Fetch company info for emails ── */
-    const [[companyInfo]] = await db.execute(
-      `SELECT name, logo_url, whatsapp_url FROM companies WHERE id = ?`,
-      [companyId]
-    );
-
-    // Display formatter for emails.
-    // MySQL returns storedCheckIn as "YYYY-MM-DD HH:MM:SS" with no timezone.
-    // Appending +05:30 tells JS to parse it as IST, then toLocaleString
-    // with timeZone:"Asia/Kolkata" formats it correctly regardless of
-    // where the Node.js server is running.
-    const formatForDisplay = (mysqlDatetime) => {
-      if (!mysqlDatetime) return formatISTForDisplay(checkInIST);
-      const raw = String(mysqlDatetime).trim();
-      // Normalise: "2026-03-09 07:43:00" → "2026-03-09T07:43:00+05:30"
-      const iso = raw.includes("T") ? raw : raw.replace(" ", "T") + "+05:30";
-      const d   = new Date(iso);
-      if (isNaN(d.getTime())) return formatISTForDisplay(checkInIST);
-      return d.toLocaleString("en-IN", {
-        timeZone:  "Asia/Kolkata",
-        day:       "2-digit",
-        month:     "short",
-        year:      "numeric",
-        hour:      "2-digit",
-        minute:    "2-digit",
-        hour12:    true,
-      });
-    };
-
-    const checkInDisplay = formatForDisplay(storedCheckIn);
-
-    /* ── Send visitor pass email (non-blocking) ── */
-    if (email) {
-      try {
-        console.log("[VISITOR] Sending pass email to:", email);
-        await sendVisitorPassMail({
-          company: {
-            id:           companyId,
-            name:         companyInfo.name,
-            logo:         companyInfo.logo_url,
-            whatsapp_url: companyInfo.whatsapp_url || null,
-          },
-          visitor: {
-            visitorCode,
-            name,
-            phone,
-            email,
-            photoUrl,
-            checkIn:        storedCheckIn || checkInMySQL,
-            checkInDisplay,
-            personToMeet:   resolvedEmployeeName || "Reception",
-            purpose:        purpose || "Visit",
-          },
-        });
-        await db.execute(
-          `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
-          [visitorId]
-        );
-        console.log("[VISITOR] Pass email sent");
-      } catch (err) {
-        console.error("[VISITOR] PASS MAIL ERROR:", err.message);
+        date = new Date(raw);
       }
     }
-
-    /* ── Send employee notification email (non-blocking) ── */
-    if (resolvedEmployeeEmail) {
-      try {
-        console.log("[VISITOR] Sending employee notification to:", resolvedEmployeeEmail);
-        await sendEmployeeNotificationMail({
-          company: {
-            id:   companyId,
-            name: companyInfo.name,
-            logo: companyInfo.logo_url,
-          },
-          employee: {
-            name:  resolvedEmployeeName,
-            email: resolvedEmployeeEmail,
-          },
-          visitor: {
-            visitorCode,
-            name,
-            phone,
-            email:       email || null,
-            fromCompany: fromCompany || null,
-            purpose:     purpose || "Visit",
-            checkIn:        storedCheckIn || checkInMySQL,
-            checkInDisplay,
-            photoUrl,
-          },
-          responseToken,
-        });
-        console.log("[VISITOR] Employee notification sent");
-      } catch (err) {
-        console.error("[VISITOR] EMPLOYEE NOTIFICATION MAIL ERROR:", err.message);
-      }
-    }
-
-    return {
-      id:             visitorId,
-      visitorCode,
-      name,
-      phone,
-      email,
-      photoUrl,
-      status:         "IN",
-      visitStatus:    "pending",
-      checkIn:        storedCheckIn || checkInMySQL,
-      checkInDisplay,
-    };
-
+    if (isNaN(date.getTime())) return "-";
+    return date.toLocaleString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      day: "2-digit", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit", hour12: true,
+    });
   } catch (err) {
-    await conn.rollback();
-    console.error("[VISITOR] SAVE ERROR:", err.message);
-    throw err;
-  } finally {
-    conn.release();
+    console.error("[formatIST] Error:", err.message);
+    return "-";
   }
+};
+
+export const emailFooter = (company = {}) => {
+  const companyName = company?.name || "Promeet";
+  const companyLogo = company?.logo_url || company?.logo || null;
+  return `
+<br/>
+<p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;margin:10px 0 0 0;">
+  Regards,<br/><b>${companyName}</b>
+</p>
+${companyLogo ? `<img src="${companyLogo}" alt="${companyName} Logo" style="margin-top:10px;height:60px;border-radius:8px;border:1px solid #eee;background:#fff;padding:6px;display:block;"/>` : ""}
+<hr style="border:0;border-top:1px solid #ddd;margin:20px 0 10px 0;" />
+<p style="font-size:13px;color:#666;margin:0;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">
+  This email was automatically sent from the <b>PROMEET Visitor Management Platform</b>.
+  If you did not expect this, please contact ${companyName} administrator.
+</p>`;
+};
+
+export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
+  if (!visitor.email) {
+    console.log("[VISITOR_MAIL] No email provided, skipping");
+    return;
+  }
+
+  const companyName  = company.name || "Promeet";
+  const visitorName  = visitor.name || "Visitor";
+  const visitorCode  = visitor.visitorCode || "-";
+  const phone        = visitor.phone || "-";
+  const personToMeet = visitor.personToMeet || "Reception";
+  const purpose      = visitor.purpose || "Visit";
+  const checkInTime  = visitor.checkInDisplay || formatIST(visitor.checkIn);
+
+  console.log(`[VISITOR_MAIL] Preparing email for ${visitor.email}`);
+
+  let imageBuffer = null;
+  try {
+    imageBuffer = await generateVisitorPassImage({ company, visitor });
+  } catch (err) {
+    console.error("[VISITOR_MAIL] Error generating pass image:", err.message);
+  }
+
+  await sendEmail({
+    to: visitor.email,
+    subject: `Welcome to ${companyName} — Your Digital Visitor Pass`,
+    html: `
+      <!DOCTYPE html><html><head>
+      <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;}
+        .container{max-width:600px;margin:0 auto;}
+        .header{background:linear-gradient(135deg,#6c2bd9,#8e44ad);color:white;padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;}
+        .content{padding:30px 20px;background:white;}
+        .success-badge{background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;border-radius:4px;}
+        .warning-badge{background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:20px 0;border-radius:4px;}
+        .info-badge{background:#f8f9ff;border-left:4px solid #6c2bd9;padding:16px;margin:20px 0;border-radius:4px;}
+        .whatsapp-badge{background:#e8f5e9;border-left:4px solid #25D366;padding:20px;margin:20px 0;border-radius:4px;text-align:center;}
+        .details-table{width:100%;border-collapse:collapse;margin:20px 0;}
+        .details-table td{padding:12px;border:1px solid #e0e0e0;}
+        .details-table tr:nth-child(odd){background:#f8f9ff;}
+        .label{font-weight:600;color:#6c2bd9;width:35%;}
+        .whatsapp-button{display:inline-block;background:#25D366;color:white;padding:12px 30px;text-decoration:none;border-radius:6px;font-weight:600;font-size:15px;}
+        h2{color:#6c2bd9;margin-top:30px;margin-bottom:10px;font-size:20px;}
+        ul{font-size:14px;line-height:1.8;color:#333;}
+        ul li{margin-bottom:8px;}
+      </style>
+      </head><body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin:0;font-size:28px;">Welcome to ${companyName}!</h1>
+          <p style="margin:10px 0 0;font-size:16px;opacity:0.95;">Your Digital Visitor Pass</p>
+        </div>
+        <div class="content">
+          <p>Hello <b>${visitorName}</b>,</p>
+          <p>Welcome to <b>${companyName}</b>! Your visitor registration has been successfully processed.</p>
+          <div class="success-badge">
+            <p style="margin:0;color:#2e7d32;font-weight:600;">&#10003; Registration Confirmed — Pass Issued</p>
+          </div>
+          <h2>Visit Details</h2>
+          <table class="details-table">
+            <tr><td class="label">Visitor ID</td><td><b style="color:#222;font-size:15px;">${visitorCode}</b></td></tr>
+            <tr><td class="label">Visitor Name</td><td>${visitorName}</td></tr>
+            <tr><td class="label">Phone</td><td>${phone}</td></tr>
+            <tr><td class="label">Company</td><td>${companyName}</td></tr>
+            <tr><td class="label">Check-in Time</td><td>${checkInTime} <span style="color:#666;font-size:12px;">(IST)</span></td></tr>
+            <tr><td class="label">Person to Meet</td><td>${personToMeet}</td></tr>
+            <tr><td class="label">Purpose</td><td>${purpose}</td></tr>
+          </table>
+          <h2>Your Digital Visitor Pass</h2>
+          <p>Your visitor pass is attached to this email. Please <b>show this pass at the reception</b> when requested.</p>
+          <div class="warning-badge">
+            <p style="margin:0;color:#e65100;font-weight:600;">Keep this email handy on your mobile device</p>
+          </div>
+          <h2>Important Guidelines</h2>
+          <ul>
+            <li><b>Display your visitor pass</b> when entering or when requested by security.</li>
+            <li><b>Check-out is mandatory</b> — Please inform reception when leaving.</li>
+            <li><b>Follow company policies</b> — Adhere to all security protocols.</li>
+          </ul>
+          ${company.whatsapp_url ? `
+          <h2>Stay Connected</h2>
+          <div class="whatsapp-badge">
+            <p style="margin:0 0 15px 0;color:#2e7d32;font-weight:600;font-size:16px;">Join ${companyName} WhatsApp</p>
+            <a href="${company.whatsapp_url}" class="whatsapp-button" target="_blank">Join WhatsApp Group</a>
+            <p style="margin:15px 0 0 0;font-size:13px;color:#666;">Get instant updates and support during your visit</p>
+          </div>` : ""}
+          <div class="info-badge">
+            <p style="margin:0;color:#6c2bd9;font-weight:600;">Need help? Contact ${companyName} reception for assistance.</p>
+          </div>
+          <p style="margin-top:30px;">Thank you for visiting <b>${companyName}</b>.</p>
+          ${emailFooter(company)}
+        </div>
+      </div>
+      </body></html>
+    `,
+    attachments: imageBuffer
+      ? [{ filename: `${visitorCode}-visitor-pass.png`, content: imageBuffer, contentType: "image/png", cid: "visitor-pass-image" }]
+      : []
+  });
+
+  console.log(`[VISITOR_MAIL] Pass sent to ${visitor.email}`);
+};
+
+export const sendEmployeeNotificationMail = async ({
+  company = {},
+  employee = {},
+  visitor = {},
+  responseToken,
+}) => {
+  if (!employee.email) {
+    console.log("[EMP_MAIL] No employee email, skipping");
+    return;
+  }
+
+  if (!responseToken) {
+    console.log("[EMP_MAIL] No response token, skipping");
+    return;
+  }
+
+  // BACKEND_URL first — /api/visit-response is an Express route, not a Next.js page
+  const baseUrl =
+    process.env.BACKEND_URL ||
+    process.env.API_BASE_URL ||
+    process.env.FRONTEND_URL ||
+    "";
+
+  if (!baseUrl) {
+    console.error("[EMP_MAIL] WARNING: No BACKEND_URL set — accept/decline links will be broken");
+  }
+
+  const acceptUrl  = `${baseUrl}/api/visit-response/${responseToken}/accept`;
+  const declineUrl = `${baseUrl}/api/visit-response/${responseToken}/decline`;
+
+  const companyName  = company.name || "Promeet";
+  const employeeName = employee.name || "there";
+  const visitorName  = visitor.name || "A visitor";
+  const checkInTime  = visitor.checkInDisplay || formatIST(visitor.checkIn);
+
+  console.log(`[EMP_MAIL] Sending to ${employee.email}`);
+  console.log(`[EMP_MAIL] Accept  → ${acceptUrl}`);
+  console.log(`[EMP_MAIL] Decline → ${declineUrl}`);
+
+  await sendEmail({
+    to: employee.email,
+    subject: `Visitor Notification: ${visitorName} has arrived at reception — ${companyName}`,
+    html: `
+      <!DOCTYPE html><html><head>
+      <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+      <style>
+        body{font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;}
+        .container{max-width:600px;margin:0 auto;}
+        .header{background:linear-gradient(135deg,#6c2bd9,#8e44ad);color:white;padding:28px 20px;text-align:center;border-radius:8px 8px 0 0;}
+        .content{padding:30px 20px;background:white;}
+        .visitor-card{background:#f8f9ff;border:1px solid #e0d7ff;border-radius:8px;padding:20px;margin:20px 0;}
+        .details-table{width:100%;border-collapse:collapse;margin:0;}
+        .details-table td{padding:10px 12px;border-bottom:1px solid #e8e3ff;}
+        .details-table tr:last-child td{border-bottom:none;}
+        .label{font-weight:600;color:#6c2bd9;width:40%;font-size:14px;}
+        .value{color:#333;font-size:14px;}
+        .action-section{margin:28px 0;padding:24px 20px;background:#f8f9ff;border:1px solid #e0d7ff;border-radius:8px;text-align:center;}
+        .action-title{font-size:15px;font-weight:700;color:#2d2d2d;margin:0 0 4px 0;letter-spacing:0.2px;}
+        .action-sub{font-size:13px;color:#666;margin:0 0 22px 0;}
+        .btn{display:inline-block;padding:13px 34px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;letter-spacing:0.3px;vertical-align:middle;}
+        .btn-accept{background:#00c853;color:#ffffff;margin-right:10px;}
+        .btn-decline{background:#ffffff;color:#c62828;border:2px solid #c62828;}
+        .action-note{margin:20px 0 0 0;font-size:12px;color:#999;line-height:1.6;}
+        .notice{background:#fff8e1;border-left:4px solid #ffc107;padding:14px 16px;border-radius:4px;margin:20px 0;font-size:13px;color:#795548;line-height:1.6;}
+        .photo-wrap{text-align:center;margin:16px 0;}
+        .photo-wrap img{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #6c2bd9;}
+      </style>
+      </head><body>
+      <div class="container">
+
+        <div class="header">
+          ${company.logo ? `<img src="${company.logo}" alt="${companyName}" style="height:46px;border-radius:6px;margin-bottom:14px;display:block;margin-left:auto;margin-right:auto;background:#fff;padding:4px;"/>` : ""}
+          <h1 style="margin:0;font-size:22px;font-weight:700;letter-spacing:0.3px;">Visitor Arrival Notification</h1>
+          <p style="margin:8px 0 0;font-size:14px;opacity:0.85;font-weight:400;">${companyName}</p>
+        </div>
+
+        <div class="content">
+
+          <p style="font-size:15px;margin:0 0 8px 0;">Dear <b>${employeeName}</b>,</p>
+          <p style="font-size:14px;color:#444;margin:0 0 4px 0;">
+            A visitor has checked in at the reception desk and is waiting to meet you.
+            The details of the visit are provided below for your reference.
+          </p>
+
+          ${visitor.photoUrl ? `
+          <div class="photo-wrap">
+            <img src="${visitor.photoUrl}" alt="${visitorName}" />
+          </div>` : ""}
+
+          <div class="visitor-card">
+            <table class="details-table">
+              <tr>
+                <td class="label">Visitor Name</td>
+                <td class="value"><b>${visitorName}</b></td>
+              </tr>
+              <tr>
+                <td class="label">Contact Number</td>
+                <td class="value">${visitor.phone || "-"}</td>
+              </tr>
+              ${visitor.email ? `
+              <tr>
+                <td class="label">Email Address</td>
+                <td class="value">${visitor.email}</td>
+              </tr>` : ""}
+              ${visitor.fromCompany ? `
+              <tr>
+                <td class="label">Organisation</td>
+                <td class="value">${visitor.fromCompany}</td>
+              </tr>` : ""}
+              <tr>
+                <td class="label">Purpose of Visit</td>
+                <td class="value">${visitor.purpose || "Not specified"}</td>
+              </tr>
+              <tr>
+                <td class="label">Arrival Time</td>
+                <td class="value">${checkInTime} <span style="color:#999;font-size:12px;">(IST)</span></td>
+              </tr>
+              <tr>
+                <td class="label">Visitor Code</td>
+                <td class="value"><span style="font-family:monospace;background:#f0ebff;padding:2px 8px;border-radius:4px;font-size:13px;">${visitor.visitorCode || "-"}</span></td>
+              </tr>
+            </table>
+          </div>
+
+          <div class="action-section">
+            <p class="action-title">Action Required</p>
+            <p class="action-sub">Kindly confirm whether you would like to receive this visitor.</p>
+            <a href="${acceptUrl}" class="btn btn-accept">Accept Visit</a>
+            <a href="${declineUrl}" class="btn btn-decline">Decline Visit</a>
+            <p class="action-note">
+              No login is required. Selecting an option above will immediately update the visitor's status at reception.<br/>
+              If no response is received, the reception team may update the status directly from the dashboard.
+            </p>
+          </div>
+
+          <div class="notice">
+            These response links are valid for <b>48 hours</b> from the time of this notification.
+            After expiry, please coordinate with reception or use the admin dashboard to update the visitor status.
+          </div>
+
+          ${emailFooter(company)}
+        </div>
+
+      </div>
+      </body></html>
+    `,
+  });
+
+  console.log(`[EMP_MAIL] Notification sent to ${employee.email}`);
 };
