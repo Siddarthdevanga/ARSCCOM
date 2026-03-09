@@ -8,25 +8,28 @@ import { db } from "../config/db.js";
 export const listEmployees = async (req, res) => {
   try {
     const companyId = req.user?.companyId;
-    const search    = req.query.search?.trim() || "";
-    const limit     = Math.min(parseInt(req.query.limit) || 200, 200);
+    const search    = (req.query.search || "").trim();
+    // Force integer — MySQL prepared statements require a JS number for LIMIT,
+    // not a string. Using Number() instead of parseInt avoids driver coercion bugs.
+    const limit     = Math.min(Number(req.query.limit) || 10, 100);
 
     let rows;
     if (search) {
-      // Autocomplete path — filter by name OR department, active only
+      // Autocomplete — match name OR department, active employees only
       const q = `%${search}%`;
       [rows] = await db.execute(
-        `SELECT id, name, email, department, is_active, created_at
+        `SELECT id, name, email, department, is_active
          FROM company_employees
          WHERE company_id = ?
            AND is_active = 1
            AND (name LIKE ? OR department LIKE ?)
          ORDER BY name ASC
-         LIMIT ?`,
-        [companyId, q, q, limit]
+         LIMIT ${limit}`,   /* inline — avoids driver parameter-type issues with LIMIT */
+        [companyId, q, q]
       );
+      console.log(`[EMPLOYEES] search="${search}" companyId=${companyId} → ${rows.length} rows`);
     } else {
-      // Full list path — returns all employees (for employee management page)
+      // Full list — for the employee management page
       [rows] = await db.execute(
         `SELECT id, name, email, department, is_active, created_at
          FROM company_employees
@@ -38,7 +41,7 @@ export const listEmployees = async (req, res) => {
 
     return res.json({ success: true, employees: rows });
   } catch (err) {
-    console.error("LIST EMPLOYEES ERROR:", err);
+    console.error("[LIST EMPLOYEES ERROR]", err);
     return res.status(500).json({ success: false, message: "Failed to fetch employees" });
   }
 };
