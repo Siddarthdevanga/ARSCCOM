@@ -149,7 +149,23 @@ export default function AdminEmployeesPage() {
       try {
         const wb  = XLSX.read(evt.target.result, { type: "array" });
         const ws  = wb.Sheets[wb.SheetNames[0]];
-        const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        // Auto-detect the header row — scan first 5 rows for one that contains
+        // "name" or "email" (covers our template where row 3 is the header,
+        // AND plain files where row 1 is the header)
+        const DETECT_COLS = ["name", "email", "full_name", "employee"];
+        const cleanVal = (v) => v?.toString().toLowerCase()
+          .replace(/[*()\[\]#!?]/g, "").trim().replace(/\s+/g, "_");
+
+        let headerRowIdx = 0; // default: row 1 (index 0)
+        for (let r = 0; r < 5; r++) {
+          const probe = XLSX.utils.sheet_to_json(ws, { defval: "", range: r, header: 1 });
+          if (probe[0]?.some(cell => DETECT_COLS.some(c => cleanVal(cell)?.includes(c)))) {
+            headerRowIdx = r;
+            break;
+          }
+        }
+        const raw = XLSX.utils.sheet_to_json(ws, { defval: "", range: headerRowIdx });
 
         if (raw.length === 0) {
           setBulkErrors([{ row: "-", reason: "The sheet appears to be empty." }]);
