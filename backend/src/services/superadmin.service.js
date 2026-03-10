@@ -270,13 +270,24 @@ export const updateSubscriptionStatus = async (companyId, status) => {
 };
 
 /* ======================================================
-   EXTEND TRIAL
+   EXTEND / CLEAR TRIAL END DATE
+   trialEndsAt = "2025-12-31"  → sets the date + keeps status as 'trial'
+   trialEndsAt = null          → clears trial_ends_at (sets DB column to NULL)
 ====================================================== */
 export const extendTrial = async (companyId, trialEndsAt) => {
-  if (!trialEndsAt) throw new Error("trial_ends_at date is required");
+  if (trialEndsAt === null) {
+    // Clear the trial end date — leave subscription_status unchanged
+    await db.query(
+      `UPDATE companies
+       SET trial_ends_at = NULL, updated_at = NOW()
+       WHERE id = ?`,
+      [companyId]
+    );
+    return;
+  }
 
   const date = new Date(trialEndsAt);
-  if (isNaN(date.getTime())) throw new Error("Invalid date format");
+  if (isNaN(date.getTime())) throw new Error("Invalid date format. Use YYYY-MM-DD");
 
   await db.query(
     `UPDATE companies
