@@ -195,20 +195,36 @@ export const updateStatus = async (req, res) => {
 };
 
 /* ======================================================
-   EXTEND TRIAL
+   EXTEND / CLEAR TRIAL END DATE
    PATCH /api/superadmin/companies/:id/extend-trial
-   body: { trial_ends_at: "2025-12-31" }
+   body: { trial_ends_at: "2025-12-31" }  → set/extend the date
+   body: { trial_ends_at: null }           → remove the date
+   body: {}                                → remove the date (field omitted)
 ====================================================== */
 export const extendTrial = async (req, res) => {
   try {
-    const companyId         = parseInt(req.params.id);
-    const { trial_ends_at } = req.body;
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId))
+      return res.status(400).json({ success: false, message: "Invalid company ID" });
 
-    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
-    if (!trial_ends_at)   return res.status(400).json({ success: false, message: "trial_ends_at is required" });
+    // null / undefined / "" all mean "clear the trial end date"
+    const raw           = req.body?.trial_ends_at;
+    const trial_ends_at = (raw === null || raw === undefined || raw === "")
+      ? null
+      : raw.toString().trim();
+
+    if (trial_ends_at !== null) {
+      const parsed = new Date(trial_ends_at);
+      if (isNaN(parsed.getTime()))
+        return res.status(400).json({ success: false, message: "Invalid date format. Use YYYY-MM-DD" });
+    }
 
     await service.extendTrial(companyId, trial_ends_at);
-    return res.status(200).json({ success: true, message: `Trial extended to ${trial_ends_at}` });
+
+    return res.status(200).json({
+      success: true,
+      message: trial_ends_at === null ? "Trial end date removed" : `Trial extended to ${trial_ends_at}`,
+    });
   } catch (err) {
     console.error("SUPERADMIN EXTEND TRIAL ERROR:", err.message);
     return res.status(400).json({ success: false, message: err.message });
