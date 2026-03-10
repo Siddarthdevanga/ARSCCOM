@@ -80,7 +80,6 @@ export default function AdminEmployeesPage() {
     return (parts.length >= 2 ? parts[0][0] + parts[1][0] : parts[0][0]).toUpperCase();
   };
 
-  /* ── single employee modals ── */
   const openAdd = () => {
     setForm(EMPTY_FORM); setFormError(""); setEditTarget(null); setModal("add");
   };
@@ -135,7 +134,6 @@ export default function AdminEmployeesPage() {
     }
   };
 
-  /* ── bulk upload ── */
   const REQUIRED_COLS = ["name", "email"];
   const ALLOWED_COLS  = ["name", "email", "department", "is_active"];
 
@@ -149,94 +147,35 @@ export default function AdminEmployeesPage() {
       try {
         const wb  = XLSX.read(evt.target.result, { type: "array" });
         const ws  = wb.Sheets[wb.SheetNames[0]];
-
-        // Auto-detect the header row — scan first 5 rows for one that contains
-        // "name" or "email" (covers our template where row 3 is the header,
-        // AND plain files where row 1 is the header)
-        const DETECT_COLS = ["name", "email", "full_name", "employee"];
-        const cleanVal = (v) => v?.toString().toLowerCase()
-          .replace(/[*()\[\]#!?]/g, "").trim().replace(/\s+/g, "_");
-
-        let headerRowIdx = 0; // default: row 1 (index 0)
-        for (let r = 0; r < 5; r++) {
-          const probe = XLSX.utils.sheet_to_json(ws, { defval: "", range: r, header: 1 });
-          if (probe[0]?.some(cell => DETECT_COLS.some(c => cleanVal(cell)?.includes(c)))) {
-            headerRowIdx = r;
-            break;
-          }
-        }
-        const raw = XLSX.utils.sheet_to_json(ws, { defval: "", range: headerRowIdx });
-
+        const raw = XLSX.utils.sheet_to_json(ws, { defval: "" });
         if (raw.length === 0) {
           setBulkErrors([{ row: "-", reason: "The sheet appears to be empty." }]);
           setBulkRows([]); setBulkModal(true); return;
         }
-
-        // Robustly normalise header keys — handles bold labels, asterisks,
-        // extra words, mixed case, spaces e.g. "* NAME", "Full Name", "is active", "Is Active"
-        const normaliseKey = (k) =>
-          k.toString()
-            .toLowerCase()
-            .replace(/[*()\[\]#!?]/g, "")
-            .trim()
-            .replace(/\s+/g, "_")
-            .replace(/_+/g, "_")
-            .replace(/^_|_$/g, "");
-
-        // Maps any recognisable variation to the canonical column key
-        const resolveKey = (raw) => {
-          const k = normaliseKey(raw);
-          if (ALLOWED_COLS.includes(k)) return k;
-          // explicit alias table — covers all realistic header variations
-          const aliases = {
-            name:        ["full_name","employee_name","emp_name","person_name","staff_name"],
-            email:       ["email_address","work_email","mail","e_mail","employee_email","emp_email"],
-            department:  ["dept","team","division","group","unit","department_name"],
-            is_active:   ["active","status","enabled","is_enabled","active_status","employee_status"],
-          };
-          for (const [col, alts] of Object.entries(aliases)) {
-            if (alts.includes(k) || alts.some(a => k.startsWith(a) || k.endsWith(a))) return col;
-          }
-          // last resort: if first word exactly matches a column, use it
-          const first = k.split("_")[0];
-          if (ALLOWED_COLS.includes(first)) return first;
-          return null;
-        };
-
         const normalised = raw.map((r) => {
           const obj = {};
           for (const k of Object.keys(r)) {
-            const resolved = resolveKey(k);
-            if (resolved) obj[resolved] = r[k];
+            const key = k.toLowerCase().trim().replace(/\s+/g, "_");
+            if (ALLOWED_COLS.includes(key)) obj[key] = r[k];
           }
           return obj;
         });
-
-        // filter out legend/instruction rows that have no name AND no email
-        const dataRows = normalised.filter(r =>
-          r.name?.toString().trim() || r.email?.toString().trim()
-        );
-
-        const firstRow = dataRows[0] || {};
+        const firstRow = normalised[0] || {};
         const missing  = REQUIRED_COLS.filter(c => !(c in firstRow));
         if (missing.length > 0) {
           setBulkErrors([{ row: "header", reason: `Missing required column(s): ${missing.join(", ")}` }]);
           setBulkRows([]); setBulkModal(true); return;
         }
-
         const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const errs = [];
-        dataRows.forEach((row, i) => {
+        normalised.forEach((row, i) => {
           const rowNum = i + 2;
-          if (!row.name?.toString().trim())
-            errs.push({ row: rowNum, email: row.email, reason: "Name is required" });
-          if (!row.email?.toString().trim())
-            errs.push({ row: rowNum, email: row.email, reason: "Email is required" });
+          if (!row.name?.toString().trim())  errs.push({ row: rowNum, email: row.email, reason: "Name is required" });
+          if (!row.email?.toString().trim()) errs.push({ row: rowNum, email: row.email, reason: "Email is required" });
           else if (!EMAIL_RE.test(row.email?.toString().trim().toLowerCase()))
             errs.push({ row: rowNum, email: row.email, reason: "Invalid email format" });
         });
-
-        setBulkRows(dataRows); setBulkErrors(errs); setBulkModal(true);
+        setBulkRows(normalised); setBulkErrors(errs); setBulkModal(true);
       } catch {
         setBulkErrors([{ row: "-", reason: "Could not parse file. Ensure it is a valid .xlsx or .xls file." }]);
         setBulkRows([]); setBulkModal(true);
@@ -276,19 +215,16 @@ export default function AdminEmployeesPage() {
     setBulkModal(false); setBulkRows([]); setBulkErrors([]); setBulkFileName("");
   };
 
-  /* ── download template from /public ── */
   const downloadTemplate = () => {
-    const link = document.createElement("a");
-    link.href = "/employees_template.xlsx";
-    link.download = "employees_template.xlsx";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["name", "email", "department", "is_active"],
+      ["Jane Smith", "jane@company.com", "Engineering", "true"],
+      ["John Doe",   "john@company.com", "HR",          "true"],
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Employees");
+    XLSX.writeFile(wb, "employees_template.xlsx");
   };
-
-  /* ── active check helper ── */
-  const isActive = (val) =>
-    ["true", "1", "yes", "active"].includes(String(val ?? "true").toLowerCase());
 
   if (loading) return (
     <div className={styles.loading}><div className={styles.spinner} /></div>
@@ -309,32 +245,24 @@ export default function AdminEmployeesPage() {
         <div className={styles.headerRight}>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="2"
-                strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Back
           </button>
-
-          {/* hidden file input */}
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls"
             style={{ display: "none" }} onChange={handleFileChange} />
-
           <button className={styles.templateBtn} onClick={downloadTemplate}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1v8M4 6l3 3 3-3M2 12v.5A1.5 1.5 0 003.5 14h7A1.5 1.5 0 0012 12.5V12"
-                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M7 1v8M4 6l3 3 3-3M2 12v.5A1.5 1.5 0 003.5 14h7A1.5 1.5 0 0012 12.5V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <span>Template</span>
           </button>
-
           <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1v8M4 4L7 1l3 3M2 11v1a1 1 0 001 1h8a1 1 0 001-1v-1"
-                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M7 1v8M4 4L7 1l3 3M2 11v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <span>Import Excel</span>
           </button>
-
           <button className={styles.addBtn} onClick={openAdd}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
@@ -387,9 +315,9 @@ export default function AdminEmployeesPage() {
               )}
             </div>
             <div className={styles.filterGroup}>
-              <button className={`${styles.filterBtn} ${statusFilter === "all"      ? styles.filterActive : ""}`}
+              <button className={`${styles.filterBtn} ${statusFilter === "all" ? styles.filterActive : ""}`}
                 onClick={() => setStatusFilter("all")}>All</button>
-              <button className={`${styles.filterBtn} ${statusFilter === "active"   ? styles.filterActive : ""}`}
+              <button className={`${styles.filterBtn} ${statusFilter === "active" ? styles.filterActive : ""}`}
                 onClick={() => setStatusFilter("active")}>Active</button>
               <button className={`${styles.filterBtn} ${statusFilter === "inactive" ? styles.filterActive : ""}`}
                 onClick={() => setStatusFilter("inactive")}>Inactive</button>
@@ -419,8 +347,7 @@ export default function AdminEmployeesPage() {
                           <div className={styles.emptyIcon}>
                             <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
                               <circle cx="15" cy="10" r="5" stroke="currentColor" strokeWidth="1.8"/>
-                              <path d="M5 27c0-5.523 4.477-10 10-10s10 4.477 10 10"
-                                stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                              <path d="M5 27c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                             </svg>
                           </div>
                           <div className={styles.emptyTitle}>No employees found</div>
@@ -432,37 +359,39 @@ export default function AdminEmployeesPage() {
                         </div>
                       </td>
                     </tr>
-                  ) : filtered.map(emp => (
-                    <tr key={emp.id}>
-                      <td>
-                        <div className={styles.nameCell}>
-                          <div className={styles.empAvatar}>{initials(emp.name)}</div>
-                          <div className={styles.nameInfo}>
-                            <span className={styles.empName}>{emp.name}</span>
-                            <span className={styles.empEmail}>{emp.email}</span>
+                  ) : (
+                    filtered.map(emp => (
+                      <tr key={emp.id}>
+                        <td>
+                          <div className={styles.nameCell}>
+                            <div className={styles.empAvatar}>{initials(emp.name)}</div>
+                            <div className={styles.nameInfo}>
+                              <span className={styles.empName}>{emp.name}</span>
+                              <span className={styles.empEmail}>{emp.email}</span>
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td>
-                        {emp.department
-                          ? <span className={styles.deptTag}>{emp.department}</span>
-                          : <span className={styles.noDept}>—</span>}
-                      </td>
-                      <td>
-                        <span className={`${styles.badge} ${emp.is_active ? styles.badgeActive : styles.badgeInactive}`}>
-                          <span className={styles.badgeDot} />
-                          {emp.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className={styles.actionCell}>
-                          <button className={styles.editBtn} onClick={() => openEdit(emp)}>Edit</button>
-                          <button className={styles.deleteBtn}
-                            onClick={() => setDeleteTarget(emp)} disabled={deleting}>Remove</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td>
+                          {emp.department
+                            ? <span className={styles.deptTag}>{emp.department}</span>
+                            : <span className={styles.noDept}>—</span>}
+                        </td>
+                        <td>
+                          <span className={`${styles.badge} ${emp.is_active ? styles.badgeActive : styles.badgeInactive}`}>
+                            <span className={styles.badgeDot} />
+                            {emp.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </td>
+                        <td>
+                          <div className={styles.actionCell}>
+                            <button className={styles.editBtn} onClick={() => openEdit(emp)}>Edit</button>
+                            <button className={styles.deleteBtn}
+                              onClick={() => setDeleteTarget(emp)} disabled={deleting}>Remove</button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -471,10 +400,9 @@ export default function AdminEmployeesPage() {
         </div>
       </div>
 
-      {/* ── ADD / EDIT MODAL ── */}
+      {/* ADD / EDIT MODAL */}
       {modal && (
-        <div className={styles.modalOverlay}
-          onClick={e => e.target === e.currentTarget && setModal(null)}>
+        <div className={styles.modalOverlay} onClick={e => e.target === e.currentTarget && setModal(null)}>
           <div className={styles.modal}>
             <div className={styles.modalHeader}>
               <div>
@@ -487,9 +415,7 @@ export default function AdminEmployeesPage() {
                 </svg>
               </button>
             </div>
-
             {formError && <div className={styles.errorMsg}>{formError}</div>}
-
             <div className={styles.formRow}>
               <div className={styles.formGroup}>
                 <label className={styles.formLabel}>Full Name <span className={styles.req}>*</span></label>
@@ -502,14 +428,11 @@ export default function AdminEmployeesPage() {
                   value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
               </div>
             </div>
-
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Department</label>
               <input className={styles.formInput} type="text" placeholder="e.g. Engineering, HR, Sales"
-                value={form.department}
-                onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
+                value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} />
             </div>
-
             <div className={styles.toggleRow}>
               <div>
                 <span className={styles.toggleLabel}>Active Employee</span>
@@ -521,7 +444,6 @@ export default function AdminEmployeesPage() {
                 <span className={styles.toggleSlider} />
               </label>
             </div>
-
             <div className={styles.modalBtns}>
               <button className={styles.modalCancelBtn} onClick={() => setModal(null)}>Cancel</button>
               <button className={styles.modalSaveBtn} onClick={handleSave} disabled={saving}>
@@ -532,22 +454,19 @@ export default function AdminEmployeesPage() {
         </div>
       )}
 
-      {/* ── DELETE CONFIRM MODAL ── */}
+      {/* DELETE CONFIRM MODAL */}
       {deleteTarget && (
-        <div className={styles.modalOverlay}
-          onClick={e => e.target === e.currentTarget && setDeleteTarget(null)}>
+        <div className={styles.modalOverlay} onClick={e => e.target === e.currentTarget && setDeleteTarget(null)}>
           <div className={styles.deleteModal}>
             <div className={styles.deleteIconWrap}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <path d="M3 5h14M8 5V3h4v2M17 5l-1 12a2 2 0 01-2 2H6a2 2 0 01-2-2L3 5"
-                  stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M3 5h14M8 5V3h4v2M17 5l-1 12a2 2 0 01-2 2H6a2 2 0 01-2-2L3 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M8 9v5M12 9v5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
               </svg>
             </div>
             <h2 className={styles.deleteTitle}>Remove Employee?</h2>
             <p className={styles.deleteText}>
-              You are about to remove <strong>{deleteTarget.name}</strong>. This will unlink them
-              from any existing visitor records.
+              You are about to remove <strong>{deleteTarget.name}</strong>. This will unlink them from any existing visitor records.
             </p>
             <div className={styles.deleteBtns}>
               <button className={styles.deleteCancelBtn} onClick={() => setDeleteTarget(null)}>Cancel</button>
@@ -559,12 +478,10 @@ export default function AdminEmployeesPage() {
         </div>
       )}
 
-      {/* ── BULK UPLOAD PREVIEW MODAL ── */}
+      {/* BULK UPLOAD MODAL */}
       {bulkModal && (
-        <div className={styles.modalOverlay}
-          onClick={e => e.target === e.currentTarget && closeBulkModal()}>
+        <div className={styles.modalOverlay} onClick={e => e.target === e.currentTarget && closeBulkModal()}>
           <div className={styles.bulkModal}>
-
             <div className={styles.modalHeader}>
               <div>
                 <p className={styles.modalEyebrow}>Bulk import</p>
@@ -580,7 +497,6 @@ export default function AdminEmployeesPage() {
               </button>
             </div>
 
-            {/* Error summary */}
             {bulkErrors.length > 0 && (
               <div className={styles.bulkErrorBox}>
                 <div className={styles.bulkErrorTitle}>
@@ -601,14 +517,12 @@ export default function AdminEmployeesPage() {
               </div>
             )}
 
-            {/* Preview table */}
             {bulkRows.length > 0 && bulkErrors.length === 0 && (
               <>
                 <div className={styles.bulkReadyBanner}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
-                    <path d="M4 7l2 2 4-4" stroke="currentColor" strokeWidth="1.8"
-                      strokeLinecap="round" strokeLinejoin="round"/>
+                    <path d="M4 7l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   {bulkRows.length} row{bulkRows.length !== 1 ? "s" : ""} ready — existing emails will be updated
                 </div>
@@ -625,19 +539,19 @@ export default function AdminEmployeesPage() {
                           <td>{r.email || <span className={styles.missing}>missing</span>}</td>
                           <td>{r.department || <span className={styles.noDept}>—</span>}</td>
                           <td>
-                            <span className={`${styles.badge} ${isActive(r.is_active) ? styles.badgeActive : styles.badgeInactive}`}>
+                            <span className={`${styles.badge} ${
+                              ["true","1","yes","active"].includes(String(r.is_active ?? "true").toLowerCase())
+                                ? styles.badgeActive : styles.badgeInactive}`}>
                               <span className={styles.badgeDot} />
-                              {isActive(r.is_active) ? "Active" : "Inactive"}
+                              {["true","1","yes","active"].includes(String(r.is_active ?? "true").toLowerCase()) ? "Active" : "Inactive"}
                             </span>
                           </td>
                         </tr>
                       ))}
                       {bulkRows.length > 50 && (
-                        <tr>
-                          <td colSpan={5} className={styles.moreRows}>
-                            +{bulkRows.length - 50} more rows not shown
-                          </td>
-                        </tr>
+                        <tr><td colSpan={5} className={styles.moreRows}>
+                          +{bulkRows.length - 50} more rows not shown
+                        </td></tr>
                       )}
                     </tbody>
                   </table>
@@ -645,12 +559,10 @@ export default function AdminEmployeesPage() {
               </>
             )}
 
-            {/* Footer buttons */}
             <div className={styles.bulkModalBtns}>
-              <button className={styles.templateBtnModal} onClick={downloadTemplate}>
+              <button className={styles.templateBtn} onClick={downloadTemplate}>
                 <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-                  <path d="M6.5 1v8M3.5 6l3 3 3-3M1 11v.5A1.5 1.5 0 002.5 13h8A1.5 1.5 0 0012 11.5V11"
-                    stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M6.5 1v8M3.5 6l3 3 3-3M1 11v.5A1.5 1.5 0 002.5 13h8A1.5 1.5 0 0012 11.5V11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 Download Template
               </button>
@@ -658,34 +570,22 @@ export default function AdminEmployeesPage() {
               <button className={styles.modalCancelBtn} onClick={closeBulkModal}>Cancel</button>
               <button className={styles.modalSaveBtn} onClick={handleBulkConfirm}
                 disabled={bulkErrors.length > 0 || bulkRows.length === 0 || bulkUploading}>
-                {bulkUploading
-                  ? "Uploading…"
-                  : `Upload ${bulkRows.length} Employee${bulkRows.length !== 1 ? "s" : ""}`}
+                {bulkUploading ? "Uploading…" : `Upload ${bulkRows.length} Employee${bulkRows.length !== 1 ? "s" : ""}`}
               </button>
             </div>
-
           </div>
         </div>
       )}
 
-      {/* TOAST */}
       {toast && (
         <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : styles.toastSuccess}`}>
           {toast.type === "success"
-            ? <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M4 7l2 2 4-4" stroke="currentColor" strokeWidth="1.8"
-                  strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            : <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M7 4v3.5M7 9v.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-              </svg>
+            ? <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/><path d="M4 7l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            : <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/><path d="M7 4v3.5M7 9v.8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
           }
           {toast.msg}
         </div>
       )}
-
     </div>
   );
 }
