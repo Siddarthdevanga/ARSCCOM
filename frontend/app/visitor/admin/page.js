@@ -251,6 +251,12 @@ export default function AdminEmployeesPage() {
           </button>
           <input ref={fileInputRef} type="file" accept=".xlsx,.xls"
             style={{ display: "none" }} onChange={handleFileChange} />
+          <button className={styles.templateBtn} onClick={downloadTemplate}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M7 1v8M4 6l3 3 3-3M2 12v.5A1.5 1.5 0 003.5 14h7A1.5 1.5 0 0012 12.5V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <span>Template</span>
+          </button>
           <button className={styles.uploadBtn} onClick={() => fileInputRef.current?.click()}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M7 1v8M4 4L7 1l3 3M2 11v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
