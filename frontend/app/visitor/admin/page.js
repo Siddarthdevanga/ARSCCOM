@@ -156,11 +156,42 @@ export default function AdminEmployeesPage() {
           setBulkRows([]); setBulkModal(true); return;
         }
 
+        // Robustly normalise header keys — handles bold labels, asterisks,
+        // extra words, mixed case, spaces e.g. "* NAME", "Full Name", "is active", "Is Active"
+        const normaliseKey = (k) =>
+          k.toString()
+            .toLowerCase()
+            .replace(/[*()\[\]#!?]/g, "")
+            .trim()
+            .replace(/\s+/g, "_")
+            .replace(/_+/g, "_")
+            .replace(/^_|_$/g, "");
+
+        // Maps any recognisable variation to the canonical column key
+        const resolveKey = (raw) => {
+          const k = normaliseKey(raw);
+          if (ALLOWED_COLS.includes(k)) return k;
+          // explicit alias table — covers all realistic header variations
+          const aliases = {
+            name:        ["full_name","employee_name","emp_name","person_name","staff_name"],
+            email:       ["email_address","work_email","mail","e_mail","employee_email","emp_email"],
+            department:  ["dept","team","division","group","unit","department_name"],
+            is_active:   ["active","status","enabled","is_enabled","active_status","employee_status"],
+          };
+          for (const [col, alts] of Object.entries(aliases)) {
+            if (alts.includes(k) || alts.some(a => k.startsWith(a) || k.endsWith(a))) return col;
+          }
+          // last resort: if first word exactly matches a column, use it
+          const first = k.split("_")[0];
+          if (ALLOWED_COLS.includes(first)) return first;
+          return null;
+        };
+
         const normalised = raw.map((r) => {
           const obj = {};
           for (const k of Object.keys(r)) {
-            const key = k.toLowerCase().trim().replace(/[\s*]+/g, "_").replace(/_+$/, "");
-            if (ALLOWED_COLS.includes(key)) obj[key] = r[k];
+            const resolved = resolveKey(k);
+            if (resolved) obj[resolved] = r[k];
           }
           return obj;
         });
