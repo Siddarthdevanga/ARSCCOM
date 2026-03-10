@@ -445,12 +445,13 @@
 }
 .templateBtn {
   display: flex; align-items: center; gap: 6px;
-  padding: 9px 16px; background: transparent;
-  border: 1.5px solid #ddd2f0; color: #9980c8;
+  padding: 7px 16px; background: #fff;
+  border: 1.5px solid #ddd2f0; color: #6200d6;
   border-radius: 50px; font-size: 12.5px; font-weight: 700;
   cursor: pointer; font-family: 'Nunito', sans-serif; transition: all 0.15s;
+  white-space: nowrap;
 }
-.templateBtn:hover { border-color: #6200d6; color: #6200d6; background: #f8f5ff; }
+.templateBtn:hover { border-color: #6200d6; background: #f8f5ff; }
 
 /* ================= TOAST ================= */
 .toast {
@@ -483,6 +484,7 @@
   .formRow { grid-template-columns: 1fr; }
   .table th, .table td { padding: 11px 10px; }
   .uploadBtn span { display: none; }
+  .templateBtn span { display: none; }
 }
 @media (max-width: 480px) {
   .heroTitle { font-size: 1.3rem; }
