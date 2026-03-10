@@ -4,17 +4,18 @@ import {
   listEmployees,
   createEmployee,
   updateEmployee,
-  deleteEmployee
+  deleteEmployee,
+  bulkUpsertEmployees
 } from "../controllers/employee.controller.js";
 
 const router = express.Router();
 
-// All routes require auth
 router.use(authenticate);
 
 router.get("/",        listEmployees);
 router.post("/",       createEmployee);
 router.put("/:id",     updateEmployee);
 router.delete("/:id",  deleteEmployee);
+router.post("/bulk",   bulkUpsertEmployees);
 
 export default router;
