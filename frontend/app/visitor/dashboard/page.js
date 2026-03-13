@@ -147,7 +147,7 @@ export default function VisitorDashboard() {
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();
-      showToast(status === "accepted" ? "Visit accepted ✓" : "Visit declined.");
+      showToast(status === "accepted" ? "Visit accepted" : "Visit declined.");
       await fetchDashboard();
     } catch {
       showToast("Failed to update status.", "error");
@@ -162,26 +162,191 @@ export default function VisitorDashboard() {
       .catch(() => showToast("Copy failed.", "error"));
   };
 
-  const downloadPdf = () => {
+  /* ─────────────────────────────────────────────────────
+     DOWNLOAD BRANDED QR IMAGE
+     Composes a full branded PNG on canvas matching the
+     conference QR download style:
+       - Purple gradient header with company name
+       - "Visitor Registration" title
+       - URL line
+       - QR code centered
+       - Instructions section
+       - PROMEET footer
+  ───────────────────────────────────────────────────── */
+  const downloadPdf = async () => {
     if (!qrUrl) return;
-    const link = document.createElement("a");
-    link.href = qrUrl;
-    link.download = "visitor-qr.png";
+
+    const companyName = company?.name?.toUpperCase() || "YOUR COMPANY";
+    const W = 800;
+    const H = 1050;
+
+    const canvas  = document.createElement("canvas");
+    canvas.width  = W;
+    canvas.height = H;
+    const ctx     = canvas.getContext("2d");
+
+    /* ── Background ── */
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, W, H);
+
+    /* ── Header gradient ── */
+    const headerGrad = ctx.createLinearGradient(0, 0, W, 80);
+    headerGrad.addColorStop(0, "#4a00b4");
+    headerGrad.addColorStop(1, "#7a00ff");
+    ctx.fillStyle = headerGrad;
+    ctx.fillRect(0, 0, W, 80);
+
+    /* ── Company name in header ── */
+    ctx.fillStyle   = "#ffffff";
+    ctx.font        = "bold 26px Arial, sans-serif";
+    ctx.textAlign   = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(companyName, W / 2, 40);
+
+    /* ── Title ── */
+    ctx.fillStyle   = "#4a00b4";
+    ctx.font        = "bold 32px Arial, sans-serif";
+    ctx.textAlign   = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText("Visitor Registration", W / 2, 148);
+
+    /* ── Subtitle ── */
+    ctx.fillStyle = "#666666";
+    ctx.font      = "16px Arial, sans-serif";
+    ctx.fillText("Scan QR Code or Visit:", W / 2, 185);
+
+    /* ── URL ── */
+    ctx.fillStyle = "#4a00b4";
+    ctx.font      = "bold 14px Arial, sans-serif";
+    const displayUrl = regUrl.length > 72 ? regUrl.slice(0, 70) + "…" : regUrl;
+    ctx.fillText(displayUrl, W / 2, 212);
+
+    /* ── QR code image ── */
+    await new Promise((resolve) => {
+      const qrImg    = new window.Image();
+      qrImg.onload   = () => {
+        const qrSize = 340;
+        const qrX    = (W - qrSize) / 2;
+        const qrY    = 235;
+
+        /* shadow */
+        ctx.shadowColor   = "rgba(98,0,214,0.15)";
+        ctx.shadowBlur    = 18;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 4;
+
+        /* white card behind QR */
+        ctx.fillStyle = "#ffffff";
+        roundRect(ctx, qrX - 16, qrY - 16, qrSize + 32, qrSize + 32, 18);
+        ctx.fill();
+
+        /* reset shadow */
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur  = 0;
+
+        /* border */
+        ctx.strokeStyle = "#ede8f8";
+        ctx.lineWidth   = 2;
+        roundRect(ctx, qrX - 16, qrY - 16, qrSize + 32, qrSize + 32, 18);
+        ctx.stroke();
+
+        ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        resolve();
+      };
+      qrImg.onerror  = resolve;
+      qrImg.src      = qrUrl;
+    });
+
+    /* ── Divider ── */
+    const dividerY = 645;
+    ctx.strokeStyle = "#ede8f8";
+    ctx.lineWidth   = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(60, dividerY);
+    ctx.lineTo(W - 60, dividerY);
+    ctx.stroke();
+
+    /* ── Instructions heading ── */
+    ctx.fillStyle   = "#4a00b4";
+    ctx.font        = "bold 20px Arial, sans-serif";
+    ctx.textAlign   = "left";
+    ctx.fillText("Instructions for Visitors:", 60, 690);
+
+    /* ── Instruction steps ── */
+    const steps = [
+      "Scan the QR code with your phone camera",
+      "Or visit the URL above in your browser",
+      "Complete the registration form",
+      "A visitor pass will be sent to your email instantly",
+      "Show the pass at the reception desk",
+    ];
+
+    ctx.fillStyle = "#333333";
+    ctx.font      = "16px Arial, sans-serif";
+    steps.forEach((step, i) => {
+      const y = 726 + i * 36;
+      /* bullet dot */
+      ctx.fillStyle = "#6200d6";
+      ctx.beginPath();
+      ctx.arc(76, y - 5, 5, 0, Math.PI * 2);
+      ctx.fill();
+      /* step text */
+      ctx.fillStyle = "#333333";
+      ctx.fillText(`${i + 1}. ${step}`, 96, y);
+    });
+
+    /* ── Footer background ── */
+    ctx.fillStyle = "#f3f0fb";
+    ctx.fillRect(0, H - 80, W, 80);
+
+    /* ── Footer top border ── */
+    ctx.strokeStyle = "#ddd2f0";
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, H - 80);
+    ctx.lineTo(W, H - 80);
+    ctx.stroke();
+
+    /* ── Footer text ── */
+    ctx.fillStyle   = "#4a00b4";
+    ctx.font        = "bold 22px Arial, sans-serif";
+    ctx.textAlign   = "center";
+    ctx.fillText("PROMEET", W / 2, H - 44);
+
+    ctx.fillStyle = "#9980c8";
+    ctx.font      = "14px Arial, sans-serif";
+    ctx.fillText("Visitor Management Platform", W / 2, H - 22);
+
+    /* ── Trigger download ── */
+    const slug     = company?.slug || "visitor";
+    const fileName = `${slug}-visitor-qr-${Date.now()}.png`;
+    const link     = document.createElement("a");
+    link.href      = canvas.toDataURL("image/png");
+    link.download  = fileName;
     link.click();
+
+    showToast("QR image downloaded!", "success");
   };
+
+  /* ── Canvas rounded rect helper ── */
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
 
   if (loading) return (
     <div className={styles.loading}><div className={styles.spinner} /></div>
   );
 
-  /* ─────────────────────────────────────────────────────────
-     STATS — read keys returned by the fixed controller:
-       totalVisitors    (was: stats.totalVisitors  — prev: stats.today)
-       activeVisitors   (was: stats.activeVisitors — prev: stats.inside)
-       pendingVisits    (was: stats.pendingVisits  — prev: stats.pending)
-       planLimit        (now inlined into stats)
-       planVisitorsUsed (now inlined into stats)
-  ───────────────────────────────────────────────────────── */
   const stats     = data?.stats || {};
   const active    = data?.activeVisitors    || [];
   const history   = data?.checkedOutVisitors || [];
@@ -189,7 +354,6 @@ export default function VisitorDashboard() {
   const totalVisitors = stats.totalVisitors  ?? 0;
   const activeCount   = stats.activeVisitors ?? 0;
 
-  // FIX 7: plan fields are now inlined in stats
   const planLimit = stats.planLimit        ?? 0;
   const planUsed  = stats.planVisitorsUsed ?? 0;
   const planPct   = planLimit > 0 ? Math.min((planUsed / planLimit) * 100, 100) : 0;
@@ -217,7 +381,7 @@ export default function VisitorDashboard() {
             + New Visit
           </button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>
-            ← Home
+            &larr; Home
           </button>
         </div>
       </header>
@@ -229,7 +393,7 @@ export default function VisitorDashboard() {
       <div className={`${styles.navPanel} ${navOpen ? styles.navPanelOpen : ""}`}>
         <div className={styles.navPanelHeader}>
           <h3>Registration QR</h3>
-          <button className={styles.navCloseBtn} onClick={() => setNavOpen(false)}>✕</button>
+          <button className={styles.navCloseBtn} onClick={() => setNavOpen(false)}>&#x2715;</button>
         </div>
         <div className={styles.navPanelBody}>
           {qrUrl ? (
@@ -242,16 +406,16 @@ export default function VisitorDashboard() {
                 <label>Registration Link</label>
                 <div className={styles.urlBox}>
                   <input className={styles.urlInput} readOnly value={regUrl} />
-                  <button className={styles.copyBtn} onClick={copyUrl}>📋</button>
+                  <button className={styles.copyBtn} onClick={copyUrl}>Copy</button>
                 </div>
               </div>
               <button className={styles.downloadPdfBtn} onClick={downloadPdf}>
-                ⬇ Download QR Image
+                Download QR Image
               </button>
             </>
           ) : (
             <div className={styles.navQRLoading}>
-              <div className={styles.spinner} /><p>Generating QR…</p>
+              <div className={styles.spinner} /><p>Generating QR...</p>
             </div>
           )}
           <div className={styles.navInstructions}>
@@ -290,7 +454,7 @@ export default function VisitorDashboard() {
       {/* UPGRADE MSG */}
       {atLimit && (
         <div className={styles.upgradeMsg}>
-          ⚠ Visitor limit reached for your plan. Upgrade to allow new check-ins.
+          Visitor limit reached for your plan. Upgrade to allow new check-ins.
         </div>
       )}
 
@@ -315,7 +479,7 @@ export default function VisitorDashboard() {
       <div className={styles.scrollBody}>
         <div className={styles.mainContent}>
 
-          {/* ── ACTIVE VISITORS ── */}
+          {/* ACTIVE VISITORS */}
           <div className={styles.tablesRow}>
             <div className={styles.tableCard}>
               <div className={styles.cardHeader}>
@@ -326,7 +490,7 @@ export default function VisitorDashboard() {
 
               {active.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>🚶</span>No visitors currently in
+                  <span className={styles.emptyIcon}>—</span>No visitors currently in
                 </div>
               ) : (
                 <div className={styles.tableScroll}>
@@ -355,7 +519,6 @@ export default function VisitorDashboard() {
                               <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
                                 {v.name}
                               </div>
-                              {/* FIX 3: from_company now returned by controller */}
                               {v.from_company && (
                                 <div style={{ fontSize: 11, color: "#9980c8" }}>{v.from_company}</div>
                               )}
@@ -379,7 +542,7 @@ export default function VisitorDashboard() {
                                       disabled={!!updatingStatus}
                                       onClick={() => handleVisitStatus(v.visitor_code, "accepted")}
                                     >
-                                      {isUpdating("accepted") ? "…" : "✓ Accept"}
+                                      {isUpdating("accepted") ? "..." : "Accept"}
                                     </button>
                                     <button
                                       style={{
@@ -392,7 +555,7 @@ export default function VisitorDashboard() {
                                       disabled={!!updatingStatus}
                                       onClick={() => handleVisitStatus(v.visitor_code, "declined")}
                                     >
-                                      {isUpdating("declined") ? "…" : "✕ Decline"}
+                                      {isUpdating("declined") ? "..." : "Decline"}
                                     </button>
                                   </div>
                                 )}
@@ -405,11 +568,10 @@ export default function VisitorDashboard() {
                                 color:      v.pass_issued ? "#00a875" : "#c77800",
                                 padding: "3px 8px", borderRadius: 50,
                               }}>
-                                {v.pass_issued ? "✓ Sent" : "Pending"}
+                                {v.pass_issued ? "Sent" : "Pending"}
                               </span>
                             </td>
                             <td style={{ fontSize: 12, color: "#9980c8" }}>
-                              {/* FIX: use fmtTime helper */}
                               {fmtTime(v.check_in)}
                             </td>
                             <td>
@@ -418,7 +580,7 @@ export default function VisitorDashboard() {
                                 onClick={() => handleCheckout(v.visitor_code)}
                                 disabled={checkingOut === v.visitor_code}
                               >
-                                {checkingOut === v.visitor_code ? "…" : "Check Out"}
+                                {checkingOut === v.visitor_code ? "..." : "Check Out"}
                               </button>
                             </td>
                           </tr>
@@ -430,7 +592,7 @@ export default function VisitorDashboard() {
               )}
             </div>
 
-            {/* ── HISTORY ── */}
+            {/* HISTORY */}
             <div className={styles.tableCard}>
               <div className={styles.cardHeader}>
                 <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
@@ -442,7 +604,7 @@ export default function VisitorDashboard() {
 
               {history.length === 0 ? (
                 <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>📋</span>No checkout history yet
+                  <span className={styles.emptyIcon}>—</span>No checkout history yet
                 </div>
               ) : (
                 <div className={styles.tableScroll}>
@@ -468,18 +630,16 @@ export default function VisitorDashboard() {
                             </div>
                             {v.person_to_meet && (
                               <div style={{ fontSize: 11, color: "#9980c8" }}>
-                                → {v.person_to_meet}
+                                &rarr; {v.person_to_meet}
                               </div>
                             )}
                           </td>
                           <td>
                             <VisitStatusBadge status={v.visit_status || "checked_out"} />
                           </td>
-                          {/* FIX 2: calcDuration now works — check_in is returned by controller */}
                           <td style={{ fontSize: 12, color: "#2a0050" }}>
                             {calcDuration(v.check_in, v.check_out)}
                           </td>
-                          {/* FIX 2: fmtDate now works — check_in returned */}
                           <td style={{ fontSize: 11, color: "#9980c8" }}>
                             {fmtDate(v.check_in)}
                           </td>
