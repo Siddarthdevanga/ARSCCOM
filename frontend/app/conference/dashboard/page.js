@@ -217,7 +217,7 @@ export default function ConferenceDashboard() {
       });
       setNewRoomName(""); setNewRoomNumber(""); setNewRoomCapacity(""); setShowAddRoomModal(false);
       await loadDashboard();
-      showNotification(response?.isActive ? "Room created & activated!" : "Room created! Upgrade to activate.", response?.isActive ? "success" : "warning");
+      showNotification(response?.isActive ? "Room created and activated!" : "Room created. Upgrade to activate.", response?.isActive ? "success" : "warning");
     } catch (err) { showNotification(err?.message || "Create failed", "error"); }
     finally { setIsCreatingRoom(false); }
   };
@@ -267,7 +267,7 @@ export default function ConferenceDashboard() {
     if (tab === "qr" && !publicBookingInfo) loadPublicBookingInfo();
   };
 
-  if (loading) return <div className={styles.container}><div className={styles.loadingState}>Loading dashboard…</div></div>;
+  if (loading) return <div className={styles.container}><div className={styles.loadingState}>Loading dashboard...</div></div>;
   if (!company || !stats) return <div className={styles.container}><div className={styles.loadingState}>Unable to load dashboard</div></div>;
 
   return (
@@ -276,7 +276,7 @@ export default function ConferenceDashboard() {
       {/* ===== NOTIFICATION ===== */}
       {notification.show && (
         <div className={`${styles.toast} ${styles[`toast${notification.type.charAt(0).toUpperCase() + notification.type.slice(1)}`]}`}>
-          {notification.type === "success" ? "✓" : notification.type === "error" ? "✕" : "⚠"} {notification.message}
+          {notification.type === "success" ? "+" : notification.type === "error" ? "x" : "!"} {notification.message}
         </div>
       )}
 
@@ -286,27 +286,27 @@ export default function ConferenceDashboard() {
       {/* ===== SINGLE LEFT NAV PANEL ===== */}
       <div className={`${styles.navPanel} ${navOpen ? styles.navPanelOpen : ""}`}>
         <div className={styles.navPanelHeader}>
-          <h3>{navTab === "qr" ? "📱 QR Code" : "🏢 Rooms"}</h3>
-          <button className={styles.navCloseBtn} onClick={() => { setNavOpen(false); cancelEdit(); }}>✕</button>
+          <h3>{navTab === "qr" ? "QR Code" : "Rooms"}</h3>
+          <button className={styles.navCloseBtn} onClick={() => { setNavOpen(false); cancelEdit(); }}>x</button>
         </div>
 
         {/* Tab switcher */}
         <div className={styles.navTabs}>
           <button className={`${styles.navTabBtn} ${navTab === "qr" ? styles.navTabActive : ""}`} onClick={() => { setNavTab("qr"); if (!publicBookingInfo) loadPublicBookingInfo(); }}>
-            📱 QR Code
+            QR Code
           </button>
           <button className={`${styles.navTabBtn} ${navTab === "rooms" ? styles.navTabActive : ""}`} onClick={() => setNavTab("rooms")}>
-            🏢 Rooms
+            Rooms
           </button>
         </div>
 
         <div className={styles.navPanelBody}>
 
-          {/* ── QR TAB ── */}
+          {/* QR TAB */}
           {navTab === "qr" && (
             <>
               {loadingQR ? (
-                <div className={styles.navQRLoading}><div className={styles.spinner} /><p>Loading QR Code…</p></div>
+                <div className={styles.navQRLoading}><div className={styles.spinner} /><p>Loading QR Code...</p></div>
               ) : publicBookingInfo ? (
                 <>
                   <div className={styles.qrSection}>
@@ -317,10 +317,10 @@ export default function ConferenceDashboard() {
                     <label>Public Booking URL</label>
                     <div className={styles.urlBox}>
                       <input type="text" value={publicBookingInfo.publicUrl} readOnly className={styles.urlInput} />
-                      <button className={styles.copyBtn} onClick={handleShareURL}>📋</button>
+                      <button className={styles.copyBtn} onClick={handleShareURL}>Copy</button>
                     </div>
                   </div>
-                  <button className={styles.downloadBtn} onClick={handleDownloadQR}>💾 Download QR Code</button>
+                  <button className={styles.downloadBtn} onClick={handleDownloadQR}>Download QR Code</button>
                   <div className={styles.navInstructions}>
                     <h4>How to use:</h4>
                     <ol>
@@ -333,13 +333,13 @@ export default function ConferenceDashboard() {
               ) : (
                 <div className={styles.navQRLoading}>
                   <p>Failed to load QR code</p>
-                  <button className={styles.retryBtn} onClick={loadPublicBookingInfo}>↻ Retry</button>
+                  <button className={styles.retryBtn} onClick={loadPublicBookingInfo}>Retry</button>
                 </div>
               )}
             </>
           )}
 
-          {/* ── ROOMS TAB ── */}
+          {/* ROOMS TAB */}
           {navTab === "rooms" && (
             <>
               {plan && (
@@ -347,14 +347,14 @@ export default function ConferenceDashboard() {
                   <div className={styles.planRow}>
                     <span>Plan: <b>{plan.plan}</b></span>
                     {plan.limit !== "Unlimited" && <span>Active: <b>{plan.activeRooms}</b>/{plan.limit}</span>}
-                    {plan.limit === "Unlimited" && <span>Unlimited 🎉</span>}
+                    {plan.limit === "Unlimited" && <span>Unlimited</span>}
                   </div>
-                  {plan.lockedRooms > 0 && <div className={styles.lockedInfo}>🔒 {plan.lockedRooms} locked</div>}
+                  {plan.lockedRooms > 0 && <div className={styles.lockedInfo}>{plan.lockedRooms} locked</div>}
                   <div className={styles.planBarBg}>
                     <div className={styles.planBarFill} style={{ width: `${roomPercentage}%`, background: roomPercentage >= 90 ? "#cc1100" : "#00b894" }} />
                   </div>
                   <div className={styles.planActions}>
-                    <button className={styles.syncBtn} onClick={handleSyncRooms} disabled={syncing}>{syncing ? "Syncing…" : "🔄 Sync"}</button>
+                    <button className={styles.syncBtn} onClick={handleSyncRooms} disabled={syncing}>{syncing ? "Syncing..." : "Sync"}</button>
                     <button className={styles.addRoomBtn} onClick={() => setShowAddRoomModal(true)}>+ Add Room</button>
                   </div>
                 </div>
@@ -366,9 +366,9 @@ export default function ConferenceDashboard() {
                     <div className={styles.roomInfo}>
                       <div className={styles.roomNameRow}>
                         <b>{r.room_name}</b>
-                        {r.is_active ? <span className={styles.activeBadge}>✓ Active</span> : <span className={styles.lockBadge}>🔒 Locked</span>}
+                        {r.is_active ? <span className={styles.activeBadge}>Active</span> : <span className={styles.lockBadge}>Locked</span>}
                       </div>
-                      <small>#{r.room_number} • Capacity: {r.capacity || "N/A"}</small>
+                      <small>#{r.room_number} &bull; Capacity: {r.capacity || "N/A"}</small>
                     </div>
 
                     {editingRoomId === r.id ? (
@@ -400,7 +400,7 @@ export default function ConferenceDashboard() {
         <div className={styles.modalOverlay} onClick={() => setShowDeleteConfirm(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3>Delete "{roomToDelete.room_name}"?</h3>
-            <p className={styles.deleteWarning}>⚠️ This cannot be undone.</p>
+            <p className={styles.deleteWarning}>This action cannot be undone.</p>
             <div className={styles.modalActions}>
               <button className={styles.modalCancel} onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
               <button className={styles.modalDelete} onClick={deleteRoom}>Delete</button>
@@ -414,13 +414,13 @@ export default function ConferenceDashboard() {
         <div className={styles.modalOverlay} onClick={() => setShowAddRoomModal(false)}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <h3>Add New Room</h3>
-            {planUsage && !planUsage.canAddMore && <div className={styles.warningBox}>⚠️ Plan limit reached.</div>}
+            {planUsage && !planUsage.canAddMore && <div className={styles.warningBox}>Plan limit reached.</div>}
             <div className={styles.formGroup}><label>Room Name *</label><input value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)} placeholder="e.g., Board Room" /></div>
             <div className={styles.formGroup}><label>Room Number *</label><input value={newRoomNumber} onChange={(e) => setNewRoomNumber(e.target.value)} placeholder="e.g., 101" /></div>
             <div className={styles.formGroup}><label>Capacity</label><input type="number" value={newRoomCapacity} onChange={(e) => setNewRoomCapacity(e.target.value)} placeholder="e.g., 10" /></div>
             <div className={styles.modalActions}>
               <button className={styles.modalCancel} onClick={() => setShowAddRoomModal(false)} disabled={isCreatingRoom}>Cancel</button>
-              <button className={styles.modalPrimary} onClick={createNewRoom} disabled={isCreatingRoom || !newRoomName.trim() || !newRoomNumber.trim()}>{isCreatingRoom ? "Creating…" : "Create Room"}</button>
+              <button className={styles.modalPrimary} onClick={createNewRoom} disabled={isCreatingRoom || !newRoomName.trim() || !newRoomNumber.trim()}>{isCreatingRoom ? "Creating..." : "Create Room"}</button>
             </div>
           </div>
         </div>
@@ -440,9 +440,9 @@ export default function ConferenceDashboard() {
             if (isBookingDisabled) { showNotification(getBookingDisabledMessage(), "warning"); }
             else { router.push("/conference/bookings"); }
           }}>
-            {isPlanExpired ? "Expired" : isBookingLimitExceeded ? "Limit" : hasNoActiveRooms ? "No Rooms" : "Book Now"}
+            {isPlanExpired ? "Expired" : isBookingLimitExceeded ? "Limit Reached" : hasNoActiveRooms ? "No Rooms" : "Book Now"}
           </button>
-          <button className={styles.backBtn} onClick={() => router.push("/home")}>← Back</button>
+          <button className={styles.backBtn} onClick={() => router.push("/home")}>&larr; Back</button>
         </div>
       </header>
 
@@ -497,7 +497,7 @@ export default function ConferenceDashboard() {
         <div className={styles.publicUrlBar}>
           <span className={styles.publicLabel}>Public URL</span>
           <a href={publicURL} target="_blank" className={styles.publicLink}>{publicURL}</a>
-          <button className={styles.shareUrlBtn} onClick={handleShareURL}>🔗 Share</button>
+          <button className={styles.shareUrlBtn} onClick={handleShareURL}>Share</button>
         </div>
 
         {/* ===== MAIN CONTENT ===== */}
@@ -521,7 +521,7 @@ export default function ConferenceDashboard() {
                 <span className={styles.cardCount}>{departmentStats.length}</span>
               </div>
               {departmentStats.length === 0 ? (
-                <div className={styles.emptyState}><span className={styles.emptyIcon}>📊</span>No activity for this period</div>
+                <div className={styles.emptyState}><span className={styles.emptyIcon}>—</span>No activity for this period</div>
               ) : (
                 <div className={styles.tableScroll}>
                   {departmentStats.map(([dep, count]) => (
@@ -541,7 +541,7 @@ export default function ConferenceDashboard() {
                 <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{filteredBookings.length}</span>
               </div>
               {filteredBookings.length === 0 ? (
-                <div className={styles.emptyState}><span className={styles.emptyIcon}>📅</span>No bookings scheduled</div>
+                <div className={styles.emptyState}><span className={styles.emptyIcon}>—</span>No bookings scheduled</div>
               ) : (
                 <div className={styles.tableScroll}>
                   <table className={styles.table}>
@@ -550,7 +550,7 @@ export default function ConferenceDashboard() {
                       {filteredBookings.slice(0, 10).map((b) => (
                         <tr key={b.id}>
                           <td><span className={styles.roomCode}>{b.room_name}</span><br /><small>#{b.room_number}</small></td>
-                          <td>{formatNiceTime(b.start_time)} – {formatNiceTime(b.end_time)}</td>
+                          <td>{formatNiceTime(b.start_time)} &ndash; {formatNiceTime(b.end_time)}</td>
                           <td><span className={styles.statusBadge}>{b.status}</span></td>
                         </tr>
                       ))}
