@@ -180,8 +180,19 @@
   font-family: 'Nunito', sans-serif;
 }
 
-.qrSection { text-align: center; margin-bottom: 1.5rem; padding: 1.25rem; background: #f8f5ff; border-radius: 18px; border: 1.5px solid #ede8f8; }
-.qrImage { width: 200px; height: 200px; border-radius: 14px; box-shadow: 0 6px 24px rgba(98,0,214,0.15); margin-bottom: 0.75rem; border: 3px solid #fff; }
+.qrSection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: #f8f5ff;
+  border-radius: 18px;
+  border: 1.5px solid #ede8f8;
+}
+.qrImage { width: 200px; height: 200px; border-radius: 14px; box-shadow: 0 6px 24px rgba(98,0,214,0.15); margin-bottom: 0.75rem; border: 3px solid #fff; display: block; }
 .qrHint { color: #6200d6; font-size: 0.8rem; margin: 0; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
 
 .urlSection { margin-bottom: 1.25rem; }
@@ -189,7 +200,12 @@
 .urlBox { display: flex; gap: 0.5rem; }
 .urlInput { flex: 1; padding: 0.8rem; border: 1.5px solid #ede8f8; border-radius: 12px; font-size: 0.75rem; background: #f8f5ff; color: #1a0038; font-family: 'Courier New', monospace; min-width: 0; }
 .urlInput:focus { outline: none; border-color: #6200d6; }
-.copyBtn { padding: 0.8rem; background: #6200d6; color: #fff; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; flex-shrink: 0; }
+.copyBtn {
+  padding: 0.8rem 1rem; background: #6200d6; color: #fff; border: none;
+  border-radius: 12px; cursor: pointer; font-size: 0.72rem; font-weight: 800;
+  font-family: 'Nunito', sans-serif; flex-shrink: 0; white-space: nowrap;
+  transition: background 0.2s;
+}
 .copyBtn:hover { background: #4a00a8; }
 
 .downloadBtn {
@@ -314,7 +330,7 @@
 .cardCountGreen { background: rgba(0,184,148,0.1); color: #00a875; }
 
 .emptyState { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 28px 16px; color: #b8a8d8; font-size: 0.88rem; font-weight: 600; gap: 10px; }
-.emptyIcon { font-size: 2rem; opacity: 0.45; }
+.emptyIcon { font-size: 1.5rem; opacity: 0.45; font-weight: 900; color: #9980c8; }
 
 .tableScroll { flex: 1; overflow-x: auto; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
