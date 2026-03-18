@@ -146,27 +146,46 @@ function DonutChart({ data }) {
    BAR CHART  (vertical, trend)
 ═══════════════════════════════════════════════════════════════ */
 function BarChart({ data, color }) {
+  const [hovered, setHovered] = useState(null);
   if (!data?.length) return (
     <div className={styles.emptyChart}>
       <Activity size={32} className={styles.emptyChartIcon} /><p>No trend data for this period</p>
     </div>
   );
-  const max = Math.max(...data.map(d => d.count), 1);
+  const max  = Math.max(...data.map(d => d.count), 1);
+  const step = Math.ceil(data.length / 12);
   return (
     <div className={styles.barChartOuter}>
+      {hovered !== null && data[hovered] && (
+        <div
+          className={styles.barTooltip}
+          style={{ left: `${Math.min((hovered / Math.max(data.length - 1, 1)) * 100, 88)}%` }}
+        >
+          <span className={styles.barTooltipVal}>{data[hovered].count}</span>
+          <span className={styles.barTooltipDate}>{data[hovered].date}</span>
+        </div>
+      )}
       <div className={styles.barChart}>
         {data.map((d, i) => {
-          const h = Math.max((d.count / max) * 100, 2);
-          const showLabel = data.length <= 14 || i % Math.ceil(data.length / 10) === 0;
+          const pct      = Math.max((d.count / max) * 100, 1.5);
+          const showTick = data.length <= 10 || i % step === 0 || i === data.length - 1;
           return (
-            <div key={i} className={styles.barCol} title={`${d.date}: ${d.count}`}>
-              <span className={styles.barValue}>{d.count > 0 && d.count}</span>
-              <div className={styles.bar} style={{ height: `${h}%`, background: color }} />
-              {showLabel && <span className={styles.barTick}>{d.date}</span>}
+            <div
+              key={i}
+              className={styles.barCol}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              <div
+                className={`${styles.bar} ${hovered === i ? styles.barActive : ""}`}
+                style={{ height: `${pct}%`, background: color }}
+              />
+              {showTick && <span className={styles.barTick}>{d.date}</span>}
             </div>
           );
         })}
       </div>
+      <div className={styles.barBaseline} />
     </div>
   );
 }
