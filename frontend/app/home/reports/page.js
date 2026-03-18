@@ -523,14 +523,18 @@ export default function ReportsPage(){
 
       {/* HERO */}
       <div className={styles.hero}>
-        <div className={styles.heroContent}>
-          <div className={styles.heroPill}>
-            <span className={styles.heroPillDot}/>
-            Live data · {pl}
-            {fetching&&<span className={styles.heroPillSpinner}/>}
+        <div className={styles.heroInner}>
+          {/* Left — pill + title + subtitle */}
+          <div className={styles.heroContent}>
+            <div className={styles.heroPill}>
+              <span className={styles.heroPillDot}/>
+              Live data · {pl}
+              {fetching&&<span className={styles.heroPillSpinner}/>}
+            </div>
+            <h1 className={styles.heroTitle}>Visitor &amp; Conference <span>Analytics</span></h1>
+            <p className={styles.heroSub}>Unified intelligence across visitor management and room bookings</p>
           </div>
-          <h1 className={styles.heroTitle}>Visitor &amp; Conference <span>Analytics</span></h1>
-          <p className={styles.heroSub}>Unified intelligence across visitor management and room bookings</p>
+          {/* Right — stats strip */}
           <div className={styles.heroStats}>
             {[
               {val:v.total,   lbl:"Total Visitors"},
