@@ -117,30 +117,37 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
   const ws = workbook.addWorksheet("Visitors");
   ws.properties.defaultRowHeight = 20;
 
-  ws.mergeCells("A1:U1");
-  applyHeaderStyle(ws.getCell("A1"));
-  ws.getCell("A1").value = `${companyName} — Visitor Records (${periodLabel})`;
-  ws.getRow(1).height = 30;
+  // Define columns BEFORE any addRow/getCell calls.
+  // NEVER use mergeCells — ExcelJS copies the cell value into every cell
+  // of the merged range, which causes the title to repeat across all columns.
+  // Solution: write the value only to A1/A2, leave adjacent cells empty.
+  ws.columns = [
+    {width:15},{width:25},{width:15},{width:30},{width:25},{width:20},{width:20},
+    {width:35},{width:15},{width:15},{width:12},{width:15},{width:25},{width:35},
+    {width:25},{width:15},{width:20},{width:22},{width:22},{width:10},{width:14},
+  ];
 
-  ws.mergeCells("A2:U2");
-  ws.getCell("A2").value = `Generated: ${formatDateTime(new Date())} | Total: ${visitors.length}`;
-  ws.getCell("A2").font = { size: 11, italic: true };
-  ws.getCell("A2").alignment = { vertical: "middle", horizontal: "center" };
+  // Row 1 — title in A1 only (no merge)
+  ws.addRow([`${companyName} — Visitor Records (${periodLabel})`]);
+  applyHeaderStyle(ws.getCell("A1"), "FF4c1d95");
+  ws.getRow(1).height = 32;
+
+  // Row 2 — meta in A2 only (no merge)
+  ws.addRow([`Generated: ${formatDateTime(new Date())}   |   Total Records: ${visitors.length}`]);
+  ws.getCell("A2").font      = { size:11, italic:true, color:{ argb:"FF5a5a8a" } };
+  ws.getCell("A2").alignment = { vertical:"middle", horizontal:"left" };
   ws.getRow(2).height = 20;
+
+  // Row 3 — blank spacer
   ws.addRow([]);
 
+  // Row 4 — column headers
   const headerRow = ws.addRow([
     "Visitor Code","Name","Phone","Email","From Company","Department","Designation",
     "Address","City","State","Postal Code","Country","Person to Meet","Purpose",
     "Belongings","ID Type","ID Number","Check In","Check Out","Status","Visit Status",
   ]);
   applyColumnHeader(headerRow);
-
-  ws.columns = [
-    {width:15},{width:25},{width:15},{width:30},{width:25},{width:20},{width:20},
-    {width:35},{width:15},{width:15},{width:12},{width:15},{width:25},{width:35},
-    {width:25},{width:15},{width:20},{width:20},{width:20},{width:10},{width:14},
-  ];
 
   visitors.forEach((v, i) => {
     const row = ws.addRow([
@@ -182,20 +189,28 @@ const generateConferenceBookingsExcel = async (companyId, companyName, periodLab
   const ws = workbook.addWorksheet("Conference Bookings");
   ws.properties.defaultRowHeight = 20;
 
-  ws.mergeCells("A1:H1");
-  applyHeaderStyle(ws.getCell("A1"));
-  ws.getCell("A1").value = `${companyName} — Conference Room Bookings (${periodLabel})`;
-  ws.getRow(1).height = 30;
+  // Define columns FIRST. No mergeCells — it repeats the value across every cell.
+  ws.columns = [
+    {width:28},{width:28},{width:22},{width:38},{width:16},{width:14},{width:14},{width:14},
+  ];
 
-  ws.mergeCells("A2:H2");
-  ws.getCell("A2").value = `Generated: ${formatDateTime(new Date())} | Total: ${bookings.length}`;
-  ws.getCell("A2").font = { size:11, italic:true };
-  ws.getCell("A2").alignment = { vertical:"middle", horizontal:"center" };
+  // Row 1 — title in A1 only (no merge)
+  ws.addRow([`${companyName} — Conference Bookings (${periodLabel})`]);
+  applyHeaderStyle(ws.getCell("A1"), "FF1e3a5f");
+  ws.getRow(1).height = 32;
+
+  // Row 2 — meta in A2 only (no merge)
+  ws.addRow([`Generated: ${formatDateTime(new Date())}   |   Total Records: ${bookings.length}`]);
+  ws.getCell("A2").font      = { size:11, italic:true, color:{ argb:"FF5a5a8a" } };
+  ws.getCell("A2").alignment = { vertical:"middle", horizontal:"left" };
+  ws.getRow(2).height = 20;
+
+  // Row 3 — blank spacer
   ws.addRow([]);
 
+  // Row 4 — column headers
   const headerRow = ws.addRow(["Room Name","Booked By","Department","Purpose","Booking Date","Start Time","End Time","Status"]);
   applyColumnHeader(headerRow);
-  ws.columns = [{width:25},{width:25},{width:20},{width:35},{width:15},{width:15},{width:15},{width:12}];
 
   bookings.forEach((b, i) => {
     const row = ws.addRow([
