@@ -392,13 +392,15 @@ router.get("/analytics", async (req, res) => {
       year:    "MONTH(CONVERT_TZ(check_in,'+00:00','+05:30'))",
     }[period] || "DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))";
 
+    // All label expressions MUST use MIN() so every SELECT item is an aggregate.
+    // MySQL only_full_group_by rejects non-aggregated columns that aren't in GROUP BY.
     const vLabel = {
-      today:   "DATE_FORMAT(CONVERT_TZ(check_in,'+00:00','+05:30'),'%H:00')",
-      week:    "DATE_FORMAT(CONVERT_TZ(check_in,'+00:00','+05:30'),'%Y-%m-%d')",
-      month:   "DATE_FORMAT(CONVERT_TZ(check_in,'+00:00','+05:30'),'%Y-%m-%d')",
+      today:   "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%H:00')",
+      week:    "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%Y-%m-%d')",
+      month:   "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%Y-%m-%d')",
       quarter: "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%d %b')",
-      year:    "DATE_FORMAT(CONVERT_TZ(check_in,'+00:00','+05:30'),'%b %Y')",
-    }[period] || "DATE_FORMAT(CONVERT_TZ(check_in,'+00:00','+05:30'),'%Y-%m-%d')";
+      year:    "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%b %Y')",
+    }[period] || "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%Y-%m-%d')";
 
     const bGroup = {
       today:   "booking_date",
@@ -409,12 +411,12 @@ router.get("/analytics", async (req, res) => {
     }[period] || "booking_date";
 
     const bLabel = {
-      today:   "DATE_FORMAT(booking_date,'%Y-%m-%d')",
-      week:    "DATE_FORMAT(booking_date,'%Y-%m-%d')",
-      month:   "DATE_FORMAT(booking_date,'%Y-%m-%d')",
+      today:   "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
+      week:    "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
+      month:   "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
       quarter: "DATE_FORMAT(MIN(booking_date),'%d %b')",
-      year:    "DATE_FORMAT(booking_date,'%b %Y')",
-    }[period] || "DATE_FORMAT(booking_date,'%Y-%m-%d')";
+      year:    "DATE_FORMAT(MIN(booking_date),'%b %Y')",
+    }[period] || "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')";
 
     /* ── VISITOR QUERIES ── */
 
