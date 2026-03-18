@@ -333,7 +333,7 @@
 .chartCard {
   background: var(--card); border: 1.5px solid var(--border);
   border-radius: var(--r-2xl); padding: clamp(1rem,2vw,1.5rem);
-  box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: 1rem;
+  box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: 1rem; min-height: 260px;
   transition: box-shadow var(--t), transform var(--t), border-color var(--t);
 }
 .chartCard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
@@ -360,14 +360,61 @@
 .statChipLbl { font-size: .55rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 
 /* ── Bar chart ─────────────────────────────────────────────── */
-.barChartOuter { width: 100%; overflow-x: auto; padding-bottom: .25rem; }
-.barChart { display: flex; align-items: flex-end; gap: 3px; height: 110px; min-width: min-content; width: 100%; }
-.barCol { flex: 1; min-width: 10px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 3px; cursor: default; }
-.bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 3px; transition: opacity var(--t); }
-.bar:hover { opacity: .72; }
-/* NEW — value label above bar (hidden at small sizes) */
-.barValue { font-size: 7px; font-weight: 700; color: var(--muted); line-height: 1; }
-.barTick { font-size: 7px; font-weight: 600; color: var(--muted); text-align: center; white-space: nowrap; writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; max-height: 32px; }
+/* ── Bar chart ─── */
+.barChartOuter {
+  position: relative; width: 100%; overflow-x: auto;
+  padding-bottom: 2px;
+}
+/* Tooltip that floats above the hovered bar */
+.barTooltip {
+  position: absolute; top: 0; z-index: 10;
+  transform: translateX(-50%);
+  background: var(--ink); color: var(--white);
+  border-radius: var(--r-sm); padding: .25rem .55rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  pointer-events: none; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(15,6,41,.35);
+}
+.barTooltip::after {
+  content: '';
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--ink);
+}
+.barTooltipVal  { font-size: .78rem; font-weight: 900; line-height: 1; }
+.barTooltipDate { font-size: .6rem;  font-weight: 600; opacity: .65; line-height: 1; }
+/* Chart area */
+.barChart {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 160px; min-width: min-content; width: 100%;
+  padding-bottom: 24px; /* room for x-axis ticks */
+}
+.barCol {
+  flex: 1; min-width: 8px; max-width: 48px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  cursor: crosshair; position: relative;
+}
+.bar {
+  width: 100%; border-radius: 4px 4px 0 0;
+  min-height: 3px;
+  transition: filter var(--t), transform var(--t);
+}
+.barActive {
+  filter: brightness(1.18);
+  transform: scaleY(1.03); transform-origin: bottom;
+}
+/* Baseline rule */
+.barBaseline {
+  height: 1px; width: 100%; background: var(--border-strong); margin-top: -1px;
+}
+/* X-axis tick label */
+.barTick {
+  position: absolute; bottom: -22px;
+  font-size: 8px; font-weight: 600; color: var(--muted);
+  white-space: nowrap; max-width: 48px;
+  overflow: hidden; text-overflow: ellipsis;
+  text-align: center; line-height: 1;
+}
 
 /* ── Donut chart ───────────────────────────────────────────── */
 .donutWrap { display: grid; grid-template-columns: auto 1fr; gap: 1.25rem; align-items: center; }
@@ -538,7 +585,7 @@
   .header    { padding: 0 .875rem; }
   .heroTitle { font-size: 1.35rem; }
   .periodBtn { padding: .3rem .7rem; font-size: .68rem; }
-  .barValue  { display: none; }
+  /* barValue removed */
 }
 @media (prefers-reduced-motion: reduce) {
   :global(*), :global(*::before), :global(*::after) {
