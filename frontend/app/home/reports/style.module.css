@@ -42,6 +42,7 @@
 @keyframes fadeUp  { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
 @keyframes slideIn { from { transform:translateX(110%); opacity:0; } to { transform:translateX(0); opacity:1; } }
 @keyframes pulse   { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.6; transform:scale(1.4); } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
 /* ── Root ──────────────────────────────────────────────────── */
 .page {
@@ -130,10 +131,18 @@
 /* ── Hero ──────────────────────────────────────────────────── */
 .hero {
   background: var(--grad-brand);
-  padding: clamp(1.75rem,4vh,2.75rem) clamp(1.25rem,5vw,3rem) clamp(1.5rem,3.5vh,2.25rem);
+  padding: clamp(1rem,2.5vh,1.5rem) clamp(1.25rem,5vw,3rem);
   position: relative; overflow: hidden; flex-shrink: 0;
 }
-.heroContent { position: relative; z-index: 1; }
+/* NEW — flex row: left=text, right=stats */
+.heroInner {
+  position: relative; z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+}
+.heroContent { flex: 1; min-width: 0; }
 
 .heroPill {
   display: inline-flex; align-items: center; gap: .4rem;
@@ -148,25 +157,31 @@
   animation: pulse 2s infinite; flex-shrink: 0;
 }
 /* NEW — small spinner inside pill when period is refreshing */
+.heroPillSpinner {
+  width: 10px; height: 10px; border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,.3); border-top-color: #fff;
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
 
 .heroTitle {
-  font-size: clamp(1.5rem,4vw,2.35rem); font-weight: 900; color: var(--white);
-  letter-spacing: -.04em; margin: 0 0 .375rem; line-height: 1.08;
+  font-size: clamp(1.2rem,3vw,1.75rem); font-weight: 900; color: var(--white);
+  letter-spacing: -.04em; margin: 0 0 .3rem; line-height: 1.1;
 }
 .heroTitle span { color: #fbbf24; }
 .heroSub {
-  font-size: clamp(.75rem,1.8vw,.88rem); color: rgba(255,255,255,.6);
-  margin: 0 0 1.5rem; font-weight: 500;
+  font-size: clamp(.72rem,1.5vw,.82rem); color: rgba(255,255,255,.6);
+  margin: 0; font-weight: 500;
 }
 
 .heroStats {
   display: inline-flex; align-items: center;
   background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
   border-radius: var(--r-lg); overflow: hidden;
+  flex-shrink: 0;
 }
 .heroStat {
   display: flex; flex-direction: column; align-items: center;
-  padding: .6rem 1.25rem; gap: 2px;
+  padding: .5rem 1rem; gap: 2px;
 }
 .heroStatVal {
   font-size: 1.2rem; font-weight: 900; color: var(--white);
@@ -207,6 +222,31 @@
 
 /* ── Period selector ───────────────────────────────────────── */
 /* NEW — sticky bar that sits between hero and scroll body */
+.periodWrap {
+  position: sticky; top: 58px; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .625rem clamp(1rem,4vw,2.5rem);
+  background: rgba(247,245,252,.96); border-bottom: 1.5px solid var(--border);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  flex-shrink: 0;
+}
+.periodBar { display: flex; gap: .25rem; }
+.periodBtn {
+  padding: .35rem 1rem; border-radius: 9999px;
+  border: 1.5px solid var(--border); background: transparent;
+  font-family: var(--font); font-size: .72rem; font-weight: 700;
+  color: var(--muted); cursor: pointer; transition: all var(--t); white-space: nowrap;
+}
+.periodBtn:hover { background: var(--purple-faint); border-color: rgba(124,58,237,.25); color: var(--purple); }
+.periodBtnActive {
+  background: var(--purple); color: var(--white); border-color: var(--purple);
+  box-shadow: 0 2px 10px rgba(124,58,237,.35);
+}
+.periodBtnActive:hover { background: var(--purple-mid); border-color: var(--purple-mid); }
+.periodNote {
+  font-size: .68rem; font-weight: 600; color: var(--muted);
+  white-space: nowrap; letter-spacing: .02em;
+}
 
 /* ── Scroll body ───────────────────────────────────────────── */
 .scrollBody { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
@@ -269,11 +309,30 @@
 }
 .kpiCard:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
 .kpiCard:hover::before { opacity: 1; }
-
+/* NEW — original used .kpiIcon, new page.js uses .kpiIconWrap — both identical */
+.kpiIcon,
+.kpiIconWrap {
+  width: clamp(38px,5vw,46px); height: clamp(38px,5vw,46px);
+  border-radius: var(--r-sm); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 .kpiBody  { min-width: 0; }
 .kpiLabel { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 .2rem; }
 .kpiValue { font-size: clamp(1.375rem,3vw,1.875rem); font-weight: 900; margin: 0; letter-spacing: -.03em; line-height: 1; }
 .kpiSub   { font-size: .65rem; color: var(--muted); margin: .2rem 0 0; font-weight: 500; }
+/* NEW — period-over-period % change indicator */
+.kpiChange {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: .62rem; font-weight: 700; margin-top: .2rem; line-height: 1;
+}
+.kpiUp   { color: var(--green); }
+.kpiDown { color: var(--red); }
+/* NEW — shimmer skeleton overlay while period is loading */
+.kpiSkeleton {
+  position: absolute; inset: 0; border-radius: var(--r-xl); z-index: 10;
+  background: linear-gradient(90deg, var(--bg) 25%, var(--bg-deep) 50%, var(--bg) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.2s infinite;
+}
 
 /* ── Chart layout ──────────────────────────────────────────── */
 .chartRow { display: grid; grid-template-columns: 1.6fr 1fr; gap: clamp(.75rem,2vw,1.25rem); }
@@ -283,7 +342,7 @@
 .chartCard {
   background: var(--card); border: 1.5px solid var(--border);
   border-radius: var(--r-2xl); padding: clamp(1rem,2vw,1.5rem);
-  box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: 1rem;
+  box-shadow: var(--shadow-xs); display: flex; flex-direction: column; gap: 1rem; min-height: 260px;
   transition: box-shadow var(--t), transform var(--t), border-color var(--t);
 }
 .chartCard:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-strong); }
@@ -291,7 +350,8 @@
 .chartCardHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
 /* NEW alias — page.js uses chartCardHead */
 .chartCardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: .5rem; }
-
+/* NEW — right-hand cluster (chips + accent bar) */
+.chartCardRight { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
 .chartCardTitle { font-size: .85rem; font-weight: 800; color: var(--ink); margin: 0; letter-spacing: -.01em; line-height: 1.2; }
 .chartCardSub   { font-size: .65rem; color: var(--muted); font-weight: 500; display: block; margin: 2px 0 0; }
 /* original + NEW alias (.accentBar) */
@@ -300,14 +360,70 @@
 
 /* ── Stat chip ─────────────────────────────────────────────── */
 /* NEW — small labelled number shown inside chart card header */
+.statChip {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  background: var(--bg-deep); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: .2rem .55rem;
+}
+.statChipVal { font-size: .78rem; font-weight: 900; color: var(--sc, var(--purple)); line-height: 1; }
+.statChipLbl { font-size: .55rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
 
+/* ── Bar chart ─────────────────────────────────────────────── */
+/* ── Bar chart ─── */
+.barChartOuter {
+  position: relative; width: 100%; overflow-x: auto;
+  padding-bottom: 2px;
+}
 /* Tooltip that floats above the hovered bar */
-
+.barTooltip {
+  position: absolute; top: 0; z-index: 10;
+  transform: translateX(-50%);
+  background: var(--ink); color: var(--white);
+  border-radius: var(--r-sm); padding: .25rem .55rem;
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  pointer-events: none; white-space: nowrap;
+  box-shadow: 0 4px 14px rgba(15,6,41,.35);
+}
+.barTooltip::after {
+  content: '';
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--ink);
+}
+.barTooltipVal  { font-size: .78rem; font-weight: 900; line-height: 1; }
+.barTooltipDate { font-size: .6rem;  font-weight: 600; opacity: .65; line-height: 1; }
 /* Chart area */
-
+.barChart {
+  display: flex; align-items: flex-end; gap: 2px;
+  height: 160px; min-width: min-content; width: 100%;
+  padding-bottom: 24px; /* room for x-axis ticks */
+}
+.barCol {
+  flex: 1; min-width: 8px; max-width: 48px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: flex-end;
+  cursor: crosshair; position: relative;
+}
+.bar {
+  width: 100%; border-radius: 4px 4px 0 0;
+  min-height: 3px;
+  transition: filter var(--t), transform var(--t);
+}
+.barActive {
+  filter: brightness(1.18);
+  transform: scaleY(1.03); transform-origin: bottom;
+}
 /* Baseline rule */
-
+.barBaseline {
+  height: 1px; width: 100%; background: var(--border-strong); margin-top: -1px;
+}
 /* X-axis tick label */
+.barTick {
+  position: absolute; bottom: -22px;
+  font-size: 8px; font-weight: 600; color: var(--muted);
+  white-space: nowrap; max-width: 48px;
+  overflow: hidden; text-overflow: ellipsis;
+  text-align: center; line-height: 1;
+}
 
 /* ── Donut chart ───────────────────────────────────────────── */
 .donutWrap { display: grid; grid-template-columns: auto 1fr; gap: 1.25rem; align-items: center; }
@@ -335,11 +451,49 @@
 
 /* ── Hourly heatmap ────────────────────────────────────────── */
 /* NEW — 24-column bar showing busiest check-in hours */
+.heatmapWrap {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 120px; padding-bottom: 22px; width: 100%;
+}
+.heatmapCell {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-end; flex: 1; height: 100%; position: relative; min-width: 8px;
+}
+.heatmapBar {
+  width: 100%; border-radius: 3px 3px 0 0;
+  transition: height .5s ease, opacity .5s ease;
+  min-height: 3px;
+}
+.heatmapTick {
+  position: absolute; bottom: 0;
+  font-size: 7px; font-weight: 600; color: var(--muted);
+  white-space: nowrap; transform: translateX(-30%);
+  line-height: 1;
+}
 
 /* ── Day-of-week chart ─────────────────────────────────────── */
 /* NEW — 7-bar compact chart showing Mon–Sun activity */
+.dowWrap {
+  display: flex; align-items: flex-end; gap: 8px;
+  height: 140px; padding-bottom: 26px; width: 100%;
+}
+.dowCol {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-end; flex: 1; height: 100%; gap: 4px;
+}
+.dowBar   { width: 100%; border-radius: 5px 5px 0 0; transition: height .5s ease, opacity .5s ease; min-height: 4px; }
+.dowLabel { font-size: .62rem; font-weight: 700; color: var(--muted); letter-spacing: .03em; }
+.dowCount { font-size: .65rem; font-weight: 800; color: var(--ink-mid); }
 
 /* ── Duration banner ───────────────────────────────────────── */
+/* NEW — informational strip shown when avg booking duration is available */
+.durationBanner {
+  display: flex; align-items: center; gap: .5rem;
+  background: #f0f9ff; border: 1.5px solid #bae6fd;
+  border-radius: var(--r-lg); padding: .625rem 1rem;
+  font-size: .75rem; font-weight: 600; color: #0369a1;
+}
+.durationBanner strong { color: #0c4a6e; font-weight: 800; }
 
 /* ── Empty chart ───────────────────────────────────────────── */
 .emptyChart { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .5rem; padding: 2rem 1rem; color: var(--muted); font-size: .78rem; font-weight: 600; text-align: center; }
@@ -424,276 +578,27 @@
   .twoCol       { grid-template-columns: 1fr; }
   .exportCards  { grid-template-columns: 1fr; }
   .exportCardFull { flex-direction: column; }
-  
-  
+  .heatmapWrap  { height: 90px; }
+  .dowWrap      { height: 110px; gap: 4px; }
 }
 @media (max-width: 768px) {
   .kpiGrid    { grid-template-columns: repeat(2,1fr); }
   .donutWrap  { grid-template-columns: 1fr; justify-items: center; }
+  .heroInner  { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .heroStats  { flex-wrap: wrap; }
   .sectionIndex, .sectionIdx { display: none; }
-  
-  
+  .periodWrap { flex-direction: column; align-items: flex-start; gap: .5rem; }
+  .periodNote { display: none; }
 }
 @media (max-width: 480px) {
   .kpiGrid   { grid-template-columns: 1fr 1fr; }
   .header    { padding: 0 .875rem; }
   .heroTitle { font-size: 1.35rem; }
-  
-  
+  .periodBtn { padding: .3rem .7rem; font-size: .68rem; }
+  /* barValue removed */
 }
 @media (prefers-reduced-motion: reduce) {
   :global(*), :global(*::before), :global(*::after) {
     animation-duration: .01ms !important; transition-duration: .1ms !important;
   }
-}
-
-/* ══════════════════════════════════════════════════════
-   SVG CHART SYSTEM  — replaces all old bar/barChart CSS
-   ══════════════════════════════════════════════════════ */
-
-/* wrapper — gives SVG a proper height reference */
-.svgWrap {
-  position: relative;
-  width: 100%;
-  min-height: 190px;
-}
-
-/* the SVG itself fills the wrapper */
-.svgChart {
-  display: block;
-  width: 100%;
-  height: 190px;
-  overflow: visible;
-}
-
-.svgHeat {
-  display: block;
-  width: 100%;
-  height: 74px;
-  overflow: visible;
-}
-
-.svgDow {
-  display: block;
-  width: 100%;
-  height: 130px;
-  overflow: visible;
-}
-
-/* Floating tooltip on SVG charts */
-.svgTip {
-  position: absolute;
-  transform: translate(-50%, -110%);
-  background: #0f0629;
-  color: #fff;
-  border-radius: 8px;
-  padding: .28rem .65rem;
-  pointer-events: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  box-shadow: 0 4px 16px rgba(15,6,41,.4);
-  z-index: 20;
-  white-space: nowrap;
-}
-.svgTip::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 5px solid transparent;
-  border-top-color: #0f0629;
-}
-.svgTip strong { font-size: .82rem; font-weight: 900; line-height: 1; }
-.svgTip span   { font-size: .62rem; opacity: .65; line-height: 1; }
-
-/* Peak chip in chart card header */
-.peakChip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  background: color-mix(in srgb, var(--pc, #7c3aed) 8%, transparent);
-  border: 1px solid color-mix(in srgb, var(--pc, #7c3aed) 20%, transparent);
-  border-radius: var(--r-sm);
-  padding: .18rem .55rem;
-  gap: 1px;
-}
-.peakChip strong {
-  font-size: .82rem;
-  font-weight: 900;
-  color: var(--pc, #7c3aed);
-  line-height: 1;
-}
-.peakChip::after {
-  content: 'PEAK';
-  font-size: .52rem;
-  font-weight: 800;
-  color: var(--pc, #7c3aed);
-  letter-spacing: .05em;
-  opacity: .7;
-}
-
-/* chartCardRight flex cluster */
-.chartCardRight {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  flex-shrink: 0;
-}
-
-/* Stacked bar */
-.stackedBar {
-  display: flex;
-  height: 6px;
-  border-radius: 999px;
-  overflow: hidden;
-  margin-top: .5rem;
-  gap: 1px;
-}
-.stackedSeg {
-  height: 100%;
-  border-radius: 999px;
-  transition: width .6s ease;
-  min-width: 2px;
-}
-
-/* Progress rings grid */
-.ringGrid {
-  display: flex;
-  justify-content: space-around;
-  align-items: flex-start;
-  gap: .75rem;
-  padding: .5rem 0;
-}
-.ringWrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: .35rem;
-  flex: 1;
-}
-.ringSvg {
-  width: 100%;
-  max-width: 92px;
-  height: auto;
-  overflow: visible;
-}
-.ringSub {
-  font-size: .62rem;
-  font-weight: 600;
-  color: var(--muted);
-  text-align: center;
-  margin: 0;
-}
-
-/* Duration banner */
-.durationBanner {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  background: #f0f9ff;
-  border: 1.5px solid #bae6fd;
-  border-radius: var(--r-lg);
-  padding: .6rem 1rem;
-  font-size: .75rem;
-  font-weight: 600;
-  color: #0369a1;
-}
-.durationBanner strong { color: #0c4a6e; font-weight: 800; }
-
-/* KPI: period-over-period change */
-.kpiChange {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  font-size: .62rem;
-  font-weight: 700;
-  margin-top: .2rem;
-  line-height: 1;
-}
-.kpiUp   { color: var(--green); }
-.kpiDown { color: var(--red);   }
-
-/* KPI icon alias */
-.kpiIconWrap {
-  width: clamp(38px,5vw,46px);
-  height: clamp(38px,5vw,46px);
-  border-radius: var(--r-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-/* KPI skeleton shimmer */
-.kpiSkeleton {
-  position: absolute;
-  inset: 0;
-  border-radius: var(--r-xl);
-  z-index: 10;
-  background: linear-gradient(90deg, var(--bg) 25%, var(--bg-deep) 50%, var(--bg) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.2s infinite;
-}
-@keyframes shimmer {
-  from { background-position: 200% 0; }
-  to   { background-position: -200% 0; }
-}
-
-/* Period selector */
-.periodWrap {
-  position: sticky;
-  top: 58px;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .625rem clamp(1rem,4vw,2.5rem);
-  background: rgba(247,245,252,.96);
-  border-bottom: 1.5px solid var(--border);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  flex-shrink: 0;
-}
-.periodBar { display: flex; gap: .25rem; }
-.periodBtn {
-  padding: .35rem 1rem;
-  border-radius: 9999px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  font-family: var(--font);
-  font-size: .72rem;
-  font-weight: 700;
-  color: var(--muted);
-  cursor: pointer;
-  transition: all var(--t);
-  white-space: nowrap;
-}
-.periodBtn:hover { background: var(--purple-faint); border-color: rgba(124,58,237,.25); color: var(--purple); }
-.periodBtnActive {
-  background: var(--purple);
-  color: var(--white);
-  border-color: var(--purple);
-  box-shadow: 0 2px 10px rgba(124,58,237,.35);
-}
-.periodBtnActive:hover { background: var(--purple-mid); border-color: var(--purple-mid); }
-.periodNote {
-  font-size: .68rem;
-  font-weight: 600;
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-/* Hero pill spinner */
-.heroPillSpinner {
-  width: 10px; height: 10px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(255,255,255,.3);
-  border-top-color: #fff;
-  animation: spin .7s linear infinite;
-  flex-shrink: 0;
 }
