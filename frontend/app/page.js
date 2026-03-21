@@ -127,17 +127,21 @@ export default function LandingPage() {
       setTimeout(() => el.classList.add('animate'), i * 160);
     });
 
-    // Animate sections on scroll
+    // Animate sections on scroll — adds .is-visible when element enters viewport
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) entry.target.classList.add('fadeUp');
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target); // fire once
+          }
         });
       },
       { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    document.querySelectorAll('.fadeUp').forEach((el) => observer.observe(el));
+    // Observe all scroll-reveal elements
+    document.querySelectorAll('.fadeUp, .card').forEach((el) => observer.observe(el));
 
     // FAQ accordion
     const questions = document.querySelectorAll('.faqQuestion');
