@@ -1,0 +1,8 @@
+# robots.txt for Promeet (promeet.zodopt.com)
+# Allows all bots to crawl and index the site
+
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.promeet.zodopt.com/sitemap.xml
