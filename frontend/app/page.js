@@ -48,72 +48,6 @@ const CONFIG = {
   },
 };
 
-/* ── PromeetLogo: "Zodopt's" small + mirrored "ee" in Promeet ── */
-function PromeetLogo({ size = 'header' }) {
-  // size: 'header' | 'footer'
-  const isFooter = size === 'footer';
-
-  const brandFontSize   = isFooter ? '1.25rem' : 'var(--fs-base)';
-  const prefixFontSize  = isFooter ? '0.65rem'  : '0.6rem';
-  const letterSpacing   = '0.01em';
-
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        flexDirection: 'column',
-        lineHeight: 1.1,
-      }}
-    >
-      {/* "Zodopt's" — smaller, muted */}
-      <span
-        style={{
-          fontSize: prefixFontSize,
-          fontWeight: 600,
-          letterSpacing: '0.08em',
-          textTransform: 'uppercase',
-          opacity: 0.65,
-          color: isFooter ? '#ffb26b' : 'var(--orange)',
-          lineHeight: 1.2,
-        }}
-      >
-        Zodopt&apos;s
-      </span>
-
-      {/* "Promeet" with mirrored ee */}
-      <span
-        style={{
-          fontSize: brandFontSize,
-          fontWeight: 700,
-          letterSpacing,
-          color: isFooter ? '#ffffff' : '#2b0b45',
-          display: 'inline-flex',
-          alignItems: 'baseline',
-        }}
-      >
-        Pr
-        <span style={{ display: 'inline-flex', alignItems: 'baseline' }}>
-          {/* first 'o' and 'm' */}
-          om
-          {/* first e — normal */}
-          <span>e</span>
-          {/* second e — horizontally mirrored, facing the first */}
-          <span
-            style={{
-              display: 'inline-block',
-              transform: 'scaleX(-1)',
-              transformOrigin: 'center',
-            }}
-          >
-            e
-          </span>
-        </span>
-        t
-      </span>
-    </span>
-  );
-}
-
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const [showWaTooltip, setShowWaTooltip] = useState(false);
@@ -127,21 +61,17 @@ export default function LandingPage() {
       setTimeout(() => el.classList.add('animate'), i * 160);
     });
 
-    // Animate sections on scroll — adds .is-visible when element enters viewport
+    // Animate sections on scroll
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('is-visible');
-            observer.unobserve(entry.target); // fire once
-          }
+          if (entry.isIntersecting) entry.target.classList.add('fadeUp');
         });
       },
       { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
     );
 
-    // Observe all scroll-reveal elements
-    document.querySelectorAll('.fadeUp, .card').forEach((el) => observer.observe(el));
+    document.querySelectorAll('.fadeUp').forEach((el) => observer.observe(el));
 
     // FAQ accordion
     const questions = document.querySelectorAll('.faqQuestion');
@@ -320,11 +250,13 @@ export default function LandingPage() {
         <span className={`waTooltip${showWaTooltip ? ' waTooltipVisible' : ''}`}>💬 Chat with us!</span>
       </a>
 
-      {/* ── HEADER ─────────────────────────────────────────────── */}
+      {/* Header */}
       <header className="header">
         <div className="logo">
-          <Image src={CONFIG.company.logo} alt={`Zodopt's Promeet Logo`} width={28} height={28} className="logoImg" priority />
-          <PromeetLogo size="header" />
+          <Image src={CONFIG.company.logo} alt={`${CONFIG.company.name} Logo`} width={28} height={28} className="logoImg" priority />
+          <div>
+            {CONFIG.company.name} <span>{CONFIG.company.tagline}</span>
+          </div>
         </div>
 
         <nav>
@@ -339,21 +271,11 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ── HERO ───────────────────────────────────────────────── */}
+      {/* ── Hero ──────────────────────────────────────────────── */}
       <section className="hero">
-        {/* Hero h1 uses the mirrored-ee treatment inline */}
-        <h1 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.08em' }}>
-          {/* "Pro" */}
-          <span>Pro</span>
-          {/* mirrored ee */}
-          <span style={{ display: 'inline-flex', alignItems: 'baseline' }}>
-            <span>e</span>
-            <span style={{ display: 'inline-block', transform: 'scaleX(-1)', transformOrigin: 'center' }}>e</span>
-          </span>
-          {/* "t" */}
-          <span>t</span>
-        </h1>
+        <h1>{CONFIG.company.name}</h1>
 
+        {/* ✅ Replaced broken marquee with static responsive pill */}
         <div className="heroPill">
           <span className="pillIcon">⚡</span>
           <span className="pillText">GO LIVE IN JUST 15 MINUTES!</span>
@@ -505,7 +427,7 @@ export default function LandingPage() {
         <div className="container">
           <span className="industryBadge">For Every Industry</span>
           <h2 className="industryTitle">Designed for <span>Modern Organizations</span></h2>
-          <p className="industrySubtitle">{CONFIG.company.name} adapts to your industry&apos;s unique needs with flexible configurations</p>
+          <p className="industrySubtitle">{CONFIG.company.name} adapts to your industry's unique needs with flexible configurations</p>
 
           <div className="industryGrid">
             {industries.map((industry, i) => (
@@ -600,7 +522,7 @@ export default function LandingPage() {
       {/* Security */}
       <section className="securitySection">
         <div className="securityContainer">
-          <h2 className="securityTitle">Enterprise-Grade Security &amp; Compliance</h2>
+          <h2 className="securityTitle">Enterprise-Grade Security & Compliance</h2>
           <p className="securitySubtitle">Your data is protected with industry-leading security standards</p>
 
           <div className="securityCards">
@@ -646,7 +568,7 @@ export default function LandingPage() {
 
           <div className="faqCta">
             <h3>Still have questions?</h3>
-            <p>Can&apos;t find the answer you&apos;re looking for? Our team is here to help.</p>
+            <p>Can't find the answer you're looking for? Our team is here to help.</p>
             <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="ctaBtn">
               Contact Support
             </Link>
@@ -705,9 +627,10 @@ export default function LandingPage() {
         <div className="footerTop">
           <div className="footerBrand fadeUp">
             <div className="logoWrap">
-              <Image src={CONFIG.company.logo} alt={`Zodopt's Promeet Logo`} width={46} height={46} />
+              <Image src={CONFIG.company.logo} alt={`${CONFIG.company.name} Logo`} width={46} height={46} />
               <div>
-                <PromeetLogo size="footer" />
+                <h3>{CONFIG.company.name}</h3>
+                <span>{CONFIG.company.tagline}</span>
               </div>
             </div>
             <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
@@ -738,7 +661,7 @@ export default function LandingPage() {
         </div>
 
         <div className="footerBottom fadeUp delay4">
-          <span>© 2026 Zodopt&apos;s {CONFIG.company.name}. All rights reserved.</span>
+          <span>© 2026 {CONFIG.company.name}. All rights reserved.</span>
           <Link href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer" className="footerLink">
             <span>© Zodopt</span>
           </Link>
