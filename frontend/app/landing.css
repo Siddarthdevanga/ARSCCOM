@@ -1,27 +1,29 @@
-/* Variables */
+/* ============================================================
+   VARIABLES
+   ============================================================ */
 :root {
-  --orange: #ff6a00;
-  --white: #ffffff;
-  --muted: #d6cdef;
-  --grid-size: 80px;
-  --purple: #8b1cfb;
-  --dark-purple: #2b0b45;
+  --orange:       #ff6a00;
+  --white:        #ffffff;
+  --muted:        #d6cdef;
+  --grid-size:    80px;
+  --purple:       #8b1cfb;
+  --dark-purple:  #2b0b45;
 
-  --spacing-xs: clamp(0.5rem, 1vw, 0.75rem);
-  --spacing-sm: clamp(0.75rem, 2vw, 1rem);
-  --spacing-md: clamp(1rem, 3vw, 1.5rem);
-  --spacing-lg: clamp(1.5rem, 4vw, 2.5rem);
-  --spacing-xl: clamp(2rem, 6vw, 4rem);
-  --spacing-2xl: clamp(3rem, 8vw, 5rem);
+  --spacing-xs:  clamp(0.5rem,  1vw,  0.75rem);
+  --spacing-sm:  clamp(0.75rem, 2vw,  1rem);
+  --spacing-md:  clamp(1rem,    3vw,  1.5rem);
+  --spacing-lg:  clamp(1.5rem,  4vw,  2.5rem);
+  --spacing-xl:  clamp(2rem,    6vw,  4rem);
+  --spacing-2xl: clamp(3rem,    8vw,  5rem);
 
-  --fs-xs: clamp(0.75rem, 1vw + 0.5rem, 0.875rem);
-  --fs-sm: clamp(0.875rem, 1vw + 0.6rem, 1rem);
-  --fs-base: clamp(1rem, 1vw + 0.7rem, 1.125rem);
-  --fs-lg: clamp(1.125rem, 1.5vw + 0.8rem, 1.5rem);
-  --fs-xl: clamp(1.5rem, 2vw + 1rem, 2rem);
-  --fs-2xl: clamp(2rem, 3vw + 1.5rem, 3rem);
-  --fs-3xl: clamp(2.5rem, 4vw + 2rem, 4rem);
-  --fs-4xl: clamp(3rem, 5vw + 2.5rem, 5.5rem);
+  --fs-xs:   clamp(0.75rem,  1vw + 0.5rem,  0.875rem);
+  --fs-sm:   clamp(0.875rem, 1vw + 0.6rem,  1rem);
+  --fs-base: clamp(1rem,     1vw + 0.7rem,  1.125rem);
+  --fs-lg:   clamp(1.125rem, 1.5vw + 0.8rem,1.5rem);
+  --fs-xl:   clamp(1.5rem,   2vw + 1rem,    2rem);
+  --fs-2xl:  clamp(2rem,     3vw + 1.5rem,  3rem);
+  --fs-3xl:  clamp(2.5rem,   4vw + 2rem,    4rem);
+  --fs-4xl:  clamp(3rem,     5vw + 2.5rem,  5.5rem);
 
   --container-sm: min(90%, 640px);
   --container-md: min(90%, 900px);
@@ -29,26 +31,25 @@
   --container-xl: min(90%, 1400px);
 }
 
-/* Reset */
+/* ============================================================
+   RESET
+   ============================================================ */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: "Segoe UI", system-ui, sans-serif;
-  /* Hide scrollbars everywhere but keep scrolling */
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
 
-*::-webkit-scrollbar {
-  display: none;
-}
+*::-webkit-scrollbar { display: none; }
 
 html {
   scroll-behavior: smooth;
   font-size: clamp(14px, 1vw + 0.5rem, 16px);
   overflow-x: hidden;
-  overflow-y: scroll; /* always allow scroll, just hide the bar */
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -63,14 +64,11 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Grid Background */
+/* Grid background */
 body::before {
   content: "";
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
   background-image:
     linear-gradient(90deg, rgba(255,255,255,0.08) 1px, transparent 4px),
@@ -80,22 +78,24 @@ body::before {
   z-index: 0;
 }
 
-/* Animations */
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
 @keyframes bgMove {
-  0%   { background-position: 0% 0%; }
+  0%   { background-position: 0%   0%;   }
   50%  { background-position: 100% 100%; }
-  100% { background-position: 0% 0%; }
+  100% { background-position: 0%   0%;   }
 }
 
 @keyframes shimmer {
-  0%   { background-position: 0% center; }
+  0%   { background-position: 0%   center; }
   100% { background-position: 200% center; }
 }
 
 @keyframes gridMove {
-  0%   { background-position: 0 0, 0 0; }
+  0%   { background-position: 0 0, 0 0;             }
   50%  { background-position: 100px 100px, 100px 100px; }
-  100% { background-position: 0 0, 0 0; }
+  100% { background-position: 0 0, 0 0;             }
 }
 
 @keyframes fadeSlideUp {
@@ -107,13 +107,25 @@ body::before {
 }
 
 @keyframes pillShimmer {
-  0%   { background-position: 0% center; }
+  0%   { background-position: 0%   center; }
   100% { background-position: 200% center; }
 }
 
 @keyframes pillPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255,106,0,0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,106,0,0);    }
   50%       { box-shadow: 0 0 0 8px rgba(255,106,0,0.15); }
+}
+
+@keyframes waEntrance {
+  0%   { opacity: 0; transform: translateY(50px) scale(0.6);  }
+  65%  { transform: translateY(-8px) scale(1.06);              }
+  100% { opacity: 1; transform: translateY(0) scale(1);        }
+}
+
+@keyframes waPulseAnim {
+  0%   { transform: scale(1);   opacity: 0.55; }
+  70%  { transform: scale(2);   opacity: 0;    }
+  100% { transform: scale(2.3); opacity: 0;    }
 }
 
 /* ============================================================
@@ -140,6 +152,7 @@ body::before {
   font-weight: 600;
   color: #2b0b45;
   font-size: var(--fs-base);
+  white-space: nowrap;
 }
 
 .logoImg {
@@ -234,69 +247,43 @@ body::before {
   position: absolute;
   inset: 0;
   background-image:
-    repeating-linear-gradient(0deg, transparent, transparent 1px, rgba(255,255,255,0.015) 1px, rgba(255,255,255,0.015) 2px),
+    repeating-linear-gradient(0deg,  transparent, transparent 1px, rgba(255,255,255,0.015) 1px, rgba(255,255,255,0.015) 2px),
     repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255,255,255,0.015) 1px, rgba(255,255,255,0.015) 2px);
   pointer-events: none;
   z-index: 0;
 }
 
-/* ── Legacy scrollContainer: hidden ─── */
-.scrollContainer { display: none !important; }
-
-/* ── NEW PILL ──────────────────────────────────────────────── */
-.heroPill {
-  display: inline-flex;
+/* ── Zodopt's / Promeet stacked heading block ── */
+.heroBrandBlock {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: clamp(0.45rem, 1.2vw, 0.65rem) clamp(1rem, 3vw, 1.75rem);
-  border-radius: 999px;
-  border: 2px solid rgba(255, 106, 0, 0.6);
-  background: rgba(255, 106, 0, 0.12);
-  backdrop-filter: blur(8px);
+  gap: clamp(0.1rem, 0.5vw, 0.25rem);
   position: relative;
-  z-index: 2;
-  margin: clamp(0.25rem, 0.75vw, 0.5rem) 0;
-  animation: pillPulse 3s ease-in-out infinite;
-  max-width: 95vw;
-  flex-wrap: nowrap;
+  z-index: 1;
+  opacity: 0;
+  transform: translateY(40px);
 }
 
-.heroPill .pillIcon {
-  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.heroPill .pillText {
-  font-size: clamp(0.7rem, 2vw, 1rem);
-  font-weight: 800;
-  letter-spacing: clamp(0.05em, 0.2vw, 0.12em);
+/* "Zodopt's" label above */
+.heroBrandLabel {
+  font-size: clamp(1rem, 3vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.75);
   text-transform: uppercase;
-  white-space: nowrap;
-  background: linear-gradient(90deg, #ffffff 10%, #ffb26b 40%, #ff6a00 60%, #ffffff 90%);
+  line-height: 1;
+  margin: 0;
+  /* subtle shimmer to match brand */
+  background: linear-gradient(120deg, #d6cdef 20%, #ffb26b 50%, #d6cdef 80%);
   background-size: 200% auto;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: pillShimmer 2.5s linear infinite;
+  animation: shimmer 4s linear infinite;
 }
 
-/* badge (used in other sections) */
-.badge {
-  display: inline-block;
-  padding: clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem);
-  background: rgba(255,106,0,.18);
-  color: var(--orange);
-  border-radius: 20px;
-  margin-bottom: var(--spacing-md);
-  opacity: 0;
-  transform: translateY(30px);
-  position: relative;
-  z-index: 1;
-  font-size: var(--fs-sm);
-}
-
+/* "Promeet" big heading */
 .hero h1 {
   font-size: var(--fs-4xl);
   font-weight: 820;
@@ -306,12 +293,17 @@ body::before {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   animation: shimmer 3s linear infinite;
-  opacity: 0;
-  transform: translateY(40px);
   position: relative;
   z-index: 1;
-  line-height: 1.1;
+  line-height: 1.05;
   margin: 0;
+}
+
+/* Animate heroBrandBlock the same way as h1 was animated */
+.heroBrandBlock.animate {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .hero h2 {
@@ -354,6 +346,48 @@ body::before {
   margin-top: clamp(0.5rem, 1.5vw, 1rem);
 }
 
+/* Legacy (hidden) */
+.scrollContainer { display: none !important; }
+
+/* ── Pill ───────────────────────────────────────────────── */
+.heroPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: clamp(0.45rem, 1.2vw, 0.65rem) clamp(1rem, 3vw, 1.75rem);
+  border-radius: 999px;
+  border: 2px solid rgba(255,106,0,0.6);
+  background: rgba(255,106,0,0.12);
+  backdrop-filter: blur(8px);
+  position: relative;
+  z-index: 2;
+  margin: clamp(0.25rem, 0.75vw, 0.5rem) 0;
+  animation: pillPulse 3s ease-in-out infinite;
+  max-width: 95vw;
+}
+
+.heroPill .pillIcon {
+  font-size: clamp(0.9rem, 2.5vw, 1.1rem);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.heroPill .pillText {
+  font-size: clamp(0.7rem, 2vw, 1rem);
+  font-weight: 800;
+  letter-spacing: clamp(0.05em, 0.2vw, 0.12em);
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: linear-gradient(90deg, #ffffff 10%, #ffb26b 40%, #ff6a00 60%, #ffffff 90%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: pillShimmer 2.5s linear infinite;
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
 .btnPrimary {
   background: var(--orange);
   padding: clamp(0.625rem, 1.2vw, 1rem) clamp(1.25rem, 2.5vw, 2rem);
@@ -388,6 +422,26 @@ body::before {
 .btnSecondary:hover {
   background: rgba(255,255,255,.1);
   transform: scale(1.05);
+}
+
+/* ── Animate helper (JS adds this class) ─────────────────── */
+.animate {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+  transition: all .9s cubic-bezier(.2,.8,.2,1) !important;
+}
+
+/* badge (shared) */
+.badge {
+  display: inline-block;
+  padding: clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem);
+  background: rgba(255,106,0,.18);
+  color: var(--orange);
+  border-radius: 20px;
+  margin-bottom: var(--spacing-md);
+  position: relative;
+  z-index: 1;
+  font-size: var(--fs-sm);
 }
 
 /* ============================================================
@@ -437,7 +491,7 @@ body::before {
   flex-wrap: wrap;
 }
 
-.liveTop h3 { font-size: var(--fs-lg); }
+.liveTop h3  { font-size: var(--fs-lg); }
 .liveTop span { color: #00ff8b; font-size: var(--fs-sm); }
 
 .liveStats {
@@ -529,15 +583,9 @@ body::before {
   gap: var(--spacing-md);
 }
 
-.dashFeatures span  { font-size: clamp(1.5rem, 3vw, 2rem); display: block; margin-bottom: var(--spacing-sm); }
-.dashFeatures h4    { font-size: var(--fs-base); }
-.dashFeatures p     { opacity: .8; font-size: var(--fs-xs); }
-
-.animate {
-  opacity: 1 !important;
-  transform: translateY(0) !important;
-  transition: all .9s cubic-bezier(.2,.8,.2,1);
-}
+.dashFeatures span { font-size: clamp(1.5rem, 3vw, 2rem); display: block; margin-bottom: var(--spacing-sm); }
+.dashFeatures h4   { font-size: var(--fs-base); }
+.dashFeatures p    { opacity: .8; font-size: var(--fs-xs); }
 
 /* ============================================================
    WHY SECTION
@@ -610,11 +658,11 @@ body::before {
   will-change: transform;
 }
 
-.card:nth-child(1) { animation-delay: 0.1s; }
+.card:nth-child(1) { animation-delay: 0.1s;  }
 .card:nth-child(2) { animation-delay: 0.25s; }
-.card:nth-child(3) { animation-delay: 0.4s; }
+.card:nth-child(3) { animation-delay: 0.4s;  }
 .card:nth-child(4) { animation-delay: 0.55s; }
-.card:nth-child(5) { animation-delay: 0.7s; }
+.card:nth-child(5) { animation-delay: 0.7s;  }
 .card:nth-child(6) { animation-delay: 0.85s; }
 
 .card:hover {
@@ -648,12 +696,12 @@ body::before {
 
 .card:hover .iconContainer svg { transform: rotate(10deg) scale(1.1); }
 
-.card1 .iconContainer { background: #ff5400; color: #ff7a1c; }
-.card2 .iconContainer { background: #9300ff; color: #bb84ff; }
-.card3 .iconContainer { background: #3079ff; color: #77aaff; }
-.card4 .iconContainer { background: #ff1f7f; color: #ff5aab; }
-.card5 .iconContainer { background: #ff9a00; color: #ffc366; }
-.card6 .iconContainer { background: #00a270; color: #3be098; }
+.card1 .iconContainer { background: #ff5400; }
+.card2 .iconContainer { background: #9300ff; }
+.card3 .iconContainer { background: #3079ff; }
+.card4 .iconContainer { background: #ff1f7f; }
+.card5 .iconContainer { background: #ff9a00; }
+.card6 .iconContainer { background: #00a270; }
 
 .card h3 {
   font-weight: 700;
@@ -730,6 +778,8 @@ body::before {
   font-size: clamp(2rem, 5vw, 3rem);
   font-weight: 800;
   opacity: 0.08;
+  pointer-events: none;
+  user-select: none;
 }
 
 .stepCard .icon {
@@ -744,16 +794,16 @@ body::before {
 .stepCard h3 { margin: var(--spacing-md) 0 var(--spacing-sm); font-size: var(--fs-lg); }
 .stepCard p  { font-size: var(--fs-sm); opacity: 0.85; line-height: 1.6; }
 
+/* Step icon colour variants — scoped inside .stepCard to avoid leaking */
+.stepCard .orange { background: linear-gradient(135deg, #ff7a00, #ffb347); }
+.stepCard .purple { background: linear-gradient(135deg, #8a2be2, #c77dff); }
+.stepCard .blue   { background: linear-gradient(135deg, #2979ff, #5bbcff); }
+.stepCard .pink   { background: linear-gradient(135deg, #ff2f92, #ff7ac8); }
+
 .icon svg {
   width: clamp(20px, 3vw, 26px);
   height: clamp(20px, 3vw, 26px);
-  fill: #fff;
 }
-
-.orange { background: linear-gradient(135deg, #ff7a00, #ffb347); }
-.purple { background: linear-gradient(135deg, #8a2be2, #c77dff); }
-.blue   { background: linear-gradient(135deg, #2979ff, #5bbcff); }
-.pink   { background: linear-gradient(135deg, #ff2f92, #ff7ac8); }
 
 .ctaText {
   margin: var(--spacing-2xl) 0 var(--spacing-md);
@@ -771,10 +821,13 @@ body::before {
   cursor: pointer;
   text-decoration: none;
   display: inline-block;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.ctaBtn:hover { transform: translateY(-2px); }
+.ctaBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255,106,0,0.35);
+}
 
 /* ============================================================
    EVERYTHING SECTION
@@ -904,15 +957,6 @@ body::before {
   transition: transform 0.25s ease;
 }
 
-.industryIcon svg {
-  width: clamp(20px, 3vw, 24px);
-  height: clamp(20px, 3vw, 24px);
-  stroke-width: 1.8;
-  fill: none;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .industryCard:hover .industryIcon { transform: translateY(-3px); }
 
 .industryCard h3 {
@@ -928,25 +972,13 @@ body::before {
   line-height: 1.6;
 }
 
-/* Industry colour variants (safe — these only apply inside .industryIcon) */
+/* Industry icon colour variants */
 .industryIcon.blue   { background: #eef2ff; }
-.industryIcon.blue   svg { stroke: #4f6df5; }
 .industryIcon.violet { background: #f3e8ff; }
-.industryIcon.violet svg { stroke: #7c3aed; }
 .industryIcon.green  { background: #ecfdf5; }
-.industryIcon.green  svg { stroke: #059669; }
 .industryIcon.amber  { background: #fffbeb; }
-.industryIcon.amber  svg { stroke: #d97706; }
 .industryIcon.red    { background: #fef2f2; }
-.industryIcon.red    svg { stroke: #dc2626; }
 .industryIcon.sky    { background: #f0f9ff; }
-.industryIcon.sky    svg { stroke: #0284c7; }
-
-/* Step icon colour classes (safe — scoped by parent) */
-.stepCard .orange { background: linear-gradient(135deg, #ff7a00, #ffb347); }
-.stepCard .purple { background: linear-gradient(135deg, #8a2be2, #c77dff); }
-.stepCard .blue   { background: linear-gradient(135deg, #2979ff, #5bbcff); }
-.stepCard .pink   { background: linear-gradient(135deg, #ff2f92, #ff7ac8); }
 
 /* ============================================================
    CTA SECTION
@@ -1085,6 +1117,7 @@ body::before {
   background: linear-gradient(90deg, #ff6a00, #9b2cff);
   transform: scaleX(0);
   transition: transform 0.4s ease;
+  transform-origin: left;
 }
 
 .pricingCard:hover::before { transform: scaleX(1); }
@@ -1109,9 +1142,10 @@ body::before {
   box-shadow: 0 30px 80px rgba(255,106,0,0.5);
 }
 
-.pricingCard.featured .planName    { color: #ffd1a3; }
-.pricingCard.featured .planPrice   { color: #ffffff; }
+.pricingCard.featured .planName     { color: #ffd1a3; }
+.pricingCard.featured .planPrice    { color: #ffffff; }
 .pricingCard.featured .planPrice span { color: #d6cdef; }
+.pricingCard.featured .planDuration { color: #d6cdef; }
 .pricingCard.featured .planFeatures li { color: #e5e5e5; }
 .pricingCard.featured .planFeatures li::before { color: #ffb26b; }
 
@@ -1156,8 +1190,6 @@ body::before {
   font-size: var(--fs-sm);
   margin-bottom: var(--spacing-lg);
 }
-
-.pricingCard.featured .planDuration { color: #d6cdef; }
 
 .planFeatures {
   list-style: none;
@@ -1301,8 +1333,9 @@ body::before {
   border-radius: clamp(1rem, 2vw, 1.5rem);
   opacity: 0;
   transition: opacity .35s ease;
-  background: linear-gradient(135deg, rgba(255,106,0,0.25), rgba(155,44,255,0.25));
+  background: linear-gradient(135deg, rgba(255,106,0,0.07), rgba(155,44,255,0.07));
   z-index: -1;
+  pointer-events: none;
 }
 
 .testimonialCard:hover::after { opacity: 1; }
@@ -1418,12 +1451,6 @@ body::before {
   margin: 0 auto var(--spacing-sm);
 }
 
-.securityIcon svg {
-  width: clamp(18px, 2.5vw, 22px);
-  height: clamp(18px, 2.5vw, 22px);
-  fill: #ffffff;
-}
-
 .securityBar {
   background: #ffffff;
   border-radius: clamp(1rem, 2vw, 1.25rem);
@@ -1497,7 +1524,7 @@ body::before {
   border-radius: clamp(1rem, 2vw, 1.25rem);
   margin-bottom: var(--spacing-md);
   overflow: hidden;
-  transition: box-shadow .3s ease, border .3s ease, transform .35s ease;
+  transition: box-shadow .3s ease, border-color .3s ease, transform .35s ease;
 }
 
 .faqItem.active { box-shadow: 0 20px 50px rgba(0,0,0,0.08); }
@@ -1524,6 +1551,7 @@ body::before {
   text-align: left;
 }
 
+/* Override .icon generic style inside FAQ only */
 .faqQuestion .icon {
   width: clamp(30px, 4vw, 38px);
   height: clamp(30px, 4vw, 38px);
@@ -1536,9 +1564,11 @@ body::before {
   font-size: var(--fs-lg);
   transition: transform 0.3s ease;
   flex-shrink: 0;
+  /* Reset inherited padding/font-size from .icon */
+  padding: 0;
 }
 
-.faqItem.active .icon { transform: rotate(45deg); }
+.faqItem.active .faqQuestion .icon { transform: rotate(45deg); }
 
 .faqAnswer {
   max-height: 0;
@@ -1547,11 +1577,11 @@ body::before {
   color: #475569;
   font-size: var(--fs-sm);
   line-height: 1.6;
-  transition: max-height .35s ease, padding .35s ease;
+  transition: max-height .4s ease, padding .4s ease;
 }
 
 .faqItem.active .faqAnswer {
-  max-height: 500px;
+  max-height: 600px;
   padding: 0 clamp(1.25rem, 2.5vw, 1.75rem) clamp(1.25rem, 2.5vw, 1.75rem);
 }
 
@@ -1566,7 +1596,7 @@ body::before {
   font-size: clamp(1.25rem, 2.5vw, 1.75rem);
   font-weight: 700;
   margin-bottom: var(--spacing-sm);
-  color: #475569;
+  color: #0f172a;
 }
 
 .faqCta p {
@@ -1630,6 +1660,8 @@ body::before {
   width: clamp(44px, 6vw, 56px);
   height: clamp(44px, 6vw, 56px);
   border-radius: clamp(0.75rem, 1.5vw, 1rem);
+  padding: clamp(0.5rem, 1.5vw, 0.75rem);
+  flex-shrink: 0;
 }
 
 .contactItem span { font-size: var(--fs-sm); }
@@ -1681,16 +1713,25 @@ body::before {
   color: #fff;
 }
 
-.fadeUp {
+/* ============================================================
+   FADE-UP (scroll-triggered via data-fade + JS)
+   ============================================================ */
+[data-fade] {
   opacity: 0;
   transform: translateY(30px);
-  animation: fadeUp 0.9s ease forwards;
+  transition: opacity 0.9s ease, transform 0.9s ease;
 }
 
-.delay1 { animation-delay: 0.15s; }
-.delay2 { animation-delay: 0.3s; }
-.delay3 { animation-delay: 0.45s; }
-.delay4 { animation-delay: 0.6s; }
+[data-fade].fadeUp {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Legacy class still works */
+.fadeUp {
+  opacity: 1 !important;
+  transform: translateY(0) !important;
+}
 
 /* ============================================================
    FOOTER
@@ -1712,7 +1753,6 @@ body::before {
 }
 
 .logoWrap { display: flex; align-items: center; gap: var(--spacing-sm); }
-
 .logoWrap img { width: clamp(40px, 5vw, 50px); height: auto; }
 .logoWrap h3  { margin: 0; font-size: var(--fs-lg); }
 
@@ -1776,7 +1816,7 @@ body::before {
   box-shadow: 0 18px 40px rgba(0,0,0,0.35);
 }
 
-.trustCard span  { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
+.trustCard span   { font-size: clamp(1.25rem, 2.5vw, 1.75rem); }
 .trustCard strong { font-size: var(--fs-sm); display: block; color: #ffffff; }
 
 .footerBottom {
@@ -1833,18 +1873,6 @@ body::before {
 /* ============================================================
    FLOATING WHATSAPP
    ============================================================ */
-@keyframes waPulseAnim {
-  0%   { transform: scale(1);   opacity: 0.55; }
-  70%  { transform: scale(2);   opacity: 0;    }
-  100% { transform: scale(2.3); opacity: 0;    }
-}
-
-@keyframes waEntrance {
-  0%   { opacity: 0; transform: translateY(50px) scale(0.6); }
-  65%  { transform: translateY(-8px) scale(1.06); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-
 .floatingWhatsapp {
   position: fixed;
   bottom: 25px;
@@ -1935,19 +1963,19 @@ body::before {
 }
 
 @media (max-width: 768px) {
-  .dashboardCards { grid-template-columns: 1fr; }
-  .dashboardGlass { margin-top: clamp(-1rem, -2vw, -1.5rem); }
-  .hero { padding-bottom: clamp(2rem, 4vw, 3rem); }
-  .featuresGrid { grid-template-columns: repeat(2, 1fr); }
-  .securityBar { flex-direction: column; align-items: flex-start; }
-  .divider { display: none; }
-  .footerTop { grid-template-columns: 1fr; }
-  .footerBottom { flex-direction: column; text-align: center; }
+  .dashboardCards  { grid-template-columns: 1fr; }
+  .dashboardGlass  { margin-top: clamp(-1rem, -2vw, -1.5rem); }
+  .hero            { padding-bottom: clamp(2rem, 4vw, 3rem); }
+  .featuresGrid    { grid-template-columns: repeat(2, 1fr); }
+  .securityBar     { flex-direction: column; align-items: flex-start; }
+  .divider         { display: none; }
+  .footerTop       { grid-template-columns: 1fr; }
+  .footerBottom    { flex-direction: column; text-align: center; }
 }
 
 @media (max-width: 600px) {
   .featuresGrid { grid-template-columns: 1fr; }
-  .headerAuth { flex-direction: column; gap: var(--spacing-xs); }
+  .headerAuth   { flex-direction: row; gap: var(--spacing-xs); }
 }
 
 @media (max-width: 480px) {
@@ -1980,19 +2008,13 @@ body::before {
     font-size: clamp(0.875rem, 3vw, 1rem);
   }
 
-  .heroPill {
-    padding: 0.4rem 0.9rem;
-    gap: 5px;
-  }
+  .heroPill       { padding: 0.4rem 0.9rem; gap: 5px; }
+  .heroPill .pillText { font-size: clamp(0.6rem, 3.2vw, 0.8rem); letter-spacing: 0.04em; }
 
-  .heroPill .pillText {
-    font-size: clamp(0.6rem, 3.2vw, 0.8rem);
-    letter-spacing: 0.04em;
-  }
-
-  .hero h1  { font-size: clamp(1.75rem, 8vw, 3rem); line-height: 1.15; }
-  .hero h2  { font-size: clamp(1rem, 4.5vw, 1.5rem); margin: clamp(0.5rem, 1.5vw, 0.75rem) 0; }
-  .hero p   { font-size: clamp(0.875rem, 3.5vw, 1rem); margin: clamp(0.375rem, 1vw, 0.5rem) auto clamp(0.75rem, 2vw, 1rem); }
+  .heroBrandLabel { font-size: clamp(0.75rem, 3.5vw, 1.1rem); }
+  .hero h1        { font-size: clamp(2rem, 10vw, 3.5rem); line-height: 1.1; }
+  .hero h2        { font-size: clamp(1rem, 4.5vw, 1.5rem); margin: clamp(0.5rem, 1.5vw, 0.75rem) 0; }
+  .hero p         { font-size: clamp(0.875rem, 3.5vw, 1rem); margin: clamp(0.375rem, 1vw, 0.5rem) auto clamp(0.75rem, 2vw, 1rem); }
 
   .floatingWhatsapp { bottom: 16px; right: 16px; width: 54px; height: 54px; }
   .waIcon  { width: 54px; height: 54px; }
@@ -2006,7 +2028,9 @@ body::before {
   }
 
   .waTooltipVisible,
-  .floatingWhatsapp:hover .waTooltip { transform: translateX(0) translateY(0); }
+  .floatingWhatsapp:hover .waTooltip {
+    transform: translateX(0) translateY(0);
+  }
 
   .waTooltip::after {
     top: 100%; left: auto; right: 16px;
@@ -2018,17 +2042,16 @@ body::before {
 
 @media (max-width: 375px) {
   .heroPill .pillText { font-size: clamp(0.55rem, 3vw, 0.7rem); letter-spacing: 0.02em; }
-
   .btnPrimary,
   .btnSecondary { padding: 0.625rem 1rem; font-size: 0.875rem; }
 }
 
 @media (max-width: 320px) {
-  .heroPill { padding: 0.35rem 0.7rem; gap: 4px; }
+  .heroPill       { padding: 0.35rem 0.7rem; gap: 4px; }
   .heroPill .pillText { font-size: 0.5rem; letter-spacing: 0.01em; }
-  .hero h1  { font-size: 1.5rem; }
-  .hero h2  { font-size: 0.875rem; }
-
+  .heroBrandLabel { font-size: 0.65rem; }
+  .hero h1        { font-size: 1.5rem; }
+  .hero h2        { font-size: 0.875rem; }
   .btnPrimary,
-  .btnSecondary { padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
+  .btnSecondary   { padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
 }
