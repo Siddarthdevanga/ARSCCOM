@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import Head from 'next/head';
 import './landing.css';
 
 /* ── Google Analytics helpers ─────────────────────────── */
@@ -49,27 +48,68 @@ const CONFIG = {
   },
 };
 
-/* ── Promeet Logo Text Component ─────────────────────────── */
-/* Renders "Promeet" with the two "e"s as mirrored pairs facing each other */
-function PromeetText({ className = '', style = {} }) {
-  return (
-    <span className={`promeet-wordmark ${className}`} style={style} aria-label="Promeet">
-      {'Prom'}
-      <span className="ee-pair" aria-hidden="true">
-        <span className="e-left">e</span>
-        <span className="e-right">e</span>
-      </span>
-      {'t'}
-    </span>
-  );
-}
+/* ── PromeetLogo: "Zodopt's" small + mirrored "ee" in Promeet ── */
+function PromeetLogo({ size = 'header' }) {
+  // size: 'header' | 'footer'
+  const isFooter = size === 'footer';
 
-/* ── Brand name with Zodopt smaller above Promeet ────────── */
-function BrandName({ size = 'normal' }) {
+  const brandFontSize   = isFooter ? '1.25rem' : 'var(--fs-base)';
+  const prefixFontSize  = isFooter ? '0.65rem'  : '0.6rem';
+  const letterSpacing   = '0.01em';
+
   return (
-    <span className={`brand-stack brand-stack--${size}`}>
-      <span className="brand-zodopt">Zodopt's</span>
-      <PromeetText className="brand-promeet" />
+    <span
+      style={{
+        display: 'inline-flex',
+        flexDirection: 'column',
+        lineHeight: 1.1,
+      }}
+    >
+      {/* "Zodopt's" — smaller, muted */}
+      <span
+        style={{
+          fontSize: prefixFontSize,
+          fontWeight: 600,
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          opacity: 0.65,
+          color: isFooter ? '#ffb26b' : 'var(--orange)',
+          lineHeight: 1.2,
+        }}
+      >
+        Zodopt&apos;s
+      </span>
+
+      {/* "Promeet" with mirrored ee */}
+      <span
+        style={{
+          fontSize: brandFontSize,
+          fontWeight: 700,
+          letterSpacing,
+          color: isFooter ? '#ffffff' : '#2b0b45',
+          display: 'inline-flex',
+          alignItems: 'baseline',
+        }}
+      >
+        Pr
+        <span style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+          {/* first 'o' and 'm' */}
+          om
+          {/* first e — normal */}
+          <span>e</span>
+          {/* second e — horizontally mirrored, facing the first */}
+          <span
+            style={{
+              display: 'inline-block',
+              transform: 'scaleX(-1)',
+              transformOrigin: 'center',
+            }}
+          >
+            e
+          </span>
+        </span>
+        t
+      </span>
     </span>
   );
 }
@@ -259,99 +299,6 @@ export default function LandingPage() {
 
   return (
     <>
-      {/* ── SEO Meta Tags (Google Search) ──────────────────── */}
-      <Head>
-        <title>Promeet – Visitor Management System | Conference Room Booking India</title>
-        <meta name="description" content="Promeet by Zodopt is India's smart Visitor Management System. Digital visitor passes, real-time dashboard, conference room booking with email & WhatsApp alerts. Start a 15-day trial for ₹49." />
-        <meta name="keywords" content="visitor management system, visitor management software, conference room booking, visitor management India, digital visitor pass, office visitor tracking, visitor management Bengaluru, conference management platform, Promeet, Zodopt" />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://www.promeet.zodopt.com/" />
-
-        {/* Open Graph */}
-        <meta property="og:type" content="website" />
-        <meta property="og:url" content="https://www.promeet.zodopt.com/" />
-        <meta property="og:title" content="Promeet – Visitor Management System | Conference Room Booking" />
-        <meta property="og:description" content="India's smartest Visitor & Conference Management Platform. Digital passes, live dashboard, WhatsApp alerts. Go live in 15 minutes." />
-        <meta property="og:image" content="https://www.promeet.zodopt.com/og-image.png" />
-        <meta property="og:site_name" content="Promeet" />
-
-        {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Promeet – Visitor Management System" />
-        <meta name="twitter:description" content="Digital visitor passes, conference room booking & live dashboards for modern organizations. Start for ₹49." />
-        <meta name="twitter:image" content="https://www.promeet.zodopt.com/og-image.png" />
-
-        {/* Structured Data – SoftwareApplication */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'SoftwareApplication',
-              name: 'Promeet',
-              alternateName: "Zodopt's Promeet",
-              applicationCategory: 'BusinessApplication',
-              operatingSystem: 'Web',
-              description: 'Visitor Management System with digital passes, conference room booking, live dashboard and WhatsApp notifications.',
-              url: 'https://www.promeet.zodopt.com/',
-              offers: {
-                '@type': 'Offer',
-                price: '49',
-                priceCurrency: 'INR',
-                description: '15-day trial with full access',
-              },
-              aggregateRating: {
-                '@type': 'AggregateRating',
-                ratingValue: '4.9',
-                reviewCount: '500',
-              },
-              publisher: {
-                '@type': 'Organization',
-                name: 'Zodopt',
-                url: 'https://zodopt.com',
-              },
-            }),
-          }}
-        />
-
-        {/* Structured Data – Organization */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'Organization',
-              name: 'Zodopt',
-              url: 'https://zodopt.com',
-              logo: 'https://www.promeet.zodopt.com/Brand Logo.png',
-              contactPoint: {
-                '@type': 'ContactPoint',
-                telephone: '+91-8647878785',
-                contactType: 'customer support',
-                availableLanguage: ['English', 'Hindi'],
-              },
-              sameAs: ['https://www.promeet.zodopt.com/'],
-            }),
-          }}
-        />
-
-        {/* Structured Data – FAQPage for rich snippets */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              '@context': 'https://schema.org',
-              '@type': 'FAQPage',
-              mainEntity: faqs.map((faq) => ({
-                '@type': 'Question',
-                name: faq.q,
-                acceptedAnswer: { '@type': 'Answer', text: faq.a },
-              })),
-            }),
-          }}
-        />
-      </Head>
-
       {/* Floating WhatsApp */}
       <a
         href={CONFIG.company.whatsapp}
@@ -369,11 +316,11 @@ export default function LandingPage() {
         <span className={`waTooltip${showWaTooltip ? ' waTooltipVisible' : ''}`}>💬 Chat with us!</span>
       </a>
 
-      {/* Header */}
+      {/* ── HEADER ─────────────────────────────────────────────── */}
       <header className="header">
         <div className="logo">
-          <Image src={CONFIG.company.logo} alt={`${CONFIG.company.name} Logo`} width={28} height={28} className="logoImg" priority />
-          <BrandName size="header" />
+          <Image src={CONFIG.company.logo} alt={`Zodopt's Promeet Logo`} width={28} height={28} className="logoImg" priority />
+          <PromeetLogo size="header" />
         </div>
 
         <nav>
@@ -388,9 +335,20 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* ── Hero ──────────────────────────────────────────────── */}
+      {/* ── HERO ───────────────────────────────────────────────── */}
       <section className="hero">
-        <h1><PromeetText /></h1>
+        {/* Hero h1 uses the mirrored-ee treatment inline */}
+        <h1 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.08em' }}>
+          {/* "Pro" */}
+          <span>Pro</span>
+          {/* mirrored ee */}
+          <span style={{ display: 'inline-flex', alignItems: 'baseline' }}>
+            <span>e</span>
+            <span style={{ display: 'inline-block', transform: 'scaleX(-1)', transformOrigin: 'center' }}>e</span>
+          </span>
+          {/* "t" */}
+          <span>t</span>
+        </h1>
 
         <div className="heroPill">
           <span className="pillIcon">⚡</span>
@@ -463,7 +421,7 @@ export default function LandingPage() {
       </section>
 
       {/* Why Section */}
-      <section className="whySection" id="features" aria-label={`Why Organizations Love Promeet`}>
+      <section className="whySection" id="features" aria-label={`Why Organizations Love ${CONFIG.company.name}`}>
         <div className="headingContainer">
           <span className="badge">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" style={{ marginRight: '6px' }}>
@@ -471,7 +429,7 @@ export default function LandingPage() {
             </svg>
             Powerful Features
           </span>
-          <h2>Why Organizations Love <span><PromeetText /></span></h2>
+          <h2>Why Organizations Love <span>{CONFIG.company.name}</span></h2>
           <p className="subheading">Everything you need to manage visitors and conference rooms seamlessly</p>
         </div>
 
@@ -494,7 +452,7 @@ export default function LandingPage() {
       <section className="howItWorks" id="how-it-works">
         <div className="container">
           <span className="badge">✨ Simple Process</span>
-          <h2 className="title">How <span><PromeetText /></span> Works</h2>
+          <h2 className="title">How <span>{CONFIG.company.name}</span> Works</h2>
           <p className="subtitle">A streamlined 4-step process to manage all your visitors and meetings</p>
 
           <div className="steps">
@@ -543,7 +501,7 @@ export default function LandingPage() {
         <div className="container">
           <span className="industryBadge">For Every Industry</span>
           <h2 className="industryTitle">Designed for <span>Modern Organizations</span></h2>
-          <p className="industrySubtitle"><PromeetText /> adapts to your industry's unique needs with flexible configurations</p>
+          <p className="industrySubtitle">{CONFIG.company.name} adapts to your industry&apos;s unique needs with flexible configurations</p>
 
           <div className="industryGrid">
             {industries.map((industry, i) => (
@@ -566,7 +524,7 @@ export default function LandingPage() {
         <div className="ctaBox">
           <div className="ctaIcon">✨</div>
           <h2>Ready to Make Your Organization Smarter?</h2>
-          <p>Join hundreds of organizations that have transformed their visitor and conference management with <PromeetText /></p>
+          <p>Join hundreds of organizations that have transformed their visitor and conference management with {CONFIG.company.name}</p>
           <div className="ctaActions">
             <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="btnPrimary">
               Schedule a Demo →
@@ -609,7 +567,7 @@ export default function LandingPage() {
         <div className="testimonialsContainer">
           <span className="sectionBadge">⭐ Customer Success Stories</span>
           <h2 className="sectionTitle">Trusted by <span>Organizations</span></h2>
-          <p className="sectionSubtitle">See what our customers have to say about their experience with <PromeetText /></p>
+          <p className="sectionSubtitle">See what our customers have to say about their experience with {CONFIG.company.name}</p>
 
           <div className="testimonialCards">
             {testimonials.map((t, i) => (
@@ -638,7 +596,7 @@ export default function LandingPage() {
       {/* Security */}
       <section className="securitySection">
         <div className="securityContainer">
-          <h2 className="securityTitle">Enterprise-Grade Security & Compliance</h2>
+          <h2 className="securityTitle">Enterprise-Grade Security &amp; Compliance</h2>
           <p className="securitySubtitle">Your data is protected with industry-leading security standards</p>
 
           <div className="securityCards">
@@ -668,7 +626,7 @@ export default function LandingPage() {
         <div className="faqContainer">
           <span className="faqBadge">❓ Got Questions?</span>
           <h2 className="faqTitle">Frequently Asked <span>Questions</span></h2>
-          <p className="faqSubtitle">Everything you need to know about <PromeetText /></p>
+          <p className="faqSubtitle">Everything you need to know about {CONFIG.company.name}</p>
 
           <div className="faqList">
             {faqs.map((faq, i) => (
@@ -684,7 +642,7 @@ export default function LandingPage() {
 
           <div className="faqCta">
             <h3>Still have questions?</h3>
-            <p>Can't find the answer you're looking for? Our team is here to help.</p>
+            <p>Can&apos;t find the answer you&apos;re looking for? Our team is here to help.</p>
             <Link href={CONFIG.company.whatsapp} target="_blank" rel="noopener noreferrer" className="ctaBtn">
               Contact Support
             </Link>
@@ -697,7 +655,7 @@ export default function LandingPage() {
         <div className="gsContainer">
           <div className="gsLeft fadeUp">
             <span className="gsBadge">⚡ Start Your Free Trial</span>
-            <h2>Get Started with <br /><span><PromeetText /> Today</span></h2>
+            <h2>Get Started with <br /><span>{CONFIG.company.name} Today</span></h2>
             <p>Transform your visitor management and conference room booking experience. Contact us for a personalized demo.</p>
             <div className="gsContact">
               <div className="contactItem">
@@ -729,7 +687,7 @@ export default function LandingPage() {
             </div>
             <div className="gsCard demoCard">
               <h3>Request a Demo</h3>
-              <p>See <PromeetText /> in action with a personalized walkthrough</p>
+              <p>See {CONFIG.company.name} in action with a personalized walkthrough</p>
               <Link href={`mailto:${CONFIG.company.email}`} className="btn secondary">
                 Schedule Demo →
               </Link>
@@ -743,10 +701,9 @@ export default function LandingPage() {
         <div className="footerTop">
           <div className="footerBrand fadeUp">
             <div className="logoWrap">
-              <Image src={CONFIG.company.logo} alt={`${CONFIG.company.name} Logo`} width={46} height={46} />
+              <Image src={CONFIG.company.logo} alt={`Zodopt's Promeet Logo`} width={46} height={46} />
               <div>
-                <BrandName size="footer" />
-                <span>{CONFIG.company.tagline}</span>
+                <PromeetLogo size="footer" />
               </div>
             </div>
             <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
@@ -777,7 +734,7 @@ export default function LandingPage() {
         </div>
 
         <div className="footerBottom fadeUp delay4">
-          <span>© 2026 <PromeetText />. All rights reserved.</span>
+          <span>© 2026 Zodopt&apos;s {CONFIG.company.name}. All rights reserved.</span>
           <Link href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer" className="footerLink">
             <span>© Zodopt</span>
           </Link>
