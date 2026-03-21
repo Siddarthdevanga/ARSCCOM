@@ -29,26 +29,34 @@
   --container-xl: min(90%, 1400px);
 }
 
-/* Reset */
+/* ============================================================
+   RESET
+   FIX 6: Scoped scrollbar hiding to html/body only — not every
+   element (*), which was over-broad and caused browser quirks.
+   ============================================================ */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: "Segoe UI", system-ui, sans-serif;
-  /* Hide scrollbars everywhere but keep scrolling */
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 
-*::-webkit-scrollbar {
-  display: none;
+html,
+body {
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE / Edge */
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;               /* Chrome / Safari */
 }
 
 html {
   scroll-behavior: smooth;
   font-size: clamp(14px, 1vw + 0.5rem, 16px);
   overflow-x: hidden;
-  overflow-y: scroll; /* always allow scroll, just hide the bar */
+  overflow-y: scroll;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -80,7 +88,9 @@ body::before {
   z-index: 0;
 }
 
-/* Animations */
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
 @keyframes bgMove {
   0%   { background-position: 0% 0%; }
   50%  { background-position: 100% 100%; }
@@ -98,12 +108,18 @@ body::before {
   100% { background-position: 0 0, 0 0; }
 }
 
+/* FIX 2 & 3: Removed the auto-firing CSS animations from .fadeUp
+   and .card. Both are now driven entirely by JS (IntersectionObserver
+   adds .animate / .fadeUp classes), so they only trigger when the
+   element enters the viewport — not on page load. */
 @keyframes fadeSlideUp {
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(30px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 @keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes pillShimmer {
@@ -147,7 +163,8 @@ body::before {
   width: auto;
 }
 
-.logo span {
+/* Legacy: kept for any remaining span inside .logo */
+.logo > span {
   display: block;
   font-size: var(--fs-xs);
   color: var(--orange);
@@ -240,10 +257,10 @@ body::before {
   z-index: 0;
 }
 
-/* ── Legacy scrollContainer: hidden ─── */
+/* Legacy scrollContainer hidden */
 .scrollContainer { display: none !important; }
 
-/* ── NEW PILL ──────────────────────────────────────────────── */
+/* ── PILL ───────────────────────────────────────────────────── */
 .heroPill {
   display: inline-flex;
   align-items: center;
@@ -282,7 +299,11 @@ body::before {
   animation: pillShimmer 2.5s linear infinite;
 }
 
-/* badge (used in other sections) */
+/* ── BADGE (used in multiple sections) ─────────────────────── */
+/* FIX 1: Removed opacity:0 / translateY(30px) from the base
+   .badge rule. The hero badge was permanently invisible because
+   nothing ever added .animate to it. Sections that need a
+   scroll-reveal badge should wrap it in a .fadeUp container. */
 .badge {
   display: inline-block;
   padding: clamp(0.375rem, 1vw, 0.5rem) clamp(0.75rem, 2vw, 1rem);
@@ -290,13 +311,16 @@ body::before {
   color: var(--orange);
   border-radius: 20px;
   margin-bottom: var(--spacing-md);
-  opacity: 0;
-  transform: translateY(30px);
   position: relative;
   z-index: 1;
   font-size: var(--fs-sm);
 }
 
+/* ── HERO TEXT ──────────────────────────────────────────────── */
+/* FIX 5: .hero h1 uses gradient text via background-clip.
+   Child <span> elements don't inherit background-clip, so they
+   need their own declaration to keep the shimmer effect intact
+   when the h1 is wrapped in a flex container. */
 .hero h1 {
   font-size: var(--fs-4xl);
   font-weight: 820;
@@ -312,6 +336,28 @@ body::before {
   z-index: 1;
   line-height: 1.1;
   margin: 0;
+}
+
+/* Inherit gradient shimmer into every direct child span of hero h1 */
+.hero h1 > span,
+.hero h1 > span > span {
+  background: inherit;
+  background-size: inherit;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+/* The mirrored 'e' is a plain inline-block — it must NOT clip
+   its own background or the transform will look wrong */
+.hero h1 .mirroredE {
+  display: inline-block;
+  -webkit-text-fill-color: inherit;
+  background: none;
+  transform: scaleX(-1);
+  transform-origin: center;
 }
 
 .hero h2 {
@@ -389,6 +435,33 @@ body::before {
   background: rgba(255,255,255,.1);
   transform: scale(1.05);
 }
+
+/* ── ANIMATE (JS-triggered) ─────────────────────────────────── */
+/* Added by JS to hero text elements */
+.animate {
+  opacity: 1 !important;
+  transform: translateY(0) scale(1) !important;
+  transition: all .9s cubic-bezier(.2,.8,.2,1);
+}
+
+/* ── FADEUP (JS-triggered via IntersectionObserver) ────────── */
+/* FIX 2: Base state is hidden. The animation ONLY fires when JS
+   adds .is-visible — not automatically on page load. */
+.fadeUp {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.fadeUp.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.delay1 { transition-delay: 0.15s; }
+.delay2 { transition-delay: 0.3s; }
+.delay3 { transition-delay: 0.45s; }
+.delay4 { transition-delay: 0.6s; }
 
 /* ============================================================
    DASHBOARD GLASS
@@ -533,12 +606,6 @@ body::before {
 .dashFeatures h4    { font-size: var(--fs-base); }
 .dashFeatures p     { opacity: .8; font-size: var(--fs-xs); }
 
-.animate {
-  opacity: 1 !important;
-  transform: translateY(0) !important;
-  transition: all .9s cubic-bezier(.2,.8,.2,1);
-}
-
 /* ============================================================
    WHY SECTION
    ============================================================ */
@@ -573,7 +640,10 @@ body::before {
   gap: clamp(0.25rem, 1vw, 0.5rem);
   margin-bottom: var(--spacing-sm);
   justify-content: center;
+  /* FIX 1 continued: explicitly visible here since this badge
+     lives inside a section that is always in view on load */
   opacity: 1;
+  transform: none;
 }
 
 .whySection h2 {
@@ -597,6 +667,11 @@ body::before {
   gap: clamp(1.5rem, 3vw, 2rem);
 }
 
+/* ── WHY CARDS ──────────────────────────────────────────────── */
+/* FIX 3: Removed the unconditional `animation: fadeSlideUp`
+   from .card. Cards now start hidden and reveal when JS adds
+   .is-visible (via IntersectionObserver on the .cardsContainer
+   or each card). The hover/interaction styles are preserved. */
 .card {
   background: linear-gradient(135deg, #ffffff, #f9f9fb);
   border-radius: clamp(1rem, 2vw, 1.25rem);
@@ -604,18 +679,20 @@ body::before {
   cursor: pointer;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
   opacity: 0;
-  transform: translateY(40px) scale(0.95);
-  animation: fadeSlideUp 0.7s forwards;
-  transition: transform 0.35s ease, box-shadow 0.35s ease, background 0.35s ease;
-  will-change: transform;
+  transform: translateY(30px) scale(0.97);
+  transition: opacity 0.6s ease, transform 0.6s ease, box-shadow 0.35s ease, background 0.35s ease;
+  will-change: transform, opacity;
 }
 
-.card:nth-child(1) { animation-delay: 0.1s; }
-.card:nth-child(2) { animation-delay: 0.25s; }
-.card:nth-child(3) { animation-delay: 0.4s; }
-.card:nth-child(4) { animation-delay: 0.55s; }
-.card:nth-child(5) { animation-delay: 0.7s; }
-.card:nth-child(6) { animation-delay: 0.85s; }
+/* Stagger via transition-delay when .is-visible is added by JS */
+.card.is-visible { opacity: 1; transform: translateY(0) scale(1); }
+
+.card:nth-child(1) { transition-delay: 0.05s; }
+.card:nth-child(2) { transition-delay: 0.15s; }
+.card:nth-child(3) { transition-delay: 0.25s; }
+.card:nth-child(4) { transition-delay: 0.35s; }
+.card:nth-child(5) { transition-delay: 0.45s; }
+.card:nth-child(6) { transition-delay: 0.55s; }
 
 .card:hover {
   transform: translateY(-6px) scale(1.05);
@@ -750,10 +827,14 @@ body::before {
   fill: #fff;
 }
 
-.orange { background: linear-gradient(135deg, #ff7a00, #ffb347); }
-.purple { background: linear-gradient(135deg, #8a2be2, #c77dff); }
-.blue   { background: linear-gradient(135deg, #2979ff, #5bbcff); }
-.pink   { background: linear-gradient(135deg, #ff2f92, #ff7ac8); }
+/* FIX 4: Step icon colour classes scoped to .stepCard to prevent
+   collision with .industryIcon colour variants (both previously
+   used bare .blue, .purple etc. at the same specificity level).
+   The redundant duplicate block at the bottom has been removed. */
+.stepCard .orange { background: linear-gradient(135deg, #ff7a00, #ffb347); }
+.stepCard .purple { background: linear-gradient(135deg, #8a2be2, #c77dff); }
+.stepCard .blue   { background: linear-gradient(135deg, #2979ff, #5bbcff); }
+.stepCard .pink   { background: linear-gradient(135deg, #ff2f92, #ff7ac8); }
 
 .ctaText {
   margin: var(--spacing-2xl) 0 var(--spacing-md);
@@ -928,7 +1009,8 @@ body::before {
   line-height: 1.6;
 }
 
-/* Industry colour variants (safe — these only apply inside .industryIcon) */
+/* FIX 4: Industry icon colour variants — scoped to .industryIcon
+   so they never collide with bare .blue/.purple etc. */
 .industryIcon.blue   { background: #eef2ff; }
 .industryIcon.blue   svg { stroke: #4f6df5; }
 .industryIcon.violet { background: #f3e8ff; }
@@ -941,12 +1023,6 @@ body::before {
 .industryIcon.red    svg { stroke: #dc2626; }
 .industryIcon.sky    { background: #f0f9ff; }
 .industryIcon.sky    svg { stroke: #0284c7; }
-
-/* Step icon colour classes (safe — scoped by parent) */
-.stepCard .orange { background: linear-gradient(135deg, #ff7a00, #ffb347); }
-.stepCard .purple { background: linear-gradient(135deg, #8a2be2, #c77dff); }
-.stepCard .blue   { background: linear-gradient(135deg, #2979ff, #5bbcff); }
-.stepCard .pink   { background: linear-gradient(135deg, #ff2f92, #ff7ac8); }
 
 /* ============================================================
    CTA SECTION
@@ -1681,17 +1757,6 @@ body::before {
   color: #fff;
 }
 
-.fadeUp {
-  opacity: 0;
-  transform: translateY(30px);
-  animation: fadeUp 0.9s ease forwards;
-}
-
-.delay1 { animation-delay: 0.15s; }
-.delay2 { animation-delay: 0.3s; }
-.delay3 { animation-delay: 0.45s; }
-.delay4 { animation-delay: 0.6s; }
-
 /* ============================================================
    FOOTER
    ============================================================ */
@@ -2018,7 +2083,6 @@ body::before {
 
 @media (max-width: 375px) {
   .heroPill .pillText { font-size: clamp(0.55rem, 3vw, 0.7rem); letter-spacing: 0.02em; }
-
   .btnPrimary,
   .btnSecondary { padding: 0.625rem 1rem; font-size: 0.875rem; }
 }
@@ -2028,7 +2092,6 @@ body::before {
   .heroPill .pillText { font-size: 0.5rem; letter-spacing: 0.01em; }
   .hero h1  { font-size: 1.5rem; }
   .hero h2  { font-size: 0.875rem; }
-
   .btnPrimary,
   .btnSecondary { padding: 0.5rem 0.875rem; font-size: 0.8125rem; }
 }
