@@ -330,7 +330,7 @@ export default function LandingPage() {
 
     /* ── Hero animation ─────────────────────────────────── */
     const heroEls = document.querySelectorAll(
-      '.hero h1, .hero .heroBrand, .hero h2, .hero p, .heroButtons'
+      '.heroBrandBlock, .heroPill, .hero h2, .hero p, .heroButtons'
     );
     heroEls.forEach((el, i) => {
       setTimeout(() => el.classList.add('animate'), i * 160);
@@ -381,9 +381,6 @@ export default function LandingPage() {
       clearTimeout(tooltipTimer);
     };
   }, []);
-
-  /* ── SSR guard ──────────────────────────────────────────── */
-  if (!mounted) return null;
 
   return (
     <>
