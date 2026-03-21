@@ -258,29 +258,28 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(0.1rem, 0.5vw, 0.25rem);
+  gap: clamp(0.05rem, 0.3vw, 0.15rem);
   position: relative;
   z-index: 1;
   opacity: 0;
   transform: translateY(40px);
 }
 
-/* "Zodopt's" label above */
+.heroBrandBlock.animate {
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* "Zodopt's" — intentionally small, subdued label above Promeet */
 .heroBrandLabel {
-  font-size: clamp(1rem, 3vw, 1.75rem);
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.75);
+  font-size: clamp(0.65rem, 1.5vw, 0.95rem);
+  font-weight: 500;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   line-height: 1;
   margin: 0;
-  /* subtle shimmer to match brand */
-  background: linear-gradient(120deg, #d6cdef 20%, #ffb26b 50%, #d6cdef 80%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 4s linear infinite;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 /* "Promeet" big heading */
@@ -299,12 +298,36 @@ body::before {
   margin: 0;
 }
 
-/* Animate heroBrandBlock the same way as h1 was animated */
-.heroBrandBlock.animate {
+/* ── Pill ───────────────────────────────────────────────── */
+.heroPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: clamp(0.45rem, 1.2vw, 0.65rem) clamp(1rem, 3vw, 1.75rem);
+  border-radius: 999px;
+  border: 2px solid rgba(255,106,0,0.6);
+  background: rgba(255,106,0,0.12);
+  backdrop-filter: blur(8px);
+  position: relative;
+  z-index: 2;
+  margin: clamp(0.25rem, 0.75vw, 0.5rem) 0;
+  max-width: 95vw;
+  /* start hidden for staggered hero animation */
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.heroPill.animate {
   opacity: 1;
   transform: translateY(0);
-  transition: all 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: opacity 0.9s cubic-bezier(0.2, 0.8, 0.2, 1),
+              transform 0.9s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: pillPulse 3s ease-in-out infinite 0.9s;
 }
+
+/* Legacy (hidden) */
+.scrollContainer { display: none !important; }
 
 .hero h2 {
   font-size: var(--fs-xl);
@@ -344,27 +367,6 @@ body::before {
   position: relative;
   z-index: 1;
   margin-top: clamp(0.5rem, 1.5vw, 1rem);
-}
-
-/* Legacy (hidden) */
-.scrollContainer { display: none !important; }
-
-/* ── Pill ───────────────────────────────────────────────── */
-.heroPill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: clamp(0.45rem, 1.2vw, 0.65rem) clamp(1rem, 3vw, 1.75rem);
-  border-radius: 999px;
-  border: 2px solid rgba(255,106,0,0.6);
-  background: rgba(255,106,0,0.12);
-  backdrop-filter: blur(8px);
-  position: relative;
-  z-index: 2;
-  margin: clamp(0.25rem, 0.75vw, 0.5rem) 0;
-  animation: pillPulse 3s ease-in-out infinite;
-  max-width: 95vw;
 }
 
 .heroPill .pillIcon {
@@ -2011,7 +2013,7 @@ body::before {
   .heroPill       { padding: 0.4rem 0.9rem; gap: 5px; }
   .heroPill .pillText { font-size: clamp(0.6rem, 3.2vw, 0.8rem); letter-spacing: 0.04em; }
 
-  .heroBrandLabel { font-size: clamp(0.75rem, 3.5vw, 1.1rem); }
+  .heroBrandLabel { font-size: clamp(0.55rem, 2.5vw, 0.75rem); letter-spacing: 0.12em; }
   .hero h1        { font-size: clamp(2rem, 10vw, 3.5rem); line-height: 1.1; }
   .hero h2        { font-size: clamp(1rem, 4.5vw, 1.5rem); margin: clamp(0.5rem, 1.5vw, 0.75rem) 0; }
   .hero p         { font-size: clamp(0.875rem, 3.5vw, 1rem); margin: clamp(0.375rem, 1vw, 0.5rem) auto clamp(0.75rem, 2vw, 1rem); }
@@ -2049,7 +2051,7 @@ body::before {
 @media (max-width: 320px) {
   .heroPill       { padding: 0.35rem 0.7rem; gap: 4px; }
   .heroPill .pillText { font-size: 0.5rem; letter-spacing: 0.01em; }
-  .heroBrandLabel { font-size: 0.65rem; }
+  .heroBrandLabel { font-size: 0.5rem; letter-spacing: 0.08em; }
   .hero h1        { font-size: 1.5rem; }
   .hero h2        { font-size: 0.875rem; }
   .btnPrimary,
