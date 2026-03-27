@@ -1,0 +1,294 @@
+/**
+ * utils/whatsapp.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Gupshup WhatsApp API wrapper
+ *
+ * Handles:
+ *   1. Phone normalisation     → always "91XXXXXXXXXX" (10-digit, no +)
+ *   2. sendOtpWhatsApp         → sends approved OTP template
+ *   3. sendVisitorPassWhatsApp → sends PNG buffer directly to Gupshup
+ *                                (NO public URL / S3 policy required)
+ *
+ * Required env vars (store in AWS Secrets Manager / .env):
+ *   GUPSHUP_API_KEY
+ *   GUPSHUP_APP_NAME
+ *   GUPSHUP_SOURCE_NUMBER      e.g. "917XXXXXXXX"  (91 + 10 digits, no +)
+ *   GUPSHUP_OTP_TEMPLATE_ID    template name registered in Gupshup dashboard
+ *   GUPSHUP_PASS_TEMPLATE_ID   template name registered in Gupshup dashboard
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+
+import FormData from "form-data";
+
+/* ======================================================
+   VALIDATE ENV ON BOOT
+====================================================== */
+const REQUIRED = [
+  "GUPSHUP_API_KEY",
+  "GUPSHUP_APP_NAME",
+  "GUPSHUP_SOURCE_NUMBER",
+  "GUPSHUP_OTP_TEMPLATE_ID",
+  "GUPSHUP_PASS_TEMPLATE_ID",
+];
+
+for (const key of REQUIRED) {
+  if (!process.env[key]) {
+    console.warn(`⚠️  [WHATSAPP] Missing env: ${key} — WhatsApp notifications will be skipped.`);
+  }
+}
+
+/* ======================================================
+   CONSTANTS
+====================================================== */
+const GUPSHUP_TEMPLATE_API = "https://api.gupshup.io/wa/api/v1/template/msg";
+const GUPSHUP_MEDIA_API    = "https://api.gupshup.io/wa/api/v1/msg";
+
+/* ======================================================
+   PHONE NORMALISATION
+   Strips all non-digits, takes last 10, prepends "91".
+   Accepts: +91XXXXXXXXXX / 91XXXXXXXXXX / 0XXXXXXXXXX / XXXXXXXXXX
+====================================================== */
+export const normalizePhone = (raw) => {
+  if (!raw) throw new Error("Phone number is required");
+  const digits = String(raw).replace(/\D/g, "");
+  const last10 = digits.slice(-10);
+  if (last10.length !== 10) {
+    throw new Error(`Invalid phone: "${raw}" — could not extract 10 digits`);
+  }
+  return `91${last10}`;
+};
+
+/* ======================================================
+   INTERNAL: POST TEMPLATE MESSAGE
+   (application/x-www-form-urlencoded)
+====================================================== */
+const postTemplate = async (payload) => {
+  const apiKey    = process.env.GUPSHUP_API_KEY;
+  const appName   = process.env.GUPSHUP_APP_NAME;
+  const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
+
+  if (!apiKey || !appName || !sourceNum) {
+    throw new Error("Gupshup env vars not configured");
+  }
+
+  const body = new URLSearchParams({
+    channel:    "whatsapp",
+    source:     sourceNum,
+    "src.name": appName,
+    ...payload,
+  });
+
+  const response = await fetch(GUPSHUP_TEMPLATE_API, {
+    method:  "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      "apikey":        apiKey,
+    },
+    body: body.toString(),
+  });
+
+  const text = await response.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+
+  if (!response.ok) {
+    console.error("[WHATSAPP] Template API error:", response.status, json);
+    throw new Error(`Gupshup template error ${response.status}: ${JSON.stringify(json)}`);
+  }
+
+  console.log("[WHATSAPP] Template response:", json);
+  return json;
+};
+
+/* ======================================================
+   INTERNAL: SEND BINARY IMAGE (multipart/form-data)
+
+   Gupshup's /wa/api/v1/msg accepts a raw file buffer via multipart.
+   The image is uploaded directly — no hosted URL needed.
+
+   The visitor receives the actual PNG image in their WhatsApp chat.
+====================================================== */
+const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) => {
+  const apiKey    = process.env.GUPSHUP_API_KEY;
+  const appName   = process.env.GUPSHUP_APP_NAME;
+  const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
+
+  if (!apiKey || !appName || !sourceNum) {
+    throw new Error("Gupshup env vars not configured");
+  }
+
+  const message = JSON.stringify({
+    type:    "image",
+    caption: caption || "",
+  });
+
+  const form = new FormData();
+  form.append("channel",     "whatsapp");
+  form.append("source",      sourceNum);
+  form.append("destination", destination);
+  form.append("src.name",    appName);
+  form.append("message",     message);
+  form.append("file",        imageBuffer, {
+    filename:    filename || "visitor-pass.png",
+    contentType: "image/png",
+    knownLength: imageBuffer.length,
+  });
+
+  const response = await fetch(GUPSHUP_MEDIA_API, {
+    method:  "POST",
+    headers: {
+      "apikey": apiKey,
+      ...form.getHeaders(),   // sets multipart/form-data with correct boundary
+    },
+    body: form.getBuffer(),
+  });
+
+  const text = await response.text();
+  let json;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+
+  if (!response.ok) {
+    console.error("[WHATSAPP] Media API error:", response.status, json);
+    throw new Error(`Gupshup media error ${response.status}: ${JSON.stringify(json)}`);
+  }
+
+  console.log("[WHATSAPP] Media response:", json);
+  return json;
+};
+
+/* ======================================================
+   SEND OTP VIA WHATSAPP
+   ─────────────────────────────────────────────────────
+   Template: visitor_otp
+   Category: AUTHENTICATION
+   Language: English (en)
+
+   Register this exact body in Gupshup dashboard:
+   ────────────────────────────────────────────────
+   Your verification code for {{1}} is *{{2}}*.
+   This OTP is valid for 5 minutes.
+   Do not share this code with anyone.
+   ────────────────────────────────────────────────
+   {{1}} = company name
+   {{2}} = 6-digit OTP
+====================================================== */
+export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
+  const destination = normalizePhone(phone);
+  const templateId  = process.env.GUPSHUP_OTP_TEMPLATE_ID;
+  const companyName = company.name || "ProMeet";
+
+  console.log(`[WHATSAPP][OTP] → ${destination} | template: ${templateId}`);
+
+  const message = JSON.stringify({
+    type: "template",
+    template: {
+      id:       templateId,
+      language: { policy: "deterministic", code: "en" },
+      components: [
+        {
+          type:       "body",
+          parameters: [
+            { type: "text", text: companyName },
+            { type: "text", text: otp },
+          ],
+        },
+      ],
+    },
+  });
+
+  await postTemplate({ destination, message });
+  console.log(`[WHATSAPP][OTP] Sent to ${destination}`);
+};
+
+/* ======================================================
+   SEND VISITOR PASS VIA WHATSAPP (DIRECT BINARY IMAGE)
+   ─────────────────────────────────────────────────────
+   What the visitor receives (two messages in sequence):
+
+   Message 1 — The actual PNG pass image
+     Sent as a binary file upload via Gupshup's media API.
+     Visitor sees the full visitor pass card as an image in chat.
+     Caption: "🎫 Your Visitor Pass — <CompanyName>"
+
+   Message 2 — Structured text details (template)
+     Sent as an approved WhatsApp template with visit details.
+     Register this body in Gupshup dashboard (TEXT header, no image):
+     ─────────────────────────────────────────────────────────────────
+     Welcome to *{{1}}*! 🎉
+
+     Your visitor pass is the image above.
+
+     🪪 *Visitor ID:* {{2}}
+     👤 *Name:* {{3}}
+     📞 *Phone:* {{4}}
+     🤝 *Meeting:* {{5}}
+     🕐 *Check-in:* {{6}}
+
+     Please show the pass image at the reception counter.
+     Valid for today only.
+     ─────────────────────────────────────────────────────────────────
+
+   passImageBuffer: Buffer — output of generateVisitorPassImage()
+   No S3 public URL or bucket policy change required.
+====================================================== */
+export const sendVisitorPassWhatsApp = async ({
+  phone,
+  passImageBuffer,
+  company  = {},
+  visitor  = {},
+}) => {
+  const destination = normalizePhone(phone);
+  const templateId  = process.env.GUPSHUP_PASS_TEMPLATE_ID;
+  const companyName = company.name || "ProMeet";
+
+  const visitorCode  = visitor.visitorCode  || "-";
+  const visitorName  = visitor.name         || "Visitor";
+  const visitorPhone = visitor.phone        || "-";
+  const personToMeet = visitor.personToMeet || "Reception";
+  const checkIn      = visitor.checkInDisplay || visitor.checkIn || "-";
+
+  if (!passImageBuffer || !Buffer.isBuffer(passImageBuffer)) {
+    throw new Error(
+      `passImageBuffer must be a Buffer — received: ${typeof passImageBuffer}`
+    );
+  }
+
+  console.log(
+    `[WHATSAPP][PASS] → ${destination} | buffer: ${passImageBuffer.length} bytes`
+  );
+
+  // ── Message 1: Send the PNG image directly as binary ──
+  await postBinaryImage({
+    destination,
+    imageBuffer: passImageBuffer,
+    filename:    `${visitorCode}-visitor-pass.png`,
+    caption:     `🎫 Your Visitor Pass — ${companyName}`,
+  });
+
+  console.log(`[WHATSAPP][PASS] Image sent to ${destination}`);
+
+  // ── Message 2: Send structured details as approved template ──
+  const message = JSON.stringify({
+    type: "template",
+    template: {
+      id:       templateId,
+      language: { policy: "deterministic", code: "en" },
+      components: [
+        {
+          type: "body",
+          parameters: [
+            { type: "text", text: companyName  },
+            { type: "text", text: visitorCode  },
+            { type: "text", text: visitorName  },
+            { type: "text", text: visitorPhone },
+            { type: "text", text: personToMeet },
+            { type: "text", text: checkIn      },
+          ],
+        },
+      ],
+    },
+  });
+
+  await postTemplate({ destination, message });
+  console.log(`[WHATSAPP][PASS] Details template sent to ${destination}`);
+};
