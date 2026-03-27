@@ -1,7 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
-import { sendEmail } from "../utils/mailer.js";
+import { sendOtpWhatsApp } from "../utils/whatsapp.js";
 import { searchEmployeesByCompany } from "../controllers/employee.controller.js";
 import multer from "multer";
 import QRCode from "qrcode";
@@ -44,51 +44,28 @@ const handleUpload = (req, res, next) => {
 };
 
 /* ======================================================
-   EMAIL TEMPLATES
-====================================================== */
-const emailFooter = (company = {}) => `
-  <br/><br/>
-  Regards,<br/>
-  <strong>${company.name || "ProMeet Team"}</strong><br/>
-  ${company.logo_url
-    ? `<img src="${company.logo_url}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
-    : ""}
-  <hr style="margin-top:20px;" />
-  <p style="font-size:13px;color:#666;margin-top:15px;line-height:1.5;">
-    This email was automatically sent from the Visitor Management Platform.<br/>
-    If you did not perform this action, please contact your administrator immediately.
-  </p>
-`;
-
-const otpEmailHtml = (otp, company) => `
-  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h2 style="color:#6c2bd9;">${company.name} – Visitor Verification</h2>
-    <p style="font-size:16px;">Your verification code is:</p>
-    <div style="background:#f7f7f7;padding:20px;text-align:center;border-radius:8px;margin:20px 0;">
-      <h1 style="letter-spacing:8px;color:#6c2bd9;margin:0;font-size:36px;">${otp}</h1>
-    </div>
-    <p style="color:#666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
-    <p style="color:#999;font-size:12px;margin-top:30px;">
-      If you didn't request this code, please ignore this email.
-    </p>
-    ${emailFooter(company)}
-  </div>
-`;
-
-/* ======================================================
    UTILITIES
 ====================================================== */
 const normalizeSlug  = (v) => String(v || "").trim().toLowerCase();
-const normalizeEmail = (v) => String(v || "").trim().toLowerCase();
-const isValidEmail   = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const generateOTP    = () => Math.floor(100000 + Math.random() * 900000).toString();
 const hashOTP        = (otp) => crypto.createHash("sha256").update(otp).digest("hex");
 
 /* ======================================================
+   PHONE NORMALISATION
+   • Strip all non-digits
+   • Take last 10 digits
+   • Prepend "91"
+   Accepts: +91XXXXXXXXXX / 91XXXXXXXXXX / 0XXXXXXXXXX / XXXXXXXXXX
+====================================================== */
+const normalizePhone = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  const last10 = digits.slice(-10);
+  if (last10.length !== 10) return null; // invalid — caller decides what to do
+  return `91${last10}`;
+};
+
+/* ======================================================
    SANITIZE EMPLOYEE ID
-   FormData sends everything as strings.
-   "null", "undefined", "", "0" must all become real null
-   so saveVisitor never attempts a DB lookup with a garbage value.
 ====================================================== */
 const sanitizeEmployeeId = (raw) => {
   if (raw === null || raw === undefined) return null;
@@ -108,17 +85,6 @@ const getCompanyBySlug = async (slug) => {
     [slug]
   );
   return company || null;
-};
-
-/* ======================================================
-   SEND OTP EMAIL
-====================================================== */
-const sendOtpMail = async (email, otp, company) => {
-  await sendEmail({
-    to:      email,
-    subject: `Your Visitor Verification Code – ${company.name}`,
-    html:    otpEmailHtml(otp, company),
-  });
 };
 
 /* ======================================================
@@ -185,7 +151,6 @@ router.get("/visitor/qr/:slug", async (req, res) => {
 /* ======================================================
    EMPLOYEE AUTOCOMPLETE
    GET /visitor/:slug/employees?q=name
-   No auth required — used by public registration form
 ====================================================== */
 router.get("/visitor/:slug/employees", async (req, res) => {
   try {
@@ -208,14 +173,24 @@ router.get("/visitor/:slug/employees", async (req, res) => {
 /* ======================================================
    SEND OTP
    POST /visitor/:slug/otp/send
+
+   Body: { phone: "9876543210" }
+
+   OTP is sent via WhatsApp only.
+   Phone is normalised to 91XXXXXXXXXX before DB storage.
 ====================================================== */
 router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
-    const slug  = normalizeSlug(req.params.slug);
-    const email = normalizeEmail(req.body.email);
+    const slug        = normalizeSlug(req.params.slug);
+    const rawPhone    = String(req.body.phone || "").trim();
+    const phoneNorm   = normalizePhone(rawPhone);
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ success: false, message: "Valid email address required" });
+    // ── Validate phone ──
+    if (!phoneNorm) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid 10-digit mobile number",
+      });
     }
 
     const company = await getCompanyBySlug(slug);
@@ -223,12 +198,12 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
-    // Resend throttle check
+    // ── Resend throttle: 30-second cooldown per phone+company ──
     const [[last]] = await db.query(
       `SELECT otp_last_sent_at FROM visitor_otp
-       WHERE email = ? AND company_id = ?
+       WHERE phone = ? AND company_id = ?
        ORDER BY id DESC LIMIT 1`,
-      [email, company.id]
+      [phoneNorm, company.id]
     );
 
     if (last?.otp_last_sent_at) {
@@ -246,18 +221,21 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     const otp     = generateOTP();
     const otpHash = hashOTP(otp);
 
+    // ── Persist OTP record ──
+    // NOTE: Schema change required — see MIGRATION section below.
     await db.query(
       `INSERT INTO visitor_otp
-         (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at, verified)
+         (company_id, phone, otp_hash, otp_expires_at, otp_last_sent_at, verified)
        VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW(), 0)`,
-      [company.id, email, otpHash, OTP_EXPIRY_MINUTES]
+      [company.id, phoneNorm, otpHash, OTP_EXPIRY_MINUTES]
     );
 
-    await sendOtpMail(email, otp, company);
+    // ── Send OTP on WhatsApp ──
+    await sendOtpWhatsApp({ phone: rawPhone, otp, company });
 
     return res.json({
       success:     true,
-      message:     "OTP sent successfully",
+      message:     "OTP sent to your WhatsApp",
       resendAfter: OTP_RESEND_SECONDS,
     });
   } catch (err) {
@@ -269,15 +247,18 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
 /* ======================================================
    VERIFY OTP
    POST /visitor/:slug/otp/verify
+
+   Body: { phone: "9876543210", otp: "123456" }
 ====================================================== */
 router.post("/visitor/:slug/otp/verify", async (req, res) => {
   try {
-    const slug  = normalizeSlug(req.params.slug);
-    const email = normalizeEmail(req.body.email);
-    const otp   = String(req.body.otp || "").trim();
+    const slug      = normalizeSlug(req.params.slug);
+    const rawPhone  = String(req.body.phone || "").trim();
+    const otp       = String(req.body.otp   || "").trim();
+    const phoneNorm = normalizePhone(rawPhone);
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ success: false, message: "Valid email address required" });
+    if (!phoneNorm) {
+      return res.status(400).json({ success: false, message: "Please enter a valid 10-digit mobile number" });
     }
 
     if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
@@ -292,9 +273,9 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
     const otpHash       = hashOTP(otp);
     const [[otpRecord]] = await db.query(
       `SELECT id, otp_hash, otp_expires_at FROM visitor_otp
-       WHERE email = ? AND company_id = ? AND verified = 0
+       WHERE phone = ? AND company_id = ? AND verified = 0
        ORDER BY id DESC LIMIT 1`,
-      [email, company.id]
+      [phoneNorm, company.id]
     );
 
     if (!otpRecord) {
@@ -354,7 +335,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
 
     /* ── 2. Session lookup with expiry window ── */
     const [[otpSession]] = await db.query(
-      `SELECT id, company_id, email FROM visitor_otp
+      `SELECT id, company_id, phone FROM visitor_otp
        WHERE otp_session_token = ?
          AND verified = 1
          AND verified_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
@@ -365,7 +346,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     if (!otpSession) {
       return res.status(401).json({
         success: false,
-        message: "Session expired or invalid. Please verify your email again.",
+        message: "Session expired or invalid. Please verify your mobile number again.",
       });
     }
 
@@ -385,15 +366,11 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       return res.status(400).json({ success: false, message: validationErrors[0] });
     }
 
-    /* ── 5. Build visitor payload ──
-       sanitizeEmployeeId handles FormData string coercion:
-       "null", "undefined", "", "0" all become real null
-       so saveVisitor never runs a DB lookup with a garbage value.
-    ── */
+    /* ── 5. Build visitor payload ── */
     const visitorData = {
       name:         req.body.name.trim(),
       phone:        req.body.phone.trim(),
-      email:        otpSession.email,
+      email:        null,                              // no email in WhatsApp-only flow
       fromCompany:  req.body.fromCompany?.trim()  || null,
       department:   req.body.department?.trim()   || null,
       designation:  req.body.designation?.trim()  || null,
@@ -410,7 +387,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       idNumber:     req.body.idNumber?.trim()      || null,
     };
 
-    /* ── 6. Persist visitor ── */
+    /* ── 6. Persist visitor (WhatsApp pass is sent inside saveVisitor) ── */
     const visitor = await saveVisitor(otpSession.company_id, visitorData, req.file);
 
     /* ── 7. Invalidate session ── */
@@ -421,7 +398,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
 
     return res.json({
       success:     true,
-      message:     "Visitor registered successfully. Pass sent to your email.",
+      message:     "Visitor registered successfully. Pass sent to your WhatsApp.",
       visitorCode: visitor.visitorCode,
     });
   } catch (err) {
