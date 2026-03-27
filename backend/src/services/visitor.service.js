@@ -1,26 +1,12 @@
 import { db } from "../config/db.js";
 import { uploadToS3 } from "./s3.service.js";
-import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 import { sendEmployeeNotificationMail } from "../utils/visitorMail.service.js";
+import { generateVisitorPassImage } from "./visitor-pass-image.js";
+import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
 import crypto from "crypto";
 
 /* ======================================================
    IST HELPERS
-
-   IMPORTANT — WHY THESE ARE KEPT BUT check_in USES NOW():
-   ─────────────────────────────────────────────────────────
-   MySQL server timezone is IST (confirmed: checkout was appearing
-   5.5 hours ahead when CONVERT_TZ(NOW(), '+00:00', '+05:30') was
-   used — it was double-shifting an already-IST NOW()).
-
-   For check_in and check_out we now use MySQL NOW() directly,
-   since it already returns the correct IST time on this server.
-
-   These helpers are kept for:
-   - Display formatting in email (formatISTForDisplay)
-   - Visitor code date key (formatISTDateKey) — generates YYYYMMDD
-     from the current IST date for the visitor_code suffix
-   - token_expires_at calculation (tokenExpiresMySQL)
 ====================================================== */
 const getISTDate = () => {
   const now = new Date();
@@ -84,12 +70,9 @@ export const saveVisitor = async (companyId, data, file) => {
   if (!name?.trim() || !phone?.trim())
     throw new Error("Visitor name and phone are required");
 
-  const employeeId = sanitizeEmployeeId(data.employeeId);
-
-  // Used for email display, visitor code date key, and token expiry only.
-  // check_in in DB is written as NOW() by MySQL (already IST on this server).
+  const employeeId   = sanitizeEmployeeId(data.employeeId);
   const checkInIST   = getISTDate();
-  const checkInMySQL = formatISTForMySQL(checkInIST); // used for token expiry + display only
+  const checkInMySQL = formatISTForMySQL(checkInIST);
 
   console.log("[VISITOR] IST (for display):", formatISTForDisplay(checkInIST));
   console.log("[VISITOR] employeeId raw:", data.employeeId, "→ sanitized:", employeeId);
@@ -185,19 +168,15 @@ export const saveVisitor = async (companyId, data, file) => {
         console.warn(`[VISITOR] Employee id=${employeeId} not found or inactive for company ${companyId}`);
       }
     } else {
-      console.log(`[VISITOR] No employeeId — person_to_meet: "${resolvedEmployeeName || "none"}". No notification will be sent.`);
+      console.log(`[VISITOR] No employeeId — person_to_meet: "${resolvedEmployeeName || "none"}"`);
     }
 
-    /* ── Generate response token (expires 48h from now) ── */
+    /* ── Generate response token ── */
     const responseToken     = crypto.randomBytes(32).toString("hex");
     const tokenExpiresAt    = new Date(checkInIST.getTime() + 48 * 60 * 60 * 1000);
     const tokenExpiresMySQL = formatISTForMySQL(tokenExpiresAt);
 
-    /* ── Insert visitor
-       FIX: check_in = NOW() — MySQL server is already in IST.
-       Previously used a manually computed IST string from JS which
-       could drift from server time. NOW() is always authoritative.
-    ── */
+    /* ── Insert visitor ── */
     const [insertResult] = await conn.execute(
       `INSERT INTO visitors (
         company_id, name, phone, email, from_company, department, designation,
@@ -234,7 +213,7 @@ export const saveVisitor = async (companyId, data, file) => {
 
     const visitorId = insertResult.insertId;
 
-    /* ── Visitor code — date key from IST ── */
+    /* ── Visitor code ── */
     const dateKey = formatISTDateKey(checkInIST);
     const [[{ count }]] = await conn.execute(
       `SELECT COUNT(*) AS count FROM visitors
@@ -242,10 +221,9 @@ export const saveVisitor = async (companyId, data, file) => {
       [companyId]
     );
     const visitorCode = `CMP${companyId}-${dateKey}-${String(count).padStart(5, "0")}`;
-
     console.log("[VISITOR] Generated code:", visitorCode);
 
-    /* ── Upload photo ── */
+    /* ── Upload visitor selfie photo to S3 ── */
     const photoUrl = await uploadToS3(
       file,
       `companies/${companyId}/visitors/${visitorCode}.jpg`
@@ -256,7 +234,7 @@ export const saveVisitor = async (companyId, data, file) => {
       [visitorCode, photoUrl, visitorId]
     );
 
-    /* ── Fetch actual check_in stored by MySQL for emails ── */
+    /* ── Fetch actual check_in stored by MySQL ── */
     const [[inserted]] = await conn.execute(
       `SELECT check_in FROM visitors WHERE id = ?`,
       [visitorId]
@@ -266,71 +244,95 @@ export const saveVisitor = async (companyId, data, file) => {
     await conn.commit();
     console.log("[VISITOR] Saved successfully, id:", visitorId);
 
-    /* ── Fetch company info for emails ── */
+    /* ── Fetch company info ── */
     const [[companyInfo]] = await db.execute(
       `SELECT name, logo_url, whatsapp_url FROM companies WHERE id = ?`,
       [companyId]
     );
 
-    // Display formatter for emails.
-    // MySQL server is UTC — storedCheckIn is "YYYY-MM-DD HH:MM:SS" in UTC.
-    // Appending "Z" tells JS to parse it as UTC, then toLocaleString with
-    // timeZone:"Asia/Kolkata" converts it to IST for display.
     const formatForDisplay = (mysqlDatetime) => {
       if (!mysqlDatetime) return formatISTForDisplay(checkInIST);
       const raw = String(mysqlDatetime).trim();
-      // "2026-03-09 09:37:00" (UTC) → "2026-03-09T09:37:00Z" → parsed as UTC
-      // toLocaleString with Asia/Kolkata then shows 3:07 PM IST correctly
       const iso = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
       const d   = new Date(iso);
       if (isNaN(d.getTime())) return formatISTForDisplay(checkInIST);
       return d.toLocaleString("en-IN", {
-        timeZone:  "Asia/Kolkata",
-        day:       "2-digit",
-        month:     "short",
-        year:      "numeric",
-        hour:      "2-digit",
-        minute:    "2-digit",
-        hour12:    true,
+        timeZone: "Asia/Kolkata",
+        day:      "2-digit",
+        month:    "short",
+        year:     "numeric",
+        hour:     "2-digit",
+        minute:   "2-digit",
+        hour12:   true,
       });
     };
 
     const checkInDisplay = formatForDisplay(storedCheckIn);
 
-    /* ── Send visitor pass email (non-blocking) ── */
-    if (email) {
-      try {
-        console.log("[VISITOR] Sending pass email to:", email);
-        await sendVisitorPassMail({
-          company: {
-            id:           companyId,
-            name:         companyInfo.name,
-            logo:         companyInfo.logo_url,
-            whatsapp_url: companyInfo.whatsapp_url || null,
-          },
-          visitor: {
-            visitorCode,
-            name,
-            phone,
-            email,
-            photoUrl,
-            checkIn:        storedCheckIn || checkInMySQL,
-            checkInDisplay,
-            personToMeet:   resolvedEmployeeName || "Reception",
-            purpose:        purpose || "Visit",
-          },
-        });
-        await db.execute(
-          `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
-          [visitorId]
-        );
-        console.log("[VISITOR] Pass email sent");
-      } catch (err) {
-        console.error("[VISITOR] PASS MAIL ERROR:", err.message);
-      }
+    /* ──────────────────────────────────────────────────────────────
+       SEND VISITOR PASS VIA WHATSAPP
+       ──────────────────────────────────────────────────────────────
+       Flow:
+         1. Generate pass PNG buffer (generateVisitorPassImage)
+         2. Send buffer DIRECTLY to Gupshup as binary image
+            → visitor receives the actual PNG in WhatsApp chat
+         3. Follow up with a template text message with visit details
+            → NO S3 upload, NO public URL needed for the pass image
+       Non-blocking — errors logged, never thrown.
+    ────────────────────────────────────────────────────────────── */
+    try {
+      console.log("[VISITOR] Generating visitor pass PNG for WhatsApp...");
+
+      // Step 1 — Generate PNG buffer using the existing canvas generator
+      const passImageBuffer = await generateVisitorPassImage({
+        company: {
+          id:       companyId,
+          name:     companyInfo.name,
+          logo:     companyInfo.logo_url,
+          logo_url: companyInfo.logo_url,
+        },
+        visitor: {
+          visitorCode,
+          name,
+          phone,
+          photoUrl,                                    // S3 URL of selfie (for canvas)
+          checkIn:        storedCheckIn || checkInMySQL,
+          checkInDisplay,
+          personToMeet:   resolvedEmployeeName || "Reception",
+          purpose:        purpose || "Visit",
+        },
+      });
+
+      // Step 2 & 3 — Send buffer directly + template details
+      // passImageBuffer is a raw Buffer from canvas.toBuffer("image/png")
+      // Gupshup receives it as a multipart file upload — no URL needed
+      await sendVisitorPassWhatsApp({
+        phone,
+        passImageBuffer,                               // ← Buffer, not a URL
+        company: {
+          name: companyInfo.name,
+        },
+        visitor: {
+          visitorCode,
+          name,
+          phone,
+          personToMeet: resolvedEmployeeName || "Reception",
+          checkInDisplay,
+        },
+      });
+
+      await db.execute(
+        `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
+        [visitorId]
+      );
+
+      console.log("[VISITOR] WhatsApp pass sent to:", phone);
+    } catch (err) {
+      // Non-fatal — visitor is already registered in DB
+      console.error("[VISITOR] WHATSAPP PASS ERROR:", err.message);
     }
 
-    /* ── Send employee notification email (non-blocking) ── */
+    /* ── Send employee notification email (unchanged) ── */
     if (resolvedEmployeeEmail) {
       try {
         console.log("[VISITOR] Sending employee notification to:", resolvedEmployeeEmail);
