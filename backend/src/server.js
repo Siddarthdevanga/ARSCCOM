@@ -125,7 +125,7 @@ async function startServer() {
     const { checkAndSendGracePeriodEmails } = await import("./cron/gracePeriodCron.js");
 
     // Run daily at 12:25 PM IST
-    cron.default.schedule('25 12 * * *', async () => {
+    cron.default.schedule('40 12 * * *', async () => {
       try {
         await checkAndSendGracePeriodEmails();
       } catch (error) {
