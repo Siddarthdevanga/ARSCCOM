@@ -318,6 +318,39 @@ export const updateSubscriptionDates = async (companyId, { subscription_start, s
 };
 
 /* ======================================================
+   SET GRACE PERIOD
+   • enable = true: Set grace_period status and calculate end date
+   • enable = false: Clear grace period
+====================================================== */
+export const setGracePeriod = async (companyId, enable, days = 10) => {
+  if (enable) {
+    // Start grace period
+    const gracePeriodEnds = new Date();
+    gracePeriodEnds.setDate(gracePeriodEnds.getDate() + days);
+
+    await db.query(
+      `UPDATE companies
+       SET subscription_status = 'grace_period',
+           grace_period_ends_at = ?,
+           grace_period_day = 1,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [gracePeriodEnds, companyId]
+    );
+  } else {
+    // Clear grace period
+    await db.query(
+      `UPDATE companies
+       SET grace_period_ends_at = NULL,
+           grace_period_day = 0,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [companyId]
+    );
+  }
+};
+
+/* ======================================================
    FORCE CANCEL SUBSCRIPTION
 ====================================================== */
 export const forceCancel = async (companyId) => {

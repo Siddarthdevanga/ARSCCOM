@@ -253,6 +253,33 @@ export const updateSubscriptionDates = async (req, res) => {
 };
 
 /* ======================================================
+   SET GRACE PERIOD
+   PATCH /api/superadmin/companies/:id/grace-period
+   body: { enable: true, days?: 10 }   → start grace period
+   body: { enable: false }              → clear grace period
+====================================================== */
+export const setGracePeriod = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const { enable, days = 10 } = req.body;
+
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (enable === undefined) return res.status(400).json({ success: false, message: "enable is required" });
+
+    await service.setGracePeriod(companyId, enable, days);
+
+    const message = enable
+      ? `Grace period set for ${days} days`
+      : "Grace period cleared";
+
+    return res.status(200).json({ success: true, message });
+  } catch (err) {
+    console.error("SUPERADMIN SET GRACE PERIOD ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
    FORCE CANCEL
    POST /api/superadmin/companies/:id/force-cancel
 ====================================================== */

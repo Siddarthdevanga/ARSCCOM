@@ -27,6 +27,7 @@ router.patch ("/companies/:id/plan",              ctrl.updatePlan);
 router.patch ("/companies/:id/status",            ctrl.updateStatus);
 router.patch ("/companies/:id/extend-trial",      ctrl.extendTrial);
 router.patch ("/companies/:id/subscription-dates",ctrl.updateSubscriptionDates);
+router.patch ("/companies/:id/grace-period",      ctrl.setGracePeriod);
 router.post  ("/companies/:id/force-cancel",      ctrl.forceCancel);
 router.post  ("/companies/:id/suspend",           ctrl.suspendCompany);
 router.post  ("/companies/:id/unsuspend",         ctrl.unsuspendCompany);

@@ -1,7 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
-import { sendOtpWhatsApp } from "../utils/whatsapp.js";
+import { sendEmail } from "../utils/mailer.js";
 import { searchEmployeesByCompany } from "../controllers/employee.controller.js";
 import multer from "multer";
 import QRCode from "qrcode";
@@ -47,6 +47,8 @@ const handleUpload = (req, res, next) => {
    UTILITIES
 ====================================================== */
 const normalizeSlug  = (v) => String(v || "").trim().toLowerCase();
+const normalizeEmail = (v) => String(v || "").trim().toLowerCase();
+const isValidEmail   = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const generateOTP    = () => Math.floor(100000 + Math.random() * 900000).toString();
 const hashOTP        = (otp) => crypto.createHash("sha256").update(otp).digest("hex");
 
@@ -85,6 +87,49 @@ const getCompanyBySlug = async (slug) => {
     [slug]
   );
   return company || null;
+};
+
+/* ======================================================
+   EMAIL TEMPLATES
+====================================================== */
+const emailFooter = (company = {}) => `
+  <br/><br/>
+  Regards,<br/>
+  <strong>${company.name || "ProMeet Team"}</strong><br/>
+  ${company.logo_url
+    ? `<img src="${company.logo_url}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
+    : ""}
+  <hr style="margin-top:20px;" />
+  <p style="font-size:13px;color:#666;margin-top:15px;line-height:1.5;">
+    This email was automatically sent from the Visitor Management Platform.<br/>
+    If you did not perform this action, please contact your administrator immediately.
+  </p>
+`;
+
+const otpEmailHtml = (otp, company) => `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+    <h2 style="color:#6c2bd9;">${company.name} – Visitor Verification</h2>
+    <p style="font-size:16px;">Your verification code is:</p>
+    <div style="background:#f7f7f7;padding:20px;text-align:center;border-radius:8px;margin:20px 0;">
+      <h1 style="letter-spacing:8px;color:#6c2bd9;margin:0;font-size:36px;">${otp}</h1>
+    </div>
+    <p style="color:#666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
+    <p style="color:#999;font-size:12px;margin-top:30px;">
+      If you didn't request this code, please ignore this email.
+    </p>
+    ${emailFooter(company)}
+  </div>
+`;
+
+/* ======================================================
+   SEND OTP EMAIL
+====================================================== */
+const sendOtpMail = async (email, otp, company) => {
+  await sendEmail({
+    to:      email,
+    subject: `Your Visitor Verification Code – ${company.name}`,
+    html:    otpEmailHtml(otp, company),
+  });
 };
 
 /* ======================================================
@@ -174,22 +219,20 @@ router.get("/visitor/:slug/employees", async (req, res) => {
    SEND OTP
    POST /visitor/:slug/otp/send
 
-   Body: { phone: "9876543210" }
+   Body: { email: "user@example.com" }
 
-   OTP is sent via WhatsApp only.
-   Phone is normalised to 91XXXXXXXXXX before DB storage.
+   OTP is sent via email.
 ====================================================== */
 router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
-    const slug        = normalizeSlug(req.params.slug);
-    const rawPhone    = String(req.body.phone || "").trim();
-    const phoneNorm   = normalizePhone(rawPhone);
+    const slug  = normalizeSlug(req.params.slug);
+    const email = normalizeEmail(req.body.email);
 
-    // ── Validate phone ──
-    if (!phoneNorm) {
+    // ── Validate email ──
+    if (!isValidEmail(email)) {
       return res.status(400).json({
         success: false,
-        message: "Please enter a valid 10-digit mobile number",
+        message: "Valid email address required",
       });
     }
 
@@ -198,12 +241,12 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
-    // ── Resend throttle: 30-second cooldown per phone+company ──
+    // ── Resend throttle: 30-second cooldown per email+company ──
     const [[last]] = await db.query(
       `SELECT otp_last_sent_at FROM visitor_otp
-       WHERE phone = ? AND company_id = ?
+       WHERE email = ? AND company_id = ?
        ORDER BY id DESC LIMIT 1`,
-      [phoneNorm, company.id]
+      [email, company.id]
     );
 
     if (last?.otp_last_sent_at) {
@@ -222,20 +265,19 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     const otpHash = hashOTP(otp);
 
     // ── Persist OTP record ──
-    // NOTE: Schema change required — see MIGRATION section below.
     await db.query(
       `INSERT INTO visitor_otp
-         (company_id, phone, otp_hash, otp_expires_at, otp_last_sent_at, verified)
+         (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at, verified)
        VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW(), 0)`,
-      [company.id, phoneNorm, otpHash, OTP_EXPIRY_MINUTES]
+      [company.id, email, otpHash, OTP_EXPIRY_MINUTES]
     );
 
-    // ── Send OTP on WhatsApp ──
-    await sendOtpWhatsApp({ phone: rawPhone, otp, company });
+    // ── Send OTP via Email ──
+    await sendOtpMail(email, otp, company);
 
     return res.json({
       success:     true,
-      message:     "OTP sent to your WhatsApp",
+      message:     "OTP sent successfully",
       resendAfter: OTP_RESEND_SECONDS,
     });
   } catch (err) {
@@ -248,17 +290,16 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
    VERIFY OTP
    POST /visitor/:slug/otp/verify
 
-   Body: { phone: "9876543210", otp: "123456" }
+   Body: { email: "user@example.com", otp: "123456" }
 ====================================================== */
 router.post("/visitor/:slug/otp/verify", async (req, res) => {
   try {
-    const slug      = normalizeSlug(req.params.slug);
-    const rawPhone  = String(req.body.phone || "").trim();
-    const otp       = String(req.body.otp   || "").trim();
-    const phoneNorm = normalizePhone(rawPhone);
+    const slug  = normalizeSlug(req.params.slug);
+    const email = normalizeEmail(req.body.email);
+    const otp   = String(req.body.otp || "").trim();
 
-    if (!phoneNorm) {
-      return res.status(400).json({ success: false, message: "Please enter a valid 10-digit mobile number" });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ success: false, message: "Valid email address required" });
     }
 
     if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
@@ -273,9 +314,9 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
     const otpHash       = hashOTP(otp);
     const [[otpRecord]] = await db.query(
       `SELECT id, otp_hash, otp_expires_at FROM visitor_otp
-       WHERE phone = ? AND company_id = ? AND verified = 0
+       WHERE email = ? AND company_id = ? AND verified = 0
        ORDER BY id DESC LIMIT 1`,
-      [phoneNorm, company.id]
+      [email, company.id]
     );
 
     if (!otpRecord) {
