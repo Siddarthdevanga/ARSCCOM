@@ -21,6 +21,7 @@ import {
   UserCog,
 } from "lucide-react";
 import styles from "./style.module.css";
+import graceStyles from "../styles/gracePeriod.module.css";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TOAST SYSTEM
@@ -159,10 +160,11 @@ function getGreeting() {
 
 function getStatusStyle(status) {
   switch ((status || "").toLowerCase()) {
-    case "active":   return { color: "#059669", Icon: CheckCircle };
-    case "expired":  return { color: "#DC2626", Icon: AlertCircle };
-    case "trial":    return { color: "#D97706", Icon: Clock };
-    default:         return { color: "#6B7280", Icon: AlertCircle };
+    case "active":        return { color: "#059669", Icon: CheckCircle };
+    case "expired":       return { color: "#DC2626", Icon: AlertCircle };
+    case "trial":         return { color: "#D97706", Icon: Clock };
+    case "grace_period":  return { color: "#F59E0B", Icon: AlertCircle };
+    default:              return { color: "#6B7280", Icon: AlertCircle };
   }
 }
 
@@ -321,6 +323,21 @@ export default function Home() {
       {/* ── SCROLL BODY ── */}
       <div className={styles.scrollBody}>
         <main className={styles.main}>
+
+          {/* GRACE PERIOD BANNER */}
+          {subData?.inGracePeriod && (
+            <div className={graceStyles.gracePeriodBanner}>
+              <AlertCircle size={24} />
+              <div>
+                <h3>⚠️ Grace Period Active</h3>
+                <p>
+                  Your subscription expired. You have <strong>{subData.gracePeriodDaysRemaining} day{subData.gracePeriodDaysRemaining !== 1 ? 's' : ''}</strong> remaining to renew.
+                </p>
+                <p>Grace period ends: {formatDate(subData.gracePeriodEndsAt)}</p>
+              </div>
+              <button onClick={() => router.push("/auth/subscription")}>Renew Now</button>
+            </div>
+          )}
 
           {/* HOME VIEW */}
           <>

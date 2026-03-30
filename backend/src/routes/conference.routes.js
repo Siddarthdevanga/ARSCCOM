@@ -16,7 +16,7 @@ const PLANS = {
   enterprise: { rooms: Infinity, bookings: Infinity },
 };
 
-const ACTIVE_STATUSES = ["active", "trial"];
+const ACTIVE_STATUSES = ["active", "trial", "grace_period"];
 
 /* ======================================================
    MIDDLEWARE
@@ -377,12 +377,12 @@ const getCompanyInfo = async (companyId) => {
 
 /**
  * Validates company subscription and returns plan details.
- * Only checks subscription_status (cron job handles date checks).
+ * Allows grace_period status and returns grace period info.
  */
 const validateCompanySubscription = async (companyId) => {
   try {
     const [[company]] = await db.query(
-      `SELECT plan, subscription_status
+      `SELECT plan, subscription_status, grace_period_ends_at, grace_period_day
        FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
@@ -394,7 +394,24 @@ const validateCompanySubscription = async (companyId) => {
     const plan = normalizePlan(company.plan);
     const status = normalizeStatus(company.subscription_status);
 
-    if (!ACTIVE_STATUSES.includes(status)) {
+    // Check if in grace period
+    const inGracePeriod = status === "grace_period" &&
+                          company.grace_period_ends_at &&
+                          new Date(company.grace_period_ends_at) > new Date();
+
+    // Calculate grace period days remaining
+    let gracePeriodDaysRemaining = 0;
+    if (inGracePeriod) {
+      const endsAt = new Date(company.grace_period_ends_at);
+      const now = new Date();
+      gracePeriodDaysRemaining = Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24));
+    }
+
+    // Allow grace_period status
+    const allowedStatuses = ["trial", "active", "grace_period"];
+
+    // Block only if expired AND not in grace period
+    if (!allowedStatuses.includes(status) && !inGracePeriod) {
       throw new Error("Subscription inactive. Please renew your subscription to continue.");
     }
 
@@ -405,6 +422,9 @@ const validateCompanySubscription = async (companyId) => {
       roomLimit: limits.rooms,
       bookingLimit: limits.bookings,
       isUnlimited: limits.rooms === Infinity,
+      inGracePeriod,
+      gracePeriodDaysRemaining,
+      gracePeriodEndsAt: inGracePeriod ? company.grace_period_ends_at : null,
     };
   } catch (error) {
     console.error("[validateCompanySubscription]", error.message);

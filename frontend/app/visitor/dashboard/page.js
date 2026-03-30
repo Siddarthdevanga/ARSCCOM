@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import QRCode from "qrcode";
 import styles from "./style.module.css";
+import graceStyles from "../../styles/gracePeriod.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -395,6 +396,15 @@ export default function VisitorDashboard() {
           <h3>Registration QR</h3>
           <button className={styles.navCloseBtn} onClick={() => setNavOpen(false)}>&#x2715;</button>
         </div>
+
+        {/* GRACE PERIOD WARNING */}
+        {data?.gracePeriodWarning?.inGracePeriod && (
+          <div className={graceStyles.graceBanner}>
+            ⚠️ Grace Period: {data.gracePeriodWarning.daysRemaining} days left.
+            <a href="/auth/subscription">Renew Now</a>
+          </div>
+        )}
+
         <div className={styles.navPanelBody}>
           {qrUrl ? (
             <>

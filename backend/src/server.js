@@ -119,6 +119,24 @@ async function startServer() {
       isReady = true;
     });
 
+    /* ========= GRACE PERIOD CRON JOB ========= */
+    console.log("⏰ Initializing Grace Period Cron Job...");
+    const cron = await import("node-cron");
+    const { checkAndSendGracePeriodEmails } = await import("./cron/gracePeriodCron.js");
+
+    // Run daily at 9:00 AM IST
+    cron.default.schedule('0 9 * * *', async () => {
+      try {
+        await checkAndSendGracePeriodEmails();
+      } catch (error) {
+        console.error("❌ Grace period cron job failed:", error);
+      }
+    }, {
+      timezone: "Asia/Kolkata"
+    });
+
+    console.log("✅ Grace Period Cron Job Scheduled (Daily 9:00 AM IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;

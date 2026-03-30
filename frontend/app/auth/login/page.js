@@ -88,10 +88,17 @@ export default function LoginPage() {
 
       const status = company?.subscription_status?.toLowerCase() || "pending";
 
-      if (["active", "trial"].includes(status)) {
-        const successMessage = status === "trial"
-          ? "Login successful! Welcome to your trial period."
-          : "Login successful! Welcome back.";
+      // Allow active, trial, and grace_period to access home
+      if (["active", "trial", "grace_period"].includes(status)) {
+        let successMessage = "Login successful! Welcome back.";
+
+        if (status === "trial") {
+          successMessage = "Login successful! Welcome to your trial period.";
+        } else if (status === "grace_period") {
+          const daysLeft = company?.grace_period_days_remaining || 0;
+          successMessage = `⚠️ Grace Period: ${daysLeft} days remaining. Please renew your subscription.`;
+        }
+
         setError(successMessage);
         setIsRedirecting(true);
         setTimeout(() => router.replace("/home"), 800);

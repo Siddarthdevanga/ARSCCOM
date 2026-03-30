@@ -271,7 +271,7 @@ export const login = async ({ email, password }) => {
 
   validateEmail(cleanEmail);
 
-  // Fetch user and company data (including whatsapp_url)
+  // Fetch user and company data (including grace period info)
   const [rows] = await db.execute(
     `SELECT
        u.id,
@@ -282,7 +282,9 @@ export const login = async ({ email, password }) => {
        c.logo_url AS companyLogo,
        c.whatsapp_url AS whatsappUrl,
        c.subscription_status,
-       c.plan
+       c.plan,
+       c.grace_period_ends_at,
+       c.grace_period_day
      FROM users u
      JOIN companies c ON c.id = u.company_id
      WHERE u.email = ?
@@ -319,11 +321,22 @@ export const login = async ({ email, password }) => {
     { expiresIn: JWT_EXPIRY }
   );
 
+  // Calculate grace period info
+  const inGracePeriod = user.grace_period_ends_at &&
+                        new Date(user.grace_period_ends_at) > new Date();
+
+  let gracePeriodDaysRemaining = 0;
+  if (inGracePeriod) {
+    const endsAt = new Date(user.grace_period_ends_at);
+    const now = new Date();
+    gracePeriodDaysRemaining = Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24));
+  }
+
   return {
     token,
-    user: { 
-      id: user.id, 
-      email: cleanEmail 
+    user: {
+      id: user.id,
+      email: cleanEmail
     },
     company: {
       id: user.companyId,
@@ -332,7 +345,9 @@ export const login = async ({ email, password }) => {
       logo_url: user.companyLogo,
       whatsapp_url: user.whatsappUrl || null,
       subscription_status: user.subscription_status || "pending",
-      plan: user.plan || "trial"
+      plan: user.plan || "trial",
+      grace_period_days_remaining: gracePeriodDaysRemaining,
+      in_grace_period: inGracePeriod,
     }
   };
 };

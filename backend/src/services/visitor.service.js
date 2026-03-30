@@ -1,8 +1,6 @@
 import { db } from "../config/db.js";
 import { uploadToS3 } from "./s3.service.js";
-import { sendEmployeeNotificationMail } from "../utils/visitorMail.service.js";
-import { generateVisitorPassImage } from "./visitor-pass-image.js";
-import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
+import { sendEmployeeNotificationMail, sendVisitorPassMail } from "../utils/visitorMail.service.js";
 import crypto from "crypto";
 
 /* ======================================================
@@ -67,8 +65,8 @@ export const saveVisitor = async (companyId, data, file) => {
     personToMeet, purpose, belongings, idType, idNumber,
   } = data;
 
-  if (!name?.trim() || !phone?.trim())
-    throw new Error("Visitor name and phone are required");
+  if (!name?.trim() || !phone?.trim() || !email?.trim())
+    throw new Error("Visitor name, phone, and email are required");
 
   const employeeId   = sanitizeEmployeeId(data.employeeId);
   const checkInIST   = getISTDate();
@@ -84,7 +82,8 @@ export const saveVisitor = async (companyId, data, file) => {
 
     /* ── Lock company ── */
     const [[company]] = await conn.execute(
-      `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
+      `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at,
+              grace_period_ends_at, grace_period_day
        FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
@@ -94,57 +93,80 @@ export const saveVisitor = async (companyId, data, file) => {
     const PLAN   = (company.plan                || "TRIAL").toUpperCase();
     const STATUS = (company.subscription_status || "PENDING").toUpperCase();
 
-    if (STATUS === "EXPIRED") {
+    // Check if in grace period
+    const inGracePeriod = STATUS === "GRACE_PERIOD" &&
+                          company.grace_period_ends_at &&
+                          new Date(company.grace_period_ends_at) > new Date();
+
+    // Calculate grace period days remaining
+    let gracePeriodDaysRemaining = 0;
+    if (inGracePeriod) {
+      const endsAt = new Date(company.grace_period_ends_at);
+      const now = new Date();
+      gracePeriodDaysRemaining = Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24));
+    }
+
+    // Log grace period status
+    if (inGracePeriod) {
+      console.log(`[VISITOR] Company in grace period: ${gracePeriodDaysRemaining} days remaining`);
+    }
+
+    // Block only if expired AND not in grace period
+    if (STATUS === "EXPIRED" && !inGracePeriod) {
       const error = new Error("Your subscription has expired. Please renew to continue.");
       error.code = "SUBSCRIPTION_EXPIRED";
       error.redirectTo = "/auth/subscription";
       throw error;
     }
 
-    if (!["ACTIVE", "TRIAL"].includes(STATUS)) {
+    // Allow ACTIVE, TRIAL, and GRACE_PERIOD
+    if (!["ACTIVE", "TRIAL", "GRACE_PERIOD"].includes(STATUS)) {
       const error = new Error("Subscription inactive. Please activate your subscription.");
       error.code = "SUBSCRIPTION_INACTIVE";
       error.redirectTo = "/auth/subscription";
       throw error;
     }
 
-    if (PLAN === "TRIAL") {
-      if (!company.trial_ends_at) {
-        const error = new Error("Trial not initialized. Please contact support.");
-        error.code = "TRIAL_NOT_INITIALIZED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-      const trialEndsDate = new Date(company.trial_ends_at);
-      if (trialEndsDate < new Date()) {
-        const error = new Error("Your trial has expired. Please upgrade to continue.");
-        error.code = "TRIAL_EXPIRED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-      const [[{ total }]] = await conn.execute(
-        `SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? FOR UPDATE`,
-        [companyId]
-      );
-      if (total >= 100) {
-        const error = new Error("Trial limit reached (100 visitors). Please upgrade.");
-        error.code = "TRIAL_LIMIT_REACHED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-    } else {
-      if (!company.subscription_ends_at) {
-        const error = new Error("Subscription not properly initialized. Please contact support.");
-        error.code = "SUBSCRIPTION_NOT_INITIALIZED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
-      }
-      const subEndsDate = new Date(company.subscription_ends_at);
-      if (subEndsDate < new Date()) {
-        const error = new Error(`Your ${PLAN} subscription has expired. Please renew.`);
-        error.code = "SUBSCRIPTION_EXPIRED";
-        error.redirectTo = "/auth/subscription";
-        throw error;
+    // Skip strict expiry checks during grace period
+    if (!inGracePeriod) {
+      if (PLAN === "TRIAL") {
+        if (!company.trial_ends_at) {
+          const error = new Error("Trial not initialized. Please contact support.");
+          error.code = "TRIAL_NOT_INITIALIZED";
+          error.redirectTo = "/auth/subscription";
+          throw error;
+        }
+        const trialEndsDate = new Date(company.trial_ends_at);
+        if (trialEndsDate < new Date()) {
+          const error = new Error("Your trial has expired. Please upgrade to continue.");
+          error.code = "TRIAL_EXPIRED";
+          error.redirectTo = "/auth/subscription";
+          throw error;
+        }
+        const [[{ total }]] = await conn.execute(
+          `SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? FOR UPDATE`,
+          [companyId]
+        );
+        if (total >= 100) {
+          const error = new Error("Trial limit reached (100 visitors). Please upgrade.");
+          error.code = "TRIAL_LIMIT_REACHED";
+          error.redirectTo = "/auth/subscription";
+          throw error;
+        }
+      } else {
+        if (!company.subscription_ends_at) {
+          const error = new Error("Subscription not properly initialized. Please contact support.");
+          error.code = "SUBSCRIPTION_NOT_INITIALIZED";
+          error.redirectTo = "/auth/subscription";
+          throw error;
+        }
+        const subEndsDate = new Date(company.subscription_ends_at);
+        if (subEndsDate < new Date()) {
+          const error = new Error(`Your ${PLAN} subscription has expired. Please renew.`);
+          error.code = "SUBSCRIPTION_EXPIRED";
+          error.redirectTo = "/auth/subscription";
+          throw error;
+        }
       }
     }
 
@@ -270,66 +292,50 @@ export const saveVisitor = async (companyId, data, file) => {
     const checkInDisplay = formatForDisplay(storedCheckIn);
 
     /* ──────────────────────────────────────────────────────────────
-       SEND VISITOR PASS VIA WHATSAPP
+       SEND VISITOR PASS VIA EMAIL
        ──────────────────────────────────────────────────────────────
        Flow:
-         1. Generate pass PNG buffer (generateVisitorPassImage)
-         2. Send buffer DIRECTLY to Gupshup as binary image
-            → visitor receives the actual PNG in WhatsApp chat
-         3. Follow up with a template text message with visit details
-            → NO S3 upload, NO public URL needed for the pass image
+         1. Send visitor pass via email with pass image generated inline
+         2. Email sent to visitor's email address
        Non-blocking — errors logged, never thrown.
+       Note: Can be switched to WhatsApp later by swapping the send function.
     ────────────────────────────────────────────────────────────── */
-    try {
-      console.log("[VISITOR] Generating visitor pass PNG for WhatsApp...");
+    if (email) {
+      try {
+        console.log("[VISITOR] Sending visitor pass via EMAIL to:", email);
 
-      // Step 1 — Generate PNG buffer using the existing canvas generator
-      const passImageBuffer = await generateVisitorPassImage({
-        company: {
-          id:       companyId,
-          name:     companyInfo.name,
-          logo:     companyInfo.logo_url,
-          logo_url: companyInfo.logo_url,
-        },
-        visitor: {
-          visitorCode,
-          name,
-          phone,
-          photoUrl,                                    // S3 URL of selfie (for canvas)
-          checkIn:        storedCheckIn || checkInMySQL,
-          checkInDisplay,
-          personToMeet:   resolvedEmployeeName || "Reception",
-          purpose:        purpose || "Visit",
-        },
-      });
+        await sendVisitorPassMail({
+          company: {
+            id:           companyId,
+            name:         companyInfo.name,
+            logo:         companyInfo.logo_url,
+            whatsapp_url: companyInfo.whatsapp_url || null,
+          },
+          visitor: {
+            visitorCode,
+            name,
+            phone,
+            email,
+            photoUrl,
+            checkIn:        storedCheckIn || checkInMySQL,
+            checkInDisplay,
+            personToMeet:   resolvedEmployeeName || "Reception",
+            purpose:        purpose || "Visit",
+          },
+        });
 
-      // Step 2 & 3 — Send buffer directly + template details
-      // passImageBuffer is a raw Buffer from canvas.toBuffer("image/png")
-      // Gupshup receives it as a multipart file upload — no URL needed
-      await sendVisitorPassWhatsApp({
-        phone,
-        passImageBuffer,                               // ← Buffer, not a URL
-        company: {
-          name: companyInfo.name,
-        },
-        visitor: {
-          visitorCode,
-          name,
-          phone,
-          personToMeet: resolvedEmployeeName || "Reception",
-          checkInDisplay,
-        },
-      });
+        await db.execute(
+          `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
+          [visitorId]
+        );
 
-      await db.execute(
-        `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
-        [visitorId]
-      );
-
-      console.log("[VISITOR] WhatsApp pass sent to:", phone);
-    } catch (err) {
-      // Non-fatal — visitor is already registered in DB
-      console.error("[VISITOR] WHATSAPP PASS ERROR:", err.message);
+        console.log("[VISITOR] Email pass sent successfully to:", email);
+      } catch (err) {
+        // Non-fatal — visitor is already registered in DB
+        console.error("[VISITOR] EMAIL PASS ERROR:", err.message);
+      }
+    } else {
+      console.warn("[VISITOR] No email provided - visitor pass not sent");
     }
 
     /* ── Send employee notification email (unchanged) ── */
@@ -376,6 +382,11 @@ export const saveVisitor = async (companyId, data, file) => {
       visitStatus:    "pending",
       checkIn:        storedCheckIn || checkInMySQL,
       checkInDisplay,
+      gracePeriodWarning: inGracePeriod ? {
+        inGracePeriod: true,
+        daysRemaining: gracePeriodDaysRemaining,
+        gracePeriodEndsAt: company.grace_period_ends_at,
+      } : null,
     };
 
   } catch (err) {
