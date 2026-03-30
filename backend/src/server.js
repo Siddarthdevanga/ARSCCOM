@@ -124,8 +124,8 @@ async function startServer() {
     const cron = await import("node-cron");
     const { checkAndSendGracePeriodEmails } = await import("./cron/gracePeriodCron.js");
 
-    // Run daily at 9:00 AM IST
-    cron.default.schedule('0 9 * * *', async () => {
+    // Run daily at 12:25 PM IST
+    cron.default.schedule('25 12 * * *', async () => {
       try {
         await checkAndSendGracePeriodEmails();
       } catch (error) {
@@ -135,7 +135,7 @@ async function startServer() {
       timezone: "Asia/Kolkata"
     });
 
-    console.log("✅ Grace Period Cron Job Scheduled (Daily 9:00 AM IST)");
+    console.log("✅ Grace Period Cron Job Scheduled (Daily 12:25 PM IST)");
 
     // protect long requests
     server.setTimeout?.(120000);
