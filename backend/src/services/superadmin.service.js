@@ -95,6 +95,8 @@ export const getDashboard = async () => {
        c.is_suspended,
        c.trial_ends_at,
        c.subscription_ends_at,
+       c.grace_period_ends_at,
+       c.grace_period_day,
        c.created_at,
        (SELECT COUNT(*) FROM conference_rooms    cr WHERE cr.company_id = c.id) AS total_rooms,
        (SELECT COUNT(*) FROM conference_bookings cb WHERE cb.company_id = c.id) AS total_bookings,

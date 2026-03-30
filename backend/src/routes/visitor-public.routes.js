@@ -376,7 +376,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
 
     /* ── 2. Session lookup with expiry window ── */
     const [[otpSession]] = await db.query(
-      `SELECT id, company_id, phone FROM visitor_otp
+      `SELECT id, company_id, phone, email FROM visitor_otp
        WHERE otp_session_token = ?
          AND verified = 1
          AND verified_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
@@ -401,6 +401,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     const validationErrors = [];
     if (!req.body.name?.trim())  validationErrors.push("Visitor name is required");
     if (!req.body.phone?.trim()) validationErrors.push("Phone number is required");
+    if (!req.body.email?.trim()) validationErrors.push("Email is required");
     if (!req.file)               validationErrors.push("Visitor photo is required");
 
     if (validationErrors.length > 0) {
@@ -411,7 +412,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     const visitorData = {
       name:         req.body.name.trim(),
       phone:        req.body.phone.trim(),
-      email:        null,                              // no email in WhatsApp-only flow
+      email:        req.body.email?.trim() || otpSession.email || null,  // Use email from OTP session or request
       fromCompany:  req.body.fromCompany?.trim()  || null,
       department:   req.body.department?.trim()   || null,
       designation:  req.body.designation?.trim()  || null,
@@ -428,7 +429,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       idNumber:     req.body.idNumber?.trim()      || null,
     };
 
-    /* ── 6. Persist visitor (WhatsApp pass is sent inside saveVisitor) ── */
+    /* ── 6. Persist visitor (Email pass is sent inside saveVisitor) ── */
     const visitor = await saveVisitor(otpSession.company_id, visitorData, req.file);
 
     /* ── 7. Invalidate session ── */
@@ -439,7 +440,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
 
     return res.json({
       success:     true,
-      message:     "Visitor registered successfully. Pass sent to your WhatsApp.",
+      message:     "Visitor registered successfully. Pass sent to your email.",
       visitorCode: visitor.visitorCode,
     });
   } catch (err) {
