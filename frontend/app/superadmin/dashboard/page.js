@@ -12,12 +12,13 @@ const fmt = (val) => (val === null || val === undefined ? "-" : val);
 
 const statusColor = (status) => {
   switch ((status || "").toLowerCase()) {
-    case "active":    return styles.badgeActive;
-    case "trial":     return styles.badgeTrial;
-    case "expired":   return styles.badgeExpired;
-    case "cancelled": return styles.badgeCancelled;
-    case "pending":   return styles.badgePending;
-    default:          return styles.badgePending;
+    case "active":       return styles.badgeActive;
+    case "trial":        return styles.badgeTrial;
+    case "grace_period": return styles.badgeGracePeriod;
+    case "expired":      return styles.badgeExpired;
+    case "cancelled":    return styles.badgeCancelled;
+    case "pending":      return styles.badgePending;
+    default:             return styles.badgePending;
   }
 };
 
@@ -42,6 +43,9 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
   const [status, setStatus]           = useState(company.subscription_status || "pending");
   const [trialEndsAt, setTrialEndsAt] = useState(company.trial_ends_at?.slice(0, 10) || "");
   const [subEndsAt, setSubEndsAt]     = useState(company.subscription_ends_at?.slice(0, 10) || "");
+
+  // grace period
+  const [gracePeriodDays, setGracePeriodDays] = useState(10);
 
   // edit fields
   const [editName,       setEditName]       = useState(company.name || "");
@@ -114,7 +118,11 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
     await call("update", "PATCH", body);
   };
 
-  const TABS = ["overview", "edit", "plan", "dates", "danger"];
+  const handleGracePeriod = async (enable) => {
+    await call("grace-period", "PATCH", { enable, days: gracePeriodDays });
+  };
+
+  const TABS = ["overview", "edit", "plan", "dates", "grace", "danger"];
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -297,6 +305,67 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
               <button className={styles.btnPrimary} disabled={loading} onClick={() => call("subscription-dates", "PATCH", { subscription_ends_at: subEndsAt })}>
                 {loading ? "Saving…" : "Update Subscription Dates"}
               </button>
+            </div>
+          )}
+
+          {/* ── GRACE PERIOD ── */}
+          {tab === "grace" && (
+            <div className={styles.formSection}>
+              <label className={styles.label}>Grace Period Management</label>
+              <p className={styles.hintText}>
+                {company.subscription_status === "grace_period"
+                  ? `⚠️ Company is currently in grace period. Grace period day: ${company.grace_period_day || 0}/10`
+                  : "Set a grace period to allow the company to continue using the platform after subscription expiration."}
+              </p>
+
+              {company.grace_period_ends_at && (
+                <div className={styles.infoBox} style={{ background: "#FEF3C7", border: "1px solid #F59E0B", padding: "12px", borderRadius: "6px", marginBottom: "16px" }}>
+                  <p style={{ margin: 0, color: "#92400E", fontSize: "14px" }}>
+                    <strong>Grace Period Ends:</strong> {company.grace_period_ends_at?.slice(0, 10) || "-"}
+                  </p>
+                </div>
+              )}
+
+              <div className={styles.divider} />
+
+              <label className={styles.label}>Grace Period Duration (Days)</label>
+              <input
+                type="number"
+                className={styles.input}
+                value={gracePeriodDays}
+                onChange={(e) => setGracePeriodDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 10)))}
+                min="1"
+                max="30"
+                placeholder="10"
+              />
+              <p className={styles.hintText}>
+                Set the number of days for the grace period (1-30 days). Default is 10 days.
+              </p>
+
+              <div className={styles.divider} />
+
+              <button
+                className={styles.btnPrimary}
+                disabled={loading}
+                onClick={() => handleGracePeriod(true)}
+              >
+                {loading ? "Processing…" : "✓ Enable Grace Period"}
+              </button>
+
+              <button
+                className={styles.btnWarning}
+                disabled={loading}
+                onClick={() => handleGracePeriod(false)}
+                style={{ marginTop: "12px" }}
+              >
+                {loading ? "Processing…" : "✕ Clear Grace Period"}
+              </button>
+
+              <p className={styles.hintText} style={{ marginTop: "16px" }}>
+                <strong>Note:</strong> Enabling grace period will set the company status to "grace_period"
+                and calculate the end date based on the duration specified above. Clearing will remove
+                the grace period and reset related fields.
+              </p>
             </div>
           )}
 
@@ -526,6 +595,7 @@ export default function SuperAdminDashboard() {
             <option value="pending">Pending</option>
             <option value="trial">Trial</option>
             <option value="active">Active</option>
+            <option value="grace_period">Grace Period</option>
             <option value="expired">Expired</option>
             <option value="cancelled">Cancelled</option>
           </select>

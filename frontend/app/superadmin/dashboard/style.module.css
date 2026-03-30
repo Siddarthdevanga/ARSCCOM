@@ -420,11 +420,12 @@
   white-space: nowrap;
 }
 
-.badgeActive    { background: rgba(0,184,148,0.12); color: #00875a; }
-.badgeTrial     { background: rgba(240,165,0,0.12);  color: #c47d00; }
-.badgeExpired   { background: rgba(204,17,0,0.1);    color: #cc1100; }
-.badgeCancelled { background: rgba(204,17,0,0.1);    color: #cc1100; }
-.badgePending   { background: rgba(98,0,214,0.1);    color: #6200d6; }
+.badgeActive      { background: rgba(0,184,148,0.12); color: #00875a; }
+.badgeTrial       { background: rgba(240,165,0,0.12);  color: #c47d00; }
+.badgeGracePeriod { background: rgba(245,158,11,0.15); color: #D97706; }
+.badgeExpired     { background: rgba(204,17,0,0.1);    color: #cc1100; }
+.badgeCancelled   { background: rgba(204,17,0,0.1);    color: #cc1100; }
+.badgePending     { background: rgba(98,0,214,0.1);    color: #6200d6; }
 
 .planTrial      { background: rgba(240,165,0,0.12);  color: #c47d00; }
 .planBusiness   { background: rgba(0,98,214,0.1);    color: #0062d6; }
