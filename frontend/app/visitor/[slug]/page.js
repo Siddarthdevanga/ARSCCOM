@@ -405,6 +405,7 @@ export default function PublicVisitorRegistration() {
       Object.entries(formData).forEach(([key, value]) => {
         fd.append(key, key === "belongings" ? (Array.isArray(value) ? value.join(", ") : "") : value || "");
       });
+      fd.append("email", email || "");  // Add email from OTP verification
       fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
 
