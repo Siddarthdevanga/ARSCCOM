@@ -3,7 +3,7 @@ import { sendGracePeriodEmail } from "../utils/gracePeriodMail.service.js";
 
 /* ======================================================
    GRACE PERIOD DAILY CHECKER
-   Runs daily at 9:00 AM IST
+   Runs daily at 12:25 PM IST
    - Checks expired subscriptions
    - Initiates grace period
    - Sends daily reminder emails
@@ -35,21 +35,23 @@ export const checkAndSendGracePeriodEmails = async () => {
 
       const [expiredCompanies] = await conn.execute(`
         SELECT
-          id,
-          name,
-          email,
-          plan,
-          subscription_status,
-          trial_ends_at,
-          subscription_ends_at
-        FROM companies
-        WHERE subscription_status IN ('active', 'trial')
-          AND grace_period_ends_at IS NULL
+          c.id,
+          c.name,
+          u.email,
+          c.plan,
+          c.subscription_status,
+          c.trial_ends_at,
+          c.subscription_ends_at
+        FROM companies c
+        INNER JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
+        WHERE c.subscription_status IN ('active', 'trial')
+          AND c.grace_period_ends_at IS NULL
           AND (
-            (plan = 'trial' AND trial_ends_at IS NOT NULL AND trial_ends_at < NOW())
+            (c.plan = 'trial' AND c.trial_ends_at IS NOT NULL AND c.trial_ends_at < NOW())
             OR
-            (plan != 'trial' AND subscription_ends_at IS NOT NULL AND subscription_ends_at < NOW())
+            (c.plan != 'trial' AND c.subscription_ends_at IS NOT NULL AND c.subscription_ends_at < NOW())
           )
+        GROUP BY c.id, u.email
       `);
 
       console.log(`   Found ${expiredCompanies.length} newly expired subscription(s)`);
@@ -82,7 +84,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           // Send Day 1 email
           const emailSent = await sendGracePeriodEmail({
             companyName: company.name,
-            adminEmail: company.email,
+            adminEmail:  company.email,
             day: 1,
             gracePeriodEndsAt: gracePeriodEnds,
             planType: company.plan,
@@ -91,7 +93,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           if (emailSent) {
             stats.newGracePeriods++;
             stats.emailsSent++;
-            console.log(`   ✅ ${company.name} (ID: ${company.id}) - Grace period started`);
+            console.log(`   ✅ ${company.name} (ID: ${company.id}) - Grace period started → ${company.email}`);
           } else {
             console.log(`   ⚠️  ${company.name} (ID: ${company.id}) - Grace period started but email failed`);
             stats.newGracePeriods++;
@@ -110,18 +112,20 @@ export const checkAndSendGracePeriodEmails = async () => {
 
       const [activeGracePeriods] = await conn.execute(`
         SELECT
-          id,
-          name,
-          email,
-          plan,
-          grace_period_ends_at,
-          grace_period_day,
-          subscription_ends_at,
-          trial_ends_at
-        FROM companies
-        WHERE subscription_status = 'grace_period'
-          AND grace_period_ends_at IS NOT NULL
-          AND grace_period_ends_at >= NOW()
+          c.id,
+          c.name,
+          u.email,
+          c.plan,
+          c.grace_period_ends_at,
+          c.grace_period_day,
+          c.subscription_ends_at,
+          c.trial_ends_at
+        FROM companies c
+        INNER JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
+        WHERE c.subscription_status = 'grace_period'
+          AND c.grace_period_ends_at IS NOT NULL
+          AND c.grace_period_ends_at >= NOW()
+        GROUP BY c.id, u.email
       `);
 
       console.log(`   Found ${activeGracePeriods.length} active grace period(s)`);
@@ -150,7 +154,7 @@ export const checkAndSendGracePeriodEmails = async () => {
             // Send daily reminder email
             const emailSent = await sendGracePeriodEmail({
               companyName: company.name,
-              adminEmail: company.email,
+              adminEmail:  company.email,
               day: currentDay,
               gracePeriodEndsAt: company.grace_period_ends_at,
               planType: company.plan,
@@ -158,7 +162,7 @@ export const checkAndSendGracePeriodEmails = async () => {
 
             if (emailSent) {
               stats.emailsSent++;
-              console.log(`   ✅ ${company.name} (ID: ${company.id}) - Day ${currentDay} email sent`);
+              console.log(`   ✅ ${company.name} (ID: ${company.id}) - Day ${currentDay} email sent → ${company.email}`);
             } else {
               console.log(`   ⚠️  ${company.name} (ID: ${company.id}) - Day ${currentDay} email failed`);
             }
@@ -176,15 +180,17 @@ export const checkAndSendGracePeriodEmails = async () => {
 
       const [expiredGracePeriods] = await conn.execute(`
         SELECT
-          id,
-          name,
-          email,
-          plan,
-          grace_period_ends_at
-        FROM companies
-        WHERE subscription_status = 'grace_period'
-          AND grace_period_ends_at IS NOT NULL
-          AND grace_period_ends_at < NOW()
+          c.id,
+          c.name,
+          u.email,
+          c.plan,
+          c.grace_period_ends_at
+        FROM companies c
+        INNER JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
+        WHERE c.subscription_status = 'grace_period'
+          AND c.grace_period_ends_at IS NOT NULL
+          AND c.grace_period_ends_at < NOW()
+        GROUP BY c.id, u.email
       `);
 
       console.log(`   Found ${expiredGracePeriods.length} expired grace period(s)`);
@@ -209,7 +215,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           // Send suspension email
           const emailSent = await sendGracePeriodEmail({
             companyName: company.name,
-            adminEmail: company.email,
+            adminEmail:  company.email,
             day: 11, // Suspension email
             gracePeriodEndsAt: company.grace_period_ends_at,
             planType: company.plan,
@@ -218,7 +224,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           if (emailSent) {
             stats.suspended++;
             stats.emailsSent++;
-            console.log(`   ✅ ${company.name} (ID: ${company.id}) - Account suspended`);
+            console.log(`   ✅ ${company.name} (ID: ${company.id}) - Account suspended → ${company.email}`);
           } else {
             console.log(`   ⚠️  ${company.name} (ID: ${company.id}) - Suspended but email failed`);
             stats.suspended++;
