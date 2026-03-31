@@ -220,19 +220,19 @@ const generateBrandedQRCode = async (url, company, isConference = true) => {
       }
     }
 
-    // Title - CONFERENCE BOOKING SYSTEM or VISITOR MANAGEMENT SYSTEM
+    // Title - CONFERENCE MANAGEMENT PLATFORM or VISITOR MANAGEMENT PLATFORM
     ctx.fillStyle = "#1F2937";
     ctx.font = "bold 42px Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     if (isConference) {
       ctx.fillText("CONFERENCE", width / 2, logoY);
-      ctx.fillText("BOOKING", width / 2, logoY + 50);
-      ctx.fillText("SYSTEM", width / 2, logoY + 100);
+      ctx.fillText("MANAGEMENT", width / 2, logoY + 50);
+      ctx.fillText("PLATFORM", width / 2, logoY + 100);
     } else {
       ctx.fillText("VISITOR", width / 2, logoY);
       ctx.fillText("MANAGEMENT", width / 2, logoY + 50);
-      ctx.fillText("SYSTEM", width / 2, logoY + 100);
+      ctx.fillText("PLATFORM", width / 2, logoY + 100);
     }
 
     // Generate QR code with orange gradient frame

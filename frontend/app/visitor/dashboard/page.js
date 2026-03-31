@@ -240,7 +240,7 @@ export default function VisitorDashboard() {
     ctx.textBaseline = "middle";
     ctx.fillText("VISITOR", W / 2, logoY);
     ctx.fillText("MANAGEMENT", W / 2, logoY + 50);
-    ctx.fillText("SYSTEM", W / 2, logoY + 100);
+    ctx.fillText("PLATFORM", W / 2, logoY + 100);
 
     /* ── QR code with orange gradient frame ── */
     const qrY = logoY + 140;
