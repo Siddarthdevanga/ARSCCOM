@@ -145,139 +145,155 @@ const drawCompanyNameInHeader = (ctx, companyName, canvasWidth, headerHeight) =>
 };
 
 /**
- * Generate a branded QR code image with company branding.
- * Similar to the reference design with company name header.
+ * Helper function to draw rounded rectangles on canvas
  */
-const generateBrandedQRCode = async (url, companyName, isConference = true) => {
+const roundRect = (ctx, x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+};
+
+/**
+ * Generate a branded QR code image with company branding.
+ * Matches the professional branded template design.
+ */
+const generateBrandedQRCode = async (url, company, isConference = true) => {
   try {
-    // Canvas dimensions
+    // Canvas dimensions - matching frontend design
     const width = 800;
-    const height = 1000;
-    const headerHeight = 120;
+    const height = 1200;
 
     // Create canvas
     const canvas = createCanvas(width, height);
     const ctx = canvas.getContext("2d");
 
-    // Background - White
-    ctx.fillStyle = "#FFFFFF";
+    // Purple gradient background
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+    bgGrad.addColorStop(0, "#5B21B6");
+    bgGrad.addColorStop(1, "#7C3AED");
+    ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
 
-    // Header - Purple gradient
-    const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
-    gradient.addColorStop(0, "#6a1b9a");
-    gradient.addColorStop(1, "#8e24aa");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, width, headerHeight);
+    // White card with shadow
+    const cardX = 60;
+    const cardY = 80;
+    const cardW = width - 120;
+    const cardH = height - 160;
+    const cardRadius = 24;
 
-    // ── Company Name (auto-fit, no clipping) ──
-    drawCompanyNameInHeader(ctx, companyName, width, headerHeight);
+    ctx.shadowColor = "rgba(0, 0, 0, 0.2)";
+    ctx.shadowBlur = 20;
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.fill();
+    ctx.shadowColor = "transparent";
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
 
-    // Title
-    ctx.fillStyle = "#6a1b9a";
-    ctx.font = "bold 36px Arial, sans-serif";
-    ctx.textAlign = "center";
-    const title = isConference ? "Conference Room Booking" : "Visitor Registration";
-    ctx.fillText(title, width / 2, 180);
-
-    // Subtitle
-    ctx.fillStyle = "#666666";
-    ctx.font = "20px Arial, sans-serif";
-    ctx.fillText("Scan QR Code or Visit:", width / 2, 230);
-
-    // URL (truncate if too long)
-    ctx.fillStyle = "#7a00ff";
-    ctx.font = "bold 18px Arial, sans-serif";
-    const maxUrlWidth = width - 100;
-    let displayUrl = url;
-
-    if (ctx.measureText(displayUrl).width > maxUrlWidth) {
-      while (
-        ctx.measureText(displayUrl + "...").width > maxUrlWidth &&
-        displayUrl.length > 20
-      ) {
-        displayUrl = displayUrl.substring(0, displayUrl.length - 1);
+    // Company logo at top
+    let logoY = cardY + 80;
+    if (company.logo_url) {
+      try {
+        const logoImg = await loadImage(company.logo_url);
+        const maxLogoW = 280;
+        const maxLogoH = 100;
+        let logoW = logoImg.width;
+        let logoH = logoImg.height;
+        const ratio = Math.min(maxLogoW / logoW, maxLogoH / logoH);
+        logoW *= ratio;
+        logoH *= ratio;
+        const logoX = (width - logoW) / 2;
+        ctx.drawImage(logoImg, logoX, cardY + 50, logoW, logoH);
+        logoY = cardY + 50 + logoH + 40;
+      } catch (err) {
+        console.error("Failed to load company logo:", err.message);
+        // Continue without logo
       }
-      displayUrl += "...";
     }
-    ctx.fillText(displayUrl, width / 2, 265);
 
-    // Generate QR code
-    const qrSize = 400;
+    // Title - CONFERENCE BOOKING SYSTEM or VISITOR MANAGEMENT SYSTEM
+    ctx.fillStyle = "#1F2937";
+    ctx.font = "bold 42px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    if (isConference) {
+      ctx.fillText("CONFERENCE", width / 2, logoY);
+      ctx.fillText("BOOKING", width / 2, logoY + 50);
+      ctx.fillText("SYSTEM", width / 2, logoY + 100);
+    } else {
+      ctx.fillText("VISITOR", width / 2, logoY);
+      ctx.fillText("MANAGEMENT", width / 2, logoY + 50);
+      ctx.fillText("SYSTEM", width / 2, logoY + 100);
+    }
+
+    // Generate QR code with orange gradient frame
+    const qrY = logoY + 140;
+    const qrSize = 360;
     const qrCodeDataUrl = await QRCode.toDataURL(url, {
       errorCorrectionLevel: "M",
       type: "image/png",
       width: qrSize,
       margin: 0,
       color: {
-        dark: "#6a1b9a",  // Purple QR code
+        dark: "#1F2937",  // Dark gray QR code
         light: "#FFFFFF",
       },
     });
 
-    // Load and draw QR code
+    // Load and draw QR code with orange frame
     const qrImage = await loadImage(qrCodeDataUrl);
     const qrX = (width - qrSize) / 2;
-    const qrY = 300;
-    ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+    const frameSize = qrSize + 60;
+    const frameX = (width - frameSize) / 2;
+    const frameY = qrY;
 
-    // Instructions section
-    const instructionsY = qrY + qrSize + 50;
+    // Orange gradient frame
+    const frameGrad = ctx.createLinearGradient(frameX, frameY, frameX, frameY + frameSize);
+    frameGrad.addColorStop(0, "#F59E0B");
+    frameGrad.addColorStop(1, "#FCD34D");
+    ctx.fillStyle = frameGrad;
+    roundRect(ctx, frameX, frameY, frameSize, frameSize, 16);
+    ctx.fill();
 
-    ctx.fillStyle = "#6a1b9a";
-    ctx.font = "bold 24px Arial, sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText(
-      "Instructions for " + (isConference ? "Employees:" : "Visitors:"),
-      80,
-      instructionsY
-    );
+    // White background for QR
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, qrX, qrY + 30, qrSize, qrSize, 12);
+    ctx.fill();
 
-    // Instruction items
-    ctx.fillStyle = "#333333";
+    // Draw QR code
+    ctx.drawImage(qrImage, qrX + 10, qrY + 40, qrSize - 20, qrSize - 20);
+
+    // "Powered by Zodopt" footer
+    const footerY = cardY + cardH - 140;
+    ctx.fillStyle = "#6B7280";
     ctx.font = "18px Arial, sans-serif";
-    const instructions = isConference
-      ? [
-          "1. Scan the QR code with your phone camera",
-          "2. Or visit the URL above in your browser",
-          "3. Authenticate with OTP",
-          "4. Select available room and time slot",
-          "5. Complete the booking form",
-          "6. Receive booking confirmation via email",
-        ]
-      : [
-          "1. Scan the QR code with your phone camera",
-          "2. Or visit the URL above in your browser",
-          "3. Enter your email to receive verification code",
-          "4. Complete the registration form",
-          "5. Capture your photo",
-          "6. Receive your digital visitor pass via email",
-        ];
-
-    let instructionY = instructionsY + 35;
-    instructions.forEach((instruction) => {
-      ctx.fillText(instruction, 80, instructionY);
-      instructionY += 30;
-    });
-
-    // Footer
-    ctx.fillStyle = "#e0e0e0";
-    ctx.fillRect(0, height - 80, width, 80);
-
-    ctx.fillStyle = "#7a00ff";
-    ctx.font = "bold 28px Arial, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("PROMEET", width / 2, height - 45);
+    ctx.fillText("Powered by Zodopt", width / 2, footerY);
 
-    ctx.fillStyle = "#666666";
-    ctx.font = "16px Arial, sans-serif";
-    ctx.fillText(
-      isConference
-        ? "Conference Booking Platform"
-        : "Visitor and Conference Booking Platform",
-      width / 2,
-      height - 20
-    );
+    // ProMeet/Zodopt logo at bottom
+    try {
+      const brandImg = await loadImage("https://www.promeet.zodopt.com/Brand%20Logo.png");
+      const brandW = 120;
+      const brandH = (brandImg.height / brandImg.width) * brandW;
+      const brandX = (width - brandW) / 2;
+      const brandY = footerY + 20;
+      ctx.drawImage(brandImg, brandX, brandY, brandW, brandH);
+    } catch (err) {
+      console.error("Failed to load brand logo:", err.message);
+      // Fallback text if logo fails
+      ctx.fillStyle = "#5B21B6";
+      ctx.font = "bold 22px Arial, sans-serif";
+      ctx.fillText("PROMEET", width / 2, footerY + 50);
+    }
 
     return canvas.toBuffer("image/png");
   } catch (error) {
@@ -1201,7 +1217,7 @@ router.get("/qr-code/download", async (req, res) => {
     await validateCompanySubscription(companyId);
 
     const [[company]] = await db.query(
-      `SELECT name, slug FROM companies WHERE id = ? LIMIT 1`,
+      `SELECT name, slug, logo_url FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
 
@@ -1232,7 +1248,7 @@ router.get("/qr-code/download", async (req, res) => {
       "https://www.promeet.zodopt.com";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
-    const qrCodeBuffer = await generateBrandedQRCode(publicUrl, company.name, true);
+    const qrCodeBuffer = await generateBrandedQRCode(publicUrl, company, true);
 
     const safeFileName = company.name.replace(/[^a-z0-9]/gi, "-").toLowerCase();
 
