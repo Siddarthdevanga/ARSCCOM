@@ -40,8 +40,9 @@ for (const key of REQUIRED) {
 /* ======================================================
    CONSTANTS
 ====================================================== */
-const GUPSHUP_TEMPLATE_API = "https://api.gupshup.io/wa/api/v1/template/msg";
-const GUPSHUP_MEDIA_API    = "https://api.gupshup.io/wa/api/v1/msg";
+// Using Meta Cloud API endpoint (FBC - Facebook Business Cloud)
+// This endpoint works for apps hosted on Meta Cloud API via Gupshup
+const GUPSHUP_MSG_API = "https://api.gupshup.io/wa/api/v1/msg";
 
 /* ======================================================
    PHONE NORMALISATION
@@ -59,10 +60,15 @@ export const normalizePhone = (raw) => {
 };
 
 /* ======================================================
-   INTERNAL: POST TEMPLATE MESSAGE
-   (application/x-www-form-urlencoded)
+   INTERNAL: POST TEMPLATE MESSAGE (META CLOUD API FORMAT)
+
+   For FBC (Facebook Business Cloud) apps via Gupshup:
+   - Uses /msg endpoint (not /template/msg)
+   - JSON format (not form-urlencoded)
+   - Template referenced by NAME (not UUID)
+   - Language code: en_GB or en_US (not just "en")
 ====================================================== */
-const postTemplate = async (payload) => {
+const postTemplate = async ({ destination, templateName, languageCode = "en", parameters = [] }) => {
   const apiKey    = process.env.GUPSHUP_API_KEY;
   const appName   = process.env.GUPSHUP_APP_NAME;
   const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
@@ -83,22 +89,43 @@ const postTemplate = async (payload) => {
     appName,
     source: normalizedSource,
     apiKeyLength: apiKey?.length,
+    templateName,
   });
 
-  const body = new URLSearchParams({
-    channel:    "whatsapp",
-    source:     normalizedSource,
-    "src.name": appName,
-    ...payload,
+  // Meta Cloud API format (for FBC apps)
+  const body = JSON.stringify({
+    channel: "whatsapp",
+    source: normalizedSource,
+    destination: destination,
+    src: {
+      name: appName,
+    },
+    message: {
+      type: "template",
+      template: {
+        name: templateName,  // Template NAME, not UUID
+        language: {
+          code: languageCode,  // e.g., "en", "en_GB", "en_US"
+        },
+        components: [
+          {
+            type: "body",
+            parameters: parameters,  // Array of { type: "text", text: "value" }
+          },
+        ],
+      },
+    },
   });
 
-  const response = await fetch(GUPSHUP_TEMPLATE_API, {
+  console.log("[WHATSAPP] Request body:", body);
+
+  const response = await fetch(GUPSHUP_MSG_API, {
     method:  "POST",
     headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
+      "Content-Type": "application/json",  // JSON, not form-urlencoded
       "apikey":        apiKey,
     },
-    body: body.toString(),
+    body: body,
   });
 
   const text = await response.text();
@@ -106,11 +133,12 @@ const postTemplate = async (payload) => {
   try { json = JSON.parse(text); } catch { json = { raw: text }; }
 
   if (!response.ok) {
-    console.error("[WHATSAPP] Template API error:", response.status, json);
+    console.error("[WHATSAPP] API error:", response.status, json);
     console.error("[WHATSAPP] Request details:", {
-      url: GUPSHUP_TEMPLATE_API,
+      url: GUPSHUP_MSG_API,
       appName,
       source: normalizedSource,
+      templateName,
       hasApiKey: !!apiKey,
     });
 
@@ -121,10 +149,10 @@ const postTemplate = async (payload) => {
       );
     }
 
-    throw new Error(`Gupshup template error ${response.status}: ${JSON.stringify(json)}`);
+    throw new Error(`Gupshup API error ${response.status}: ${JSON.stringify(json)}`);
   }
 
-  console.log("[WHATSAPP] Template response:", json);
+  console.log("[WHATSAPP] API response:", json);
   return json;
 };
 
@@ -162,7 +190,7 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
     knownLength: imageBuffer.length,
   });
 
-  const response = await fetch(GUPSHUP_MEDIA_API, {
+  const response = await fetch(GUPSHUP_MSG_API, {
     method:  "POST",
     headers: {
       "apikey": apiKey,
@@ -185,7 +213,7 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
 };
 
 /* ======================================================
-   SEND OTP VIA WHATSAPP
+   SEND OTP VIA WHATSAPP (META CLOUD API FORMAT)
    ─────────────────────────────────────────────────────
    Template: verification_otp
    Category: AUTHENTICATION
@@ -198,30 +226,26 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
    Expires in 5 minutes.
    ────────────────────────────────────────────────
    {{1}} = 6-digit OTP
+
+   AWS Secrets Manager:
+   GUPSHUP_OTP_TEMPLATE_ID = "verification_otp" (template NAME, not UUID)
 ====================================================== */
 export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
   const destination = normalizePhone(phone);
-  const templateId  = process.env.GUPSHUP_OTP_TEMPLATE_ID;
+  const templateName = process.env.GUPSHUP_OTP_TEMPLATE_ID;
 
-  console.log(`[WHATSAPP][OTP] → ${destination} | OTP: ${otp} | template: ${templateId}`);
+  console.log(`[WHATSAPP][OTP] → ${destination} | OTP: ${otp} | template: ${templateName}`);
 
-  const message = JSON.stringify({
-    type: "template",
-    template: {
-      id:       templateId,
-      language: { policy: "deterministic", code: "en" },
-      components: [
-        {
-          type:       "body",
-          parameters: [
-            { type: "text", text: otp },  // Only OTP parameter
-          ],
-        },
-      ],
-    },
+  // Call Meta Cloud API with template name and parameters
+  await postTemplate({
+    destination,
+    templateName,
+    languageCode: "en",  // or "en_GB", "en_US" depending on your template
+    parameters: [
+      { type: "text", text: String(otp) },  // {{1}} = OTP
+    ],
   });
 
-  await postTemplate({ destination, message });
   console.log(`[WHATSAPP][OTP] Sent to ${destination}`);
 };
 
@@ -300,28 +324,20 @@ export const sendVisitorPassWhatsApp = async ({
 
   console.log(`[WHATSAPP][PASS] Image sent to ${destination}`);
 
-  // ── Message 2: Send structured details as approved template ──
-  const message = JSON.stringify({
-    type: "template",
-    template: {
-      id:       templateId,
-      language: { policy: "deterministic", code: "en" },
-      components: [
-        {
-          type: "body",
-          parameters: [
-            { type: "text", text: companyName  },
-            { type: "text", text: visitorCode  },
-            { type: "text", text: visitorName  },
-            { type: "text", text: visitorPhone },
-            { type: "text", text: personToMeet },
-            { type: "text", text: checkIn      },
-          ],
-        },
-      ],
-    },
+  // ── Message 2: Send structured details as approved template (Meta Cloud API) ──
+  await postTemplate({
+    destination,
+    templateName: templateId,  // Template NAME (e.g., "visitor_pass")
+    languageCode: "en",
+    parameters: [
+      { type: "text", text: companyName  },  // {{1}}
+      { type: "text", text: visitorCode  },  // {{2}}
+      { type: "text", text: visitorName  },  // {{3}}
+      { type: "text", text: visitorPhone },  // {{4}}
+      { type: "text", text: personToMeet },  // {{5}}
+      { type: "text", text: checkIn      },  // {{6}}
+    ],
   });
 
-  await postTemplate({ destination, message });
   console.log(`[WHATSAPP][PASS] Details template sent to ${destination}`);
 };
