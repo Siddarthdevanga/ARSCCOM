@@ -222,7 +222,7 @@ const HeroBanner = ({ company }) => (
         {getGreeting()}
       </div>
       <h2 className={styles.heroBannerTitle}>Welcome to <span>{company?.name}</span></h2>
-      <p className={styles.heroBannerSub}>Verify your email to complete visitor registration</p>
+      <p className={styles.heroBannerSub}>Verify your WhatsApp number to complete visitor registration</p>
     </div>
   </div>
 );
@@ -242,14 +242,14 @@ export default function PublicVisitorRegistration() {
   const [error,       setError]       = useState("");
   const [visitorCode, setVisitorCode] = useState("");
 
-  const [email,       setEmail]       = useState("");
+  const [phone,       setPhone]       = useState("");
   const [otp,         setOtp]         = useState("");
   const [otpSent,     setOtpSent]     = useState(false);
   const [otpToken,    setOtpToken]    = useState("");
   const [resendTimer, setResendTimer] = useState(0);
 
   const [formData, setFormData] = useState({
-    name: "", phone: "", fromCompany: "", department: "", designation: "",
+    name: "", email: "", fromCompany: "", department: "", designation: "",
     address: "", city: "", state: "", postalCode: "", country: "",
     personToMeet: "", purpose: "", belongings: [], idType: "", idNumber: "",
   });
@@ -317,18 +317,18 @@ export default function PublicVisitorRegistration() {
   const goBack = useCallback(() => { setError(""); setStep((p) => Math.max(p - 1, 1)); }, []);
 
   const handleSendOTP = async () => {
-    const trimmed = email.trim().toLowerCase();
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError("Valid email address required"); return;
+    const trimmed = phone.trim().replace(/\D/g, "");
+    if (!trimmed || trimmed.length !== 10) {
+      setError("Valid 10-digit WhatsApp number required"); return;
     }
     try {
       setError(""); setSubmitting(true);
       const data = await publicFetch(`/api/public/visitor/${slug}/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ phone: `91${trimmed}` }),
       });
-      setEmail(trimmed); setOtpSent(true); setResendTimer(data.resendAfter || 30);
+      setPhone(trimmed); setOtpSent(true); setResendTimer(data.resendAfter || 30);
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
   };
@@ -340,7 +340,7 @@ export default function PublicVisitorRegistration() {
       const data = await publicFetch(`/api/public/visitor/${slug}/otp/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ phone: `91${phone}`, otp }),
       });
       setOtpToken(data.otpToken); setStep(1);
     } catch (err) { setError(err.message); }
@@ -382,8 +382,8 @@ export default function PublicVisitorRegistration() {
     setError("");
     if (step === 1) {
       if (!formData.name.trim()) { setError("Visitor name is required"); return false; }
-      if (!formData.phone.trim() || !/^\+?[\d\s\-()]{10,}$/.test(formData.phone)) {
-        setError("Valid phone number required (min 10 digits)"); return false;
+      if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+        setError("Valid email address required"); return false;
       }
     }
     if (step === 2 && !formData.personToMeet.trim()) {
@@ -405,7 +405,7 @@ export default function PublicVisitorRegistration() {
       Object.entries(formData).forEach(([key, value]) => {
         fd.append(key, key === "belongings" ? (Array.isArray(value) ? value.join(", ") : "") : value || "");
       });
-      fd.append("email", email || "");  // Add email from OTP verification
+      fd.append("phone", `91${phone}`);  // Add phone from OTP verification (with 91 prefix)
       fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
 
@@ -433,8 +433,8 @@ export default function PublicVisitorRegistration() {
   const handleReset = useCallback(() => {
     if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); setCameraActive(false); }
     canvasRef.current?.getContext("2d").clearRect(0, 0, 400, 300);
-    setStep(0); setEmail(""); setOtp(""); setOtpSent(false); setOtpToken(""); setResendTimer(0);
-    setFormData({ name:"", phone:"", fromCompany:"", department:"", designation:"",
+    setStep(0); setPhone(""); setOtp(""); setOtpSent(false); setOtpToken(""); setResendTimer(0);
+    setFormData({ name:"", email:"", fromCompany:"", department:"", designation:"",
       address:"", city:"", state:"", postalCode:"", country:"",
       personToMeet:"", purpose:"", belongings:[], idType:"", idNumber:"" });
     setSelectedEmployeeId(null); setPhoto(null); setPhotoBlob(null); setVisitorCode(""); setError("");
@@ -459,7 +459,7 @@ export default function PublicVisitorRegistration() {
   return (
     <div className={styles.page}>
 
-      {/* ── STEP 0: EMAIL ── */}
+      {/* ── STEP 0: WHATSAPP OTP ── */}
       {step === 0 && (
         <>
           <Navbar company={company} />
@@ -467,20 +467,28 @@ export default function PublicVisitorRegistration() {
           <div className={styles.container}>
             <div className={styles.authCard}>
               <p style={{ textAlign:"center", color:"#6b7280", fontSize:"0.9rem", marginBottom:"1.25rem", lineHeight:1.6 }}>
-                Enter your email to receive a verification code
+                Enter your WhatsApp number to receive a verification code
               </p>
               {error && <div className={styles.errorMsg}>{error}</div>}
               {!otpSent ? (
                 <>
                   <div className={styles.formGroup}>
-                    <label htmlFor="email">Email Address *</label>
-                    <input id="email" className={styles.input} type="email" value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && !submitting && handleSendOTP()}
-                      placeholder="your.email@example.com" disabled={submitting}
-                      autoComplete="email" autoCapitalize="none" />
+                    <label htmlFor="phone">WhatsApp Number *</label>
+                    <div style={{ display:"flex", gap:"0.5rem", alignItems:"center" }}>
+                      <div style={{ padding:"0.75rem 1rem", background:"#f3f4f6", border:"1px solid #d1d5db", borderRadius:"0.5rem", fontWeight:"600", color:"#374151", fontSize:"0.95rem" }}>
+                        +91
+                      </div>
+                      <input id="phone" className={styles.input} type="tel" inputMode="tel" value={phone}
+                        onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
+                        onKeyDown={(e) => e.key === "Enter" && !submitting && handleSendOTP()}
+                        placeholder="9876543210" maxLength={10} disabled={submitting}
+                        autoComplete="tel" style={{ flex:1 }} />
+                    </div>
+                    <p style={{ fontSize:"0.8rem", color:"#6b7280", marginTop:"0.25rem" }}>
+                      Enter 10-digit mobile number
+                    </p>
                   </div>
-                  <button className={styles.primaryBtn} onClick={handleSendOTP} disabled={submitting || !email.trim()}>
+                  <button className={styles.primaryBtn} onClick={handleSendOTP} disabled={submitting || phone.replace(/\D/g,"").length !== 10}>
                     {submitting ? "Sending…" : "Send Verification Code"}
                   </button>
                 </>
@@ -501,11 +509,11 @@ export default function PublicVisitorRegistration() {
                     {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend Code"}
                   </button>
                   <p style={{ textAlign:"center", marginTop:"1rem", fontSize:"0.875rem", color:"#6b7280" }}>
-                    Code sent to: <strong style={{ color:"#1e1b4b" }}>{email}</strong><br />
+                    Code sent to WhatsApp: <strong style={{ color:"#1e1b4b" }}>+91 {phone}</strong><br />
                     <button onClick={() => { setOtpSent(false); setOtp(""); setError(""); }}
                       style={{ color:"#7c3aed", cursor:"pointer", textDecoration:"underline",
                         fontSize:"0.825rem", background:"none", border:"none", padding:0, marginTop:"0.5rem" }}>
-                      Change email
+                      Change number
                     </button>
                   </p>
                 </>
@@ -531,14 +539,19 @@ export default function PublicVisitorRegistration() {
                   placeholder="Enter your full name" autoComplete="name" />
               </div>
               <div className={styles.formGroup}>
-                <label htmlFor="phone">Phone Number *</label>
-                <input id="phone" className={styles.input} type="tel" name="phone"
-                  value={formData.phone} onChange={handleInputChange}
-                  placeholder="+1234567890" autoComplete="tel" inputMode="tel" />
+                <label>WhatsApp Number (Verified ✓)</label>
+                <div style={{ display:"flex", gap:"0.5rem", alignItems:"center" }}>
+                  <div style={{ padding:"0.75rem 1rem", background:"#f3f4f6", border:"1px solid #d1d5db", borderRadius:"0.5rem", fontWeight:"600", color:"#374151", fontSize:"0.95rem" }}>
+                    +91
+                  </div>
+                  <input className={styles.input} type="tel" value={phone} disabled readOnly style={{ flex:1, background:"#f9fafb" }} />
+                </div>
               </div>
               <div className={styles.formGroup}>
-                <label>Email (Verified ✓)</label>
-                <input className={styles.input} type="email" value={email} disabled readOnly />
+                <label htmlFor="email">Email Address *</label>
+                <input id="email" className={styles.input} type="email" name="email"
+                  value={formData.email} onChange={handleInputChange}
+                  placeholder="your.email@example.com" autoComplete="email" autoCapitalize="none" />
               </div>
               <button className={styles.primaryBtn} onClick={handleNext}>Next →</button>
             </main>
@@ -711,7 +724,7 @@ export default function PublicVisitorRegistration() {
                   Registration Successful!
                 </h2>
                 <p style={{ fontSize:"clamp(0.875rem,2vw,1rem)", color:"#6b7280", marginBottom:"2rem", lineHeight:1.6 }}>
-                  Your visitor pass has been sent to your email.
+                  Your visitor pass has been sent to your WhatsApp.
                 </p>
                 <div className={styles.successMsg}>
                   <p style={{ margin:0, fontSize:"0.875rem", fontWeight:600, color:"#166534" }}>Visitor ID</p>
@@ -721,7 +734,7 @@ export default function PublicVisitorRegistration() {
                 </div>
                 <p style={{ fontSize:"clamp(0.825rem,1.8vw,0.925rem)", color:"#9ca3af", lineHeight:1.6, marginBottom:"2rem" }}>
                   Please show this ID at the reception.<br />
-                  Check your email <strong style={{ color:"#4b5563" }}>({email})</strong> for the digital pass.
+                  Check your WhatsApp <strong style={{ color:"#4b5563" }}>(+91 {phone})</strong> for the digital pass.
                 </p>
                 {company?.whatsapp_url?.trim() && (
                   <div className={styles.whatsappSection}>
