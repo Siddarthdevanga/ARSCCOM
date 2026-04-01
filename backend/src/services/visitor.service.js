@@ -1,6 +1,7 @@
 import { db } from "../config/db.js";
 import { uploadToS3 } from "./s3.service.js";
 import { sendEmployeeNotificationMail, sendVisitorPassMail } from "../utils/visitorMail.service.js";
+import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
 import crypto from "crypto";
 
 /* ======================================================
@@ -292,24 +293,25 @@ export const saveVisitor = async (companyId, data, file) => {
     const checkInDisplay = formatForDisplay(storedCheckIn);
 
     /* ──────────────────────────────────────────────────────────────
-       SEND VISITOR PASS VIA EMAIL
+       SEND VISITOR PASS VIA WHATSAPP
        ──────────────────────────────────────────────────────────────
        Flow:
-         1. Send visitor pass via email with pass image generated inline
-         2. Email sent to visitor's email address
+         1. Generate visitor pass image as PNG buffer
+         2. Send pass image + details via WhatsApp using Gupshup
        Non-blocking — errors logged, never thrown.
-       Note: Can be switched to WhatsApp later by swapping the send function.
+       Both phone and email are required fields.
     ────────────────────────────────────────────────────────────── */
-    if (email) {
+    if (phone && email) {
       try {
-        console.log("[VISITOR] Sending visitor pass via EMAIL to:", email);
+        console.log("[VISITOR] Sending visitor pass via WHATSAPP to:", phone);
 
-        await sendVisitorPassMail({
+        // Generate pass image buffer
+        const { generateVisitorPassImage } = await import("../utils/visitor-pass-image.js");
+        const passImageBuffer = await generateVisitorPassImage({
           company: {
-            id:           companyId,
-            name:         companyInfo.name,
-            logo:         companyInfo.logo_url,
-            whatsapp_url: companyInfo.whatsapp_url || null,
+            id:   companyId,
+            name: companyInfo.name,
+            logo: companyInfo.logo_url,
           },
           visitor: {
             visitorCode,
@@ -324,18 +326,36 @@ export const saveVisitor = async (companyId, data, file) => {
           },
         });
 
+        // Send via WhatsApp (image + text template)
+        await sendVisitorPassWhatsApp({
+          phone,
+          passImageBuffer,
+          company: {
+            id:   companyId,
+            name: companyInfo.name,
+          },
+          visitor: {
+            visitorCode,
+            name,
+            phone,
+            personToMeet:   resolvedEmployeeName || "Reception",
+            checkIn:        storedCheckIn || checkInMySQL,
+            checkInDisplay,
+          },
+        });
+
         await db.execute(
           `UPDATE visitors SET pass_mail_sent = 1 WHERE id = ?`,
           [visitorId]
         );
 
-        console.log("[VISITOR] Email pass sent successfully to:", email);
+        console.log("[VISITOR] WhatsApp pass sent successfully to:", phone);
       } catch (err) {
         // Non-fatal — visitor is already registered in DB
-        console.error("[VISITOR] EMAIL PASS ERROR:", err.message);
+        console.error("[VISITOR] WHATSAPP PASS ERROR:", err.message);
       }
     } else {
-      console.warn("[VISITOR] No email provided - visitor pass not sent");
+      console.warn("[VISITOR] Phone or email missing - visitor pass not sent");
     }
 
     /* ── Send employee notification email (unchanged) ── */
