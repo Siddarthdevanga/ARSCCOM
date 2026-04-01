@@ -2,6 +2,7 @@ import express from "express";
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
 import { sendEmail } from "../utils/mailer.js";
+import { sendOtpWhatsApp } from "../utils/whatsapp.js";
 import { searchEmployeesByCompany } from "../controllers/employee.controller.js";
 import multer from "multer";
 import QRCode from "qrcode";
@@ -226,13 +227,13 @@ router.get("/visitor/:slug/employees", async (req, res) => {
 router.post("/visitor/:slug/otp/send", async (req, res) => {
   try {
     const slug  = normalizeSlug(req.params.slug);
-    const email = normalizeEmail(req.body.email);
+    const phone = normalizePhone(req.body.phone);
 
-    // ── Validate email ──
-    if (!isValidEmail(email)) {
+    // ── Validate phone ──
+    if (!phone) {
       return res.status(400).json({
         success: false,
-        message: "Valid email address required",
+        message: "Valid WhatsApp number required (10 digits)",
       });
     }
 
@@ -241,12 +242,12 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
       return res.status(404).json({ success: false, message: "Invalid registration link" });
     }
 
-    // ── Resend throttle: 30-second cooldown per email+company ──
+    // ── Resend throttle: 30-second cooldown per phone+company ──
     const [[last]] = await db.query(
       `SELECT otp_last_sent_at FROM visitor_otp
-       WHERE email = ? AND company_id = ?
+       WHERE phone = ? AND company_id = ?
        ORDER BY id DESC LIMIT 1`,
-      [email, company.id]
+      [phone, company.id]
     );
 
     if (last?.otp_last_sent_at) {
@@ -267,17 +268,17 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
     // ── Persist OTP record ──
     await db.query(
       `INSERT INTO visitor_otp
-         (company_id, email, otp_hash, otp_expires_at, otp_last_sent_at, verified)
+         (company_id, phone, otp_hash, otp_expires_at, otp_last_sent_at, verified)
        VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW(), 0)`,
-      [company.id, email, otpHash, OTP_EXPIRY_MINUTES]
+      [company.id, phone, otpHash, OTP_EXPIRY_MINUTES]
     );
 
-    // ── Send OTP via Email ──
-    await sendOtpMail(email, otp, company);
+    // ── Send OTP via WhatsApp ──
+    await sendOtpWhatsApp({ phone, otp, company });
 
     return res.json({
       success:     true,
-      message:     "OTP sent successfully",
+      message:     "OTP sent to WhatsApp successfully",
       resendAfter: OTP_RESEND_SECONDS,
     });
   } catch (err) {
@@ -290,16 +291,16 @@ router.post("/visitor/:slug/otp/send", async (req, res) => {
    VERIFY OTP
    POST /visitor/:slug/otp/verify
 
-   Body: { email: "user@example.com", otp: "123456" }
+   Body: { phone: "9876543210", otp: "123456" }
 ====================================================== */
 router.post("/visitor/:slug/otp/verify", async (req, res) => {
   try {
     const slug  = normalizeSlug(req.params.slug);
-    const email = normalizeEmail(req.body.email);
+    const phone = normalizePhone(req.body.phone);
     const otp   = String(req.body.otp || "").trim();
 
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ success: false, message: "Valid email address required" });
+    if (!phone) {
+      return res.status(400).json({ success: false, message: "Valid WhatsApp number required" });
     }
 
     if (!otp || otp.length !== 6 || !/^\d{6}$/.test(otp)) {
@@ -314,9 +315,9 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
     const otpHash       = hashOTP(otp);
     const [[otpRecord]] = await db.query(
       `SELECT id, otp_hash, otp_expires_at FROM visitor_otp
-       WHERE email = ? AND company_id = ? AND verified = 0
+       WHERE phone = ? AND company_id = ? AND verified = 0
        ORDER BY id DESC LIMIT 1`,
-      [email, company.id]
+      [phone, company.id]
     );
 
     if (!otpRecord) {

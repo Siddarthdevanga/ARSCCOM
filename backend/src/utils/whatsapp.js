@@ -27,8 +27,8 @@ const REQUIRED = [
   "GUPSHUP_API_KEY",
   "GUPSHUP_APP_NAME",
   "GUPSHUP_SOURCE_NUMBER",
-  "GUPSHUP_OTP_TEMPLATE_ID",
-  "GUPSHUP_PASS_TEMPLATE_ID",
+  "GUPSHUP_OTP_TEMPLATE_ID",     // Template: verification_otp
+  "GUPSHUP_PASS_TEMPLATE_ID",    // Template: visitor_pass
 ];
 
 for (const key of REQUIRED) {
@@ -159,25 +159,23 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
 /* ======================================================
    SEND OTP VIA WHATSAPP
    ─────────────────────────────────────────────────────
-   Template: visitor_otp
+   Template: verification_otp
    Category: AUTHENTICATION
    Language: English (en)
 
    Register this exact body in Gupshup dashboard:
    ────────────────────────────────────────────────
-   Your verification code for {{1}} is *{{2}}*.
-   This OTP is valid for 5 minutes.
-   Do not share this code with anyone.
+   {{1}} is your verification code. For your security,
+   do not share this code.
+   Expires in 5 minutes.
    ────────────────────────────────────────────────
-   {{1}} = company name
-   {{2}} = 6-digit OTP
+   {{1}} = 6-digit OTP
 ====================================================== */
 export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
   const destination = normalizePhone(phone);
   const templateId  = process.env.GUPSHUP_OTP_TEMPLATE_ID;
-  const companyName = company.name || "ProMeet";
 
-  console.log(`[WHATSAPP][OTP] → ${destination} | template: ${templateId}`);
+  console.log(`[WHATSAPP][OTP] → ${destination} | OTP: ${otp} | template: ${templateId}`);
 
   const message = JSON.stringify({
     type: "template",
@@ -188,8 +186,7 @@ export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
         {
           type:       "body",
           parameters: [
-            { type: "text", text: companyName },
-            { type: "text", text: otp },
+            { type: "text", text: otp },  // Only OTP parameter
           ],
         },
       ],
@@ -203,6 +200,10 @@ export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
 /* ======================================================
    SEND VISITOR PASS VIA WHATSAPP (DIRECT BINARY IMAGE)
    ─────────────────────────────────────────────────────
+   Template: visitor_pass
+   Category: MARKETING or UTILITY
+   Language: English (en)
+
    What the visitor receives (two messages in sequence):
 
    Message 1 — The actual PNG pass image
@@ -211,22 +212,26 @@ export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
      Caption: "🎫 Your Visitor Pass — <CompanyName>"
 
    Message 2 — Structured text details (template)
-     Sent as an approved WhatsApp template with visit details.
-     Register this body in Gupshup dashboard (TEXT header, no image):
+     Register this exact body in Gupshup dashboard:
      ─────────────────────────────────────────────────────────────────
-     Welcome to *{{1}}*! 🎉
+     Welcome to {{1}}! 🎉
 
-     Your visitor pass is the image above.
+     Your visitor pass has been sent as an image above.
 
-     🪪 *Visitor ID:* {{2}}
-     👤 *Name:* {{3}}
-     📞 *Phone:* {{4}}
-     🤝 *Meeting:* {{5}}
-     🕐 *Check-in:* {{6}}
+     🪪 Visitor ID: {{2}}
+     👤 Name: {{3}}
+     📞 Phone: {{4}}
+     🤝 Meeting: {{5}}
+     🕐 Check-in: {{6}}
 
      Please show the pass image at the reception counter.
-     Valid for today only.
      ─────────────────────────────────────────────────────────────────
+     {{1}} = Company name
+     {{2}} = Visitor code
+     {{3}} = Visitor name
+     {{4}} = Visitor phone
+     {{5}} = Person to meet
+     {{6}} = Check-in time
 
    passImageBuffer: Buffer — output of generateVisitorPassImage()
    No S3 public URL or bucket policy change required.
