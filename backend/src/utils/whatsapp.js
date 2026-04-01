@@ -92,40 +92,47 @@ const postTemplate = async ({ destination, templateName, languageCode = "en", pa
     templateName,
   });
 
-  // Meta Cloud API format (for FBC apps)
-  const body = JSON.stringify({
+  // Meta Cloud API format (for FBC apps) - uses form-urlencoded with JSON message
+  const messagePayload = {
+    type: "template",
+    template: {
+      name: templateName,  // Template NAME, not UUID
+      language: {
+        code: languageCode,  // e.g., "en", "en_GB", "en_US"
+      },
+      components: [
+        {
+          type: "body",
+          parameters: parameters,  // Array of { type: "text", text: "value" }
+        },
+      ],
+    },
+  };
+
+  const body = new URLSearchParams({
     channel: "whatsapp",
     source: normalizedSource,
     destination: destination,
-    src: {
-      name: appName,
-    },
-    message: {
-      type: "template",
-      template: {
-        name: templateName,  // Template NAME, not UUID
-        language: {
-          code: languageCode,  // e.g., "en", "en_GB", "en_US"
-        },
-        components: [
-          {
-            type: "body",
-            parameters: parameters,  // Array of { type: "text", text: "value" }
-          },
-        ],
-      },
-    },
+    "src.name": appName,
+    message: JSON.stringify(messagePayload),
   });
 
-  console.log("[WHATSAPP] Request body:", body);
+  console.log("[WHATSAPP] Request body:", {
+    channel: "whatsapp",
+    source: normalizedSource,
+    destination,
+    appName,
+    templateName,
+    parametersCount: parameters.length,
+  });
 
   const response = await fetch(GUPSHUP_MSG_API, {
     method:  "POST",
     headers: {
-      "Content-Type": "application/json",  // JSON, not form-urlencoded
+      "Content-Type": "application/x-www-form-urlencoded",  // Form-urlencoded for /msg endpoint
       "apikey":        apiKey,
     },
-    body: body,
+    body: body.toString(),
   });
 
   const text = await response.text();
