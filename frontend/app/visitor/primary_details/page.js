@@ -34,13 +34,21 @@ export default function VisitorPrimaryDetails() {
   /* ================= NEXT ================= */
   const handleNext = () => {
     setError("");
-    if (!name.trim() || !phone.trim() || !email.trim()) {
-      setError("All fields are mandatory");
+    if (!name.trim()) {
+      setError("Visitor name is required");
+      return;
+    }
+    if (!phone.trim() || phone.replace(/\D/g,"").length !== 10) {
+      setError("Valid 10-digit WhatsApp number is required");
+      return;
+    }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError("Valid email address is required");
       return;
     }
     localStorage.setItem(
       "visitor_primary",
-      JSON.stringify({ name, phone, email })
+      JSON.stringify({ name, phone: `91${phone}`, email })
     );
     router.push("/visitor/secondary_details");
   };
@@ -121,15 +129,25 @@ export default function VisitorPrimaryDetails() {
 
             <div className={styles.row}>
               <div className={styles.col}>
-                <label className={styles.label}>Phone <span className={styles.req}>*</span></label>
-                <input
-                  className={styles.input}
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="Phone number"
-                  autoComplete="off"
-                  inputMode="tel"
-                />
+                <label className={styles.label}>WhatsApp Number <span className={styles.req}>*</span></label>
+                <div style={{ display:"flex", gap:"0.5rem", alignItems:"stretch" }}>
+                  <div style={{ padding:"0.75rem 1rem", background:"#f3f4f6", border:"1px solid #d1d5db", borderRadius:"0.5rem", fontWeight:"600", color:"#374151", fontSize:"0.95rem", display:"flex", alignItems:"center" }}>
+                    +91
+                  </div>
+                  <input
+                    className={styles.input}
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
+                    placeholder="9876543210"
+                    autoComplete="off"
+                    inputMode="tel"
+                    maxLength={10}
+                    style={{ flex:1, margin:0 }}
+                  />
+                </div>
+                <p style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.25rem", marginBottom:0 }}>
+                  Enter 10-digit mobile number
+                </p>
               </div>
               <div className={styles.col}>
                 <label className={styles.label}>Email <span className={styles.req}>*</span></label>
