@@ -68,12 +68,26 @@ const postTemplate = async (payload) => {
   const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
 
   if (!apiKey || !appName || !sourceNum) {
+    console.error("[WHATSAPP] Missing Gupshup configuration:", {
+      hasApiKey: !!apiKey,
+      hasAppName: !!appName,
+      hasSourceNum: !!sourceNum,
+    });
     throw new Error("Gupshup env vars not configured");
   }
 
+  // Ensure source number is in correct format (no + prefix, just digits)
+  const normalizedSource = String(sourceNum).replace(/\D/g, "");
+
+  console.log("[WHATSAPP] Using config:", {
+    appName,
+    source: normalizedSource,
+    apiKeyLength: apiKey?.length,
+  });
+
   const body = new URLSearchParams({
     channel:    "whatsapp",
-    source:     sourceNum,
+    source:     normalizedSource,
     "src.name": appName,
     ...payload,
   });
@@ -93,6 +107,20 @@ const postTemplate = async (payload) => {
 
   if (!response.ok) {
     console.error("[WHATSAPP] Template API error:", response.status, json);
+    console.error("[WHATSAPP] Request details:", {
+      url: GUPSHUP_TEMPLATE_API,
+      appName,
+      source: normalizedSource,
+      hasApiKey: !!apiKey,
+    });
+
+    // Provide more helpful error messages
+    if (json.message === "Invalid App Details") {
+      throw new Error(
+        `Gupshup auth failed - check: 1) API key is valid, 2) App name "${appName}" matches Gupshup dashboard, 3) Source number "${normalizedSource}" is registered`
+      );
+    }
+
     throw new Error(`Gupshup template error ${response.status}: ${JSON.stringify(json)}`);
   }
 

@@ -13,7 +13,7 @@ export default function VisitorPrimaryDetails() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
 
-  /* ================= LOAD COMPANY ================= */
+  /* ================= LOAD COMPANY & PREVIOUS DATA ================= */
   useEffect(() => {
     const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
@@ -28,6 +28,24 @@ export default function VisitorPrimaryDetails() {
       router.replace("/auth/login");
       return;
     }
+
+    // Load previously entered data (when user navigates back)
+    const storedPrimary = localStorage.getItem("visitor_primary");
+    if (storedPrimary) {
+      try {
+        const data = JSON.parse(storedPrimary);
+        if (data.name) setName(data.name);
+        if (data.email) setEmail(data.email);
+        // Strip "91" prefix from phone if present (we add it back on save)
+        if (data.phone) {
+          const phoneDigits = String(data.phone).replace(/\D/g, "");
+          setPhone(phoneDigits.startsWith("91") ? phoneDigits.slice(2) : phoneDigits);
+        }
+      } catch (err) {
+        console.warn("[PRIMARY_DETAILS] Failed to load stored data:", err);
+      }
+    }
+
     setLoading(false);
   }, [router]);
 
