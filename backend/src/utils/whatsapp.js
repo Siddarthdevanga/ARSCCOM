@@ -66,9 +66,9 @@ export const normalizePhone = (raw) => {
    - Uses /msg endpoint (not /template/msg)
    - JSON format (not form-urlencoded)
    - Template referenced by NAME (not UUID)
-   - Language code: en_GB or en_US (not just "en")
+   - Language code: en_GB
 ====================================================== */
-const postTemplate = async ({ destination, templateName, languageCode = "en", parameters = [] }) => {
+const postTemplate = async ({ destination, templateName, languageCode = "en_GB", parameters = [] }) => {
   const apiKey    = process.env.GUPSHUP_API_KEY;
   const appName   = process.env.GUPSHUP_APP_NAME;
   const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
@@ -90,6 +90,7 @@ const postTemplate = async ({ destination, templateName, languageCode = "en", pa
     source: normalizedSource,
     apiKeyLength: apiKey?.length,
     templateName,
+    languageCode,
   });
 
   // Meta Cloud API format (for FBC apps) - uses form-urlencoded with JSON message
@@ -98,7 +99,7 @@ const postTemplate = async ({ destination, templateName, languageCode = "en", pa
     template: {
       name: templateName,  // Template NAME, not UUID
       language: {
-        code: languageCode,  // e.g., "en", "en_GB", "en_US"
+        code: languageCode,  // en_GB
       },
       components: [
         {
@@ -123,6 +124,7 @@ const postTemplate = async ({ destination, templateName, languageCode = "en", pa
     destination,
     appName,
     templateName,
+    languageCode,
     parametersCount: parameters.length,
   });
 
@@ -146,6 +148,7 @@ const postTemplate = async ({ destination, templateName, languageCode = "en", pa
       appName,
       source: normalizedSource,
       templateName,
+      languageCode,
       hasApiKey: !!apiKey,
     });
 
@@ -224,7 +227,7 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
    ─────────────────────────────────────────────────────
    Template: verification_otp
    Category: AUTHENTICATION
-   Language: English (en)
+   Language: English UK (en_GB)
 
    Register this exact body in Gupshup dashboard:
    ────────────────────────────────────────────────
@@ -243,11 +246,10 @@ export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
 
   console.log(`[WHATSAPP][OTP] → ${destination} | OTP: ${otp} | template: ${templateName}`);
 
-  // Call Meta Cloud API with template name and parameters
   await postTemplate({
     destination,
     templateName,
-    languageCode: "en",  // or "en_GB", "en_US" depending on your template
+    languageCode: "en_GB",
     parameters: [
       { type: "text", text: String(otp) },  // {{1}} = OTP
     ],
@@ -261,7 +263,7 @@ export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
    ─────────────────────────────────────────────────────
    Template: visitor_pass
    Category: MARKETING or UTILITY
-   Language: English (en)
+   Language: English UK (en_GB)
 
    What the visitor receives (two messages in sequence):
 
@@ -335,7 +337,7 @@ export const sendVisitorPassWhatsApp = async ({
   await postTemplate({
     destination,
     templateName: templateId,  // Template NAME (e.g., "visitor_pass")
-    languageCode: "en",
+    languageCode: "en_GB",
     parameters: [
       { type: "text", text: companyName  },  // {{1}}
       { type: "text", text: visitorCode  },  // {{2}}
