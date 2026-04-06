@@ -447,7 +447,7 @@ const canAddBooking = async (companyId, bookingLimit) => {
   if (bookingLimit === Infinity) return true;
 
   const [[count]] = await db.query(
-    `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
+    `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? AND status = 'BOOKED'`,
     [companyId]
   );
 

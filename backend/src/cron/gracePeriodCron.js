@@ -3,7 +3,7 @@ import { sendGracePeriodEmail } from "../utils/gracePeriodMail.service.js";
 
 /* ======================================================
    GRACE PERIOD DAILY CHECKER
-   Runs daily at 12:25 PM IST
+   Runs daily at 12:00 AM IST (midnight)
    - Checks expired subscriptions
    - Initiates grace period
    - Sends daily reminder emails
@@ -44,7 +44,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           c.subscription_ends_at
         FROM companies c
         INNER JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
-        WHERE c.subscription_status IN ('active', 'trial')
+        WHERE c.subscription_status IN ('active', 'trial', 'expired')
           AND c.grace_period_ends_at IS NULL
           AND (
             (c.plan = 'trial' AND c.trial_ends_at IS NOT NULL AND c.trial_ends_at < NOW())
@@ -265,7 +265,7 @@ export const checkAndSendGracePeriodEmails = async () => {
 /* ======================================================
    MANUAL TRIGGER (for testing)
 ====================================================== */
-export const triggerGracePeriodCheck = async (req, res) => {
+export const triggerGracePeriodCheck = async (_req, res) => {
   try {
     console.log("🔧 Manual grace period check triggered");
     const stats = await checkAndSendGracePeriodEmails();

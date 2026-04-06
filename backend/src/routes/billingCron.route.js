@@ -578,57 +578,9 @@ async function checkExpiringSubscriptions() {
     }
   }
 
-  /* ================= EXPIRED SUBSCRIPTIONS ================= */
-  // FIX: Include enterprise in the expired check
-  const [expired] = await db.query(
-    `
-      SELECT c.id, c.name, c.plan, c.subscription_ends_at, c.trial_ends_at,
-             c.expiry_email_sent_at,
-             (SELECT u.email FROM users u WHERE u.company_id = c.id LIMIT 1) as company_email
-      FROM companies c
-      WHERE c.subscription_status = 'active'
-      AND (
-        (c.plan IN ('business', 'enterprise') AND c.subscription_ends_at < NOW())
-        OR
-        (c.plan = 'trial' AND c.trial_ends_at < NOW())
-      )
-      AND c.expiry_email_sent_at IS NULL
-    `
-  );
-
-  for (const company of expired) {
-    const expiredAt = company.plan === "trial" ? company.trial_ends_at : company.subscription_ends_at;
-
-    console.log(`🔴 ${company.name} (${company.plan}) subscription has expired`);
-
-    // Mark as expired in DB
-    await db.query(
-      `UPDATE companies SET subscription_status = 'expired', updated_at = NOW() WHERE id = ?`,
-      [company.id]
-    );
-
-    if (company.company_email) {
-      try {
-        const emailContent = emailTemplates.subscriptionExpired(company.name, company.plan, expiredAt);
-        await sendEmail({
-          to: company.company_email,
-          subject: emailContent.subject,
-          html: emailContent.html
-        });
-
-        await db.query(
-          `UPDATE companies SET expiry_email_sent_at = NOW(), updated_at = NOW() WHERE id = ?`,
-          [company.id]
-        );
-
-        console.log(`✅ Expired notification sent to ${company.company_email}`);
-      } catch (err) {
-        console.error(`❌ Failed to send expired email for ${company.name}:`, err.message);
-      }
-    } else {
-      console.log(`⚠️ ${company.name} has no email, skipping notification`);
-    }
-  }
+  // NOTE: Expired subscriptions are handled by the grace period cron (gracePeriodCron.js).
+  // That cron transitions companies from active/trial → grace_period (10 days) → expired.
+  // Do NOT update subscription_status to 'expired' here — doing so bypasses the grace period.
 }
 
 /* ================= CRON SCHEDULE ================= */

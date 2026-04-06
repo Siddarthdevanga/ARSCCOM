@@ -112,15 +112,8 @@ export const saveVisitor = async (companyId, data, file) => {
       console.log(`[VISITOR] Company in grace period: ${gracePeriodDaysRemaining} days remaining`);
     }
 
-    // Block only if expired AND not in grace period
-    if (STATUS === "EXPIRED" && !inGracePeriod) {
-      const error = new Error("Your subscription has expired. Please renew to continue.");
-      error.code = "SUBSCRIPTION_EXPIRED";
-      error.redirectTo = "/auth/subscription";
-      throw error;
-    }
-
-    // Allow ACTIVE, TRIAL, and GRACE_PERIOD
+    // Block only terminal/inactive statuses. Trust the status field for ACTIVE/TRIAL —
+    // the grace period cron transitions them when their subscription actually expires.
     if (!["ACTIVE", "TRIAL", "GRACE_PERIOD"].includes(STATUS)) {
       const error = new Error("Subscription inactive. Please activate your subscription.");
       error.code = "SUBSCRIPTION_INACTIVE";
@@ -128,46 +121,25 @@ export const saveVisitor = async (companyId, data, file) => {
       throw error;
     }
 
-    // Skip strict expiry checks during grace period
-    if (!inGracePeriod) {
-      if (PLAN === "TRIAL") {
-        if (!company.trial_ends_at) {
-          const error = new Error("Trial not initialized. Please contact support.");
-          error.code = "TRIAL_NOT_INITIALIZED";
-          error.redirectTo = "/auth/subscription";
-          throw error;
-        }
-        const trialEndsDate = new Date(company.trial_ends_at);
-        if (trialEndsDate < new Date()) {
-          const error = new Error("Your trial has expired. Please upgrade to continue.");
-          error.code = "TRIAL_EXPIRED";
-          error.redirectTo = "/auth/subscription";
-          throw error;
-        }
-        const [[{ total }]] = await conn.execute(
-          `SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? FOR UPDATE`,
-          [companyId]
-        );
-        if (total >= 100) {
-          const error = new Error("Trial limit reached (100 visitors). Please upgrade.");
-          error.code = "TRIAL_LIMIT_REACHED";
-          error.redirectTo = "/auth/subscription";
-          throw error;
-        }
-      } else {
-        if (!company.subscription_ends_at) {
-          const error = new Error("Subscription not properly initialized. Please contact support.");
-          error.code = "SUBSCRIPTION_NOT_INITIALIZED";
-          error.redirectTo = "/auth/subscription";
-          throw error;
-        }
-        const subEndsDate = new Date(company.subscription_ends_at);
-        if (subEndsDate < new Date()) {
-          const error = new Error(`Your ${PLAN} subscription has expired. Please renew.`);
-          error.code = "SUBSCRIPTION_EXPIRED";
-          error.redirectTo = "/auth/subscription";
-          throw error;
-        }
+    // If in GRACE_PERIOD, verify it hasn't ended yet
+    if (STATUS === "GRACE_PERIOD" && !inGracePeriod) {
+      const error = new Error("Your grace period has ended. Please renew to continue.");
+      error.code = "GRACE_PERIOD_EXPIRED";
+      error.redirectTo = "/auth/subscription";
+      throw error;
+    }
+
+    // Enforce trial visitor limit (100) regardless of grace period
+    if (PLAN === "TRIAL") {
+      const [[{ total }]] = await conn.execute(
+        `SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? FOR UPDATE`,
+        [companyId]
+      );
+      if (total >= 100) {
+        const error = new Error("Trial limit reached (100 visitors). Please upgrade.");
+        error.code = "TRIAL_LIMIT_REACHED";
+        error.redirectTo = "/auth/subscription";
+        throw error;
       }
     }
 

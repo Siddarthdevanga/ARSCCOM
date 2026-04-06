@@ -302,15 +302,16 @@ const checkSubscriptionStatus = async (companyId) => {
   console.log(`[SUBSCRIPTION_CHECK] Checking company:`, companyId);
 
   const [[company]] = await db.query(
-    `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at
+    `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at,
+            grace_period_ends_at
      FROM companies WHERE id = ? LIMIT 1`,
     [companyId]
   );
 
   if (!company) {
-    return { 
-      isValid: false, 
-      isBlocked: true, 
+    return {
+      isValid: false,
+      isBlocked: true,
       reason: "COMPANY_NOT_FOUND",
       error: new Error("Company not found")
     };
@@ -322,33 +323,26 @@ const checkSubscriptionStatus = async (companyId) => {
 
   console.log(`[SUBSCRIPTION_CHECK] Plan: ${plan}, Status: ${status}`);
 
-  // Check subscription expiry
-  let isExpired = false;
-  let expiryReason = null;
+  // Check if in grace period
+  const inGracePeriod = status === "GRACE_PERIOD" &&
+                        company.grace_period_ends_at &&
+                        new Date(company.grace_period_ends_at) > now;
 
-  if (plan === "TRIAL" && company.trial_ends_at) {
-    const trialEndsDate = new Date(company.trial_ends_at);
-    if (trialEndsDate < now) {
-      isExpired = true;
-      expiryReason = "TRIAL_EXPIRED";
-    }
-  }
-
-  if (["BUSINESS", "ENTERPRISE"].includes(plan) && company.subscription_ends_at) {
-    const subEndsDate = new Date(company.subscription_ends_at);
-    if (subEndsDate < now) {
-      isExpired = true;
-      expiryReason = "SUBSCRIPTION_EXPIRED";
-    }
-  }
+  // Allow ACTIVE, TRIAL, and GRACE_PERIOD statuses.
+  // When status is still 'ACTIVE'/'TRIAL' but subscription has technically expired,
+  // allow access — the grace period cron will transition the status to 'GRACE_PERIOD' shortly.
+  // Only block when the status itself is a terminal/invalid value (e.g., 'EXPIRED', 'SUSPENDED').
+  const allowedStatuses = ["ACTIVE", "TRIAL", "GRACE_PERIOD"];
+  const isValidStatus = allowedStatuses.includes(status);
 
   return {
-    isValid: !isExpired && ["ACTIVE", "TRIAL"].includes(status),
-    isBlocked: isExpired || !["ACTIVE", "TRIAL"].includes(status),
-    isExpired,
+    isValid: isValidStatus,
+    isBlocked: !isValidStatus,
+    isExpired: false,
+    inGracePeriod,
     plan,
     status,
-    reason: expiryReason || (isExpired ? "EXPIRED" : "OK"),
+    reason: inGracePeriod ? "GRACE_PERIOD_ACTIVE" : (isValidStatus ? "OK" : "SUBSCRIPTION_INACTIVE"),
     limits: PLAN_LIMITS[plan] || PLAN_LIMITS.TRIAL
   };
 };
