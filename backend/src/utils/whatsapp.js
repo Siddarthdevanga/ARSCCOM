@@ -247,7 +247,7 @@ export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
   await postTemplate({
     destination,
     templateName,
-    languageCode: "en",  // or "en_GB", "en_US" depending on your template
+    languageCode: "en_GB",  // British English for WhatsApp template
     parameters: [
       { type: "text", text: String(otp) },  // {{1}} = OTP
     ],
@@ -335,7 +335,7 @@ export const sendVisitorPassWhatsApp = async ({
   await postTemplate({
     destination,
     templateName: templateId,  // Template NAME (e.g., "visitor_pass")
-    languageCode: "en",
+    languageCode: "en_GB",  // British English for WhatsApp template
     parameters: [
       { type: "text", text: companyName  },  // {{1}}
       { type: "text", text: visitorCode  },  // {{2}}
