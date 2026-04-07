@@ -29,18 +29,14 @@ export default function VisitorPrimaryDetails() {
       return;
     }
 
-    // Load previously entered data (when user navigates back)
+    // Restore name/email when user navigates back from step 2.
+    // Phone is intentionally never restored — it must always be entered fresh.
     const storedPrimary = localStorage.getItem("visitor_primary");
     if (storedPrimary) {
       try {
         const data = JSON.parse(storedPrimary);
-        if (data.name) setName(data.name);
+        if (data.name)  setName(data.name);
         if (data.email) setEmail(data.email);
-        // Strip "91" prefix from phone if present (we add it back on save)
-        if (data.phone) {
-          const phoneDigits = String(data.phone).replace(/\D/g, "");
-          setPhone(phoneDigits.startsWith("91") ? phoneDigits.slice(2) : phoneDigits);
-        }
       } catch (err) {
         console.warn("[PRIMARY_DETAILS] Failed to load stored data:", err);
       }
@@ -156,7 +152,7 @@ export default function VisitorPrimaryDetails() {
                     className={styles.input}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
-                    placeholder="9876543210"
+                    placeholder="WhatsApp Number"
                     autoComplete="off"
                     inputMode="tel"
                     maxLength={10}

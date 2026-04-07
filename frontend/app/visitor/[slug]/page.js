@@ -481,7 +481,7 @@ export default function PublicVisitorRegistration() {
                       <input id="phone" className={styles.input} type="tel" inputMode="tel" value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
                         onKeyDown={(e) => e.key === "Enter" && !submitting && handleSendOTP()}
-                        placeholder="9876543210" maxLength={10} disabled={submitting}
+                        placeholder="WhatsApp Number" maxLength={10} disabled={submitting}
                         autoComplete="tel" style={{ flex:1 }} />
                     </div>
                     <p style={{ fontSize:"0.8rem", color:"#6b7280", marginTop:"0.25rem" }}>
