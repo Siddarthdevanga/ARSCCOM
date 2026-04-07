@@ -22,6 +22,20 @@ import superAdminRoutes from "./routes/superadmin.routes.js";
 import employeeRoutes from "./routes/employee.routes.js";
 import visitResponseRoutes from "./routes/visitResponse.routes.js";
 
+/* ================= RATE LIMITERS ================= */
+import {
+  authLimiter,
+  otpSendLimiter,
+  otpVerifyLimiter,
+  publicBookingLimiter,
+  publicVisitorLimiter,
+  paymentLimiter,
+  adminWriteLimiter,
+  generalLimiter,
+  superAdminLimiter,
+  exportLimiter,
+} from "./middlewares/rateLimiter.js";
+
 const app = express();
 
 /* ================= ENV ================= */
@@ -154,6 +168,18 @@ app.get("/", (req, res) => {
 /* =====================================================
    PUBLIC ROUTES (NO AUTH)
 ===================================================== */
+
+// OTP send/verify — tight limits to prevent abuse
+app.use("/api/public/send-otp",    otpSendLimiter);
+app.use("/api/public/verify-otp",  otpVerifyLimiter);
+app.use("/api/public/conference/company/:slug/send-otp",   otpSendLimiter);
+app.use("/api/public/conference/company/:slug/verify-otp", otpVerifyLimiter);
+
+// Booking / registration write endpoints
+app.use("/api/public/register",              publicVisitorLimiter);
+app.use("/api/public/conference/company/:slug/book", publicBookingLimiter);
+
+// General public access (viewing rooms, bookings, company info)
 app.use("/api/public", visitorPublicRouter);
 app.use("/api/public/conference", conferencePublicRoutes);
 
@@ -163,24 +189,42 @@ app.use("/api/visit-response", visitResponseRoutes);
 /* =====================================================
    PROTECTED ROUTES (REQUIRE AUTH)
 ===================================================== */
-app.use("/api/auth", authRoutes);
-app.use("/api/visitors", visitorRoutes);
-app.use("/api/employees", employeeRoutes);
-app.use("/api/conference", conferenceRoutes);
-app.use("/api/exports", exportsRoutes);
-app.use("/api/payment", paymentRoutes);
-app.use("/api/subscription", subscriptionRoutes);
-app.use("/api/upgrade", upgradeRoutes);
-app.use("/api/payment/zoho", billingSyncRoutes);
-app.use("/api/settings", settingsRoutes);
-app.use("/api/billing/repair", billingRepair);
-app.use("/api/billing/cron", billingCron);
+
+// Auth — brute-force protection
+app.use("/api/auth", authLimiter, authRoutes);
+
+// Visitors — write ops have tighter limit
+app.use("/api/visitors", adminWriteLimiter, visitorRoutes);
+
+// Employees
+app.use("/api/employees", adminWriteLimiter, employeeRoutes);
+
+// Conference
+app.use("/api/conference", adminWriteLimiter, conferenceRoutes);
+
+// Exports — heavy, low limit
+app.use("/api/exports", exportLimiter, exportsRoutes);
+
+// Payment & upgrade — prevent Zoho spam
+app.use("/api/payment", paymentLimiter, paymentRoutes);
+app.use("/api/upgrade", paymentLimiter, upgradeRoutes);
+app.use("/api/payment/zoho", generalLimiter, billingSyncRoutes);
+
+// Subscription & settings
+app.use("/api/subscription", generalLimiter, subscriptionRoutes);
+app.use("/api/settings", generalLimiter, settingsRoutes);
+
+// Billing internals — general
+app.use("/api/billing/repair", generalLimiter, billingRepair);
+app.use("/api/billing/cron",   generalLimiter, billingCron);
+
+// Webhooks — no rate limiting (Zoho needs to call freely)
 app.use("/api/webhook", webhookRoutes);
 
 /* =====================================================
    SUPERADMIN ROUTES
 ===================================================== */
-app.use("/api/superadmin", superAdminRoutes);
+app.use("/api/superadmin", superAdminLimiter, superAdminRoutes);
 
 /* ================= 404 HANDLER ================= */
 app.use((req, res) => {

@@ -150,11 +150,12 @@ export default function VisitorPrimaryDetails() {
                   </div>
                   <input
                     className={styles.input}
+                    type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
-                    placeholder="WhatsApp Number"
-                    autoComplete="off"
-                    inputMode="tel"
+                    placeholder="Enter 10-digit number"
+                    autoComplete="new-password"
+                    inputMode="numeric"
                     maxLength={10}
                     style={{ flex:1, margin:0 }}
                   />
