@@ -24,11 +24,23 @@ const router = express.Router();
  */
 
 /* ── Pricing constants ───────────────────────────────── */
-const BUSINESS_BASE_PRICE   = 500.00;
-const GST_RATE              = 0.18;
-const BUSINESS_GST_AMOUNT   = parseFloat((BUSINESS_BASE_PRICE * GST_RATE).toFixed(2)); // 90.00
-const BUSINESS_TOTAL_PRICE  = parseFloat((BUSINESS_BASE_PRICE + BUSINESS_GST_AMOUNT).toFixed(2)); // 590.00
-const BUSINESS_TOTAL_STR    = BUSINESS_TOTAL_PRICE.toFixed(2); // "590.00"
+const GST_RATE = 0.18;
+
+const PRICING = {
+  trial:    { base: 49,  label: "PROMEET Trial (15 Days)" },
+  business: { base: 500, label: "PROMEET Business Plan (30 Days)" },
+};
+
+const calcPrice = (plan) => {
+  const base  = PRICING[plan]?.base || 0;
+  const gst   = parseFloat((base * GST_RATE).toFixed(2));
+  const total = parseFloat((base + gst).toFixed(2));
+  return { base, gst, total, totalStr: total.toFixed(2) };
+};
+
+// Keep legacy constants used in business block below
+const BUSINESS_TOTAL_PRICE = calcPrice("business").total;
+const BUSINESS_TOTAL_STR   = calcPrice("business").totalStr;
 
 /* ======================================================
    POST /api/upgrade
@@ -43,8 +55,8 @@ router.post("/", authenticate, async (req, res) => {
     if (!plan)
       return res.status(400).json({ success: false, message: "Plan is required" });
 
-    if (!["business", "enterprise"].includes(plan))
-      return res.status(400).json({ success: false, message: "Invalid plan. Choose 'business' or 'enterprise'" });
+    if (!["trial", "business", "enterprise"].includes(plan))
+      return res.status(400).json({ success: false, message: "Invalid plan. Choose 'trial', 'business' or 'enterprise'" });
 
     if (!email || !companyId)
       return res.status(401).json({ success: false, message: "Authentication failed" });
@@ -90,6 +102,82 @@ router.post("/", authenticate, async (req, res) => {
           currentPlan,
           currentPlanContinues: true,
         },
+      });
+    }
+
+    /* ======================================================
+       TRIAL RENEWAL — ₹49 + 18% GST = ₹57.82
+       Allowed for: trial (any status) or grace_period on any plan
+    ====================================================== */
+    if (plan === "trial") {
+      if (currentPlan !== "trial")
+        return res.status(403).json({ success: false, message: "Trial renewal is only available for Trial plan users." });
+
+      const pricing = calcPrice("trial");
+
+      // Reuse existing pending payment link if still valid
+      if (company.pending_upgrade_plan === "trial" && company.last_payment_link && company.last_payment_link_id) {
+        let client = await zohoClient();
+        try {
+          const { data } = await client.get(`/paymentlinks/${company.last_payment_link_id}`);
+          const linkStatus = data?.payment_link?.status?.toLowerCase();
+          const linkAmount = parseFloat(data?.payment_link?.payment_amount || "0");
+          if (["created", "sent"].includes(linkStatus) && linkAmount === pricing.total) {
+            return res.json({
+              success: true, reused: true,
+              redirectTo: data.payment_link.url,
+              message: "Existing trial renewal payment link still valid.",
+              data: { plan: "trial", baseAmount: `₹${pricing.base}`, gst: `₹${pricing.gst} (18%)`, totalAmount: `₹${pricing.totalStr}`, currency: "INR" },
+            });
+          }
+        } catch (err) {
+          console.log("⚠ Could not verify old trial link → generating new", err.message);
+        }
+      }
+
+      // Ensure Zoho customer
+      let customerId = company.zoho_customer_id;
+      if (!customerId) {
+        let client = await zohoClient();
+        const { data } = await client.post("/customers", { display_name: companyName, company_name: companyName, email });
+        customerId = data?.customer?.customer_id;
+        if (!customerId) throw new Error("Zoho failed to create customer");
+        await db.query(`UPDATE companies SET zoho_customer_id = ?, updated_at = NOW() WHERE id = ?`, [customerId, companyId]);
+      }
+
+      const payload = {
+        customer_id: customerId, customer_name: companyName, currency_code: "INR",
+        payment_amount: pricing.totalStr,
+        description: `${PRICING.trial.label} — ₹${pricing.base} + 18% GST (₹${pricing.gst})`,
+        is_partial_payment: false,
+        reference_id: `TRIAL-RENEW-${companyId}-${Date.now()}`,
+      };
+
+      console.log(`💳 Creating Trial Renewal Payment Link → ₹${pricing.totalStr} for Company ${companyId}`);
+
+      let client = await zohoClient();
+      let data;
+      try {
+        ({ data } = await client.post("/paymentlinks", payload));
+      } catch (err) {
+        if (err?.response?.status === 401) {
+          client = await zohoClient();
+          ({ data } = await client.post("/paymentlinks", payload));
+        } else throw err;
+      }
+
+      const link = data?.payment_link;
+      if (!link?.url || !link?.payment_link_id) throw new Error("Zoho did not return payment link");
+
+      await db.query(
+        `UPDATE companies SET pending_upgrade_plan = 'trial', last_payment_link = ?, last_payment_link_id = ?, last_payment_created_at = NOW(), updated_at = NOW() WHERE id = ?`,
+        [link.url, link.payment_link_id, companyId]
+      );
+
+      return res.json({
+        success: true, redirectTo: link.url,
+        message: "Trial renewal payment link generated. Your current plan remains active until you complete payment.",
+        data: { plan: "trial", baseAmount: `₹${pricing.base}`, gst: `₹${pricing.gst} (18%)`, totalAmount: `₹${pricing.totalStr}`, currency: "INR" },
       });
     }
 
@@ -262,58 +350,62 @@ router.get("/options", authenticate, async (req, res) => {
     const status        = (company.subscription_status || "").toLowerCase();
     const pendingUpgrade = company.pending_upgrade_plan;
 
+    const trialP    = calcPrice("trial");
+    const businessP = calcPrice("business");
+
+    // Renewal card for current plan (always shown)
+    const renewalOptions = [];
+
+    if (currentPlan === "trial") {
+      renewalOptions.push({
+        plan: "trial", name: "Renew Trial Plan", isRenewal: true,
+        basePrice: `₹${trialP.base}`, gst: `₹${trialP.gst} (18%)`,
+        totalPrice: `₹${trialP.totalStr} / 15 days`,
+        requiresPayment: true, isPending: pendingUpgrade === "trial",
+        features: ["100 visitor bookings", "100 conference bookings", "2 conference rooms"],
+      });
+    } else if (currentPlan === "business") {
+      renewalOptions.push({
+        plan: "business", name: "Renew Business Plan", isRenewal: true,
+        basePrice: `₹${businessP.base}`, gst: `₹${businessP.gst} (18%)`,
+        totalPrice: `₹${businessP.totalStr} / month`,
+        requiresPayment: true, isPending: pendingUpgrade === "business",
+        features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
+      });
+    } else if (currentPlan === "enterprise") {
+      renewalOptions.push({
+        plan: "enterprise", name: "Renew Enterprise Plan", isRenewal: true,
+        basePrice: "Custom Pricing", gst: "Applicable", totalPrice: "Custom Pricing",
+        requiresPayment: false, requiresContact: true, isPending: pendingUpgrade === "enterprise",
+        features: ["Unlimited everything", "Dedicated support"],
+      });
+    }
+
+    // Upgrade options (higher plans only)
     const availableUpgrades = [];
 
     if (currentPlan === "trial") {
       availableUpgrades.push(
         {
-          plan:             "business",
-          name:             "Business Plan",
-          basePrice:        `₹${BUSINESS_BASE_PRICE.toFixed(2)}`,
-          gst:              `₹${BUSINESS_GST_AMOUNT.toFixed(2)} (18%)`,
-          totalPrice:       `₹${BUSINESS_TOTAL_STR}/month`,
-          requiresPayment:  true,
-          isPending:        pendingUpgrade === "business",
-          features: [
-            "Unlimited visitors",
-            "1000 conference bookings",
-            "6 Conference Rooms",
-            "Dedicated Support",
-          ],
+          plan: "business", name: "Upgrade to Business",
+          basePrice: `₹${businessP.base}`, gst: `₹${businessP.gst} (18%)`,
+          totalPrice: `₹${businessP.totalStr} / month`,
+          requiresPayment: true, isPending: pendingUpgrade === "business",
+          features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
         },
         {
-          plan:             "enterprise",
-          name:             "Enterprise Plan",
-          basePrice:        "Custom Pricing",
-          gst:              "Applicable",
-          totalPrice:       "Custom Pricing",
-          requiresPayment:  false,
-          requiresContact:  true,
-          isPending:        pendingUpgrade === "enterprise",
-          features: [
-            "Unlimited Visitors",
-            "Unlimited Conference Bookings",
-            "Unlimited Conference Rooms",
-            "Dedicated Support",
-          ],
+          plan: "enterprise", name: "Enterprise Plan",
+          basePrice: "Custom Pricing", gst: "Applicable", totalPrice: "Custom Pricing",
+          requiresPayment: false, requiresContact: true, isPending: pendingUpgrade === "enterprise",
+          features: ["Unlimited everything", "Custom integrations", "Dedicated account manager"],
         }
       );
     } else if (currentPlan === "business") {
       availableUpgrades.push({
-        plan:            "enterprise",
-        name:            "Enterprise Plan",
-        basePrice:       "Custom Pricing",
-        gst:             "Applicable",
-        totalPrice:      "Custom Pricing",
-        requiresPayment: false,
-        requiresContact: true,
-        isPending:       pendingUpgrade === "enterprise",
-        features: [
-          "Unlimited Visitors",
-          "Unlimited Conference Bookings",
-          "Unlimited Conference Rooms",
-          "Dedicated Support",
-        ],
+        plan: "enterprise", name: "Upgrade to Enterprise",
+        basePrice: "Custom Pricing", gst: "Applicable", totalPrice: "Custom Pricing",
+        requiresPayment: false, requiresContact: true, isPending: pendingUpgrade === "enterprise",
+        features: ["Unlimited everything", "Custom integrations", "Dedicated account manager"],
       });
     }
 
@@ -322,6 +414,7 @@ router.get("/options", authenticate, async (req, res) => {
       currentPlan,
       status,
       pendingUpgrade,
+      renewalOptions,
       availableUpgrades,
     });
 

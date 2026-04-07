@@ -188,8 +188,7 @@ export default function Home() {
   const [loadingSub,  setLoadingSub]  = useState(false);
   const [subError,    setSubError]    = useState("");
 
-  const [upgradingBusiness,   setUpgradingBusiness]   = useState(false);
-  const [upgradingEnterprise, setUpgradingEnterprise] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState("");
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -222,40 +221,29 @@ export default function Home() {
     }
   };
 
-  /* ── Upgrade ──────────────────────────────────────────────────────── */
-  const handleUpgradeBusiness = async () => {
+  /* ── Upgrade / Renew ─────────────────────────────────────────────── */
+  const handleSelectPlan = async (plan) => {
+    if (upgradingPlan) return;
     try {
-      setUpgradingBusiness(true);
+      setUpgradingPlan(plan);
       const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upgrade`, {
         method: "POST",
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "business" }),
+        body: JSON.stringify({ plan }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Upgrade failed");
-      if (data.success && data.redirectTo) { window.location.href = data.redirectTo; }
-      else throw new Error(data.message || "No redirect URL provided");
+      if (!res.ok) throw new Error(data?.message || "Request failed");
+      if (data.success && data.redirectTo) {
+        setShowMenu(false);
+        if (plan === "enterprise") router.push(data.redirectTo);
+        else window.location.href = data.redirectTo;
+      } else {
+        throw new Error(data.message || "No redirect URL provided");
+      }
     } catch (err) {
-      toast.error("Upgrade Failed", err.message || "Failed to process upgrade. Please try again.");
-      setUpgradingBusiness(false);
-    }
-  };
-
-  const handleUpgradeEnterprise = async () => {
-    try {
-      setUpgradingEnterprise(true);
-      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upgrade`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "enterprise" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Upgrade failed");
-      if (data.success && data.redirectTo) { setShowMenu(false); router.push(data.redirectTo); }
-      else throw new Error(data.message || "No redirect URL provided");
-    } catch (err) {
-      toast.error("Contact Sales Failed", err.message || "Please contact support directly.");
-      setUpgradingEnterprise(false);
+      toast.error("Failed", err.message || "Please try again.");
+    } finally {
+      setUpgradingPlan("");
     }
   };
 
@@ -504,41 +492,50 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {needsRenewal && (
-                    <div className={styles.renewalSection}>
-                      <div className={styles.alertBox}>
-                        <AlertCircle size={18}/>
-                        <div>
-                          <p className={styles.alertTitle}>Subscription Expired</p>
-                          <p className={styles.alertText}>Renew now to continue accessing all PROMEET features.</p>
-                        </div>
-                      </div>
-                      <button className={styles.primaryBtn} onClick={handleRenew}>
-                        Renew Subscription
-                      </button>
-                    </div>
-                  )}
-
-                  {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
+                  {/* ── RENEW CURRENT PLAN (always shown) ── */}
+                  {!needsRenewal && currentPlan && (
                     <div className={styles.upgradeSection}>
                       <div className={styles.sectionHeader}>
                         <TrendingUp size={18}/>
-                        <h5>{inGracePeriod ? "Renew / Upgrade Your Plan" : "Upgrade Your Plan"}</h5>
+                        <h5>
+                          {inGracePeriod ? "⚠️ Renew Before Access Ends" : "Renew Current Plan"}
+                        </h5>
                       </div>
-                      <p className={styles.sectionDescription}>
-                        {inGracePeriod
-                          ? "Renew before your grace period ends to avoid losing access."
-                          : "Unlock more features and scale with your business."}
-                      </p>
+                      {inGracePeriod && (
+                        <p className={styles.sectionDescription} style={{ color: "#DC2626", fontWeight: 600 }}>
+                          Grace period active — renew now to avoid suspension.
+                        </p>
+                      )}
 
-                      {canUpgradeBusiness && (
+                      {currentPlan === "trial" && (
+                        <div className={styles.upgradePlanCard}>
+                          <div className={styles.planIconWrapper}><Clock size={20}/></div>
+                          <div className={styles.planInfo}>
+                            <h6>Trial Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.price}>₹49</span>
+                              <span className={styles.period}> + GST / 15 days</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={13}/> 100 visitor bookings</li>
+                            <li><CheckCircle size={13}/> 100 conference bookings</li>
+                            <li><CheckCircle size={13}/> 2 conference rooms</li>
+                          </ul>
+                          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("trial")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "trial" ? <><div className={styles.btnSpinner}/> Processing...</> : "Renew Trial"}
+                          </button>
+                        </div>
+                      )}
+
+                      {currentPlan === "business" && (
                         <div className={styles.upgradePlanCard}>
                           <div className={styles.planIconWrapper}><Zap size={20}/></div>
                           <div className={styles.planInfo}>
                             <h6>Business Plan</h6>
                             <div className={styles.planPricing}>
                               <span className={styles.price}>₹500</span>
-                              <span className={styles.period}>/mo</span>
+                              <span className={styles.period}> + GST / mo</span>
                             </div>
                           </div>
                           <ul className={styles.featureList}>
@@ -547,8 +544,60 @@ export default function Home() {
                             <li><CheckCircle size={13}/> 6 conference rooms</li>
                             <li><CheckCircle size={13}/> Priority support</li>
                           </ul>
-                          <button className={styles.upgradeBtn} onClick={handleUpgradeBusiness} disabled={upgradingBusiness}>
-                            {upgradingBusiness ? (<><div className={styles.btnSpinner}/> Processing...</>) : (inGracePeriod ? "Renew Business Plan" : "Upgrade to Business")}
+                          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Renew Business"}
+                          </button>
+                        </div>
+                      )}
+
+                      {currentPlan === "enterprise" && (
+                        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
+                          <div className={styles.planIconWrapper}><Crown size={20}/></div>
+                          <div className={styles.planInfo}>
+                            <h6>Enterprise Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.customPrice}>Custom Pricing</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={13}/> Unlimited everything</li>
+                            <li><CheckCircle size={13}/> Dedicated support</li>
+                          </ul>
+                          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* ── UPGRADE TO HIGHER PLAN ── */}
+                  {!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise) && (
+                    <div className={styles.upgradeSection}>
+                      <div className={styles.sectionHeader}>
+                        <TrendingUp size={18}/>
+                        <h5>Upgrade Your Plan</h5>
+                      </div>
+                      <p className={styles.sectionDescription}>Unlock more features and scale with your business.</p>
+
+                      {canUpgradeBusiness && (
+                        <div className={styles.upgradePlanCard}>
+                          <div className={styles.planIconWrapper}><Zap size={20}/></div>
+                          <div className={styles.planInfo}>
+                            <h6>Business Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.price}>₹500</span>
+                              <span className={styles.period}> + GST / mo</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={13}/> Unlimited visitors</li>
+                            <li><CheckCircle size={13}/> 1,000 conference bookings</li>
+                            <li><CheckCircle size={13}/> 6 conference rooms</li>
+                            <li><CheckCircle size={13}/> Priority support</li>
+                          </ul>
+                          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Upgrade to Business"}
                           </button>
                         </div>
                       )}
@@ -566,20 +615,28 @@ export default function Home() {
                             <li><CheckCircle size={13}/> Everything in Business</li>
                             <li><CheckCircle size={13}/> Custom integrations</li>
                             <li><CheckCircle size={13}/> Dedicated account manager</li>
-                            <li><CheckCircle size={13}/> Custom branding</li>
                           </ul>
-                          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={handleUpgradeEnterprise} disabled={upgradingEnterprise}>
-                            {upgradingEnterprise ? (<><div className={styles.btnSpinner}/> Processing...</>) : "Contact Sales"}
+                          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
                           </button>
                         </div>
                       )}
                     </div>
                   )}
 
-                  {currentPlan === "enterprise" && currentStatus === "active" && (
-                    <div className={styles.infoBox}>
-                      <Crown size={16}/>
-                      <p>You&apos;re on our premium Enterprise plan with full feature access. Contact support for custom requirements.</p>
+                  {/* ── EXPIRED: go to subscription page ── */}
+                  {needsRenewal && (
+                    <div className={styles.renewalSection}>
+                      <div className={styles.alertBox}>
+                        <AlertCircle size={18}/>
+                        <div>
+                          <p className={styles.alertTitle}>Subscription Expired</p>
+                          <p className={styles.alertText}>Renew now to continue accessing all PROMEET features.</p>
+                        </div>
+                      </div>
+                      <button className={styles.primaryBtn} onClick={handleRenew}>
+                        Renew Subscription
+                      </button>
                     </div>
                   )}
                 </>
