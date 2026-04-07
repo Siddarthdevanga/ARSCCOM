@@ -437,26 +437,30 @@ async function repairBilling() {
         if (activePlan === "trial") {
           // Trial — uses trial_ends_at
           await db.query(
-            `UPDATE companies SET 
-               subscription_status = 'active', 
-               plan = 'trial', 
-               pending_upgrade_plan = NULL, 
-               last_payment_created_at = ?, 
-               trial_ends_at = ?, 
-               updated_at = NOW() 
+            `UPDATE companies SET
+               subscription_status = 'active',
+               plan = 'trial',
+               pending_upgrade_plan = NULL,
+               last_payment_created_at = ?,
+               trial_ends_at = ?,
+               grace_period_ends_at = NULL,
+               grace_period_day = 0,
+               updated_at = NOW()
              WHERE id = ?`,
             [mysqlPaid, mysqlEnds, id]
           );
         } else {
           // Business OR Enterprise — both use subscription_ends_at
           await db.query(
-            `UPDATE companies SET 
-               subscription_status = 'active', 
-               plan = ?, 
-               pending_upgrade_plan = NULL, 
-               last_payment_created_at = ?, 
-               subscription_ends_at = ?, 
-               updated_at = NOW() 
+            `UPDATE companies SET
+               subscription_status = 'active',
+               plan = ?,
+               pending_upgrade_plan = NULL,
+               last_payment_created_at = ?,
+               subscription_ends_at = ?,
+               grace_period_ends_at = NULL,
+               grace_period_day = 0,
+               updated_at = NOW()
              WHERE id = ?`,
             [activePlan, mysqlPaid, mysqlEnds, id]
           );

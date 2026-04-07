@@ -280,9 +280,10 @@ export default function Home() {
   const currentPlan   = subData?.PLAN?.toLowerCase()   || "";
   const currentStatus = subData?.STATUS?.toLowerCase() || "";
 
-  const canUpgradeBusiness   = currentPlan === "trial" && ["active", "trial"].includes(currentStatus);
-  const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan) && ["active", "trial"].includes(currentStatus);
+  const canUpgradeBusiness   = currentPlan === "trial"                        && ["active", "trial", "grace_period"].includes(currentStatus);
+  const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan)    && ["active", "trial", "grace_period"].includes(currentStatus);
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
+  const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
 
   const { color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
@@ -325,17 +326,21 @@ export default function Home() {
         <main className={styles.main}>
 
           {/* GRACE PERIOD BANNER */}
-          {subData?.inGracePeriod && (
+          {inGracePeriod && (
             <div className={graceStyles.gracePeriodBanner}>
               <AlertCircle size={24} />
               <div>
                 <h3>⚠️ Grace Period Active</h3>
                 <p>
-                  Your subscription expired. You have <strong>{subData.gracePeriodDaysRemaining} day{subData.gracePeriodDaysRemaining !== 1 ? 's' : ''}</strong> remaining to renew.
+                  Your subscription expired. You have{" "}
+                  <strong>
+                    {subData.GRACE_PERIOD_DAYS_REMAINING} day{subData.GRACE_PERIOD_DAYS_REMAINING !== 1 ? "s" : ""}
+                  </strong>{" "}
+                  remaining to renew.
                 </p>
-                <p>Grace period ends: {formatDate(subData.gracePeriodEndsAt)}</p>
+                <p>Grace period ends: {formatDate(subData.GRACE_PERIOD_ENDS_ON)}</p>
               </div>
-              <button onClick={() => router.push("/auth/subscription")}>Renew Now</button>
+              <button onClick={handleOpenMenu}>Renew Now</button>
             </div>
           )}
 
@@ -518,9 +523,13 @@ export default function Home() {
                     <div className={styles.upgradeSection}>
                       <div className={styles.sectionHeader}>
                         <TrendingUp size={18}/>
-                        <h5>Upgrade Your Plan</h5>
+                        <h5>{inGracePeriod ? "Renew / Upgrade Your Plan" : "Upgrade Your Plan"}</h5>
                       </div>
-                      <p className={styles.sectionDescription}>Unlock more features and scale with your business.</p>
+                      <p className={styles.sectionDescription}>
+                        {inGracePeriod
+                          ? "Renew before your grace period ends to avoid losing access."
+                          : "Unlock more features and scale with your business."}
+                      </p>
 
                       {canUpgradeBusiness && (
                         <div className={styles.upgradePlanCard}>
@@ -539,7 +548,7 @@ export default function Home() {
                             <li><CheckCircle size={13}/> Priority support</li>
                           </ul>
                           <button className={styles.upgradeBtn} onClick={handleUpgradeBusiness} disabled={upgradingBusiness}>
-                            {upgradingBusiness ? (<><div className={styles.btnSpinner}/> Processing...</>) : "Upgrade to Business"}
+                            {upgradingBusiness ? (<><div className={styles.btnSpinner}/> Processing...</>) : (inGracePeriod ? "Renew Business Plan" : "Upgrade to Business")}
                           </button>
                         </div>
                       )}

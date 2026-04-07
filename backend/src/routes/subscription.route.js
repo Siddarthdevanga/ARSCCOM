@@ -20,13 +20,15 @@ router.get("/details", authenticate, async (req, res) => {
 
     const [[company]] = await db.query(
       `
-      SELECT 
+      SELECT
         plan,
         subscription_status,
         zoho_customer_id,
         trial_ends_at,
         subscription_ends_at,
-        last_payment_created_at
+        last_payment_created_at,
+        grace_period_ends_at,
+        grace_period_day
       FROM companies
       WHERE id = ?
       LIMIT 1
@@ -41,14 +43,25 @@ router.get("/details", authenticate, async (req, res) => {
       });
     }
 
-    // Convert lowercase → UPPERCASE safely
-    const PLAN = company.plan ? company.plan.toUpperCase() : "TRIAL";
+    const PLAN   = company.plan ? company.plan.toUpperCase() : "TRIAL";
     const STATUS = company.subscription_status
       ? company.subscription_status.toUpperCase()
       : "PENDING";
-    const ZOHO_ID = company.zoho_customer_id
-      ? company.zoho_customer_id.toUpperCase()
-      : null;
+    const ZOHO_ID = company.zoho_customer_id || null;
+
+    // Compute grace period info
+    const now = new Date();
+    const inGracePeriod = STATUS === "GRACE_PERIOD" &&
+                          company.grace_period_ends_at &&
+                          new Date(company.grace_period_ends_at) > now;
+
+    let gracePeriodDaysRemaining = 0;
+    if (inGracePeriod) {
+      gracePeriodDaysRemaining = Math.max(
+        0,
+        Math.ceil((new Date(company.grace_period_ends_at) - now) / (1000 * 60 * 60 * 24))
+      );
+    }
 
     return res.json({
       SUCCESS: true,
@@ -58,9 +71,13 @@ router.get("/details", authenticate, async (req, res) => {
 
       ZOHO_CUSTOMER_ID: ZOHO_ID,
 
-      TRIAL_ENDS_ON: company.trial_ends_at || null,
-      EXPIRES_ON: company.subscription_ends_at || null,
-      LAST_PAID_ON: company.last_payment_created_at || null
+      TRIAL_ENDS_ON:  company.trial_ends_at           || null,
+      EXPIRES_ON:     company.subscription_ends_at     || null,
+      LAST_PAID_ON:   company.last_payment_created_at  || null,
+
+      IN_GRACE_PERIOD:              inGracePeriod,
+      GRACE_PERIOD_ENDS_ON:         inGracePeriod ? company.grace_period_ends_at : null,
+      GRACE_PERIOD_DAYS_REMAINING:  gracePeriodDaysRemaining,
     });
 
   } catch (err) {

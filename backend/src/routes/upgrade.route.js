@@ -97,10 +97,11 @@ router.post("/", authenticate, async (req, res) => {
        BUSINESS — generate payment link (₹500 + 18% GST = ₹590)
     ====================================================== */
     if (plan === "business") {
+      // Block only if currently active on business (not in grace period)
       if (currentPlan === "business" && status === "active")
         return res.status(403).json({ success: false, message: "Already on Business plan" });
 
-      if (currentPlan === "enterprise")
+      if (currentPlan === "enterprise" && status !== "grace_period")
         return res.status(403).json({ success: false, message: "Cannot downgrade from Enterprise to Business. Please contact support." });
 
       /* ── Reuse existing pending payment link if still valid ── */
