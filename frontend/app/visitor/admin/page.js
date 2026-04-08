@@ -5,7 +5,7 @@ import Image from "next/image";
 import * as XLSX from "xlsx";
 import styles from "./style.module.css";
 
-const EMPTY_FORM = { name: "", email: "", department: "", is_active: true };
+const EMPTY_FORM = { name: "", email: "", phone: "", department: "", is_active: true };
 
 export default function AdminEmployeesPage() {
   const router = useRouter();
@@ -68,6 +68,7 @@ export default function AdminEmployeesPage() {
       list = list.filter(e =>
         e.name?.toLowerCase().includes(q) ||
         e.email?.toLowerCase().includes(q) ||
+        e.phone?.toLowerCase().includes(q) ||
         e.department?.toLowerCase().includes(q)
       );
     }
@@ -84,7 +85,7 @@ export default function AdminEmployeesPage() {
     setForm(EMPTY_FORM); setFormError(""); setEditTarget(null); setModal("add");
   };
   const openEdit = (emp) => {
-    setForm({ name: emp.name, email: emp.email, department: emp.department || "", is_active: !!emp.is_active });
+    setForm({ name: emp.name, email: emp.email, phone: emp.phone || "", department: emp.department || "", is_active: !!emp.is_active });
     setFormError(""); setEditTarget(emp); setModal("edit");
   };
 
@@ -135,7 +136,7 @@ export default function AdminEmployeesPage() {
   };
 
   const REQUIRED_COLS = ["name", "email"];
-  const ALLOWED_COLS  = ["name", "email", "department", "is_active"];
+  const ALLOWED_COLS  = ["name", "email", "phone", "department", "is_active"];
 
   const handleFileChange = (e) => {
     const file = e.target.files?.[0];
@@ -217,9 +218,9 @@ export default function AdminEmployeesPage() {
 
   const downloadTemplate = () => {
     const ws = XLSX.utils.aoa_to_sheet([
-      ["name", "email", "department", "is_active"],
-      ["Jane Smith", "jane@company.com", "Engineering", "true"],
-      ["John Doe",   "john@company.com", "HR",          "true"],
+      ["name", "email", "phone", "department", "is_active"],
+      ["Jane Smith", "jane@company.com", "9876543210", "Engineering", "true"],
+      ["John Doe",   "john@company.com", "9123456789", "HR",          "true"],
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Employees");
@@ -334,6 +335,7 @@ export default function AdminEmployeesPage() {
                 <thead>
                   <tr>
                     <th>Employee</th>
+                    <th>Phone</th>
                     <th>Department</th>
                     <th>Status</th>
                     <th>Actions</th>
@@ -342,7 +344,7 @@ export default function AdminEmployeesPage() {
                 <tbody>
                   {filtered.length === 0 ? (
                     <tr>
-                      <td colSpan={4}>
+                      <td colSpan={5}>
                         <div className={styles.emptyState}>
                           <div className={styles.emptyIcon}>
                             <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
@@ -370,6 +372,11 @@ export default function AdminEmployeesPage() {
                               <span className={styles.empEmail}>{emp.email}</span>
                             </div>
                           </div>
+                        </td>
+                        <td>
+                          {emp.phone
+                            ? <span className={styles.empPhone}>{emp.phone}</span>
+                            : <span className={styles.noDept}>—</span>}
                         </td>
                         <td>
                           {emp.department
@@ -427,6 +434,11 @@ export default function AdminEmployeesPage() {
                 <input className={styles.formInput} type="email" placeholder="jane@company.com"
                   value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
               </div>
+            </div>
+            <div className={styles.formGroup}>
+              <label className={styles.formLabel}>Phone</label>
+              <input className={styles.formInput} type="tel" placeholder="e.g. 9876543210"
+                value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
             </div>
             <div className={styles.formGroup}>
               <label className={styles.formLabel}>Department</label>
@@ -529,7 +541,7 @@ export default function AdminEmployeesPage() {
                 <div className={styles.bulkTableWrap}>
                   <table className={styles.bulkTable}>
                     <thead>
-                      <tr><th>#</th><th>Name</th><th>Email</th><th>Department</th><th>Active</th></tr>
+                      <tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Department</th><th>Active</th></tr>
                     </thead>
                     <tbody>
                       {bulkRows.slice(0, 50).map((r, i) => (
@@ -537,6 +549,7 @@ export default function AdminEmployeesPage() {
                           <td className={styles.bulkRowNum}>{i + 2}</td>
                           <td>{r.name || <span className={styles.missing}>missing</span>}</td>
                           <td>{r.email || <span className={styles.missing}>missing</span>}</td>
+                          <td>{r.phone || <span className={styles.noDept}>—</span>}</td>
                           <td>{r.department || <span className={styles.noDept}>—</span>}</td>
                           <td>
                             <span className={`${styles.badge} ${
@@ -549,7 +562,7 @@ export default function AdminEmployeesPage() {
                         </tr>
                       ))}
                       {bulkRows.length > 50 && (
-                        <tr><td colSpan={5} className={styles.moreRows}>
+                        <tr><td colSpan={6} className={styles.moreRows}>
                           +{bulkRows.length - 50} more rows not shown
                         </td></tr>
                       )}
