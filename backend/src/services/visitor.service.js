@@ -245,14 +245,12 @@ export const saveVisitor = async (companyId, data, file) => {
       [companyId]
     );
 
-    const backendUrl  = process.env.BACKEND_URL || "";
-    const logoProxyUrl = companyInfo.logo_url ? `${backendUrl}/api/logo/${companyId}` : null;
-
-    // Short-lived presigned URLs for image generation (pass PNG + email photo)
-    const logoPresigned  = companyInfo.logo_url ? await getPresignedUrl(companyInfo.logo_url, 300) : null;
-    const photoPresigned = photoUrl              ? await getPresignedUrl(photoUrl, 300)             : null;
-    // 48-hour presigned URL for employee email (employees respond within 48h)
-    const photoForEmail  = photoUrl              ? await getPresignedUrl(photoUrl, 172800)          : null;
+    // Short-lived presigned URLs for image generation (pass PNG)
+    const logoPresigned  = companyInfo.logo_url ? await getPresignedUrl(companyInfo.logo_url, 300)    : null;
+    const photoPresigned = photoUrl              ? await getPresignedUrl(photoUrl, 300)                : null;
+    // 48-hour presigned URLs for emails (direct S3 links work in all email clients)
+    const logoForEmail   = companyInfo.logo_url ? await getPresignedUrl(companyInfo.logo_url, 172800) : null;
+    const photoForEmail  = photoUrl              ? await getPresignedUrl(photoUrl, 172800)             : null;
 
     const formatForDisplay = (mysqlDatetime) => {
       if (!mysqlDatetime) return formatISTForDisplay(checkInIST);
@@ -347,7 +345,7 @@ export const saveVisitor = async (companyId, data, file) => {
           company: {
             id:   companyId,
             name: companyInfo.name,
-            logo: logoProxyUrl,   // permanent proxy URL — safe in emails
+            logo: logoForEmail,   // 48hr presigned URL — direct S3 link, works in all email clients
           },
           employee: {
             name:  resolvedEmployeeName,

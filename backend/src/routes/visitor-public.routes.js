@@ -4,6 +4,7 @@ import { saveVisitor } from "../services/visitor.service.js";
 import { sendEmail } from "../utils/mailer.js";
 import { sendOtpWhatsApp } from "../utils/whatsapp.js";
 import { searchEmployeesByCompany } from "../controllers/employee.controller.js";
+import { getPresignedUrl } from "../services/s3.service.js";
 import multer from "multer";
 import QRCode from "qrcode";
 import crypto from "crypto";
@@ -93,12 +94,12 @@ const getCompanyBySlug = async (slug) => {
 /* ======================================================
    EMAIL TEMPLATES
 ====================================================== */
-const emailFooter = (company = {}) => `
+const emailFooter = (company = {}, logoUrl = null) => `
   <br/><br/>
   Regards,<br/>
   <strong>${company.name || "ProMeet Team"}</strong><br/>
-  ${company.id
-    ? `<img src="${process.env.BACKEND_URL}/api/logo/${company.id}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
+  ${logoUrl
+    ? `<img src="${logoUrl}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
     : ""}
   <hr style="margin-top:20px;" />
   <p style="font-size:13px;color:#666;margin-top:15px;line-height:1.5;">
@@ -107,7 +108,7 @@ const emailFooter = (company = {}) => `
   </p>
 `;
 
-const otpEmailHtml = (otp, company) => `
+const otpEmailHtml = (otp, company, logoUrl) => `
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
     <h2 style="color:#6c2bd9;">${company.name} – Visitor Verification</h2>
     <p style="font-size:16px;">Your verification code is:</p>
@@ -118,7 +119,7 @@ const otpEmailHtml = (otp, company) => `
     <p style="color:#999;font-size:12px;margin-top:30px;">
       If you didn't request this code, please ignore this email.
     </p>
-    ${emailFooter(company)}
+    ${emailFooter(company, logoUrl)}
   </div>
 `;
 
@@ -126,10 +127,11 @@ const otpEmailHtml = (otp, company) => `
    SEND OTP EMAIL
 ====================================================== */
 const sendOtpMail = async (email, otp, company) => {
+  const logoUrl = company.logo_url ? await getPresignedUrl(company.logo_url, 3600) : null;
   await sendEmail({
     to:      email,
     subject: `Your Visitor Verification Code – ${company.name}`,
-    html:    otpEmailHtml(otp, company),
+    html:    otpEmailHtml(otp, company, logoUrl),
   });
 };
 

@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
+import { getPresignedUrl } from "../services/s3.service.js";
 
 const router = express.Router();
 
@@ -108,12 +109,12 @@ const generateOtp = () => {
 /* ======================================================
    EMAIL TEMPLATES
 ====================================================== */
-const emailFooter = (company) => `
+const emailFooter = (company, logoUrl = null) => `
 <br/>
 <br/>
 Regards,<br/>
 <b>${company.name}</b><br/>
-${company.id ? `<img src="${process.env.BACKEND_URL}/api/logo/${company.id}" alt="${company.name} Logo" height="55" />` : ""}
+${logoUrl ? `<img src="${logoUrl}" alt="${company.name} Logo" height="55" />` : ""}
 <hr/>
 <p style="font-size:13px;color:#666;margin-top:15px;">
 This email was automatically sent from the Conference Room Booking Platform.
@@ -121,7 +122,11 @@ If you did not perform this action, please contact your administrator immediatel
 </p>
 `;
 
+const getLogoUrl = async (company) =>
+  company.logo_url ? getPresignedUrl(company.logo_url, 3600) : null;
+
 const sendOtpEmail = async (email, otp, company) => {
+  const logoUrl = await getLogoUrl(company);
   await sendEmail({
     to: email,
     subject: `Your OTP for Conference Booking – ${company.name}`,
@@ -132,12 +137,13 @@ const sendOtpEmail = async (email, otp, company) => {
       </div>
       <p>This OTP is valid for ${OTP_EXPIRY_MINUTES} minutes.</p>
       <p style="color:#666;font-size:14px;">Please do not share this code with anyone.</p>
-      ${emailFooter(company)}
+      ${emailFooter(company, logoUrl)}
     `
   });
 };
 
 const sendBookingEmail = async (email, company, room, booking) => {
+  const logoUrl = await getLogoUrl(company);
   await sendEmail({
     to: email,
     subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
@@ -167,12 +173,13 @@ const sendBookingEmail = async (email, company, room, booking) => {
           <td style="padding:10px;">${booking.purpose || "—"}</td>
         </tr>
       </table>
-      ${emailFooter(company)}
+      ${emailFooter(company, logoUrl)}
     `
   });
 };
 
 const sendUpdateEmail = async (email, company, room, booking) => {
+  const logoUrl = await getLogoUrl(company);
   await sendEmail({
     to: email,
     subject: `Booking Updated – ${room.room_name} | ${company.name}`,
@@ -195,12 +202,13 @@ const sendUpdateEmail = async (email, company, room, booking) => {
           <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
         </tr>
       </table>
-      ${emailFooter(company)}
+      ${emailFooter(company, logoUrl)}
     `
   });
 };
 
 const sendCancelEmail = async (email, company, room, booking) => {
+  const logoUrl = await getLogoUrl(company);
   await sendEmail({
     to: email,
     subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
@@ -223,7 +231,7 @@ const sendCancelEmail = async (email, company, room, booking) => {
           <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
         </tr>
       </table>
-      ${emailFooter(company)}
+      ${emailFooter(company, logoUrl)}
     `
   });
 };
