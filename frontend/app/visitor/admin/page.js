@@ -237,9 +237,10 @@ export default function AdminEmployeesPage() {
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          {company?.logo && (
-            <Image src={company.logo} alt="Logo" width={38} height={38}
-              className={styles.companyLogo} unoptimized />
+          {company?.id && (
+            <Image src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt="Logo" width={38} height={38}
+              className={styles.companyLogo} unoptimized
+              onError={e => { e.currentTarget.style.display = "none"; }} />
           )}
           <span className={styles.logoText}>{company?.name || "Dashboard"}</span>
         </div>

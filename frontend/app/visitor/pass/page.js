@@ -190,11 +190,12 @@ function VisitorPassContent() {
           <div className={styles.logoText}>{displayCompanyName}</div>
         </div>
         <div className={styles.rightHeader}>
-          {(company.logo || localCompany?.logo_url) && (
+          {(company?.id || localCompany?.id) && (
             <img
-              src={company.logo || localCompany?.logo_url || "/logo.png"}
+              src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company?.id || localCompany?.id}`}
               alt="Company Logo"
               className={styles.companyLogo}
+              onError={e => { e.currentTarget.style.display = "none"; }}
             />
           )}
           <button

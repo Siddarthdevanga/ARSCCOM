@@ -891,11 +891,12 @@ export default function PublicConferenceBooking() {
       <header className={styles.header}>
         <div className={styles.headerContent}>
           <div className={styles.headerLeft}>
-            {company.logo_url && (
+            {company.id && (
               <img
-                src={company.logo_url}
+                src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`}
                 alt={`${company.name} logo`}
                 className={styles.logo}
+                onError={e => { e.currentTarget.style.display = "none"; }}
               />
             )}
             <h1>{company.name}</h1>

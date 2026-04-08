@@ -85,9 +85,10 @@ export default function VisitorPrimaryDetails() {
         </div>
         <div className={styles.rightHeader}>
           <img
-            src={company.logo_url || "/logo.png"}
+            src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`}
             alt="Company Logo"
             className={styles.companyLogo}
+            onError={e => { e.currentTarget.style.display = "none"; }}
           />
           <button className={styles.backBtn} onClick={() => router.push("/visitor/dashboard")}>
             ← Back

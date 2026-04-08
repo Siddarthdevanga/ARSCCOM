@@ -435,7 +435,7 @@ export default function ConferenceDashboard() {
           <div className={styles.logoText}>{company.name}</div>
         </div>
         <div className={styles.rightHeader}>
-          <img src={company.logo_url || "/logo.png"} alt="Logo" className={styles.companyLogo} />
+          <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt="Logo" className={styles.companyLogo} onError={e => { e.currentTarget.style.display = "none"; }} />
           <button className={styles.bookNowBtn} disabled={isBookingDisabled} onClick={() => {
             if (isBookingDisabled) { showNotification(getBookingDisabledMessage(), "warning"); }
             else { router.push("/conference/bookings"); }

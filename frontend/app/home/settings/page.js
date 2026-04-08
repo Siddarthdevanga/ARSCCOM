@@ -295,8 +295,8 @@ export default function SettingsPage() {
           <div className={styles.logoText}>{company?.name}</div>
         </div>
         <div className={styles.rightHeader}>
-          {company?.logo_url && (
-            <img src={company.logo_url} alt="Logo" className={styles.companyLogo} />
+          {company?.id && (
+            <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt="Logo" className={styles.companyLogo} onError={e => { e.currentTarget.style.display = "none"; }} />
           )}
           <button className={styles.logoutBtn} onClick={handleLogout}>Logout</button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>← Back</button>

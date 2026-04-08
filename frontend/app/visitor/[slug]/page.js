@@ -206,7 +206,7 @@ const StepProgress = ({ currentStep }) => {
 const Navbar = ({ company }) => (
   <header className={styles.header}>
     <div className={styles.headerLeft}>
-      {company?.logo_url && <img src={company.logo_url} alt={`${company.name} logo`} className={styles.logo} />}
+      {company?.id && <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt={`${company.name} logo`} className={styles.logo} onError={e => { e.currentTarget.style.display = "none"; }} />}
       <span className={styles.logoText}>{company?.name}</span>
     </div>
     <span className={styles.headerBadge}>Visitor Registration</span>

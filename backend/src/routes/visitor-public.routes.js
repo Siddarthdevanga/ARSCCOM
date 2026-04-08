@@ -97,8 +97,8 @@ const emailFooter = (company = {}) => `
   <br/><br/>
   Regards,<br/>
   <strong>${company.name || "ProMeet Team"}</strong><br/>
-  ${company.logo_url
-    ? `<img src="${company.logo_url}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
+  ${company.id
+    ? `<img src="${process.env.BACKEND_URL}/api/logo/${company.id}" alt="${company.name || "Company"} Logo" height="55" style="margin-top:8px;" />`
     : ""}
   <hr style="margin-top:20px;" />
   <p style="font-size:13px;color:#666;margin-top:15px;line-height:1.5;">
@@ -155,8 +155,8 @@ router.get("/visitor/:slug/info", async (req, res) => {
     return res.json({
       success: true,
       company: {
+        id:           company.id,
         name:         company.name,
-        logo_url:     company.logo_url,
         whatsapp_url: company.whatsapp_url || null,
       },
       qrCode,

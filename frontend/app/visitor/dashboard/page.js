@@ -373,9 +373,10 @@ export default function VisitorDashboard() {
           <span className={styles.logoText}>{company?.name || "Visitor Dashboard"}</span>
         </div>
         <div className={styles.rightHeader}>
-          {company?.logo && (
-            <Image src={company.logo} alt="Logo" width={72} height={36}
-              className={styles.companyLogo} unoptimized />
+          {company?.id && (
+            <Image src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt="Logo" width={72} height={36}
+              className={styles.companyLogo} unoptimized
+              onError={e => { e.currentTarget.style.display = "none"; }} />
           )}
           <button className={styles.newBtn} disabled={atLimit}
             onClick={() => router.push("/visitor/primary_details")}>

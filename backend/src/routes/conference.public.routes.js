@@ -113,7 +113,7 @@ const emailFooter = (company) => `
 <br/>
 Regards,<br/>
 <b>${company.name}</b><br/>
-${company.logo_url ? `<img src="${company.logo_url}" alt="${company.name} Logo" height="55" />` : ""}
+${company.id ? `<img src="${process.env.BACKEND_URL}/api/logo/${company.id}" alt="${company.name} Logo" height="55" />` : ""}
 <hr/>
 <p style="font-size:13px;color:#666;margin-top:15px;">
 This email was automatically sent from the Conference Room Booking Platform.

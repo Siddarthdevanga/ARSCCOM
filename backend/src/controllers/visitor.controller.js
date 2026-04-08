@@ -130,7 +130,7 @@ export const getPublicVisitorPass = async (req, res) => {
 
     return res.json({
       success: true,
-      company: { name: v.company_name, logo: v.company_logo ? logoProxyUrl(v.company_id) : null },
+      company: { id: v.company_id, name: v.company_name },
       visitor: {
         visitorCode: v.visitor_code,
         name: v.name,
