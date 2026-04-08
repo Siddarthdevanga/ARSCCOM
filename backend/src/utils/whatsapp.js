@@ -18,7 +18,6 @@
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
-import FormData from "form-data";
 
 /* ======================================================
    VALIDATE ENV ON BOOT
@@ -137,30 +136,22 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
     throw new Error("Gupshup env vars not configured");
   }
 
-  const message = JSON.stringify({
-    type:    "image",
-    caption: caption || "",
-  });
+  const normalizedSource = String(sourceNum).replace(/\D/g, "");
 
+  // Use native FormData + Blob — native fetch sets the correct
+  // multipart/form-data Content-Type boundary automatically.
   const form = new FormData();
   form.append("channel",     "whatsapp");
-  form.append("source",      sourceNum);
+  form.append("source",      normalizedSource);
   form.append("destination", destination);
   form.append("src.name",    appName);
-  form.append("message",     message);
-  form.append("file",        imageBuffer, {
-    filename:    filename || "visitor-pass.png",
-    contentType: "image/png",
-    knownLength: imageBuffer.length,
-  });
+  form.append("message",     JSON.stringify({ type: "image", caption: caption || "" }));
+  form.append("file",        new Blob([imageBuffer], { type: "image/png" }), filename || "visitor-pass.png");
 
   const response = await fetch(GUPSHUP_MSG_API, {
     method:  "POST",
-    headers: {
-      "apikey": apiKey,
-      ...form.getHeaders(),   // sets multipart/form-data with correct boundary
-    },
-    body: form.getBuffer(),
+    headers: { "apikey": apiKey },  // No Content-Type — fetch sets it with the correct boundary
+    body:    form,
   });
 
   const text = await response.text();
@@ -194,7 +185,7 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
    AWS Secrets Manager:
    GUPSHUP_OTP_TEMPLATE_ID = "verification_otp" (template NAME, not UUID)
 ====================================================== */
-export const sendOtpWhatsApp = async ({ phone, otp, company = {} }) => {
+export const sendOtpWhatsApp = async ({ phone, otp }) => {
   const destination = normalizePhone(phone);
   const templateName = process.env.GUPSHUP_OTP_TEMPLATE_ID;
 
