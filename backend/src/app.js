@@ -21,6 +21,7 @@ import settingsRoutes from "./routes/settings.routes.js";
 import superAdminRoutes from "./routes/superadmin.routes.js";
 import employeeRoutes from "./routes/employee.routes.js";
 import visitResponseRoutes from "./routes/visitResponse.routes.js";
+import logoRoutes from "./routes/logo.routes.js";
 
 /* ================= RATE LIMITERS ================= */
 import {
@@ -185,6 +186,9 @@ app.use("/api/public/conference", conferencePublicRoutes);
 
 // Employee email accept/decline (tokenised — no login required)
 app.use("/api/visit-response", visitResponseRoutes);
+
+// Company logo proxy — public, permanent URL, safe for emails
+app.use("/api/logo", logoRoutes);
 
 /* =====================================================
    PROTECTED ROUTES (REQUIRE AUTH)

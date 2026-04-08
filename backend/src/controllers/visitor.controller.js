@@ -1,6 +1,12 @@
 import { db } from "../config/db.js";
 import { saveVisitor } from "../services/visitor.service.js";
 import { getPlanUsage } from "../services/plan.service.js";
+import { getPresignedUrl } from "../services/s3.service.js";
+
+const logoProxyUrl = (companyId) => {
+  const base = process.env.BACKEND_URL || "";
+  return `${base}/api/logo/${companyId}`;
+};
 
 /* =========================================================
    CREATE VISITOR
@@ -60,10 +66,11 @@ export const getVisitorPass = async (req, res) => {
     }
 
     const v = rows[0];
+    const photoUrl = v.photo_url ? await getPresignedUrl(v.photo_url) : null;
 
     return res.json({
       success: true,
-      company: { name: v.company_name, logo: v.company_logo },
+      company: { name: v.company_name, logo: v.company_logo ? logoProxyUrl(companyId) : null },
       visitor: {
         visitorCode: v.visitor_code,
         name: v.name,
@@ -71,7 +78,7 @@ export const getVisitorPass = async (req, res) => {
         email: v.email,
         idType: v.id_type,
         idNumber: v.id_number,
-        photoUrl: v.photo_url,
+        photoUrl,
         checkIn: v.check_in,
         checkOut: v.check_out,
         status: v.status,
@@ -102,7 +109,7 @@ export const getPublicVisitorPass = async (req, res) => {
     const [rows] = await db.execute(
       `SELECT
         v.visitor_code, v.name, v.phone, v.email,
-        v.photo_url,
+        v.photo_url, v.company_id,
         DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
         DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
@@ -119,16 +126,17 @@ export const getPublicVisitorPass = async (req, res) => {
     }
 
     const v = rows[0];
+    const photoUrl = v.photo_url ? await getPresignedUrl(v.photo_url) : null;
 
     return res.json({
       success: true,
-      company: { name: v.company_name, logo: v.company_logo },
+      company: { name: v.company_name, logo: v.company_logo ? logoProxyUrl(v.company_id) : null },
       visitor: {
         visitorCode: v.visitor_code,
         name: v.name,
         phone: v.phone,
         email: v.email,
-        photoUrl: v.photo_url,
+        photoUrl,
         checkIn: v.check_in,
         checkOut: v.check_out,
         status: v.status,
@@ -428,11 +436,13 @@ export const resendVisitorPass = async (req, res) => {
       return `${day} ${month} ${year}, ${hours}:${minutes} ${ampm}`;
     };
 
+    const photoPresigned = visitor.photo_url ? await getPresignedUrl(visitor.photo_url, 172800) : null;
+
     await sendVisitorPassMail({
       company: {
         id:           visitor.company_id,
         name:         visitor.company_name,
-        logo:         visitor.company_logo,
+        logo:         logoProxyUrl(visitor.company_id),
         whatsapp_url: visitor.company_whatsapp_url || null,
       },
       visitor: {
@@ -440,7 +450,7 @@ export const resendVisitorPass = async (req, res) => {
         name:           visitor.name,
         phone:          visitor.phone,
         email:          visitor.email,
-        photoUrl:       visitor.photo_url,
+        photoUrl:       photoPresigned,
         checkIn:        visitor.check_in,
         checkInDisplay: formatISTForDisplay(visitor.check_in),
         personToMeet:   visitor.person_to_meet || "Reception",

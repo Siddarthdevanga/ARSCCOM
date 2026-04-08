@@ -15,7 +15,7 @@ export const listEmployees = async (req, res) => {
     if (search) {
       const q = `%${search}%`;
       [rows] = await db.execute(
-        `SELECT id, name, email, department, is_active
+        `SELECT id, name, email, phone, department, is_active
          FROM company_employees
          WHERE company_id = ?
            AND is_active = 1
@@ -27,7 +27,7 @@ export const listEmployees = async (req, res) => {
       console.log(`[EMPLOYEES] search="${search}" companyId=${companyId} → ${rows.length} rows`);
     } else {
       [rows] = await db.execute(
-        `SELECT id, name, email, department, is_active, created_at
+        `SELECT id, name, email, phone, department, is_active, created_at
          FROM company_employees
          WHERE company_id = ?
          ORDER BY name ASC`,
@@ -49,7 +49,7 @@ export const listEmployees = async (req, res) => {
 export const createEmployee = async (req, res) => {
   try {
     const companyId = req.user?.companyId;
-    const { name, email, department } = req.body;
+    const { name, email, phone, department } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ success: false, message: "Employee name is required" });
@@ -58,21 +58,27 @@ export const createEmployee = async (req, res) => {
       return res.status(400).json({ success: false, message: "Valid email is required" });
     }
 
+    const cleanPhone = phone?.trim().replace(/\D/g, "") || null;
+    if (cleanPhone && cleanPhone.length < 10) {
+      return res.status(400).json({ success: false, message: "Phone must be at least 10 digits" });
+    }
+
     const [result] = await db.execute(
-      `INSERT INTO company_employees (company_id, name, email, department)
-       VALUES (?, ?, ?, ?)`,
-      [companyId, name.trim(), email.trim().toLowerCase(), department?.trim() || null]
+      `INSERT INTO company_employees (company_id, name, email, phone, department)
+       VALUES (?, ?, ?, ?, ?)`,
+      [companyId, name.trim(), email.trim().toLowerCase(), cleanPhone, department?.trim() || null]
     );
 
     return res.status(201).json({
       success: true,
       message: "Employee added successfully",
       employee: {
-        id: result.insertId,
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
+        id:         result.insertId,
+        name:       name.trim(),
+        email:      email.trim().toLowerCase(),
+        phone:      cleanPhone,
         department: department?.trim() || null,
-        is_active: 1
+        is_active:  1,
       }
     });
   } catch (err) {
@@ -92,7 +98,7 @@ export const updateEmployee = async (req, res) => {
   try {
     const companyId = req.user?.companyId;
     const { id } = req.params;
-    const { name, email, department, is_active } = req.body;
+    const { name, email, phone, department, is_active } = req.body;
 
     if (!name?.trim()) {
       return res.status(400).json({ success: false, message: "Employee name is required" });
@@ -101,17 +107,23 @@ export const updateEmployee = async (req, res) => {
       return res.status(400).json({ success: false, message: "Valid email is required" });
     }
 
+    const cleanPhone = phone?.trim().replace(/\D/g, "") || null;
+    if (cleanPhone && cleanPhone.length < 10) {
+      return res.status(400).json({ success: false, message: "Phone must be at least 10 digits" });
+    }
+
     const [result] = await db.execute(
       `UPDATE company_employees
-       SET name = ?, email = ?, department = ?, is_active = ?
+       SET name = ?, email = ?, phone = ?, department = ?, is_active = ?
        WHERE id = ? AND company_id = ?`,
       [
         name.trim(),
         email.trim().toLowerCase(),
+        cleanPhone,
         department?.trim() || null,
         is_active !== undefined ? (is_active ? 1 : 0) : 1,
         id,
-        companyId
+        companyId,
       ]
     );
 
@@ -160,7 +172,7 @@ export const deleteEmployee = async (req, res) => {
 export const searchEmployeesByCompany = async (companyId, query) => {
   const q = `%${(query || "").trim()}%`;
   const [rows] = await db.execute(
-    `SELECT id, name, email, department
+    `SELECT id, name, email, phone, department
      FROM company_employees
      WHERE company_id = ?
        AND is_active = 1
@@ -196,11 +208,11 @@ export const bulkUpsertEmployees = async (req, res) => {
     const errors   = [];
 
     const rows = employees.map((emp, i) => {
-      const rowNum = i + 2; // Excel row number (row 1 = header)
+      const rowNum = i + 2;
       const name   = emp.name?.toString().trim()  || "";
       const email  = emp.email?.toString().trim().toLowerCase() || "";
+      const phone  = emp.phone?.toString().trim().replace(/\D/g, "") || null;
       const dept   = emp.department?.toString().trim() || null;
-      // Accept TRUE/true/1/yes as active; default to active if omitted
       const raw    = emp.is_active;
       const active = raw === undefined || raw === null
         ? 1
@@ -210,7 +222,7 @@ export const bulkUpsertEmployees = async (req, res) => {
       if (!email)             errors.push({ row: rowNum, email, reason: "Email is required" });
       else if (!EMAIL_RE.test(email)) errors.push({ row: rowNum, email, reason: "Invalid email format" });
 
-      return [companyId, name, email, dept, active];
+      return [companyId, name, email, phone, dept, active];
     });
 
     if (errors.length > 0) {
@@ -223,14 +235,15 @@ export const bulkUpsertEmployees = async (req, res) => {
 
     // Build a single multi-row INSERT … ON DUPLICATE KEY UPDATE
     // The unique key must be on (company_id, email) in the DB schema.
-    const placeholders = rows.map(() => "(?, ?, ?, ?, ?)").join(", ");
+    const placeholders = rows.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
     const flat         = rows.flat();
 
     const [result] = await db.execute(
-      `INSERT INTO company_employees (company_id, name, email, department, is_active)
+      `INSERT INTO company_employees (company_id, name, email, phone, department, is_active)
        VALUES ${placeholders}
        ON DUPLICATE KEY UPDATE
          name        = VALUES(name),
+         phone       = VALUES(phone),
          department  = VALUES(department),
          is_active   = VALUES(is_active)`,
       flat

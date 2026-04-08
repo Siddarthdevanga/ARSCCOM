@@ -1,5 +1,5 @@
 import { db } from "../config/db.js";
-import { uploadToS3 } from "./s3.service.js";
+import { uploadToS3, getPresignedUrl } from "./s3.service.js";
 import { sendEmployeeNotificationMail, sendVisitorPassMail } from "../utils/visitorMail.service.js";
 import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
 import crypto from "crypto";
@@ -241,9 +241,18 @@ export const saveVisitor = async (companyId, data, file) => {
 
     /* ── Fetch company info ── */
     const [[companyInfo]] = await db.execute(
-      `SELECT name, logo_url, whatsapp_url FROM companies WHERE id = ?`,
+      `SELECT id, name, logo_url, whatsapp_url FROM companies WHERE id = ?`,
       [companyId]
     );
+
+    const backendUrl  = process.env.BACKEND_URL || "";
+    const logoProxyUrl = companyInfo.logo_url ? `${backendUrl}/api/logo/${companyId}` : null;
+
+    // Short-lived presigned URLs for image generation (pass PNG + email photo)
+    const logoPresigned  = companyInfo.logo_url ? await getPresignedUrl(companyInfo.logo_url, 300) : null;
+    const photoPresigned = photoUrl              ? await getPresignedUrl(photoUrl, 300)             : null;
+    // 48-hour presigned URL for employee email (employees respond within 48h)
+    const photoForEmail  = photoUrl              ? await getPresignedUrl(photoUrl, 172800)          : null;
 
     const formatForDisplay = (mysqlDatetime) => {
       if (!mysqlDatetime) return formatISTForDisplay(checkInIST);
@@ -277,20 +286,20 @@ export const saveVisitor = async (companyId, data, file) => {
       try {
         console.log("[VISITOR] Sending visitor pass via WHATSAPP to:", phone);
 
-        // Generate pass image buffer
+        // Generate pass image buffer (uses presigned URLs — bucket is private)
         const { generateVisitorPassImage } = await import("../utils/visitor-pass-image.js");
         const passImageBuffer = await generateVisitorPassImage({
           company: {
             id:   companyId,
             name: companyInfo.name,
-            logo: companyInfo.logo_url,
+            logo: logoPresigned,      // presigned URL valid 5 min (enough for generation)
           },
           visitor: {
             visitorCode,
             name,
             phone,
             email,
-            photoUrl,
+            photoUrl:       photoPresigned, // presigned URL valid 5 min
             checkIn:        storedCheckIn || checkInMySQL,
             checkInDisplay,
             personToMeet:   resolvedEmployeeName || "Reception",
@@ -338,7 +347,7 @@ export const saveVisitor = async (companyId, data, file) => {
           company: {
             id:   companyId,
             name: companyInfo.name,
-            logo: companyInfo.logo_url,
+            logo: logoProxyUrl,   // permanent proxy URL — safe in emails
           },
           employee: {
             name:  resolvedEmployeeName,
@@ -353,7 +362,7 @@ export const saveVisitor = async (companyId, data, file) => {
             purpose:     purpose || "Visit",
             checkIn:        storedCheckIn || checkInMySQL,
             checkInDisplay,
-            photoUrl,
+            photoUrl:    photoForEmail, // 48h presigned URL — valid while employee responds
           },
           responseToken,
         });
