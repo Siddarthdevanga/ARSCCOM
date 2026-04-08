@@ -6,8 +6,8 @@
  * Handles:
  *   1. Phone normalisation     → always "91XXXXXXXXXX" (10-digit, no +)
  *   2. sendOtpWhatsApp         → sends approved OTP template
- *   3. sendVisitorPassWhatsApp → sends PNG buffer directly to Gupshup
- *                                (NO public URL / S3 policy required)
+ *   3. sendVisitorPassWhatsApp → uploads pass PNG to S3 (pre-signed URL),
+ *                                sends image URL + template via Gupshup
  *
  * Required env vars (store in AWS Secrets Manager / .env):
  *   GUPSHUP_API_KEY
@@ -15,8 +15,11 @@
  *   GUPSHUP_SOURCE_NUMBER      e.g. "917XXXXXXXX"  (91 + 10 digits, no +)
  *   GUPSHUP_OTP_TEMPLATE_ID    template UUID from Gupshup dashboard
  *   GUPSHUP_PASS_TEMPLATE_ID   template UUID from Gupshup dashboard
+ *   S3_BUCKET_NAME             for temporary visitor pass image hosting
  * ─────────────────────────────────────────────────────────────────────────────
  */
+
+import { uploadBufferAndGetPresignedUrl } from "../services/s3.service.js";
 
 
 /* ======================================================
@@ -127,7 +130,7 @@ const postTemplate = async ({ destination, templateId, params = [] }) => {
 
    The visitor receives the actual PNG image in their WhatsApp chat.
 ====================================================== */
-const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) => {
+const postImageUrl = async ({ destination, imageUrl, caption }) => {
   const apiKey    = process.env.GUPSHUP_API_KEY;
   const appName   = process.env.GUPSHUP_APP_NAME;
   const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
@@ -138,20 +141,18 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
 
   const normalizedSource = String(sourceNum).replace(/\D/g, "");
 
-  // Use native FormData + Blob — native fetch sets the correct
-  // multipart/form-data Content-Type boundary automatically.
-  const form = new FormData();
-  form.append("channel",     "whatsapp");
-  form.append("source",      normalizedSource);
-  form.append("destination", destination);
-  form.append("src.name",    appName);
-  form.append("message",     JSON.stringify({ type: "image", caption: caption || "" }));
-  form.append("file",        new Blob([imageBuffer], { type: "image/png" }), filename || "visitor-pass.png");
+  const body = new URLSearchParams({
+    channel:     "whatsapp",
+    source:      normalizedSource,
+    destination: destination,
+    "src.name":  appName,
+    message:     JSON.stringify({ type: "image", originalUrl: imageUrl, previewUrl: imageUrl, caption: caption || "" }),
+  });
 
   const response = await fetch(GUPSHUP_MSG_API, {
     method:  "POST",
-    headers: { "apikey": apiKey },  // No Content-Type — fetch sets it with the correct boundary
-    body:    form,
+    headers: { "Content-Type": "application/x-www-form-urlencoded", "apikey": apiKey },
+    body:    body.toString(),
   });
 
   const text = await response.text();
@@ -159,11 +160,11 @@ const postBinaryImage = async ({ destination, imageBuffer, filename, caption }) 
   try { json = JSON.parse(text); } catch { json = { raw: text }; }
 
   if (!response.ok) {
-    console.error("[WHATSAPP] Media API error:", response.status, json);
-    throw new Error(`Gupshup media error ${response.status}: ${JSON.stringify(json)}`);
+    console.error("[WHATSAPP] Image URL API error:", response.status, json);
+    throw new Error(`Gupshup image error ${response.status}: ${JSON.stringify(json)}`);
   }
 
-  console.log("[WHATSAPP] Media response:", json);
+  console.log("[WHATSAPP] Image response:", json);
   return json;
 };
 
@@ -265,12 +266,15 @@ export const sendVisitorPassWhatsApp = async ({
     `[WHATSAPP][PASS] → ${destination} | buffer: ${passImageBuffer.length} bytes`
   );
 
-  // ── Message 1: Send the PNG image directly as binary ──
-  await postBinaryImage({
+  // ── Message 1: Upload PNG to S3, get pre-signed URL, send via Gupshup ──
+  const s3Key = `visitor-passes/${visitorCode}-${Date.now()}.png`;
+  const imageUrl = await uploadBufferAndGetPresignedUrl(passImageBuffer, s3Key, "image/png", 86400);
+  console.log(`[WHATSAPP][PASS] Uploaded to S3: ${s3Key}`);
+
+  await postImageUrl({
     destination,
-    imageBuffer: passImageBuffer,
-    filename:    `${visitorCode}-visitor-pass.png`,
-    caption:     `🎫 Your Visitor Pass — ${companyName}`,
+    imageUrl,
+    caption: `Your Visitor Pass — ${companyName}`,
   });
 
   console.log(`[WHATSAPP][PASS] Image sent to ${destination}`);
