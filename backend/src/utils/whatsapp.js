@@ -13,8 +13,8 @@
  *   GUPSHUP_API_KEY
  *   GUPSHUP_APP_NAME
  *   GUPSHUP_SOURCE_NUMBER      e.g. "917XXXXXXXX"  (91 + 10 digits, no +)
- *   GUPSHUP_OTP_TEMPLATE_ID    template name registered in Gupshup dashboard
- *   GUPSHUP_PASS_TEMPLATE_ID   template name registered in Gupshup dashboard
+ *   GUPSHUP_OTP_TEMPLATE_ID    template UUID from Gupshup dashboard
+ *   GUPSHUP_PASS_TEMPLATE_ID   template UUID from Gupshup dashboard
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -27,8 +27,8 @@ const REQUIRED = [
   "GUPSHUP_API_KEY",
   "GUPSHUP_APP_NAME",
   "GUPSHUP_SOURCE_NUMBER",
-  "GUPSHUP_OTP_TEMPLATE_ID",     // Template: verification_otp
-  "GUPSHUP_PASS_TEMPLATE_ID",    // Template: visitor_pass
+  "GUPSHUP_OTP_TEMPLATE_ID",     // Template UUID from Gupshup dashboard
+  "GUPSHUP_PASS_TEMPLATE_ID",    // Template UUID from Gupshup dashboard
 ];
 
 for (const key of REQUIRED) {
@@ -97,7 +97,7 @@ const postTemplate = async ({ destination, templateName, languageCode = "en_GB",
   const messagePayload = {
     type: "template",
     template: {
-      name: templateName,  // Template NAME, not UUID
+      id: templateName,  // Template UUID from Gupshup dashboard
       language: {
         code: languageCode,  // en_GB
       },
