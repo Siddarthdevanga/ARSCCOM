@@ -1,18 +1,18 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 
 /* ======================================================
    SHARED HANDLER — consistent 429 response
 ====================================================== */
-const handler = (req, res) => {
+const handler = (_req, res) => {
   res.status(429).json({
     success: false,
     message: "Too many requests. Please wait and try again.",
   });
 };
 
-const keyByIp = (req) => req.ip;
+const keyByIp = (req) => ipKeyGenerator(req);
 const keyByIpAndCompany = (req) =>
-  `${req.ip}-${req.user?.companyId || req.user?.company_id || "anon"}`;
+  `${ipKeyGenerator(req)}-${req.user?.companyId || req.user?.company_id || "anon"}`;
 
 /* ======================================================
    AUTH ROUTES  — login, register, forgot-password
