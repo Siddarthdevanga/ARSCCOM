@@ -342,9 +342,7 @@ export const login = async ({ email, password }) => {
       id: user.companyId,
       name: user.companyName,
       slug: user.companySlug,
-      logo_url: user.companyLogo
-        ? `${process.env.BACKEND_URL || ""}/api/logo/${user.companyId}`
-        : null,
+      logo_url: user.companyLogo ? `/api/logo/${user.companyId}` : null,
       whatsapp_url: user.whatsappUrl || null,
       subscription_status: user.subscription_status || "pending",
       plan: user.plan || "trial",

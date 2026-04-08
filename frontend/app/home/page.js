@@ -291,8 +291,13 @@ export default function Home() {
         </button>
 
         <div className={styles.companyInfo}>
-          {company.logo_url && (
-            <img src={company.logo_url} alt={`${company.name} logo`} className={styles.companyLogoHeader}/>
+          {company.id && (
+            <img
+              src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`}
+              alt={`${company.name} logo`}
+              className={styles.companyLogoHeader}
+              onError={e => { e.currentTarget.style.display = "none"; }}
+            />
           )}
           <h1 className={styles.companyName}>{company.name}</h1>
         </div>

@@ -104,15 +104,13 @@ export const getSettings = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const backendUrl = process.env.BACKEND_URL || "";
-
     return res.json({
       success: true,
       company: {
         id:                  company.id,
         name:                company.name,
         slug:                company.slug,
-        logo_url:            company.logo_url ? `${backendUrl}/api/logo/${company.id}` : null,
+        logo_url:            company.logo_url ? `/api/logo/${company.id}` : null,
         rooms:               company.rooms,
         whatsapp_url:        company.whatsapp_url || null,
         plan:                company.plan,
@@ -167,8 +165,6 @@ export const updateCompanySettings = async (req, res) => {
       [companyId]
     );
 
-    const backendUrl = process.env.BACKEND_URL || "";
-
     return res.json({
       success: true,
       message: "Company settings updated successfully",
@@ -176,7 +172,7 @@ export const updateCompanySettings = async (req, res) => {
         id:           companyId,
         name:         updated.name,
         slug:         updated.slug,
-        logo_url:     updated.logo_url ? `${backendUrl}/api/logo/${companyId}` : null,
+        logo_url:     updated.logo_url ? `/api/logo/${companyId}` : null,
         whatsapp_url: updated.whatsapp_url || null,
       },
     });
@@ -224,12 +220,10 @@ export const updateCompanyLogo = async (req, res) => {
       [key, companyId]
     );
 
-    const backendUrl = process.env.BACKEND_URL || "";
-
     return res.json({
       success:  true,
       message:  "Company logo updated successfully",
-      logo_url: `${backendUrl}/api/logo/${companyId}`,
+      logo_url: `/api/logo/${companyId}`,
     });
 
   } catch (error) {
