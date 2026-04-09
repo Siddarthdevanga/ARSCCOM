@@ -17,6 +17,8 @@
 /* ======================================================
    VALIDATE ENV ON BOOT
 ====================================================== */
+// ca802e29-9330-4e39-8adb-f80e2e63af65  ← GUPSHUP_PASS_TEMPLATE_ID
+// 4a1ca8eb-0bf5-4617-9338-fc25a483a8a3  ← GUPSHUP_APPROVAL_TEMPLATE_ID
 const REQUIRED = [
   "GUPSHUP_API_KEY",
   "GUPSHUP_APP_NAME",
@@ -24,6 +26,7 @@ const REQUIRED = [
   "GUPSHUP_OTP_TEMPLATE_ID",
   "GUPSHUP_PASS_TEMPLATE_ID",
   "GUPSHUP_APPROVAL_TEMPLATE_ID",
+  "FRONTEND_URL",
 ];
 
 for (const key of REQUIRED) {
@@ -131,15 +134,16 @@ export const sendOtpWhatsApp = async ({ phone, otp }) => {
      Purpose: {{5}}
      Check-in: {{6}}
 
-     Please Show the pass image at the reception counter.
      Promeet - Visitor Management Platform
 
    {{1}} = Company name
-   {{2}} = Pass URL  (https://promeet.zodopt.com/visitor/pass?code=VIS123)
+   {{2}} = Full pass URL
    {{3}} = Visitor code
    {{4}} = Visitor name
    {{5}} = Purpose
    {{6}} = Check-in time
+
+   UUID: GUPSHUP_PASS_TEMPLATE_ID = ca802e29-9330-4e39-8adb-f80e2e63af65
 ====================================================== */
 export const sendVisitorPassWhatsApp = async ({
   phone,
@@ -148,17 +152,17 @@ export const sendVisitorPassWhatsApp = async ({
 }) => {
   const destination  = normalizePhone(phone);
   const templateId   = process.env.GUPSHUP_PASS_TEMPLATE_ID;
-  const frontendUrl  = process.env.FRONTEND_URL || "https://promeet.zodopt.com";
+  const frontendUrl  = process.env.FRONTEND_URL || "https://www.promeet.zodopt.com";
 
-  const companyName  = company.name          || "ProMeet";
-  const visitorCode  = visitor.visitorCode   || "-";
-  const visitorName  = visitor.name          || "Visitor";
-  const purpose      = visitor.purpose       || "Visit";
+  const companyName  = company.name           || "ProMeet";
+  const visitorCode  = visitor.visitorCode    || "-";
+  const visitorName  = visitor.name           || "Visitor";
+  const purpose      = visitor.purpose        || "Visit";
   const checkIn      = visitor.checkInDisplay || visitor.checkIn || "-";
 
   const passUrl = `${frontendUrl}/visitor/pass?code=${visitorCode}`;
 
-  console.log(`[WHATSAPP][PASS] → ${destination} | pass URL: ${passUrl}`);
+  console.log(`[WHATSAPP][PASS] → ${destination} | passUrl: ${passUrl}`);
 
   await postTemplate({
     destination,
@@ -176,17 +180,25 @@ export const sendVisitorPassWhatsApp = async ({
 
      🪪 View Pass: {{2}}
 
-     Please take action:
-     ✅ Approve: {{3}}
-     ❌ Decline: {{4}}
+     Please take action below.
 
-     Your response will be updated in Dashboard.
      Promeet - Visitor Management Platform
 
-   {{1}} = Visitor name
-   {{2}} = Pass URL
-   {{3}} = Approve URL (frontend page)
-   {{4}} = Decline URL (frontend page)
+   Buttons (CTA Dynamic URL):
+     Button 1 — Approve Visit
+       Base URL: https://www.promeet.zodopt.com/visit-response/
+       Suffix param: TOKEN/accept
+     Button 2 — Decline Visit
+       Base URL: https://www.promeet.zodopt.com/visit-response/
+       Suffix param: TOKEN/decline
+
+   Params order (Gupshup):
+     [0] = {{1}} body — visitor name
+     [1] = {{2}} body — pass URL
+     [2] = button 1 suffix — TOKEN/accept
+     [3] = button 2 suffix — TOKEN/decline
+
+   UUID: GUPSHUP_APPROVAL_TEMPLATE_ID = 4a1ca8eb-0bf5-4617-9338-fc25a483a8a3
 ====================================================== */
 export const sendApprovalWhatsApp = async ({
   phone,
@@ -195,21 +207,24 @@ export const sendApprovalWhatsApp = async ({
 }) => {
   const destination  = normalizePhone(phone);
   const templateId   = process.env.GUPSHUP_APPROVAL_TEMPLATE_ID;
-  const frontendUrl  = process.env.FRONTEND_URL || "https://promeet.zodopt.com";
+  const frontendUrl  = process.env.FRONTEND_URL || "https://www.promeet.zodopt.com";
 
   const visitorName  = visitor.name        || "A visitor";
   const visitorCode  = visitor.visitorCode || "";
 
   const passUrl      = `${frontendUrl}/visitor/pass?code=${visitorCode}`;
-  const approveUrl   = `${frontendUrl}/visit-response/${responseToken}/accept`;
-  const declineUrl   = `${frontendUrl}/visit-response/${responseToken}/decline`;
 
-  console.log(`[WHATSAPP][APPROVAL] → ${destination} | visitor: ${visitorName}`);
+  // Button suffixes — appended to base URL set in Gupshup template
+  const approveSuffix = `${responseToken}/accept`;
+  const declineSuffix = `${responseToken}/decline`;
+
+  console.log(`[WHATSAPP][APPROVAL] → ${destination} | visitor: ${visitorName} | token: ${responseToken}`);
 
   await postTemplate({
     destination,
     templateId,
-    params: [visitorName, passUrl, approveUrl, declineUrl],
+    // body params first, then button suffix params in button order
+    params: [visitorName, passUrl, approveSuffix, declineSuffix],
   });
 
   console.log(`[WHATSAPP][APPROVAL] Sent to ${destination}`);
