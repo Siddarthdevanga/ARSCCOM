@@ -57,7 +57,7 @@ export const normalizePhone = (raw) => {
 /* ======================================================
    INTERNAL: POST TEMPLATE MESSAGE
 ====================================================== */
-const postTemplate = async ({ destination, templateId, params = [] }) => {
+const postTemplate = async ({ destination, templateId, params = [], buttons = [] }) => {
   const apiKey    = process.env.GUPSHUP_API_KEY;
   const appName   = process.env.GUPSHUP_APP_NAME;
   const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
@@ -66,8 +66,15 @@ const postTemplate = async ({ destination, templateId, params = [] }) => {
     throw new Error("Gupshup env vars not configured");
   }
 
-  const normalizedSource  = String(sourceNum).replace(/\D/g, "");
-  const templatePayload   = JSON.stringify({ id: templateId, params });
+  const normalizedSource = String(sourceNum).replace(/\D/g, "");
+
+  // For CTA dynamic URL button templates, Gupshup requires button suffixes
+  // in a separate `buttons` array — not appended to the body `params` array.
+  const templatePayload = JSON.stringify(
+    buttons.length > 0
+      ? { id: templateId, params, buttons }
+      : { id: templateId, params }
+  );
 
   const body = new URLSearchParams({
     channel:     "whatsapp",
@@ -77,7 +84,7 @@ const postTemplate = async ({ destination, templateId, params = [] }) => {
     template:    templatePayload,
   });
 
-  console.log("[WHATSAPP] Template request:", { source: normalizedSource, destination, templateId, params });
+  console.log("[WHATSAPP] Template request:", { source: normalizedSource, destination, templateId, params, buttons });
 
   const response = await fetch(GUPSHUP_TEMPLATE_API, {
     method:  "POST",
@@ -223,8 +230,12 @@ export const sendApprovalWhatsApp = async ({
   await postTemplate({
     destination,
     templateId,
-    // body params first, then button suffix params in button order
-    params: [visitorName, passUrl, approveSuffix, declineSuffix],
+    // Body params only — button suffixes go in the separate buttons array
+    params: [visitorName, passUrl],
+    buttons: [
+      { type: "url", index: "0", value: approveSuffix },
+      { type: "url", index: "1", value: declineSuffix },
+    ],
   });
 
   console.log(`[WHATSAPP][APPROVAL] Sent to ${destination}`);
