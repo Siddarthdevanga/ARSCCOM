@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/db.js";
+import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
 
 const router = express.Router();
 
@@ -17,9 +18,13 @@ router.get("/:token/:action", async (req, res) => {
 
   try {
     const [[visitor]] = await db.execute(
-      `SELECT id, name, visit_status, response_token_expires_at, employee_id
-       FROM visitors
-       WHERE response_token = ?
+      `SELECT v.id, v.name, v.phone, v.visitor_code, v.purpose,
+              v.visit_status, v.response_token_expires_at, v.employee_id,
+              DATE_FORMAT(CONVERT_TZ(v.check_in, '+00:00', '+05:30'), '%Y-%m-%d %H:%i') AS check_in_display,
+              c.id AS company_id, c.name AS company_name
+       FROM visitors v
+       INNER JOIN companies c ON c.id = v.company_id
+       WHERE v.response_token = ?
        LIMIT 1`,
       [token]
     );
@@ -61,6 +66,20 @@ router.get("/:token/:action", async (req, res) => {
     );
 
     const isAccepted = newStatus === "accepted";
+
+    // Send WhatsApp to visitor with their pass link (fire-and-forget)
+    if (visitor.phone) {
+      sendVisitorPassWhatsApp({
+        phone: visitor.phone,
+        company: { id: visitor.company_id, name: visitor.company_name },
+        visitor: {
+          visitorCode:     visitor.visitor_code,
+          name:            visitor.name,
+          purpose:         visitor.purpose,
+          checkInDisplay:  visitor.check_in_display,
+        },
+      }).catch(err => console.error("[VISIT_RESPONSE] WhatsApp to visitor failed:", err));
+    }
 
     return res.send(renderPage(
       isAccepted ? "Visit Accepted ✅" : "Visit Declined ❌",
