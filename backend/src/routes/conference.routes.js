@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
+import { getPresignedUrl } from "../services/s3.service.js";
 import QRCode from "qrcode";
 import { createCanvas, loadImage, registerFont } from "canvas";
 
@@ -290,11 +291,11 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
    EMAIL FUNCTIONS
 ====================================================== */
 
-const emailFooter = (company = { name: "", logo_url: "" }) => `
+const emailFooter = (company = {}, logoUrl = null) => `
 <br/>
 Regards,<br/>
 <b>${company.name || ""}</b><br/>
-${company.logo_url ? `<img src="${company.logo_url}" height="55" alt="Company Logo" />` : ""}
+${logoUrl ? `<img src="${logoUrl}" height="55" alt="Company Logo" />` : ""}
 <hr/>
 <p style="font-size:13px;color:#666">
 This email was automatically sent from the Conference Room Booking Platform.
@@ -309,13 +310,9 @@ const sendBookingMail = async ({
   heading,
   booking,
   company,
+  teamMembers = [],
 }) => {
   try {
-    if (!sendEmail) {
-      console.warn("[EMAIL] sendEmail function not configured");
-      return;
-    }
-
     const toEmail = isEmail(userEmail)
       ? userEmail
       : isEmail(adminEmail)
@@ -330,6 +327,8 @@ const sendBookingMail = async ({
     subject = subject || "Conference Room Notification";
     heading = heading || "Conference Room Update";
 
+    const logoUrl = company?.logo_url ? await getPresignedUrl(company.logo_url, 3600) : null;
+
     const html = `
       <h2>${heading}</h2>
 
@@ -342,7 +341,7 @@ const sendBookingMail = async ({
 
       <p><b>Status:</b> ${booking?.status || "N/A"}</p>
 
-      ${emailFooter(company)}
+      ${emailFooter(company, logoUrl)}
     `;
 
     await sendEmail({
@@ -352,7 +351,29 @@ const sendBookingMail = async ({
       html,
     });
 
-    console.log("[EMAIL] Sent to:", toEmail);
+    // Email each team member
+    for (const m of teamMembers) {
+      if (m?.email) {
+        const memberHtml = `
+          <h2 style="color:#6c2bd9;">📅 You've Been Added to a Meeting</h2>
+          <p>Hi <b>${m.name}</b>,</p>
+          <p><b>${toEmail}</b> has added you to a conference room booking at <b>${company?.name || ""}</b>.</p>
+          <p><b>Room:</b> ${booking?.room_name || "N/A"}</p>
+          <p><b>Date:</b> ${booking?.booking_date || "N/A"}</p>
+          <p><b>Time:</b> ${toAmPm(booking?.start_time)} — ${toAmPm(booking?.end_time)}</p>
+          ${booking?.department ? `<p><b>Department:</b> ${booking.department}</p>` : ""}
+          ${booking?.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
+          ${emailFooter(company, logoUrl)}
+        `;
+        await sendEmail({
+          to: m.email,
+          subject: `You've been added to a meeting – ${booking?.room_name || ""} | ${company?.name || ""}`,
+          html: memberHtml,
+        });
+      }
+    }
+
+    console.log("[EMAIL] Sent to:", toEmail, "| Team members:", teamMembers.length);
   } catch (err) {
     console.error("[EMAIL] Error:", err?.message || err);
   }
@@ -365,13 +386,13 @@ const sendBookingMail = async ({
 const getCompanyInfo = async (companyId) => {
   try {
     const [[company]] = await db.query(
-      `SELECT name, logo_url FROM companies WHERE id = ? LIMIT 1`,
+      `SELECT id, name, logo_url FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
     );
-    return company || { name: "", logo_url: "" };
+    return company || { id: companyId, name: "", logo_url: "" };
   } catch (error) {
     console.error("[getCompanyInfo]", error.message);
-    return { name: "", logo_url: "" };
+    return { id: companyId, name: "", logo_url: "" };
   }
 };
 
@@ -849,6 +870,26 @@ router.delete("/rooms/:id", async (req, res) => {
   }
 });
 
+router.get("/employees/search", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const q = (req.query.q || "").trim();
+    const like = `%${q}%`;
+    const [rows] = await db.query(
+      `SELECT id, name, email, department
+       FROM company_employees
+       WHERE company_id = ? AND is_active = 1
+         AND (name LIKE ? OR department LIKE ?)
+       ORDER BY name ASC LIMIT 20`,
+      [companyId, like, like]
+    );
+    res.json(rows);
+  } catch (err) {
+    console.error("[GET /employees/search]", err.message);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 router.get("/bookings", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
@@ -907,6 +948,7 @@ router.post("/bookings", async (req, res) => {
       booking_date,
       start_time,
       end_time,
+      teamMembers = [],
     } = req.body;
 
     if (!room_id || !booked_by || !department || !booking_date || !start_time || !end_time) {
@@ -944,7 +986,7 @@ router.post("/bookings", async (req, res) => {
       return res.status(409).json({ message: "Time slot already booked for this room" });
     }
 
-    await conn.query(
+    const [bookingResult] = await conn.query(
       `INSERT INTO conference_bookings
        (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -959,6 +1001,17 @@ router.post("/bookings", async (req, res) => {
         end_time,
       ]
     );
+
+    const bookingId = bookingResult.insertId;
+
+    // Save optional team members
+    const validMembers = Array.isArray(teamMembers) ? teamMembers.filter(m => m?.id && m?.name) : [];
+    for (const m of validMembers) {
+      await conn.query(
+        `INSERT INTO conference_booking_members (booking_id, employee_id, name, email) VALUES (?, ?, ?, ?)`,
+        [bookingId, m.id, m.name, m.email || null]
+      );
+    }
 
     await conn.commit();
 
@@ -979,6 +1032,7 @@ router.post("/bookings", async (req, res) => {
         status: "CONFIRMED",
       },
       company: companyInfo,
+      teamMembers: validMembers,
     });
 
     res.status(201).json({ message: "Booking created successfully" });

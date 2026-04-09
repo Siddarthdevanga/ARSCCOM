@@ -236,6 +236,39 @@ const sendCancelEmail = async (email, company, room, booking) => {
   });
 };
 
+const sendTeamMemberEmail = async (memberEmail, memberName, organiserEmail, company, room, booking) => {
+  const logoUrl = await getLogoUrl(company);
+  await sendEmail({
+    to: memberEmail,
+    subject: `You've been added to a meeting – ${room.room_name} | ${company.name}`,
+    html: `
+      <h2 style="color:#6c2bd9;">📅 You've Been Added to a Meeting</h2>
+      <p>Hi <b>${memberName}</b>,</p>
+      <p><b>${organiserEmail}</b> has added you to a conference room booking at <b>${company.name}</b>.</p>
+      <table style="border-collapse:collapse;margin:20px 0;font-size:15px;width:100%;max-width:500px;">
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:10px;font-weight:bold;width:140px;">Room</td>
+          <td style="padding:10px;">${room.room_name} (#${room.room_number})</td>
+        </tr>
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:10px;font-weight:bold;">Date</td>
+          <td style="padding:10px;">${booking.booking_date}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:10px;font-weight:bold;">Time</td>
+          <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #eee;">
+          <td style="padding:10px;font-weight:bold;">Department</td>
+          <td style="padding:10px;">${booking.department}</td>
+        </tr>
+        ${booking.purpose ? `<tr><td style="padding:10px;font-weight:bold;">Purpose</td><td style="padding:10px;">${booking.purpose}</td></tr>` : ""}
+      </table>
+      ${emailFooter(company, logoUrl)}
+    `
+  });
+};
+
 /* ======================================================
    DATABASE HELPERS
 ====================================================== */
@@ -705,7 +738,8 @@ router.post("/company/:slug/book", async (req, res) => {
       purpose = "",
       booking_date,
       start_time: rawStartTime,
-      end_time: rawEndTime
+      end_time: rawEndTime,
+      teamMembers = []
     } = req.body;
 
     const email = normalizeEmail(booked_by);
@@ -784,15 +818,33 @@ router.post("/company/:slug/book", async (req, res) => {
       [company.id, room_id, email, cleanDepartment, cleanPurpose, booking_date, startTime, endTime]
     );
 
-    await sendBookingEmail(email, company, room, {
-      booking_date,
-      start_time: startTime,
-      end_time: endTime,
-      department: cleanDepartment,
-      purpose: cleanPurpose
-    });
+    const bookingId = insertResult.insertId;
+    const bookingDetails = { booking_date, start_time: startTime, end_time: endTime, department: cleanDepartment, purpose: cleanPurpose };
 
-    console.log(`[BOOKING_SUCCESS] ID: ${insertResult.insertId}, Company: ${company.id}, Email: ${email}`);
+    // Save team members
+    const validMembers = Array.isArray(teamMembers)
+      ? teamMembers.filter(m => m && m.id && m.name)
+      : [];
+    if (validMembers.length > 0) {
+      await Promise.all(validMembers.map(m =>
+        db.query(
+          `INSERT INTO conference_booking_members (booking_id, employee_id, name, email) VALUES (?, ?, ?, ?)`,
+          [bookingId, m.id, m.name, m.email || null]
+        )
+      ));
+    }
+
+    // Email organiser
+    await sendBookingEmail(email, company, room, bookingDetails);
+
+    // Email each team member
+    for (const m of validMembers) {
+      if (m.email) {
+        await sendTeamMemberEmail(m.email, m.name, email, company, room, bookingDetails);
+      }
+    }
+
+    console.log(`[BOOKING_SUCCESS] ID: ${bookingId}, Company: ${company.id}, Email: ${email}, Members: ${validMembers.length}`);
 
     res.json({ 
       message: "Booking confirmed successfully",
@@ -801,6 +853,35 @@ router.post("/company/:slug/book", async (req, res) => {
   } catch (error) {
     console.error("[PUBLIC][BOOK]", error);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+});
+
+/**
+ * GET /company/:slug/employees/search - Search employees by name or department
+ */
+router.get("/company/:slug/employees/search", async (req, res) => {
+  try {
+    const slug = normalizeSlug(req.params.slug);
+    const q    = (req.query.q || "").trim();
+
+    const company = await getCompanyBySlug(slug);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    const like = `%${q}%`;
+    const [rows] = await db.execute(
+      `SELECT id, name, email, department
+       FROM company_employees
+       WHERE company_id = ? AND is_active = 1
+         AND (name LIKE ? OR department LIKE ?)
+       ORDER BY name ASC
+       LIMIT 20`,
+      [company.id, like, like]
+    );
+
+    res.json(rows);
+  } catch (err) {
+    console.error("[CONF][EMP_SEARCH]", err);
+    res.status(500).json({ message: "Server error" });
   }
 });
 

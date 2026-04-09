@@ -316,6 +316,11 @@ export default function PublicConferenceBooking() {
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
 
+  const [teamMembers, setTeamMembers]         = useState([]);
+  const [memberSearch, setMemberSearch]       = useState("");
+  const [memberResults, setMemberResults]     = useState([]);
+  const [memberSearching, setMemberSearching] = useState(false);
+
   const [loading, setLoading] = useState(false);
   const [resendTimer, setResendTimer] = useState(0);
 
@@ -560,6 +565,24 @@ export default function PublicConferenceBooking() {
     return () => clearInterval(timer);
   }, [resendTimer]);
 
+  /* ===== TEAM MEMBER SEARCH ===== */
+  useEffect(() => {
+    if (!memberSearch.trim() || !slug) { setMemberResults([]); return; }
+    const timer = setTimeout(async () => {
+      setMemberSearching(true);
+      try {
+        const res = await fetch(`${API}/api/public/conference/company/${slug}/employees/search?q=${encodeURIComponent(memberSearch)}`);
+        const data = await res.json();
+        setMemberResults(Array.isArray(data) ? data.filter(e => !teamMembers.some(m => m.id === e.id)) : []);
+      } catch { setMemberResults([]); }
+      finally { setMemberSearching(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [memberSearch, slug, teamMembers]);
+
+  const addMember  = (emp) => { setTeamMembers(prev => [...prev, emp]); setMemberSearch(""); setMemberResults([]); };
+  const removeMember = (id) => setTeamMembers(prev => prev.filter(m => m.id !== id));
+
   const resendOtp = async () => {
     hideToast();
     
@@ -668,7 +691,8 @@ export default function PublicConferenceBooking() {
             purpose,
             booking_date: date,
             start_time: startTime,
-            end_time: endTime
+            end_time: endTime,
+            teamMembers
           })
         }
       );
@@ -700,6 +724,8 @@ export default function PublicConferenceBooking() {
       setEndTime("");
       setDepartment("");
       setPurpose("");
+      setTeamMembers([]);
+      setMemberSearch("");
       setFormErrors({});
       
       loadBookings();
@@ -1091,6 +1117,45 @@ export default function PublicConferenceBooking() {
                 />
               </div>
 
+              {/* ── Team Members ── */}
+              <div className={styles.formGroup}>
+                <label>Team Members (Optional)</label>
+                <div className={styles.memberSearchWrap}>
+                  <input
+                    type="text"
+                    value={memberSearch}
+                    onChange={e => setMemberSearch(e.target.value)}
+                    placeholder="Search by name or department…"
+                    className={styles.input}
+                  />
+                  {memberSearching && (
+                    <div className={styles.memberDropdown}>
+                      <div className={styles.memberSearching}>Searching…</div>
+                    </div>
+                  )}
+                  {!memberSearching && memberResults.length > 0 && (
+                    <div className={styles.memberDropdown}>
+                      {memberResults.map(e => (
+                        <div key={e.id} className={styles.memberOption} onClick={() => addMember(e)}>
+                          <span className={styles.memberName}>{e.name}</span>
+                          {e.department && <span className={styles.memberDept}>{e.department}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {teamMembers.length > 0 && (
+                  <div className={styles.memberChips}>
+                    {teamMembers.map(m => (
+                      <span key={m.id} className={styles.memberChip}>
+                        {m.name}
+                        <button className={styles.chipRemove} onClick={() => removeMember(m.id)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button
                 onClick={initiateBooking}
                 disabled={loading || !roomId || !date}
@@ -1222,6 +1287,7 @@ export default function PublicConferenceBooking() {
               <p><strong>Time:</strong> {confirmModal.data.startTime} – {confirmModal.data.endTime}</p>
               <p><strong>Department:</strong> {confirmModal.data.department}</p>
               <p><strong>Purpose:</strong> {confirmModal.data.purpose}</p>
+              {teamMembers.length > 0 && <p><strong>Team:</strong> {teamMembers.map(m => m.name).join(", ")}</p>}
             </div>
             <div className={styles.modalActions}>
               <button onClick={confirmBooking} className={styles.primaryBtn} disabled={loading}>

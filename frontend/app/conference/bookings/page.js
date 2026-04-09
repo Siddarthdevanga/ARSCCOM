@@ -122,6 +122,12 @@ export default function ConferenceBookings() {
   const [department, setDepartment] = useState("");
   const [purpose, setPurpose] = useState("");
 
+  const [teamMembers, setTeamMembers]         = useState([]);
+  const [memberSearch, setMemberSearch]       = useState("");
+  const [memberResults, setMemberResults]     = useState([]);
+  const [memberSearching, setMemberSearching] = useState(false);
+  const memberSearchRef                       = useRef(null);
+
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [editStart, setEditStart] = useState("");
@@ -149,6 +155,27 @@ export default function ConferenceBookings() {
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  /* ===== TEAM MEMBER SEARCH ===== */
+  useEffect(() => {
+    if (!memberSearch.trim()) { setMemberResults([]); return; }
+    const timer = setTimeout(async () => {
+      setMemberSearching(true);
+      try {
+        const data = await apiFetch(`/api/conference/employees/search?q=${encodeURIComponent(memberSearch)}`);
+        setMemberResults(Array.isArray(data) ? data.filter(e => !teamMembers.some(m => m.id === e.id)) : []);
+      } catch { setMemberResults([]); }
+      finally { setMemberSearching(false); }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [memberSearch, teamMembers]);
+
+  const addMember = (emp) => {
+    setTeamMembers(prev => [...prev, emp]);
+    setMemberSearch("");
+    setMemberResults([]);
+  };
+  const removeMember = (id) => setTeamMembers(prev => prev.filter(m => m.id !== id));
 
   const dayBookings = useMemo(() => {
     if (!date || !roomId) return [];
@@ -197,8 +224,8 @@ export default function ConferenceBookings() {
   const confirmBooking = async () => {
     setConfirmModal({ isOpen: false, data: null }); setLoading(true);
     try {
-      await apiFetch("/api/conference/bookings", { method: "POST", body: JSON.stringify({ room_id: roomId, booked_by: "ADMIN", department, purpose, booking_date: date, start_time: startTime.includes("M") ? startTime : toAmPmStrict(startTime), end_time: endTime.includes("M") ? endTime : toAmPmStrict(endTime) }) });
-      setResultModal({ isOpen: true, type: "success", message: "Booking created!" }); setStartTime(""); setEndTime(""); setDepartment(""); setPurpose(""); loadAll();
+      await apiFetch("/api/conference/bookings", { method: "POST", body: JSON.stringify({ room_id: roomId, booked_by: "ADMIN", department, purpose, booking_date: date, start_time: startTime.includes("M") ? startTime : toAmPmStrict(startTime), end_time: endTime.includes("M") ? endTime : toAmPmStrict(endTime), teamMembers }) });
+      setResultModal({ isOpen: true, type: "success", message: "Booking created!" }); setStartTime(""); setEndTime(""); setDepartment(""); setPurpose(""); setTeamMembers([]); setMemberSearch(""); loadAll();
     } catch (e) { setResultModal({ isOpen: true, type: "error", message: e.message || "Booking failed" }); } finally { setLoading(false); }
   };
 
@@ -304,6 +331,41 @@ export default function ConferenceBookings() {
                 <input value={purpose} disabled={planBlocked} onChange={(e) => setPurpose(e.target.value)} className={styles.input} placeholder="e.g., Team Meeting" />
               </div>
 
+              {/* ── Team Members ── */}
+              <div className={styles.field}>
+                <label className={styles.fieldLabel}>Team Members (Optional)</label>
+                <div className={styles.memberSearchWrap} ref={memberSearchRef}>
+                  <input
+                    className={styles.input}
+                    value={memberSearch}
+                    onChange={(e) => setMemberSearch(e.target.value)}
+                    placeholder="Search by name or department…"
+                    disabled={planBlocked}
+                  />
+                  {memberSearching && <div className={styles.memberDropdown}><div className={styles.memberSearching}>Searching…</div></div>}
+                  {!memberSearching && memberResults.length > 0 && (
+                    <div className={styles.memberDropdown}>
+                      {memberResults.map(e => (
+                        <div key={e.id} className={styles.memberOption} onClick={() => addMember(e)}>
+                          <span className={styles.memberName}>{e.name}</span>
+                          {e.department && <span className={styles.memberDept}>{e.department}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {teamMembers.length > 0 && (
+                  <div className={styles.memberChips}>
+                    {teamMembers.map(m => (
+                      <span key={m.id} className={styles.memberChip}>
+                        {m.name}
+                        <button className={styles.chipRemove} onClick={() => removeMember(m.id)}>×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button disabled={planBlocked || loading} onClick={initiateBooking} className={styles.bookBtn}>
                 {loading ? "Processing…" : "Book Room"}
               </button>
@@ -362,7 +424,7 @@ export default function ConferenceBookings() {
       {/* ===== MODALS ===== */}
       <Modal isOpen={confirmModal.isOpen} onClose={() => setConfirmModal({ isOpen: false, data: null })} title="Confirm Booking" type="info">
         {confirmModal.data && (<>
-          <div className={styles.mInfo}><p><b>Room:</b> {confirmModal.data.room} {confirmModal.data.roomNumber && `(#${confirmModal.data.roomNumber})`}</p><p><b>Date:</b> {confirmModal.data.date}</p><p><b>Time:</b> {confirmModal.data.startTime} – {confirmModal.data.endTime}</p><p><b>Dept:</b> {confirmModal.data.department}</p><p><b>Purpose:</b> {confirmModal.data.purpose}</p></div>
+          <div className={styles.mInfo}><p><b>Room:</b> {confirmModal.data.room} {confirmModal.data.roomNumber && `(#${confirmModal.data.roomNumber})`}</p><p><b>Date:</b> {confirmModal.data.date}</p><p><b>Time:</b> {confirmModal.data.startTime} – {confirmModal.data.endTime}</p><p><b>Dept:</b> {confirmModal.data.department}</p><p><b>Purpose:</b> {confirmModal.data.purpose}</p>{teamMembers.length > 0 && <p><b>Team:</b> {teamMembers.map(m => m.name).join(", ")}</p>}</div>
           <div className={styles.mActions}><button className={styles.mPrimary} onClick={confirmBooking} disabled={loading}>{loading ? "Booking…" : "Confirm"}</button><button className={styles.mSecondary} onClick={() => setConfirmModal({ isOpen: false, data: null })} disabled={loading}>Cancel</button></div>
         </>)}
       </Modal>
