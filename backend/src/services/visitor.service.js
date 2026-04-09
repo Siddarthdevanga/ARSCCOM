@@ -1,7 +1,7 @@
 import { db } from "../config/db.js";
 import { uploadToS3, getPresignedUrl } from "./s3.service.js";
-import { sendEmployeeNotificationMail, sendVisitorPassMail } from "../utils/visitorMail.service.js";
-import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
+import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
+import { sendVisitorPassWhatsApp, sendApprovalWhatsApp } from "../utils/whatsapp.js";
 import crypto from "crypto";
 
 /* ======================================================
@@ -146,19 +146,21 @@ export const saveVisitor = async (companyId, data, file) => {
     /* ── Resolve employee ── */
     let resolvedEmployeeId    = null;
     let resolvedEmployeeEmail = null;
+    let resolvedEmployeePhone = null;
     let resolvedEmployeeName  = personToMeet || null;
 
     if (employeeId) {
       const [[emp]] = await conn.execute(
-        `SELECT id, name, email FROM company_employees
+        `SELECT id, name, email, phone FROM company_employees
          WHERE id = ? AND company_id = ? AND is_active = 1`,
         [employeeId, companyId]
       );
       if (emp) {
         resolvedEmployeeId    = emp.id;
         resolvedEmployeeEmail = emp.email;
+        resolvedEmployeePhone = emp.phone;
         resolvedEmployeeName  = emp.name;
-        console.log(`[VISITOR] Employee resolved: ${emp.name} <${emp.email}>`);
+        console.log(`[VISITOR] Employee resolved: ${emp.name} <${emp.email}> | phone: ${emp.phone || "none"}`);
       } else {
         console.warn(`[VISITOR] Employee id=${employeeId} not found or inactive for company ${companyId}`);
       }
@@ -245,10 +247,7 @@ export const saveVisitor = async (companyId, data, file) => {
       [companyId]
     );
 
-    // Short-lived presigned URLs for image generation (pass PNG)
-    const logoPresigned  = companyInfo.logo_url ? await getPresignedUrl(companyInfo.logo_url, 300)    : null;
-    const photoPresigned = photoUrl              ? await getPresignedUrl(photoUrl, 300)                : null;
-    // 48-hour presigned URLs for emails (direct S3 links work in all email clients)
+    // 48-hour presigned URLs for emails
     const logoForEmail   = companyInfo.logo_url ? await getPresignedUrl(companyInfo.logo_url, 172800) : null;
     const photoForEmail  = photoUrl              ? await getPresignedUrl(photoUrl, 172800)             : null;
 
@@ -280,45 +279,18 @@ export const saveVisitor = async (companyId, data, file) => {
        Non-blocking — errors logged, never thrown.
        Both phone and email are required fields.
     ────────────────────────────────────────────────────────────── */
-    if (phone && email) {
+    /* ── Send visitor pass link via WhatsApp ── */
+    if (phone) {
       try {
-        console.log("[VISITOR] Sending visitor pass via WHATSAPP to:", phone);
+        console.log("[VISITOR] Sending visitor pass link via WHATSAPP to:", phone);
 
-        // Generate pass image buffer (uses presigned URLs — bucket is private)
-        const { generateVisitorPassImage } = await import("../utils/visitor-pass-image.js");
-        const passImageBuffer = await generateVisitorPassImage({
-          company: {
-            id:   companyId,
-            name: companyInfo.name,
-            logo: logoPresigned,      // presigned URL valid 5 min (enough for generation)
-          },
-          visitor: {
-            visitorCode,
-            name,
-            phone,
-            email,
-            photoUrl:       photoPresigned, // presigned URL valid 5 min
-            checkIn:        storedCheckIn || checkInMySQL,
-            checkInDisplay,
-            personToMeet:   resolvedEmployeeName || "Reception",
-            purpose:        purpose || "Visit",
-          },
-        });
-
-        // Send via WhatsApp (image + text template)
         await sendVisitorPassWhatsApp({
           phone,
-          passImageBuffer,
-          company: {
-            id:   companyId,
-            name: companyInfo.name,
-          },
+          company: { name: companyInfo.name },
           visitor: {
             visitorCode,
             name,
-            phone,
-            personToMeet:   resolvedEmployeeName || "Reception",
-            checkIn:        storedCheckIn || checkInMySQL,
+            purpose:      purpose || "Visit",
             checkInDisplay,
           },
         });
@@ -328,45 +300,45 @@ export const saveVisitor = async (companyId, data, file) => {
           [visitorId]
         );
 
-        console.log("[VISITOR] WhatsApp pass sent successfully to:", phone);
+        console.log("[VISITOR] WhatsApp pass link sent to:", phone);
       } catch (err) {
-        // Non-fatal — visitor is already registered in DB
         console.error("[VISITOR] WHATSAPP PASS ERROR:", err.message);
       }
     } else {
-      console.warn("[VISITOR] Phone or email missing - visitor pass not sent");
+      console.warn("[VISITOR] No phone — visitor pass not sent");
     }
 
-    /* ── Send employee notification email (unchanged) ── */
-    if (resolvedEmployeeEmail) {
+    /* ── Send approval request via WhatsApp to employee ── */
+    if (resolvedEmployeePhone) {
       try {
-        console.log("[VISITOR] Sending employee notification to:", resolvedEmployeeEmail);
+        console.log("[VISITOR] Sending approval WhatsApp to employee:", resolvedEmployeePhone);
+        await sendApprovalWhatsApp({
+          phone: resolvedEmployeePhone,
+          visitor: { visitorCode, name },
+          responseToken,
+        });
+        console.log("[VISITOR] Approval WhatsApp sent to:", resolvedEmployeePhone);
+      } catch (err) {
+        console.error("[VISITOR] APPROVAL WHATSAPP ERROR:", err.message);
+      }
+    } else if (resolvedEmployeeEmail) {
+      /* fallback — employee has no phone, send email */
+      try {
+        const { sendEmployeeNotificationMail } = await import("../utils/visitorMail.service.js");
         await sendEmployeeNotificationMail({
-          company: {
-            id:   companyId,
-            name: companyInfo.name,
-            logo: logoForEmail,   // 48hr presigned URL — direct S3 link, works in all email clients
-          },
-          employee: {
-            name:  resolvedEmployeeName,
-            email: resolvedEmployeeEmail,
-          },
+          company: { id: companyId, name: companyInfo.name, logo: logoForEmail },
+          employee: { name: resolvedEmployeeName, email: resolvedEmployeeEmail },
           visitor: {
-            visitorCode,
-            name,
-            phone,
-            email:       email || null,
-            fromCompany: fromCompany || null,
-            purpose:     purpose || "Visit",
-            checkIn:        storedCheckIn || checkInMySQL,
-            checkInDisplay,
-            photoUrl:    photoForEmail, // 48h presigned URL — valid while employee responds
+            visitorCode, name, phone, email: email || null,
+            fromCompany: fromCompany || null, purpose: purpose || "Visit",
+            checkIn: storedCheckIn || checkInMySQL, checkInDisplay,
+            photoUrl: photoForEmail,
           },
           responseToken,
         });
-        console.log("[VISITOR] Employee notification sent");
+        console.log("[VISITOR] Employee notification email sent (no phone fallback)");
       } catch (err) {
-        console.error("[VISITOR] EMPLOYEE NOTIFICATION MAIL ERROR:", err.message);
+        console.error("[VISITOR] EMPLOYEE NOTIFICATION EMAIL ERROR:", err.message);
       }
     }
 

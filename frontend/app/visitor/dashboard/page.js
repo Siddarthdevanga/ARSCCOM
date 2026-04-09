@@ -278,8 +278,8 @@ export default function VisitorDashboard() {
       "Scan the QR code with your phone camera",
       "Or visit the URL above in your browser",
       "Complete the registration form",
-      "A visitor pass will be sent to your email instantly",
-      "Show the pass at the reception desk",
+      "A visitor pass link will be sent to their WhatsApp instantly",
+      "Show the WhatsApp pass link at the reception desk",
     ];
 
     ctx.fillStyle = "#333333";
@@ -435,7 +435,7 @@ export default function VisitorDashboard() {
               <li>Print or display the QR code at reception</li>
               <li>Visitors scan with their phone</li>
               <li>They complete the registration form</li>
-              <li>A pass is sent to their email instantly</li>
+              <li>A pass link is sent to their WhatsApp instantly</li>
               <li>The person to meet gets a notification</li>
             </ol>
           </div>
