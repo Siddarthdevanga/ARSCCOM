@@ -205,7 +205,7 @@ export const sendVisitorPassWhatsApp = async ({
      [2] = button 1 suffix — TOKEN/accept
      [3] = button 2 suffix — TOKEN/decline
 
-   UUID: GUPSHUP_APPROVAL_TEMPLATE_ID = 4a1ca8eb-0bf5-4617-9338-fc25a483a8a3
+   UUID: GUPSHUP_APPROVAL_TEMPLATE_ID = a649ff25-ef35-46d6-9f13-b2bed1af439b
 ====================================================== */
 export const sendApprovalWhatsApp = async ({
   phone,
