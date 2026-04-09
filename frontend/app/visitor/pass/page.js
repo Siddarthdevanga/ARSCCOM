@@ -65,7 +65,7 @@ function VisitorPassContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const visitorCode = useMemo(() => searchParams.get("visitorCode"), [searchParams]);
+  const visitorCode = useMemo(() => searchParams.get("code") || searchParams.get("visitorCode"), [searchParams]);
 
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState(null);
