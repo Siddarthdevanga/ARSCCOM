@@ -212,7 +212,7 @@ export const sendApprovalWhatsApp = async ({
   const visitorName  = visitor.name        || "A visitor";
   const visitorCode  = visitor.visitorCode || "";
 
-  const passUrl      = `${frontendUrl}/v/pass?code=${visitorCode}`;
+  const passUrl      = `${frontendUrl}/visitor/pass?code=${visitorCode}`;
 
   // Button suffixes — appended to base URL set in Gupshup template
   const approveSuffix = `${responseToken}/accept`;
