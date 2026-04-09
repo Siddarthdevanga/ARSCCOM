@@ -100,7 +100,7 @@ export const getVisitorPass = async (req, res) => {
 ========================================================= */
 export const getPublicVisitorPass = async (req, res) => {
   try {
-    const { visitorCode } = req.params;
+    const visitorCode = decodeURIComponent(req.params.visitorCode || "");
 
     if (!visitorCode) {
       return res.status(400).json({ success: false, message: "Visitor code is required" });

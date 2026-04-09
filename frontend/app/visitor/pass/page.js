@@ -65,7 +65,18 @@ function VisitorPassContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const visitorCode = useMemo(() => searchParams.get("code") || searchParams.get("visitorCode"), [searchParams]);
+  const visitorCode = useMemo(() => {
+    const raw = searchParams.get("code") || searchParams.get("visitorCode") || "";
+    // If the param is a full URL (WhatsApp sometimes passes the URL as the code value),
+    // extract the actual code from it
+    if (raw.startsWith("http")) {
+      try {
+        const u = new URL(raw);
+        return u.searchParams.get("code") || u.searchParams.get("visitorCode") || raw;
+      } catch { return raw; }
+    }
+    return raw;
+  }, [searchParams]);
 
   const [loading, setLoading] = useState(true);
   const [company, setCompany] = useState(null);
@@ -97,7 +108,7 @@ function VisitorPassContent() {
     const loadPass = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/public/code/${visitorCode}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/public/code/${encodeURIComponent(visitorCode)}`,
           { signal: controller.signal }
         );
         const data = await res.json();
