@@ -308,8 +308,25 @@ export const saveVisitor = async (companyId, data, file) => {
       console.warn("[VISITOR] No phone — visitor pass not sent");
     }
 
-    /* ── Send approval request via WhatsApp to employee ── */
+    /* ── Send visitor pass + approval request via WhatsApp to employee ── */
     if (resolvedEmployeePhone) {
+      try {
+        console.log("[VISITOR] Sending visitor pass WhatsApp to employee:", resolvedEmployeePhone);
+        await sendVisitorPassWhatsApp({
+          phone: resolvedEmployeePhone,
+          company: { name: companyInfo.name },
+          visitor: {
+            visitorCode,
+            name,
+            purpose:       purpose || "Visit",
+            checkInDisplay,
+          },
+        });
+        console.log("[VISITOR] Visitor pass WhatsApp sent to employee:", resolvedEmployeePhone);
+      } catch (err) {
+        console.error("[VISITOR] EMPLOYEE PASS WHATSAPP ERROR:", err.message);
+      }
+
       try {
         console.log("[VISITOR] Sending approval WhatsApp to employee:", resolvedEmployeePhone);
         await sendApprovalWhatsApp({
