@@ -214,12 +214,9 @@ export const sendApprovalWhatsApp = async ({
 }) => {
   const destination  = normalizePhone(phone);
   const templateId   = process.env.GUPSHUP_APPROVAL_TEMPLATE_ID;
-  const frontendUrl  = process.env.FRONTEND_URL || "https://www.promeet.zodopt.com";
 
   const visitorName  = visitor.name        || "A visitor";
   const visitorCode  = visitor.visitorCode || "";
-
-  const passUrl      = `${frontendUrl}/visitor/pass?code=${visitorCode}`;
 
   // Button suffixes — appended to base URL set in Gupshup template
   const approveSuffix = `${responseToken}/accept`;
@@ -227,15 +224,13 @@ export const sendApprovalWhatsApp = async ({
 
   console.log(`[WHATSAPP][APPROVAL] → ${destination} | visitor: ${visitorName} | token: ${responseToken}`);
 
+  // Template body: {{1}} = visitor name, {{2}} = visitor code only
+  // (base URL is hardcoded in template: https://www.promeet.zodopt.com/visitor/pass?code={{2}})
+  // Button {{1}} for each button = dynamic URL suffix
   await postTemplate({
     destination,
     templateId,
-    // Body params only — button suffixes go in the separate buttons array
-    params: [visitorName, passUrl],
-    buttons: [
-      { type: "url", index: "0", value: approveSuffix },
-      { type: "url", index: "1", value: declineSuffix },
-    ],
+    params: [visitorName, visitorCode, approveSuffix, declineSuffix],
   });
 
   console.log(`[WHATSAPP][APPROVAL] Sent to ${destination}`);
