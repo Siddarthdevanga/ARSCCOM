@@ -290,7 +290,8 @@ export const saveVisitor = async (companyId, data, file) => {
           visitor: {
             visitorCode,
             name,
-            purpose:      purpose || "Visit",
+            purpose:       purpose || "Visit",
+            personToMeet:  resolvedEmployeeName || null,
             checkInDisplay,
           },
         });
@@ -321,25 +322,8 @@ export const saveVisitor = async (companyId, data, file) => {
       } catch (err) {
         console.error("[VISITOR] APPROVAL WHATSAPP ERROR:", err.message);
       }
-    } else if (resolvedEmployeeEmail) {
-      /* fallback — employee has no phone, send email */
-      try {
-        const { sendEmployeeNotificationMail } = await import("../utils/visitorMail.service.js");
-        await sendEmployeeNotificationMail({
-          company: { id: companyId, name: companyInfo.name, logo: logoForEmail },
-          employee: { name: resolvedEmployeeName, email: resolvedEmployeeEmail },
-          visitor: {
-            visitorCode, name, phone, email: email || null,
-            fromCompany: fromCompany || null, purpose: purpose || "Visit",
-            checkIn: storedCheckIn || checkInMySQL, checkInDisplay,
-            photoUrl: photoForEmail,
-          },
-          responseToken,
-        });
-        console.log("[VISITOR] Employee notification email sent (no phone fallback)");
-      } catch (err) {
-        console.error("[VISITOR] EMPLOYEE NOTIFICATION EMAIL ERROR:", err.message);
-      }
+    } else {
+      console.log("[VISITOR] Employee has no phone — approval message skipped");
     }
 
     return {

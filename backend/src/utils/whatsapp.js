@@ -166,6 +166,7 @@ export const sendVisitorPassWhatsApp = async ({
   const visitorName  = visitor.name           || "Visitor";
   const purpose      = visitor.purpose        || "Visit";
   const checkIn      = visitor.checkInDisplay || visitor.checkIn || "-";
+  const personToMeet = visitor.personToMeet   || "-";
 
   const passUrl = `${frontendUrl}/v/pass?code=${visitorCode}`;
 
@@ -174,7 +175,7 @@ export const sendVisitorPassWhatsApp = async ({
   await postTemplate({
     destination,
     templateId,
-    params: [companyName, passUrl, visitorCode, visitorName, purpose, checkIn],
+    params: [companyName, passUrl, visitorCode, visitorName, purpose, checkIn, personToMeet],
   });
 
   console.log(`[WHATSAPP][PASS] Sent to ${destination}`);
