@@ -1,6 +1,5 @@
 import express from "express";
 import { db } from "../config/db.js";
-import { sendVisitorPassWhatsApp } from "../utils/whatsapp.js";
 
 const router = express.Router();
 
@@ -66,20 +65,6 @@ router.get("/:token/:action", async (req, res) => {
     );
 
     const isAccepted = newStatus === "accepted";
-
-    // Send WhatsApp to visitor with their pass link (fire-and-forget)
-    if (visitor.phone) {
-      sendVisitorPassWhatsApp({
-        phone: visitor.phone,
-        company: { id: visitor.company_id, name: visitor.company_name },
-        visitor: {
-          visitorCode:     visitor.visitor_code,
-          name:            visitor.name,
-          purpose:         visitor.purpose,
-          checkInDisplay:  visitor.check_in_display,
-        },
-      }).catch(err => console.error("[VISIT_RESPONSE] WhatsApp to visitor failed:", err));
-    }
 
     return res.send(renderPage(
       isAccepted ? "Visit Accepted ✅" : "Visit Declined ❌",
