@@ -163,6 +163,18 @@ function PublicPassContent() {
               <span className={styles.rowValue}>{visitor.email}</span>
             </div>
           )}
+          {visitor.personToMeet && (
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Meeting</span>
+              <span className={styles.rowValue}>{visitor.personToMeet}</span>
+            </div>
+          )}
+          {visitor.purpose && (
+            <div className={styles.row}>
+              <span className={styles.rowLabel}>Purpose</span>
+              <span className={styles.rowValue}>{visitor.purpose}</span>
+            </div>
+          )}
           <div className={styles.row}>
             <span className={styles.rowLabel}>Check-in</span>
             <span className={styles.rowValue}>{formatIST(visitor.checkIn)}</span>

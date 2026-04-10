@@ -109,7 +109,7 @@ export const getPublicVisitorPass = async (req, res) => {
     const [rows] = await db.execute(
       `SELECT
         v.visitor_code, v.name, v.phone, v.email,
-        v.photo_url, v.company_id,
+        v.photo_url, v.company_id, v.person_to_meet, v.purpose,
         DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
         DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
@@ -132,16 +132,18 @@ export const getPublicVisitorPass = async (req, res) => {
       success: true,
       company: { id: v.company_id, name: v.company_name },
       visitor: {
-        visitorCode: v.visitor_code,
-        name: v.name,
-        phone: v.phone,
-        email: v.email,
+        visitorCode:  v.visitor_code,
+        name:         v.name,
+        phone:        v.phone,
+        email:        v.email,
         photoUrl,
-        checkIn: v.check_in,
-        checkOut: v.check_out,
-        status: v.status,
-        visitStatus: v.visit_status,
-        passIssued: v.pass_mail_sent > 0,
+        personToMeet: v.person_to_meet || null,
+        purpose:      v.purpose        || null,
+        checkIn:      v.check_in,
+        checkOut:     v.check_out,
+        status:       v.status,
+        visitStatus:  v.visit_status,
+        passIssued:   v.pass_mail_sent > 0,
       }
     });
 
