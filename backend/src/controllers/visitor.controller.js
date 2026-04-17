@@ -113,7 +113,7 @@ export const getPublicVisitorPass = async (req, res) => {
         DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
         DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
-        c.name AS company_name, c.logo_url AS company_logo
+        c.name AS company_name, c.logo_url AS company_logo, c.whatsapp_url
        FROM visitors v
        INNER JOIN companies c ON c.id = v.company_id
        WHERE v.visitor_code = ?
@@ -130,7 +130,7 @@ export const getPublicVisitorPass = async (req, res) => {
 
     return res.json({
       success: true,
-      company: { id: v.company_id, name: v.company_name },
+      company: { id: v.company_id, name: v.company_name, whatsappUrl: v.whatsapp_url || null },
       visitor: {
         visitorCode:  v.visitor_code,
         name:         v.name,

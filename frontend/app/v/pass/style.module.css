@@ -196,7 +196,7 @@
 /* ===== WHATSAPP ===== */
 .whatsappBtn {
   width: 100%;
-  padding: 13px;
+  padding: 13px 16px;
   background: #25d366;
   color: #fff;
   border: none;
@@ -205,6 +205,10 @@
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 .whatsappBtn:hover {
