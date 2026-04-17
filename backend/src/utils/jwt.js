@@ -7,6 +7,6 @@ export const generateToken = async (user) => {
   return jwt.sign(
     { user_id: user.id, company_id: user.company_id },
     s.JWT_SECRET,
-    { expiresIn: "1d" }
+    { expiresIn: "12h" }
   );
 };

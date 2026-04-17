@@ -12,7 +12,7 @@ import { sendEmail } from "../utils/mailer.js";
 const PASSWORD_MIN_LENGTH = 8;
 const RESET_CODE_EXPIRY_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 30;
-const JWT_EXPIRY = "7d";
+const JWT_EXPIRY = "12h";
 const BCRYPT_ROUNDS = 10;
 
 // Only block cancelled subscriptions, allow expired to login for renewal

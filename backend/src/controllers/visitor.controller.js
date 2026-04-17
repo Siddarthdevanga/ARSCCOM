@@ -126,6 +126,15 @@ export const getPublicVisitorPass = async (req, res) => {
     }
 
     const v = rows[0];
+
+    // Pass link expires 12 hours after check-in
+    if (v.check_in) {
+      const expiredAt = new Date(v.check_in).getTime() + 12 * 60 * 60 * 1000;
+      if (Date.now() > expiredAt) {
+        return res.status(410).json({ success: false, message: "This visitor pass has expired." });
+      }
+    }
+
     const photoUrl = v.photo_url ? await getPresignedUrl(v.photo_url) : null;
 
     return res.json({

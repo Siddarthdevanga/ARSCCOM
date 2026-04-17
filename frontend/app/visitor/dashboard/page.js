@@ -99,13 +99,34 @@ export default function VisitorDashboard() {
     const stored = localStorage.getItem("company");
     if (!token) { router.replace("/"); return; }
 
+    // Auto-logout when JWT expires (catches idle sessions with no API calls)
+    let autoLogoutTimer = null;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const msLeft  = payload.exp * 1000 - Date.now();
+      if (msLeft <= 0) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("company");
+        router.replace("/");
+        return;
+      }
+      autoLogoutTimer = setTimeout(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("company");
+        router.replace("/");
+      }, msLeft);
+    } catch {}
+
     if (stored) {
       try { setCompany(JSON.parse(stored)); } catch {}
     }
 
     fetchDashboard().then(() => setLoading(false));
     pollTimer.current = setInterval(fetchDashboard, 30_000);
-    return () => clearInterval(pollTimer.current);
+    return () => {
+      clearInterval(pollTimer.current);
+      if (autoLogoutTimer) clearTimeout(autoLogoutTimer);
+    };
   }, [fetchDashboard]);
 
   useEffect(() => {

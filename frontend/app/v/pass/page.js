@@ -60,7 +60,7 @@ function PublicPassContent() {
 
   useEffect(() => {
     if (!visitorCode) {
-      setError("Invalid visitor pass link");
+      setError({ message: "Invalid visitor pass link", expired: false });
       setLoading(false);
       return;
     }
@@ -72,12 +72,16 @@ function PublicPassContent() {
           { signal: controller.signal }
         );
         const data = await res.json();
-        if (!res.ok) throw new Error(data?.message || "Visitor not found");
+        if (!res.ok) {
+          const err = new Error(data?.message || "Visitor not found");
+          err.status = res.status;
+          throw err;
+        }
         setCompany(data.company || null);
         setVisitor(data.visitor || null);
       } catch (err) {
         if (err.name !== "AbortError") {
-          setError(err.message || "Unable to load visitor pass");
+          setError({ message: err.message || "Unable to load visitor pass", expired: err.status === 410 });
         }
       } finally {
         setLoading(false);
@@ -101,9 +105,16 @@ function PublicPassContent() {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.errorIcon}>⚠️</div>
-          <h2 className={styles.errorTitle}>Pass Not Found</h2>
-          <p className={styles.errorMsg}>{error}</p>
+          <div className={styles.errorIcon}>{error.expired ? "⏰" : "⚠️"}</div>
+          <h2 className={styles.errorTitle}>
+            {error.expired ? "Pass Expired" : "Pass Not Found"}
+          </h2>
+          <p className={styles.errorMsg}>{error.message}</p>
+          {error.expired && (
+            <p className={styles.errorMsg} style={{ marginTop: 8, fontSize: 12 }}>
+              Visitor passes are valid for 12 hours from check-in.
+            </p>
+          )}
         </div>
         <div className={styles.poweredBy}>Powered by Promeet · Visitor Management</div>
       </div>
