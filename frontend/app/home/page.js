@@ -216,42 +216,54 @@ const CalendarSVG = () => (
 );
 
 function InsightPanel({ items }) {
-  const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState([]);
+  const [visible, setVisible]   = useState(false);
+  const [current, setCurrent]   = useState(0);
+  const [fading,  setFading]    = useState(false);
+  const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (items.length > 0) {
-      const t = setTimeout(() => setVisible(true), 800);
-      return () => clearTimeout(t);
-    }
+    if (items.length === 0) return;
+    const t = setTimeout(() => setVisible(true), 800);
+    return () => clearTimeout(t);
   }, [items]);
 
-  const dismiss = (idx) => {
-    setDismissed((prev) => [...prev, idx]);
-  };
+  useEffect(() => {
+    if (!visible || items.length <= 1) return;
+    const interval = setInterval(() => {
+      setFading(true);
+      setTimeout(() => {
+        setCurrent((prev) => (prev + 1) % items.length);
+        setFading(false);
+      }, 350);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [visible, items.length]);
 
-  const activeItems = items.filter((_, i) => !dismissed.includes(i));
+  if (!visible || dismissed || items.length === 0) return null;
 
-  if (!visible || activeItems.length === 0) return null;
+  const item = items[current];
 
   return (
-    <div className={styles.insightPanel}>
-      {items.map((item, i) =>
-        dismissed.includes(i) ? null : (
-          <div key={i} className={styles.insightCard}>
-            <div className={styles.insightIcon} data-type={item.type}>
-              {item.type === "visitor" ? <VisitorSVG /> : <CalendarSVG />}
+    <div className={`${styles.insightPanel} ${fading ? styles.insightFading : ""}`}>
+      <div className={styles.insightCard}>
+        <div className={styles.insightIcon} data-type={item.type}>
+          {item.type === "visitor" ? <VisitorSVG /> : <CalendarSVG />}
+        </div>
+        <div className={styles.insightBody}>
+          <p className={styles.insightLabel}>{item.type === "visitor" ? "Visitors" : "Conference"}</p>
+          <p className={styles.insightText}>{item.message}</p>
+          {items.length > 1 && (
+            <div className={styles.insightDots}>
+              {items.map((_, i) => (
+                <span key={i} className={`${styles.insightDot} ${i === current ? styles.insightDotActive : ""}`} />
+              ))}
             </div>
-            <div className={styles.insightBody}>
-              <p className={styles.insightLabel}>{item.type === "visitor" ? "Visitors" : "Conference"}</p>
-              <p className={styles.insightText}>{item.message}</p>
-            </div>
-            <button className={styles.insightClose} onClick={() => dismiss(i)} aria-label="Dismiss">
-              <X size={13} />
-            </button>
-          </div>
-        )
-      )}
+          )}
+        </div>
+        <button className={styles.insightClose} onClick={() => setDismissed(true)} aria-label="Dismiss">
+          <X size={13} />
+        </button>
+      </div>
     </div>
   );
 }

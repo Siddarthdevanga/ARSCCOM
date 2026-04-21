@@ -832,24 +832,26 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   INSIGHT NOTIFICATION PANEL — left side, transparent container
+   INSIGHT NOTIFICATION PANEL — left side, rotating single card
    ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes insightFadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 .insightPanel {
   position: fixed;
   bottom: clamp(1rem, 3vh, 1.5rem);
   left: clamp(0.75rem, 2vw, 1.25rem);
   z-index: 9000;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: clamp(260px, 80vw, 320px);
+  width: clamp(270px, 82vw, 330px);
   pointer-events: none;
   animation: insightFadeIn 0.5s ease both;
+  transition: opacity 0.35s ease;
 }
 
-@keyframes insightFadeIn {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+.insightFading {
+  opacity: 0;
 }
 
 .insightCard {
@@ -858,12 +860,11 @@
   align-items: flex-start;
   gap: 12px;
   padding: 14px 12px 14px 14px;
-  background: rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: #ffffff;
+  border: 1.5px solid rgba(109, 40, 217, 0.18);
+  border-left: 4px solid #6d28d9;
   border-radius: 14px;
-  box-shadow: 0 4px 24px rgba(108, 43, 217, 0.10), 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 24px rgba(108, 43, 217, 0.14), 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .insightIcon {
@@ -877,12 +878,16 @@
 }
 
 .insightIcon[data-type="visitor"] {
-  background: rgba(109, 40, 217, 0.12);
+  background: rgba(109, 40, 217, 0.10);
   color: #6d28d9;
 }
 
 .insightIcon[data-type="booking"] {
-  background: rgba(5, 150, 105, 0.12);
+  background: rgba(5, 150, 105, 0.10);
+  color: #059669;
+}
+
+.insightIcon[data-type="booking"] ~ .insightBody .insightLabel {
   color: #059669;
 }
 
@@ -905,7 +910,28 @@
   font-weight: 500;
   color: #1a1a2e;
   line-height: 1.45;
-  margin: 0;
+  margin: 0 0 6px;
+}
+
+.insightDots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.insightDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: background 0.3s, transform 0.3s;
+  display: inline-block;
+}
+
+.insightDotActive {
+  background: #6d28d9;
+  transform: scale(1.3);
 }
 
 .insightClose {
