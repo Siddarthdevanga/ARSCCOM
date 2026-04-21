@@ -481,3 +481,32 @@ export const resendVisitorPass = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message || "Failed to resend visitor pass" });
   }
 };
+
+/* =========================================================
+   YESTERDAY SUMMARY — for home page insight notifications
+========================================================= */
+export const getYesterdaySummary = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const [[{ visitors }]] = await db.execute(
+      `SELECT COUNT(*) AS visitors FROM visitors
+       WHERE company_id = ? AND DATE(check_in) = CURDATE() - INTERVAL 1 DAY`,
+      [companyId]
+    );
+
+    const [[{ bookings }]] = await db.execute(
+      `SELECT COUNT(*) AS bookings FROM conference_bookings
+       WHERE company_id = ? AND DATE(start_time) = CURDATE() - INTERVAL 1 DAY
+         AND status != 'cancelled'`,
+      [companyId]
+    );
+
+    return res.json({ success: true, visitors: Number(visitors), bookings: Number(bookings) });
+  } catch (error) {
+    console.error("YESTERDAY SUMMARY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch summary" });
+  }
+};
+

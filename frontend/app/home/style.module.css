@@ -830,3 +830,100 @@
     transition-duration: 0.1ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INSIGHT NOTIFICATION PANEL — left side, transparent container
+   ═══════════════════════════════════════════════════════════════════════════ */
+.insightPanel {
+  position: fixed;
+  bottom: clamp(1rem, 3vh, 1.5rem);
+  left: clamp(0.75rem, 2vw, 1.25rem);
+  z-index: 9000;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: clamp(260px, 80vw, 320px);
+  pointer-events: none;
+  animation: insightFadeIn 0.5s ease both;
+}
+
+@keyframes insightFadeIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.insightCard {
+  pointer-events: all;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 12px 14px 14px;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 4px 24px rgba(108, 43, 217, 0.10), 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.insightIcon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.insightIcon[data-type="visitor"] {
+  background: rgba(109, 40, 217, 0.12);
+  color: #6d28d9;
+}
+
+.insightIcon[data-type="booking"] {
+  background: rgba(5, 150, 105, 0.12);
+  color: #059669;
+}
+
+.insightBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.insightLabel {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #6c2bd9;
+  margin: 0 0 3px;
+}
+
+.insightText {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #1a1a2e;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.insightClose {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+
+.insightClose:hover {
+  color: #374151;
+  background: rgba(0,0,0,0.06);
+}
+

@@ -9,6 +9,7 @@ import {
   checkoutVisitor,
   resendVisitorPass,
   updateVisitStatus,
+  getYesterdaySummary,
 } from "../controllers/visitor.controller.js";
 
 const router = express.Router();
@@ -28,6 +29,9 @@ router.post("/", authenticate, upload.single("photo"), createVisitor);
 
 /* ── DASHBOARD ── */
 router.get("/dashboard", authenticate, getVisitorDashboard);
+
+/* ── YESTERDAY SUMMARY ── */
+router.get("/yesterday-summary", authenticate, getYesterdaySummary);
 
 /* ── VISITOR PASS (ADMIN) ── */
 router.get("/code/:visitorCode", authenticate, getVisitorPass);

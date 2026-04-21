@@ -12,7 +12,6 @@ import {
   Crown,
   Clock,
   TrendingUp,
-  Download,
   AlertCircle,
   ChevronRight,
   Settings,
@@ -176,6 +175,88 @@ function formatDate(iso) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   INSIGHT NOTIFICATION MESSAGES (7 days, professional)
+   ═══════════════════════════════════════════════════════════════════════════ */
+const VISITOR_MSGS = [
+  (n) => `${n} visitor${n !== 1 ? "s" : ""} came through on Sunday. Your office never really clocks out.`,
+  (n) => `Strong start — ${n} visitor${n !== 1 ? "s" : ""} walked in on Monday. The week is already winning.`,
+  (n) => `${n} visitor${n !== 1 ? "s" : ""} checked in yesterday. Mid-week and the momentum is building.`,
+  (n) => `Wednesday brought in ${n} visitor${n !== 1 ? "s" : ""}. Halfway through the week, fully on track.`,
+  (n) => `${n} visitor${n !== 1 ? "s" : ""} yesterday. The pre-weekend push is real.`,
+  (n) => `${n} visitor${n !== 1 ? "s" : ""} came through on Friday. A great way to close the week.`,
+  (n) => `${n} visitor${n !== 1 ? "s" : ""} on a Saturday. Some teams just do not wait for Monday.`,
+];
+
+const BOOKING_MSGS = [
+  (n) => `${n} conference room${n !== 1 ? "s" : ""} booked over the weekend. The week started before Monday did.`,
+  (n) => `${n} meeting${n !== 1 ? "s" : ""} scheduled on day one. Your team means business.`,
+  (n) => `${n} conference session${n !== 1 ? "s" : ""} wrapped up on Tuesday. Collaboration is alive and well.`,
+  (n) => `${n} room${n !== 1 ? "s" : ""} booked yesterday. Ideas were in the air.`,
+  (n) => `${n} meeting${n !== 1 ? "s" : ""} locked in on Thursday. Finishing strong before the weekend.`,
+  (n) => `${n} conference booking${n !== 1 ? "s" : ""} on the last day of the week. No one slows down around here.`,
+  (n) => `${n} conference session${n !== 1 ? "s" : ""} over the weekend. Dedication looks good on your team.`,
+];
+
+const VisitorSVG = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const CalendarSVG = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="20" height="20">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+    <line x1="16" y1="2" x2="16" y2="6"/>
+    <line x1="8" y1="2" x2="8" y2="6"/>
+    <line x1="3" y1="10" x2="21" y2="10"/>
+  </svg>
+);
+
+function InsightPanel({ items }) {
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState([]);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      const t = setTimeout(() => setVisible(true), 800);
+      return () => clearTimeout(t);
+    }
+  }, [items]);
+
+  const dismiss = (idx) => {
+    setDismissed((prev) => [...prev, idx]);
+  };
+
+  const activeItems = items.filter((_, i) => !dismissed.includes(i));
+
+  if (!visible || activeItems.length === 0) return null;
+
+  return (
+    <div className={styles.insightPanel}>
+      {items.map((item, i) =>
+        dismissed.includes(i) ? null : (
+          <div key={i} className={styles.insightCard}>
+            <div className={styles.insightIcon} data-type={item.type}>
+              {item.type === "visitor" ? <VisitorSVG /> : <CalendarSVG />}
+            </div>
+            <div className={styles.insightBody}>
+              <p className={styles.insightLabel}>{item.type === "visitor" ? "Visitors" : "Conference"}</p>
+              <p className={styles.insightText}>{item.message}</p>
+            </div>
+            <button className={styles.insightClose} onClick={() => dismiss(i)} aria-label="Dismiss">
+              <X size={13} />
+            </button>
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    HOME PAGE
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function Home() {
@@ -187,6 +268,7 @@ export default function Home() {
   const [subData,     setSubData]     = useState(null);
   const [loadingSub,  setLoadingSub]  = useState(false);
   const [subError,    setSubError]    = useState("");
+  const [insightItems, setInsightItems] = useState([]);
 
   const [upgradingPlan, setUpgradingPlan] = useState("");
 
@@ -197,7 +279,28 @@ export default function Home() {
     const storedCompany  = localStorage.getItem("company");
     if (!token || !storedCompany) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(storedCompany)); }
-    catch { localStorage.clear(); router.replace("/auth/login"); }
+    catch { localStorage.clear(); router.replace("/auth/login"); return; }
+
+    // Show insight notifications once per session
+    const sessionKey = `insight_${new Date().toDateString()}`;
+    if (sessionStorage.getItem(sessionKey)) return;
+
+    const day = new Date().getDay(); // 0=Sun … 6=Sat
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/yesterday-summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data.success) return;
+        const items = [];
+        if (data.visitors > 0) items.push({ type: "visitor", message: VISITOR_MSGS[day](data.visitors) });
+        if (data.bookings > 0) items.push({ type: "booking", message: BOOKING_MSGS[day](data.bookings) });
+        if (items.length > 0) {
+          setInsightItems(items);
+          sessionStorage.setItem(sessionKey, "1");
+        }
+      })
+      .catch(() => {});
   }, [router]);
 
   /* ── Fetch Subscription ───────────────────────────────────────────── */
@@ -281,6 +384,7 @@ export default function Home() {
     <div className={styles.container}>
 
       <ToastContainer toasts={toasts} removeToast={removeToast} />
+      <InsightPanel items={insightItems} />
 
       {/* ── HEADER ── */}
       <header className={styles.header}>
