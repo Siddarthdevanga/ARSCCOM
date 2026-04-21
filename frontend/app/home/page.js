@@ -293,10 +293,6 @@ export default function Home() {
     try { setCompany(JSON.parse(storedCompany)); }
     catch { localStorage.clear(); router.replace("/auth/login"); return; }
 
-    // Show insight notifications once per session
-    const sessionKey = `insight_${new Date().toDateString()}`;
-    if (sessionStorage.getItem(sessionKey)) return;
-
     const day = new Date().getDay(); // 0=Sun … 6=Sat
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/yesterday-summary`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -307,10 +303,7 @@ export default function Home() {
         const items = [];
         if (data.visitors > 0) items.push({ type: "visitor", message: VISITOR_MSGS[day](data.visitors) });
         if (data.bookings > 0) items.push({ type: "booking", message: BOOKING_MSGS[day](data.bookings) });
-        if (items.length > 0) {
-          setInsightItems(items);
-          sessionStorage.setItem(sessionKey, "1");
-        }
+        if (items.length > 0) setInsightItems(items);
       })
       .catch(() => {});
   }, [router]);
