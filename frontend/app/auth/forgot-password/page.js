@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
-export default function ForgotPassword() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
+function ForgotPasswordForm() {
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const isSuperAdmin = useMemo(() => searchParams.get("type") === "superadmin", [searchParams]);
+
+  const [email,   setEmail]   = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error,   setError]   = useState("");
   const [success, setSuccess] = useState("");
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -25,25 +28,11 @@ export default function ForgotPassword() {
 
     setLoading(true);
     try {
-      /* ── 1. Try superadmin endpoint first ── */
-      const saRes = await fetch(`${API_BASE}/api/superadmin/forgot-password`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: normalizedEmail }),
-      });
+      const endpoint = isSuperAdmin
+        ? `${API_BASE}/api/superadmin/forgot-password`
+        : `${API_BASE}/api/auth/forgot-password`;
 
-      const saData = await saRes.json();
-
-      if (saRes.ok && saData.success) {
-        setSuccess("If the email exists, a reset code has been sent.");
-        setTimeout(() => {
-          router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}&type=superadmin`);
-        }, 1500);
-        return;
-      }
-
-      /* ── 2. Fall through to regular user ── */
-      const res = await fetch(`${API_BASE}/api/auth/forgot-password`, {
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: normalizedEmail }),
@@ -61,8 +50,9 @@ export default function ForgotPassword() {
       if (!res.ok) throw new Error(data.message || "Unable to process request");
 
       setSuccess("If the email exists, a reset code has been sent.");
+      const typeParam = isSuperAdmin ? "&type=superadmin" : "";
       setTimeout(() => {
-        router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}`);
+        router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}${typeParam}`);
       }, 1500);
 
     } catch (err) {
@@ -140,5 +130,17 @@ export default function ForgotPassword() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className={styles.container}>
+        <div className={styles.loadingState}>Loading…</div>
+      </div>
+    }>
+      <ForgotPasswordForm />
+    </Suspense>
   );
 }

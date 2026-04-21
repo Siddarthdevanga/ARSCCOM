@@ -345,3 +345,5 @@
   .submitBtn { height: 46px; font-size: 14px; }
   .lockIcon { font-size: 2.4rem; }
 }
+
+.loadingState { display:flex; align-items:center; justify-content:center; height:100vh; color:#6c2bd9; font-size:0.9rem; }
