@@ -498,8 +498,8 @@ export const getYesterdaySummary = async (req, res) => {
 
     const [[{ bookings }]] = await db.execute(
       `SELECT COUNT(*) AS bookings FROM conference_bookings
-       WHERE company_id = ? AND DATE(start_time) = CURDATE() - INTERVAL 1 DAY
-         AND status != 'cancelled'`,
+       WHERE company_id = ? AND booking_date = CURDATE() - INTERVAL 1 DAY
+         AND status != 'CANCELLED'`,
       [companyId]
     );
 
