@@ -842,7 +842,7 @@
 .insightPanel {
   position: fixed;
   bottom: clamp(1rem, 3vh, 1.5rem);
-  left: clamp(0.75rem, 2vw, 1.25rem);
+  right: clamp(0.75rem, 2vw, 1.25rem);
   z-index: 9000;
   width: clamp(270px, 82vw, 330px);
   pointer-events: none;
