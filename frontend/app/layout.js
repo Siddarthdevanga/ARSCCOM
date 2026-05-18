@@ -103,7 +103,7 @@ export const metadata = {
   },
 
   verification: {
-    google: 'YOUR_GOOGLE_SEARCH_CONSOLE_TOKEN', // ← replace with actual token
+    google: ''AW-17980176621', // ← replace with actual token
   },
 
   category: 'technology',
