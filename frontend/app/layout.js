@@ -5,7 +5,7 @@ const GA_ID = 'AW-17980176621';
 
 /* ── Site-wide constants (single source of truth) ───────── */
 export const SITE = {
-  name:        'Promeet',
+  name:        'Zodopts Promeet',
   brand:       'Zodopt',
   tagline:     'Visitor Management Platform',
   domain:      'https://www.promeet.zodopt.com',
