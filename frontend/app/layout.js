@@ -52,6 +52,9 @@ export const metadata = {
     'Promeet',
     'Zodopt',
     'Promeet visitor management',
+    'Visitor management system for schools',
+    'Digital guest book for showrooms', 
+    'Promeet pricing',
     'Zodopt Promeet',
   ],
 
