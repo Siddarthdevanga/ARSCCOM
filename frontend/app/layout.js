@@ -56,6 +56,12 @@ export const metadata = {
     'Digital guest book for showrooms', 
     'Promeet pricing',
     'Zodopt Promeet',
+    'visitor check-in software',
+    'workplace management system',
+    'workplace management system',
+    'visitor management system for office',
+    'touchless check-in system',
+    'digital visitor pass / visitor badge',  
   ],
 
   authors:   [{ name: SITE.brand, url: 'https://zodopt.com' }],
