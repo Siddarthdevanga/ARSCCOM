@@ -497,8 +497,9 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       employeeId:   sanitizeEmployeeId(req.body.employeeId),
       purpose:      req.body.purpose?.trim()       || null,
       belongings:   req.body.belongings            || null,
-      idType:       req.body.idType?.trim()        || null,
-      idNumber:     req.body.idNumber?.trim()      || null,
+      idType:           req.body.idType?.trim()    || null,
+      idNumber:         req.body.idNumber?.trim()  || null,
+      existingPhotoKey: existingPhotoKey,
     };
 
     /* ── 6. Persist visitor (Email pass is sent inside saveVisitor) ── */

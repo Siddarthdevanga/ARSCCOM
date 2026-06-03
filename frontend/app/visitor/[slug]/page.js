@@ -736,7 +736,7 @@ export default function PublicVisitorRegistration() {
                   <div className={styles.formGroup}>
                     <label>Belongings</label>
                     <div className={styles.checkboxGroup}>
-                      {["Laptop", "Bag", "Documents"].map(item => (
+                      {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map(item => (
                         <label key={item} className={styles.checkboxLabel}>
                           <input type="checkbox"
                             checked={returnBelongings.includes(item)}
@@ -884,7 +884,7 @@ export default function PublicVisitorRegistration() {
 
               {/* Belongings */}
               <div className={styles.checkboxGroup}>
-                {["Laptop", "Bag", "Documents"].map((item) => (
+                {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map((item) => (
                   <label key={item} className={styles.checkboxLabel}>
                     <input type="checkbox" checked={formData.belongings.includes(item)} onChange={() => toggleBelonging(item)} />
                     {item}
