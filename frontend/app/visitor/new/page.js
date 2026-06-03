@@ -232,27 +232,35 @@ export default function NewVisitorPage() {
     setLoading(false);
   }, [router]);
 
-  const handlePhoneBlur = async () => {
+  // Trigger lookup via effect so clicking a button immediately after typing
+  // doesn't cause the blur-before-click race (onBlur fires before onClick,
+  // hiding the button mid-click and swallowing the first tap).
+  useEffect(() => {
     const digits = phone.replace(/\D/g, "");
     if (digits.length !== 10) return;
+    let cancelled = false;
     setLooking(true);
     setProfile(null);
     setError("");
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API}/api/visitors/returning?phone=${digits}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.found && data.profile) {
-        setProfile(data.profile);
-        localStorage.setItem("visitor_returning", JSON.stringify(data.profile));
-      } else {
-        localStorage.removeItem("visitor_returning");
-      }
-    } catch { localStorage.removeItem("visitor_returning"); }
-    finally { setLooking(false); }
-  };
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${API}/api/visitors/returning?phone=${digits}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (cancelled) return;
+        if (data.found && data.profile) {
+          setProfile(data.profile);
+          localStorage.setItem("visitor_returning", JSON.stringify(data.profile));
+        } else {
+          localStorage.removeItem("visitor_returning");
+        }
+      } catch { if (!cancelled) localStorage.removeItem("visitor_returning"); }
+      finally { if (!cancelled) setLooking(false); }
+    })();
+    return () => { cancelled = true; };
+  }, [phone]);
 
   const toggleBelonging = (item) => setBelongings(prev =>
     prev.includes(item) ? prev.filter(b => b !== item) : [...prev, item]
@@ -370,7 +378,6 @@ export default function NewVisitorPage() {
                   type="tel"
                   value={phone}
                   onChange={(e) => { setPhone(e.target.value.replace(/\D/g,"").slice(0,10)); setProfile(null); localStorage.removeItem("visitor_returning"); }}
-                  onBlur={handlePhoneBlur}
                   placeholder="Enter 10-digit number"
                   inputMode="numeric"
                   maxLength={10}
@@ -388,7 +395,7 @@ export default function NewVisitorPage() {
             </div>
 
             {/* ── New visitor ── */}
-            {!profile && !looking && phone.replace(/\D/g,"").length === 10 && (
+            {!profile && phone.replace(/\D/g,"").length === 10 && (
               <button className={styles.nextBtn} onClick={handleProceedNew}
                 style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
                 Continue as New Visitor
