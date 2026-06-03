@@ -29,11 +29,6 @@ const IconUser = () => (
     <circle cx="12" cy="7" r="4"/>
   </svg>
 );
-const IconSearch = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-  </svg>
-);
 
 /* ── Employee autocomplete (admin, auth required) ── */
 const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled }) => {
@@ -334,8 +329,10 @@ export default function NewVisitorPage() {
 
       <div className={styles.scrollBody}>
         <section className={styles.hero}>
-          <h1 className={styles.heroTitle}>New <span>Visit</span></h1>
-          <p className={styles.heroSub}>Enter visitor phone number to begin</p>
+          <h1 className={styles.heroTitle}>Register a <span>Visitor</span></h1>
+          <p className={styles.heroSub}>
+            Enter the visitor&apos;s WhatsApp number. Returning visitors are detected automatically — their details pre-fill instantly and the pass is issued in seconds.
+          </p>
         </section>
 
         <main className={styles.mainContent}>
