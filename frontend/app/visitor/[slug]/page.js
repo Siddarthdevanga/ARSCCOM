@@ -262,6 +262,12 @@ export default function PublicVisitorRegistration() {
   const [returningData,       setReturningData]       = useState(null);
   const [showReturnPreview,   setShowReturnPreview]   = useState(false);
   const [returningPhotoKey,   setReturningPhotoKey]   = useState(null);
+  const [showReturnMiniForm,  setShowReturnMiniForm]  = useState(false);
+  const [returnPersonToMeet,  setReturnPersonToMeet]  = useState("");
+  const [returnEmployeeId,    setReturnEmployeeId]    = useState(null);
+  const [returnPurpose,       setReturnPurpose]       = useState("");
+  const [returnBelongings,    setReturnBelongings]    = useState([]);
+  const [returnMiniError,     setReturnMiniError]     = useState("");
   const [stream,       setStream]       = useState(null);
 
   const videoRef  = useRef(null);
@@ -449,6 +455,52 @@ export default function PublicVisitorRegistration() {
     finally { setSubmitting(false); }
   };
 
+  const handleReturningSubmit = async () => {
+    if (!returnPersonToMeet.trim()) { setReturnMiniError("Person to Meet is required"); return; }
+    setReturnMiniError(""); setSubmitting(true);
+    try {
+      const fd = new FormData();
+      const r  = returningData;
+      fd.append("name",        r.name        || "");
+      fd.append("phone",       `91${phone}`);
+      fd.append("email",       r.email       || "");
+      fd.append("fromCompany", r.fromCompany || "");
+      fd.append("department",  r.department  || "");
+      fd.append("designation", r.designation || "");
+      fd.append("address",     r.address     || "");
+      fd.append("city",        r.city        || "");
+      fd.append("state",       r.state       || "");
+      fd.append("postalCode",  r.postalCode  || "");
+      fd.append("country",     r.country     || "");
+      fd.append("idType",      r.idType      || "");
+      fd.append("idNumber",    r.idNumber    || "");
+      fd.append("personToMeet", returnPersonToMeet.trim());
+      if (returnPurpose.trim()) fd.append("purpose", returnPurpose.trim());
+      if (returnBelongings.length) fd.append("belongings", returnBelongings.join(", "));
+      if (returnEmployeeId) fd.append("employeeId", String(returnEmployeeId));
+      if (r.photoKey) fd.append("existingPhotoKey", r.photoKey);
+
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
+      let data;
+      try {
+        const res = await fetch(`${API}/api/public/visitor/${slug}/register`, {
+          method: "POST", headers: { "otp-token": otpToken },
+          body: fd, credentials: "omit", signal: controller.signal,
+        });
+        clearTimeout(timer);
+        data = await res.json();
+        if (!res.ok || !data.success) throw new Error(data.message || "Registration failed.");
+      } catch (err) {
+        clearTimeout(timer);
+        if (err.name === "AbortError") throw new Error("Request timed out — please retry");
+        throw err;
+      }
+      setVisitorCode(data.visitorCode); setStep(4);
+    } catch (err) { setReturnMiniError(err.message || "Failed to register. Please try again."); }
+    finally { setSubmitting(false); }
+  };
+
   const handleReset = useCallback(() => {
     if (stream) { stream.getTracks().forEach((t) => t.stop()); setStream(null); setCameraActive(false); }
     canvasRef.current?.getContext("2d").clearRect(0, 0, 400, 300);
@@ -458,6 +510,8 @@ export default function PublicVisitorRegistration() {
       personToMeet:"", purpose:"", belongings:[], idType:"", idNumber:"" });
     setSelectedEmployeeId(null); setPhoto(null); setPhotoBlob(null); setVisitorCode(""); setError("");
     setReturningData(null); setShowReturnPreview(false); setReturningPhotoKey(null);
+    setShowReturnMiniForm(false); setReturnPersonToMeet(""); setReturnEmployeeId(null);
+    setReturnPurpose(""); setReturnBelongings([]); setReturnMiniError("");
   }, [stream]);
 
   if (loading) return <div className={styles.loadingContainer}><div className={styles.spinner} /></div>;
@@ -615,46 +669,106 @@ export default function PublicVisitorRegistration() {
                 ));
               })()}
 
-              <div style={{ display:"flex", gap:"0.75rem", marginTop:"0.5rem" }}>
-                <button className={styles.secondaryBtn} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev,
-                      name: returningData.name, email: returningData.email,
-                      fromCompany: returningData.fromCompany, department: returningData.department,
-                      designation: returningData.designation, address: returningData.address,
-                      city: returningData.city, state: returningData.state,
-                      postalCode: returningData.postalCode, country: returningData.country,
-                      idType: returningData.idType, idNumber: returningData.idNumber,
-                    }));
-                    if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
-                    setShowReturnPreview(false);
-                  }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                  </svg>
-                  Edit Details
-                </button>
-                <button className={styles.primaryBtn} style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
-                  onClick={() => {
-                    setFormData(prev => ({ ...prev,
-                      name: returningData.name, email: returningData.email,
-                      fromCompany: returningData.fromCompany, department: returningData.department,
-                      designation: returningData.designation, address: returningData.address,
-                      city: returningData.city, state: returningData.state,
-                      postalCode: returningData.postalCode, country: returningData.country,
-                      idType: returningData.idType, idNumber: returningData.idNumber,
-                    }));
-                    if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
-                    setShowReturnPreview(false);
-                    setStep(2);
-                  }}>
-                  Confirm & Continue
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
-              </div>
+              {/* Action buttons — shown only before mini form is revealed */}
+              {!showReturnMiniForm && (
+                <div style={{ display:"flex", gap:"0.75rem", marginTop:"0.5rem" }}>
+                  <button className={styles.secondaryBtn} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
+                    onClick={() => {
+                      setFormData(prev => ({ ...prev,
+                        name: returningData.name, email: returningData.email,
+                        fromCompany: returningData.fromCompany, department: returningData.department,
+                        designation: returningData.designation, address: returningData.address,
+                        city: returningData.city, state: returningData.state,
+                        postalCode: returningData.postalCode, country: returningData.country,
+                        idType: returningData.idType, idNumber: returningData.idNumber,
+                      }));
+                      if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
+                      setShowReturnPreview(false);
+                    }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit Details
+                  </button>
+                  <button className={styles.primaryBtn} style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
+                    onClick={() => setShowReturnMiniForm(true)}>
+                    Confirm & Continue
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+
+              {/* Inline mini form — visit-specific fields */}
+              {showReturnMiniForm && (
+                <div style={{ marginTop:"1rem", borderTop:"1px solid #e5e7eb", paddingTop:"1rem" }}>
+                  <div style={{ fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase",
+                    letterSpacing:"0.8px", color:"#374151", marginBottom:"0.75rem" }}>Visit Details</div>
+
+                  {returnMiniError && (
+                    <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"0.5rem",
+                      padding:"0.5rem 0.75rem", fontSize:"0.82rem", color:"#b91c1c", marginBottom:"0.75rem" }}>
+                      {returnMiniError}
+                    </div>
+                  )}
+
+                  <div className={styles.formGroup}>
+                    <label>Person to Meet *</label>
+                    <EmployeeAutocomplete
+                      slug={slug}
+                      value={returnPersonToMeet}
+                      employeeId={returnEmployeeId}
+                      onChange={(val) => { setReturnPersonToMeet(val); setReturnMiniError(""); }}
+                      onSelect={({ name, id }) => { setReturnPersonToMeet(name); setReturnEmployeeId(id); setReturnMiniError(""); }}
+                      disabled={submitting}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Purpose of Visit</label>
+                    <input className={styles.input} value={returnPurpose}
+                      onChange={(e) => setReturnPurpose(e.target.value)}
+                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Belongings</label>
+                    <div className={styles.checkboxGroup}>
+                      {["Laptop", "Bag", "Documents"].map(item => (
+                        <label key={item} className={styles.checkboxLabel}>
+                          <input type="checkbox"
+                            checked={returnBelongings.includes(item)}
+                            onChange={() => setReturnBelongings(prev =>
+                              prev.includes(item) ? prev.filter(b => b !== item) : [...prev, item]
+                            )} />
+                          {item}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display:"flex", gap:"0.75rem" }}>
+                    <button className={styles.secondaryBtn} style={{ flex:1 }}
+                      onClick={() => { setShowReturnMiniForm(false); setReturnMiniError(""); }}
+                      disabled={submitting}>
+                      Back
+                    </button>
+                    <button className={styles.primaryBtn} style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
+                      onClick={handleReturningSubmit} disabled={submitting}>
+                      {submitting ? "Please wait…" : (
+                        <>
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <polyline points="20 6 9 17 4 12"/>
+                          </svg>
+                          Get Visitor Pass
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
             </main>
           </div>
         </>
