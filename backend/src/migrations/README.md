@@ -45,6 +45,21 @@ mysql -u root -p'Root@123' -D arsccom < backend/src/migrations/add-visitor-otp-e
 ALTER TABLE visitor_otp ADD INDEX idx_email_company (email, company_id);
 ```
 
+### 3. Auto-Checkout Status
+
+#### `add-auto-checkout-status.sql`
+```bash
+mysql -u root -p'Root@123' -D arsccom < backend/src/migrations/add-auto-checkout-status.sql
+```
+
+**What it does:**
+- Adds `auto_checked_out` to the `visit_status` ENUM on the `visitors` table
+- Allowed values after migration: `pending`, `accepted`, `declined`, `checked_out`, `auto_checked_out`
+
+**Why needed:** Visitors who are still `IN` at end of day (11:59 PM) are automatically checked out on the next admin login. Without this migration, setting `visit_status = 'auto_checked_out'` will fail with "Data truncated for column 'visit_status'" error.
+
+---
+
 ## Verification
 
 After running migrations, verify the changes:

@@ -352,3 +352,32 @@ export const saveVisitor = async (companyId, data, file) => {
     conn.release();
   }
 };
+
+/* ======================================================
+   AUTO-CHECKOUT STALE VISITORS
+   Called on every admin login (fire-and-forget).
+   Checks out all visitors still IN whose check-in day
+   has passed, or whose check-in is today but it is
+   already 23:59 or later (IST). Sets check_out to
+   23:59:00 of their check-in date so reports stay clean.
+====================================================== */
+export const autoCheckoutStaleVisitors = async () => {
+  try {
+    const [result] = await db.execute(
+      `UPDATE visitors
+       SET status       = 'OUT',
+           visit_status = 'auto_checked_out',
+           check_out    = DATE_FORMAT(DATE(check_in), '%Y-%m-%d 23:59:00')
+       WHERE status = 'IN'
+         AND (
+           DATE(check_in) < CURDATE()
+           OR (DATE(check_in) = CURDATE() AND CURTIME() >= '23:59:00')
+         )`
+    );
+    if (result.affectedRows > 0) {
+      console.log(`[AUTO-CHECKOUT] Auto-checked out ${result.affectedRows} stale visitor(s)`);
+    }
+  } catch (err) {
+    console.error("[AUTO-CHECKOUT] Error:", err.message);
+  }
+};

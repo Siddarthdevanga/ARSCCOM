@@ -14,7 +14,8 @@ const VS_CONFIG = {
   accepted:    { label: "Accepted",    bg: "rgba(0,184,148,0.12)",  color: "#00a875" },
   declined:    { label: "Declined",    bg: "rgba(204,17,0,0.1)",    color: "#cc1100" },
   checked_in:  { label: "Checked In",  bg: "rgba(59,130,246,0.12)", color: "#2563eb" },
-  checked_out: { label: "Checked Out", bg: "rgba(98,0,214,0.1)",    color: "#6200d6" },
+  checked_out:      { label: "Checked Out",      bg: "rgba(98,0,214,0.1)",    color: "#6200d6" },
+  auto_checked_out: { label: "Auto Checked Out", bg: "rgba(107,114,128,0.1)", color: "#6b7280" },
 };
 
 function VisitStatusBadge({ status }) {

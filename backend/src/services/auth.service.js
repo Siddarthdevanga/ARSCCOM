@@ -5,6 +5,7 @@ import path from "path";
 import { db } from "../config/db.js";
 import { uploadToS3 } from "./s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
+import { autoCheckoutStaleVisitors } from "./visitor.service.js";
 
 /* ======================================================
    CONSTANTS & CONFIGURATION
@@ -331,6 +332,9 @@ export const login = async ({ email, password }) => {
     const now = new Date();
     gracePeriodDaysRemaining = Math.ceil((endsAt - now) / (1000 * 60 * 60 * 24));
   }
+
+  // Fire-and-forget: auto-checkout any visitors still IN from a previous day
+  autoCheckoutStaleVisitors().catch(console.error);
 
   return {
     token,

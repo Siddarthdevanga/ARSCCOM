@@ -160,7 +160,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     if (v.status === "IN")  row.getCell(20).font = { bold:true, color:{ argb:"FF00c853" } };
     if (v.status === "OUT") row.getCell(20).font = { bold:true, color:{ argb:"FFff1744" } };
     row.getCell(21).alignment = { horizontal:"center" };
-    const vsColors = { accepted:"FF00c853", declined:"FFff1744", pending:"FFf0a500", checked_out:"FF6200d6" };
+    const vsColors = { accepted:"FF00c853", declined:"FFff1744", pending:"FFf0a500", checked_out:"FF6200d6", auto_checked_out:"FF6b7280" };
     if (vsColors[v.visit_status]) row.getCell(21).font = { bold:true, color:{ argb:vsColors[v.visit_status] } };
   });
 

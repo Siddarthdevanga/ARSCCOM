@@ -55,8 +55,8 @@ export default function RegisterPage() {
     const roomCount = Number(conferenceRooms);
     if (!roomCount || roomCount < 1 || roomCount > 100) { setError("Conference rooms must be between 1 and 100"); return false; }
     if (whatsappUrl?.trim()) {
-      const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i;
-      if (!whatsappPattern.test(whatsappUrl.trim())) { setError("Invalid WhatsApp URL. Must start with https://wa.me/ or https://api.whatsapp.com/"); return false; }
+      const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\/.+/i;
+      if (!whatsappPattern.test(whatsappUrl.trim())) { setError("Invalid WhatsApp URL. Accepted: https://wa.me/... , https://api.whatsapp.com/... or https://chat.whatsapp.com/..."); return false; }
     }
     if (!logo) { setError("Company logo is required"); return false; }
     if (!password || password.length < 8) { setError("Password must be at least 8 characters"); return false; }
