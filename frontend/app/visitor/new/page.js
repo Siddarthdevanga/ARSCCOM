@@ -222,6 +222,13 @@ export default function NewVisitorPage() {
     const stored  = localStorage.getItem("company");
     if (!token || !stored) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
+
+    // Clear all stale registration data from any previous abandoned session
+    localStorage.removeItem("visitor_primary");
+    localStorage.removeItem("visitor_secondary");
+    localStorage.removeItem("visitor_returning");
+    localStorage.removeItem("visitor_new_phone");
+
     setLoading(false);
   }, [router]);
 
@@ -240,8 +247,10 @@ export default function NewVisitorPage() {
       if (data.found && data.profile) {
         setProfile(data.profile);
         localStorage.setItem("visitor_returning", JSON.stringify(data.profile));
+      } else {
+        localStorage.removeItem("visitor_returning");
       }
-    } catch { /* silently ignore */ }
+    } catch { localStorage.removeItem("visitor_returning"); }
     finally { setLooking(false); }
   };
 
@@ -300,6 +309,8 @@ export default function NewVisitorPage() {
       if (!res.ok) throw new Error(data?.message || "Failed to issue pass");
 
       localStorage.removeItem("visitor_returning");
+      localStorage.removeItem("visitor_primary");
+      localStorage.removeItem("visitor_secondary");
       router.push(`/visitor/pass?visitorCode=${data.visitor.visitorCode}`);
     } catch (err) {
       setMiniError(err.message || "Failed to issue pass");
@@ -358,7 +369,7 @@ export default function NewVisitorPage() {
                   className={styles.input}
                   type="tel"
                   value={phone}
-                  onChange={(e) => { setPhone(e.target.value.replace(/\D/g,"").slice(0,10)); setProfile(null); }}
+                  onChange={(e) => { setPhone(e.target.value.replace(/\D/g,"").slice(0,10)); setProfile(null); localStorage.removeItem("visitor_returning"); }}
                   onBlur={handlePhoneBlur}
                   placeholder="Enter 10-digit number"
                   inputMode="numeric"

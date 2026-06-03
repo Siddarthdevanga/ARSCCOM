@@ -69,8 +69,11 @@ export default function VisitorPrimaryDetails() {
         if (!email.trim() && p.email) setEmail(p.email);
         localStorage.setItem("visitor_returning", JSON.stringify(p));
         setPrefillBanner(true);
+      } else {
+        localStorage.removeItem("visitor_returning");
+        setPrefillBanner(false);
       }
-    } catch { /* silently ignore — admin can fill manually */ }
+    } catch { localStorage.removeItem("visitor_returning"); setPrefillBanner(false); }
   };
 
   /* ================= NEXT ================= */
@@ -187,7 +190,7 @@ export default function VisitorPrimaryDetails() {
                     className={styles.input}
                     type="tel"
                     value={phone}
-                    onChange={(e) => { setPhone(e.target.value.replace(/\D/g,"").slice(0,10)); setPrefillBanner(false); }}
+                    onChange={(e) => { setPhone(e.target.value.replace(/\D/g,"").slice(0,10)); setPrefillBanner(false); localStorage.removeItem("visitor_returning"); }}
                     onBlur={handlePhoneBlur}
                     placeholder="Enter 10-digit number"
                     autoComplete="new-password"
