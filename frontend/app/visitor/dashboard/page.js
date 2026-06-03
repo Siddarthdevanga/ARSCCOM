@@ -401,7 +401,7 @@ export default function VisitorDashboard() {
               onError={e => { e.currentTarget.style.display = "none"; }} />
           )}
           <button className={styles.newBtn} disabled={atLimit}
-            onClick={() => router.push("/visitor/primary_details")}>
+            onClick={() => router.push("/visitor/new")}>
             + New Visit
           </button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>

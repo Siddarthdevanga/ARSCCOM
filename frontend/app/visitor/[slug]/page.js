@@ -548,66 +548,111 @@ export default function PublicVisitorRegistration() {
         <>
           <Navbar company={company} />
           <div className={styles.container}>
-            <main className={styles.card}>
-              <h2 className={styles.title}>Welcome back! 👋</h2>
+            <main className={styles.card} style={{ border:"1px solid #e5e7eb" }}>
+              <h2 className={styles.title}>Welcome back</h2>
               <p style={{ color:"#6b7280", fontSize:"0.9rem", marginBottom:"1.25rem", textAlign:"center", lineHeight:1.6 }}>
                 We found your details from a previous visit to {company?.name}.
               </p>
 
-              {returningData.photoUrl && (
-                <div style={{ display:"flex", justifyContent:"center", marginBottom:"1.25rem" }}>
-                  <img src={returningData.photoUrl} alt="Your photo"
-                    style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover",
-                      border:"3px solid #7c3aed", boxShadow:"0 2px 8px rgba(124,58,237,0.2)" }} />
-                </div>
-              )}
-
-              <div style={{ background:"#f9fafb", borderRadius:"0.75rem", padding:"1rem", marginBottom:"1.25rem",
-                display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem 1rem", fontSize:"0.875rem" }}>
-                {[
-                  ["Name",        returningData.name],
-                  ["Email",       returningData.email],
-                  ["Company",     returningData.fromCompany],
-                  ["Department",  returningData.department],
-                  ["Designation", returningData.designation],
-                  ["City",        returningData.city],
-                ].filter(([, v]) => v).map(([label, value]) => (
-                  <div key={label}>
-                    <div style={{ color:"#9ca3af", fontSize:"0.75rem", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>{label}</div>
-                    <div style={{ color:"#1f2937", fontWeight:500, marginTop:2 }}>{value}</div>
-                  </div>
-                ))}
+              {/* Photo */}
+              <div style={{ display:"flex", justifyContent:"center", marginBottom:"1.25rem" }}>
+                {returningData.photoUrl
+                  ? <img src={returningData.photoUrl} alt="Your photo"
+                      style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover",
+                        border:"3px solid #7c3aed", boxShadow:"0 2px 8px rgba(124,58,237,0.2)" }} />
+                  : <div style={{ width:80, height:80, borderRadius:"50%", background:"#f3f4f6",
+                      border:"3px solid #e5e7eb", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                    </div>
+                }
               </div>
 
-              <div style={{ display:"flex", gap:"0.75rem" }}>
-                <button className={styles.secondaryBtn} style={{ flex:1 }} onClick={() => {
-                  setFormData(prev => ({ ...prev,
-                    name: returningData.name, email: returningData.email,
-                    fromCompany: returningData.fromCompany, department: returningData.department,
-                    designation: returningData.designation, address: returningData.address,
-                    city: returningData.city, state: returningData.state,
-                    postalCode: returningData.postalCode, country: returningData.country,
-                    idType: returningData.idType, idNumber: returningData.idNumber,
-                  }));
-                  if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
-                  setShowReturnPreview(false);
-                }}>
-                  ✏️ Edit Details
+              {/* All fields grid — nulls shown greyed */}
+              {(() => {
+                const r = returningData;
+                const sections = [
+                  { label:"Primary", fields:[
+                    { k:"Name",        v: r.name },
+                    { k:"Email",       v: r.email },
+                    { k:"Phone",       v: phone ? `+91 ${phone}` : null },
+                  ]},
+                  { label:"Organisation", fields:[
+                    { k:"Company",     v: r.fromCompany },
+                    { k:"Department",  v: r.department },
+                    { k:"Designation", v: r.designation },
+                    { k:"Address",     v: r.address },
+                    { k:"City",        v: r.city },
+                    { k:"State",       v: r.state },
+                    { k:"Postal Code", v: r.postalCode },
+                    { k:"Country",     v: r.country },
+                  ]},
+                  { label:"Identity", fields:[
+                    { k:"ID Type",     v: r.idType },
+                    { k:"ID Number",   v: r.idNumber },
+                  ]},
+                ];
+                return sections.map(sec => (
+                  <div key={sec.label} style={{ marginBottom:"1rem" }}>
+                    <div style={{ fontSize:"0.7rem", fontWeight:700, textTransform:"uppercase",
+                      letterSpacing:"0.8px", color:"#7c3aed", marginBottom:"0.5rem" }}>{sec.label}</div>
+                    <div style={{ border:"1px solid #e5e7eb", borderRadius:"0.6rem", overflow:"hidden" }}>
+                      {sec.fields.map(({ k, v }, i) => (
+                        <div key={k} style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
+                          padding:"0.5rem 0.75rem", fontSize:"0.82rem",
+                          borderTop: i > 0 ? "1px solid #f3f4f6" : "none",
+                          background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                          <span style={{ color:"#6b7280", fontWeight:500, minWidth:90 }}>{k}</span>
+                          <span style={{ color: v ? "#1f2937" : "#d1d5db", fontStyle: v ? "normal" : "italic",
+                            textAlign:"right", maxWidth:"60%", wordBreak:"break-word" }}>
+                            {v || "Not provided"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+
+              <div style={{ display:"flex", gap:"0.75rem", marginTop:"0.5rem" }}>
+                <button className={styles.secondaryBtn} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev,
+                      name: returningData.name, email: returningData.email,
+                      fromCompany: returningData.fromCompany, department: returningData.department,
+                      designation: returningData.designation, address: returningData.address,
+                      city: returningData.city, state: returningData.state,
+                      postalCode: returningData.postalCode, country: returningData.country,
+                      idType: returningData.idType, idNumber: returningData.idNumber,
+                    }));
+                    if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
+                    setShowReturnPreview(false);
+                  }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                  Edit Details
                 </button>
-                <button className={styles.primaryBtn} style={{ flex:2 }} onClick={() => {
-                  setFormData(prev => ({ ...prev,
-                    name: returningData.name, email: returningData.email,
-                    fromCompany: returningData.fromCompany, department: returningData.department,
-                    designation: returningData.designation, address: returningData.address,
-                    city: returningData.city, state: returningData.state,
-                    postalCode: returningData.postalCode, country: returningData.country,
-                    idType: returningData.idType, idNumber: returningData.idNumber,
-                  }));
-                  if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
-                  setShowReturnPreview(false);
-                  setStep(2);
-                }}>
-                  Confirm & Continue →
+                <button className={styles.primaryBtn} style={{ flex:2, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
+                  onClick={() => {
+                    setFormData(prev => ({ ...prev,
+                      name: returningData.name, email: returningData.email,
+                      fromCompany: returningData.fromCompany, department: returningData.department,
+                      designation: returningData.designation, address: returningData.address,
+                      city: returningData.city, state: returningData.state,
+                      postalCode: returningData.postalCode, country: returningData.country,
+                      idType: returningData.idType, idNumber: returningData.idNumber,
+                    }));
+                    if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
+                    setShowReturnPreview(false);
+                    setStep(2);
+                  }}>
+                  Confirm & Continue
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                  </svg>
                 </button>
               </div>
             </main>
@@ -759,28 +804,32 @@ export default function PublicVisitorRegistration() {
                     <img src={returningData.photoUrl} alt="Previous photo"
                       style={{ width:"100%", maxWidth:"280px", borderRadius:"0.75rem", boxShadow:"0 4px 12px rgba(0,0,0,0.1)", marginBottom:"0.75rem" }} />
                     <div style={{ display:"flex", gap:"0.75rem", justifyContent:"center" }}>
-                      <button type="button" className={styles.primaryBtn} style={{ flex:1, maxWidth:160 }}
+                      <button type="button" className={styles.primaryBtn} style={{ flex:1, maxWidth:160, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.35rem" }}
                         onClick={() => setPhoto(returningData.photoUrl)}>
-                        ✓ Use This Photo
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Use This Photo
                       </button>
-                      <button type="button" className={styles.secondaryBtn} style={{ flex:1, maxWidth:160 }}
+                      <button type="button" className={styles.secondaryBtn} style={{ flex:1, maxWidth:160, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.35rem" }}
                         onClick={() => { setReturningPhotoKey(null); startCamera(); }}>
-                        📷 Take New
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                        Take New
                       </button>
                     </div>
                   </div>
                 )}
                 {!cameraActive && !photo && !returningPhotoKey && (
-                  <button type="button" className={styles.primaryBtn} onClick={startCamera} style={{ maxWidth:"300px" }}>
-                    📷 Start Camera
+                  <button type="button" className={styles.primaryBtn} onClick={startCamera} style={{ maxWidth:"300px", display:"flex", alignItems:"center", gap:"0.4rem" }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                    Start Camera
                   </button>
                 )}
                 {cameraActive && (
                   <>
                     <video ref={videoRef} autoPlay playsInline muted
                       style={{ width:"100%", maxWidth:"400px", borderRadius:"0.75rem", boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }} />
-                    <button type="button" className={styles.primaryBtn} onClick={capturePhoto} style={{ maxWidth:"300px" }}>
-                      📸 Capture Photo
+                    <button type="button" className={styles.primaryBtn} onClick={capturePhoto} style={{ maxWidth:"300px", display:"flex", alignItems:"center", gap:"0.4rem" }}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+                      Capture Photo
                     </button>
                   </>
                 )}
@@ -788,8 +837,9 @@ export default function PublicVisitorRegistration() {
                   <>
                     <img src={photo} alt="Captured"
                       style={{ width:"100%", maxWidth:"400px", borderRadius:"0.75rem", boxShadow:"0 4px 12px rgba(0,0,0,0.1)" }} />
-                    <button type="button" className={styles.secondaryBtn} onClick={retakePhoto} style={{ maxWidth:"300px", marginTop:0 }}>
-                      🔄 Retake
+                    <button type="button" className={styles.secondaryBtn} onClick={retakePhoto} style={{ maxWidth:"300px", marginTop:0, display:"flex", alignItems:"center", gap:"0.4rem" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+                      Retake
                     </button>
                   </>
                 )}

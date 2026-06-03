@@ -31,7 +31,6 @@ export default function VisitorPrimaryDetails() {
     }
 
     // Restore name/email when user navigates back from step 2.
-    // Phone is intentionally never restored — it must always be entered fresh.
     const storedPrimary = localStorage.getItem("visitor_primary");
     if (storedPrimary) {
       try {
@@ -41,6 +40,13 @@ export default function VisitorPrimaryDetails() {
       } catch (err) {
         console.warn("[PRIMARY_DETAILS] Failed to load stored data:", err);
       }
+    }
+
+    // Carry phone number from /visitor/new (new visitor flow)
+    const newPhone = localStorage.getItem("visitor_new_phone");
+    if (newPhone) {
+      setPhone(newPhone);
+      localStorage.removeItem("visitor_new_phone");
     }
 
     setLoading(false);
