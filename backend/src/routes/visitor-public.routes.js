@@ -364,6 +364,74 @@ router.post("/visitor/:slug/otp/verify", async (req, res) => {
 });
 
 /* ======================================================
+   RETURNING VISITOR PROFILE LOOKUP (PUBLIC)
+   GET /visitor/:slug/returning?phone=91XXXXXXXXXX
+   Returns the most recent profile for this phone+company.
+   Excludes visit-specific fields (purpose, personToMeet, belongings).
+====================================================== */
+router.get("/visitor/:slug/returning", async (req, res) => {
+  try {
+    const slug    = normalizeSlug(req.params.slug);
+    const rawPhone = String(req.query.phone || "").replace(/\D/g, "");
+    const last10   = rawPhone.slice(-10);
+
+    if (last10.length !== 10) {
+      return res.status(400).json({ success: false, message: "Valid phone required" });
+    }
+    const phone = `91${last10}`;
+
+    const company = await getCompanyBySlug(slug);
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Invalid registration link" });
+    }
+
+    const [[visitor]] = await db.query(
+      `SELECT name, email, from_company, department, designation,
+              address, city, state, postal_code, country,
+              id_type, id_number, photo_url
+       FROM visitors
+       WHERE phone = ? AND company_id = ? AND photo_url IS NOT NULL
+       ORDER BY check_in DESC
+       LIMIT 1`,
+      [phone, company.id]
+    );
+
+    if (!visitor) {
+      return res.json({ success: true, found: false, profile: null });
+    }
+
+    let photoUrl = null;
+    if (visitor.photo_url) {
+      try { photoUrl = await getPresignedUrl(visitor.photo_url, 3600); } catch { photoUrl = null; }
+    }
+
+    return res.json({
+      success: true,
+      found:   true,
+      profile: {
+        name:        visitor.name         || "",
+        email:       visitor.email        || "",
+        fromCompany: visitor.from_company || "",
+        department:  visitor.department   || "",
+        designation: visitor.designation  || "",
+        address:     visitor.address      || "",
+        city:        visitor.city         || "",
+        state:       visitor.state        || "",
+        postalCode:  visitor.postal_code  || "",
+        country:     visitor.country      || "",
+        idType:      visitor.id_type      || "",
+        idNumber:    visitor.id_number    || "",
+        photoUrl,
+        photoKey:    visitor.photo_url    || null,
+      },
+    });
+  } catch (err) {
+    console.error("[VISITOR][RETURNING]", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+});
+
+/* ======================================================
    REGISTER VISITOR
    POST /visitor/:slug/register
 ====================================================== */
@@ -401,11 +469,12 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     }
 
     /* ── 4. Field validation ── */
+    const existingPhotoKey = req.body.existingPhotoKey?.trim() || null;
     const validationErrors = [];
     if (!req.body.name?.trim())  validationErrors.push("Visitor name is required");
     if (!req.body.phone?.trim()) validationErrors.push("Phone number is required");
     if (!req.body.email?.trim()) validationErrors.push("Email is required");
-    if (!req.file)               validationErrors.push("Visitor photo is required");
+    if (!req.file && !existingPhotoKey) validationErrors.push("Visitor photo is required");
 
     if (validationErrors.length > 0) {
       return res.status(400).json({ success: false, message: validationErrors[0] });

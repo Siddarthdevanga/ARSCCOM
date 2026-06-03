@@ -19,7 +19,8 @@ export const createVisitor = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized: company missing in token" });
     }
 
-    if (!req.file) {
+    const existingPhotoKey = req.body.existingPhotoKey?.trim() || null;
+    if (!req.file && !existingPhotoKey) {
       return res.status(400).json({ success: false, message: "Visitor photo is required" });
     }
 
@@ -507,6 +508,69 @@ export const getYesterdaySummary = async (req, res) => {
   } catch (error) {
     console.error("YESTERDAY SUMMARY ERROR:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch summary" });
+  }
+};
+
+/* =========================================================
+   GET RETURNING VISITOR PROFILE
+   GET /api/visitors/returning?phone=91XXXXXXXXXX
+   Auth: JWT (company-scoped)
+   Returns the most recent profile for this phone+company,
+   excluding visit-specific fields (purpose, personToMeet, belongings).
+========================================================= */
+export const getReturningVisitor = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    const rawPhone  = String(req.query.phone || "").replace(/\D/g, "");
+    const last10    = rawPhone.slice(-10);
+    if (last10.length !== 10) {
+      return res.status(400).json({ success: false, message: "Valid 10-digit phone required" });
+    }
+    const phone = `91${last10}`;
+
+    const [[visitor]] = await db.execute(
+      `SELECT name, email, from_company, department, designation,
+              address, city, state, postal_code, country,
+              id_type, id_number, photo_url
+       FROM visitors
+       WHERE phone = ? AND company_id = ? AND photo_url IS NOT NULL
+       ORDER BY check_in DESC
+       LIMIT 1`,
+      [phone, companyId]
+    );
+
+    if (!visitor) {
+      return res.json({ success: true, found: false, profile: null });
+    }
+
+    let photoUrl = null;
+    if (visitor.photo_url) {
+      try { photoUrl = await getPresignedUrl(visitor.photo_url, 3600); } catch { photoUrl = null; }
+    }
+
+    return res.json({
+      success: true,
+      found:   true,
+      profile: {
+        name:        visitor.name        || "",
+        email:       visitor.email       || "",
+        fromCompany: visitor.from_company || "",
+        department:  visitor.department  || "",
+        designation: visitor.designation || "",
+        address:     visitor.address     || "",
+        city:        visitor.city        || "",
+        state:       visitor.state       || "",
+        postalCode:  visitor.postal_code || "",
+        country:     visitor.country     || "",
+        idType:      visitor.id_type     || "",
+        idNumber:    visitor.id_number   || "",
+        photoUrl,
+        photoKey:    visitor.photo_url   || null,
+      },
+    });
+  } catch (error) {
+    console.error("RETURNING VISITOR ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch visitor profile" });
   }
 };
 

@@ -10,6 +10,7 @@ import {
   resendVisitorPass,
   updateVisitStatus,
   getYesterdaySummary,
+  getReturningVisitor,
 } from "../controllers/visitor.controller.js";
 
 const router = express.Router();
@@ -32,6 +33,9 @@ router.get("/dashboard", authenticate, getVisitorDashboard);
 
 /* ── YESTERDAY SUMMARY ── */
 router.get("/yesterday-summary", authenticate, getYesterdaySummary);
+
+/* ── RETURNING VISITOR PROFILE LOOKUP ── */
+router.get("/returning", authenticate, getReturningVisitor);
 
 /* ── VISITOR PASS (ADMIN) ── */
 router.get("/code/:visitorCode", authenticate, getVisitorPass);

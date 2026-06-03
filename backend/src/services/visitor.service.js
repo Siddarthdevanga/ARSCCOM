@@ -58,7 +58,9 @@ const sanitizeEmployeeId = (raw) => {
 ====================================================== */
 export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
-  if (!file)      throw new Error("Visitor photo is required");
+
+  const existingPhotoKey = data.existingPhotoKey?.trim() || null;
+  if (!file && !existingPhotoKey) throw new Error("Visitor photo is required");
 
   const {
     name, phone, email, fromCompany, department, designation,
@@ -220,11 +222,10 @@ export const saveVisitor = async (companyId, data, file) => {
     const visitorCode = `CMP${companyId}-${dateKey}-${String(count).padStart(5, "0")}`;
     console.log("[VISITOR] Generated code:", visitorCode);
 
-    /* ── Upload visitor selfie photo to S3 ── */
-    const photoUrl = await uploadToS3(
-      file,
-      `companies/${companyId}/visitors/${visitorCode}.jpg`
-    );
+    /* ── Upload visitor selfie photo to S3 (or reuse existing key) ── */
+    const photoUrl = file
+      ? await uploadToS3(file, `companies/${companyId}/visitors/${visitorCode}.jpg`)
+      : existingPhotoKey;
 
     await conn.execute(
       `UPDATE visitors SET visitor_code = ?, photo_url = ? WHERE id = ?`,

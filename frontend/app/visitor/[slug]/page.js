@@ -258,6 +258,10 @@ export default function PublicVisitorRegistration() {
   const [photo,        setPhoto]        = useState(null);
   const [photoBlob,    setPhotoBlob]    = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
+
+  const [returningData,       setReturningData]       = useState(null);
+  const [showReturnPreview,   setShowReturnPreview]   = useState(false);
+  const [returningPhotoKey,   setReturningPhotoKey]   = useState(null);
   const [stream,       setStream]       = useState(null);
 
   const videoRef  = useRef(null);
@@ -342,7 +346,18 @@ export default function PublicVisitorRegistration() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: `91${phone}`, otp }),
       });
-      setOtpToken(data.otpToken); setStep(1);
+      setOtpToken(data.otpToken);
+
+      // Check for returning visitor profile (same company, same phone)
+      try {
+        const returning = await publicFetch(`/api/public/visitor/${slug}/returning?phone=${phone}`);
+        if (returning.found && returning.profile) {
+          setReturningData(returning.profile);
+          setShowReturnPreview(true);
+        }
+      } catch { /* first-time visitor — proceed normally */ }
+
+      setStep(1);
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
   };
@@ -389,7 +404,7 @@ export default function PublicVisitorRegistration() {
     if (step === 2 && !formData.personToMeet.trim()) {
       setError("Person to meet is required"); return false;
     }
-    if (step === 3 && (!photo || !photoBlob)) {
+    if (step === 3 && !photo && !returningPhotoKey) {
       setError("Visitor photo is required"); return false;
     }
     return true;
@@ -406,7 +421,11 @@ export default function PublicVisitorRegistration() {
         fd.append(key, key === "belongings" ? (Array.isArray(value) ? value.join(", ") : "") : value || "");
       });
       fd.append("phone", `91${phone}`);  // Add phone from OTP verification (with 91 prefix)
-      fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
+      if (photoBlob) {
+        fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
+      } else if (returningPhotoKey) {
+        fd.append("existingPhotoKey", returningPhotoKey);
+      }
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
 
       const controller = new AbortController();
@@ -438,6 +457,7 @@ export default function PublicVisitorRegistration() {
       address:"", city:"", state:"", postalCode:"", country:"",
       personToMeet:"", purpose:"", belongings:[], idType:"", idNumber:"" });
     setSelectedEmployeeId(null); setPhoto(null); setPhotoBlob(null); setVisitorCode(""); setError("");
+    setReturningData(null); setShowReturnPreview(false); setReturningPhotoKey(null);
   }, [stream]);
 
   if (loading) return <div className={styles.loadingContainer}><div className={styles.spinner} /></div>;
@@ -523,8 +543,80 @@ export default function PublicVisitorRegistration() {
         </>
       )}
 
-      {/* ── STEP 1: PRIMARY ── */}
-      {step === 1 && (
+      {/* ── STEP 1: RETURNING VISITOR PREVIEW ── */}
+      {step === 1 && showReturnPreview && returningData && (
+        <>
+          <Navbar company={company} />
+          <div className={styles.container}>
+            <main className={styles.card}>
+              <h2 className={styles.title}>Welcome back! 👋</h2>
+              <p style={{ color:"#6b7280", fontSize:"0.9rem", marginBottom:"1.25rem", textAlign:"center", lineHeight:1.6 }}>
+                We found your details from a previous visit to {company?.name}.
+              </p>
+
+              {returningData.photoUrl && (
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:"1.25rem" }}>
+                  <img src={returningData.photoUrl} alt="Your photo"
+                    style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover",
+                      border:"3px solid #7c3aed", boxShadow:"0 2px 8px rgba(124,58,237,0.2)" }} />
+                </div>
+              )}
+
+              <div style={{ background:"#f9fafb", borderRadius:"0.75rem", padding:"1rem", marginBottom:"1.25rem",
+                display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem 1rem", fontSize:"0.875rem" }}>
+                {[
+                  ["Name",        returningData.name],
+                  ["Email",       returningData.email],
+                  ["Company",     returningData.fromCompany],
+                  ["Department",  returningData.department],
+                  ["Designation", returningData.designation],
+                  ["City",        returningData.city],
+                ].filter(([, v]) => v).map(([label, value]) => (
+                  <div key={label}>
+                    <div style={{ color:"#9ca3af", fontSize:"0.75rem", fontWeight:600, textTransform:"uppercase", letterSpacing:"0.5px" }}>{label}</div>
+                    <div style={{ color:"#1f2937", fontWeight:500, marginTop:2 }}>{value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display:"flex", gap:"0.75rem" }}>
+                <button className={styles.secondaryBtn} style={{ flex:1 }} onClick={() => {
+                  setFormData(prev => ({ ...prev,
+                    name: returningData.name, email: returningData.email,
+                    fromCompany: returningData.fromCompany, department: returningData.department,
+                    designation: returningData.designation, address: returningData.address,
+                    city: returningData.city, state: returningData.state,
+                    postalCode: returningData.postalCode, country: returningData.country,
+                    idType: returningData.idType, idNumber: returningData.idNumber,
+                  }));
+                  if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
+                  setShowReturnPreview(false);
+                }}>
+                  ✏️ Edit Details
+                </button>
+                <button className={styles.primaryBtn} style={{ flex:2 }} onClick={() => {
+                  setFormData(prev => ({ ...prev,
+                    name: returningData.name, email: returningData.email,
+                    fromCompany: returningData.fromCompany, department: returningData.department,
+                    designation: returningData.designation, address: returningData.address,
+                    city: returningData.city, state: returningData.state,
+                    postalCode: returningData.postalCode, country: returningData.country,
+                    idType: returningData.idType, idNumber: returningData.idNumber,
+                  }));
+                  if (returningData.photoKey) setReturningPhotoKey(returningData.photoKey);
+                  setShowReturnPreview(false);
+                  setStep(2);
+                }}>
+                  Confirm & Continue →
+                </button>
+              </div>
+            </main>
+          </div>
+        </>
+      )}
+
+      {/* ── STEP 1: PRIMARY (new visitor or after editing) ── */}
+      {step === 1 && !showReturnPreview && (
         <>
           <Navbar company={company} />
           <div className={styles.container}>
@@ -660,7 +752,25 @@ export default function PublicVisitorRegistration() {
               <h2 className={styles.title}>Identity Verification</h2>
               {error && <div className={styles.errorMsg}>{error}</div>}
               <div className={styles.cameraContainer}>
-                {!cameraActive && !photo && (
+                {/* Returning visitor: show saved photo as default option */}
+                {!cameraActive && !photo && returningPhotoKey && returningData?.photoUrl && (
+                  <div style={{ textAlign:"center" }}>
+                    <p style={{ color:"#6b7280", fontSize:"0.85rem", marginBottom:"0.75rem" }}>Photo from your last visit:</p>
+                    <img src={returningData.photoUrl} alt="Previous photo"
+                      style={{ width:"100%", maxWidth:"280px", borderRadius:"0.75rem", boxShadow:"0 4px 12px rgba(0,0,0,0.1)", marginBottom:"0.75rem" }} />
+                    <div style={{ display:"flex", gap:"0.75rem", justifyContent:"center" }}>
+                      <button type="button" className={styles.primaryBtn} style={{ flex:1, maxWidth:160 }}
+                        onClick={() => setPhoto(returningData.photoUrl)}>
+                        ✓ Use This Photo
+                      </button>
+                      <button type="button" className={styles.secondaryBtn} style={{ flex:1, maxWidth:160 }}
+                        onClick={() => { setReturningPhotoKey(null); startCamera(); }}>
+                        📷 Take New
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!cameraActive && !photo && !returningPhotoKey && (
                   <button type="button" className={styles.primaryBtn} onClick={startCamera} style={{ maxWidth:"300px" }}>
                     📷 Start Camera
                   </button>
@@ -703,7 +813,7 @@ export default function PublicVisitorRegistration() {
               <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
                 <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }} disabled={submitting}>← Back</button>
-                <button className={styles.primaryBtn} onClick={handleSubmit} disabled={!photo || !photoBlob || submitting} style={{ flex:2 }}>
+                <button className={styles.primaryBtn} onClick={handleSubmit} disabled={(!photo && !returningPhotoKey) || submitting} style={{ flex:2 }}>
                   {submitting ? "Submitting…" : "✓ Submit"}
                 </button>
               </div>

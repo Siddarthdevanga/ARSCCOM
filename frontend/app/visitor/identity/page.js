@@ -25,11 +25,25 @@ export default function VisitorIdentity() {
       localStorage.clear();
       router.replace("/auth/login");
     }
+
+    // Pre-fill ID fields and returning photo from previous visit
+    try {
+      const returning = localStorage.getItem("visitor_returning");
+      if (returning) {
+        const r = JSON.parse(returning);
+        if (r.idType)   setIdType(r.idType);
+        if (r.idNumber) setIdNumber(r.idNumber);
+        if (r.photoUrl) setReturningPhoto(r.photoUrl);
+        if (r.photoKey) setReturningKey(r.photoKey);
+      }
+    } catch { /* ignore */ }
   }, [router]);
 
   /* ================= IDENTITY ================= */
-  const [idType,   setIdType]   = useState("");
-  const [idNumber, setIdNumber] = useState("");
+  const [idType,          setIdType]          = useState("");
+  const [idNumber,        setIdNumber]        = useState("");
+  const [returningPhoto,  setReturningPhoto]  = useState(null);
+  const [returningKey,    setReturningKey]    = useState(null);
 
   /* ================= CAMERA ================= */
   const [cameraActive, setCameraActive] = useState(false);
@@ -90,7 +104,7 @@ export default function VisitorIdentity() {
 
   /* ================= VALIDATION ================= */
   const validateAll = () => {
-    if (!photo) {
+    if (!photo && !returningKey) {
       setError("Visitor photo is required");
       return false;
     }
@@ -152,7 +166,11 @@ export default function VisitorIdentity() {
 
       formData.append("idType",   idType);
       formData.append("idNumber", idNumber);
-      formData.append("photo",    file);
+      if (photo && file) {
+        formData.append("photo", file);
+      } else if (returningKey) {
+        formData.append("existingPhotoKey", returningKey);
+      }
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors`,
@@ -168,6 +186,7 @@ export default function VisitorIdentity() {
 
       localStorage.removeItem("visitor_primary");
       localStorage.removeItem("visitor_secondary");
+      localStorage.removeItem("visitor_returning");
 
       router.push(`/visitor/pass?visitorCode=${data.visitor.visitorCode}`);
     } catch (err) {
@@ -252,7 +271,24 @@ export default function VisitorIdentity() {
                 </div>
 
                 <div className={styles.cameraContainer}>
-                  {!cameraActive && !photo && (
+                  {!cameraActive && !photo && returningKey && returningPhoto && (
+                    <div className={styles.cameraIdle}>
+                      <p className={styles.cameraIdleText} style={{ marginBottom:"0.5rem", fontSize:"0.82rem", color:"#6b7280" }}>
+                        Photo from last visit:
+                      </p>
+                      <img src={returningPhoto} alt="Previous photo" className={styles.preview} style={{ marginBottom:"0.75rem" }} />
+                      <div style={{ display:"flex", gap:"0.5rem" }}>
+                        <button className={styles.startBtn} onClick={() => setPhoto(returningPhoto)}>
+                          ✓ Use This Photo
+                        </button>
+                        <button className={styles.startBtn} style={{ background:"#f3f4f6", color:"#374151" }}
+                          onClick={() => { setReturningKey(null); setReturningPhoto(null); startCamera(); }}>
+                          📷 New Photo
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                  {!cameraActive && !photo && !returningKey && (
                     <div className={styles.cameraIdle}>
                       <div className={styles.cameraIcon}>📷</div>
                       <p className={styles.cameraIdleText}>Take a visitor photo</p>

@@ -229,6 +229,23 @@ export default function SecondaryDetails() {
         const parsed = JSON.parse(saved);
         setForm(parsed);
         if (parsed._employeeId) setSelectedEmployeeId(parsed._employeeId);
+      } else {
+        // Pre-fill profile fields from returning visitor data (never pre-fill visit-specific fields)
+        const returning = localStorage.getItem("visitor_returning");
+        if (returning) {
+          const r = JSON.parse(returning);
+          setForm(prev => ({
+            ...prev,
+            fromCompany: r.fromCompany || "",
+            department:  r.department  || "",
+            designation: r.designation || "",
+            address:     r.address     || "",
+            city:        r.city        || "",
+            state:       r.state       || "",
+            postalCode:  r.postalCode  || "",
+            country:     r.country     || "",
+          }));
+        }
       }
     } catch {
       localStorage.clear(); router.replace("/auth/login");

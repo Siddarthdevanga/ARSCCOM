@@ -8,10 +8,11 @@ export default function VisitorPrimaryDetails() {
   const router = useRouter();
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const [name,         setName]         = useState("");
+  const [phone,        setPhone]        = useState("");
+  const [email,        setEmail]        = useState("");
+  const [error,        setError]        = useState("");
+  const [prefillBanner, setPrefillBanner] = useState(false);
 
   /* ================= LOAD COMPANY & PREVIOUS DATA ================= */
   useEffect(() => {
@@ -44,6 +45,27 @@ export default function VisitorPrimaryDetails() {
 
     setLoading(false);
   }, [router]);
+
+  /* ================= RETURNING VISITOR LOOKUP ================= */
+  const handlePhoneBlur = async () => {
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length !== 10) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/returning?phone=${digits}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const data = await res.json();
+      if (data.found && data.profile) {
+        const p = data.profile;
+        if (!name.trim()  && p.name)  setName(p.name);
+        if (!email.trim() && p.email) setEmail(p.email);
+        localStorage.setItem("visitor_returning", JSON.stringify(p));
+        setPrefillBanner(true);
+      }
+    } catch { /* silently ignore — admin can fill manually */ }
+  };
 
   /* ================= NEXT ================= */
   const handleNext = () => {
@@ -130,6 +152,12 @@ export default function VisitorPrimaryDetails() {
             </div>
 
             {error && <div className={styles.error}>{error}</div>}
+            {prefillBanner && (
+              <div style={{ background:"#ede9fe", border:"1px solid #c4b5fd", borderRadius:"0.5rem",
+                padding:"0.6rem 0.875rem", fontSize:"0.82rem", color:"#5b21b6", marginBottom:"0.75rem" }}>
+                ✓ Details pre-filled from last visit — review before proceeding
+              </div>
+            )}
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Full Name <span className={styles.req}>*</span></label>
@@ -153,7 +181,8 @@ export default function VisitorPrimaryDetails() {
                     className={styles.input}
                     type="tel"
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
+                    onChange={(e) => { setPhone(e.target.value.replace(/\D/g,"").slice(0,10)); setPrefillBanner(false); }}
+                    onBlur={handlePhoneBlur}
                     placeholder="Enter 10-digit number"
                     autoComplete="new-password"
                     inputMode="numeric"
