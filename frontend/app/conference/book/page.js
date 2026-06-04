@@ -272,7 +272,7 @@ export default function ConferenceBookPage() {
   );
 
   return (
-    <div style={{ minHeight:"100vh", background:"#f8f7ff", fontFamily:"'Nunito', sans-serif" }}>
+    <div style={{ background:"#f8f7ff", fontFamily:"'Nunito', sans-serif", paddingBottom:"3rem" }}>
 
       {/* Header */}
       <header style={{ padding:"0.875rem 1.25rem", background:"#fff",

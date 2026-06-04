@@ -504,36 +504,20 @@ export default function PublicConferenceBooking() {
   }, [slug]);
 
   /* ================= ROOMS DATA ================= */
-  useEffect(() => {
+  const loadRooms = useCallback(async () => {
     if (!company) return;
-    
-    const loadRooms = async () => {
-      try {
-        const response = await fetch(`${API}/api/public/conference/company/${slug}/rooms`);
-        
-        if (!response.ok) {
-          console.log("[ROOMS_API_ERROR] Status:", response.status);
-          
-          if (response.status === 403) {
-            showToast("Some features may be limited. Contact your organization if you need assistance.", "info");
-          }
-          
-          setRooms([]);
-          return;
-        }
-
-        const data = await response.json();
-        setRooms(data || []);
-        
-        console.log("[ROOMS_LOADED]", data?.length || 0, "rooms");
-      } catch (error) {
-        console.error("[ROOMS_ERROR]", error);
-        setRooms([]);
+    try {
+      const response = await fetch(`${API}/api/public/conference/company/${slug}/rooms`);
+      if (!response.ok) {
+        if (response.status === 403) showToast("Some features may be limited. Contact your organization if you need assistance.", "info");
+        setRooms([]); return;
       }
-    };
-
-    loadRooms();
+      const data = await response.json();
+      setRooms(data || []);
+    } catch { setRooms([]); }
   }, [company, slug]);
+
+  useEffect(() => { loadRooms(); }, [loadRooms]);
 
   /* ================= BOOKINGS DATA ================= */
   const loadBookings = useCallback(async (overrideRoomId) => {
@@ -817,7 +801,11 @@ export default function PublicConferenceBooking() {
       setTeamMembers([]);
       setMemberSearch("");
       setFormErrors({});
-      
+      setSelectedRoom(null);
+      setRoomId("");
+
+      // Refresh rooms so cards show the new booking, then reload bookings
+      await loadRooms();
       loadBookings();
     } catch (error) {
       console.error("[BOOKING_ERROR]", error);
@@ -1089,23 +1077,23 @@ export default function PublicConferenceBooking() {
         </div>
       )}
 
-      {/* ================= HERO BANNER — matches SaaS welcome section ================= */}
-      <div className={styles.heroBanner}>
-        <div className={styles.heroBannerContent}>
-          <div className={styles.heroBannerGreeting}>
-            <span className={styles.heroBannerDot}></span>
-            {getGreeting()}
+      {/* Banner only shown before OTP verification */}
+      {!otpVerified && (
+        <div className={styles.heroBanner}>
+          <div className={styles.heroBannerContent}>
+            <div className={styles.heroBannerGreeting}>
+              <span className={styles.heroBannerDot}></span>
+              {getGreeting()}
+            </div>
+            <h2 className={styles.heroBannerTitle}>
+              Welcome, <span>Let&apos;s Get This Meeting Rolling</span>
+            </h2>
+            <p className={styles.heroBannerSub}>
+              Verify your email to start booking conference rooms
+            </p>
           </div>
-          <h2 className={styles.heroBannerTitle}>
-            Welcome, <span>Let's Get This Meeting Rolling</span>
-          </h2>
-          <p className={styles.heroBannerSub}>
-            {!otpVerified ? "Verify your email to start booking conference rooms"
-              : !selectedRoom ? "Choose a conference room to continue"
-              : "Fill in your booking details and confirm"}
-          </p>
         </div>
-      </div>
+      )}
 
       {/* ================= OTP VERIFICATION SECTION ================= */}
       {!otpVerified ? (
@@ -1175,7 +1163,7 @@ export default function PublicConferenceBooking() {
         </div>
       ) : !selectedRoom ? (
         /* ── Room Selection Grid ── */
-        <div className={styles.container} style={{ maxWidth:900, padding:"1.5rem 1rem" }}>
+        <div style={{ maxWidth:960, margin:"0 auto", padding:"1.5rem 1rem 2rem" }}>
           <p style={{ color:"#6b7280", fontSize:"0.875rem", marginBottom:"1.25rem" }}>
             {rooms.length} room{rooms.length !== 1 ? "s" : ""} available &mdash; today&apos;s upcoming bookings shown on each card
           </p>
@@ -1188,10 +1176,61 @@ export default function PublicConferenceBooking() {
               }} />
             ))}
           </div>
+
+          {/* Inline today's schedule */}
+          {rooms.length > 0 && (
+            <div style={{ marginTop:"2.5rem" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.875rem" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span style={{ fontWeight:700, fontSize:"0.9rem", color:"#1f2937" }}>Today&apos;s Schedule</span>
+              </div>
+              <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden" }}>
+                {rooms.map(room => (
+                  <div key={room.id} style={{ borderBottom:"1px solid #f3f4f6" }}>
+                    <div style={{ padding:"0.6rem 1rem", background:"#faf5ff",
+                      fontWeight:600, fontSize:"0.82rem", color:"#374151", display:"flex", justifyContent:"space-between" }}>
+                      <span>{room.room_name}</span>
+                      {room.capacity && <span style={{ color:"#9ca3af", fontWeight:400, fontSize:"0.75rem" }}>{room.capacity} people</span>}
+                    </div>
+                    {room.today_bookings?.length > 0 ? room.today_bookings.map((b, i) => (
+                      <div key={i} style={{ padding:"0.45rem 1rem 0.45rem 1.5rem",
+                        borderTop:"1px solid #f9fafb", fontSize:"0.78rem", color:"#374151" }}>
+                        <span style={{ fontWeight:600 }}>
+                          {(() => { const [h,m] = (b.start_time||"0:0").split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
+                          {" – "}
+                          {(() => { const [h,m] = (b.end_time||"0:0").split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
+                        </span>
+                        <span style={{ color:"#6b7280", marginLeft:8 }}>{b.booked_by}</span>
+                      </div>
+                    )) : (
+                      <div style={{ padding:"0.45rem 1rem 0.45rem 1.5rem", fontSize:"0.75rem", color:"#9ca3af" }}>
+                        No upcoming bookings today
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         <div className={styles.container}>
           <div className={styles.layout}>
+            {/* Back to rooms */}
+            <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
+              style={{ background:"none", border:"none", cursor:"pointer", color:"#7c3aed",
+                fontSize:"0.875rem", fontWeight:600, display:"flex", alignItems:"center",
+                gap:"0.3rem", marginBottom:"0.875rem", padding:0 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 5l-7 7 7 7"/>
+              </svg>
+              Back to Rooms
+            </button>
+
             {/* ── Selected room summary ── */}
             <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
               overflow:"hidden", marginBottom:"1rem", display:"flex" }}>
