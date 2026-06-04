@@ -1,7 +1,18 @@
 import express from "express";
+import multer from "multer";
 import { db } from "../config/db.js";
 import { authMiddleware } from "../middleware/auth.js";
+import { uploadToS3, getPresignedUrl } from "../services/s3.service.js";
 import QRCode from "qrcode";
+
+const roomImageUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
+  },
+});
 
 const router = express.Router();
 
@@ -29,6 +40,63 @@ router.use(authMiddleware);
 
 const normalizePlan   = (plan)   => (plan   || "trial").toLowerCase();
 const normalizeStatus = (status) => (status || "pending").toLowerCase();
+
+/* ──────────────────────────────────────────────────────────
+   Attach today's upcoming bookings + presigned image URL to
+   each room. Bookings include employee name (looked up by
+   booked_by email from company_employees).
+────────────────────────────────────────────────────────── */
+const enrichRoomsWithStatus = async (rooms, companyId) => {
+  if (!rooms.length) return rooms;
+
+  const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const todayIST = nowIST.toISOString().split("T")[0];
+  const nowTime  = `${String(nowIST.getHours()).padStart(2,"0")}:${String(nowIST.getMinutes()).padStart(2,"0")}:00`;
+
+  const roomIds = rooms.map(r => r.id);
+  const placeholders = roomIds.map(() => "?").join(",");
+
+  const [bookings] = await db.query(
+    `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose,
+            COALESCE(ce.name, '') AS employee_name
+     FROM conference_bookings cb
+     LEFT JOIN company_employees ce
+       ON ce.company_id = ? AND LOWER(ce.email) = LOWER(cb.booked_by) AND ce.is_active = 1
+     WHERE cb.company_id = ?
+       AND cb.room_id IN (${placeholders})
+       AND cb.booking_date = ?
+       AND cb.status = 'BOOKED'
+       AND cb.end_time > ?
+     ORDER BY cb.start_time ASC`,
+    [companyId, companyId, ...roomIds, todayIST, nowTime]
+  );
+
+  const bookingsByRoom = {};
+  for (const b of bookings) {
+    if (!bookingsByRoom[b.room_id]) bookingsByRoom[b.room_id] = [];
+    const name = b.employee_name || b.booked_by;
+    bookingsByRoom[b.room_id].push({
+      start_time:  b.start_time,
+      end_time:    b.end_time,
+      booked_by:   `${name} (${b.booked_by})`,
+      purpose:     b.purpose || null,
+    });
+  }
+
+  return await Promise.all(rooms.map(async (room) => {
+    let imageUrl = null;
+    if (room.image_url) {
+      try { imageUrl = await getPresignedUrl(room.image_url, 3600); } catch { imageUrl = null; }
+    }
+    const todayBookings = bookingsByRoom[room.id] || [];
+    return {
+      ...room,
+      image_url:      imageUrl,
+      today_bookings: todayBookings,
+      is_busy_today:  todayBookings.length > 0,
+    };
+  }));
+};
 
 const generatePublicSlug = (companyName, companyId) => {
   const normalized = (companyName || "company")
@@ -228,14 +296,14 @@ router.get("/rooms", async (req, res) => {
     await syncRoomActivationByPlan(companyId, plan);
 
     const [rooms] = await db.query(
-      `SELECT id, room_number, room_name, capacity, is_active
+      `SELECT id, room_number, room_name, capacity, is_active, image_url
        FROM conference_rooms
        WHERE company_id = ? AND is_active = 1
        ORDER BY room_number ASC`,
       [companyId]
     );
 
-    res.json(rooms);
+    res.json(await enrichRoomsWithStatus(rooms, companyId));
   } catch (err) {
     sendError(res, err, "GET /rooms");
   }
@@ -252,14 +320,14 @@ router.get("/rooms/all", async (req, res) => {
     await syncRoomActivationByPlan(companyId, plan);
 
     const [rooms] = await db.query(
-      `SELECT id, room_number, room_name, capacity, is_active
+      `SELECT id, room_number, room_name, capacity, is_active, image_url
        FROM conference_rooms
        WHERE company_id = ?
        ORDER BY room_number ASC, id ASC`,
       [companyId]
     );
 
-    res.json(rooms);
+    res.json(await enrichRoomsWithStatus(rooms, companyId));
   } catch (err) {
     sendError(res, err, "GET /rooms/all");
   }
@@ -269,7 +337,7 @@ router.get("/rooms/all", async (req, res) => {
  * POST /api/conference/rooms
  * Creates a new conference room with plan-limit checking.
  */
-router.post("/rooms", async (req, res) => {
+router.post("/rooms", roomImageUpload.single("image"), async (req, res) => {
   try {
     const companyId   = req.user.company_id;
     const room_name   = String(req.body.room_name  || "").trim();
@@ -308,16 +376,25 @@ router.post("/rooms", async (req, res) => {
       [companyId, room_number, room_name, capacity]
     );
 
+    const roomId = result.insertId;
+
+    // Upload image to S3 if provided
+    if (req.file) {
+      const imageKey = `companies/${companyId}/rooms/${roomId}.jpg`;
+      await uploadToS3(req.file, imageKey);
+      await db.query(`UPDATE conference_rooms SET image_url = ? WHERE id = ?`, [imageKey, roomId]);
+    }
+
     await syncRoomActivationByPlan(companyId, plan);
 
     const [[newRoom]] = await db.query(
       `SELECT is_active FROM conference_rooms WHERE id = ?`,
-      [result.insertId]
+      [roomId]
     );
 
     res.status(201).json({
       message:  "Room created successfully. Activation depends on your current plan.",
-      roomId:   result.insertId,
+      roomId,
       isActive: Boolean(newRoom?.is_active),
     });
   } catch (err) {
@@ -329,7 +406,7 @@ router.post("/rooms", async (req, res) => {
  * PATCH /api/conference/rooms/:id
  * Updates room details (active rooms only).
  */
-router.patch("/rooms/:id", async (req, res) => {
+router.patch("/rooms/:id", roomImageUpload.single("image"), async (req, res) => {
   try {
     const companyId = req.user.company_id;
     const roomId    = parseInt(req.params.id, 10);
@@ -347,12 +424,19 @@ router.patch("/rooms/:id", async (req, res) => {
     await validateCompanySubscription(companyId);
     await verifyRoomAccess(roomId, companyId, true);
 
-    await db.query(
-      `UPDATE conference_rooms
-       SET room_name = ?, capacity = ?
-       WHERE id = ? AND company_id = ?`,
-      [room_name, capacity, roomId, companyId]
-    );
+    if (req.file) {
+      const imageKey = `companies/${companyId}/rooms/${roomId}.jpg`;
+      await uploadToS3(req.file, imageKey);
+      await db.query(
+        `UPDATE conference_rooms SET room_name = ?, capacity = ?, image_url = ? WHERE id = ? AND company_id = ?`,
+        [room_name, capacity, imageKey, roomId, companyId]
+      );
+    } else {
+      await db.query(
+        `UPDATE conference_rooms SET room_name = ?, capacity = ? WHERE id = ? AND company_id = ?`,
+        [room_name, capacity, roomId, companyId]
+      );
+    }
 
     res.json({ message: "Room updated successfully" });
   } catch (err) {

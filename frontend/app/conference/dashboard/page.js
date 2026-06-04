@@ -63,7 +63,13 @@ export default function ConferenceDashboard() {
   const [newRoomName, setNewRoomName] = useState("");
   const [newRoomNumber, setNewRoomNumber] = useState("");
   const [newRoomCapacity, setNewRoomCapacity] = useState("");
+  const [newRoomImage, setNewRoomImage] = useState(null);
+  const [newRoomImagePreview, setNewRoomImagePreview] = useState(null);
   const [isCreatingRoom, setIsCreatingRoom] = useState(false);
+
+  // Edit room image
+  const [editRoomImage, setEditRoomImage] = useState(null);
+  const [editRoomImagePreview, setEditRoomImagePreview] = useState(null);
 
   const [filterDay, setFilterDay] = useState("today");
 
@@ -174,19 +180,26 @@ export default function ConferenceDashboard() {
     setEditingRoomId(room.id); setEditName(room.room_name); setEditCapacity(room.capacity || 0);
   };
 
-  const cancelEdit = () => { setEditingRoomId(null); setEditName(""); setEditCapacity(0); };
+  const cancelEdit = () => {
+    setEditingRoomId(null); setEditName(""); setEditCapacity(0);
+    setEditRoomImage(null); setEditRoomImagePreview(null);
+  };
 
   const saveRoomChanges = async (roomId) => {
     const newName = editName.trim();
     const original = allRooms.find((r) => r.id === roomId);
     if (!newName) { showNotification("Name cannot be empty", "error"); return; }
-    if (newName === original?.room_name && editCapacity === original?.capacity) { cancelEdit(); return; }
     if (!original?.is_active) { showNotification("Room locked.", "warning"); cancelEdit(); return; }
     try {
-      await apiFetch(`/api/conference/rooms/${roomId}`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room_name: newName, capacity: editCapacity || 0 }),
+      const token = localStorage.getItem("token");
+      const fd = new FormData();
+      fd.append("room_name", newName);
+      fd.append("capacity", editCapacity || 0);
+      if (editRoomImage) fd.append("image", editRoomImage);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms/${roomId}`, {
+        method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: fd,
       });
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.message || "Update failed"); }
       cancelEdit(); await loadDashboard(); showNotification("Room updated!", "success");
     } catch (err) { showNotification(err?.message || "Update failed", "error"); cancelEdit(); }
   };
@@ -211,11 +224,19 @@ export default function ConferenceDashboard() {
     if (allRooms.some(r => String(r.room_number) === String(number))) { showNotification("Room number exists", "error"); return; }
     setIsCreatingRoom(true);
     try {
-      const response = await apiFetch("/api/conference/rooms", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room_name: name, room_number: number, capacity }),
+      const token = localStorage.getItem("token");
+      const fd = new FormData();
+      fd.append("room_name", name);
+      fd.append("room_number", number);
+      fd.append("capacity", capacity);
+      if (newRoomImage) fd.append("image", newRoomImage);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms`, {
+        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
       });
-      setNewRoomName(""); setNewRoomNumber(""); setNewRoomCapacity(""); setShowAddRoomModal(false);
+      if (!res.ok) { const d = await res.json(); throw new Error(d?.message || "Create failed"); }
+      const response = await res.json();
+      setNewRoomName(""); setNewRoomNumber(""); setNewRoomCapacity("");
+      setNewRoomImage(null); setNewRoomImagePreview(null); setShowAddRoomModal(false);
       await loadDashboard();
       showNotification(response?.isActive ? "Room created and activated!" : "Room created. Upgrade to activate.", response?.isActive ? "success" : "warning");
     } catch (err) { showNotification(err?.message || "Create failed", "error"); }
@@ -375,6 +396,17 @@ export default function ConferenceDashboard() {
                       <div className={styles.editForm}>
                         <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Room name" autoFocus />
                         <input type="number" value={editCapacity} onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)} placeholder="Capacity" />
+                        <div style={{ marginTop:"0.5rem" }}>
+                          <label style={{ fontSize:"0.78rem", color:"#6b7280", display:"block", marginBottom:"0.3rem" }}>Room Image</label>
+                          {editRoomImagePreview && (
+                            <img src={editRoomImagePreview} alt="Preview" style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", borderRadius:"0.4rem", marginBottom:"0.35rem" }} />
+                          )}
+                          <input type="file" accept="image/*" style={{ fontSize:"0.78rem" }}
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) { setEditRoomImage(f); setEditRoomImagePreview(URL.createObjectURL(f)); }
+                            }} />
+                        </div>
                         <div className={styles.editActions}>
                           <button className={styles.saveBtn} onClick={() => saveRoomChanges(r.id)}>Save</button>
                           <button className={styles.cancelEditBtn} onClick={cancelEdit}>Cancel</button>
@@ -418,6 +450,17 @@ export default function ConferenceDashboard() {
             <div className={styles.formGroup}><label>Room Name *</label><input value={newRoomName} onChange={(e) => setNewRoomName(e.target.value)} placeholder="e.g., Board Room" /></div>
             <div className={styles.formGroup}><label>Room Number *</label><input value={newRoomNumber} onChange={(e) => setNewRoomNumber(e.target.value)} placeholder="e.g., 101" /></div>
             <div className={styles.formGroup}><label>Capacity</label><input type="number" value={newRoomCapacity} onChange={(e) => setNewRoomCapacity(e.target.value)} placeholder="e.g., 10" /></div>
+            <div className={styles.formGroup}>
+              <label>Room Image</label>
+              {newRoomImagePreview && (
+                <img src={newRoomImagePreview} alt="Preview" style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", borderRadius:"0.5rem", marginBottom:"0.5rem" }} />
+              )}
+              <input type="file" accept="image/*"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) { setNewRoomImage(f); setNewRoomImagePreview(URL.createObjectURL(f)); }
+                }} />
+            </div>
             <div className={styles.modalActions}>
               <button className={styles.modalCancel} onClick={() => setShowAddRoomModal(false)} disabled={isCreatingRoom}>Cancel</button>
               <button className={styles.modalPrimary} onClick={createNewRoom} disabled={isCreatingRoom || !newRoomName.trim() || !newRoomNumber.trim()}>{isCreatingRoom ? "Creating..." : "Create Room"}</button>
@@ -438,7 +481,7 @@ export default function ConferenceDashboard() {
           <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt="Logo" className={styles.companyLogo} onError={e => { e.currentTarget.style.display = "none"; }} />
           <button className={styles.bookNowBtn} disabled={isBookingDisabled} onClick={() => {
             if (isBookingDisabled) { showNotification(getBookingDisabledMessage(), "warning"); }
-            else { router.push("/conference/bookings"); }
+            else { router.push("/conference/book"); }
           }}>
             {isPlanExpired ? "Expired" : isBookingLimitExceeded ? "Limit Reached" : hasNoActiveRooms ? "No Rooms" : "Book Now"}
           </button>
@@ -562,6 +605,103 @@ export default function ConferenceDashboard() {
           </div>
 
         </main>
+
+        {/* ===== TODAY'S TIMELINE ===== */}
+        {allRooms.length > 0 && (
+          <section style={{ padding:"1.5rem 1rem 2rem", overflowX:"auto" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>Today&apos;s Schedule</span>
+            </div>
+            <TodayTimeline rooms={allRooms} bookings={filteredBookings} />
+          </section>
+        )}
+
+      </div>
+    </div>
+  );
+}
+
+/* ─── Today's Timeline Component ─────────────────────────── */
+function TodayTimeline({ rooms, bookings }) {
+  const HOUR_PX = 60;
+  const START_H = 0;
+  const END_H   = 24;
+  const totalW  = (END_H - START_H) * HOUR_PX;
+  const hours   = Array.from({ length: END_H - START_H + 1 }, (_, i) => START_H + i);
+
+  const toMinutes = (t) => {
+    if (!t) return 0;
+    const parts = String(t).split(":");
+    return parseInt(parts[0]) * 60 + parseInt(parts[1] || "0");
+  };
+
+  const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const nowMin = nowIST.getHours() * 60 + nowIST.getMinutes();
+  const nowPx  = ((nowMin - START_H * 60) / 60) * HOUR_PX;
+
+  return (
+    <div style={{ overflowX:"auto", borderRadius:"0.75rem", border:"1px solid #e5e7eb" }}>
+      <div style={{ minWidth: totalW + 120 }}>
+        {/* Hour header */}
+        <div style={{ display:"flex", marginLeft:120, borderBottom:"1px solid #e5e7eb", background:"#f9fafb" }}>
+          {hours.map(h => (
+            <div key={h} style={{ width:HOUR_PX, flexShrink:0, fontSize:"0.65rem", color:"#9ca3af",
+              textAlign:"center", padding:"0.3rem 0", borderRight:"1px solid #f3f4f6" }}>
+              {h === 0 ? "12 AM" : h < 12 ? `${h} AM` : h === 12 ? "12 PM" : `${h - 12} PM`}
+            </div>
+          ))}
+        </div>
+
+        {/* Rows */}
+        {rooms.map((room) => {
+          const roomBookings = bookings.filter(b => b.room_id === room.id);
+          return (
+            <div key={room.id} style={{ display:"flex", borderBottom:"1px solid #f3f4f6", minHeight:44 }}>
+              {/* Room label */}
+              <div style={{ width:120, flexShrink:0, padding:"0.5rem 0.75rem",
+                fontSize:"0.78rem", fontWeight:600, color:"#374151",
+                borderRight:"1px solid #e5e7eb", display:"flex", alignItems:"center",
+                background:"#fafafa" }}>
+                {room.room_name}
+              </div>
+              {/* Timeline track */}
+              <div style={{ position:"relative", flex:1, height:44 }}>
+                {/* Hour grid lines */}
+                {hours.map(h => (
+                  <div key={h} style={{ position:"absolute", left:(h - START_H) * HOUR_PX,
+                    top:0, bottom:0, width:1, background:"#f3f4f6" }} />
+                ))}
+                {/* Now indicator */}
+                {nowPx >= 0 && nowPx <= totalW && (
+                  <div style={{ position:"absolute", left:nowPx, top:0, bottom:0,
+                    width:2, background:"#ef4444", zIndex:10 }} />
+                )}
+                {/* Booking blocks */}
+                {roomBookings.map((b, i) => {
+                  const startMin = toMinutes(b.start_time);
+                  const endMin   = toMinutes(b.end_time);
+                  const left  = ((startMin - START_H * 60) / 60) * HOUR_PX;
+                  const width = Math.max(4, ((endMin - startMin) / 60) * HOUR_PX);
+                  return (
+                    <div key={i} title={`${b.booked_by} • ${b.purpose || ""}`}
+                      style={{ position:"absolute", left, width, top:6, bottom:6,
+                        background:"#7c3aed", borderRadius:4, overflow:"hidden",
+                        padding:"0 4px", display:"flex", alignItems:"center" }}>
+                      <span style={{ fontSize:"0.6rem", color:"#fff", whiteSpace:"nowrap",
+                        overflow:"hidden", textOverflow:"ellipsis" }}>
+                        {b.booked_by?.split("(")[0]?.trim() || "Booked"}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

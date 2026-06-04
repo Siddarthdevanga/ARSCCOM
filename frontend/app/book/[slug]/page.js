@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -278,6 +278,95 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
 };
 
 /* ======================================================
+   PUBLIC ROOM CARD
+====================================================== */
+const prettyTimePub = (t = "") => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  return `${h % 12 || 12}:${String(m).padStart(2,"0")} ${h >= 12 ? "PM" : "AM"}`;
+};
+
+function PublicRoomCard({ room, onSelect }) {
+  const busy = room.is_busy_today;
+  return (
+    <div
+      onClick={() => onSelect(room)}
+      style={{
+        borderRadius:"0.875rem",
+        border: `1.5px solid ${busy ? "#e5e7eb" : "#7c3aed"}`,
+        background:"#fff", overflow:"hidden", cursor:"pointer",
+        opacity: busy ? 0.65 : 1,
+        boxShadow: busy ? "none" : "0 2px 12px rgba(124,58,237,0.08)",
+        transition:"transform 0.15s, box-shadow 0.15s",
+      }}
+      onMouseEnter={e => { if (!busy) { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}}
+      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=busy?"none":"0 2px 12px rgba(124,58,237,0.08)"; }}
+    >
+      {/* 16:9 image */}
+      <div style={{ width:"100%", aspectRatio:"16/9", background:"#ede9fe", position:"relative",
+        overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+        {room.image_url
+          ? <img src={room.image_url} alt={room.room_name}
+              style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
+          : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.3rem" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+              </svg>
+              <span style={{ fontSize:"1rem", fontWeight:800, color:"#7c3aed" }}>
+                {room.room_name.charAt(0).toUpperCase()}
+              </span>
+            </div>
+        }
+        {busy && (
+          <div style={{ position:"absolute", top:8, right:8, background:"rgba(0,0,0,0.6)",
+            color:"#fff", fontSize:"0.65rem", fontWeight:700, padding:"2px 7px",
+            borderRadius:99 }}>BUSY TODAY</div>
+        )}
+      </div>
+
+      <div style={{ padding:"0.875rem" }}>
+        <div style={{ fontWeight:700, fontSize:"0.9rem", color:"#1f2937", marginBottom:"0.25rem" }}>
+          {room.room_name}
+        </div>
+        {room.capacity && (
+          <div style={{ fontSize:"0.78rem", color:"#6b7280", marginBottom:"0.5rem", display:"flex", alignItems:"center", gap:"0.3rem" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+            {room.capacity} people
+          </div>
+        )}
+
+        {room.today_bookings?.length > 0 && (
+          <div style={{ borderTop:"1px solid #f3f4f6", paddingTop:"0.5rem" }}>
+            <div style={{ fontSize:"0.67rem", fontWeight:700, color:"#9ca3af",
+              textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.3rem" }}>
+              Today&apos;s Bookings
+            </div>
+            {room.today_bookings.map((b, i) => (
+              <div key={i} style={{ fontSize:"0.72rem", color:"#374151", marginBottom:"0.2rem" }}>
+                <span style={{ fontWeight:600 }}>{prettyTimePub(b.start_time)} – {prettyTimePub(b.end_time)}</span>
+                <div style={{ color:"#6b7280", fontSize:"0.68rem" }}>{b.booked_by}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ marginTop:"0.75rem", width:"100%", padding:"0.45rem",
+          background: busy ? "#f3f4f6" : "#7c3aed",
+          color: busy ? "#9ca3af" : "#fff",
+          borderRadius:"0.5rem", fontSize:"0.8rem", fontWeight:600, textAlign:"center" }}>
+          {busy ? "Select for Another Date" : "Select Room"}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================
    GREETING HELPER
 ====================================================== */
 const getGreeting = () => {
@@ -292,7 +381,6 @@ const getGreeting = () => {
 ====================================================== */
 export default function PublicConferenceBooking() {
   const { slug } = useParams();
-  const router = useRouter();
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -300,6 +388,8 @@ export default function PublicConferenceBooking() {
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
 
+  const [selectedRoom, setSelectedRoom] = useState(null);
+  const [showSchedule, setShowSchedule] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [date, setDate] = useState(today);
   const [startTime, setStartTime] = useState("");
@@ -349,7 +439,6 @@ export default function PublicConferenceBooking() {
     if (!date) errors.date = "Please select a date";
     if (!startTime) errors.startTime = "Please select start time";
     if (!endTime) errors.endTime = "Please select end time";
-    if (!department.trim()) errors.department = "Department is required";
 
     if (startTime && endTime && ampmToMinutes(endTime) <= ampmToMinutes(startTime)) {
       errors.endTime = "End time must be after start time";
@@ -447,15 +536,16 @@ export default function PublicConferenceBooking() {
   }, [company, slug]);
 
   /* ================= BOOKINGS DATA ================= */
-  const loadBookings = useCallback(async () => {
-    if (!roomId || !date) {
+  const loadBookings = useCallback(async (overrideRoomId) => {
+    const effectiveRoomId = overrideRoomId || roomId;
+    if (!effectiveRoomId || !date) {
       setBookings([]);
       return;
     }
 
     try {
       const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&date=${date}&userEmail=${email || ""}`
+        `${API}/api/public/conference/company/${slug}/bookings?roomId=${effectiveRoomId}&date=${date}&userEmail=${email || ""}`
       );
 
       if (!response.ok) {
@@ -934,6 +1024,16 @@ export default function PublicConferenceBooking() {
               <>
                 <span className={styles.userEmail}>{email}</span>
                 <button
+                  onClick={() => setShowSchedule(true)}
+                  title="Today's Schedule"
+                  style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:"0.4rem",
+                    padding:"0.35rem 0.6rem", cursor:"pointer", display:"flex",
+                    flexDirection:"column", gap:"3px", alignItems:"center" }}>
+                  <span style={{ display:"block", width:16, height:1.5, background:"#374151" }} />
+                  <span style={{ display:"block", width:12, height:1.5, background:"#374151" }} />
+                  <span style={{ display:"block", width:16, height:1.5, background:"#374151" }} />
+                </button>
+                <button
                   className={styles.logoutBtn}
                   onClick={handleLogout}
                   title="Logout"
@@ -947,6 +1047,48 @@ export default function PublicConferenceBooking() {
         </div>
       </header>
 
+      {/* ── Today's Schedule Slide-out ── */}
+      {showSchedule && (
+        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex" }}>
+          <div style={{ flex:1, background:"rgba(0,0,0,0.4)" }} onClick={() => setShowSchedule(false)} />
+          <div style={{ width:"min(360px,92vw)", background:"#fff", overflowY:"auto",
+            padding:"1.25rem", boxShadow:"-4px 0 24px rgba(0,0,0,0.15)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem" }}>
+              <span style={{ fontWeight:700, fontSize:"1rem", color:"#1f2937" }}>Today&apos;s Schedule</span>
+              <button onClick={() => setShowSchedule(false)}
+                style={{ background:"none", border:"none", fontSize:"1.25rem", cursor:"pointer", color:"#6b7280" }}>
+                ×
+              </button>
+            </div>
+            {rooms.length === 0 ? (
+              <p style={{ color:"#9ca3af", fontSize:"0.875rem" }}>No rooms available.</p>
+            ) : rooms.map(room => (
+              <div key={room.id} style={{ marginBottom:"1rem", borderRadius:"0.6rem",
+                border:"1px solid #e5e7eb", overflow:"hidden" }}>
+                <div style={{ padding:"0.6rem 0.875rem", background:"#f9fafb",
+                  fontWeight:600, fontSize:"0.85rem", color:"#374151" }}>
+                  {room.room_name}
+                  {room.capacity ? <span style={{ fontWeight:400, color:"#9ca3af", marginLeft:6, fontSize:"0.75rem" }}>{room.capacity} people</span> : null}
+                </div>
+                {room.today_bookings?.length > 0 ? room.today_bookings.map((b, i) => (
+                  <div key={i} style={{ padding:"0.5rem 0.875rem", borderTop:"1px solid #f3f4f6",
+                    fontSize:"0.78rem", color:"#374151" }}>
+                    <span style={{ fontWeight:600 }}>
+                      {(() => { const [h,m] = b.start_time.split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
+                      {" – "}
+                      {(() => { const [h,m] = b.end_time.split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
+                    </span>
+                    <div style={{ color:"#6b7280", marginTop:2 }}>{b.booked_by}</div>
+                  </div>
+                )) : (
+                  <div style={{ padding:"0.5rem 0.875rem", fontSize:"0.78rem", color:"#9ca3af" }}>No bookings today</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ================= HERO BANNER — matches SaaS welcome section ================= */}
       <div className={styles.heroBanner}>
         <div className={styles.heroBannerContent}>
@@ -958,7 +1100,9 @@ export default function PublicConferenceBooking() {
             Welcome, <span>Let's Get This Meeting Rolling</span>
           </h2>
           <p className={styles.heroBannerSub}>
-            {otpVerified ? "Select a room and time slot to book your conference room" : "Verify your email to start booking conference rooms"}
+            {!otpVerified ? "Verify your email to start booking conference rooms"
+              : !selectedRoom ? "Choose a conference room to continue"
+              : "Fill in your booking details and confirm"}
           </p>
         </div>
       </div>
@@ -1029,9 +1173,52 @@ export default function PublicConferenceBooking() {
             )}
           </div>
         </div>
+      ) : !selectedRoom ? (
+        /* ── Room Selection Grid ── */
+        <div className={styles.container} style={{ maxWidth:900, padding:"1.5rem 1rem" }}>
+          <p style={{ color:"#6b7280", fontSize:"0.875rem", marginBottom:"1.25rem" }}>
+            {rooms.length} room{rooms.length !== 1 ? "s" : ""} available &mdash; today&apos;s upcoming bookings shown on each card
+          </p>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"1rem" }}>
+            {rooms.map(room => (
+              <PublicRoomCard key={room.id} room={room} onSelect={(r) => {
+                setSelectedRoom(r);
+                setRoomId(String(r.id));
+                loadBookings(r.id);
+              }} />
+            ))}
+          </div>
+        </div>
       ) : (
         <div className={styles.container}>
           <div className={styles.layout}>
+            {/* ── Selected room summary ── */}
+            <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
+              overflow:"hidden", marginBottom:"1rem", display:"flex" }}>
+              <div style={{ width:100, flexShrink:0, background:"#ede9fe", minHeight:72,
+                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                {selectedRoom.image_url
+                  ? <img src={selectedRoom.image_url} alt={selectedRoom.room_name}
+                      style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="2"/>
+                      <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                    </svg>
+                }
+              </div>
+              <div style={{ padding:"0.875rem" }}>
+                <div style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>{selectedRoom.room_name}</div>
+                <div style={{ fontSize:"0.78rem", color:"#6b7280", marginTop:"0.2rem" }}>
+                  {selectedRoom.capacity ? `${selectedRoom.capacity} people` : ""}
+                </div>
+                <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
+                  style={{ marginTop:"0.35rem", fontSize:"0.75rem", color:"#7c3aed",
+                    background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>
+                  Change room
+                </button>
+              </div>
+            </div>
+
             {/* ================= BOOKING FORM ================= */}
             <div className={styles.card}>
               <h2>Book a Conference Room</h2>
@@ -1047,24 +1234,6 @@ export default function PublicConferenceBooking() {
                   className={`${styles.input} ${formErrors.date ? styles.inputError : ''}`}
                 />
                 {formErrors.date && <span className={styles.errorText}>{formErrors.date}</span>}
-              </div>
-
-              <div className={styles.formGroup}>
-                <label htmlFor="room">Room <span className={styles.required}>*</span></label>
-                <select 
-                  id="room"
-                  value={roomId} 
-                  onChange={e => setRoomId(e.target.value)}
-                  className={`${styles.select} ${formErrors.roomId ? styles.inputError : ''}`}
-                >
-                  <option value="">Select a room</option>
-                  {rooms.map(r => (
-                    <option key={r.id} value={r.id}>
-                      {r.room_name} (#{r.room_number})
-                    </option>
-                  ))}
-                </select>
-                {formErrors.roomId && <span className={styles.errorText}>{formErrors.roomId}</span>}
               </div>
 
               <div className={formErrors.startTime ? styles.formGroupError : styles.formGroup}>
@@ -1093,20 +1262,19 @@ export default function PublicConferenceBooking() {
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="department">Department <span className={styles.required}>*</span></label>
+                <label htmlFor="department">Department</label>
                 <input
                   id="department"
                   type="text"
                   value={department}
                   placeholder="e.g., Engineering, Sales, Marketing"
                   onChange={e => setDepartment(e.target.value)}
-                  className={`${styles.input} ${formErrors.department ? styles.inputError : ''}`}
+                  className={styles.input}
                 />
-                {formErrors.department && <span className={styles.errorText}>{formErrors.department}</span>}
               </div>
 
               <div className={styles.formGroup}>
-                <label htmlFor="purpose">Purpose (Optional)</label>
+                <label htmlFor="purpose">Purpose</label>
                 <input
                   id="purpose"
                   type="text"
@@ -1119,7 +1287,7 @@ export default function PublicConferenceBooking() {
 
               {/* ── Team Members ── */}
               <div className={styles.formGroup}>
-                <label>Team Members (Optional)</label>
+                <label>Team Members</label>
                 <div className={styles.memberSearchWrap}>
                   <input
                     type="text"

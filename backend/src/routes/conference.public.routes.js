@@ -142,130 +142,123 @@ const sendOtpEmail = async (email, otp, company) => {
   });
 };
 
+/* ── shared: get a presigned room image URL (null if none) ── */
+const getRoomImageUrl = async (room) => {
+  if (!room?.image_url) return null;
+  try { return await getPresignedUrl(room.image_url, 86400); } catch { return null; }
+};
+
+/* ── shared: 16:9 room image block or branded placeholder ── */
+const roomImageBlock = (imageUrl, roomName) =>
+  imageUrl
+    ? `<img src="${imageUrl}" alt="${roomName}" style="width:100%;max-width:560px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;margin:0 auto 20px;" />`
+    : `<div style="width:100%;max-width:560px;aspect-ratio:16/9;background:linear-gradient(135deg,#6c2bd9,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+         <span style="color:#fff;font-size:28px;font-weight:800;letter-spacing:1px;">${roomName.charAt(0).toUpperCase()}</span>
+       </div>`;
+
+/* ── shared: booking details table ── */
+const bookingTable = (room, booking, accentColor = "#6c2bd9") => `
+  <table style="border-collapse:collapse;margin:0;font-size:14px;width:100%;max-width:560px;border-radius:8px;overflow:hidden;border:1px solid #ede9fe;">
+    <tr style="background:${accentColor};color:#fff;">
+      <td colspan="2" style="padding:10px 14px;font-weight:700;font-size:15px;">Booking Summary</td>
+    </tr>
+    <tr style="border-bottom:1px solid #ede9fe;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;width:130px;">Room</td>
+      <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${room.room_name}${room.room_number ? ` <span style="color:#9ca3af;font-weight:400;">#${room.room_number}</span>` : ""}${room.capacity ? ` <span style="color:#9ca3af;font-size:12px;margin-left:6px;">&bull; ${room.capacity} people</span>` : ""}</td>
+    </tr>
+    <tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Date</td>
+      <td style="padding:10px 14px;color:#1f2937;">${booking.booking_date}</td>
+    </tr>
+    <tr style="border-bottom:1px solid #ede9fe;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Time</td>
+      <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${prettyTime(booking.start_time)} &ndash; ${prettyTime(booking.end_time)}</td>
+    </tr>
+    ${booking.department ? `<tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
+    ${booking.purpose ? `<tr><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
+  </table>`;
+
 const sendBookingEmail = async (email, company, room, booking) => {
-  const logoUrl = await getLogoUrl(company);
+  const [logoUrl, roomImageUrl] = await Promise.all([getLogoUrl(company), getRoomImageUrl(room)]);
   await sendEmail({
     to: email,
     subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
     html: `
-      <h2 style="color:#4CAF50;">✓ Booking Confirmed</h2>
-      <h3>${company.name}</h3>
-
-      <table style="border-collapse:collapse;margin:20px 0;font-size:15px;width:100%;max-width:500px;">
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;width:140px;">Room</td>
-          <td style="padding:10px;">${room.room_name} (#${room.room_number})</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Date</td>
-          <td style="padding:10px;">${booking.booking_date}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Time</td>
-          <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Department</td>
-          <td style="padding:10px;">${booking.department}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px;font-weight:bold;">Purpose</td>
-          <td style="padding:10px;">${booking.purpose || "—"}</td>
-        </tr>
-      </table>
-      ${emailFooter(company, logoUrl)}
-    `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #ede9fe;">
+        <div style="background:linear-gradient(135deg,#6c2bd9,#7c3aed);padding:24px 28px;">
+          <div style="color:#c4b5fd;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
+          <h1 style="color:#fff;margin:0;font-size:22px;">Booking Confirmed</h1>
+          <p style="color:#ddd6fe;margin:6px 0 0;font-size:14px;">Your conference room is reserved</p>
+        </div>
+        <div style="padding:24px 28px;">
+          ${roomImageBlock(roomImageUrl, room.room_name)}
+          ${bookingTable(room, booking, "#6c2bd9")}
+        </div>
+        ${emailFooter(company, logoUrl)}
+      </div>`
   });
 };
 
 const sendUpdateEmail = async (email, company, room, booking) => {
-  const logoUrl = await getLogoUrl(company);
+  const [logoUrl, roomImageUrl] = await Promise.all([getLogoUrl(company), getRoomImageUrl(room)]);
   await sendEmail({
     to: email,
     subject: `Booking Updated – ${room.room_name} | ${company.name}`,
     html: `
-      <h2 style="color:#2196F3;">Booking Updated</h2>
-      <h3>${company.name}</h3>
-      <p>Your conference room booking has been successfully updated.</p>
-
-      <table style="border-collapse:collapse;margin:20px 0;font-size:15px;width:100%;max-width:500px;">
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;width:140px;">Room</td>
-          <td style="padding:10px;">${room.room_name} (#${room.room_number})</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Date</td>
-          <td style="padding:10px;">${booking.booking_date}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px;font-weight:bold;">New Time</td>
-          <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
-        </tr>
-      </table>
-      ${emailFooter(company, logoUrl)}
-    `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e0f2fe;">
+        <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:24px 28px;">
+          <div style="color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
+          <h1 style="color:#fff;margin:0;font-size:22px;">Booking Updated</h1>
+          <p style="color:#dbeafe;margin:6px 0 0;font-size:14px;">Your booking details have changed</p>
+        </div>
+        <div style="padding:24px 28px;">
+          ${roomImageBlock(roomImageUrl, room.room_name)}
+          ${bookingTable(room, booking, "#1d4ed8")}
+        </div>
+        ${emailFooter(company, logoUrl)}
+      </div>`
   });
 };
 
 const sendCancelEmail = async (email, company, room, booking) => {
-  const logoUrl = await getLogoUrl(company);
+  const [logoUrl, roomImageUrl] = await Promise.all([getLogoUrl(company), getRoomImageUrl(room)]);
   await sendEmail({
     to: email,
     subject: `Booking Cancelled – ${room.room_name} | ${company.name}`,
     html: `
-      <h2 style="color:#f44336;">Booking Cancelled</h2>
-      <h3>${company.name}</h3>
-      <p>Your conference room booking has been cancelled.</p>
-
-      <table style="border-collapse:collapse;margin:20px 0;font-size:15px;width:100%;max-width:500px;">
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;width:140px;">Room</td>
-          <td style="padding:10px;">${room.room_name} (#${room.room_number})</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Date</td>
-          <td style="padding:10px;">${booking.booking_date}</td>
-        </tr>
-        <tr>
-          <td style="padding:10px;font-weight:bold;">Time</td>
-          <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
-        </tr>
-      </table>
-      ${emailFooter(company, logoUrl)}
-    `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #fee2e2;">
+        <div style="background:linear-gradient(135deg,#b91c1c,#ef4444);padding:24px 28px;">
+          <div style="color:#fecaca;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
+          <h1 style="color:#fff;margin:0;font-size:22px;">Booking Cancelled</h1>
+          <p style="color:#fee2e2;margin:6px 0 0;font-size:14px;">Your conference room booking has been cancelled</p>
+        </div>
+        <div style="padding:24px 28px;">
+          ${roomImageBlock(roomImageUrl, room.room_name)}
+          ${bookingTable(room, booking, "#b91c1c")}
+        </div>
+        ${emailFooter(company, logoUrl)}
+      </div>`
   });
 };
 
 const sendTeamMemberEmail = async (memberEmail, memberName, organiserEmail, company, room, booking) => {
-  const logoUrl = await getLogoUrl(company);
+  const [logoUrl, roomImageUrl] = await Promise.all([getLogoUrl(company), getRoomImageUrl(room)]);
   await sendEmail({
     to: memberEmail,
     subject: `You've been added to a meeting – ${room.room_name} | ${company.name}`,
     html: `
-      <h2 style="color:#6c2bd9;">📅 You've Been Added to a Meeting</h2>
-      <p>Hi <b>${memberName}</b>,</p>
-      <p><b>${organiserEmail}</b> has added you to a conference room booking at <b>${company.name}</b>.</p>
-      <table style="border-collapse:collapse;margin:20px 0;font-size:15px;width:100%;max-width:500px;">
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;width:140px;">Room</td>
-          <td style="padding:10px;">${room.room_name} (#${room.room_number})</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Date</td>
-          <td style="padding:10px;">${booking.booking_date}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Time</td>
-          <td style="padding:10px;">${prettyTime(booking.start_time)} – ${prettyTime(booking.end_time)}</td>
-        </tr>
-        <tr style="border-bottom:1px solid #eee;">
-          <td style="padding:10px;font-weight:bold;">Department</td>
-          <td style="padding:10px;">${booking.department}</td>
-        </tr>
-        ${booking.purpose ? `<tr><td style="padding:10px;font-weight:bold;">Purpose</td><td style="padding:10px;">${booking.purpose}</td></tr>` : ""}
-      </table>
-      ${emailFooter(company, logoUrl)}
-    `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #ede9fe;">
+        <div style="background:linear-gradient(135deg,#6c2bd9,#7c3aed);padding:24px 28px;">
+          <div style="color:#c4b5fd;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
+          <h1 style="color:#fff;margin:0;font-size:22px;">You've Been Added to a Meeting</h1>
+          <p style="color:#ddd6fe;margin:6px 0 0;font-size:14px;">Hi <b>${memberName}</b> — <b>${organiserEmail}</b> has invited you</p>
+        </div>
+        <div style="padding:24px 28px;">
+          ${roomImageBlock(roomImageUrl, room.room_name)}
+          ${bookingTable(room, booking, "#6c2bd9")}
+        </div>
+        ${emailFooter(company, logoUrl)}
+      </div>`
   });
 };
 
@@ -288,7 +281,7 @@ const getCompanyBySlug = async (slug, fields = "id, name, logo_url") => {
  */
 const getRoomById = async (roomId) => {
   const [[room]] = await db.query(
-    `SELECT room_name, room_number FROM conference_rooms WHERE id = ? LIMIT 1`,
+    `SELECT room_name, room_number, capacity, image_url FROM conference_rooms WHERE id = ? LIMIT 1`,
     [roomId]
   );
   return room;
@@ -522,47 +515,77 @@ router.get("/company/:slug", async (req, res) => {
  */
 router.get("/company/:slug/rooms", async (req, res) => {
   try {
-    const slug = normalizeSlug(req.params.slug);
+    const slug    = normalizeSlug(req.params.slug);
     const company = await getCompanyBySlug(slug, "id");
+    if (!company) return res.json([]);
 
-    if (!company) {
-      return res.json([]);
-    }
-
-    // Check subscription with graceful degradation
+    let limitClause = "";
     try {
       const subscriptionInfo = await validateSubscription(company.id, "ROOM", false);
-      
-      // Always try to return available rooms, but potentially limited by plan
-      const [rooms] = await db.query(
-        `SELECT id, room_name, room_number
-         FROM conference_rooms
-         WHERE company_id = ?
-         ORDER BY room_number ASC
-         ${subscriptionInfo.limits && subscriptionInfo.limits.rooms !== Infinity ? `LIMIT ${subscriptionInfo.limits.rooms}` : ''}`,
-        [company.id]
+      if (subscriptionInfo.limits?.rooms !== Infinity) {
+        limitClause = `LIMIT ${subscriptionInfo.limits.rooms}`;
+      }
+    } catch { limitClause = "LIMIT 2"; }
+
+    const [rooms] = await db.query(
+      `SELECT id, room_name, room_number, capacity, image_url
+       FROM conference_rooms
+       WHERE company_id = ? AND is_active = 1
+       ORDER BY room_number ASC ${limitClause}`,
+      [company.id]
+    );
+
+    // Attach today's upcoming bookings + employee name + presigned image
+    const nowIST  = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const today   = nowIST.toISOString().split("T")[0];
+    const nowTime = `${String(nowIST.getHours()).padStart(2,"0")}:${String(nowIST.getMinutes()).padStart(2,"0")}:00`;
+
+    const roomIds = rooms.map(r => r.id);
+    let bookingsByRoom = {};
+
+    if (roomIds.length) {
+      const placeholders = roomIds.map(() => "?").join(",");
+      const [bookings] = await db.query(
+        `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by,
+                COALESCE(ce.name, '') AS employee_name
+         FROM conference_bookings cb
+         LEFT JOIN company_employees ce
+           ON ce.company_id = ? AND LOWER(ce.email) = LOWER(cb.booked_by) AND ce.is_active = 1
+         WHERE cb.company_id = ?
+           AND cb.room_id IN (${placeholders})
+           AND cb.booking_date = ?
+           AND cb.status = 'BOOKED'
+           AND cb.end_time > ?
+         ORDER BY cb.start_time ASC`,
+        [company.id, company.id, ...roomIds, today, nowTime]
       );
 
-      console.log(`[ROOMS_SERVED] ${rooms.length} rooms for company ${company.id}`);
-      res.json(rooms || []);
-      
-    } catch (error) {
-      // If subscription validation fails, still try to serve basic rooms
-      console.warn(`[ROOMS_DEGRADED_ACCESS] ${company.id}:`, error.message);
-      
-      const [rooms] = await db.query(
-        `SELECT id, room_name, room_number
-         FROM conference_rooms
-         WHERE company_id = ?
-         ORDER BY room_number ASC
-         LIMIT 2`, // Default to trial limits if we can't validate subscription
-        [company.id]
-      );
-
-      console.log(`[ROOMS_LIMITED_ACCESS] ${rooms.length} rooms for company ${company.id}`);
-      res.json(rooms || []);
+      for (const b of bookings) {
+        if (!bookingsByRoom[b.room_id]) bookingsByRoom[b.room_id] = [];
+        const name = b.employee_name || b.booked_by;
+        bookingsByRoom[b.room_id].push({
+          start_time: b.start_time,
+          end_time:   b.end_time,
+          booked_by:  `${name} (${b.booked_by})`,
+        });
+      }
     }
 
+    const enriched = await Promise.all(rooms.map(async (room) => {
+      let imageUrl = null;
+      if (room.image_url) {
+        try { imageUrl = await getPresignedUrl(room.image_url, 3600); } catch { imageUrl = null; }
+      }
+      const todayBookings = bookingsByRoom[room.id] || [];
+      return {
+        ...room,
+        image_url:      imageUrl,
+        today_bookings: todayBookings,
+        is_busy_today:  todayBookings.length > 0,
+      };
+    }));
+
+    res.json(enriched);
   } catch (error) {
     console.error("[PUBLIC][ROOMS]", error);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
