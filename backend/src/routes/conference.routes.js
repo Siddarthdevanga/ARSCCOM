@@ -296,17 +296,71 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
    EMAIL FUNCTIONS
 ====================================================== */
 
+/* ── Email helpers (match public template style) ── */
+
 const emailFooter = (company = {}, logoUrl = null) => `
-<br/>
-Regards,<br/>
-<b>${company.name || ""}</b><br/>
-${logoUrl ? `<img src="${logoUrl}" height="55" alt="Company Logo" />` : ""}
-<hr/>
-<p style="font-size:13px;color:#666">
-This email was automatically sent from the Conference Room Booking Platform.
-If you did not perform this action, please contact your administrator immediately.
-</p>
+  <div style="padding:20px 28px;border-top:1px solid #ede9fe;background:#faf5ff;">
+    ${logoUrl ? `<img src="${logoUrl}" height="40" alt="${company.name || ""}" style="display:block;margin-bottom:10px;" />` : ""}
+    <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1f2937;">${company.name || ""}</p>
+    <p style="margin:0;font-size:12px;color:#9ca3af;">
+      This email was sent automatically by the Conference Room Booking Platform.<br/>
+      If you did not expect this email, please contact your administrator.
+    </p>
+  </div>
 `;
+
+const roomImageBlock = (imageUrl, roomName) =>
+  imageUrl
+    ? `<img src="${imageUrl}" alt="${roomName}" style="width:100%;max-width:560px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;margin:0 auto 20px;" />`
+    : `<div style="width:100%;max-width:560px;aspect-ratio:16/9;background:linear-gradient(135deg,#6c2bd9,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;min-height:140px;">
+         <span style="color:#fff;font-size:36px;font-weight:800;letter-spacing:1px;">${(roomName || "R").charAt(0).toUpperCase()}</span>
+       </div>`;
+
+const bookingTable = (booking, accentColor = "#6c2bd9") => `
+  <table style="border-collapse:collapse;width:100%;max-width:560px;border-radius:8px;overflow:hidden;border:1px solid #ede9fe;font-size:14px;">
+    <tr style="background:${accentColor};">
+      <td colspan="2" style="padding:10px 14px;font-weight:700;font-size:15px;color:#fff;">Booking Summary</td>
+    </tr>
+    <tr style="border-bottom:1px solid #ede9fe;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;width:130px;">Room</td>
+      <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${booking?.room_name || "N/A"}</td>
+    </tr>
+    <tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Date</td>
+      <td style="padding:10px 14px;color:#1f2937;">${booking?.booking_date || "N/A"}</td>
+    </tr>
+    <tr style="border-bottom:1px solid #ede9fe;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Time</td>
+      <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${toAmPm(booking?.start_time)} &ndash; ${toAmPm(booking?.end_time)}</td>
+    </tr>
+    ${booking?.department ? `<tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
+    ${booking?.purpose ? `<tr style="border-bottom:1px solid #ede9fe;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
+    <tr style="background:#faf5ff;">
+      <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Status</td>
+      <td style="padding:10px 14px;font-weight:700;color:${accentColor};">${booking?.status || "N/A"}</td>
+    </tr>
+  </table>`;
+
+/* Color scheme per action */
+const ACTION_THEME = {
+  CONFIRMED:   { bg1: "#6c2bd9", bg2: "#7c3aed", sub: "#ddd6fe", border: "#ede9fe", label: "Your conference room is reserved" },
+  RESCHEDULED: { bg1: "#1d4ed8", bg2: "#3b82f6", sub: "#dbeafe", border: "#e0f2fe", label: "Your booking details have changed" },
+  CANCELLED:   { bg1: "#b91c1c", bg2: "#ef4444", sub: "#fee2e2", border: "#fee2e2", label: "Your conference room booking has been cancelled" },
+};
+
+const buildEmailHtml = (heading, subtext, booking, roomImageUrl, company, logoUrl, accentColor, border) => `
+  <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid ${border};">
+    <div style="background:linear-gradient(135deg,${accentColor[0]},${accentColor[1]});padding:24px 28px;">
+      <div style="color:${accentColor[2]};font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company?.name || ""}</div>
+      <h1 style="color:#fff;margin:0;font-size:22px;">${heading}</h1>
+      <p style="color:${accentColor[2]};margin:6px 0 0;font-size:14px;">${subtext}</p>
+    </div>
+    <div style="padding:24px 28px;">
+      ${roomImageBlock(roomImageUrl, booking?.room_name || "Room")}
+      ${bookingTable(booking, accentColor[0])}
+    </div>
+    ${emailFooter(company, logoUrl)}
+  </div>`;
 
 const sendBookingMail = async ({
   adminEmail,
@@ -319,37 +373,18 @@ const sendBookingMail = async ({
   roomImageUrl = null,
 }) => {
   try {
-    const toEmail = isEmail(userEmail)
-      ? userEmail
-      : isEmail(adminEmail)
-      ? adminEmail
-      : null;
-
-    if (!toEmail) {
-      console.warn("[EMAIL] No valid recipient email found");
-      return;
-    }
+    const toEmail = isEmail(userEmail) ? userEmail : isEmail(adminEmail) ? adminEmail : null;
+    if (!toEmail) { console.warn("[EMAIL] No valid recipient"); return; }
 
     subject = subject || "Conference Room Notification";
     heading = heading || "Conference Room Update";
 
     const logoUrl = company?.logo_url ? await getPresignedUrl(company.logo_url, 3600) : null;
+    const status  = (booking?.status || "CONFIRMED").toUpperCase();
+    const theme   = ACTION_THEME[status] || ACTION_THEME.CONFIRMED;
+    const accent  = [theme.bg1, theme.bg2, theme.sub];
 
-    const roomBanner = roomImageUrl
-      ? `<img src="${roomImageUrl}" alt="${booking?.room_name || "Room"}" style="width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin-bottom:20px;display:block;" />`
-      : "";
-
-    const html = `
-      ${roomBanner}
-      <h2>${heading}</h2>
-      <p><b>Room:</b> ${booking?.room_name || "N/A"}</p>
-      <p><b>Date:</b> ${booking?.booking_date || "N/A"}</p>
-      <p><b>Time:</b> ${toAmPm(booking?.start_time)} — ${toAmPm(booking?.end_time)}</p>
-      ${booking?.department ? `<p><b>Department:</b> ${booking.department}</p>` : ""}
-      ${booking?.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
-      <p><b>Status:</b> ${booking?.status || "N/A"}</p>
-      ${emailFooter(company, logoUrl)}
-    `;
+    const html = buildEmailHtml(heading, theme.label, booking, roomImageUrl, company, logoUrl, accent, theme.border);
 
     await sendEmail({
       to: toEmail,
@@ -358,27 +393,19 @@ const sendBookingMail = async ({
       html,
     });
 
-    // Email each team member
+    // Team member emails
     for (const m of teamMembers) {
-      if (m?.email) {
-        const memberHtml = `
-          ${roomBanner}
-          <h2 style="color:#6c2bd9;">📅 You've Been Added to a Meeting</h2>
-          <p>Hi <b>${m.name}</b>,</p>
-          <p><b>${toEmail}</b> has added you to a conference room booking at <b>${company?.name || ""}</b>.</p>
-          <p><b>Room:</b> ${booking?.room_name || "N/A"}</p>
-          <p><b>Date:</b> ${booking?.booking_date || "N/A"}</p>
-          <p><b>Time:</b> ${toAmPm(booking?.start_time)} — ${toAmPm(booking?.end_time)}</p>
-          ${booking?.department ? `<p><b>Department:</b> ${booking.department}</p>` : ""}
-          ${booking?.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
-          ${emailFooter(company, logoUrl)}
-        `;
-        await sendEmail({
-          to: m.email,
-          subject: `You've been added to a meeting – ${booking?.room_name || ""} | ${company?.name || ""}`,
-          html: memberHtml,
-        });
-      }
+      if (!m?.email) continue;
+      const memberHeading = status === "CANCELLED" ? "Meeting Cancelled" : status === "RESCHEDULED" ? "Meeting Rescheduled" : "You've Been Added to a Meeting";
+      const memberSub = `Hi ${m.name} — ${toEmail} has ${status === "CANCELLED" ? "cancelled" : status === "RESCHEDULED" ? "rescheduled" : "invited you to"} a meeting at ${company?.name || ""}`;
+      const memberThemeToUse = ACTION_THEME[status] || ACTION_THEME.CONFIRMED;
+      const memberAccentToUse = [memberThemeToUse.bg1, memberThemeToUse.bg2, memberThemeToUse.sub];
+      const memberHtml = buildEmailHtml(memberHeading, memberSub, booking, roomImageUrl, company, logoUrl, memberAccentToUse, memberThemeToUse.border);
+      await sendEmail({
+        to: m.email,
+        subject: `${memberHeading} – ${booking?.room_name || ""} | ${company?.name || ""}`,
+        html: memberHtml,
+      });
     }
 
     console.log("[EMAIL] Sent to:", toEmail, "| Team members:", teamMembers.length);
