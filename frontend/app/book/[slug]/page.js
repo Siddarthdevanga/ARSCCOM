@@ -287,20 +287,17 @@ const prettyTimePub = (t = "") => {
 };
 
 function PublicRoomCard({ room, onSelect }) {
-  const busy = room.is_busy_today;
   return (
     <div
       onClick={() => onSelect(room)}
       style={{
-        borderRadius:"0.875rem",
-        border: `1.5px solid ${busy ? "#e5e7eb" : "#7c3aed"}`,
+        borderRadius:"0.875rem", border:"1.5px solid #7c3aed",
         background:"#fff", overflow:"hidden", cursor:"pointer",
-        opacity: busy ? 0.65 : 1,
-        boxShadow: busy ? "none" : "0 2px 12px rgba(124,58,237,0.08)",
+        boxShadow:"0 2px 12px rgba(124,58,237,0.08)",
         transition:"transform 0.15s, box-shadow 0.15s",
       }}
-      onMouseEnter={e => { if (!busy) { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}}
-      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=busy?"none":"0 2px 12px rgba(124,58,237,0.08)"; }}
+      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(124,58,237,0.08)"; }}
     >
       {/* 16:9 image */}
       <div style={{ width:"100%", aspectRatio:"16/9", background:"#ede9fe", position:"relative",
@@ -318,11 +315,6 @@ function PublicRoomCard({ room, onSelect }) {
               </span>
             </div>
         }
-        {busy && (
-          <div style={{ position:"absolute", top:8, right:8, background:"rgba(0,0,0,0.6)",
-            color:"#fff", fontSize:"0.65rem", fontWeight:700, padding:"2px 7px",
-            borderRadius:99 }}>BUSY TODAY</div>
-        )}
       </div>
 
       <div style={{ padding:"0.875rem" }}>
@@ -356,10 +348,9 @@ function PublicRoomCard({ room, onSelect }) {
         )}
 
         <div style={{ marginTop:"0.75rem", width:"100%", padding:"0.45rem",
-          background: busy ? "#f3f4f6" : "#7c3aed",
-          color: busy ? "#9ca3af" : "#fff",
+          background:"#7c3aed", color:"#fff",
           borderRadius:"0.5rem", fontSize:"0.8rem", fontWeight:600, textAlign:"center" }}>
-          {busy ? "Select for Another Date" : "Select Room"}
+          Select Room
         </div>
       </div>
     </div>
@@ -993,45 +984,53 @@ export default function PublicConferenceBooking() {
 
       {/* ================= HEADER — matches SaaS nav bar ================= */}
       <header className={styles.header}>
-        <div className={styles.headerContent}>
-          <div className={styles.headerLeft}>
-            {company.id && (
-              <img
-                src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`}
-                alt={`${company.name} logo`}
-                className={styles.logo}
-                onError={e => { e.currentTarget.style.display = "none"; }}
-              />
+        <div className={styles.headerContent} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
+          {/* Left: hamburger (after OTP) or logo */}
+          <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
+            {otpVerified ? (
+              <button
+                onClick={() => setShowSchedule(true)}
+                title="Today's Schedule"
+                style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+                  padding:"0.4rem 0.5rem", cursor:"pointer", display:"flex",
+                  flexDirection:"column", gap:"4px", alignItems:"center", justifyContent:"center" }}>
+                <span style={{ display:"block", width:18, height:2, background:"#374151", borderRadius:1 }} />
+                <span style={{ display:"block", width:13, height:2, background:"#374151", borderRadius:1 }} />
+                <span style={{ display:"block", width:18, height:2, background:"#374151", borderRadius:1 }} />
+              </button>
+            ) : (
+              company.id && (
+                <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`}
+                  alt={`${company.name} logo`} className={styles.logo}
+                  onError={e => { e.currentTarget.style.display = "none"; }} />
+              )
             )}
-            <h1>{company.name}</h1>
-            <span className={styles.subtitle}>Conference Booking</span>
+            <div>
+              <h1 style={{ margin:0, fontSize:"1rem", fontWeight:700 }}>{company.name}</h1>
+              <span className={styles.subtitle}>Conference Booking</span>
+            </div>
           </div>
 
-          <div className={styles.headerRight}>
-            {otpVerified && (
-              <>
-                <span className={styles.userEmail}>{email}</span>
-                <button
-                  onClick={() => setShowSchedule(true)}
-                  title="Today's Schedule"
-                  style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:"0.4rem",
-                    padding:"0.35rem 0.6rem", cursor:"pointer", display:"flex",
-                    flexDirection:"column", gap:"3px", alignItems:"center" }}>
-                  <span style={{ display:"block", width:16, height:1.5, background:"#374151" }} />
-                  <span style={{ display:"block", width:12, height:1.5, background:"#374151" }} />
-                  <span style={{ display:"block", width:16, height:1.5, background:"#374151" }} />
+          {/* Right: email + oval back/logout */}
+          {otpVerified && (
+            <div style={{ display:"flex", alignItems:"center", gap:"0.625rem" }}>
+              <span className={styles.userEmail} style={{ display:"none" }}>{email}</span>
+              {selectedRoom && (
+                <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
+                  style={{ padding:"0.4rem 1rem", borderRadius:99, border:"1.5px solid #7c3aed",
+                    background:"#fff", color:"#7c3aed", fontSize:"0.82rem", fontWeight:600,
+                    cursor:"pointer" }}>
+                  ← Rooms
                 </button>
-                <button
-                  className={styles.logoutBtn}
-                  onClick={handleLogout}
-                  title="Logout"
-                  aria-label="Logout"
-                >
-                  Logout ⎋
-                </button>
-              </>
-            )}
-          </div>
+              )}
+              <button onClick={handleLogout}
+                style={{ padding:"0.4rem 1.1rem", borderRadius:99, border:"none",
+                  background:"#7c3aed", color:"#fff", fontSize:"0.82rem", fontWeight:600,
+                  cursor:"pointer" }}>
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </header>
 

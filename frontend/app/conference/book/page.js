@@ -63,19 +63,17 @@ const IconCheck = () => (
 
 /* ── Room Card ── */
 function RoomCard({ room, onSelect }) {
-  const busy = room.is_busy_today;
   return (
     <div
       onClick={() => onSelect(room)}
       style={{
-        borderRadius:"0.875rem", border:`1.5px solid ${busy ? "#e5e7eb" : "#7c3aed"}`,
+        borderRadius:"0.875rem", border:"1.5px solid #7c3aed",
         background:"#fff", overflow:"hidden", cursor:"pointer",
-        opacity: busy ? 0.65 : 1,
-        boxShadow: busy ? "none" : "0 2px 12px rgba(124,58,237,0.08)",
+        boxShadow:"0 2px 12px rgba(124,58,237,0.08)",
         transition:"transform 0.15s, box-shadow 0.15s",
       }}
-      onMouseEnter={e => { if (!busy) { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}}
-      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow=busy?"none":"0 2px 12px rgba(124,58,237,0.08)"; }}
+      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(124,58,237,0.08)"; }}
     >
       {/* 16:9 image banner */}
       <div style={{ width:"100%", aspectRatio:"16/9", background:"#ede9fe", position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -89,11 +87,6 @@ function RoomCard({ room, onSelect }) {
               </span>
             </div>
         }
-        {busy && (
-          <div style={{ position:"absolute", top:8, right:8, background:"rgba(0,0,0,0.6)",
-            color:"#fff", fontSize:"0.65rem", fontWeight:700, padding:"2px 7px",
-            borderRadius:99, letterSpacing:"0.5px" }}>BUSY TODAY</div>
-        )}
       </div>
 
       {/* Card body */}
@@ -125,21 +118,12 @@ function RoomCard({ room, onSelect }) {
           </div>
         )}
 
-        {!busy && (
-          <button style={{ marginTop:"0.75rem", width:"100%", padding:"0.5rem",
-            background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.5rem",
-            fontSize:"0.82rem", fontWeight:600, cursor:"pointer", display:"flex",
-            alignItems:"center", justifyContent:"center", gap:"0.35rem" }}>
-            Select Room <IconArrow />
-          </button>
-        )}
-        {busy && (
-          <div style={{ marginTop:"0.75rem", width:"100%", padding:"0.5rem",
-            background:"#f3f4f6", color:"#9ca3af", borderRadius:"0.5rem",
-            fontSize:"0.82rem", fontWeight:600, textAlign:"center" }}>
-            Select for Another Date
-          </div>
-        )}
+        <button style={{ marginTop:"0.75rem", width:"100%", padding:"0.5rem",
+          background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.5rem",
+          fontSize:"0.82rem", fontWeight:600, cursor:"pointer", display:"flex",
+          alignItems:"center", justifyContent:"center", gap:"0.35rem" }}>
+          Select Room <IconArrow />
+        </button>
       </div>
     </div>
   );
