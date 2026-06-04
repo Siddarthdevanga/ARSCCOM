@@ -538,6 +538,20 @@ export default function ConferenceDashboard() {
           <button className={styles.shareUrlBtn} onClick={handleShareURL}>Share</button>
         </div>
 
+        {/* ===== TODAY'S TIMELINE — above dept/schedule ===== */}
+        {allRooms.length > 0 && (
+          <section style={{ padding:"0 1rem 1.5rem" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>Today&apos;s Room Schedule</span>
+            </div>
+            <TodayTimeline rooms={allRooms} bookings={filteredBookings} />
+          </section>
+        )}
+
         {/* ===== MAIN CONTENT ===== */}
         <main className={styles.mainContent}>
 
@@ -601,92 +615,111 @@ export default function ConferenceDashboard() {
 
         </main>
 
-        {/* ===== TODAY'S TIMELINE ===== */}
-        {allRooms.length > 0 && (
-          <section style={{ padding:"1.5rem 1rem 2rem" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
-                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>Today&apos;s Schedule</span>
-            </div>
-            <TodayTimeline rooms={allRooms} bookings={filteredBookings} />
-          </section>
-        )}
-
       </div>
     </div>
   );
 }
 
+/* ─── Room colour palette ─── */
+const PALETTE = [
+  { bg:"#7c3aed", dim:"#a78bfa" },
+  { bg:"#0891b2", dim:"#67e8f9" },
+  { bg:"#059669", dim:"#6ee7b7" },
+  { bg:"#d97706", dim:"#fcd34d" },
+  { bg:"#dc2626", dim:"#fca5a5" },
+  { bg:"#9333ea", dim:"#d8b4fe" },
+  { bg:"#0284c7", dim:"#7dd3fc" },
+  { bg:"#16a34a", dim:"#86efac" },
+];
+
 /* ─── Today's Timeline — vertical Google Calendar style ──── */
 function TodayTimeline({ rooms, bookings }) {
-  const HOUR_H   = 64;   // px per hour
-  const START_H  = 7;    // 7 AM
-  const END_H    = 22;   // 10 PM
-  const ROOM_COL = 140;  // px per room column
-  const TIME_W   = 56;   // left time label column
+  const HOUR_H   = 68;
+  const START_H  = 7;
+  const END_H    = 22;
+  const ROOM_COL = 148;
+  const TIME_W   = 58;
   const hours    = Array.from({ length: END_H - START_H }, (_, i) => START_H + i);
   const totalH   = (END_H - START_H) * HOUR_H;
   const scrollRef = React.useRef(null);
+  const [popup, setPopup] = React.useState(null); // { booking, x, y }
 
   const toMin = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
   const fmt   = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2,"0")} ${h >= 12 ? "PM" : "AM"}`; };
 
-  const nowIST  = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const nowMin  = nowIST.getHours() * 60 + nowIST.getMinutes();
-  const nowTop  = ((nowMin - START_H * 60) / 60) * HOUR_H;
-  const nowH    = nowIST.getHours();
+  const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const nowMin = nowIST.getHours() * 60 + nowIST.getMinutes();
+  const nowTop = ((nowMin - START_H * 60) / 60) * HOUR_H;
+  const nowH   = nowIST.getHours();
 
-  // Auto-scroll current time into view
   React.useEffect(() => {
-    if (scrollRef.current) {
-      const target = Math.max(0, nowTop - 120);
-      scrollRef.current.scrollTop = target;
-    }
+    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, nowTop - 100);
   }, [nowTop]);
 
+  // Close popup on outside click
+  React.useEffect(() => {
+    if (!popup) return;
+    const handler = () => setPopup(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [popup]);
+
   return (
-    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden" }}>
-      {/* Jump to Now */}
-      <div style={{ padding:"0.5rem 0.75rem", borderBottom:"1px solid #f3f4f6", display:"flex", justifyContent:"flex-end" }}>
-        <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 120))}
-          style={{ fontSize:"0.72rem", color:"#7c3aed", background:"#ede9fe", border:"none",
-            borderRadius:"99px", padding:"0.25rem 0.75rem", cursor:"pointer", fontWeight:700,
+    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden", position:"relative" }}>
+      {/* Top bar */}
+      <div style={{ padding:"0.5rem 0.875rem", borderBottom:"1px solid #f3f4f6",
+        display:"flex", justifyContent:"space-between", alignItems:"center",
+        background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
+        <div style={{ display:"flex", gap:"0.5rem" }}>
+          {rooms.map((r,i) => (
+            <span key={r.id} style={{ display:"flex", alignItems:"center", gap:"0.25rem",
+              fontSize:"0.65rem", color:"rgba(255,255,255,0.9)", fontWeight:700 }}>
+              <span style={{ width:8, height:8, borderRadius:"50%",
+                background: PALETTE[i % PALETTE.length].dim, display:"inline-block" }} />
+              {r.room_name}
+            </span>
+          ))}
+        </div>
+        <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
+          style={{ fontSize:"0.7rem", color:"#7c3aed", background:"#fff", border:"none",
+            borderRadius:"99px", padding:"0.2rem 0.7rem", cursor:"pointer", fontWeight:700,
             display:"flex", alignItems:"center", gap:"0.3rem" }}>
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
           Now
         </button>
       </div>
 
-      {/* Sticky header — room names */}
-      <div style={{ display:"flex", borderBottom:"1px solid #e5e7eb",
-        background:"#f9fafb", position:"sticky", top:0, zIndex:10 }}>
+      {/* Room name header row */}
+      <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa",
+        position:"sticky", top:0, zIndex:10, overflowX:"hidden" }}>
         <div style={{ width:TIME_W, flexShrink:0 }} />
-        {rooms.map(r => (
-          <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.5rem",
-            borderLeft:"1px solid #e5e7eb", textAlign:"center" }}>
-            <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937",
-              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
-            <div style={{ fontSize:"0.62rem", color:"#9ca3af" }}>#{r.room_number}</div>
-          </div>
-        ))}
+        {rooms.map((r, i) => {
+          const col = PALETTE[i % PALETTE.length];
+          return (
+            <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.4rem",
+              borderLeft:"1px solid #e5e7eb", textAlign:"center",
+              borderTop:`3px solid ${col.bg}` }}>
+              <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937",
+                whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
+              <div style={{ fontSize:"0.6rem", color:"#9ca3af" }}>#{r.room_number}</div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Scrollable body */}
-      <div ref={scrollRef} style={{ overflowY:"auto", overflowX:"auto", maxHeight:480 }}>
+      <div ref={scrollRef} style={{ overflowY:"auto", overflowX:"auto", maxHeight:460 }}>
         <div style={{ display:"flex", position:"relative", minWidth: TIME_W + rooms.length * ROOM_COL }}>
 
           {/* Time labels */}
-          <div style={{ width:TIME_W, flexShrink:0, position:"relative" }}>
+          <div style={{ width:TIME_W, flexShrink:0 }}>
             {hours.map(h => (
               <div key={h} style={{ height:HOUR_H, display:"flex", alignItems:"flex-start",
-                paddingTop:4, paddingRight:8, justifyContent:"flex-end", boxSizing:"border-box" }}>
-                <span style={{ fontSize:"0.62rem", color: h === nowH ? "#7c3aed" : "#9ca3af",
-                  fontWeight: h === nowH ? 800 : 400, whiteSpace:"nowrap" }}>
+                paddingTop:5, paddingRight:8, justifyContent:"flex-end", boxSizing:"border-box" }}>
+                <span style={{ fontSize:"0.62rem", fontWeight: h === nowH ? 800 : 400,
+                  color: h === nowH ? "#7c3aed" : "#9ca3af", whiteSpace:"nowrap" }}>
                   {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h-12} PM`}
                 </span>
               </div>
@@ -694,45 +727,51 @@ function TodayTimeline({ rooms, bookings }) {
           </div>
 
           {/* Room columns */}
-          {rooms.map(room => {
+          {rooms.map((room, ri) => {
+            const col = PALETTE[ri % PALETTE.length];
             const roomBk = bookings.filter(b => b.room_id === room.id);
             return (
               <div key={room.id} style={{ width:ROOM_COL, flexShrink:0, position:"relative",
                 borderLeft:"1px solid #e5e7eb", height:totalH }}>
-                {/* Hour grid lines + current hour highlight */}
+                {/* Hour bands */}
                 {hours.map(h => (
-                  <div key={h} style={{ position:"absolute", top:(h - START_H) * HOUR_H, left:0, right:0,
+                  <div key={h} style={{ position:"absolute", top:(h-START_H)*HOUR_H, left:0, right:0,
                     height:HOUR_H, borderBottom:"1px solid #f3f4f6",
-                    background: h === nowH ? "rgba(124,58,237,0.04)" : "transparent" }} />
+                    background: h === nowH ? `${col.bg}08` : h % 2 === 0 ? "#fafafa" : "#fff" }} />
                 ))}
                 {/* Now line */}
                 {nowTop >= 0 && nowTop <= totalH && (
                   <div style={{ position:"absolute", top:nowTop, left:0, right:0, height:2,
                     background:"#ef4444", zIndex:5, display:"flex", alignItems:"center" }}>
-                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444",
-                      marginLeft:-4, flexShrink:0 }} />
+                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444", marginLeft:-4, flexShrink:0 }} />
                   </div>
                 )}
                 {/* Booking blocks */}
-                {roomBk.map((b, i) => {
+                {roomBk.map((b, bi) => {
                   const sMin  = toMin(b.start_time);
                   const eMin  = toMin(b.end_time);
-                  const top   = Math.max(0, ((sMin - START_H * 60) / 60) * HOUR_H);
-                  const ht    = Math.max(20, ((eMin - sMin) / 60) * HOUR_H - 2);
+                  const top   = Math.max(0, ((sMin - START_H*60)/60)*HOUR_H);
+                  const ht    = Math.max(22, ((eMin-sMin)/60)*HOUR_H - 3);
                   const isPast = eMin < nowMin;
-                  const name  = b.booked_by?.split("(")?.[0]?.trim() || b.department || "Booked";
+                  const isNow  = sMin <= nowMin && eMin > nowMin;
+                  const bg     = isPast ? col.dim : col.bg;
+                  const name   = b.booked_by?.split("(")?.[0]?.trim() || b.department || "Booked";
                   return (
-                    <div key={i} title={`${name}\n${fmt(b.start_time)} – ${fmt(b.end_time)}${b.purpose ? `\n${b.purpose}` : ""}`}
+                    <div key={bi}
+                      onClick={(e) => { e.stopPropagation(); setPopup({ booking:b, roomName:room.room_name, color:col.bg, x:e.clientX, y:e.clientY }); }}
                       style={{ position:"absolute", top, left:3, right:3, height:ht,
-                        background: isPast ? "#c4b5fd" : "#7c3aed",
-                        borderRadius:6, padding:"3px 6px", overflow:"hidden", zIndex:3,
-                        boxShadow:"0 1px 4px rgba(124,58,237,0.2)", cursor:"default" }}>
-                      <div style={{ fontSize:"0.6rem", color:"#fff", fontWeight:700,
-                        lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        background:bg, borderRadius:6, padding:"3px 6px", overflow:"hidden",
+                        zIndex:3, cursor:"pointer", opacity: isPast ? 0.55 : 1,
+                        boxShadow: isNow ? `0 0 0 2px #fff, 0 0 0 4px ${col.bg}` : `0 1px 4px ${col.bg}44`,
+                        transition:"transform 0.1s" }}
+                      onMouseEnter={e => e.currentTarget.style.transform="scale(1.02)"}
+                      onMouseLeave={e => e.currentTarget.style.transform=""}>
+                      <div style={{ fontSize:"0.6rem", color:"#fff", fontWeight:700, lineHeight:1.3,
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                         {fmt(b.start_time)}
                       </div>
-                      {ht > 32 && (
-                        <div style={{ fontSize:"0.58rem", color:"rgba(255,255,255,0.88)",
+                      {ht > 34 && (
+                        <div style={{ fontSize:"0.58rem", color:"rgba(255,255,255,0.9)",
                           overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
                           {name}
                         </div>
@@ -745,6 +784,67 @@ function TodayTimeline({ rooms, bookings }) {
           })}
         </div>
       </div>
+
+      {/* ── Click Popup ── */}
+      {popup && (() => {
+        const b = popup.booking;
+        const fmt2 = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
+        const members = b.team_members || [];
+        return (
+          <div onClick={e => e.stopPropagation()}
+            style={{ position:"fixed", top: Math.min(popup.y, window.innerHeight - 320),
+              left: Math.min(popup.x, window.innerWidth - 280),
+              width:268, background:"#fff", borderRadius:"0.875rem",
+              boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:1000, overflow:"hidden" }}>
+            <div style={{ background:popup.color, padding:"0.75rem 1rem",
+              display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+              <div>
+                <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>{popup.roomName}</div>
+                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.85)", marginTop:2 }}>
+                  {fmt2(b.start_time)} – {fmt2(b.end_time)}
+                </div>
+              </div>
+              <button onClick={() => setPopup(null)}
+                style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff",
+                  borderRadius:"50%", width:22, height:22, cursor:"pointer", fontSize:"0.85rem",
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            </div>
+            <div style={{ padding:"0.75rem 1rem", fontSize:"0.78rem", color:"#374151" }}>
+              <div style={{ marginBottom:"0.4rem" }}>
+                <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Booked By</span>
+                <div style={{ fontWeight:700, color:"#1f2937", marginTop:2 }}>
+                  {b.booked_by === "ADMIN" ? "Admin" : b.booked_by}
+                </div>
+              </div>
+              {b.department && (
+                <div style={{ marginBottom:"0.4rem" }}>
+                  <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Department</span>
+                  <div style={{ fontWeight:600, marginTop:2 }}>{b.department}</div>
+                </div>
+              )}
+              {b.purpose && (
+                <div style={{ marginBottom:"0.4rem" }}>
+                  <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Purpose</span>
+                  <div style={{ marginTop:2 }}>{b.purpose}</div>
+                </div>
+              )}
+              {members.length > 0 && (
+                <div>
+                  <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Team Members</span>
+                  <div style={{ marginTop:4, display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
+                    {members.map((m, i) => (
+                      <span key={i} style={{ background:"#ede9fe", color:"#7c3aed",
+                        borderRadius:99, padding:"2px 8px", fontSize:"0.68rem", fontWeight:700 }}>
+                        {m.name || m}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

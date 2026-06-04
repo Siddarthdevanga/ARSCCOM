@@ -299,6 +299,14 @@ export default function ConferenceBookPage() {
     return n.getHours() * 60 + n.getMinutes();
   }, []);
 
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const check = () => setIsNarrow(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   // Override the dashboard's :global(body){overflow:hidden} CSS
   useEffect(() => {
     document.documentElement.style.overflow = "auto";
@@ -505,7 +513,7 @@ export default function ConferenceBookPage() {
 
         {/* ── STEP 2: Two-column layout ── */}
         {step === 2 && selected && (
-          <div style={{ display:"grid", gridTemplateColumns:"1fr minmax(0,340px)", gap:"1.25rem", alignItems:"start" }}>
+          <div style={{ display:"grid", gridTemplateColumns: isNarrow ? "1fr" : "1fr minmax(0,340px)", gap:"1.25rem", alignItems:"start" }}>
 
             {/* ── LEFT: Form ── */}
             <div>

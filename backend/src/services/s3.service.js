@@ -69,6 +69,15 @@ export const getS3Object = async (keyOrUrl) => {
    Used for temporary files like visitor pass PNGs sent via
    WhatsApp (24-hour expiry by default).
 ────────────────────────────────────────────────────────── */
+export const deleteFromS3 = async (keyOrUrl) => {
+  if (!keyOrUrl) return;
+  try {
+    await s3.deleteObject({ Bucket: BUCKET(), Key: extractKey(keyOrUrl) }).promise();
+  } catch (err) {
+    console.warn("[S3 delete]", err.message);
+  }
+};
+
 export const uploadBufferAndGetPresignedUrl = async (
   buffer,
   key,

@@ -3,7 +3,7 @@ import multer from "multer";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
-import { getPresignedUrl, uploadToS3 } from "../services/s3.service.js";
+import { getPresignedUrl, uploadToS3, deleteFromS3 } from "../services/s3.service.js";
 import QRCode from "qrcode";
 import { createCanvas, loadImage, registerFont } from "canvas";
 
@@ -316,6 +316,7 @@ const sendBookingMail = async ({
   booking,
   company,
   teamMembers = [],
+  roomImageUrl = null,
 }) => {
   try {
     const toEmail = isEmail(userEmail)
@@ -334,18 +335,19 @@ const sendBookingMail = async ({
 
     const logoUrl = company?.logo_url ? await getPresignedUrl(company.logo_url, 3600) : null;
 
-    const html = `
-      <h2>${heading}</h2>
+    const roomBanner = roomImageUrl
+      ? `<img src="${roomImageUrl}" alt="${booking?.room_name || "Room"}" style="width:100%;max-height:220px;object-fit:cover;border-radius:8px;margin-bottom:20px;display:block;" />`
+      : "";
 
+    const html = `
+      ${roomBanner}
+      <h2>${heading}</h2>
       <p><b>Room:</b> ${booking?.room_name || "N/A"}</p>
       <p><b>Date:</b> ${booking?.booking_date || "N/A"}</p>
       <p><b>Time:</b> ${toAmPm(booking?.start_time)} — ${toAmPm(booking?.end_time)}</p>
-
       ${booking?.department ? `<p><b>Department:</b> ${booking.department}</p>` : ""}
       ${booking?.purpose ? `<p><b>Purpose:</b> ${booking.purpose}</p>` : ""}
-
       <p><b>Status:</b> ${booking?.status || "N/A"}</p>
-
       ${emailFooter(company, logoUrl)}
     `;
 
@@ -360,6 +362,7 @@ const sendBookingMail = async ({
     for (const m of teamMembers) {
       if (m?.email) {
         const memberHtml = `
+          ${roomBanner}
           <h2 style="color:#6c2bd9;">📅 You've Been Added to a Meeting</h2>
           <p>Hi <b>${m.name}</b>,</p>
           <p><b>${toEmail}</b> has added you to a conference room booking at <b>${company?.name || ""}</b>.</p>
@@ -883,6 +886,10 @@ router.patch("/rooms/:id/image", roomImageUpload.single("image"), async (req, re
     await validateCompanySubscription(companyId);
     await verifyRoomAccess(roomId, companyId, true);
 
+    // Delete old photo from S3 before uploading new one
+    const [[existing]] = await db.query(`SELECT image_url FROM conference_rooms WHERE id = ? LIMIT 1`, [roomId]);
+    if (existing?.image_url) await deleteFromS3(existing.image_url);
+
     const key = `companies/${companyId}/rooms/${roomId}.jpg`;
     await uploadToS3(req.file, key);
     await db.query(
@@ -1098,6 +1105,10 @@ router.post("/bookings", async (req, res) => {
 
     const companyInfo = await getCompanyInfo(companyId);
 
+    // Fetch room image for email banner
+    const [[roomRow]] = await db.query(`SELECT image_url FROM conference_rooms WHERE id = ? LIMIT 1`, [room_id]);
+    const roomImageUrl = roomRow?.image_url ? await getPresignedUrl(roomRow.image_url, 3600).catch(() => null) : null;
+
     await sendBookingMail({
       adminEmail,
       userEmail: booked_by,
@@ -1114,6 +1125,7 @@ router.post("/bookings", async (req, res) => {
       },
       company: companyInfo,
       teamMembers: validMembers,
+      roomImageUrl,
     });
 
     res.status(201).json({ message: "Booking created successfully" });
@@ -1191,6 +1203,8 @@ router.patch("/bookings/:id", async (req, res) => {
     );
 
     const companyInfo = await getCompanyInfo(companyId);
+    const [[rr]] = await db.query(`SELECT image_url FROM conference_rooms WHERE id = ? LIMIT 1`, [newRoomId]);
+    const roomImageUrl = rr?.image_url ? await getPresignedUrl(rr.image_url, 3600).catch(() => null) : null;
 
     await sendBookingMail({
       adminEmail: req.user.email,
@@ -1200,6 +1214,7 @@ router.patch("/bookings/:id", async (req, res) => {
       booking: { ...booking, room_name: newRoomName, start_time, end_time, booking_date: newDate, status: "RESCHEDULED" },
       company: companyInfo,
       teamMembers: members,
+      roomImageUrl,
     });
 
     res.json({ message: "Booking updated successfully" });
@@ -1215,7 +1230,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
-      `SELECT b.*, r.room_name FROM conference_bookings b
+      `SELECT b.*, r.room_name, r.image_url as room_image FROM conference_bookings b
        JOIN conference_rooms r ON r.id = b.room_id
        WHERE b.id = ? AND b.company_id = ? LIMIT 1`,
       [bookingId, companyId]
@@ -1231,6 +1246,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     );
 
     const companyInfo = await getCompanyInfo(companyId);
+    const roomImageUrl = booking.room_image ? await getPresignedUrl(booking.room_image, 3600).catch(() => null) : null;
 
     await sendBookingMail({
       adminEmail: req.user.email,
@@ -1240,6 +1256,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       booking: { ...booking, status: "CANCELLED" },
       company: companyInfo,
       teamMembers: members,
+      roomImageUrl,
     });
 
     res.json({ message: "Booking cancelled successfully" });
