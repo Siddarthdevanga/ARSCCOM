@@ -270,10 +270,14 @@ export default function ConferenceBookPage() {
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  // Reset body overflow locked by dashboard CSS
+  // Override the dashboard's :global(body){overflow:hidden} CSS
   useEffect(() => {
-    document.documentElement.style.overflow = "";
-    document.body.style.overflow = "";
+    document.documentElement.style.overflow = "auto";
+    document.body.style.overflow = "auto";
+    return () => {
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+    };
   }, []);
 
   useEffect(() => {
@@ -358,22 +362,29 @@ export default function ConferenceBookPage() {
     <div style={{ background:"#f8f7ff", fontFamily:"'Nunito', sans-serif", paddingBottom:"3rem" }}>
 
       {/* Header */}
-      <header style={{ padding:"0.875rem 1.25rem", background:"#fff",
+      <header style={{ padding:"0.75rem 1.25rem", background:"#fff",
         borderBottom:"1px solid #e5e7eb", display:"flex", alignItems:"center",
         justifyContent:"space-between", position:"sticky", top:0, zIndex:40 }}>
+        {/* Logo — left */}
+        <img src={`${API}/api/logo/${company?.id}`} alt="Logo"
+          style={{ height:32, objectFit:"contain" }}
+          onError={e => { e.currentTarget.style.display="none"; }} />
+        {/* Company name — center */}
+        <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937",
+          position:"absolute", left:"50%", transform:"translateX(-50%)" }}>
+          {company?.name}
+        </div>
+        {/* Back button — right, purple filled */}
         <button onClick={() => step === 2 ? setStep(1) : router.back()}
-          style={{ background:"#f3f4f6", border:"none", cursor:"pointer",
-            color:"#374151", display:"flex", alignItems:"center", gap:"0.4rem",
-            fontSize:"0.82rem", fontWeight:700, borderRadius:"99px", padding:"0.4rem 1rem" }}>
+          style={{ background:"#7c3aed", border:"none", cursor:"pointer",
+            color:"#fff", display:"flex", alignItems:"center", gap:"0.4rem",
+            fontSize:"0.82rem", fontWeight:700, borderRadius:"99px", padding:"0.4rem 1.1rem",
+            whiteSpace:"nowrap" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
           {step === 2 ? "Back to Rooms" : "Back"}
         </button>
-        <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937" }}>{company?.name}</div>
-        <img src={`${API}/api/logo/${company?.id}`} alt="Logo"
-          style={{ height:32, objectFit:"contain" }}
-          onError={e => { e.currentTarget.style.display="none"; }} />
       </header>
 
       <div style={{ maxWidth:900, margin:"0 auto", padding:"1.5rem 1rem 3rem" }}>
