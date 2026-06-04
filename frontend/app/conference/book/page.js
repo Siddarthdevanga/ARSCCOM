@@ -62,7 +62,8 @@ const IconCheck = () => (
 );
 
 /* ── Room Card ── */
-function RoomCard({ room, onSelect }) {
+function RoomCard({ room, onSelect, nowMinutes = 0 }) {
+  const toMin = (t) => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
   return (
     <div
       onClick={() => onSelect(room)}
@@ -94,16 +95,23 @@ function RoomCard({ room, onSelect }) {
         </div>
         {room.today_bookings?.length > 0 && (
           <div style={{ borderTop:"1px solid #f3f4f6", paddingTop:"0.5rem" }}>
-            <div style={{ fontSize:"0.68rem", fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.35rem" }}>Today&apos;s Bookings</div>
-            {room.today_bookings.map((b, i) => (
-              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:"0.35rem", fontSize:"0.75rem", color:"#374151", marginBottom:"0.25rem" }}>
-                <IconClock />
-                <div>
-                  <span style={{ fontWeight:600 }}>{prettyTime(b.start_time)} – {prettyTime(b.end_time)}</span>
-                  <div style={{ color:"#6b7280", fontSize:"0.7rem" }}>{b.booked_by}</div>
+            <div style={{ fontSize:"0.68rem", fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.35rem" }}>Today&apos;s Schedule</div>
+            {[...room.today_bookings].sort((a,b) => a.start_time.localeCompare(b.start_time)).map((b, i) => {
+              const ended = toMin(b.end_time) <= nowMinutes;
+              return (
+                <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:"0.35rem",
+                  fontSize:"0.75rem", color: ended ? "#9ca3af" : "#374151",
+                  marginBottom:"0.25rem", opacity: ended ? 0.6 : 1 }}>
+                  <IconClock />
+                  <div>
+                    <span style={{ fontWeight:600, textDecoration: ended ? "line-through" : "none" }}>
+                      {prettyTime(b.start_time)} – {prettyTime(b.end_time)}
+                    </span>
+                    <div style={{ color:"#9ca3af", fontSize:"0.7rem" }}>{b.booked_by}</div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         <button style={{ marginTop:"0.75rem", width:"100%", padding:"0.5rem",
@@ -268,7 +276,28 @@ export default function ConferenceBookPage() {
   const [memberSearching,setMemberSearching]= useState(false);
   const memberRef = useRef(null);
 
+  // Room schedule sidebar
+  const [roomSchedule,    setRoomSchedule]    = useState([]);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
+
+  // Reschedule modal
+  const [rescheduleTarget, setRescheduleTarget] = useState(null); // booking
+  const [rsDate,  setRsDate]  = useState("");
+  const [rsRoom,  setRsRoom]  = useState("");
+  const [rsStart, setRsStart] = useState("");
+  const [rsEnd,   setRsEnd]   = useState("");
+  const [rsError, setRsError] = useState("");
+  const [rsSaving,setRsSaving]= useState(false);
+
+  // Cancel modal
+  const [cancelTarget,  setCancelTarget]  = useState(null);
+  const [cancelSaving,  setCancelSaving]  = useState(false);
+
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const nowMinutes = useMemo(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  }, []);
 
   // Override the dashboard's :global(body){overflow:hidden} CSS
   useEffect(() => {
@@ -316,6 +345,65 @@ export default function ConferenceBookPage() {
 
   const addMember = (emp) => { setTeamMembers(p => [...p, emp]); setMemberSearch(""); setMemberResults([]); };
   const removeMember = (id) => setTeamMembers(p => p.filter(m => m.id !== id));
+
+  // Fetch today's bookings for selected room
+  const loadRoomSchedule = (roomId) => {
+    if (!roomId) return;
+    setScheduleLoading(true);
+    apiFetch(`/api/conference/bookings?roomId=${roomId}&date=${today}`)
+      .then(data => setRoomSchedule(Array.isArray(data) ? data.filter(b => b.status === "BOOKED") : []))
+      .catch(() => setRoomSchedule([]))
+      .finally(() => setScheduleLoading(false));
+  };
+
+  useEffect(() => {
+    if (selected) loadRoomSchedule(selected.id);
+    else setRoomSchedule([]);
+  }, [selected]);
+
+  // Classify a booking relative to now
+  const classifyBooking = (b) => {
+    const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+    const s = toMin(b.start_time), e = toMin(b.end_time);
+    if (e <= nowMinutes) return "past";
+    if (s <= nowMinutes && e > nowMinutes) return "active"; // in-progress
+    return "upcoming";
+  };
+
+  // Open reschedule modal
+  const openReschedule = (b) => {
+    setRescheduleTarget(b);
+    setRsDate(b.booking_date?.split("T")[0] || today);
+    setRsRoom(String(b.room_id));
+    setRsStart("");
+    setRsEnd("");
+    setRsError("");
+  };
+
+  const confirmReschedule = async () => {
+    if (!rsStart || !rsEnd) { setRsError("Select both start and end time"); return; }
+    if (ampmToMinutes(rsEnd) <= ampmToMinutes(rsStart)) { setRsError("End must be after start"); return; }
+    setRsError(""); setRsSaving(true);
+    try {
+      await apiFetch(`/api/conference/bookings/${rescheduleTarget.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ start_time: rsStart, end_time: rsEnd, booking_date: rsDate, room_id: Number(rsRoom) }),
+      });
+      setRescheduleTarget(null);
+      loadRoomSchedule(selected.id);
+    } catch (err) { setRsError(err?.message || "Reschedule failed"); }
+    finally { setRsSaving(false); }
+  };
+
+  const confirmCancel = async () => {
+    setCancelSaving(true);
+    try {
+      await apiFetch(`/api/conference/bookings/${cancelTarget.id}/cancel`, { method: "PATCH" });
+      setCancelTarget(null);
+      loadRoomSchedule(selected.id);
+    } catch { /* silent */ }
+    finally { setCancelSaving(false); }
+  };
 
   const startMinutes = useMemo(() => startTime ? ampmToMinutes(startTime) : null, [startTime]);
 
@@ -383,11 +471,11 @@ export default function ConferenceBookPage() {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
-          {step === 2 ? "Back to Rooms" : "Back"}
+          Back
         </button>
       </header>
 
-      <div style={{ maxWidth:900, margin:"0 auto", padding:"1.5rem 1rem 3rem" }}>
+      <div style={{ maxWidth:1100, margin:"0 auto", padding:"1.5rem 1rem 3rem" }}>
 
         {/* ── STEP 1: Room selection ── */}
         {step === 1 && (
@@ -397,7 +485,7 @@ export default function ConferenceBookPage() {
                 Select a Conference Room
               </h1>
               <p style={{ color:"#6b7280", fontSize:"0.875rem", marginTop:"0.35rem" }}>
-                {rooms.length} room{rooms.length !== 1 ? "s" : ""} available &mdash; today&apos;s upcoming bookings shown on each card
+                {rooms.length} room{rooms.length !== 1 ? "s" : ""} available &mdash; today&apos;s bookings shown on each card
               </p>
             </div>
             {rooms.length === 0 ? (
@@ -407,158 +495,314 @@ export default function ConferenceBookPage() {
             ) : (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"1rem" }}>
                 {rooms.map(room => (
-                  <RoomCard key={room.id} room={room} onSelect={r => { setSelected(r); setStep(2); window.scrollTo({ top:0, behavior:"smooth" }); }} />
+                  <RoomCard key={room.id} room={room} nowMinutes={nowMinutes}
+                    onSelect={r => { setSelected(r); setStep(2); window.scrollTo({ top:0, behavior:"smooth" }); }} />
                 ))}
               </div>
             )}
           </>
         )}
 
-        {/* ── STEP 2: Booking form ── */}
+        {/* ── STEP 2: Two-column layout ── */}
         {step === 2 && selected && (
-          <>
-            {/* Room summary */}
-            <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
-              overflow:"hidden", marginBottom:"1.5rem", display:"flex" }}>
-              <div style={{ width:120, flexShrink:0, background:"#ede9fe",
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {selected.image_url
-                  ? <img src={selected.image_url} alt={selected.room_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  : <IconBuilding />}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr minmax(0,340px)", gap:"1.25rem", alignItems:"start" }}>
+
+            {/* ── LEFT: Form ── */}
+            <div>
+              {/* Room summary */}
+              <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
+                overflow:"hidden", marginBottom:"1.25rem", display:"flex" }}>
+                <div style={{ width:110, flexShrink:0, background:"#ede9fe",
+                  display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {selected.image_url
+                    ? <img src={selected.image_url} alt={selected.room_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    : <IconBuilding />}
+                </div>
+                <div style={{ padding:"0.875rem" }}>
+                  <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937" }}>{selected.room_name}</div>
+                  <div style={{ display:"flex", alignItems:"center", gap:"0.3rem", color:"#6b7280", fontSize:"0.82rem", marginTop:"0.2rem" }}>
+                    <IconUsers /> {selected.capacity ? `${selected.capacity} people` : "Capacity N/A"}
+                  </div>
+                  <button onClick={() => setStep(1)}
+                    style={{ marginTop:"0.4rem", fontSize:"0.72rem", color:"#7c3aed", background:"none",
+                      border:"none", cursor:"pointer", padding:0, fontWeight:700 }}>
+                    ← Change room
+                  </button>
+                </div>
               </div>
-              <div style={{ padding:"1rem" }}>
-                <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937" }}>{selected.room_name}</div>
-                <div style={{ display:"flex", alignItems:"center", gap:"0.3rem", color:"#6b7280", fontSize:"0.82rem", marginTop:"0.25rem" }}>
-                  <IconUsers /> {selected.capacity ? `${selected.capacity} people` : "Capacity N/A"}
-                </div>
-                <button onClick={() => setStep(1)}
-                  style={{ marginTop:"0.5rem", fontSize:"0.75rem", color:"#7c3aed", background:"none",
-                    border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>
-                  Change room
-                </button>
-              </div>
-            </div>
 
-            {/* Booking form */}
-            <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1.25rem" }}>
-              <h2 style={{ fontSize:"1rem", fontWeight:700, color:"#1f2937", marginBottom:"1.25rem" }}>
-                Booking Details
-              </h2>
+              {/* Booking form */}
+              <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1.25rem" }}>
+                <h2 style={{ fontSize:"1rem", fontWeight:700, color:"#1f2937", marginBottom:"1.25rem" }}>New Booking</h2>
 
-              {formError && (
-                <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"0.5rem",
-                  padding:"0.625rem 0.875rem", fontSize:"0.82rem", color:"#b91c1c", marginBottom:"1rem" }}>
-                  {formError}
-                </div>
-              )}
+                {formError && (
+                  <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"0.5rem",
+                    padding:"0.625rem 0.875rem", fontSize:"0.82rem", color:"#b91c1c", marginBottom:"1rem" }}>
+                    {formError}
+                  </div>
+                )}
 
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem" }}>
-
-                {/* Book on behalf of */}
-                <div style={{ gridColumn:"1/-1" }}>
-                  <EmployeeSearch
-                    label={<>Book on behalf of <span style={opt}>(optional — leave blank to book as Admin)</span></>}
-                    selected={onBehalfOf}
-                    onSelect={setOnBehalfOf}
-                    onClear={() => setOnBehalfOf(null)}
-                  />
-                </div>
-
-                {/* Date */}
-                <div style={{ gridColumn:"1/-1" }}>
-                  <label style={lbl}>Date</label>
-                  <input type="date" value={bookingDate} min={today}
-                    onChange={e => setBookingDate(e.target.value)} style={inp} />
-                </div>
-
-                {/* Start / End time */}
-                <div>
-                  <label style={lbl}>Start Time</label>
-                  <TimePicker value={startTime} onChange={v => { setStartTime(v); setEndTime(""); }} label="Select start time" />
-                </div>
-                <div>
-                  <label style={lbl}>End Time</label>
-                  <TimePicker value={endTime} onChange={setEndTime} label="Select end time"
-                    minMinutes={startMinutes} disabled={!startTime} />
-                </div>
-
-                {/* Department */}
-                <div>
-                  <label style={lbl}>Department <span style={opt}>(optional)</span></label>
-                  <input value={department} onChange={e => setDepartment(e.target.value)}
-                    placeholder="e.g. Engineering" style={inp} />
-                </div>
-
-                {/* Purpose */}
-                <div>
-                  <label style={lbl}>Purpose <span style={opt}>(optional)</span></label>
-                  <input value={purpose} onChange={e => setPurpose(e.target.value)}
-                    placeholder="e.g. Weekly sync" style={inp} />
-                </div>
-
-                {/* Team members */}
-                <div style={{ gridColumn:"1/-1" }} ref={memberRef}>
-                  <label style={lbl}>Team Members <span style={opt}>(optional)</span></label>
-                  <div style={{ position:"relative" }}>
-                    <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)}
-                      placeholder="Search by name or email…" style={inp} />
-                    {memberSearching && (
-                      <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
-                        background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
-                        boxShadow:"0 4px 16px rgba(0,0,0,0.1)", padding:"0.75rem", fontSize:"0.82rem", color:"#6b7280" }}>
-                        Searching…
-                      </div>
-                    )}
-                    {!memberSearching && memberResults.length > 0 && (
-                      <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
-                        background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
-                        boxShadow:"0 4px 16px rgba(0,0,0,0.1)", maxHeight:200, overflowY:"auto" }}>
-                        {memberResults.map(emp => (
-                          <div key={emp.id} onClick={() => addMember(emp)}
-                            style={{ padding:"0.5rem 0.875rem", cursor:"pointer", borderBottom:"1px solid #f3f4f6" }}
-                            onMouseEnter={e => e.currentTarget.style.background="#f5f3ff"}
-                            onMouseLeave={e => e.currentTarget.style.background="none"}>
-                            <div style={{ fontWeight:600, fontSize:"0.875rem" }}>{emp.name}</div>
-                            <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{emp.email}{emp.department ? ` · ${emp.department}` : ""}</div>
-                          </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem" }}>
+                  <div style={{ gridColumn:"1/-1" }}>
+                    <EmployeeSearch
+                      label={<>Book on behalf of <span style={opt}>(optional)</span></>}
+                      selected={onBehalfOf} onSelect={setOnBehalfOf} onClear={() => setOnBehalfOf(null)}
+                    />
+                  </div>
+                  <div style={{ gridColumn:"1/-1" }}>
+                    <label style={lbl}>Date</label>
+                    <input type="date" value={bookingDate} min={today}
+                      onChange={e => { setBookingDate(e.target.value); setStartTime(""); setEndTime(""); }} style={inp} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Start Time</label>
+                    <TimePicker value={startTime} onChange={v => { setStartTime(v); setEndTime(""); }} label="Select start time"
+                      minMinutes={bookingDate === today ? nowMinutes : null} />
+                  </div>
+                  <div>
+                    <label style={lbl}>End Time</label>
+                    <TimePicker value={endTime} onChange={setEndTime} label="Select end time"
+                      minMinutes={startMinutes} disabled={!startTime} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Department <span style={opt}>(optional)</span></label>
+                    <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="e.g. Engineering" style={inp} />
+                  </div>
+                  <div>
+                    <label style={lbl}>Purpose <span style={opt}>(optional)</span></label>
+                    <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="e.g. Weekly sync" style={inp} />
+                  </div>
+                  <div style={{ gridColumn:"1/-1" }} ref={memberRef}>
+                    <label style={lbl}>Team Members <span style={opt}>(optional)</span></label>
+                    <div style={{ position:"relative" }}>
+                      <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)}
+                        placeholder="Search by name or email…" style={inp} />
+                      {memberSearching && (
+                        <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
+                          background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+                          boxShadow:"0 4px 16px rgba(0,0,0,0.1)", padding:"0.75rem", fontSize:"0.82rem", color:"#6b7280" }}>
+                          Searching…
+                        </div>
+                      )}
+                      {!memberSearching && memberResults.length > 0 && (
+                        <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
+                          background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+                          boxShadow:"0 4px 16px rgba(0,0,0,0.1)", maxHeight:200, overflowY:"auto" }}>
+                          {memberResults.map(emp => (
+                            <div key={emp.id} onClick={() => addMember(emp)}
+                              style={{ padding:"0.5rem 0.875rem", cursor:"pointer", borderBottom:"1px solid #f3f4f6" }}
+                              onMouseEnter={e => e.currentTarget.style.background="#f5f3ff"}
+                              onMouseLeave={e => e.currentTarget.style.background="none"}>
+                              <div style={{ fontWeight:600, fontSize:"0.875rem" }}>{emp.name}</div>
+                              <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{emp.email}{emp.department ? ` · ${emp.department}` : ""}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {teamMembers.length > 0 && (
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"0.4rem", marginTop:"0.5rem" }}>
+                        {teamMembers.map(m => (
+                          <span key={m.id} style={{ display:"flex", alignItems:"center", gap:"0.3rem",
+                            background:"#ede9fe", color:"#7c3aed", borderRadius:99,
+                            padding:"0.25rem 0.625rem", fontSize:"0.78rem", fontWeight:600 }}>
+                            {m.name}
+                            <button onClick={() => removeMember(m.id)} style={{ background:"none", border:"none",
+                              cursor:"pointer", color:"#7c3aed", padding:0, lineHeight:1, fontSize:"0.9rem" }}>×</button>
+                          </span>
                         ))}
                       </div>
                     )}
                   </div>
-                  {teamMembers.length > 0 && (
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:"0.4rem", marginTop:"0.5rem" }}>
-                      {teamMembers.map(m => (
-                        <span key={m.id} style={{ display:"flex", alignItems:"center", gap:"0.3rem",
-                          background:"#ede9fe", color:"#7c3aed", borderRadius:99,
-                          padding:"0.25rem 0.625rem", fontSize:"0.78rem", fontWeight:600 }}>
-                          {m.name}
-                          <button onClick={() => removeMember(m.id)} style={{ background:"none", border:"none",
-                            cursor:"pointer", color:"#7c3aed", padding:0, lineHeight:1, fontSize:"0.9rem" }}>×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
-              </div>
 
-              {/* Booked as info */}
-              <div style={{ marginTop:"0.875rem", padding:"0.5rem 0.875rem", background:"#f5f3ff",
-                borderRadius:"0.5rem", fontSize:"0.78rem", color:"#6b21a8" }}>
-                Booking as: <strong>{onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin"}</strong>
-              </div>
+                <div style={{ marginTop:"0.875rem", padding:"0.5rem 0.875rem", background:"#f5f3ff",
+                  borderRadius:"0.5rem", fontSize:"0.78rem", color:"#6b21a8" }}>
+                  Booking as: <strong>{onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin"}</strong>
+                </div>
 
-              <button onClick={handleBook} disabled={submitting}
-                style={{ marginTop:"1.25rem", width:"100%", padding:"0.75rem",
-                  background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
-                  border:"none", borderRadius:"0.625rem", fontSize:"0.9rem",
-                  fontWeight:700, cursor: submitting ? "not-allowed" : "pointer",
-                  display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
-                {submitting ? "Booking…" : (<><IconCheck /> Confirm Booking</>)}
-              </button>
+                <button onClick={handleBook} disabled={submitting}
+                  style={{ marginTop:"1.25rem", width:"100%", padding:"0.75rem",
+                    background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                    border:"none", borderRadius:"0.625rem", fontSize:"0.9rem",
+                    fontWeight:700, cursor: submitting ? "not-allowed" : "pointer",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
+                  {submitting ? "Booking…" : (<><IconCheck /> Confirm Booking</>)}
+                </button>
+              </div>
             </div>
-          </>
+
+            {/* ── RIGHT: Today's room schedule ── */}
+            <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
+              overflow:"hidden", position:"sticky", top:80 }}>
+              <div style={{ padding:"0.75rem 1rem", borderBottom:"1px solid #f3f4f6",
+                background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
+                <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>Today&apos;s Schedule</div>
+                <div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.8)", marginTop:2 }}>{selected.room_name}</div>
+              </div>
+              <div style={{ padding:"0.75rem", maxHeight:500, overflowY:"auto" }}>
+                {scheduleLoading ? (
+                  <div style={{ textAlign:"center", padding:"2rem", color:"#9ca3af", fontSize:"0.82rem" }}>Loading…</div>
+                ) : roomSchedule.length === 0 ? (
+                  <div style={{ textAlign:"center", padding:"2rem", color:"#9ca3af", fontSize:"0.82rem" }}>
+                    No bookings today for this room
+                  </div>
+                ) : (
+                  [...roomSchedule].sort((a,b) => a.start_time.localeCompare(b.start_time)).map(b => {
+                    const state = classifyBooking(b);
+                    const isPast = state === "past" || state === "active";
+                    const booker = b.booked_by === "ADMIN" ? "Admin" : b.booked_by;
+                    return (
+                      <div key={b.id} style={{ marginBottom:"0.6rem", borderRadius:"0.5rem",
+                        border:`1px solid ${isPast ? "#e5e7eb" : "#7c3aed"}`,
+                        background: isPast ? "#f9fafb" : "#fff",
+                        opacity: isPast ? 0.6 : 1, padding:"0.6rem 0.75rem" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                          <div style={{ fontSize:"0.78rem", fontWeight:700,
+                            color: isPast ? "#9ca3af" : "#1f2937" }}>
+                            {prettyTime(b.start_time)} – {prettyTime(b.end_time)}
+                          </div>
+                          {state === "active" && (
+                            <span style={{ fontSize:"0.62rem", background:"#fef3c7", color:"#92400e",
+                              borderRadius:99, padding:"1px 6px", fontWeight:700 }}>In Progress</span>
+                          )}
+                          {state === "past" && (
+                            <span style={{ fontSize:"0.62rem", background:"#f3f4f6", color:"#9ca3af",
+                              borderRadius:99, padding:"1px 6px", fontWeight:700 }}>Ended</span>
+                          )}
+                        </div>
+                        <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:2 }}>
+                          {b.department && <span>{b.department} · </span>}{booker}
+                        </div>
+                        {!isPast && (
+                          <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
+                            <button onClick={() => openReschedule(b)}
+                              style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
+                                border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
+                              Reschedule
+                            </button>
+                            <button onClick={() => setCancelTarget(b)}
+                              style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
+                                border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </div>
+
+      {/* ── Reschedule Modal ── */}
+      {rescheduleTarget && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:100,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setRescheduleTarget(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:440,
+            boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb",
+              background:"linear-gradient(135deg,#7c3aed,#a78bfa)", borderRadius:"1rem 1rem 0 0",
+              display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:800, color:"#fff", fontSize:"0.95rem" }}>Reschedule Booking</span>
+              <button onClick={() => setRescheduleTarget(null)}
+                style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff",
+                  borderRadius:"50%", width:28, height:28, cursor:"pointer", fontSize:"1rem" }}>×</button>
+            </div>
+            <div style={{ padding:"1.25rem" }}>
+              <div style={{ fontSize:"0.8rem", color:"#6b7280", marginBottom:"1rem", background:"#f5f3ff",
+                padding:"0.5rem 0.75rem", borderRadius:"0.5rem" }}>
+                Current: <strong>{prettyTime(rescheduleTarget.start_time)} – {prettyTime(rescheduleTarget.end_time)}</strong>
+                {" · "}{rescheduleTarget.booked_by === "ADMIN" ? "Admin" : rescheduleTarget.booked_by}
+              </div>
+              {rsError && <div style={{ background:"#fef2f2", color:"#b91c1c", borderRadius:"0.5rem",
+                padding:"0.5rem 0.75rem", fontSize:"0.8rem", marginBottom:"0.75rem" }}>{rsError}</div>}
+              <div style={{ display:"grid", gap:"0.75rem" }}>
+                <div>
+                  <label style={lbl}>Date</label>
+                  <input type="date" value={rsDate} min={today} onChange={e => setRsDate(e.target.value)} style={inp} />
+                </div>
+                <div>
+                  <label style={lbl}>Room</label>
+                  <select value={rsRoom} onChange={e => setRsRoom(e.target.value)} style={inp}>
+                    {rooms.map(r => <option key={r.id} value={r.id}>{r.room_name}</option>)}
+                  </select>
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"0.75rem" }}>
+                  <div>
+                    <label style={lbl}>Start Time</label>
+                    <TimePicker value={rsStart} onChange={v => { setRsStart(v); setRsEnd(""); }} label="Start"
+                      minMinutes={rsDate === today ? nowMinutes : null} />
+                  </div>
+                  <div>
+                    <label style={lbl}>End Time</label>
+                    <TimePicker value={rsEnd} onChange={setRsEnd} label="End"
+                      minMinutes={rsStart ? ampmToMinutes(rsStart) : null} disabled={!rsStart} />
+                  </div>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:"0.75rem", marginTop:"1.25rem" }}>
+                <button onClick={confirmReschedule} disabled={rsSaving}
+                  style={{ flex:1, padding:"0.65rem", background: rsSaving ? "#a78bfa" : "#7c3aed",
+                    color:"#fff", border:"none", borderRadius:"0.5rem", fontWeight:700,
+                    fontSize:"0.875rem", cursor: rsSaving ? "not-allowed" : "pointer" }}>
+                  {rsSaving ? "Saving…" : "Confirm Reschedule"}
+                </button>
+                <button onClick={() => setRescheduleTarget(null)}
+                  style={{ flex:1, padding:"0.65rem", background:"#f3f4f6", color:"#374151",
+                    border:"none", borderRadius:"0.5rem", fontWeight:600, fontSize:"0.875rem", cursor:"pointer" }}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Confirmation Modal ── */}
+      {cancelTarget && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:100,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setCancelTarget(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:380,
+            boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb", borderRadius:"1rem 1rem 0 0",
+              background:"#fef2f2", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:800, color:"#b91c1c", fontSize:"0.95rem" }}>Cancel Booking</span>
+              <button onClick={() => setCancelTarget(null)}
+                style={{ background:"none", border:"none", fontSize:"1.2rem", cursor:"pointer", color:"#6b7280" }}>×</button>
+            </div>
+            <div style={{ padding:"1.25rem" }}>
+              <p style={{ fontSize:"0.875rem", color:"#374151", marginBottom:"0.75rem" }}>
+                Are you sure you want to cancel this booking?
+                A cancellation email will be sent to the booker and all team members.
+              </p>
+              <div style={{ background:"#f9fafb", borderRadius:"0.5rem", padding:"0.625rem 0.875rem",
+                fontSize:"0.82rem", color:"#374151", marginBottom:"1.25rem" }}>
+                <strong>{prettyTime(cancelTarget.start_time)} – {prettyTime(cancelTarget.end_time)}</strong>
+                <br />{cancelTarget.department || cancelTarget.booked_by}
+              </div>
+              <div style={{ display:"flex", gap:"0.75rem" }}>
+                <button onClick={confirmCancel} disabled={cancelSaving}
+                  style={{ flex:1, padding:"0.65rem", background: cancelSaving ? "#fca5a5" : "#ef4444",
+                    color:"#fff", border:"none", borderRadius:"0.5rem", fontWeight:700,
+                    fontSize:"0.875rem", cursor: cancelSaving ? "not-allowed" : "pointer" }}>
+                  {cancelSaving ? "Cancelling…" : "Yes, Cancel"}
+                </button>
+                <button onClick={() => setCancelTarget(null)}
+                  style={{ flex:1, padding:"0.65rem", background:"#f3f4f6", color:"#374151",
+                    border:"none", borderRadius:"0.5rem", fontWeight:600, fontSize:"0.875rem", cursor:"pointer" }}>
+                  Keep Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

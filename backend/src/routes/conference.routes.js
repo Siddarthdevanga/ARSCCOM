@@ -41,10 +41,6 @@ router.use(authenticate);
 
 const getCompanyId = (user) => user?.company_id || user?.companyId;
 
-const nowTime = () => {
-  const d = new Date();
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-};
 
 const normalizeTime = (t) => {
   if (!t) throw new Error("Time is required");
@@ -1139,7 +1135,7 @@ router.patch("/bookings/:id", async (req, res) => {
     const companyId = getCompanyId(req.user);
     const bookingId = Number(req.params.id);
 
-    let { start_time, end_time } = req.body;
+    let { start_time, end_time, booking_date, room_id } = req.body;
 
     if (!start_time || !end_time) {
       return res.status(400).json({ message: "Start and end times are required" });
@@ -1159,29 +1155,39 @@ router.patch("/bookings/:id", async (req, res) => {
       [bookingId, companyId]
     );
 
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    const today = new Date().toISOString().slice(0, 10);
-    if (booking.booking_date === today && start_time <= nowTime()) {
-      return res.status(400).json({ message: "Cannot schedule booking in the past" });
+    const newDate   = booking_date || booking.booking_date;
+    const newRoomId = room_id ? Number(room_id) : booking.room_id;
+
+    // Validate new room if changed
+    let newRoomName = booking.room_name;
+    if (newRoomId !== booking.room_id) {
+      const [[nr]] = await db.query(
+        `SELECT room_name FROM conference_rooms WHERE id = ? AND company_id = ? LIMIT 1`,
+        [newRoomId, companyId]
+      );
+      if (!nr) return res.status(403).json({ message: "Invalid room" });
+      newRoomName = nr.room_name;
     }
 
     const [[conflict]] = await db.query(
       `SELECT COUNT(*) AS cnt FROM conference_bookings
        WHERE company_id = ? AND room_id = ? AND booking_date = ? AND id <> ? AND status = 'BOOKED'
        AND start_time < ? AND end_time > ?`,
-      [companyId, booking.room_id, booking.booking_date, bookingId, end_time, start_time]
+      [companyId, newRoomId, newDate, bookingId, end_time, start_time]
     );
 
-    if (conflict.cnt > 0) {
-      return res.status(409).json({ message: "Time slot already booked" });
-    }
+    if (conflict.cnt > 0) return res.status(409).json({ message: "Time slot already booked" });
 
     await db.query(
-      `UPDATE conference_bookings SET start_time = ?, end_time = ? WHERE id = ?`,
-      [start_time, end_time, bookingId]
+      `UPDATE conference_bookings SET start_time = ?, end_time = ?, booking_date = ?, room_id = ? WHERE id = ?`,
+      [start_time, end_time, newDate, newRoomId, bookingId]
+    );
+
+    const [members] = await db.query(
+      `SELECT name, email FROM conference_booking_members WHERE booking_id = ?`,
+      [bookingId]
     );
 
     const companyInfo = await getCompanyInfo(companyId);
@@ -1191,8 +1197,9 @@ router.patch("/bookings/:id", async (req, res) => {
       userEmail: booking.booked_by,
       subject: "Conference Room Booking Rescheduled",
       heading: "Meeting Rescheduled 🔄",
-      booking: { ...booking, start_time, end_time, status: "RESCHEDULED" },
+      booking: { ...booking, room_name: newRoomName, start_time, end_time, booking_date: newDate, status: "RESCHEDULED" },
       company: companyInfo,
+      teamMembers: members,
     });
 
     res.json({ message: "Booking updated successfully" });
@@ -1214,12 +1221,12 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       [bookingId, companyId]
     );
 
-    if (!booking) {
-      return res.status(404).json({ message: "Booking not found" });
-    }
+    if (!booking) return res.status(404).json({ message: "Booking not found" });
 
-    await db.query(
-      `UPDATE conference_bookings SET status = 'CANCELLED' WHERE id = ?`,
+    await db.query(`UPDATE conference_bookings SET status = 'CANCELLED' WHERE id = ?`, [bookingId]);
+
+    const [members] = await db.query(
+      `SELECT name, email FROM conference_booking_members WHERE booking_id = ?`,
       [bookingId]
     );
 
@@ -1232,6 +1239,7 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
       heading: "Meeting Cancelled ❌",
       booking: { ...booking, status: "CANCELLED" },
       company: companyInfo,
+      teamMembers: members,
     });
 
     res.json({ message: "Booking cancelled successfully" });
