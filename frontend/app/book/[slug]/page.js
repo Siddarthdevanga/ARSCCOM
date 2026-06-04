@@ -1140,57 +1140,69 @@ export default function PublicConferenceBooking() {
             </div>
           </div>
 
-          {/* Right: email + oval back/logout */}
+          {/* Right: logout */}
           {otpVerified && (
-            <div style={{ display:"flex", alignItems:"center", gap:"0.625rem" }}>
-              <span className={styles.userEmail} style={{ display:"none" }}>{email}</span>
-              {selectedRoom && (
-                <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
-                  style={{ padding:"0.4rem 1rem", borderRadius:99, border:"1.5px solid #7c3aed",
-                    background:"#fff", color:"#7c3aed", fontSize:"0.82rem", fontWeight:600,
-                    cursor:"pointer" }}>
-                  ← Rooms
-                </button>
-              )}
-              <button onClick={handleLogout}
-                style={{ padding:"0.4rem 1.1rem", borderRadius:99, border:"none",
-                  background:"#7c3aed", color:"#fff", fontSize:"0.82rem", fontWeight:600,
-                  cursor:"pointer" }}>
-                Logout
-              </button>
-            </div>
+            <button onClick={handleLogout}
+              style={{ padding:"0.4rem 1.1rem", borderRadius:99, border:"none",
+                background:"#7c3aed", color:"#fff", fontSize:"0.82rem", fontWeight:600,
+                cursor:"pointer" }}>
+              Logout
+            </button>
           )}
         </div>
       </header>
 
-      {/* ── Today's Schedule Slide-out — Google Calendar Grid ── */}
+      {/* ── Today's Schedule Popup Modal — mobile-first ── */}
       {showSchedule && (
-        <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex" }}>
-          <div style={{ flex:1, background:"rgba(0,0,0,0.45)" }} onClick={() => setShowSchedule(false)} />
-          <div style={{ width:"min(400px,95vw)", background:"#fff", display:"flex",
-            flexDirection:"column", boxShadow:"-4px 0 32px rgba(0,0,0,0.18)" }}>
-            {/* Panel header */}
+        <div style={{ position:"fixed", inset:0, zIndex:200,
+          display:"flex", alignItems:"flex-end", justifyContent:"center",
+          background:"rgba(0,0,0,0.5)", padding:"0" }}
+          onClick={() => setShowSchedule(false)}>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width:"100%", maxWidth:"100vw",
+              height:"90vh",
+              background:"#fff", borderRadius:"1.25rem 1.25rem 0 0",
+              display:"flex", flexDirection:"column",
+              boxShadow:"0 -8px 40px rgba(0,0,0,0.2)",
+              animation:"slideUp 0.25s ease",
+            }}>
+            {/* Modal header */}
             <div style={{ padding:"1rem 1.25rem", background:"linear-gradient(135deg,#7c3aed,#a78bfa)",
-              display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+              borderRadius:"1.25rem 1.25rem 0 0", display:"flex", justifyContent:"space-between",
+              alignItems:"center", flexShrink:0 }}>
               <div>
                 <div style={{ fontWeight:800, fontSize:"1rem", color:"#fff" }}>Today&apos;s Schedule</div>
-                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.8)", marginTop:2 }}>
+                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.82)", marginTop:2 }}>
                   {new Date().toLocaleDateString("en-IN", { weekday:"long", day:"numeric", month:"long" })}
                 </div>
               </div>
               <button onClick={() => setShowSchedule(false)}
                 style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff",
-                  borderRadius:"50%", width:30, height:30, cursor:"pointer",
-                  fontSize:"1.1rem", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  borderRadius:"50%", width:32, height:32, cursor:"pointer",
+                  fontSize:"1.2rem", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 ×
               </button>
             </div>
 
-            {/* Calendar grid */}
-            <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
+            {/* Drag handle */}
+            <div style={{ display:"flex", justifyContent:"center", padding:"0.5rem 0",
+              flexShrink:0, borderBottom:"1px solid #f3f4f6" }}>
+              <div style={{ width:40, height:4, borderRadius:99, background:"#d1d5db" }} />
+            </div>
+
+            {/* Calendar grid — scrollable */}
+            <div style={{ flex:1, overflowX:"auto", overflowY:"hidden" }}>
               <PublicCalendarGrid rooms={rooms} />
             </div>
           </div>
+          <style>{`
+            @keyframes slideUp {
+              from { transform: translateY(100%); }
+              to   { transform: translateY(0); }
+            }
+          `}</style>
         </div>
       )}
 
@@ -1343,34 +1355,36 @@ export default function PublicConferenceBooking() {
         </div>
       ) : (
         <div className={styles.container}>
-          <div className={styles.layout}>
-            {/* ── Selected room summary ── */}
-            <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
-              overflow:"hidden", marginBottom:"1rem", display:"flex" }}>
-              <div style={{ width:100, flexShrink:0, background:"#ede9fe", minHeight:72,
-                display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {selectedRoom.image_url
-                  ? <img src={selectedRoom.image_url} alt={selectedRoom.room_name}
-                      style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="2"/>
-                      <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
-                    </svg>
-                }
-              </div>
-              <div style={{ padding:"0.875rem" }}>
-                <div style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>{selectedRoom.room_name}</div>
-                <div style={{ fontSize:"0.78rem", color:"#6b7280", marginTop:"0.2rem" }}>
-                  {selectedRoom.capacity ? `${selectedRoom.capacity} people` : ""}
-                </div>
-                <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
-                  style={{ marginTop:"0.35rem", fontSize:"0.75rem", color:"#7c3aed",
-                    background:"none", border:"none", cursor:"pointer", padding:0, fontWeight:600 }}>
-                  Change room
-                </button>
+          {/* ── Room summary — full width above the grid ── */}
+          <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
+            overflow:"hidden", marginBottom:"1.25rem", display:"flex", alignItems:"center" }}>
+            <div style={{ width:90, flexShrink:0, background:"#ede9fe", alignSelf:"stretch",
+              display:"flex", alignItems:"center", justifyContent:"center", minHeight:72 }}>
+              {selectedRoom.image_url
+                ? <img src={selectedRoom.image_url} alt={selectedRoom.room_name}
+                    style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
+                  </svg>
+              }
+            </div>
+            <div style={{ padding:"0.875rem", flex:1 }}>
+              <div style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>{selectedRoom.room_name}</div>
+              <div style={{ fontSize:"0.78rem", color:"#6b7280", marginTop:"0.2rem" }}>
+                {selectedRoom.capacity ? `${selectedRoom.capacity} people` : ""}
+                {selectedRoom.room_number ? ` · Room #${selectedRoom.room_number}` : ""}
               </div>
             </div>
+            <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
+              style={{ margin:"0 1rem", padding:"0.4rem 1rem", borderRadius:99,
+                border:"1.5px solid #7c3aed", background:"#fff", color:"#7c3aed",
+                fontSize:"0.8rem", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+              ← Rooms
+            </button>
+          </div>
 
+          <div className={styles.layout}>
             {/* ================= BOOKING FORM ================= */}
             <div className={styles.card}>
               <h2>Book a Conference Room</h2>
