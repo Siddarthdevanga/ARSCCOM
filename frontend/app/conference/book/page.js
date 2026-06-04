@@ -263,8 +263,9 @@ export default function ConferenceBookPage() {
   const [endTime,     setEndTime]     = useState("");
   const [purpose,     setPurpose]     = useState("");
   const [department,  setDepartment]  = useState("");
-  const [formError,   setFormError]   = useState("");
-  const [submitting,  setSubmitting]  = useState(false);
+  const [formError,    setFormError]    = useState("");
+  const [submitting,   setSubmitting]   = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState("");
 
   // Book on behalf of
   const [onBehalfOf, setOnBehalfOf] = useState(null);
@@ -437,7 +438,12 @@ export default function ConferenceBookPage() {
           teamMembers:  teamMembers.length > 0 ? teamMembers : undefined,
         }),
       });
-      router.push("/conference/bookings?booked=1");
+      // Reset form, refresh sidebar, show success
+      setStartTime(""); setEndTime(""); setPurpose(""); setDepartment("");
+      setOnBehalfOf(null); setTeamMembers([]); setMemberSearch("");
+      setBookingSuccess(`Booking confirmed for ${selected.room_name} on ${bookingDate} · ${startTime} – ${endTime}`);
+      loadRoomSchedule(selected.id);
+      setTimeout(() => setBookingSuccess(""), 6000);
     } catch (err) {
       setFormError(err?.message || "Booking failed. Please try again.");
     } finally { setSubmitting(false); }
@@ -543,7 +549,17 @@ export default function ConferenceBookPage() {
               <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1.25rem" }}>
                 <h2 style={{ fontSize:"1rem", fontWeight:700, color:"#1f2937", marginBottom:"1.25rem" }}>New Booking</h2>
 
-                {formError && (
+                {bookingSuccess && (
+                <div style={{ background:"#f0fdf4", border:"1px solid #86efac", borderRadius:"0.5rem",
+                  padding:"0.625rem 0.875rem", fontSize:"0.82rem", color:"#166534",
+                  marginBottom:"1rem", display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  {bookingSuccess}
+                </div>
+              )}
+              {formError && (
                   <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"0.5rem",
                     padding:"0.625rem 0.875rem", fontSize:"0.82rem", color:"#b91c1c", marginBottom:"1rem" }}>
                     {formError}
