@@ -834,7 +834,7 @@ router.post("/rooms", roomImageUpload.single("image"), async (req, res) => {
   }
 });
 
-router.patch("/rooms/:id", roomImageUpload.single("image"), async (req, res) => {
+router.patch("/rooms/:id", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
     const roomId = parseInt(req.params.id);
@@ -851,25 +851,53 @@ router.patch("/rooms/:id", roomImageUpload.single("image"), async (req, res) => 
     await validateCompanySubscription(companyId);
     await verifyRoomAccess(roomId, companyId, true);
 
-    if (req.file) {
-      const key = `companies/${companyId}/rooms/${roomId}.jpg`;
-      await uploadToS3(req.file, key);
-      await db.query(
-        `UPDATE conference_rooms SET room_name = ?, capacity = ?, image_url = ?
-         WHERE id = ? AND company_id = ?`,
-        [room_name.trim(), capacity || 0, key, roomId, companyId]
-      );
-    } else {
-      await db.query(
-        `UPDATE conference_rooms SET room_name = ?, capacity = ?
-         WHERE id = ? AND company_id = ?`,
-        [room_name.trim(), capacity || 0, roomId, companyId]
-      );
-    }
+    await db.query(
+      `UPDATE conference_rooms SET room_name = ?, capacity = ?
+       WHERE id = ? AND company_id = ?`,
+      [room_name.trim(), capacity || 0, roomId, companyId]
+    );
 
     res.json({ message: "Room updated successfully" });
   } catch (err) {
     console.error("[PATCH /rooms/:id]", err.message);
+
+    const statusCode = err.message.includes("not found")
+      ? 404
+      : err.message.includes("locked") ||
+        err.message.includes("inactive") ||
+        err.message.includes("renew")
+      ? 403
+      : 500;
+
+    res.status(statusCode).json({ message: err.message });
+  }
+});
+
+router.patch("/rooms/:id/image", roomImageUpload.single("image"), async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const roomId = parseInt(req.params.id);
+
+    if (isNaN(roomId) || roomId <= 0) {
+      return res.status(400).json({ message: "Invalid room ID" });
+    }
+    if (!req.file) {
+      return res.status(400).json({ message: "Image file is required" });
+    }
+
+    await validateCompanySubscription(companyId);
+    await verifyRoomAccess(roomId, companyId, true);
+
+    const key = `companies/${companyId}/rooms/${roomId}.jpg`;
+    await uploadToS3(req.file, key);
+    await db.query(
+      `UPDATE conference_rooms SET image_url = ? WHERE id = ? AND company_id = ?`,
+      [key, roomId, companyId]
+    );
+
+    res.json({ message: "Room image updated successfully" });
+  } catch (err) {
+    console.error("[PATCH /rooms/:id/image]", err.message);
 
     const statusCode = err.message.includes("not found")
       ? 404

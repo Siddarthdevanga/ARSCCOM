@@ -177,14 +177,24 @@ export default function ConferenceDashboard() {
     if (!original?.is_active) { showNotification("Room locked.", "warning"); cancelEdit(); return; }
     try {
       const token = localStorage.getItem("token");
-      const fd = new FormData();
-      fd.append("room_name", newName);
-      fd.append("capacity", editCapacity || 0);
-      if (editRoomImage) fd.append("image", editRoomImage);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms/${roomId}`, {
-        method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: fd,
+      const base = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms/${roomId}`;
+
+      const res = await fetch(base, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ room_name: newName, capacity: editCapacity || 0 }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d?.message || "Update failed"); }
+
+      if (editRoomImage) {
+        const fd = new FormData();
+        fd.append("image", editRoomImage);
+        const imgRes = await fetch(`${base}/image`, {
+          method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: fd,
+        });
+        if (!imgRes.ok) { const d = await imgRes.json(); throw new Error(d?.message || "Image upload failed"); }
+      }
+
       cancelEdit(); await loadDashboard(); showNotification("Room updated!", "success");
     } catch (err) { showNotification(err?.message || "Update failed", "error"); cancelEdit(); }
   };
