@@ -102,6 +102,80 @@ const Modal = ({ isOpen, onClose, title, children, type = "info" }) => {
   );
 };
 
+/* ── Room Schedule Panel (right column) ── */
+function RoomSchedulePanel({ roomId, date, today, rooms, dayBookings, editingId, editStart, editEnd,
+  setEditStart, setEditEnd, getBlockedExcluding, initiateEdit, cancelEdit,
+  showRescheduleConfirm, initiateCancellation, dbToAmPm, normalizeDate, styles }) {
+
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const toMin  = (t) => { const [h, m] = String(t || "0:0").split(":").map(Number); return h * 60 + (m || 0); };
+  const selectedRoom = rooms.find(r => String(r.id) === String(roomId));
+  const sorted = [...dayBookings].sort((a, b) => a.start_time.localeCompare(b.start_time));
+
+  return (
+    <div className={styles.bookingsCard}>
+      <div className={styles.sectionHeader}>
+        <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
+        <h3 className={styles.cardTitle}>
+          {selectedRoom ? `${selectedRoom.room_name} — ${date === today ? "Today" : date}` : "Room Schedule"}
+        </h3>
+        {roomId && <span className={styles.cardCount}>{dayBookings.length}</span>}
+      </div>
+
+      {!roomId ? (
+        <div className={styles.emptyState}><span className={styles.emptyIcon}>🏢</span>Select a room to see its schedule</div>
+      ) : sorted.length === 0 ? (
+        <div className={styles.emptyState}><span className={styles.emptyIcon}>✨</span>No bookings for this date</div>
+      ) : (
+        <div className={styles.bkList}>
+          {sorted.map((b) => {
+            const sMin   = toMin(b.start_time);
+            const eMin   = toMin(b.end_time);
+            const isPast = date === today && eMin <= nowMin;
+            const isNow  = date === today && sMin <= nowMin && eMin > nowMin;
+            const blocked = getBlockedExcluding(b.id);
+            return (
+              <div key={b.id} className={styles.bkItem}
+                style={{ opacity: isPast ? 0.55 : 1, background: isPast ? "#f9fafb" : undefined }}>
+                {editingId === b.id ? (
+                  <>
+                    <div className={styles.bkEditTitle}>Reschedule</div>
+                    <p className={styles.bkDept}>{b.department}</p>
+                    <TimeScroller value={editStart} onChange={setEditStart} label="New Start" excludedSlots={blocked} currentDate={normalizeDate(b.booking_date)} today={today} />
+                    <TimeScroller value={editEnd} onChange={setEditEnd} label="New End" minTime={editStart} excludedSlots={blocked} currentDate={normalizeDate(b.booking_date)} today={today} />
+                    <div className={styles.bkActions}>
+                      <button className={styles.saveBk} onClick={showRescheduleConfirm}>Save</button>
+                      <button className={styles.cancelEditBk} onClick={cancelEdit}>Cancel</button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:"0.4rem" }}>
+                      <div className={styles.bkTime}>
+                        🕒 <b>{b.start_time.includes("M") ? b.start_time : dbToAmPm(b.start_time)} – {b.end_time.includes("M") ? b.end_time : dbToAmPm(b.end_time)}</b>
+                      </div>
+                      {isNow && <span style={{ fontSize:"0.62rem", background:"#fef3c7", color:"#92400e", borderRadius:99, padding:"1px 7px", fontWeight:700, whiteSpace:"nowrap" }}>In Progress</span>}
+                      {isPast && <span style={{ fontSize:"0.62rem", background:"#f3f4f6", color:"#9ca3af", borderRadius:99, padding:"1px 7px", fontWeight:700, whiteSpace:"nowrap" }}>Ended</span>}
+                    </div>
+                    <p className={styles.bkDept}>{b.department}{b.purpose && ` • ${b.purpose}`}</p>
+                    <p className={styles.bkBy}>👤 {b.booked_by}</p>
+                    {!isPast && !isNow && (
+                      <div className={styles.bkActions}>
+                        <button className={styles.editBk} onClick={() => initiateEdit(b)}>Reschedule</button>
+                        <button className={styles.cancelBk} onClick={() => initiateCancellation(b)}>Cancel</button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ======================================================
    MAIN COMPONENT
 ====================================================== */
@@ -312,67 +386,6 @@ export default function ConferenceBookings() {
           <p className={styles.heroSub}>Select room, date, and time to create a booking</p>
         </section>
 
-        {/* ===== TODAY'S OVERVIEW ===== */}
-        {rooms.length > 0 && (
-          <section style={{ padding:"0 1.25rem 1.5rem", maxWidth:1200, margin:"0 auto" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.875rem" }}>
-              <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", display:"inline-block" }} />
-              <h3 style={{ margin:0, fontSize:"0.9rem", fontWeight:700, color:"#1f2937" }}>
-                Today&apos;s Bookings — All Rooms
-              </h3>
-              <span style={{ fontSize:"0.75rem", color:"#9ca3af" }}>
-                {new Date().toLocaleDateString("en-IN", { weekday:"short", day:"numeric", month:"short" })}
-              </span>
-            </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:"0.75rem" }}>
-              {rooms.map(room => {
-                const todayBk = bookings.filter(b =>
-                  normalizeDate(b.booking_date) === today && Number(b.room_id) === room.id && b.status === "BOOKED"
-                ).sort((a, b) => a.start_time.localeCompare(b.start_time));
-                return (
-                  <div key={room.id} style={{ background:"#fff", borderRadius:"0.75rem",
-                    border:"1px solid #e5e7eb", overflow:"hidden",
-                    boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
-                    <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"0.6rem 0.875rem" }}>
-                      <div style={{ fontWeight:700, fontSize:"0.82rem", color:"#fff" }}>{room.room_name}</div>
-                      <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.8)" }}>#{room.room_number}</div>
-                    </div>
-                    <div style={{ padding:"0.625rem" }}>
-                      {todayBk.length === 0 ? (
-                        <div style={{ textAlign:"center", padding:"0.75rem 0", fontSize:"0.75rem", color:"#9ca3af" }}>
-                          Free today
-                        </div>
-                      ) : todayBk.map(b => (
-                        <div key={b.id} style={{ padding:"0.4rem 0.5rem", marginBottom:"0.3rem",
-                          background:"#f5f3ff", borderRadius:"0.4rem", borderLeft:"3px solid #7c3aed" }}>
-                          <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#1f2937" }}>
-                            {b.start_time.includes("M") ? b.start_time : dbToAmPm(b.start_time)} – {b.end_time.includes("M") ? b.end_time : dbToAmPm(b.end_time)}
-                          </div>
-                          <div style={{ fontSize:"0.68rem", color:"#6b7280", marginTop:"0.1rem" }}>
-                            {b.department || b.booked_by}
-                          </div>
-                          <div style={{ display:"flex", gap:"0.35rem", marginTop:"0.35rem" }}>
-                            <button onClick={() => { setRoomId(String(room.id)); setDate(today); initiateEdit(b); }}
-                              style={{ flex:1, padding:"0.2rem", background:"#ede9fe", color:"#7c3aed",
-                                border:"none", borderRadius:"0.3rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
-                              Reschedule
-                            </button>
-                            <button onClick={() => initiateCancellation(b)}
-                              style={{ flex:1, padding:"0.2rem", background:"#fef2f2", color:"#b91c1c",
-                                border:"none", borderRadius:"0.3rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        )}
-
         {/* ===== PLAN BLOCKED ===== */}
         {planBlocked && <div className={styles.blockedMsg}>🚫 Booking not allowed. Upgrade plan to continue.</div>}
 
@@ -455,52 +468,27 @@ export default function ConferenceBookings() {
               </button>
             </div>
 
-            {/* ── RIGHT: Day Bookings ── */}
-            <div className={styles.bookingsCard}>
-              <div className={styles.sectionHeader}>
-                <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
-                <h3 className={styles.cardTitle}>Bookings for {date}</h3>
-                <span className={styles.cardCount}>{dayBookings.length}</span>
-              </div>
-
-              {!roomId || !date ? (
-                <div className={styles.emptyState}><span className={styles.emptyIcon}>📅</span>Select room & date to view bookings</div>
-              ) : dayBookings.length === 0 ? (
-                <div className={styles.emptyState}><span className={styles.emptyIcon}>✨</span>No bookings for this date</div>
-              ) : (
-                <div className={styles.bkList}>
-                  {dayBookings.map((b) => {
-                    const blocked = getBlockedExcluding(b.id);
-                    return (
-                      <div key={b.id} className={styles.bkItem}>
-                        {editingId === b.id ? (
-                          <>
-                            <div className={styles.bkEditTitle}>Reschedule</div>
-                            <p className={styles.bkDept}>{b.department}</p>
-                            <TimeScroller value={editStart} onChange={setEditStart} label="New Start" excludedSlots={blocked} currentDate={normalizeDate(b.booking_date)} today={today} />
-                            <TimeScroller value={editEnd} onChange={setEditEnd} label="New End" minTime={editStart} excludedSlots={blocked} currentDate={normalizeDate(b.booking_date)} today={today} />
-                            <div className={styles.bkActions}>
-                              <button className={styles.saveBk} onClick={showRescheduleConfirm}>Save</button>
-                              <button className={styles.cancelEditBk} onClick={cancelEdit}>Cancel</button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className={styles.bkTime}>🕒 <b>{b.start_time.includes("M") ? b.start_time : dbToAmPm(b.start_time)} – {b.end_time.includes("M") ? b.end_time : dbToAmPm(b.end_time)}</b></div>
-                            <p className={styles.bkDept}>{b.department}{b.purpose && ` • ${b.purpose}`}</p>
-                            <p className={styles.bkBy}>👤 {b.booked_by}</p>
-                            <div className={styles.bkActions}>
-                              <button className={styles.editBk} onClick={() => initiateEdit(b)}>Reschedule</button>
-                              <button className={styles.cancelBk} onClick={() => initiateCancellation(b)}>Cancel</button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            {/* ── RIGHT: Room Schedule ── */}
+            <RoomSchedulePanel
+              roomId={roomId}
+              date={date}
+              today={today}
+              rooms={rooms}
+              dayBookings={dayBookings}
+              editingId={editingId}
+              editStart={editStart}
+              editEnd={editEnd}
+              setEditStart={setEditStart}
+              setEditEnd={setEditEnd}
+              getBlockedExcluding={getBlockedExcluding}
+              initiateEdit={initiateEdit}
+              cancelEdit={cancelEdit}
+              showRescheduleConfirm={showRescheduleConfirm}
+              initiateCancellation={initiateCancellation}
+              dbToAmPm={dbToAmPm}
+              normalizeDate={normalizeDate}
+              styles={styles}
+            />
           </div>
         </main>
       </div>
