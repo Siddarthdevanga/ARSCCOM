@@ -289,6 +289,67 @@ export default function ConferenceBookings() {
           <p className={styles.heroSub}>Select room, date, and time to create a booking</p>
         </section>
 
+        {/* ===== TODAY'S OVERVIEW ===== */}
+        {rooms.length > 0 && (
+          <section style={{ padding:"0 1.25rem 1.5rem", maxWidth:1200, margin:"0 auto" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.875rem" }}>
+              <span style={{ width:8, height:8, borderRadius:"50%", background:"#7c3aed", display:"inline-block" }} />
+              <h3 style={{ margin:0, fontSize:"0.9rem", fontWeight:700, color:"#1f2937" }}>
+                Today&apos;s Bookings — All Rooms
+              </h3>
+              <span style={{ fontSize:"0.75rem", color:"#9ca3af" }}>
+                {new Date().toLocaleDateString("en-IN", { weekday:"short", day:"numeric", month:"short" })}
+              </span>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))", gap:"0.75rem" }}>
+              {rooms.map(room => {
+                const todayBk = bookings.filter(b =>
+                  normalizeDate(b.booking_date) === today && Number(b.room_id) === room.id && b.status === "BOOKED"
+                ).sort((a, b) => a.start_time.localeCompare(b.start_time));
+                return (
+                  <div key={room.id} style={{ background:"#fff", borderRadius:"0.75rem",
+                    border:"1px solid #e5e7eb", overflow:"hidden",
+                    boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+                    <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"0.6rem 0.875rem" }}>
+                      <div style={{ fontWeight:700, fontSize:"0.82rem", color:"#fff" }}>{room.room_name}</div>
+                      <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.8)" }}>#{room.room_number}</div>
+                    </div>
+                    <div style={{ padding:"0.625rem" }}>
+                      {todayBk.length === 0 ? (
+                        <div style={{ textAlign:"center", padding:"0.75rem 0", fontSize:"0.75rem", color:"#9ca3af" }}>
+                          Free today
+                        </div>
+                      ) : todayBk.map(b => (
+                        <div key={b.id} style={{ padding:"0.4rem 0.5rem", marginBottom:"0.3rem",
+                          background:"#f5f3ff", borderRadius:"0.4rem", borderLeft:"3px solid #7c3aed" }}>
+                          <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#1f2937" }}>
+                            {b.start_time.includes("M") ? b.start_time : dbToAmPm(b.start_time)} – {b.end_time.includes("M") ? b.end_time : dbToAmPm(b.end_time)}
+                          </div>
+                          <div style={{ fontSize:"0.68rem", color:"#6b7280", marginTop:"0.1rem" }}>
+                            {b.department || b.booked_by}
+                          </div>
+                          <div style={{ display:"flex", gap:"0.35rem", marginTop:"0.35rem" }}>
+                            <button onClick={() => { setRoomId(String(room.id)); setDate(today); initiateEdit(b); }}
+                              style={{ flex:1, padding:"0.2rem", background:"#ede9fe", color:"#7c3aed",
+                                border:"none", borderRadius:"0.3rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
+                              Reschedule
+                            </button>
+                            <button onClick={() => initiateCancellation(b)}
+                              style={{ flex:1, padding:"0.2rem", background:"#fef2f2", color:"#b91c1c",
+                                border:"none", borderRadius:"0.3rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
         {/* ===== PLAN BLOCKED ===== */}
         {planBlocked && <div className={styles.blockedMsg}>🚫 Booking not allowed. Upgrade plan to continue.</div>}
 

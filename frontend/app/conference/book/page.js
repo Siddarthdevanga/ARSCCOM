@@ -75,7 +75,6 @@ function RoomCard({ room, onSelect }) {
       onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}
       onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(124,58,237,0.08)"; }}
     >
-      {/* 16:9 image banner */}
       <div style={{ width:"100%", aspectRatio:"16/9", background:"#ede9fe", position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
         {room.image_url
           ? <img src={room.image_url} alt={room.room_name}
@@ -88,26 +87,16 @@ function RoomCard({ room, onSelect }) {
             </div>
         }
       </div>
-
-      {/* Card body */}
       <div style={{ padding:"0.875rem" }}>
-        <div style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937", marginBottom:"0.3rem" }}>
-          {room.room_name}
-        </div>
+        <div style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937", marginBottom:"0.3rem" }}>{room.room_name}</div>
         <div style={{ display:"flex", alignItems:"center", gap:"0.3rem", color:"#6b7280", fontSize:"0.8rem", marginBottom:"0.625rem" }}>
-          <IconUsers />
-          {room.capacity ? `${room.capacity} people` : "Capacity N/A"}
+          <IconUsers />{room.capacity ? `${room.capacity} people` : "Capacity N/A"}
         </div>
-
-        {/* Today's bookings */}
         {room.today_bookings?.length > 0 && (
           <div style={{ borderTop:"1px solid #f3f4f6", paddingTop:"0.5rem" }}>
-            <div style={{ fontSize:"0.68rem", fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.35rem" }}>
-              Today&apos;s Bookings
-            </div>
+            <div style={{ fontSize:"0.68rem", fontWeight:700, color:"#9ca3af", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.35rem" }}>Today&apos;s Bookings</div>
             {room.today_bookings.map((b, i) => (
-              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:"0.35rem",
-                fontSize:"0.75rem", color:"#374151", marginBottom:"0.25rem" }}>
+              <div key={i} style={{ display:"flex", alignItems:"flex-start", gap:"0.35rem", fontSize:"0.75rem", color:"#374151", marginBottom:"0.25rem" }}>
                 <IconClock />
                 <div>
                   <span style={{ fontWeight:600 }}>{prettyTime(b.start_time)} – {prettyTime(b.end_time)}</span>
@@ -117,7 +106,6 @@ function RoomCard({ room, onSelect }) {
             ))}
           </div>
         )}
-
         <button style={{ marginTop:"0.75rem", width:"100%", padding:"0.5rem",
           background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.5rem",
           fontSize:"0.82rem", fontWeight:600, cursor:"pointer", display:"flex",
@@ -177,55 +165,154 @@ function TimePicker({ value, onChange, label, minMinutes = null, disabled = fals
   );
 }
 
+/* ── Employee Search Field ── */
+function EmployeeSearch({ label, selected, onSelect, onClear, placeholder = "Search by name or email…" }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setResults([]); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) { setResults([]); return; }
+    const t = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const data = await apiFetch(`/api/conference/employees/search?q=${encodeURIComponent(query)}`);
+        setResults(Array.isArray(data) ? data : []);
+      } catch { setResults([]); } finally { setSearching(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  if (selected) {
+    return (
+      <div>
+        <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>{label}</label>
+        <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", padding:"0.55rem 0.875rem",
+          border:"1px solid #7c3aed", borderRadius:"0.5rem", background:"#f5f3ff" }}>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:600, fontSize:"0.875rem", color:"#1f2937" }}>{selected.name}</div>
+            <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{selected.email}{selected.department ? ` · ${selected.department}` : ""}</div>
+          </div>
+          <button onClick={onClear} style={{ background:"none", border:"none", cursor:"pointer", color:"#9ca3af", fontSize:"1rem", lineHeight:1 }}>×</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref}>
+      <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>{label}</label>
+      <div style={{ position:"relative" }}>
+        <input value={query} onChange={e => setQuery(e.target.value)} placeholder={placeholder}
+          style={{ width:"100%", padding:"0.65rem 0.875rem", border:"1px solid #d1d5db",
+            borderRadius:"0.5rem", fontSize:"0.875rem", boxSizing:"border-box" }} />
+        {searching && <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
+          background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+          boxShadow:"0 4px 16px rgba(0,0,0,0.1)", padding:"0.75rem", fontSize:"0.82rem", color:"#6b7280" }}>
+          Searching…
+        </div>}
+        {!searching && results.length > 0 && (
+          <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
+            background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+            boxShadow:"0 4px 16px rgba(0,0,0,0.1)", maxHeight:200, overflowY:"auto" }}>
+            {results.map(emp => (
+              <div key={emp.id} onClick={() => { onSelect(emp); setQuery(""); setResults([]); }}
+                style={{ padding:"0.5rem 0.875rem", cursor:"pointer", borderBottom:"1px solid #f3f4f6" }}
+                onMouseEnter={e => e.currentTarget.style.background="#f5f3ff"}
+                onMouseLeave={e => e.currentTarget.style.background="none"}>
+                <div style={{ fontWeight:600, fontSize:"0.875rem", color:"#1f2937" }}>{emp.name}</div>
+                <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{emp.email}{emp.department ? ` · ${emp.department}` : ""}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ══════════════════════════════════════
    PAGE
 ══════════════════════════════════════ */
 export default function ConferenceBookPage() {
   const router = useRouter();
-  const [company, setCompany]     = useState(null);
-  const [rooms,   setRooms]       = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [step,    setStep]        = useState(1); // 1 = room select, 2 = booking form
-  const [selected, setSelected]   = useState(null);
+  const [company, setCompany]   = useState(null);
+  const [rooms,   setRooms]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [step,    setStep]      = useState(1);
+  const [selected, setSelected] = useState(null);
 
-  // Booking form state
-  const [bookingDate,  setBookingDate]  = useState("");
-  const [startTime,    setStartTime]    = useState("");
-  const [endTime,      setEndTime]      = useState("");
-  const [purpose,      setPurpose]      = useState("");
-  const [department,   setDepartment]   = useState("");
-  const [bookedBy,     setBookedBy]     = useState("");
-  const [formError,    setFormError]    = useState("");
-  const [submitting,   setSubmitting]   = useState(false);
+  // Booking form
+  const [bookingDate, setBookingDate] = useState("");
+  const [startTime,   setStartTime]   = useState("");
+  const [endTime,     setEndTime]     = useState("");
+  const [purpose,     setPurpose]     = useState("");
+  const [department,  setDepartment]  = useState("");
+  const [formError,   setFormError]   = useState("");
+  const [submitting,  setSubmitting]  = useState(false);
+
+  // Book on behalf of
+  const [onBehalfOf, setOnBehalfOf] = useState(null);
+
+  // Team members
+  const [teamMembers,    setTeamMembers]    = useState([]);
+  const [memberSearch,   setMemberSearch]   = useState("");
+  const [memberResults,  setMemberResults]  = useState([]);
+  const [memberSearching,setMemberSearching]= useState(false);
+  const memberRef = useRef(null);
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   useEffect(() => {
-    const token   = localStorage.getItem("token");
-    const stored  = localStorage.getItem("company");
+    const token  = localStorage.getItem("token");
+    const stored = localStorage.getItem("company");
     if (!token || !stored) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
     setBookingDate(today);
 
-    apiFetch("/api/conference/rooms/all")
+    apiFetch("/api/conference/rooms")
       .then(data => setRooms(Array.isArray(data) ? data : []))
       .catch(() => setRooms([]))
       .finally(() => setLoading(false));
   }, [router, today]);
 
-  const handleSelectRoom = (room) => {
-    setSelected(room);
-    setStep(2);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Team member search
+  useEffect(() => {
+    if (!memberSearch.trim()) { setMemberResults([]); return; }
+    const t = setTimeout(async () => {
+      setMemberSearching(true);
+      try {
+        const data = await apiFetch(`/api/conference/employees/search?q=${encodeURIComponent(memberSearch)}`);
+        setMemberResults(Array.isArray(data) ? data.filter(e =>
+          e.id !== onBehalfOf?.id && !teamMembers.some(m => m.id === e.id)
+        ) : []);
+      } catch { setMemberResults([]); } finally { setMemberSearching(false); }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [memberSearch, teamMembers, onBehalfOf]);
+
+  useEffect(() => {
+    const handler = (e) => { if (memberRef.current && !memberRef.current.contains(e.target)) setMemberResults([]); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const addMember = (emp) => { setTeamMembers(p => [...p, emp]); setMemberSearch(""); setMemberResults([]); };
+  const removeMember = (id) => setTeamMembers(p => p.filter(m => m.id !== id));
 
   const startMinutes = useMemo(() => startTime ? ampmToMinutes(startTime) : null, [startTime]);
 
   const handleBook = async () => {
-    if (!bookedBy.trim())  { setFormError("Your email is required");     return; }
-    if (!bookingDate)      { setFormError("Date is required");            return; }
-    if (!startTime)        { setFormError("Start time is required");      return; }
-    if (!endTime)          { setFormError("End time is required");        return; }
+    if (!bookingDate) { setFormError("Date is required"); return; }
+    if (!startTime)   { setFormError("Start time is required"); return; }
+    if (!endTime)     { setFormError("End time is required"); return; }
     if (ampmToMinutes(endTime) <= ampmToMinutes(startTime)) {
       setFormError("End time must be after start time"); return;
     }
@@ -235,12 +322,13 @@ export default function ConferenceBookPage() {
         method: "POST",
         body: JSON.stringify({
           room_id:      selected.id,
-          booked_by:    bookedBy.trim().toLowerCase(),
+          booked_by:    onBehalfOf?.email || "ADMIN",
           department:   department.trim() || undefined,
           purpose:      purpose.trim()    || undefined,
           booking_date: bookingDate,
           start_time:   startTime,
           end_time:     endTime,
+          teamMembers:  teamMembers.length > 0 ? teamMembers : undefined,
         }),
       });
       router.push("/conference/bookings?booked=1");
@@ -255,6 +343,11 @@ export default function ConferenceBookPage() {
     </div>
   );
 
+  const inp = { width:"100%", padding:"0.65rem 0.875rem", border:"1px solid #d1d5db",
+    borderRadius:"0.5rem", fontSize:"0.875rem", boxSizing:"border-box" };
+  const lbl = { display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" };
+  const opt = { color:"#9ca3af", fontWeight:400, fontSize:"0.75rem" };
+
   return (
     <div style={{ background:"#f8f7ff", fontFamily:"'Nunito', sans-serif", paddingBottom:"3rem" }}>
 
@@ -262,17 +355,15 @@ export default function ConferenceBookPage() {
       <header style={{ padding:"0.875rem 1.25rem", background:"#fff",
         borderBottom:"1px solid #e5e7eb", display:"flex", alignItems:"center",
         justifyContent:"space-between", position:"sticky", top:0, zIndex:40 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:"0.75rem" }}>
-          <button onClick={() => step === 2 ? setStep(1) : router.back()}
-            style={{ background:"none", border:"none", cursor:"pointer",
-              color:"#6b7280", display:"flex", alignItems:"center", gap:"0.3rem",
-              fontSize:"0.875rem", fontWeight:600 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 12H5M12 5l-7 7 7 7"/>
-            </svg>
-            {step === 2 ? "Back to Rooms" : "Back"}
-          </button>
-        </div>
+        <button onClick={() => step === 2 ? setStep(1) : router.back()}
+          style={{ background:"none", border:"none", cursor:"pointer",
+            color:"#6b7280", display:"flex", alignItems:"center", gap:"0.3rem",
+            fontSize:"0.875rem", fontWeight:600 }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 5l-7 7 7 7"/>
+          </svg>
+          {step === 2 ? "Back to Rooms" : "Back"}
+        </button>
         <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937" }}>{company?.name}</div>
         <img src={`${API}/api/logo/${company?.id}`} alt="Logo"
           style={{ height:32, objectFit:"contain" }}
@@ -292,15 +383,14 @@ export default function ConferenceBookPage() {
                 {rooms.length} room{rooms.length !== 1 ? "s" : ""} available &mdash; today&apos;s upcoming bookings shown on each card
               </p>
             </div>
-
             {rooms.length === 0 ? (
               <div style={{ textAlign:"center", padding:"3rem", color:"#9ca3af" }}>
-                No conference rooms found. Add rooms from the dashboard.
+                No active conference rooms found. Add and activate rooms from the dashboard.
               </div>
             ) : (
               <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:"1rem" }}>
                 {rooms.map(room => (
-                  <RoomCard key={room.id} room={room} onSelect={handleSelectRoom} />
+                  <RoomCard key={room.id} room={room} onSelect={r => { setSelected(r); setStep(2); window.scrollTo({ top:0, behavior:"smooth" }); }} />
                 ))}
               </div>
             )}
@@ -310,16 +400,14 @@ export default function ConferenceBookPage() {
         {/* ── STEP 2: Booking form ── */}
         {step === 2 && selected && (
           <>
-            {/* Room summary card */}
+            {/* Room summary */}
             <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
-              overflow:"hidden", marginBottom:"1.5rem", display:"flex", gap:0 }}>
+              overflow:"hidden", marginBottom:"1.5rem", display:"flex" }}>
               <div style={{ width:120, flexShrink:0, background:"#ede9fe",
                 display:"flex", alignItems:"center", justifyContent:"center" }}>
                 {selected.image_url
-                  ? <img src={selected.image_url} alt={selected.room_name}
-                      style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                  : <IconBuilding />
-                }
+                  ? <img src={selected.image_url} alt={selected.room_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                  : <IconBuilding />}
               </div>
               <div style={{ padding:"1rem" }}>
                 <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937" }}>{selected.room_name}</div>
@@ -348,60 +436,98 @@ export default function ConferenceBookPage() {
               )}
 
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem" }}>
+
+                {/* Book on behalf of */}
                 <div style={{ gridColumn:"1/-1" }}>
-                  <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>
-                    Your Email
-                  </label>
-                  <input value={bookedBy} onChange={e => setBookedBy(e.target.value)}
-                    placeholder="your@email.com" type="email"
-                    style={{ width:"100%", padding:"0.65rem 0.875rem", border:"1px solid #d1d5db",
-                      borderRadius:"0.5rem", fontSize:"0.875rem", boxSizing:"border-box" }} />
+                  <EmployeeSearch
+                    label={<>Book on behalf of <span style={opt}>(optional — leave blank to book as Admin)</span></>}
+                    selected={onBehalfOf}
+                    onSelect={setOnBehalfOf}
+                    onClear={() => setOnBehalfOf(null)}
+                  />
                 </div>
 
-                <div>
-                  <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>
-                    Date
-                  </label>
+                {/* Date */}
+                <div style={{ gridColumn:"1/-1" }}>
+                  <label style={lbl}>Date</label>
                   <input type="date" value={bookingDate} min={today}
-                    onChange={e => setBookingDate(e.target.value)}
-                    style={{ width:"100%", padding:"0.65rem 0.875rem", border:"1px solid #d1d5db",
-                      borderRadius:"0.5rem", fontSize:"0.875rem", boxSizing:"border-box" }} />
+                    onChange={e => setBookingDate(e.target.value)} style={inp} />
                 </div>
 
+                {/* Start / End time */}
                 <div>
-                  <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>
-                    Department
-                  </label>
-                  <input value={department} onChange={e => setDepartment(e.target.value)}
-                    placeholder="e.g. Engineering"
-                    style={{ width:"100%", padding:"0.65rem 0.875rem", border:"1px solid #d1d5db",
-                      borderRadius:"0.5rem", fontSize:"0.875rem", boxSizing:"border-box" }} />
-                </div>
-
-                <div>
-                  <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>
-                    Start Time
-                  </label>
+                  <label style={lbl}>Start Time</label>
                   <TimePicker value={startTime} onChange={v => { setStartTime(v); setEndTime(""); }} label="Select start time" />
                 </div>
-
                 <div>
-                  <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>
-                    End Time
-                  </label>
+                  <label style={lbl}>End Time</label>
                   <TimePicker value={endTime} onChange={setEndTime} label="Select end time"
                     minMinutes={startMinutes} disabled={!startTime} />
                 </div>
 
-                <div style={{ gridColumn:"1/-1" }}>
-                  <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>
-                    Purpose
-                  </label>
-                  <input value={purpose} onChange={e => setPurpose(e.target.value)}
-                    placeholder="e.g. Weekly sync, Interview…"
-                    style={{ width:"100%", padding:"0.65rem 0.875rem", border:"1px solid #d1d5db",
-                      borderRadius:"0.5rem", fontSize:"0.875rem", boxSizing:"border-box" }} />
+                {/* Department */}
+                <div>
+                  <label style={lbl}>Department <span style={opt}>(optional)</span></label>
+                  <input value={department} onChange={e => setDepartment(e.target.value)}
+                    placeholder="e.g. Engineering" style={inp} />
                 </div>
+
+                {/* Purpose */}
+                <div>
+                  <label style={lbl}>Purpose <span style={opt}>(optional)</span></label>
+                  <input value={purpose} onChange={e => setPurpose(e.target.value)}
+                    placeholder="e.g. Weekly sync" style={inp} />
+                </div>
+
+                {/* Team members */}
+                <div style={{ gridColumn:"1/-1" }} ref={memberRef}>
+                  <label style={lbl}>Team Members <span style={opt}>(optional)</span></label>
+                  <div style={{ position:"relative" }}>
+                    <input value={memberSearch} onChange={e => setMemberSearch(e.target.value)}
+                      placeholder="Search by name or email…" style={inp} />
+                    {memberSearching && (
+                      <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
+                        background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+                        boxShadow:"0 4px 16px rgba(0,0,0,0.1)", padding:"0.75rem", fontSize:"0.82rem", color:"#6b7280" }}>
+                        Searching…
+                      </div>
+                    )}
+                    {!memberSearching && memberResults.length > 0 && (
+                      <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
+                        background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
+                        boxShadow:"0 4px 16px rgba(0,0,0,0.1)", maxHeight:200, overflowY:"auto" }}>
+                        {memberResults.map(emp => (
+                          <div key={emp.id} onClick={() => addMember(emp)}
+                            style={{ padding:"0.5rem 0.875rem", cursor:"pointer", borderBottom:"1px solid #f3f4f6" }}
+                            onMouseEnter={e => e.currentTarget.style.background="#f5f3ff"}
+                            onMouseLeave={e => e.currentTarget.style.background="none"}>
+                            <div style={{ fontWeight:600, fontSize:"0.875rem" }}>{emp.name}</div>
+                            <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{emp.email}{emp.department ? ` · ${emp.department}` : ""}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {teamMembers.length > 0 && (
+                    <div style={{ display:"flex", flexWrap:"wrap", gap:"0.4rem", marginTop:"0.5rem" }}>
+                      {teamMembers.map(m => (
+                        <span key={m.id} style={{ display:"flex", alignItems:"center", gap:"0.3rem",
+                          background:"#ede9fe", color:"#7c3aed", borderRadius:99,
+                          padding:"0.25rem 0.625rem", fontSize:"0.78rem", fontWeight:600 }}>
+                          {m.name}
+                          <button onClick={() => removeMember(m.id)} style={{ background:"none", border:"none",
+                            cursor:"pointer", color:"#7c3aed", padding:0, lineHeight:1, fontSize:"0.9rem" }}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Booked as info */}
+              <div style={{ marginTop:"0.875rem", padding:"0.5rem 0.875rem", background:"#f5f3ff",
+                borderRadius:"0.5rem", fontSize:"0.78rem", color:"#6b21a8" }}>
+                Booking as: <strong>{onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin"}</strong>
               </div>
 
               <button onClick={handleBook} disabled={submitting}
