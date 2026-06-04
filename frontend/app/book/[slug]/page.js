@@ -496,6 +496,7 @@ export default function PublicConferenceBooking() {
   const [company, setCompany] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [showSchedule, setShowSchedule] = useState(false);
@@ -664,6 +665,16 @@ export default function PublicConferenceBooking() {
   useEffect(() => {
     loadBookings();
   }, [loadBookings, otpVerified]);
+
+  // Auto-refresh rooms (cards + calendar) and bookings every 60 seconds
+  useEffect(() => {
+    if (!otpVerified) return;
+    const timer = setInterval(() => {
+      loadRooms();
+      loadBookings();
+    }, 60000);
+    return () => clearInterval(timer);
+  }, [otpVerified, loadRooms, loadBookings]);
 
   /* ================= TIME VALIDATION ================= */
   useEffect(() => {
@@ -1269,61 +1280,66 @@ export default function PublicConferenceBooking() {
         </div>
       ) : !selectedRoom ? (
         /* ── Room Selection Grid ── */
-        <div style={{ maxWidth:960, margin:"0 auto", padding:"1.5rem 1rem 2rem" }}>
-          <p style={{ color:"#6b7280", fontSize:"0.875rem", marginBottom:"1.25rem" }}>
-            {rooms.length} room{rooms.length !== 1 ? "s" : ""} available &mdash; today&apos;s upcoming bookings shown on each card
-          </p>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"1rem" }}>
-            {rooms.map(room => (
-              <PublicRoomCard key={room.id} room={room}
-                nowMinutes={new Date().getHours()*60+new Date().getMinutes()}
-                onSelect={(r) => {
-                setSelectedRoom(r);
-                setRoomId(String(r.id));
-                loadBookings(r.id);
-              }} />
-            ))}
+        <div style={{ maxWidth:960, margin:"0 auto", padding:"0.5rem 1rem 2rem" }}>
+
+          {/* ── Sticky search bar ── */}
+          <div style={{ position:"sticky", top:64, zIndex:30, background:"rgba(240,238,248,0.95)",
+            backdropFilter:"blur(8px)", padding:"0.75rem 0", marginBottom:"0.875rem" }}>
+            <div style={{ position:"relative", maxWidth:400 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
+                style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none" }}>
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search rooms…"
+                style={{ width:"100%", padding:"0.55rem 0.875rem 0.55rem 2.25rem",
+                  border:"1.5px solid #e5e7eb", borderRadius:"99px", fontSize:"0.875rem",
+                  background:"#fff", outline:"none", boxSizing:"border-box",
+                  boxShadow:"0 1px 8px rgba(124,58,237,0.08)" }}
+                onFocus={e => e.target.style.borderColor="#7c3aed"}
+                onBlur={e => e.target.style.borderColor="#e5e7eb"}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")}
+                  style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)",
+                    background:"none", border:"none", cursor:"pointer", color:"#9ca3af",
+                    fontSize:"1rem", lineHeight:1, padding:2 }}>×</button>
+              )}
+            </div>
+            {searchQuery && (
+              <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.35rem", paddingLeft:4 }}>
+                {rooms.filter(r => r.room_name.toLowerCase().includes(searchQuery.toLowerCase())).length} result{rooms.filter(r => r.room_name.toLowerCase().includes(searchQuery.toLowerCase())).length !== 1 ? "s" : ""}
+              </div>
+            )}
           </div>
 
-          {/* Inline today's schedule */}
-          {rooms.length > 0 && (
-            <div style={{ marginTop:"2.5rem" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"0.875rem" }}>
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <span style={{ fontWeight:700, fontSize:"0.9rem", color:"#1f2937" }}>Today&apos;s Schedule</span>
+          {/* ── Room grid ── */}
+          {(() => {
+            const filtered = searchQuery
+              ? rooms.filter(r => r.room_name.toLowerCase().includes(searchQuery.toLowerCase()))
+              : rooms;
+            return filtered.length === 0 ? (
+              <div style={{ textAlign:"center", padding:"3rem", color:"#9ca3af" }}>
+                <div style={{ fontSize:"2rem", marginBottom:"0.5rem" }}>🔍</div>
+                <div style={{ fontWeight:600 }}>No rooms match &ldquo;{searchQuery}&rdquo;</div>
               </div>
-              <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden" }}>
-                {rooms.map(room => (
-                  <div key={room.id} style={{ borderBottom:"1px solid #f3f4f6" }}>
-                    <div style={{ padding:"0.6rem 1rem", background:"#faf5ff",
-                      fontWeight:600, fontSize:"0.82rem", color:"#374151", display:"flex", justifyContent:"space-between" }}>
-                      <span>{room.room_name}</span>
-                      {room.capacity && <span style={{ color:"#9ca3af", fontWeight:400, fontSize:"0.75rem" }}>{room.capacity} people</span>}
-                    </div>
-                    {room.today_bookings?.length > 0 ? room.today_bookings.map((b, i) => (
-                      <div key={i} style={{ padding:"0.45rem 1rem 0.45rem 1.5rem",
-                        borderTop:"1px solid #f9fafb", fontSize:"0.78rem", color:"#374151" }}>
-                        <span style={{ fontWeight:600 }}>
-                          {(() => { const [h,m] = (b.start_time||"0:0").split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
-                          {" – "}
-                          {(() => { const [h,m] = (b.end_time||"0:0").split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
-                        </span>
-                        <span style={{ color:"#6b7280", marginLeft:8 }}>{b.booked_by}</span>
-                      </div>
-                    )) : (
-                      <div style={{ padding:"0.45rem 1rem 0.45rem 1.5rem", fontSize:"0.75rem", color:"#9ca3af" }}>
-                        No upcoming bookings today
-                      </div>
-                    )}
-                  </div>
+            ) : (
+              <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"1rem" }}>
+                {filtered.map(room => (
+                  <PublicRoomCard key={room.id} room={room}
+                    nowMinutes={new Date().getHours()*60+new Date().getMinutes()}
+                    onSelect={(r) => {
+                      setSelectedRoom(r);
+                      setSearchQuery("");
+                      setRoomId(String(r.id));
+                      loadBookings(r.id);
+                    }} />
                 ))}
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       ) : (
         <div className={styles.container}>
