@@ -278,6 +278,118 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
 };
 
 /* ======================================================
+   PUBLIC CALENDAR GRID — Google Calendar vertical style
+====================================================== */
+const PUB_PALETTE = [
+  "#7c3aed","#0891b2","#059669","#d97706","#dc2626","#9333ea","#0284c7","#16a34a",
+];
+
+function PublicCalendarGrid({ rooms }) {
+  const HOUR_H  = 60;
+  const START_H = 7;
+  const END_H   = 22;
+  const ROOM_W  = 110;
+  const TIME_W  = 48;
+  const totalH  = (END_H - START_H) * HOUR_H;
+  const hours   = Array.from({ length: END_H - START_H }, (_, i) => START_H + i);
+  const scrollRef = useRef(null);
+
+  const toMin = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+  const fmt   = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
+
+  const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const nowMin = nowIST.getHours() * 60 + nowIST.getMinutes();
+  const nowTop = ((nowMin - START_H * 60) / 60) * HOUR_H;
+  const nowH   = nowIST.getHours();
+
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, nowTop - 80);
+  }, [nowTop]);
+
+  return (
+    <div style={{ minWidth: TIME_W + rooms.length * ROOM_W }}>
+      {/* Sticky room name header */}
+      <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa",
+        position:"sticky", top:0, zIndex:10 }}>
+        <div style={{ width:TIME_W, flexShrink:0 }} />
+        {rooms.map((r, i) => (
+          <div key={r.id} style={{ width:ROOM_W, flexShrink:0, padding:"0.5rem 0.35rem",
+            borderLeft:"1px solid #e5e7eb", textAlign:"center",
+            borderTop:`3px solid ${PUB_PALETTE[i % PUB_PALETTE.length]}` }}>
+            <div style={{ fontSize:"0.68rem", fontWeight:800, color:"#1f2937",
+              overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.room_name}</div>
+            <div style={{ fontSize:"0.58rem", color:"#9ca3af" }}>#{r.room_number}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Scrollable body */}
+      <div ref={scrollRef} style={{ overflowY:"auto", maxHeight:"calc(100vh - 160px)" }}>
+        <div style={{ display:"flex", position:"relative" }}>
+          {/* Time labels */}
+          <div style={{ width:TIME_W, flexShrink:0 }}>
+            {hours.map(h => (
+              <div key={h} style={{ height:HOUR_H, display:"flex", alignItems:"flex-start",
+                paddingTop:4, paddingRight:6, justifyContent:"flex-end", boxSizing:"border-box" }}>
+                <span style={{ fontSize:"0.58rem", fontWeight: h===nowH ? 800 : 400,
+                  color: h===nowH ? "#7c3aed" : "#9ca3af", whiteSpace:"nowrap" }}>
+                  {h===12?"12 PM":h<12?`${h} AM`:`${h-12} PM`}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Room columns */}
+          {rooms.map((room, ri) => {
+            const color = PUB_PALETTE[ri % PUB_PALETTE.length];
+            return (
+              <div key={room.id} style={{ width:ROOM_W, flexShrink:0, position:"relative",
+                borderLeft:"1px solid #e5e7eb", height:totalH }}>
+                {hours.map(h => (
+                  <div key={h} style={{ position:"absolute", top:(h-START_H)*HOUR_H, left:0, right:0,
+                    height:HOUR_H, borderBottom:"1px solid #f3f4f6",
+                    background: h===nowH ? `${color}0a` : h%2===0 ? "#fafafa" : "#fff" }} />
+                ))}
+                {nowTop >= 0 && nowTop <= totalH && (
+                  <div style={{ position:"absolute", top:nowTop, left:0, right:0,
+                    height:2, background:"#ef4444", zIndex:5, display:"flex", alignItems:"center" }}>
+                    <div style={{ width:7, height:7, borderRadius:"50%", background:"#ef4444", marginLeft:-3, flexShrink:0 }} />
+                  </div>
+                )}
+                {(room.today_bookings || []).map((b, bi) => {
+                  const sMin = toMin(b.start_time), eMin = toMin(b.end_time);
+                  const top  = Math.max(0, ((sMin-START_H*60)/60)*HOUR_H);
+                  const ht   = Math.max(18, ((eMin-sMin)/60)*HOUR_H - 2);
+                  const past = eMin < nowMin;
+                  return (
+                    <div key={bi} title={`${fmt(b.start_time)} – ${fmt(b.end_time)}`}
+                      style={{ position:"absolute", top, left:2, right:2, height:ht,
+                        background:past?`${color}66`:color, borderRadius:5,
+                        padding:"2px 4px", overflow:"hidden", zIndex:3,
+                        opacity: past ? 0.6 : 1, cursor:"default" }}>
+                      <div style={{ fontSize:"0.56rem", color:"#fff", fontWeight:700,
+                        lineHeight:1.3, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>
+                        {fmt(b.start_time)}
+                      </div>
+                      {ht > 28 && (
+                        <div style={{ fontSize:"0.54rem", color:"rgba(255,255,255,0.85)",
+                          overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>
+                          {b.booked_by?.split("(")[0]?.trim() || "Booked"}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================
    PUBLIC ROOM CARD
 ====================================================== */
 const prettyTimePub = (t = "") => {
@@ -286,7 +398,8 @@ const prettyTimePub = (t = "") => {
   return `${h % 12 || 12}:${String(m).padStart(2,"0")} ${h >= 12 ? "PM" : "AM"}`;
 };
 
-function PublicRoomCard({ room, onSelect }) {
+function PublicRoomCard({ room, onSelect, nowMinutes = 0 }) {
+  const toMin = (t) => { const [h, m] = String(t||"0:0").split(":").map(Number); return h*60+(m||0); };
   return (
     <div
       onClick={() => onSelect(room)}
@@ -336,14 +449,19 @@ function PublicRoomCard({ room, onSelect }) {
           <div style={{ borderTop:"1px solid #f3f4f6", paddingTop:"0.5rem" }}>
             <div style={{ fontSize:"0.67rem", fontWeight:700, color:"#9ca3af",
               textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.3rem" }}>
-              Today&apos;s Bookings
+              Today&apos;s Schedule
             </div>
-            {room.today_bookings.map((b, i) => (
-              <div key={i} style={{ fontSize:"0.72rem", color:"#374151", marginBottom:"0.2rem" }}>
-                <span style={{ fontWeight:600 }}>{prettyTimePub(b.start_time)} – {prettyTimePub(b.end_time)}</span>
-                <div style={{ color:"#6b7280", fontSize:"0.68rem" }}>{b.booked_by}</div>
-              </div>
-            ))}
+            {[...room.today_bookings].sort((a,b)=>a.start_time.localeCompare(b.start_time)).map((b, i) => {
+              const ended = toMin(b.end_time) <= nowMinutes;
+              return (
+                <div key={i} style={{ fontSize:"0.72rem", marginBottom:"0.2rem",
+                  color: ended ? "#9ca3af" : "#374151", opacity: ended ? 0.6 : 1 }}>
+                  <span style={{ fontWeight:600, textDecoration: ended ? "line-through" : "none" }}>
+                    {prettyTimePub(b.start_time)} – {prettyTimePub(b.end_time)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -1034,44 +1152,33 @@ export default function PublicConferenceBooking() {
         </div>
       </header>
 
-      {/* ── Today's Schedule Slide-out ── */}
+      {/* ── Today's Schedule Slide-out — Google Calendar Grid ── */}
       {showSchedule && (
         <div style={{ position:"fixed", inset:0, zIndex:200, display:"flex" }}>
-          <div style={{ flex:1, background:"rgba(0,0,0,0.4)" }} onClick={() => setShowSchedule(false)} />
-          <div style={{ width:"min(360px,92vw)", background:"#fff", overflowY:"auto",
-            padding:"1.25rem", boxShadow:"-4px 0 24px rgba(0,0,0,0.15)" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem" }}>
-              <span style={{ fontWeight:700, fontSize:"1rem", color:"#1f2937" }}>Today&apos;s Schedule</span>
+          <div style={{ flex:1, background:"rgba(0,0,0,0.45)" }} onClick={() => setShowSchedule(false)} />
+          <div style={{ width:"min(400px,95vw)", background:"#fff", display:"flex",
+            flexDirection:"column", boxShadow:"-4px 0 32px rgba(0,0,0,0.18)" }}>
+            {/* Panel header */}
+            <div style={{ padding:"1rem 1.25rem", background:"linear-gradient(135deg,#7c3aed,#a78bfa)",
+              display:"flex", justifyContent:"space-between", alignItems:"center", flexShrink:0 }}>
+              <div>
+                <div style={{ fontWeight:800, fontSize:"1rem", color:"#fff" }}>Today&apos;s Schedule</div>
+                <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.8)", marginTop:2 }}>
+                  {new Date().toLocaleDateString("en-IN", { weekday:"long", day:"numeric", month:"long" })}
+                </div>
+              </div>
               <button onClick={() => setShowSchedule(false)}
-                style={{ background:"none", border:"none", fontSize:"1.25rem", cursor:"pointer", color:"#6b7280" }}>
+                style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff",
+                  borderRadius:"50%", width:30, height:30, cursor:"pointer",
+                  fontSize:"1.1rem", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 ×
               </button>
             </div>
-            {rooms.length === 0 ? (
-              <p style={{ color:"#9ca3af", fontSize:"0.875rem" }}>No rooms available.</p>
-            ) : rooms.map(room => (
-              <div key={room.id} style={{ marginBottom:"1rem", borderRadius:"0.6rem",
-                border:"1px solid #e5e7eb", overflow:"hidden" }}>
-                <div style={{ padding:"0.6rem 0.875rem", background:"#f9fafb",
-                  fontWeight:600, fontSize:"0.85rem", color:"#374151" }}>
-                  {room.room_name}
-                  {room.capacity ? <span style={{ fontWeight:400, color:"#9ca3af", marginLeft:6, fontSize:"0.75rem" }}>{room.capacity} people</span> : null}
-                </div>
-                {room.today_bookings?.length > 0 ? room.today_bookings.map((b, i) => (
-                  <div key={i} style={{ padding:"0.5rem 0.875rem", borderTop:"1px solid #f3f4f6",
-                    fontSize:"0.78rem", color:"#374151" }}>
-                    <span style={{ fontWeight:600 }}>
-                      {(() => { const [h,m] = b.start_time.split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
-                      {" – "}
-                      {(() => { const [h,m] = b.end_time.split(":"); return `${h%12||12}:${m} ${h>=12?"PM":"AM"}`; })()}
-                    </span>
-                    <div style={{ color:"#6b7280", marginTop:2 }}>{b.booked_by}</div>
-                  </div>
-                )) : (
-                  <div style={{ padding:"0.5rem 0.875rem", fontSize:"0.78rem", color:"#9ca3af" }}>No bookings today</div>
-                )}
-              </div>
-            ))}
+
+            {/* Calendar grid */}
+            <div style={{ flex:1, overflowY:"auto", overflowX:"auto" }}>
+              <PublicCalendarGrid rooms={rooms} />
+            </div>
           </div>
         </div>
       )}
@@ -1168,7 +1275,9 @@ export default function PublicConferenceBooking() {
           </p>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))", gap:"1rem" }}>
             {rooms.map(room => (
-              <PublicRoomCard key={room.id} room={room} onSelect={(r) => {
+              <PublicRoomCard key={room.id} room={room}
+                nowMinutes={new Date().getHours()*60+new Date().getMinutes()}
+                onSelect={(r) => {
                 setSelectedRoom(r);
                 setRoomId(String(r.id));
                 loadBookings(r.id);
@@ -1219,17 +1328,6 @@ export default function PublicConferenceBooking() {
       ) : (
         <div className={styles.container}>
           <div className={styles.layout}>
-            {/* Back to rooms */}
-            <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
-              style={{ background:"none", border:"none", cursor:"pointer", color:"#7c3aed",
-                fontSize:"0.875rem", fontWeight:600, display:"flex", alignItems:"center",
-                gap:"0.3rem", marginBottom:"0.875rem", padding:0 }}>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 5l-7 7 7 7"/>
-              </svg>
-              Back to Rooms
-            </button>
-
             {/* ── Selected room summary ── */}
             <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
               overflow:"hidden", marginBottom:"1rem", display:"flex" }}>

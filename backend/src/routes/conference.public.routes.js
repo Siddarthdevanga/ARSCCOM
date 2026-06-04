@@ -555,9 +555,8 @@ router.get("/company/:slug/rooms", async (req, res) => {
            AND cb.room_id IN (${placeholders})
            AND cb.booking_date = ?
            AND cb.status = 'BOOKED'
-           AND cb.end_time > ?
          ORDER BY cb.start_time ASC`,
-        [company.id, company.id, ...roomIds, today, nowTime]
+        [company.id, company.id, ...roomIds, today]
       );
 
       for (const b of bookings) {
