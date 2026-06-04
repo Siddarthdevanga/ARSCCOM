@@ -270,6 +270,12 @@ export default function ConferenceBookPage() {
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
+  // Reset body overflow locked by dashboard CSS
+  useEffect(() => {
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
+  }, []);
+
   useEffect(() => {
     const token  = localStorage.getItem("token");
     const stored = localStorage.getItem("company");
@@ -356,10 +362,10 @@ export default function ConferenceBookPage() {
         borderBottom:"1px solid #e5e7eb", display:"flex", alignItems:"center",
         justifyContent:"space-between", position:"sticky", top:0, zIndex:40 }}>
         <button onClick={() => step === 2 ? setStep(1) : router.back()}
-          style={{ background:"none", border:"none", cursor:"pointer",
-            color:"#6b7280", display:"flex", alignItems:"center", gap:"0.3rem",
-            fontSize:"0.875rem", fontWeight:600 }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          style={{ background:"#f3f4f6", border:"none", cursor:"pointer",
+            color:"#374151", display:"flex", alignItems:"center", gap:"0.4rem",
+            fontSize:"0.82rem", fontWeight:700, borderRadius:"99px", padding:"0.4rem 1rem" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
           {step === 2 ? "Back to Rooms" : "Back"}

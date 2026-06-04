@@ -467,7 +467,6 @@ const enrichRoomsWithStatus = async (rooms, companyId) => {
   if (!rooms.length) return rooms;
   const nowIST  = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
   const today   = nowIST.toISOString().split("T")[0];
-  const nowTime = `${String(nowIST.getHours()).padStart(2,"0")}:${String(nowIST.getMinutes()).padStart(2,"0")}:00`;
   const roomIds = rooms.map(r => r.id);
   const ph = roomIds.map(() => "?").join(",");
   const [bookings] = await db.query(
@@ -477,9 +476,9 @@ const enrichRoomsWithStatus = async (rooms, companyId) => {
      LEFT JOIN company_employees ce
        ON ce.company_id = ? AND LOWER(ce.email) = LOWER(cb.booked_by) AND ce.is_active = 1
      WHERE cb.company_id = ? AND cb.room_id IN (${ph})
-       AND cb.booking_date = ? AND cb.status = 'BOOKED' AND cb.end_time > ?
+       AND cb.booking_date = ? AND cb.status = 'BOOKED'
      ORDER BY cb.start_time ASC`,
-    [companyId, companyId, ...roomIds, today, nowTime]
+    [companyId, companyId, ...roomIds, today]
   );
   const byRoom = {};
   for (const b of bookings) {
