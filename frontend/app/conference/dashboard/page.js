@@ -257,6 +257,36 @@ export default function ConferenceDashboard() {
     return Object.entries(map);
   }, [filteredBookings]);
 
+  const analyticsData = useMemo(() => {
+    const now = new Date();
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now); d.setDate(now.getDate() - (6 - i));
+      return d.toISOString().split("T")[0];
+    });
+    const last7 = bookings.filter((b) => {
+      const bd = b.booking_date?.split("T")[0] || b.booking_date;
+      return days.includes(bd) && b.status === "BOOKED";
+    });
+    // bookings over time
+    const byDay = {};
+    days.forEach((d) => { byDay[d] = 0; });
+    last7.forEach((b) => { const bd = b.booking_date?.split("T")[0] || b.booking_date; if (byDay[bd] !== undefined) byDay[bd]++; });
+    const dailyCounts = days.map((d) => ({ label: new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday:"short" }), count: byDay[d], date: d }));
+    // bookings per room
+    const byRoom = {};
+    last7.forEach((b) => { const key = b.room_name || "Unknown"; byRoom[key] = (byRoom[key] || 0) + 1; });
+    const roomCounts = Object.entries(byRoom).sort((a, b) => b[1] - a[1]);
+    // peak hours (0-23 bucket)
+    const byHour = Array(24).fill(0);
+    last7.forEach((b) => {
+      if (b.start_time) {
+        const h = parseInt(String(b.start_time).split(":")[0], 10);
+        if (!isNaN(h)) byHour[h]++;
+      }
+    });
+    return { dailyCounts, roomCounts, byHour, total: last7.length };
+  }, [bookings]);
+
   const isPlanExpired = plan?.plan === "EXPIRED" || plan?.status === "EXPIRED";
   const isBookingLimitExceeded = bookingPlan && bookingPlan.limit !== Infinity && bookingPlan.remaining !== null && bookingPlan.remaining <= 0;
   const hasNoActiveRooms = plan && plan.activeRooms === 0;
@@ -610,17 +640,33 @@ export default function ConferenceDashboard() {
           </section>
         )}
 
+        {/* ===== ANALYTICS CHARTS ===== */}
+        {analyticsData.total > 0 && (
+          <section style={{ padding:"0 1rem 1.5rem" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+              <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>Analytics</span>
+              <span style={{ fontSize:"0.75rem", color:"#9ca3af", fontWeight:600 }}>Last 7 days · {analyticsData.total} bookings</span>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))", gap:"1rem" }}>
+
+              {/* Bookings over time */}
+              <AreaChart data={analyticsData.dailyCounts} />
+
+              {/* Bookings per room */}
+              <RoomBarChart data={analyticsData.roomCounts} />
+
+              {/* Peak hours heatmap */}
+              <PeakHoursChart byHour={analyticsData.byHour} />
+
+            </div>
+          </section>
+        )}
+
         {/* ===== MAIN CONTENT ===== */}
         <main className={styles.mainContent}>
-
-          {/* Filter tabs (for dept/schedule tables) */}
-          <div className={styles.filterRow}>
-            {["yesterday", "today", "tomorrow"].map((d) => (
-              <button key={d} className={`${styles.filterBtn} ${filterDay === d ? styles.filterActive : ""}`} onClick={() => setFilterDay(d)}>
-                {d.charAt(0).toUpperCase() + d.slice(1)}
-              </button>
-            ))}
-          </div>
 
           <div className={styles.tablesRow}>
             {/* Department Usage */}
@@ -673,6 +719,103 @@ export default function ConferenceDashboard() {
 
         </main>
 
+      </div>
+    </div>
+  );
+}
+
+/* ─── Analytics: Bookings over time (area chart) ─── */
+function AreaChart({ data }) {
+  const W = 340, H = 120, PAD = 28;
+  const max = Math.max(...data.map(d => d.count), 1);
+  const xs = data.map((_, i) => PAD + (i / (data.length - 1)) * (W - PAD * 2));
+  const ys = data.map(d => PAD + (1 - d.count / max) * (H - PAD * 2));
+  const linePts = xs.map((x, i) => `${x},${ys[i]}`).join(" ");
+  const areaPts = `${xs[0]},${H - PAD} ` + xs.map((x, i) => `${x},${ys[i]}`).join(" ") + ` ${xs[xs.length - 1]},${H - PAD}`;
+  return (
+    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1rem" }}>
+      <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#374151", marginBottom:"0.75rem" }}>Bookings Over Time</div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", height:"auto", overflow:"visible" }}>
+        <defs>
+          <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.25"/>
+            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.02"/>
+          </linearGradient>
+        </defs>
+        {/* grid lines */}
+        {[0,0.5,1].map((f,i) => (
+          <line key={i} x1={PAD} y1={PAD + f*(H-PAD*2)} x2={W-PAD} y2={PAD + f*(H-PAD*2)}
+            stroke="#f3f4f6" strokeWidth="1"/>
+        ))}
+        <polygon points={areaPts} fill="url(#areaGrad)"/>
+        <polyline points={linePts} fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+        {xs.map((x, i) => (
+          <g key={i}>
+            <circle cx={x} cy={ys[i]} r="3" fill="#7c3aed"/>
+            <text x={x} y={H - 4} textAnchor="middle" fontSize="9" fill="#9ca3af">{data[i].label}</text>
+            {data[i].count > 0 && <text x={x} y={ys[i] - 6} textAnchor="middle" fontSize="9" fontWeight="700" fill="#7c3aed">{data[i].count}</text>}
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/* ─── Analytics: Bookings per room (horizontal bar chart) ─── */
+function RoomBarChart({ data }) {
+  const max = Math.max(...data.map(d => d[1]), 1);
+  const colors = ["#7c3aed","#0891b2","#059669","#d97706","#dc2626","#9333ea","#0284c7","#16a34a"];
+  return (
+    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1rem" }}>
+      <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#374151", marginBottom:"0.75rem" }}>Bookings per Room</div>
+      {data.length === 0 ? (
+        <div style={{ fontSize:"0.78rem", color:"#9ca3af", textAlign:"center", padding:"1.5rem 0" }}>No data</div>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", gap:"0.5rem" }}>
+          {data.slice(0, 6).map(([room, count], i) => (
+            <div key={room}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:"0.72rem", fontWeight:700, color:"#374151", marginBottom:"0.2rem" }}>
+                <span style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", maxWidth:"70%" }}>{room}</span>
+                <span style={{ color: colors[i % colors.length] }}>{count}</span>
+              </div>
+              <div style={{ height:8, background:"#f3f4f6", borderRadius:99, overflow:"hidden" }}>
+                <div style={{ height:"100%", width:`${(count/max)*100}%`, background: colors[i % colors.length], borderRadius:99, transition:"width 0.4s" }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── Analytics: Peak hours heatmap ─── */
+function PeakHoursChart({ byHour }) {
+  const workHours = Array.from({ length: 13 }, (_, i) => i + 8); // 8 AM – 8 PM
+  const max = Math.max(...workHours.map(h => byHour[h]), 1);
+  const toLabel = (h) => `${h % 12 || 12}${h >= 12 ? "p" : "a"}`;
+  const alpha = (h) => byHour[h] === 0 ? 0.06 : 0.15 + (byHour[h] / max) * 0.85;
+  return (
+    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1rem" }}>
+      <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#374151", marginBottom:"0.75rem" }}>Peak Hours</div>
+      <div style={{ display:"grid", gridTemplateColumns:`repeat(${workHours.length}, 1fr)`, gap:"3px" }}>
+        {workHours.map(h => (
+          <div key={h} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"3px" }}>
+            <div style={{ width:"100%", height:36, borderRadius:5,
+              background:`rgba(124,58,237,${alpha(h)})`,
+              display:"flex", alignItems:"center", justifyContent:"center" }}>
+              {byHour[h] > 0 && <span style={{ fontSize:"0.6rem", fontWeight:800, color:"#7c3aed" }}>{byHour[h]}</span>}
+            </div>
+            <span style={{ fontSize:"0.55rem", color:"#9ca3af", fontWeight:600 }}>{toLabel(h)}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginTop:"0.75rem", justifyContent:"flex-end" }}>
+        <span style={{ fontSize:"0.65rem", color:"#9ca3af" }}>low</span>
+        {[0.1,0.3,0.55,0.8,1].map((a,i) => (
+          <div key={i} style={{ width:12, height:12, borderRadius:3, background:`rgba(124,58,237,${a})` }}/>
+        ))}
+        <span style={{ fontSize:"0.65rem", color:"#9ca3af" }}>high</span>
       </div>
     </div>
   );
