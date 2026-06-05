@@ -608,7 +608,7 @@ export default function ConferenceDashboard() {
 
         {/* ===== ROOM SCHEDULE ===== */}
         {allRooms.length > 0 && (
-          <section style={{ padding:"0 1rem 1.5rem" }}>
+          <section style={{ padding:"0.75rem 1rem 1.5rem" }}>
             <TodayTimeline rooms={allRooms} bookings={filteredBookings} filterDay={filterDay} setFilterDay={setFilterDay} />
           </section>
         )}
