@@ -506,6 +506,14 @@ const enrichRoomsWithStatus = async (rooms, companyId) => {
      ORDER BY cb.start_time ASC`,
     [companyId, companyId, ...roomIds, today]
   );
+  const [countRows] = await db.query(
+    `SELECT room_id, COUNT(*) AS total FROM conference_bookings
+     WHERE company_id = ? AND room_id IN (${ph}) AND status = 'BOOKED'
+     GROUP BY room_id`,
+    [companyId, ...roomIds]
+  );
+  const totalByRoom = {};
+  for (const r of countRows) totalByRoom[r.room_id] = r.total;
   const byRoom = {};
   for (const b of bookings) {
     if (!byRoom[b.room_id]) byRoom[b.room_id] = [];
@@ -519,7 +527,8 @@ const enrichRoomsWithStatus = async (rooms, companyId) => {
     let imageUrl = null;
     if (room.image_url) { try { imageUrl = await getPresignedUrl(room.image_url, 3600); } catch {} }
     const todayBookings = byRoom[room.id] || [];
-    return { ...room, image_url: imageUrl, today_bookings: todayBookings, is_busy_today: todayBookings.length > 0 };
+    return { ...room, image_url: imageUrl, today_bookings: todayBookings,
+      is_busy_today: todayBookings.length > 0, total_bookings: totalByRoom[room.id] || 0 };
   }));
 };
 

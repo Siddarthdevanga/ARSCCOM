@@ -90,8 +90,22 @@ function RoomCard({ room, onSelect, nowMinutes = 0 }) {
       </div>
       <div style={{ padding:"0.875rem" }}>
         <div style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937", marginBottom:"0.3rem" }}>{room.room_name}</div>
-        <div style={{ display:"flex", alignItems:"center", gap:"0.3rem", color:"#6b7280", fontSize:"0.8rem", marginBottom:"0.625rem" }}>
-          <IconUsers />{room.capacity ? `${room.capacity} people` : "Capacity N/A"}
+        <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", color:"#6b7280", fontSize:"0.8rem", marginBottom:"0.625rem", flexWrap:"wrap" }}>
+          <span style={{ display:"flex", alignItems:"center", gap:"0.3rem" }}>
+            <IconUsers />{room.capacity ? `${room.capacity} people` : "Capacity N/A"}
+          </span>
+          {room.total_bookings > 0 && (
+            <>
+              <span style={{ color:"#d1d5db" }}>·</span>
+              <span style={{ display:"flex", alignItems:"center", gap:"0.25rem" }}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                {room.total_bookings} bookings
+              </span>
+            </>
+          )}
         </div>
         {room.today_bookings?.length > 0 && (
           <div style={{ borderTop:"1px solid #f3f4f6", paddingTop:"0.5rem" }}>

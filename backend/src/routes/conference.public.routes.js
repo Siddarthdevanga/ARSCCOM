@@ -543,6 +543,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
     const roomIds = rooms.map(r => r.id);
     let bookingsByRoom = {};
 
+    let totalByRoom = {};
     if (roomIds.length) {
       const placeholders = roomIds.map(() => "?").join(",");
       const [bookings] = await db.query(
@@ -558,6 +559,13 @@ router.get("/company/:slug/rooms", async (req, res) => {
          ORDER BY cb.start_time ASC`,
         [company.id, company.id, ...roomIds, today]
       );
+      const [countRows] = await db.query(
+        `SELECT room_id, COUNT(*) AS total FROM conference_bookings
+         WHERE company_id = ? AND room_id IN (${placeholders}) AND status = 'BOOKED'
+         GROUP BY room_id`,
+        [company.id, ...roomIds]
+      );
+      for (const r of countRows) totalByRoom[r.room_id] = r.total;
 
       for (const b of bookings) {
         if (!bookingsByRoom[b.room_id]) bookingsByRoom[b.room_id] = [];
@@ -581,6 +589,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
         image_url:      imageUrl,
         today_bookings: todayBookings,
         is_busy_today:  todayBookings.length > 0,
+        total_bookings: totalByRoom[room.id] || 0,
       };
     }));
 
