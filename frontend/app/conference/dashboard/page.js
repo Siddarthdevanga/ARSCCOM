@@ -162,7 +162,12 @@ export default function ConferenceDashboard() {
 
   const startEditRoom = (room) => {
     if (!room.is_active) { showNotification("Room locked. Upgrade to edit.", "warning"); return; }
-    setEditingRoomId(room.id); setEditName(room.room_name); setEditCapacity(room.capacity || 0);
+    setEditingRoomId(room.id);
+    setEditName(room.room_name);
+    setEditCapacity(room.capacity || 0);
+    setEditRoomImage(null);
+    // Pre-fill preview with existing room image so admin sees the current photo
+    setEditRoomImagePreview(room.image_url || null);
   };
 
   const cancelEdit = () => {
@@ -391,16 +396,49 @@ export default function ConferenceDashboard() {
                       <div className={styles.editForm}>
                         <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Room name" autoFocus />
                         <input type="number" value={editCapacity} onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)} placeholder="Capacity" />
-                        <div style={{ marginTop:"0.5rem" }}>
-                          <label style={{ fontSize:"0.78rem", color:"#6b7280", display:"block", marginBottom:"0.3rem" }}>Room Image</label>
-                          {editRoomImagePreview && (
-                            <img src={editRoomImagePreview} alt="Preview" style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover", borderRadius:"0.4rem", marginBottom:"0.35rem" }} />
+                        <div style={{ marginTop:"0.75rem" }}>
+                          <label style={{ fontSize:"0.78rem", fontWeight:600, color:"#374151", display:"block", marginBottom:"0.4rem" }}>
+                            Room Photo
+                          </label>
+                          {editRoomImagePreview ? (
+                            <div style={{ position:"relative", marginBottom:"0.5rem" }}>
+                              <img src={editRoomImagePreview} alt="Room preview"
+                                style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover",
+                                  borderRadius:"0.5rem", display:"block",
+                                  border:"2px solid #7c3aed" }} />
+                              <div style={{ position:"absolute", top:6, left:6, background:"rgba(0,0,0,0.55)",
+                                color:"#fff", fontSize:"0.62rem", fontWeight:700, borderRadius:4,
+                                padding:"2px 6px", letterSpacing:"0.3px" }}>
+                                {editRoomImage ? "NEW PHOTO" : "CURRENT PHOTO"}
+                              </div>
+                              <button onClick={() => { setEditRoomImage(null); setEditRoomImagePreview(null); }}
+                                style={{ position:"absolute", top:6, right:6, background:"rgba(239,68,68,0.85)",
+                                  border:"none", borderRadius:"50%", width:24, height:24, cursor:"pointer",
+                                  color:"#fff", fontSize:"0.85rem", display:"flex", alignItems:"center",
+                                  justifyContent:"center", lineHeight:1 }}>
+                                ×
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ width:"100%", aspectRatio:"16/9", background:"#f3f4f6",
+                              borderRadius:"0.5rem", display:"flex", alignItems:"center",
+                              justifyContent:"center", marginBottom:"0.5rem", border:"2px dashed #d1d5db" }}>
+                              <span style={{ fontSize:"0.78rem", color:"#9ca3af" }}>No photo uploaded</span>
+                            </div>
                           )}
-                          <input type="file" accept="image/*" style={{ fontSize:"0.78rem" }}
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (f) { setEditRoomImage(f); setEditRoomImagePreview(URL.createObjectURL(f)); }
-                            }} />
+                          <label style={{ display:"inline-flex", alignItems:"center", gap:"0.4rem",
+                            padding:"0.35rem 0.875rem", background:"#ede9fe", color:"#7c3aed",
+                            borderRadius:"0.4rem", fontSize:"0.78rem", fontWeight:700, cursor:"pointer" }}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                            </svg>
+                            {editRoomImagePreview ? "Replace Photo" : "Upload Photo"}
+                            <input type="file" accept="image/*" style={{ display:"none" }}
+                              onChange={(e) => {
+                                const f = e.target.files?.[0];
+                                if (f) { setEditRoomImage(f); setEditRoomImagePreview(URL.createObjectURL(f)); }
+                              }} />
+                          </label>
                         </div>
                         <div className={styles.editActions}>
                           <button className={styles.saveBtn} onClick={() => saveRoomChanges(r.id)}>Save</button>
