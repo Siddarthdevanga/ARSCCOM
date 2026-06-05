@@ -576,24 +576,44 @@ export default function ConferenceDashboard() {
           <button className={styles.shareUrlBtn} onClick={handleShareURL}>Share</button>
         </div>
 
-        {/* ===== TODAY'S TIMELINE — above dept/schedule ===== */}
+        {/* ===== ROOM SCHEDULE — filter tabs + calendar as one block ===== */}
         {allRooms.length > 0 && (
           <section style={{ padding:"0 1rem 1.5rem" }}>
-            <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
-                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-              </svg>
-              <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>Today&apos;s Room Schedule</span>
+            {/* Unified header row: title left, tabs right */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+              marginBottom:"1rem", flexWrap:"wrap", gap:"0.5rem" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>
+                  {filterDay === "yesterday" ? "Yesterday's" : filterDay === "tomorrow" ? "Tomorrow's" : "Today's"} Room Schedule
+                </span>
+              </div>
+              {/* Filter tabs */}
+              <div style={{ display:"flex", gap:"0.35rem" }}>
+                {["yesterday", "today", "tomorrow"].map((d) => (
+                  <button key={d}
+                    onClick={() => setFilterDay(d)}
+                    style={{ padding:"0.3rem 0.875rem", borderRadius:99, fontSize:"0.78rem",
+                      fontWeight:700, cursor:"pointer", border:"none",
+                      background: filterDay === d ? "#7c3aed" : "#ede9fe",
+                      color: filterDay === d ? "#fff" : "#7c3aed",
+                      transition:"all 0.15s" }}>
+                    {d.charAt(0).toUpperCase() + d.slice(1)}
+                  </button>
+                ))}
+              </div>
             </div>
-            <TodayTimeline rooms={allRooms} bookings={filteredBookings} />
+            <TodayTimeline rooms={allRooms} bookings={filteredBookings} filterDay={filterDay} />
           </section>
         )}
 
         {/* ===== MAIN CONTENT ===== */}
         <main className={styles.mainContent}>
 
-          {/* Filter tabs */}
+          {/* Filter tabs (for dept/schedule tables) */}
           <div className={styles.filterRow}>
             {["yesterday", "today", "tomorrow"].map((d) => (
               <button key={d} className={`${styles.filterBtn} ${filterDay === d ? styles.filterActive : ""}`} onClick={() => setFilterDay(d)}>
@@ -671,7 +691,8 @@ const PALETTE = [
 ];
 
 /* ─── Today's Timeline — vertical Google Calendar style ──── */
-function TodayTimeline({ rooms, bookings }) {
+function TodayTimeline({ rooms, bookings, filterDay = "today" }) {
+  const isToday = filterDay === "today";
   const HOUR_H   = 68;
   const START_H  = 7;
   const END_H    = 22;
@@ -691,8 +712,10 @@ function TodayTimeline({ rooms, bookings }) {
   const nowH   = nowIST.getHours();
 
   React.useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, nowTop - 100);
-  }, [nowTop]);
+    if (!scrollRef.current) return;
+    // Scroll to now for today, scroll to top for other days
+    scrollRef.current.scrollTop = isToday ? Math.max(0, nowTop - 100) : 0;
+  }, [nowTop, isToday]);
 
   // Close popup on outside click
   React.useEffect(() => {
@@ -718,15 +741,17 @@ function TodayTimeline({ rooms, bookings }) {
             </span>
           ))}
         </div>
-        <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
-          style={{ fontSize:"0.7rem", color:"#7c3aed", background:"#fff", border:"none",
-            borderRadius:"99px", padding:"0.2rem 0.7rem", cursor:"pointer", fontWeight:700,
-            display:"flex", alignItems:"center", gap:"0.3rem" }}>
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Now
-        </button>
+        {isToday && (
+          <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
+            style={{ fontSize:"0.7rem", color:"#7c3aed", background:"#fff", border:"none",
+              borderRadius:"99px", padding:"0.2rem 0.7rem", cursor:"pointer", fontWeight:700,
+              display:"flex", alignItems:"center", gap:"0.3rem" }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Now
+          </button>
+        )}
       </div>
 
       {/* Room name header row */}
@@ -777,8 +802,8 @@ function TodayTimeline({ rooms, bookings }) {
                     height:HOUR_H, borderBottom:"1px solid #f3f4f6",
                     background: h === nowH ? `${col.bg}08` : h % 2 === 0 ? "#fafafa" : "#fff" }} />
                 ))}
-                {/* Now line */}
-                {nowTop >= 0 && nowTop <= totalH && (
+                {/* Now line — only on today's view */}
+                {isToday && nowTop >= 0 && nowTop <= totalH && (
                   <div style={{ position:"absolute", top:nowTop, left:0, right:0, height:2,
                     background:"#ef4444", zIndex:5, display:"flex", alignItems:"center" }}>
                     <div style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444", marginLeft:-4, flexShrink:0 }} />
