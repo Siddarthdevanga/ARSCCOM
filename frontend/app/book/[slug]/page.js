@@ -1183,7 +1183,14 @@ export default function PublicConferenceBooking() {
         }
       );
       if (!response.ok) { await handleApiError(response, "Could not extend booking"); return; }
-      showToast(`Meeting extended by ${extraMinutes} minutes`, "success");
+      const data = await response.json().catch(() => null);
+      const newEnd = data?.new_end_time ? (() => {
+        const [h, m] = data.new_end_time.split(":").map(Number);
+        const ampm = h >= 12 ? "PM" : "AM";
+        const h12 = h % 12 || 12;
+        return `${h12}:${String(m).padStart(2, "0")} ${ampm}`;
+      })() : "";
+      showToast(newEnd ? `Extended +${extraMinutes} min — now ends at ${newEnd}` : `Meeting extended by ${extraMinutes} minutes`, "success");
       loadBookings();
     } catch {
       showToast("Network error. Please try again.", "error");
@@ -1700,9 +1707,9 @@ export default function PublicConferenceBooking() {
                                 {[15, 30, 60].map(mins => (
                                   <button key={mins} onClick={() => extendBooking(b.id, mins)}
                                     disabled={loading}
-                                    style={{ flex:1, padding:"0.35rem 0", background:"#dcfce7", color:"#15803d",
-                                      border:"1px solid #bbf7d0", borderRadius:"0.4rem", fontSize:"0.75rem",
-                                      fontWeight:700, cursor:"pointer" }}>
+                                    style={{ flex:1, padding:"0.35rem 0", background:"#16a34a", color:"#fff",
+                                      border:"none", borderRadius:"0.4rem", fontSize:"0.75rem",
+                                      fontWeight:700, cursor:"pointer", boxShadow:"0 1px 4px rgba(22,163,74,0.35)" }}>
                                     +{mins}m
                                   </button>
                                 ))}

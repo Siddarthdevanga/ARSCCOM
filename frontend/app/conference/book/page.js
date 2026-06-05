@@ -280,6 +280,7 @@ export default function ConferenceBookPage() {
   const [formError,    setFormError]    = useState("");
   const [submitting,   setSubmitting]   = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState("");
+  const [extendMsg, setExtendMsg] = useState("");
   const [confirmPreview, setConfirmPreview] = useState(null);
 
   // Book on behalf of
@@ -388,10 +389,16 @@ export default function ConferenceBookPage() {
   // Classify a booking relative to now
   const extendBooking = async (b, extraMinutes) => {
     try {
-      await apiFetch(`/api/conference/bookings/${b.id}/extend`, {
+      const data = await apiFetch(`/api/conference/bookings/${b.id}/extend`, {
         method: "PATCH",
         body: JSON.stringify({ extra_minutes: extraMinutes }),
       });
+      const newEnd = data?.new_end_time ? prettyTime(data.new_end_time) : "";
+      const msg = newEnd
+        ? `Extended +${extraMinutes} min — now ends at ${newEnd}`
+        : `Extended by ${extraMinutes} minutes`;
+      setExtendMsg(msg);
+      setTimeout(() => setExtendMsg(""), 4000);
       loadRoomSchedule(selected.id);
     } catch (err) {
       setFormError(err?.message || "Could not extend booking");
@@ -804,17 +811,28 @@ export default function ConferenceBookPage() {
                         </div>
                         {state === "active" && (
                           <div style={{ marginTop:"0.5rem" }}>
-                            <div style={{ fontSize:"0.62rem", fontWeight:700, color:"#6b7280", marginBottom:"0.3rem" }}>Extend meeting</div>
+                            <div style={{ fontSize:"0.62rem", fontWeight:700, color:"#15803d", marginBottom:"0.3rem" }}>Extend meeting</div>
                             <div style={{ display:"flex", gap:"0.3rem" }}>
                               {[15, 30, 60].map(mins => (
                                 <button key={mins} onClick={() => extendBooking(b, mins)}
-                                  style={{ flex:1, padding:"0.28rem 0", background:"#dcfce7", color:"#15803d",
-                                    border:"1px solid #bbf7d0", borderRadius:"0.35rem", fontSize:"0.7rem",
-                                    fontWeight:700, cursor:"pointer" }}>
+                                  style={{ flex:1, padding:"0.3rem 0", background:"#16a34a", color:"#fff",
+                                    border:"none", borderRadius:"0.35rem", fontSize:"0.7rem",
+                                    fontWeight:700, cursor:"pointer", boxShadow:"0 1px 4px rgba(22,163,74,0.35)" }}>
                                   +{mins}m
                                 </button>
                               ))}
                             </div>
+                            {extendMsg && (
+                              <div style={{ marginTop:"0.4rem", padding:"0.35rem 0.6rem",
+                                background:"#f0fdf4", border:"1px solid #86efac", borderRadius:"0.35rem",
+                                fontSize:"0.68rem", fontWeight:700, color:"#166534",
+                                display:"flex", alignItems:"center", gap:"0.3rem" }}>
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                  <polyline points="20 6 9 17 4 12"/>
+                                </svg>
+                                {extendMsg}
+                              </div>
+                            )}
                           </div>
                         )}
                         {state === "upcoming" && (
