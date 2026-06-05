@@ -1611,9 +1611,8 @@ export default function PublicConferenceBooking() {
                   {bookings.map(b => {
                     const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" }));
                     const nowMins = nowIST.getHours() * 60 + nowIST.getMinutes();
-                    const toMins = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h*60+(m||0); };
                     const bDate = b.booking_date?.split("T")[0] || b.booking_date;
-                    const sMins = toMins(b.start_time), eMins = toMins(b.end_time);
+                    const sMins = ampmToMinutes(b.start_time), eMins = ampmToMinutes(b.end_time);
                     const isInProgress = bDate === today && sMins <= nowMins && eMins > nowMins;
                     const isPast = !isInProgress && (bDate < today || (bDate === today && eMins <= nowMins));
                     return (

@@ -1131,8 +1131,8 @@ router.patch("/company/:slug/bookings/:id/extend", async (req, res) => {
     if (booking.booked_by !== email) return res.status(403).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
 
     const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-    const today  = nowIST.toISOString().split("T")[0];
-    const bDate  = booking.booking_date?.toISOString?.()?.split("T")[0] || String(booking.booking_date).split("T")[0];
+    const today  = nowIST.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    const bDate  = new Date(booking.booking_date).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     const toMin  = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
     const nowMin = nowIST.getHours() * 60 + nowIST.getMinutes();
     const sMin   = toMin(booking.start_time), eMin = toMin(booking.end_time);
@@ -1151,7 +1151,7 @@ router.patch("/company/:slug/bookings/:id/extend", async (req, res) => {
        WHERE company_id = ? AND room_id = ? AND booking_date = ? AND id != ?
          AND status = 'BOOKED' AND start_time < ? AND end_time > ?
        LIMIT 1`,
-      [company.id, booking.room_id, bDate, bookingId, newEndTime, booking.end_time]
+      [company.id, booking.room_id, today, bookingId, newEndTime, booking.end_time]
     );
     if (conflict) return res.status(409).json({ message: `Cannot extend — another booking starts before the new end time` });
 
