@@ -1586,8 +1586,15 @@ export default function PublicConferenceBooking() {
                 <p className={styles.emptyState}>No bookings for this date</p>
               ) : (
                 <div className={styles.bookingsList}>
-                  {bookings.map(b => (
-                    <div key={b.id} className={styles.bookingItem}>
+                  {bookings.map(b => {
+                    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" }));
+                    const nowMins = nowIST.getHours() * 60 + nowIST.getMinutes();
+                    const toMins = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h*60+(m||0); };
+                    const bDate = b.booking_date?.split("T")[0] || b.booking_date;
+                    const isPast = bDate < today || (bDate === today && toMins(b.end_time) < nowMins);
+                    return (
+                    <div key={b.id} className={styles.bookingItem}
+                      style={isPast ? { opacity:0.55, background:"#f9fafb", borderColor:"#e5e7eb" } : {}}>
                       {editingId === b.id ? (
                         <>
                           <div className={styles.bookingHeader}>
@@ -1655,25 +1662,34 @@ export default function PublicConferenceBooking() {
                           {b.can_modify && (
                             <div className={styles.bookingActions}>
                               <button
-                                onClick={() => initiateEdit(b)}
+                                onClick={() => !isPast && initiateEdit(b)}
                                 className={styles.editBtn}
-                                disabled={loading}
+                                disabled={loading || isPast}
+                                style={isPast ? { opacity:0.45, cursor:"not-allowed", pointerEvents:"none" } : {}}
                               >
                                 Reschedule
                               </button>
                               <button
-                                onClick={() => initiateCancellation(b)}
+                                onClick={() => !isPast && initiateCancellation(b)}
                                 className={styles.cancelBtn}
-                                disabled={loading}
+                                disabled={loading || isPast}
+                                style={isPast ? { opacity:0.45, cursor:"not-allowed", pointerEvents:"none" } : {}}
                               >
                                 Cancel
                               </button>
                             </div>
                           )}
+                          {isPast && (
+                            <div style={{ marginTop:"0.4rem", fontSize:"0.7rem", fontWeight:700,
+                              color:"#9ca3af", letterSpacing:"0.3px" }}>
+                              This booking has ended
+                            </div>
+                          )}
                         </>
                       )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
