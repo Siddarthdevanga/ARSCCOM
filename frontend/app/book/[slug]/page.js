@@ -284,7 +284,7 @@ const PUB_PALETTE = [
   "#7c3aed","#0891b2","#059669","#d97706","#dc2626","#9333ea","#0284c7","#16a34a",
 ];
 
-function PublicCalendarGrid({ rooms }) {
+function PublicCalendarGrid({ rooms, scrollContainerRef }) {
   const HOUR_H  = 60;
   const START_H = 7;
   const END_H   = 22;
@@ -292,7 +292,6 @@ function PublicCalendarGrid({ rooms }) {
   const TIME_W  = 48;
   const totalH  = (END_H - START_H) * HOUR_H;
   const hours   = Array.from({ length: END_H - START_H }, (_, i) => START_H + i);
-  const scrollRef = useRef(null);
 
   const toMin = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
   const fmt   = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
@@ -303,8 +302,10 @@ function PublicCalendarGrid({ rooms }) {
   const nowH   = nowIST.getHours();
 
   useEffect(() => {
-    if (scrollRef.current) scrollRef.current.scrollTop = Math.max(0, nowTop - 80);
-  }, [nowTop]);
+    if (scrollContainerRef?.current) {
+      scrollContainerRef.current.scrollTop = Math.max(0, nowTop - 80);
+    }
+  }, [nowTop, scrollContainerRef]);
 
   return (
     <div style={{ minWidth: TIME_W + rooms.length * ROOM_W }}>
@@ -323,8 +324,8 @@ function PublicCalendarGrid({ rooms }) {
         ))}
       </div>
 
-      {/* Scrollable body */}
-      <div ref={scrollRef} style={{ overflowY:"auto", maxHeight:"calc(100vh - 160px)" }}>
+      {/* Body — parent container handles both-axis scroll */}
+      <div>
         <div style={{ display:"flex", position:"relative" }}>
           {/* Time labels */}
           <div style={{ width:TIME_W, flexShrink:0 }}>
@@ -385,6 +386,17 @@ function PublicCalendarGrid({ rooms }) {
           })}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* Thin wrapper that owns the scroll container ref */
+function CalendarScrollWrapper({ rooms }) {
+  const scrollRef = useRef(null);
+  return (
+    <div ref={scrollRef}
+      style={{ height:"100%", overflow:"auto", WebkitOverflowScrolling:"touch" }}>
+      <PublicCalendarGrid rooms={rooms} scrollContainerRef={scrollRef} />
     </div>
   );
 }
@@ -1192,10 +1204,8 @@ export default function PublicConferenceBooking() {
               <div style={{ width:40, height:4, borderRadius:99, background:"#d1d5db" }} />
             </div>
 
-            {/* Calendar grid — scrollable */}
-            <div style={{ flex:1, overflowX:"auto", overflowY:"hidden" }}>
-              <PublicCalendarGrid rooms={rooms} />
-            </div>
+            {/* Calendar grid — both-axis scrollable */}
+            <CalendarScrollWrapper rooms={rooms} />
           </div>
           <style>{`
             @keyframes slideUp {
