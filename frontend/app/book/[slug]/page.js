@@ -1171,6 +1171,27 @@ export default function PublicConferenceBooking() {
     }
   };
 
+  const extendBooking = async (bookingId, extraMinutes) => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${API}/api/public/conference/company/${slug}/bookings/${bookingId}/extend`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, extra_minutes: extraMinutes })
+        }
+      );
+      if (!response.ok) { await handleApiError(response, "Could not extend booking"); return; }
+      showToast(`Meeting extended by ${extraMinutes} minutes`, "success");
+      loadBookings();
+    } catch {
+      showToast("Network error. Please try again.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* ================= LOADING STATE ================= */
   if (!company) return (
     <div className={styles.loadingContainer}>
@@ -1181,6 +1202,7 @@ export default function PublicConferenceBooking() {
 
   return (
     <div className={styles.page}>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}`}</style>
       {/* Enhanced Toast Notification */}
       <Toast
         message={toast.message}
@@ -1591,10 +1613,13 @@ export default function PublicConferenceBooking() {
                     const nowMins = nowIST.getHours() * 60 + nowIST.getMinutes();
                     const toMins = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h*60+(m||0); };
                     const bDate = b.booking_date?.split("T")[0] || b.booking_date;
-                    const isPast = bDate < today || (bDate === today && toMins(b.end_time) < nowMins);
+                    const sMins = toMins(b.start_time), eMins = toMins(b.end_time);
+                    const isInProgress = bDate === today && sMins <= nowMins && eMins > nowMins;
+                    const isPast = !isInProgress && (bDate < today || (bDate === today && eMins <= nowMins));
                     return (
                     <div key={b.id} className={styles.bookingItem}
-                      style={isPast ? { opacity:0.55, background:"#f9fafb", borderColor:"#e5e7eb" } : {}}>
+                      style={isPast ? { opacity:0.55, background:"#f9fafb", borderColor:"#e5e7eb" } :
+                             isInProgress ? { borderColor:"#16a34a", boxShadow:"0 0 0 2px #bbf7d0" } : {}}>
                       {editingId === b.id ? (
                         <>
                           <div className={styles.bookingHeader}>
@@ -1646,7 +1671,15 @@ export default function PublicConferenceBooking() {
                               <span className={styles.timeIcon}>🕒</span>
                               <strong>{b.start_time} – {b.end_time}</strong>
                             </div>
-                            {b.can_modify && (
+                            {isInProgress ? (
+                              <span style={{ display:"flex", alignItems:"center", gap:"0.3rem",
+                                fontSize:"0.68rem", background:"#dcfce7", color:"#15803d",
+                                borderRadius:99, padding:"2px 8px", fontWeight:700 }}>
+                                <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a",
+                                  display:"inline-block", animation:"pulse 1.5s infinite" }} />
+                                In Progress
+                              </span>
+                            ) : b.can_modify && (
                               <span className={styles.bookingBadge}>Your Booking</span>
                             )}
                           </div>
@@ -1659,7 +1692,25 @@ export default function PublicConferenceBooking() {
                             </p>
                           </div>
 
-                          {b.can_modify && (
+                          {isInProgress && b.can_modify && (
+                            <div style={{ marginTop:"0.5rem" }}>
+                              <div style={{ fontSize:"0.7rem", fontWeight:700, color:"#15803d", marginBottom:"0.3rem" }}>
+                                Extend meeting
+                              </div>
+                              <div style={{ display:"flex", gap:"0.4rem" }}>
+                                {[15, 30, 60].map(mins => (
+                                  <button key={mins} onClick={() => extendBooking(b.id, mins)}
+                                    disabled={loading}
+                                    style={{ flex:1, padding:"0.35rem 0", background:"#dcfce7", color:"#15803d",
+                                      border:"1px solid #bbf7d0", borderRadius:"0.4rem", fontSize:"0.75rem",
+                                      fontWeight:700, cursor:"pointer" }}>
+                                    +{mins}m
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {!isInProgress && b.can_modify && (
                             <div className={styles.bookingActions}>
                               <button
                                 onClick={() => !isPast && initiateEdit(b)}

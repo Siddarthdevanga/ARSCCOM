@@ -386,6 +386,18 @@ export default function ConferenceBookPage() {
   }, [selected]);
 
   // Classify a booking relative to now
+  const extendBooking = async (b, extraMinutes) => {
+    try {
+      await apiFetch(`/api/conference/bookings/${b.id}/extend`, {
+        method: "PATCH",
+        body: JSON.stringify({ extra_minutes: extraMinutes }),
+      });
+      loadRoomSchedule(selected.id);
+    } catch (err) {
+      setFormError(err?.message || "Could not extend booking");
+    }
+  };
+
   const classifyBooking = (b) => {
     const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
     const s = toMin(b.start_time), e = toMin(b.end_time);
@@ -547,6 +559,8 @@ export default function ConferenceBookPage() {
           </div>
         </div>
       )}
+
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}`}</style>
 
       {/* Header */}
       <header style={{ padding:"0.75rem 1.25rem", background:"#fff",
@@ -772,8 +786,13 @@ export default function ConferenceBookPage() {
                             {prettyTime(b.start_time)} – {prettyTime(b.end_time)}
                           </div>
                           {state === "active" && (
-                            <span style={{ fontSize:"0.62rem", background:"#fef3c7", color:"#92400e",
-                              borderRadius:99, padding:"1px 6px", fontWeight:700 }}>In Progress</span>
+                            <span style={{ display:"flex", alignItems:"center", gap:"0.3rem",
+                              fontSize:"0.62rem", background:"#dcfce7", color:"#15803d",
+                              borderRadius:99, padding:"2px 7px", fontWeight:700 }}>
+                              <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a",
+                                display:"inline-block", animation:"pulse 1.5s infinite" }} />
+                              In Progress
+                            </span>
                           )}
                           {state === "past" && (
                             <span style={{ fontSize:"0.62rem", background:"#f3f4f6", color:"#9ca3af",
@@ -783,7 +802,22 @@ export default function ConferenceBookPage() {
                         <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:2 }}>
                           {b.department && <span>{b.department} · </span>}{booker}
                         </div>
-                        {!isPast && (
+                        {state === "active" && (
+                          <div style={{ marginTop:"0.5rem" }}>
+                            <div style={{ fontSize:"0.62rem", fontWeight:700, color:"#6b7280", marginBottom:"0.3rem" }}>Extend meeting</div>
+                            <div style={{ display:"flex", gap:"0.3rem" }}>
+                              {[15, 30, 60].map(mins => (
+                                <button key={mins} onClick={() => extendBooking(b, mins)}
+                                  style={{ flex:1, padding:"0.28rem 0", background:"#dcfce7", color:"#15803d",
+                                    border:"1px solid #bbf7d0", borderRadius:"0.35rem", fontSize:"0.7rem",
+                                    fontWeight:700, cursor:"pointer" }}>
+                                  +{mins}m
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {state === "upcoming" && (
                           <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
                             <button onClick={() => openReschedule(b)}
                               style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",

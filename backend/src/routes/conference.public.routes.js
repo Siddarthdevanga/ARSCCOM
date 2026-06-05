@@ -1110,4 +1110,57 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
   }
 });
 
+router.patch("/company/:slug/bookings/:id/extend", async (req, res) => {
+  try {
+    const slug      = normalizeSlug(req.params.slug);
+    const bookingId = Number(req.params.id);
+    const email     = normalizeEmail(req.body?.email || "");
+    const extra     = Number(req.body?.extra_minutes);
+
+    if (!email) return res.status(400).json({ message: "Email required" });
+    if (![15, 30, 60].includes(extra)) return res.status(400).json({ message: "extra_minutes must be 15, 30, or 60" });
+
+    const company = await getCompanyBySlug(slug, "id, name, logo_url");
+    if (!company) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+
+    const [[booking]] = await db.query(
+      `SELECT * FROM conference_bookings WHERE id = ? AND company_id = ? AND status = 'BOOKED' LIMIT 1`,
+      [bookingId, company.id]
+    );
+    if (!booking) return res.status(404).json({ message: ERROR_MESSAGES.BOOKING_NOT_FOUND });
+    if (booking.booked_by !== email) return res.status(403).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+
+    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const today  = nowIST.toISOString().split("T")[0];
+    const bDate  = booking.booking_date?.toISOString?.()?.split("T")[0] || String(booking.booking_date).split("T")[0];
+    const toMin  = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
+    const nowMin = nowIST.getHours() * 60 + nowIST.getMinutes();
+    const sMin   = toMin(booking.start_time), eMin = toMin(booking.end_time);
+
+    if (bDate !== today || sMin > nowMin || eMin <= nowMin) {
+      return res.status(400).json({ message: "Can only extend a booking that is currently in progress" });
+    }
+
+    const newEndMin  = eMin + extra;
+    const newEndH    = Math.floor(newEndMin / 60);
+    const newEndM    = newEndMin % 60;
+    const newEndTime = `${String(newEndH).padStart(2,"0")}:${String(newEndM).padStart(2,"0")}:00`;
+
+    const [[conflict]] = await db.query(
+      `SELECT id FROM conference_bookings
+       WHERE company_id = ? AND room_id = ? AND booking_date = ? AND id != ?
+         AND status = 'BOOKED' AND start_time < ? AND end_time > ?
+       LIMIT 1`,
+      [company.id, booking.room_id, bDate, bookingId, newEndTime, booking.end_time]
+    );
+    if (conflict) return res.status(409).json({ message: `Cannot extend — another booking starts before the new end time` });
+
+    await db.query(`UPDATE conference_bookings SET end_time = ? WHERE id = ?`, [newEndTime, bookingId]);
+    res.json({ message: `Extended by ${extra} minutes`, new_end_time: newEndTime });
+  } catch (error) {
+    console.error("[PUBLIC][EXTEND]", error);
+    res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+});
+
 export default router;
