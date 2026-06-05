@@ -947,7 +947,7 @@ function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
                   const isPast = eMin < nowMin;
                   const isNow  = sMin <= nowMin && eMin > nowMin;
                   const bg     = isPast ? col.dim : col.bg;
-                  const name   = b.booked_by?.split("(")?.[0]?.trim() || b.department || "Booked";
+                  const name   = b.booked_by_name || b.booked_by?.split("(")?.[0]?.trim() || b.department || "Booked";
                   return (
                     <div key={bi}
                       onClick={(e) => { e.stopPropagation(); setPopup({ booking:b, roomName:room.room_name, color:col.bg, x:e.clientX, y:e.clientY }); }}
@@ -1005,7 +1005,7 @@ function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
               <div style={{ marginBottom:"0.4rem" }}>
                 <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Booked By</span>
                 <div style={{ fontWeight:700, color:"#1f2937", marginTop:2 }}>
-                  {b.booked_by === "ADMIN" ? "Admin" : b.booked_by}
+                  {b.booked_by === "ADMIN" ? "Admin" : (b.booked_by_name || b.booked_by)}
                 </div>
               </div>
               {b.department && (

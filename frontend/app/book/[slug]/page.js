@@ -301,6 +301,15 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
   const nowTop = ((nowMin - START_H * 60) / 60) * HOUR_H;
   const nowH   = nowIST.getHours();
 
+  const [popup, setPopup] = useState(null);
+
+  useEffect(() => {
+    if (!popup) return;
+    const handler = () => setPopup(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [popup]);
+
   useEffect(() => {
     if (scrollContainerRef?.current) {
       scrollContainerRef.current.scrollTop = Math.max(0, nowTop - 80);
@@ -308,6 +317,7 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
   }, [nowTop, scrollContainerRef]);
 
   return (
+    <>
     <div style={{ minWidth: TIME_W + rooms.length * ROOM_W }}>
       {/* Sticky room name header */}
       <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa",
@@ -363,11 +373,12 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
                   const ht   = Math.max(18, ((eMin-sMin)/60)*HOUR_H - 2);
                   const past = eMin < nowMin;
                   return (
-                    <div key={bi} title={`${fmt(b.start_time)} – ${fmt(b.end_time)}`}
+                    <div key={bi}
+                      onClick={(e) => { e.stopPropagation(); setPopup({ booking:b, roomName:room.room_name, color, x:e.clientX, y:e.clientY }); }}
                       style={{ position:"absolute", top, left:2, right:2, height:ht,
-                        background:past?`${color}66`:color, borderRadius:5,
+                        background:past?`${color}99`:color, borderRadius:5,
                         padding:"2px 4px", overflow:"hidden", zIndex:3,
-                        opacity: past ? 0.6 : 1, cursor:"default" }}>
+                        opacity: past ? 0.6 : 1, cursor:"pointer" }}>
                       <div style={{ fontSize:"0.56rem", color:"#fff", fontWeight:700,
                         lineHeight:1.3, overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>
                         {fmt(b.start_time)}
@@ -387,6 +398,46 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
         </div>
       </div>
     </div>
+
+    {/* Booking popup */}
+    {popup && (() => {
+      const b = popup.booking;
+      const name = b.booked_by?.split("(")?.[0]?.trim() || "Booked";
+      return (
+        <div onClick={e => e.stopPropagation()}
+          style={{ position:"fixed", top: Math.min(popup.y + 8, window.innerHeight - 200),
+            left: Math.min(popup.x + 8, window.innerWidth - 240),
+            width:230, background:"#fff", borderRadius:"0.75rem",
+            boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:9999, overflow:"hidden" }}>
+          <div style={{ background:popup.color, padding:"0.625rem 0.875rem",
+            display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+            <div>
+              <div style={{ fontWeight:800, fontSize:"0.8rem", color:"#fff" }}>{popup.roomName}</div>
+              <div style={{ fontSize:"0.68rem", color:"rgba(255,255,255,0.85)", marginTop:2 }}>
+                {fmt(b.start_time)} – {fmt(b.end_time)}
+              </div>
+            </div>
+            <button onClick={() => setPopup(null)}
+              style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff",
+                borderRadius:"50%", width:20, height:20, cursor:"pointer", fontSize:"0.8rem",
+                display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+          </div>
+          <div style={{ padding:"0.625rem 0.875rem", fontSize:"0.75rem", color:"#374151" }}>
+            <div style={{ marginBottom:"0.35rem" }}>
+              <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Booked By</span>
+              <div style={{ fontWeight:700, color:"#1f2937", marginTop:1 }}>{name}</div>
+            </div>
+            {b.purpose && (
+              <div>
+                <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Purpose</span>
+                <div style={{ marginTop:1 }}>{b.purpose}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    })()}
+    </>
   );
 }
 

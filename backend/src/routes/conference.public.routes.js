@@ -547,7 +547,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
     if (roomIds.length) {
       const placeholders = roomIds.map(() => "?").join(",");
       const [bookings] = await db.query(
-        `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by,
+        `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose,
                 COALESCE(ce.name, '') AS employee_name
          FROM conference_bookings cb
          LEFT JOIN company_employees ce
@@ -573,7 +573,8 @@ router.get("/company/:slug/rooms", async (req, res) => {
         bookingsByRoom[b.room_id].push({
           start_time: b.start_time,
           end_time:   b.end_time,
-          booked_by:  `${name} (${b.booked_by})`,
+          booked_by:  name || b.booked_by,
+          purpose:    b.purpose || null,
         });
       }
     }

@@ -1020,9 +1020,12 @@ router.get("/bookings", async (req, res) => {
     const { roomId, date } = req.query;
 
     let sql = `
-      SELECT b.*, r.room_name, r.room_number
+      SELECT b.*, r.room_name, r.room_number,
+             COALESCE(e.name, '') AS booked_by_name
       FROM conference_bookings b
       JOIN conference_rooms r ON r.id = b.room_id
+      LEFT JOIN company_employees e
+        ON e.company_id = b.company_id AND LOWER(e.email) = LOWER(b.booked_by) AND e.is_active = 1
       WHERE b.company_id = ?
     `;
 
