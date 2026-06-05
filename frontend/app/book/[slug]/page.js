@@ -561,6 +561,7 @@ export default function PublicConferenceBooking() {
     if (!date) errors.date = "Please select a date";
     if (!startTime) errors.startTime = "Please select start time";
     if (!endTime) errors.endTime = "Please select end time";
+    if (!purpose || !purpose.trim()) errors.purpose = "Please enter a purpose";
 
     if (startTime && endTime && ampmToMinutes(endTime) <= ampmToMinutes(startTime)) {
       errors.endTime = "End time must be after start time";
@@ -1449,16 +1450,17 @@ export default function PublicConferenceBooking() {
                 />
               </div>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="purpose">Purpose</label>
+              <div className={formErrors.purpose ? styles.formGroupError : styles.formGroup}>
+                <label htmlFor="purpose">Purpose <span style={{ color:"#ef4444" }}>*</span></label>
                 <input
                   id="purpose"
                   type="text"
                   value={purpose}
                   placeholder="e.g., Team Meeting, Client Call, Training"
                   onChange={e => setPurpose(e.target.value)}
-                  className={styles.input}
+                  className={`${styles.input} ${formErrors.purpose ? styles.inputError : ""}`}
                 />
+                {formErrors.purpose && <span className={styles.errorText}>{formErrors.purpose}</span>}
               </div>
 
               {/* ── Team Members ── */}

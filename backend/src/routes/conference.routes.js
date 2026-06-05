@@ -1066,7 +1066,7 @@ router.post("/bookings", async (req, res) => {
       teamMembers = [],
     } = req.body;
 
-    if (!room_id || !booked_by || !booking_date || !start_time || !end_time) {
+    if (!room_id || !booked_by || !booking_date || !start_time || !end_time || !(purpose || "").trim()) {
       return res.status(400).json({ message: "All required fields must be provided" });
     }
 

@@ -769,7 +769,7 @@ router.post("/company/:slug/book", async (req, res) => {
     const cleanPurpose = String(purpose || "").trim();
 
     // Validate required fields
-    if (!room_id || !email || !booking_date || !rawStartTime || !rawEndTime) {
+    if (!room_id || !email || !booking_date || !rawStartTime || !rawEndTime || !cleanPurpose) {
       return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
     }
 

@@ -266,6 +266,7 @@ export default function ConferenceBookPage() {
   const [formError,    setFormError]    = useState("");
   const [submitting,   setSubmitting]   = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState("");
+  const [confirmPreview, setConfirmPreview] = useState(null);
 
   // Book on behalf of
   const [onBehalfOf, setOnBehalfOf] = useState(null);
@@ -416,14 +417,31 @@ export default function ConferenceBookPage() {
 
   const startMinutes = useMemo(() => startTime ? ampmToMinutes(startTime) : null, [startTime]);
 
-  const handleBook = async () => {
+  const handleBook = () => {
     if (!bookingDate) { setFormError("Date is required"); return; }
     if (!startTime)   { setFormError("Start time is required"); return; }
     if (!endTime)     { setFormError("End time is required"); return; }
     if (ampmToMinutes(endTime) <= ampmToMinutes(startTime)) {
       setFormError("End time must be after start time"); return;
     }
-    setFormError(""); setSubmitting(true);
+    if (!purpose.trim()) { setFormError("Purpose is required"); return; }
+    setFormError("");
+    setConfirmPreview({
+      room:       selected.room_name,
+      roomNumber: selected.room_number,
+      date:       bookingDate,
+      startTime,
+      endTime,
+      bookedBy:   onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin",
+      purpose:    purpose.trim(),
+      department: department.trim() || "—",
+      teamMembers,
+    });
+  };
+
+  const handleConfirmBooking = async () => {
+    setConfirmPreview(null);
+    setSubmitting(true);
     try {
       await apiFetch("/api/conference/bookings", {
         method: "POST",
@@ -431,14 +449,13 @@ export default function ConferenceBookPage() {
           room_id:      selected.id,
           booked_by:    onBehalfOf?.email || "ADMIN",
           department:   department.trim() || undefined,
-          purpose:      purpose.trim()    || undefined,
+          purpose:      purpose.trim(),
           booking_date: bookingDate,
           start_time:   startTime,
           end_time:     endTime,
           teamMembers:  teamMembers.length > 0 ? teamMembers : undefined,
         }),
       });
-      // Reset form, refresh sidebar, show success
       setStartTime(""); setEndTime(""); setPurpose(""); setDepartment("");
       setOnBehalfOf(null); setTeamMembers([]); setMemberSearch("");
       setBookingSuccess(`Booking confirmed for ${selected.room_name} on ${bookingDate} · ${startTime} – ${endTime}`);
@@ -462,6 +479,60 @@ export default function ConferenceBookPage() {
 
   return (
     <div style={{ background:"#f8f7ff", fontFamily:"'Nunito', sans-serif", paddingBottom:"3rem" }}>
+
+      {/* ===== CONFIRM BOOKING MODAL ===== */}
+      {confirmPreview && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1000,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setConfirmPreview(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:420,
+            overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+            {/* Modal header */}
+            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+              <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
+                textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Confirm Booking</div>
+              <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>{confirmPreview.room}</div>
+              <div style={{ fontSize:"0.78rem", color:"rgba(255,255,255,0.8)", marginTop:2 }}>
+                Room #{confirmPreview.roomNumber}
+              </div>
+            </div>
+            {/* Details */}
+            <div style={{ padding:"1.25rem 1.5rem" }}>
+              {[
+                ["Date",       confirmPreview.date],
+                ["Time",       `${confirmPreview.startTime} – ${confirmPreview.endTime}`],
+                ["Booked by",  confirmPreview.bookedBy],
+                ["Purpose",    confirmPreview.purpose],
+                ["Department", confirmPreview.department],
+                ...(confirmPreview.teamMembers.length > 0
+                  ? [["Team", confirmPreview.teamMembers.map(m => m.name).join(", ")]]
+                  : []),
+              ].map(([label, value]) => (
+                <div key={label} style={{ display:"flex", justifyContent:"space-between",
+                  padding:"0.5rem 0", borderBottom:"1px solid #f3f4f6", fontSize:"0.83rem" }}>
+                  <span style={{ color:"#6b7280", fontWeight:600 }}>{label}</span>
+                  <span style={{ color:"#111827", fontWeight:700, textAlign:"right", maxWidth:"60%" }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            {/* Actions */}
+            <div style={{ padding:"0 1.5rem 1.25rem", display:"flex", gap:"0.75rem" }}>
+              <button onClick={() => setConfirmPreview(null)}
+                style={{ flex:1, padding:"0.7rem", borderRadius:"0.625rem", border:"1px solid #d1d5db",
+                  background:"#fff", color:"#374151", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleConfirmBooking} disabled={submitting}
+                style={{ flex:2, padding:"0.7rem", borderRadius:"0.625rem", border:"none",
+                  background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                  fontSize:"0.875rem", fontWeight:700, cursor: submitting ? "not-allowed" : "pointer" }}>
+                {submitting ? "Booking…" : "Confirm Booking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <header style={{ padding:"0.75rem 1.25rem", background:"#fff",
@@ -593,7 +664,7 @@ export default function ConferenceBookPage() {
                     <input value={department} onChange={e => setDepartment(e.target.value)} placeholder="e.g. Engineering" style={inp} />
                   </div>
                   <div>
-                    <label style={lbl}>Purpose <span style={opt}>(optional)</span></label>
+                    <label style={lbl}>Purpose <span style={{ color:"#ef4444" }}>*</span></label>
                     <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="e.g. Weekly sync" style={inp} />
                   </div>
                   <div style={{ gridColumn:"1/-1" }} ref={memberRef}>
