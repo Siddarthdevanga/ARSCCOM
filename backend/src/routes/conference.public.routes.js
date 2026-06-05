@@ -769,7 +769,7 @@ router.post("/company/:slug/book", async (req, res) => {
     const cleanPurpose = String(purpose || "").trim();
 
     // Validate required fields
-    if (!room_id || !email || !cleanDepartment || !booking_date || !rawStartTime || !rawEndTime) {
+    if (!room_id || !email || !booking_date || !rawStartTime || !rawEndTime) {
       return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
     }
 
@@ -994,12 +994,21 @@ router.patch("/company/:slug/bookings/:id", async (req, res) => {
     );
 
     const room = await getRoomById(booking.room_id);
+    const updatedBooking = { ...booking, start_time: startTime, end_time: endTime };
 
-    await sendUpdateEmail(userEmail, company, room, {
-      booking_date: booking.booking_date,
-      start_time: startTime,
-      end_time: endTime
-    });
+    await sendUpdateEmail(userEmail, company, room, updatedBooking);
+
+    // Email team members
+    const [members] = await db.query(
+      `SELECT name, email FROM conference_booking_members WHERE booking_id = ?`,
+      [bookingId]
+    );
+    for (const m of members) {
+      if (m.email) {
+        try { await sendUpdateEmail(m.email, company, room, updatedBooking); }
+        catch (e) { console.warn("[RESCHEDULE_MEMBER_EMAIL]", e.message); }
+      }
+    }
 
     console.log(`[BOOKING_UPDATED] ID: ${bookingId}`);
 
@@ -1062,11 +1071,24 @@ router.patch("/company/:slug/bookings/:id/cancel", async (req, res) => {
 
     const room = await getRoomById(booking.room_id);
 
+    // Fetch team members before cancellation record is gone
+    const [members] = await db.query(
+      `SELECT name, email FROM conference_booking_members WHERE booking_id = ?`,
+      [bookingId]
+    );
+
     try {
       await sendCancelEmail(email, company, room, booking);
     } catch (emailError) {
       console.warn("[CANCEL_EMAIL_WARNING]", emailError.message);
-      // Don't fail the cancellation if email fails
+    }
+
+    // Email each team member about the cancellation
+    for (const m of members) {
+      if (m.email) {
+        try { await sendCancelEmail(m.email, company, room, { ...booking, booked_by: email }); }
+        catch (e) { console.warn("[CANCEL_MEMBER_EMAIL]", e.message); }
+      }
     }
 
     console.log(`[BOOKING_CANCELLED] ID: ${bookingId}, Company: ${company.id}`);
