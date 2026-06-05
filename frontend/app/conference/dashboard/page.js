@@ -606,37 +606,10 @@ export default function ConferenceDashboard() {
           <button className={styles.shareUrlBtn} onClick={handleShareURL}>Share</button>
         </div>
 
-        {/* ===== ROOM SCHEDULE — filter tabs + calendar as one block ===== */}
+        {/* ===== ROOM SCHEDULE ===== */}
         {allRooms.length > 0 && (
           <section style={{ padding:"0 1rem 1.5rem" }}>
-            {/* Unified header row: title left, tabs right */}
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-              marginBottom:"1rem", flexWrap:"wrap", gap:"0.5rem" }}>
-              <div style={{ display:"flex", alignItems:"center", gap:"0.5rem" }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>
-                  {filterDay === "yesterday" ? "Yesterday's" : filterDay === "tomorrow" ? "Tomorrow's" : "Today's"} Room Schedule
-                </span>
-              </div>
-              {/* Filter tabs */}
-              <div style={{ display:"flex", gap:"0.35rem" }}>
-                {["yesterday", "today", "tomorrow"].map((d) => (
-                  <button key={d}
-                    onClick={() => setFilterDay(d)}
-                    style={{ padding:"0.3rem 0.875rem", borderRadius:99, fontSize:"0.78rem",
-                      fontWeight:700, cursor:"pointer", border:"none",
-                      background: filterDay === d ? "#7c3aed" : "#ede9fe",
-                      color: filterDay === d ? "#fff" : "#7c3aed",
-                      transition:"all 0.15s" }}>
-                    {d.charAt(0).toUpperCase() + d.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <TodayTimeline rooms={allRooms} bookings={filteredBookings} filterDay={filterDay} />
+            <TodayTimeline rooms={allRooms} bookings={filteredBookings} filterDay={filterDay} setFilterDay={setFilterDay} />
           </section>
         )}
 
@@ -834,7 +807,7 @@ const PALETTE = [
 ];
 
 /* ─── Today's Timeline — vertical Google Calendar style ──── */
-function TodayTimeline({ rooms, bookings, filterDay = "today" }) {
+function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
   const isToday = filterDay === "today";
   const HOUR_H   = 68;
   const START_H  = 7;
@@ -871,30 +844,43 @@ function TodayTimeline({ rooms, bookings, filterDay = "today" }) {
   return (
     <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden", position:"relative" }}>
       {/* Top bar */}
-      <div style={{ padding:"0.5rem 0.875rem", borderBottom:"1px solid #f3f4f6",
-        display:"flex", justifyContent:"space-between", alignItems:"center",
+      <div style={{ padding:"0.625rem 0.875rem", borderBottom:"1px solid #f3f4f6",
+        display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem",
         background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
-        <div style={{ display:"flex", gap:"0.5rem" }}>
-          {rooms.map((r,i) => (
-            <span key={r.id} style={{ display:"flex", alignItems:"center", gap:"0.25rem",
-              fontSize:"0.65rem", color:"rgba(255,255,255,0.9)", fontWeight:700 }}>
-              <span style={{ width:8, height:8, borderRadius:"50%",
-                background: PALETTE[i % PALETTE.length].dim, display:"inline-block" }} />
-              {r.room_name}
-            </span>
-          ))}
+        {/* Title */}
+        <div style={{ display:"flex", alignItems:"center", gap:"0.4rem" }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span style={{ fontSize:"0.8rem", fontWeight:800, color:"#fff" }}>
+            {filterDay === "yesterday" ? "Yesterday's" : filterDay === "tomorrow" ? "Tomorrow's" : "Today's"} Room Schedule
+          </span>
         </div>
-        {isToday && (
-          <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
-            style={{ fontSize:"0.7rem", color:"#7c3aed", background:"#fff", border:"none",
-              borderRadius:"99px", padding:"0.2rem 0.7rem", cursor:"pointer", fontWeight:700,
-              display:"flex", alignItems:"center", gap:"0.3rem" }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-            </svg>
-            Now
-          </button>
-        )}
+        {/* Filter + Now */}
+        <div style={{ display:"flex", alignItems:"center", gap:"0.35rem" }}>
+          {setFilterDay && ["yesterday","today","tomorrow"].map((d) => (
+            <button key={d} onClick={() => setFilterDay(d)}
+              style={{ padding:"0.2rem 0.7rem", borderRadius:99, fontSize:"0.7rem", fontWeight:700,
+                cursor:"pointer", border:"none",
+                background: filterDay === d ? "#fff" : "rgba(255,255,255,0.18)",
+                color: filterDay === d ? "#7c3aed" : "#fff",
+                transition:"all 0.15s" }}>
+              {d.charAt(0).toUpperCase() + d.slice(1)}
+            </button>
+          ))}
+          {isToday && (
+            <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
+              style={{ fontSize:"0.7rem", color:"#7c3aed", background:"#fff", border:"none",
+                borderRadius:"99px", padding:"0.2rem 0.7rem", cursor:"pointer", fontWeight:700,
+                display:"flex", alignItems:"center", gap:"0.3rem", marginLeft:"0.25rem" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              Now
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Room name header row */}
