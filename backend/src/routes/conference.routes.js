@@ -496,7 +496,7 @@ const enrichRoomsWithStatus = async (rooms, companyId) => {
   const roomIds = rooms.map(r => r.id);
   const ph = roomIds.map(() => "?").join(",");
   const [bookings] = await db.query(
-    `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose,
+    `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose, cb.department,
             COALESCE(ce.name, '') AS employee_name
      FROM conference_bookings cb
      LEFT JOIN company_employees ce
@@ -521,6 +521,7 @@ const enrichRoomsWithStatus = async (rooms, companyId) => {
     byRoom[b.room_id].push({
       start_time: b.start_time, end_time: b.end_time,
       booked_by: `${name} (${b.booked_by})`, purpose: b.purpose || null,
+      department: b.department || null,
     });
   }
   return Promise.all(rooms.map(async (room) => {

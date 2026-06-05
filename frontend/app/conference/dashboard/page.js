@@ -58,7 +58,7 @@ export default function ConferenceDashboard() {
   const [editRoomImage, setEditRoomImage] = useState(null);
   const [editRoomImagePreview, setEditRoomImagePreview] = useState(null);
 
-  const [filterDay, setFilterDay] = useState("today");
+  const [filterDay] = useState("today");
 
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -609,7 +609,7 @@ export default function ConferenceDashboard() {
         {/* ===== ROOM SCHEDULE ===== */}
         {allRooms.length > 0 && (
           <section style={{ padding:"0.75rem 1rem 1.5rem" }}>
-            <TodayTimeline rooms={allRooms} bookings={filteredBookings} filterDay={filterDay} setFilterDay={setFilterDay} />
+            <TodayTimeline rooms={allRooms} bookings={bookings} />
           </section>
         )}
 
@@ -807,8 +807,7 @@ const PALETTE = [
 ];
 
 /* ─── Today's Timeline — vertical Google Calendar style ──── */
-function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
-  const isToday = filterDay === "today";
+function TodayTimeline({ rooms, bookings }) {
   const HOUR_H   = 68;
   const START_H  = 7;
   const END_H    = 22;
@@ -817,23 +816,84 @@ function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
   const hours    = Array.from({ length: END_H - START_H }, (_, i) => START_H + i);
   const totalH   = (END_H - START_H) * HOUR_H;
   const scrollRef = React.useRef(null);
-  const [popup, setPopup] = React.useState(null); // { booking, x, y }
+  const [popup, setPopup] = React.useState(null);
 
   const toMin = (t) => { if (!t) return 0; const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
   const fmt   = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h % 12 || 12}:${String(m).padStart(2,"0")} ${h >= 12 ? "PM" : "AM"}`; };
+  const normDate = (d) => {
+    if (!d) return "";
+    if (d instanceof Date) return d.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    return String(d).includes("T") ? String(d).split("T")[0] : String(d);
+  };
 
-  const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
-  const nowMin = nowIST.getHours() * 60 + nowIST.getMinutes();
-  const nowTop = ((nowMin - START_H * 60) / 60) * HOUR_H;
-  const nowH   = nowIST.getHours();
+  const nowIST  = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+  const todayIST = nowIST.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+  const nowMin  = nowIST.getHours() * 60 + nowIST.getMinutes();
+  const nowTop  = ((nowMin - START_H * 60) / 60) * HOUR_H;
+  const nowH    = nowIST.getHours();
+
+  const [calView, setCalView] = React.useState("day");
+  const [calDate, setCalDate] = React.useState(todayIST);
+  const isToday = calDate === todayIST;
+
+  const getWeekDates = (ds) => {
+    const d = new Date(ds + "T12:00:00"); const day = d.getDay();
+    const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    return Array.from({length:7}, (_, i) => { const dt = new Date(mon); dt.setDate(mon.getDate() + i); return dt.toLocaleDateString("en-CA"); });
+  };
+  const getMonthCells = (ds) => {
+    const [y, m] = ds.split("-").map(Number);
+    const first = new Date(y, m-1, 1); const last = new Date(y, m, 0);
+    const pad = first.getDay() === 0 ? 6 : first.getDay() - 1;
+    const cells = Array(pad).fill(null);
+    for (let d = 1; d <= last.getDate(); d++) cells.push(`${y}-${String(m).padStart(2,"0")}-${String(d).padStart(2,"0")}`);
+    return cells;
+  };
+  const navigate = (dir) => {
+    if (calView === "day") {
+      const d = new Date(calDate + "T12:00:00"); d.setDate(d.getDate() + dir); setCalDate(d.toLocaleDateString("en-CA"));
+    } else if (calView === "week") {
+      const d = new Date(calDate + "T12:00:00"); d.setDate(d.getDate() + 7 * dir); setCalDate(d.toLocaleDateString("en-CA"));
+    } else {
+      const [y, m] = calDate.split("-").map(Number); const nm = m + dir;
+      const ny = y + Math.floor((nm - 1) / 12); const am = ((nm - 1 + 120) % 12) + 1;
+      setCalDate(`${ny}-${String(am).padStart(2,"0")}-01`);
+    }
+  };
+
+  const allNorm = React.useMemo(() =>
+    bookings.filter(b => b.status === "BOOKED").map(b => ({ ...b, _date: normDate(b.booking_date) })),
+  [bookings]);
+
+  const dayBookings = React.useMemo(() => allNorm.filter(b => b._date === calDate), [allNorm, calDate]);
+  const bookingsByDate = React.useMemo(() => {
+    const map = {};
+    allNorm.forEach(b => { if (!map[b._date]) map[b._date] = []; map[b._date].push(b); });
+    return map;
+  }, [allNorm]);
+
+  const weekDates   = React.useMemo(() => calView === "week"  ? getWeekDates(calDate)  : [], [calView, calDate]);
+  const monthCells  = React.useMemo(() => calView === "month" ? getMonthCells(calDate) : [], [calView, calDate]);
+
+  const headerLabel = React.useMemo(() => {
+    if (calView === "day") {
+      const d = new Date(calDate + "T12:00:00");
+      return d.toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" });
+    }
+    if (calView === "week") {
+      const wk = getWeekDates(calDate);
+      const f = new Date(wk[0] + "T12:00:00"), l = new Date(wk[6] + "T12:00:00");
+      return `${f.toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${l.toLocaleDateString("en-US",{month:"short",day:"numeric"})}, ${l.getFullYear()}`;
+    }
+    const [y, m] = calDate.split("-").map(Number);
+    return new Date(y, m-1, 1).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+  }, [calView, calDate]);
 
   React.useEffect(() => {
-    if (!scrollRef.current) return;
-    // Scroll to now for today, scroll to top for other days
+    if (!scrollRef.current || calView !== "day") return;
     scrollRef.current.scrollTop = isToday ? Math.max(0, nowTop - 100) : 0;
-  }, [nowTop, isToday]);
+  }, [nowTop, isToday, calView]);
 
-  // Close popup on outside click
   React.useEffect(() => {
     if (!popup) return;
     const handler = () => setPopup(null);
@@ -841,11 +901,62 @@ function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
     return () => document.removeEventListener("click", handler);
   }, [popup]);
 
+  const PopupBookingDetail = ({ b, color, roomName }) => {
+    const fmt2 = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
+    const members = b.team_members || [];
+    const displayName = b.booked_by === "ADMIN" ? "Admin" : (b.booked_by_name || b.booked_by?.replace(/\s*\([^)]*\)$/,"").trim() || b.booked_by);
+    const displayEmail = b.booked_by?.includes("@") ? b.booked_by : null;
+    return (
+      <div onClick={e => e.stopPropagation()}
+        style={{ position:"fixed", top: Math.min(popup.y, window.innerHeight - 360),
+          left: Math.min(popup.x, window.innerWidth - 280),
+          width:268, background:"#fff", borderRadius:"0.875rem",
+          boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:1000, overflow:"hidden" }}>
+        <div style={{ background:color, padding:"0.75rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+          <div>
+            <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>{roomName}</div>
+            <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.85)", marginTop:2 }}>{fmt2(b.start_time)} – {fmt2(b.end_time)}</div>
+          </div>
+          <button onClick={() => setPopup(null)} style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff", borderRadius:"50%", width:22, height:22, cursor:"pointer", fontSize:"0.85rem", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+        </div>
+        <div style={{ padding:"0.75rem 1rem", fontSize:"0.78rem", color:"#374151" }}>
+          <div style={{ marginBottom:"0.4rem" }}>
+            <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Booked By</span>
+            <div style={{ fontWeight:700, color:"#1f2937", marginTop:2 }}>{displayName}</div>
+            {displayEmail && <div style={{ fontSize:"0.65rem", color:"#6b7280", marginTop:1 }}>{displayEmail}</div>}
+          </div>
+          {b.department && (
+            <div style={{ marginBottom:"0.4rem" }}>
+              <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Department</span>
+              <div style={{ fontWeight:600, marginTop:2 }}>{b.department}</div>
+            </div>
+          )}
+          {b.purpose && (
+            <div style={{ marginBottom:"0.4rem" }}>
+              <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Purpose</span>
+              <div style={{ marginTop:2 }}>{b.purpose}</div>
+            </div>
+          )}
+          {members.length > 0 && (
+            <div>
+              <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Team Members</span>
+              <div style={{ marginTop:4, display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
+                {members.map((mem, i) => (
+                  <span key={i} style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:99, padding:"2px 8px", fontSize:"0.68rem", fontWeight:700 }}>{mem.name || mem}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden", position:"relative" }}>
       {/* Top bar */}
-      <div style={{ padding:"0.625rem 0.875rem", borderBottom:"1px solid #f3f4f6",
-        display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.5rem",
+      <div style={{ padding:"0.5rem 0.875rem", borderBottom:"1px solid #f3f4f6",
+        display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.4rem",
         background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
         {/* Title */}
         <div style={{ display:"flex", alignItems:"center", gap:"0.4rem" }}>
@@ -853,186 +964,234 @@ function TodayTimeline({ rooms, bookings, filterDay = "today", setFilterDay }) {
             <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          <span style={{ fontSize:"0.8rem", fontWeight:800, color:"#fff" }}>
-            {filterDay === "yesterday" ? "Yesterday's" : filterDay === "tomorrow" ? "Tomorrow's" : "Today's"} Room Schedule
-          </span>
+          <span style={{ fontSize:"0.8rem", fontWeight:800, color:"#fff" }}>Room Schedule</span>
         </div>
-        {/* Filter + Now */}
-        <div style={{ display:"flex", alignItems:"center", gap:"0.35rem" }}>
-          {setFilterDay && ["yesterday","today","tomorrow"].map((d) => (
-            <button key={d} onClick={() => setFilterDay(d)}
-              style={{ padding:"0.2rem 0.7rem", borderRadius:99, fontSize:"0.7rem", fontWeight:700,
-                cursor:"pointer", border:"none",
-                background: filterDay === d ? "#fff" : "rgba(255,255,255,0.18)",
-                color: filterDay === d ? "#7c3aed" : "#fff",
-                transition:"all 0.15s" }}>
-              {d.charAt(0).toUpperCase() + d.slice(1)}
+        {/* Controls */}
+        <div style={{ display:"flex", alignItems:"center", gap:"0.3rem", flexWrap:"wrap" }}>
+          {/* View tabs */}
+          {["day","week","month"].map(v => (
+            <button key={v} onClick={() => setCalView(v)}
+              style={{ padding:"0.17rem 0.5rem", borderRadius:99, fontSize:"0.65rem", fontWeight:700, cursor:"pointer", border:"none",
+                background: calView === v ? "#fff" : "rgba(255,255,255,0.18)",
+                color: calView === v ? "#7c3aed" : "#fff", transition:"all 0.15s" }}>
+              {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
           ))}
-          {isToday && (
+          {/* Date nav */}
+          <div style={{ display:"flex", alignItems:"center", gap:"0.15rem", background:"rgba(255,255,255,0.12)", borderRadius:99, padding:"0.1rem 0.3rem" }}>
+            <button onClick={() => navigate(-1)} style={{ background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:"1rem", lineHeight:1, padding:"0 2px" }}>‹</button>
+            <span style={{ fontSize:"0.62rem", fontWeight:700, color:"#fff", minWidth:90, textAlign:"center" }}>{headerLabel}</span>
+            <button onClick={() => navigate(1)} style={{ background:"none", border:"none", color:"#fff", cursor:"pointer", fontSize:"1rem", lineHeight:1, padding:"0 2px" }}>›</button>
+          </div>
+          {!isToday && calView === "day" && (
+            <button onClick={() => setCalDate(todayIST)}
+              style={{ padding:"0.17rem 0.5rem", borderRadius:99, fontSize:"0.65rem", fontWeight:700, cursor:"pointer", border:"none", background:"rgba(255,255,255,0.18)", color:"#fff" }}>
+              Today
+            </button>
+          )}
+          {/* Date / Month picker */}
+          {calView === "month" ? (
+            <input type="month" value={calDate.slice(0,7)} onChange={e => setCalDate(e.target.value + "-01")}
+              style={{ fontSize:"0.6rem", borderRadius:6, border:"1px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.15)", color:"#fff", padding:"0.12rem 0.25rem", cursor:"pointer" }} />
+          ) : (
+            <input type="date" value={calDate} onChange={e => e.target.value && setCalDate(e.target.value)}
+              style={{ fontSize:"0.6rem", borderRadius:6, border:"1px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.15)", color:"#fff", padding:"0.12rem 0.25rem", cursor:"pointer" }} />
+          )}
+          {calView === "day" && isToday && (
             <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
-              style={{ fontSize:"0.7rem", color:"#7c3aed", background:"#fff", border:"none",
-                borderRadius:"99px", padding:"0.2rem 0.7rem", cursor:"pointer", fontWeight:700,
-                display:"flex", alignItems:"center", gap:"0.3rem", marginLeft:"0.25rem" }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-              </svg>
+              style={{ fontSize:"0.65rem", color:"#7c3aed", background:"#fff", border:"none", borderRadius:99, padding:"0.17rem 0.5rem", cursor:"pointer", fontWeight:700, display:"flex", alignItems:"center", gap:"0.2rem" }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Now
             </button>
           )}
         </div>
       </div>
 
-      {/* Room name header row */}
-      <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa",
-        position:"sticky", top:0, zIndex:10, overflowX:"hidden" }}>
-        <div style={{ width:TIME_W, flexShrink:0 }} />
-        {rooms.map((r, i) => {
-          const col = PALETTE[i % PALETTE.length];
-          return (
-            <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.4rem",
-              borderLeft:"1px solid #e5e7eb", textAlign:"center",
-              borderTop:`3px solid ${col.bg}` }}>
-              <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937",
-                whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
-              <div style={{ fontSize:"0.6rem", color:"#9ca3af" }}>#{r.room_number}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Scrollable body */}
-      <div ref={scrollRef} style={{ overflowY:"auto", overflowX:"auto", maxHeight:460 }}>
-        <div style={{ display:"flex", position:"relative", minWidth: TIME_W + rooms.length * ROOM_COL }}>
-
-          {/* Time labels */}
-          <div style={{ width:TIME_W, flexShrink:0 }}>
-            {hours.map(h => (
-              <div key={h} style={{ height:HOUR_H, display:"flex", alignItems:"flex-start",
-                paddingTop:5, paddingRight:8, justifyContent:"flex-end", boxSizing:"border-box" }}>
-                <span style={{ fontSize:"0.62rem", fontWeight: h === nowH ? 800 : 400,
-                  color: h === nowH ? "#7c3aed" : "#9ca3af", whiteSpace:"nowrap" }}>
-                  {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h-12} PM`}
-                </span>
+      {/* ── Day View ── */}
+      {calView === "day" && (
+        <>
+          <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa", position:"sticky", top:0, zIndex:10, overflowX:"hidden" }}>
+            <div style={{ width:TIME_W, flexShrink:0 }} />
+            {rooms.map((r, i) => {
+              const col = PALETTE[i % PALETTE.length];
+              return (
+                <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.4rem", borderLeft:"1px solid #e5e7eb", textAlign:"center", borderTop:`3px solid ${col.bg}` }}>
+                  <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
+                  <div style={{ fontSize:"0.6rem", color:"#9ca3af" }}>#{r.room_number}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div ref={scrollRef} style={{ overflowY:"auto", overflowX:"auto", maxHeight:460 }}>
+            <div style={{ display:"flex", position:"relative", minWidth: TIME_W + rooms.length * ROOM_COL }}>
+              <div style={{ width:TIME_W, flexShrink:0 }}>
+                {hours.map(h => (
+                  <div key={h} style={{ height:HOUR_H, display:"flex", alignItems:"flex-start", paddingTop:5, paddingRight:8, justifyContent:"flex-end", boxSizing:"border-box" }}>
+                    <span style={{ fontSize:"0.62rem", fontWeight: h === nowH ? 800 : 400, color: h === nowH ? "#7c3aed" : "#9ca3af", whiteSpace:"nowrap" }}>
+                      {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h-12} PM`}
+                    </span>
+                  </div>
+                ))}
               </div>
+              {rooms.map((room, ri) => {
+                const col = PALETTE[ri % PALETTE.length];
+                const roomBk = dayBookings.filter(b => b.room_id === room.id);
+                return (
+                  <div key={room.id} style={{ width:ROOM_COL, flexShrink:0, position:"relative", borderLeft:"1px solid #e5e7eb", height:totalH }}>
+                    {hours.map(h => (
+                      <div key={h} style={{ position:"absolute", top:(h-START_H)*HOUR_H, left:0, right:0, height:HOUR_H, borderBottom:"1px solid #f3f4f6", background: h === nowH ? `${col.bg}08` : h % 2 === 0 ? "#fafafa" : "#fff" }} />
+                    ))}
+                    {isToday && nowTop >= 0 && nowTop <= totalH && (
+                      <div style={{ position:"absolute", top:nowTop, left:0, right:0, height:2, background:"#ef4444", zIndex:5, display:"flex", alignItems:"center" }}>
+                        <div style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444", marginLeft:-4, flexShrink:0 }} />
+                      </div>
+                    )}
+                    {roomBk.map((b, bi) => {
+                      const sMin = toMin(b.start_time), eMin = toMin(b.end_time);
+                      const top  = Math.max(0, ((sMin - START_H*60)/60)*HOUR_H);
+                      const ht   = Math.max(22, ((eMin-sMin)/60)*HOUR_H - 3);
+                      const isPast = eMin < nowMin, isNow = sMin <= nowMin && eMin > nowMin;
+                      const bg = isPast ? col.dim : col.bg;
+                      const name = b.booked_by_name || b.booked_by?.split("(")?.[0]?.trim() || "Booked";
+                      return (
+                        <div key={bi}
+                          onClick={(e) => { e.stopPropagation(); setPopup({ booking:b, roomName:room.room_name, color:col.bg, x:e.clientX, y:e.clientY }); }}
+                          style={{ position:"absolute", top, left:3, right:3, height:ht, background:bg, borderRadius:6, padding:"3px 6px", overflow:"hidden", zIndex:3, cursor:"pointer", opacity: isPast ? 0.55 : 1, boxShadow: isNow ? `0 0 0 2px #fff, 0 0 0 4px ${col.bg}` : `0 1px 4px ${col.bg}44`, transition:"transform 0.1s" }}
+                          onMouseEnter={e => e.currentTarget.style.transform="scale(1.02)"}
+                          onMouseLeave={e => e.currentTarget.style.transform=""}>
+                          <div style={{ fontSize:"0.6rem", color:"#fff", fontWeight:700, lineHeight:1.3, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{fmt(b.start_time)}</div>
+                          {ht > 34 && <div style={{ fontSize:"0.58rem", color:"rgba(255,255,255,0.9)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{name}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Week View ── */}
+      {calView === "week" && (
+        <div style={{ overflowX:"auto" }}>
+          <div style={{ display:"grid", gridTemplateColumns:`repeat(7, minmax(100px, 1fr))`, borderTop:"1px solid #f3f4f6" }}>
+            {weekDates.map((d, di) => {
+              const dateObj = new Date(d + "T12:00:00");
+              const dayBks = bookingsByDate[d] || [];
+              const isTd = d === todayIST;
+              return (
+                <div key={d}
+                  onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
+                  style={{ padding:"0.6rem 0.5rem", borderLeft: di > 0 ? "1px solid #f3f4f6" : "none", cursor:"pointer", minHeight:130, background: isTd ? "#f5f3ff" : "#fff" }}
+                  onMouseEnter={e => !isTd && (e.currentTarget.style.background="#fafafa")}
+                  onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fff")}>
+                  <div style={{ fontSize:"0.58rem", color: isTd ? "#7c3aed" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
+                    {dateObj.toLocaleDateString("en-US",{weekday:"short"})}
+                  </div>
+                  <div style={{ fontSize:"1rem", fontWeight:800, color: isTd ? "#7c3aed" : "#1f2937", marginBottom:"0.3rem" }}>{dateObj.getDate()}</div>
+                  {dayBks.length === 0
+                    ? <div style={{ fontSize:"0.58rem", color:"#d1d5db" }}>No bookings</div>
+                    : <>
+                        <div style={{ fontSize:"0.6rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.2rem" }}>{dayBks.length} booking{dayBks.length !== 1 ? "s" : ""}</div>
+                        {dayBks.slice(0,3).map((b, i) => {
+                          const rIdx = rooms.findIndex(r => r.id === b.room_id);
+                          const color = PALETTE[rIdx >= 0 ? rIdx % PALETTE.length : 0].bg;
+                          return (
+                            <div key={i} style={{ fontSize:"0.56rem", color:"#374151", marginBottom:2, padding:"1px 4px", borderLeft:`2px solid ${color}`, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              {fmt(b.start_time)} · {b.room_name}
+                            </div>
+                          );
+                        })}
+                        {dayBks.length > 3 && <div style={{ fontSize:"0.54rem", color:"#9ca3af" }}>+{dayBks.length - 3} more</div>}
+                      </>
+                  }
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── Month View ── */}
+      {calView === "month" && (
+        <div style={{ padding:"0.5rem" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.25rem" }}>
+            {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
+              <div key={d} style={{ textAlign:"center", fontSize:"0.6rem", fontWeight:700, color:"#9ca3af", padding:"0.2rem 0" }}>{d}</div>
             ))}
           </div>
-
-          {/* Room columns */}
-          {rooms.map((room, ri) => {
-            const col = PALETTE[ri % PALETTE.length];
-            const roomBk = bookings.filter(b => b.room_id === room.id);
-            return (
-              <div key={room.id} style={{ width:ROOM_COL, flexShrink:0, position:"relative",
-                borderLeft:"1px solid #e5e7eb", height:totalH }}>
-                {/* Hour bands */}
-                {hours.map(h => (
-                  <div key={h} style={{ position:"absolute", top:(h-START_H)*HOUR_H, left:0, right:0,
-                    height:HOUR_H, borderBottom:"1px solid #f3f4f6",
-                    background: h === nowH ? `${col.bg}08` : h % 2 === 0 ? "#fafafa" : "#fff" }} />
-                ))}
-                {/* Now line — only on today's view */}
-                {isToday && nowTop >= 0 && nowTop <= totalH && (
-                  <div style={{ position:"absolute", top:nowTop, left:0, right:0, height:2,
-                    background:"#ef4444", zIndex:5, display:"flex", alignItems:"center" }}>
-                    <div style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444", marginLeft:-4, flexShrink:0 }} />
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:2 }}>
+            {monthCells.map((d, idx) => {
+              if (!d) return <div key={idx} />;
+              const isTd = d === todayIST;
+              const dayBks = bookingsByDate[d] || [];
+              return (
+                <div key={d}
+                  onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
+                  style={{ padding:"0.3rem", borderRadius:"0.35rem", minHeight:52, cursor:"pointer",
+                    background: isTd ? "#f5f3ff" : "#fafafa", border:`1px solid ${isTd ? "#a78bfa" : "#e5e7eb"}` }}
+                  onMouseEnter={e => !isTd && (e.currentTarget.style.background="#f3f4f6")}
+                  onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fafafa")}>
+                  <div style={{ fontSize:"0.7rem", fontWeight: isTd ? 800 : 600, color: isTd ? "#7c3aed" : "#374151" }}>
+                    {parseInt(d.split("-")[2])}
                   </div>
-                )}
-                {/* Booking blocks */}
-                {roomBk.map((b, bi) => {
-                  const sMin  = toMin(b.start_time);
-                  const eMin  = toMin(b.end_time);
-                  const top   = Math.max(0, ((sMin - START_H*60)/60)*HOUR_H);
-                  const ht    = Math.max(22, ((eMin-sMin)/60)*HOUR_H - 3);
-                  const isPast = eMin < nowMin;
-                  const isNow  = sMin <= nowMin && eMin > nowMin;
-                  const bg     = isPast ? col.dim : col.bg;
-                  const name   = b.booked_by_name || b.booked_by?.split("(")?.[0]?.trim() || b.department || "Booked";
-                  return (
-                    <div key={bi}
-                      onClick={(e) => { e.stopPropagation(); setPopup({ booking:b, roomName:room.room_name, color:col.bg, x:e.clientX, y:e.clientY }); }}
-                      style={{ position:"absolute", top, left:3, right:3, height:ht,
-                        background:bg, borderRadius:6, padding:"3px 6px", overflow:"hidden",
-                        zIndex:3, cursor:"pointer", opacity: isPast ? 0.55 : 1,
-                        boxShadow: isNow ? `0 0 0 2px #fff, 0 0 0 4px ${col.bg}` : `0 1px 4px ${col.bg}44`,
-                        transition:"transform 0.1s" }}
-                      onMouseEnter={e => e.currentTarget.style.transform="scale(1.02)"}
-                      onMouseLeave={e => e.currentTarget.style.transform=""}>
-                      <div style={{ fontSize:"0.6rem", color:"#fff", fontWeight:700, lineHeight:1.3,
-                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {fmt(b.start_time)}
-                      </div>
-                      {ht > 34 && (
-                        <div style={{ fontSize:"0.58rem", color:"rgba(255,255,255,0.9)",
-                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                          {name}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
+                  {dayBks.length > 0 && (
+                    <span style={{ fontSize:"0.55rem", fontWeight:700, color:"#7c3aed", background:"#ede9fe", borderRadius:99, padding:"0 4px", marginTop:2, display:"inline-block" }}>
+                      {dayBks.length}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Click Popup ── */}
-      {popup && (() => {
-        const b = popup.booking;
+      {/* ── Single booking popup (day view click) ── */}
+      {popup && !popup.type && (
+        <PopupBookingDetail b={popup.booking} color={popup.color} roomName={popup.roomName} />
+      )}
+
+      {/* ── Day summary popup (week/month click) ── */}
+      {popup?.type === "day" && (() => {
         const fmt2 = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
-        const members = b.team_members || [];
+        const dl = new Date(popup.date + "T12:00:00").toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
         return (
           <div onClick={e => e.stopPropagation()}
-            style={{ position:"fixed", top: Math.min(popup.y, window.innerHeight - 320),
-              left: Math.min(popup.x, window.innerWidth - 280),
-              width:268, background:"#fff", borderRadius:"0.875rem",
-              boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:1000, overflow:"hidden" }}>
-            <div style={{ background:popup.color, padding:"0.75rem 1rem",
-              display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+            style={{ position:"fixed", top: Math.min(popup.y, window.innerHeight - 360), left: Math.min(popup.x, window.innerWidth - 280),
+              width:272, background:"#fff", borderRadius:"0.875rem", boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:1000, overflow:"hidden" }}>
+            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"0.75rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
-                <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>{popup.roomName}</div>
+                <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>{dl}</div>
                 <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.85)", marginTop:2 }}>
-                  {fmt2(b.start_time)} – {fmt2(b.end_time)}
+                  {popup.bookings.length} booking{popup.bookings.length !== 1 ? "s" : ""}
                 </div>
               </div>
-              <button onClick={() => setPopup(null)}
-                style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff",
-                  borderRadius:"50%", width:22, height:22, cursor:"pointer", fontSize:"0.85rem",
-                  display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+              <button onClick={() => setPopup(null)} style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff", borderRadius:"50%", width:22, height:22, cursor:"pointer", fontSize:"0.85rem", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
             </div>
-            <div style={{ padding:"0.75rem 1rem", fontSize:"0.78rem", color:"#374151" }}>
-              <div style={{ marginBottom:"0.4rem" }}>
-                <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Booked By</span>
-                <div style={{ fontWeight:700, color:"#1f2937", marginTop:2 }}>
-                  {b.booked_by === "ADMIN" ? "Admin" : (b.booked_by_name || b.booked_by)}
-                </div>
-              </div>
-              {b.department && (
-                <div style={{ marginBottom:"0.4rem" }}>
-                  <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Department</span>
-                  <div style={{ fontWeight:600, marginTop:2 }}>{b.department}</div>
-                </div>
-              )}
-              {b.purpose && (
-                <div style={{ marginBottom:"0.4rem" }}>
-                  <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Purpose</span>
-                  <div style={{ marginTop:2 }}>{b.purpose}</div>
-                </div>
-              )}
-              {members.length > 0 && (
-                <div>
-                  <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Team Members</span>
-                  <div style={{ marginTop:4, display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
-                    {members.map((m, i) => (
-                      <span key={i} style={{ background:"#ede9fe", color:"#7c3aed",
-                        borderRadius:99, padding:"2px 8px", fontSize:"0.68rem", fontWeight:700 }}>
-                        {m.name || m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
+            <div style={{ maxHeight:280, overflowY:"auto" }}>
+              {popup.bookings.length === 0
+                ? <div style={{ padding:"1rem", textAlign:"center", color:"#9ca3af", fontSize:"0.75rem" }}>No bookings</div>
+                : popup.bookings.map((b, i) => {
+                    const rIdx = rooms.findIndex(r => r.id === b.room_id);
+                    const col  = PALETTE[rIdx >= 0 ? rIdx % PALETTE.length : 0];
+                    const name = b.booked_by_name || b.booked_by?.split("(")?.[0]?.trim() || b.booked_by;
+                    const email = b.booked_by?.includes("@") ? b.booked_by : null;
+                    return (
+                      <div key={i} style={{ padding:"0.55rem 1rem", borderBottom:"1px solid #f3f4f6", borderLeft:`3px solid ${col.bg}` }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                          <div style={{ fontWeight:700, fontSize:"0.75rem", color:"#1f2937" }}>{b.room_name}</div>
+                          <div style={{ fontSize:"0.62rem", color:"#7c3aed", fontWeight:700 }}>{fmt2(b.start_time)}–{fmt2(b.end_time)}</div>
+                        </div>
+                        <div style={{ fontSize:"0.68rem", color:"#374151", marginTop:2, fontWeight:600 }}>{name}</div>
+                        {email && <div style={{ fontSize:"0.62rem", color:"#6b7280" }}>{email}</div>}
+                        {b.department && <div style={{ fontSize:"0.62rem", color:"#9ca3af", marginTop:1 }}>{b.department}</div>}
+                        {b.purpose && <div style={{ fontSize:"0.62rem", color:"#6b7280", marginTop:1 }}>"{b.purpose}"</div>}
+                      </div>
+                    );
+                  })
+              }
             </div>
           </div>
         );

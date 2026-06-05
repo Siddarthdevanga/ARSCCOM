@@ -547,7 +547,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
     if (roomIds.length) {
       const placeholders = roomIds.map(() => "?").join(",");
       const [bookings] = await db.query(
-        `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose,
+        `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose, cb.department,
                 COALESCE(ce.name, '') AS employee_name
          FROM conference_bookings cb
          LEFT JOIN company_employees ce
@@ -571,10 +571,12 @@ router.get("/company/:slug/rooms", async (req, res) => {
         if (!bookingsByRoom[b.room_id]) bookingsByRoom[b.room_id] = [];
         const name = b.employee_name || b.booked_by;
         bookingsByRoom[b.room_id].push({
-          start_time: b.start_time,
-          end_time:   b.end_time,
-          booked_by:  name || b.booked_by,
-          purpose:    b.purpose || null,
+          start_time:      b.start_time,
+          end_time:        b.end_time,
+          booked_by:       name || b.booked_by,
+          booked_by_email: b.booked_by,
+          purpose:         b.purpose || null,
+          department:      b.department || null,
         });
       }
     }
@@ -1159,6 +1161,45 @@ router.patch("/company/:slug/bookings/:id/extend", async (req, res) => {
     res.json({ message: `Extended by ${extra} minutes`, new_end_time: newEndTime });
   } catch (error) {
     console.error("[PUBLIC][EXTEND]", error);
+    res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+});
+
+router.get("/company/:slug/rooms/bookings/range", async (req, res) => {
+  try {
+    const slug = normalizeSlug(req.params.slug);
+    const { start_date, end_date } = req.query;
+    if (!start_date || !end_date) return res.status(400).json({ message: "start_date and end_date required" });
+
+    const company = await getCompanyBySlug(slug, "id");
+    if (!company) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+
+    const [rows] = await db.query(
+      `SELECT cb.room_id, cb.booking_date, cb.start_time, cb.end_time,
+              cb.booked_by, cb.purpose, cb.department,
+              COALESCE(ce.name, '') AS employee_name
+       FROM conference_bookings cb
+       LEFT JOIN company_employees ce
+         ON ce.company_id = ? AND LOWER(ce.email) = LOWER(cb.booked_by) AND ce.is_active = 1
+       WHERE cb.company_id = ? AND cb.booking_date BETWEEN ? AND ? AND cb.status = 'BOOKED'
+       ORDER BY cb.booking_date ASC, cb.start_time ASC`,
+      [company.id, company.id, start_date, end_date]
+    );
+
+    res.json(rows.map(b => ({
+      room_id:         b.room_id,
+      booking_date:    b.booking_date instanceof Date
+        ? b.booking_date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" })
+        : String(b.booking_date).split("T")[0],
+      start_time:      b.start_time,
+      end_time:        b.end_time,
+      booked_by:       b.employee_name || b.booked_by,
+      booked_by_email: b.booked_by,
+      purpose:         b.purpose || null,
+      department:      b.department || null,
+    })));
+  } catch (err) {
+    console.error("[PUBLIC][RANGE]", err.message);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
   }
 });

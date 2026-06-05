@@ -284,7 +284,7 @@ const PUB_PALETTE = [
   "#7c3aed","#0891b2","#059669","#d97706","#dc2626","#9333ea","#0284c7","#16a34a",
 ];
 
-function PublicCalendarGrid({ rooms, scrollContainerRef }) {
+function PublicCalendarGrid({ rooms, scrollContainerRef, dayBookings }) {
   const HOUR_H  = 60;
   const START_H = 7;
   const END_H   = 22;
@@ -367,7 +367,7 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
                     <div style={{ width:7, height:7, borderRadius:"50%", background:"#ef4444", marginLeft:-3, flexShrink:0 }} />
                   </div>
                 )}
-                {(room.today_bookings || []).map((b, bi) => {
+                {(dayBookings ? (dayBookings[room.id] || []) : (room.today_bookings || [])).map((b, bi) => {
                   const sMin = toMin(b.start_time), eMin = toMin(b.end_time);
                   const top  = Math.max(0, ((sMin-START_H*60)/60)*HOUR_H);
                   const ht   = Math.max(18, ((eMin-sMin)/60)*HOUR_H - 2);
@@ -386,7 +386,7 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
                       {ht > 28 && (
                         <div style={{ fontSize:"0.54rem", color:"rgba(255,255,255,0.85)",
                           overflow:"hidden", whiteSpace:"nowrap", textOverflow:"ellipsis" }}>
-                          {b.booked_by?.split("(")[0]?.trim() || "Booked"}
+                          {b.booked_by || "Booked"}
                         </div>
                       )}
                     </div>
@@ -399,15 +399,13 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
       </div>
     </div>
 
-    {/* Booking popup */}
     {popup && (() => {
       const b = popup.booking;
-      const name = b.booked_by?.split("(")?.[0]?.trim() || "Booked";
       return (
         <div onClick={e => e.stopPropagation()}
-          style={{ position:"fixed", top: Math.min(popup.y + 8, window.innerHeight - 200),
-            left: Math.min(popup.x + 8, window.innerWidth - 240),
-            width:230, background:"#fff", borderRadius:"0.75rem",
+          style={{ position:"fixed", top: Math.min(popup.y + 8, window.innerHeight - 270),
+            left: Math.min(popup.x + 8, window.innerWidth - 250),
+            width:240, background:"#fff", borderRadius:"0.75rem",
             boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:9999, overflow:"hidden" }}>
           <div style={{ background:popup.color, padding:"0.625rem 0.875rem",
             display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
@@ -425,8 +423,17 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
           <div style={{ padding:"0.625rem 0.875rem", fontSize:"0.75rem", color:"#374151" }}>
             <div style={{ marginBottom:"0.35rem" }}>
               <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Booked By</span>
-              <div style={{ fontWeight:700, color:"#1f2937", marginTop:1 }}>{name}</div>
+              <div style={{ fontWeight:700, color:"#1f2937", marginTop:1 }}>{b.booked_by || "—"}</div>
+              {b.booked_by_email && b.booked_by_email !== b.booked_by && (
+                <div style={{ fontSize:"0.62rem", color:"#6b7280", marginTop:1 }}>{b.booked_by_email}</div>
+              )}
             </div>
+            {b.department && (
+              <div style={{ marginBottom:"0.35rem" }}>
+                <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Department</span>
+                <div style={{ marginTop:1 }}>{b.department}</div>
+              </div>
+            )}
             {b.purpose && (
               <div>
                 <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Purpose</span>
@@ -441,13 +448,266 @@ function PublicCalendarGrid({ rooms, scrollContainerRef }) {
   );
 }
 
-/* Thin wrapper that owns the scroll container ref */
-function CalendarScrollWrapper({ rooms }) {
+/* Wrapper that owns scroll ref + view state + week/month data */
+function CalendarScrollWrapper({ rooms, slug }) {
   const scrollRef = useRef(null);
+  const todayIST = useMemo(() => new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" }), []);
+
+  const [calView, setCalView] = useState("day");
+  const [calDate, setCalDate] = useState(todayIST);
+  const [rangeBookings, setRangeBookings] = useState(null);
+  const [rangeLoading, setRangeLoading] = useState(false);
+  const [dayPopup, setDayPopup] = useState(null);
+
+  const fmt = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
+
+  const getWeekDates = (ds) => {
+    const d = new Date(ds + "T12:00:00"); const day = d.getDay();
+    const mon = new Date(d); mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+    return Array.from({length:7}, (_, i) => { const dt = new Date(mon); dt.setDate(mon.getDate() + i); return dt.toLocaleDateString("en-CA"); });
+  };
+  const getMonthCells = (ds) => {
+    const [y, m] = ds.split("-").map(Number);
+    const first = new Date(y, m-1, 1); const last = new Date(y, m, 0);
+    const pad = first.getDay() === 0 ? 6 : first.getDay() - 1;
+    const cells = Array(pad).fill(null);
+    for (let dd = 1; dd <= last.getDate(); dd++) cells.push(`${y}-${String(m).padStart(2,"0")}-${String(dd).padStart(2,"0")}`);
+    return cells;
+  };
+  const navigate = (dir) => {
+    if (calView === "day") {
+      const d = new Date(calDate + "T12:00:00"); d.setDate(d.getDate() + dir); setCalDate(d.toLocaleDateString("en-CA"));
+    } else if (calView === "week") {
+      const d = new Date(calDate + "T12:00:00"); d.setDate(d.getDate() + 7 * dir); setCalDate(d.toLocaleDateString("en-CA"));
+    } else {
+      const [y, m] = calDate.split("-").map(Number); const nm = m + dir;
+      const ny = y + Math.floor((nm - 1) / 12); const am = ((nm - 1 + 120) % 12) + 1;
+      setCalDate(`${ny}-${String(am).padStart(2,"0")}-01`);
+    }
+  };
+
+  const weekDates  = useMemo(() => calView === "week"  ? getWeekDates(calDate)  : [], [calView, calDate]);
+  const monthCells = useMemo(() => calView === "month" ? getMonthCells(calDate) : [], [calView, calDate]);
+
+  const headerLabel = useMemo(() => {
+    if (calView === "day") {
+      const d = new Date(calDate + "T12:00:00");
+      return d.toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric", year:"numeric" });
+    }
+    if (calView === "week") {
+      const wk = getWeekDates(calDate);
+      const f = new Date(wk[0] + "T12:00:00"), l = new Date(wk[6] + "T12:00:00");
+      return `${f.toLocaleDateString("en-US",{month:"short",day:"numeric"})} – ${l.toLocaleDateString("en-US",{month:"short",day:"numeric"})}, ${l.getFullYear()}`;
+    }
+    const [y, m] = calDate.split("-").map(Number);
+    return new Date(y, m-1, 1).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+  }, [calView, calDate]);
+
+  useEffect(() => {
+    if (calView === "day" && calDate === todayIST) { setRangeBookings(null); return; }
+    const [start, end] = calView === "week"
+      ? (() => { const wk = getWeekDates(calDate); return [wk[0], wk[6]]; })()
+      : calView === "month"
+        ? (() => { const c = getMonthCells(calDate).filter(Boolean); return [c[0], c[c.length-1]]; })()
+        : [calDate, calDate];
+    if (!start || !end) return;
+    setRangeLoading(true);
+    fetch(`${API}/api/public/conference/company/${slug}/rooms/bookings/range?start_date=${start}&end_date=${end}`)
+      .then(r => r.ok ? r.json() : [])
+      .then(data => {
+        const byDate = {};
+        const byRoom = {};
+        data.forEach(b => {
+          if (!byDate[b.booking_date]) byDate[b.booking_date] = [];
+          byDate[b.booking_date].push(b);
+          if (!byRoom[b.room_id]) byRoom[b.room_id] = [];
+          byRoom[b.room_id].push(b);
+        });
+        setRangeBookings({ byDate, byRoom });
+      })
+      .catch(() => setRangeBookings(null))
+      .finally(() => setRangeLoading(false));
+  }, [calView, calDate, slug, todayIST]);
+
+  useEffect(() => {
+    if (!dayPopup) return;
+    const handler = () => setDayPopup(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [dayPopup]);
+
+  const dayViewBookings = useMemo(() => {
+    if (calView !== "day" || !rangeBookings) return null;
+    return rangeBookings.byRoom;
+  }, [calView, rangeBookings]);
+
   return (
-    <div ref={scrollRef}
-      style={{ height:"100%", overflow:"auto", WebkitOverflowScrolling:"touch" }}>
-      <PublicCalendarGrid rooms={rooms} scrollContainerRef={scrollRef} />
+    <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
+      {/* View controls */}
+      <div style={{ padding:"0.4rem 0.75rem", borderBottom:"1px solid #f3f4f6",
+        background:"linear-gradient(135deg,#7c3aed,#a78bfa)",
+        display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"0.3rem", flexShrink:0 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"0.25rem" }}>
+          {["day","week","month"].map(v => (
+            <button key={v} onClick={() => setCalView(v)}
+              style={{ padding:"0.15rem 0.45rem", borderRadius:99, fontSize:"0.62rem", fontWeight:700, cursor:"pointer", border:"none",
+                background: calView === v ? "#fff" : "rgba(255,255,255,0.18)",
+                color: calView === v ? "#7c3aed" : "#fff" }}>
+              {v.charAt(0).toUpperCase() + v.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div style={{ display:"flex", alignItems:"center", gap:"0.2rem" }}>
+          <button onClick={() => navigate(-1)} style={{ background:"rgba(255,255,255,0.18)", border:"none", color:"#fff", borderRadius:99, width:22, height:22, cursor:"pointer", fontSize:"0.9rem", display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
+          <span style={{ fontSize:"0.6rem", fontWeight:700, color:"#fff", minWidth:80, textAlign:"center" }}>{headerLabel}</span>
+          <button onClick={() => navigate(1)} style={{ background:"rgba(255,255,255,0.18)", border:"none", color:"#fff", borderRadius:99, width:22, height:22, cursor:"pointer", fontSize:"0.9rem", display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
+          {(calView !== "day" || calDate !== todayIST) && (
+            <button onClick={() => { setCalDate(todayIST); setCalView("day"); }}
+              style={{ padding:"0.15rem 0.4rem", borderRadius:99, fontSize:"0.6rem", fontWeight:700, cursor:"pointer", border:"none", background:"rgba(255,255,255,0.18)", color:"#fff" }}>
+              Today
+            </button>
+          )}
+          {calView === "month" ? (
+            <input type="month" value={calDate.slice(0,7)} onChange={e => setCalDate(e.target.value + "-01")}
+              style={{ fontSize:"0.58rem", borderRadius:5, border:"1px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.15)", color:"#fff", padding:"0.1rem 0.2rem", cursor:"pointer" }} />
+          ) : (
+            <input type="date" value={calDate} onChange={e => e.target.value && setCalDate(e.target.value)}
+              style={{ fontSize:"0.58rem", borderRadius:5, border:"1px solid rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.15)", color:"#fff", padding:"0.1rem 0.2rem", cursor:"pointer" }} />
+          )}
+        </div>
+      </div>
+
+      {rangeLoading && (
+        <div style={{ padding:"0.75rem", textAlign:"center", fontSize:"0.7rem", color:"#9ca3af" }}>Loading…</div>
+      )}
+
+      {/* Day view */}
+      {calView === "day" && !rangeLoading && (
+        <div ref={scrollRef} style={{ flex:1, overflow:"auto", WebkitOverflowScrolling:"touch" }}>
+          <PublicCalendarGrid rooms={rooms} scrollContainerRef={scrollRef} dayBookings={dayViewBookings} />
+        </div>
+      )}
+
+      {/* Week view */}
+      {calView === "week" && !rangeLoading && (
+        <div style={{ flex:1, overflowY:"auto" }}>
+          <div style={{ display:"grid", gridTemplateColumns:`repeat(7, minmax(80px, 1fr))` }}>
+            {weekDates.map((d, di) => {
+              const dateObj = new Date(d + "T12:00:00");
+              const dayBks = rangeBookings?.byDate?.[d] || [];
+              const isTd = d === todayIST;
+              return (
+                <div key={d}
+                  onClick={(e) => { e.stopPropagation(); setDayPopup({ date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
+                  style={{ padding:"0.5rem 0.4rem", borderLeft: di > 0 ? "1px solid #f3f4f6" : "none", borderBottom:"1px solid #f3f4f6",
+                    cursor:"pointer", minHeight:110, background: isTd ? "#f5f3ff" : "#fff" }}
+                  onMouseEnter={e => !isTd && (e.currentTarget.style.background="#fafafa")}
+                  onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fff")}>
+                  <div style={{ fontSize:"0.56rem", color: isTd ? "#7c3aed" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
+                    {dateObj.toLocaleDateString("en-US",{weekday:"short"})}
+                  </div>
+                  <div style={{ fontSize:"0.9rem", fontWeight:800, color: isTd ? "#7c3aed" : "#1f2937", marginBottom:"0.2rem" }}>{dateObj.getDate()}</div>
+                  {dayBks.length === 0
+                    ? <div style={{ fontSize:"0.55rem", color:"#d1d5db" }}>–</div>
+                    : <>
+                        <div style={{ fontSize:"0.58rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.15rem" }}>{dayBks.length} bk.</div>
+                        {dayBks.slice(0,3).map((b, i) => {
+                          const rIdx = rooms.findIndex(r => r.id === b.room_id);
+                          const color = PUB_PALETTE[rIdx >= 0 ? rIdx % PUB_PALETTE.length : 0];
+                          return (
+                            <div key={i} style={{ fontSize:"0.53rem", color:"#374151", marginBottom:2, padding:"1px 3px", borderLeft:`2px solid ${color}`, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                              {fmt(b.start_time)}
+                            </div>
+                          );
+                        })}
+                        {dayBks.length > 3 && <div style={{ fontSize:"0.5rem", color:"#9ca3af" }}>+{dayBks.length-3}</div>}
+                      </>
+                  }
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Month view */}
+      {calView === "month" && !rangeLoading && (
+        <div style={{ flex:1, overflowY:"auto", padding:"0.4rem" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.2rem" }}>
+            {["M","T","W","T","F","S","S"].map((d, i) => (
+              <div key={i} style={{ textAlign:"center", fontSize:"0.58rem", fontWeight:700, color:"#9ca3af" }}>{d}</div>
+            ))}
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:2 }}>
+            {monthCells.map((d, idx) => {
+              if (!d) return <div key={idx} />;
+              const isTd = d === todayIST;
+              const dayBks = rangeBookings?.byDate?.[d] || [];
+              return (
+                <div key={d}
+                  onClick={(e) => { e.stopPropagation(); setDayPopup({ date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
+                  style={{ padding:"0.25rem", borderRadius:"0.3rem", minHeight:42, cursor:"pointer",
+                    background: isTd ? "#f5f3ff" : "#fafafa", border:`1px solid ${isTd ? "#a78bfa" : "#e5e7eb"}` }}
+                  onMouseEnter={e => !isTd && (e.currentTarget.style.background="#f3f4f6")}
+                  onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fafafa")}>
+                  <div style={{ fontSize:"0.65rem", fontWeight: isTd ? 800 : 600, color: isTd ? "#7c3aed" : "#374151" }}>
+                    {parseInt(d.split("-")[2])}
+                  </div>
+                  {dayBks.length > 0 && (
+                    <span style={{ fontSize:"0.52rem", fontWeight:700, color:"#7c3aed", background:"#ede9fe", borderRadius:99, padding:"0 3px", display:"inline-block", marginTop:1 }}>
+                      {dayBks.length}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Day summary popup (week/month cell click) */}
+      {dayPopup && (() => {
+        const fmt2 = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
+        const dl = new Date(dayPopup.date + "T12:00:00").toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
+        return (
+          <div onClick={e => e.stopPropagation()}
+            style={{ position:"fixed", top: Math.min(dayPopup.y + 8, window.innerHeight - 320), left: Math.min(dayPopup.x + 8, window.innerWidth - 260),
+              width:252, background:"#fff", borderRadius:"0.75rem", boxShadow:"0 8px 32px rgba(0,0,0,0.2)", zIndex:9999, overflow:"hidden" }}>
+            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"0.625rem 0.875rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <div>
+                <div style={{ fontWeight:800, fontSize:"0.8rem", color:"#fff" }}>{dl}</div>
+                <div style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.85)", marginTop:1 }}>{dayPopup.bookings.length} booking{dayPopup.bookings.length !== 1 ? "s" : ""}</div>
+              </div>
+              <button onClick={() => setDayPopup(null)} style={{ background:"rgba(255,255,255,0.2)", border:"none", color:"#fff", borderRadius:"50%", width:20, height:20, cursor:"pointer", fontSize:"0.8rem", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+            </div>
+            <div style={{ maxHeight:260, overflowY:"auto" }}>
+              {dayPopup.bookings.length === 0
+                ? <div style={{ padding:"1rem", textAlign:"center", color:"#9ca3af", fontSize:"0.7rem" }}>No bookings</div>
+                : dayPopup.bookings.map((b, i) => {
+                    const rIdx = rooms.findIndex(r => r.id === b.room_id);
+                    const color = PUB_PALETTE[rIdx >= 0 ? rIdx % PUB_PALETTE.length : 0];
+                    return (
+                      <div key={i} style={{ padding:"0.5rem 0.875rem", borderBottom:"1px solid #f3f4f6", borderLeft:`3px solid ${color}` }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
+                          <div style={{ fontWeight:700, fontSize:"0.72rem", color:"#1f2937" }}>
+                            {rooms.find(r=>r.id===b.room_id)?.room_name || "Room"}
+                          </div>
+                          <div style={{ fontSize:"0.6rem", color:"#7c3aed", fontWeight:700 }}>{fmt2(b.start_time)}–{fmt2(b.end_time)}</div>
+                        </div>
+                        <div style={{ fontSize:"0.65rem", color:"#374151", marginTop:2, fontWeight:600 }}>{b.booked_by}</div>
+                        {b.booked_by_email && b.booked_by_email !== b.booked_by && (
+                          <div style={{ fontSize:"0.6rem", color:"#6b7280" }}>{b.booked_by_email}</div>
+                        )}
+                        {b.department && <div style={{ fontSize:"0.6rem", color:"#9ca3af", marginTop:1 }}>{b.department}</div>}
+                        {b.purpose && <div style={{ fontSize:"0.6rem", color:"#6b7280", marginTop:1 }}>"{b.purpose}"</div>}
+                      </div>
+                    );
+                  })
+              }
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -1300,7 +1560,7 @@ export default function PublicConferenceBooking() {
             </div>
 
             {/* Calendar grid — both-axis scrollable */}
-            <CalendarScrollWrapper rooms={rooms} />
+            <CalendarScrollWrapper rooms={rooms} slug={slug} />
           </div>
           <style>{`
             @keyframes slideUp {
