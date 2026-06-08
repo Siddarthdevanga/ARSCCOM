@@ -23,7 +23,7 @@ const CONFIG = {
     tagline:    'Visitor Management Platform',
     logo:       '/Brand Logo.png',
     email:      'admin@promeet.zodopt.com',
-    whatsapp:   'https://api.whatsapp.com/send/?phone=918647878785&text=Hi+can+i+get+to+know+more+about+promeet&type=phone_number&app_absent=0',
+    whatsapp:   'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Promeet+-+Visitor+Management+Platform',
     loginUrl:   'https://www.promeet.zodopt.com/auth/login',
     phone:      '+91 8647878785',
   },
