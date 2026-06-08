@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import * as service from "../services/superadmin.service.js";
+import { db } from "../config/db.js";
 
 const JWT_EXPIRY = "12h";
 
@@ -344,3 +345,22 @@ export const deleteCompany = async (req, res) => {
     return res.status(status).json({ success: false, message: err.message });
   }
 };
+
+/* ======================================================
+   WHATSAPP LEADS
+   GET /api/superadmin/whatsapp-leads
+====================================================== */
+export const whatsappLeads = async (req, res) => {
+  try {
+    const [leads] = await db.query(
+      `SELECT id, phone, name, last_action, created_at, updated_at
+       FROM whatsapp_leads
+       ORDER BY updated_at DESC`
+    );
+    return res.status(200).json({ success: true, leads });
+  } catch (err) {
+    console.error("SUPERADMIN WHATSAPP LEADS ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+

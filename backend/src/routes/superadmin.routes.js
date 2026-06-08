@@ -19,6 +19,9 @@ router.use(authenticateSuperAdmin);
 // ── Dashboard ──────────────────────────────────────────
 router.get("/dashboard", ctrl.dashboard);
 
+// ── WhatsApp Leads ─────────────────────────────────────
+router.get("/whatsapp-leads", ctrl.whatsappLeads);
+
 // ── Company ────────────────────────────────────────────
 router.get   ("/companies/:id",                   ctrl.companyDetail);
 router.get   ("/companies/:id/users",             ctrl.companyUsers);

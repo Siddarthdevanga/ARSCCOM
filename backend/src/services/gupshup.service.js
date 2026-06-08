@@ -16,8 +16,12 @@ const getConfig = () => {
 const API_URL = "https://api.gupshup.io/wa/api/v1/msg";
 
 const INTRO_TEXT =
-  "👋 Welcome to *Promeet* — the smart conference room booking platform!\n\n" +
-  "Promeet helps teams book meeting rooms effortlessly, manage schedules, and stay organised — all in one place.\n\n" +
+  "*Welcome to Promeet!*\n\n" +
+  "Thank you for your interest in Promeet.\n" +
+  "✨ Manage visitor check-ins, visitor records, and visitor history digitally.\n" +
+  "✨ Track visitor details, photos, meeting hosts, and items carried.\n" +
+  "✨ Get real-time visibility of checked-in/check-out visitors with detailed analytics.\n" +
+  "✨ Book and manage meeting & conference rooms efficiently from a single platform.\n\n" +
   "What would you like to do?";
 
 export const sendIntroMessage = async (destination) => {
@@ -32,8 +36,8 @@ export const sendIntroMessage = async (destination) => {
       header: "Promeet",
     },
     options: [
-      { type: "text", title: "Book a Demo" },
-      { type: "text", title: "Start with Promeet" },
+      { type: "text", title: "Book A Demo" },
+      { type: "text", title: "Start With Promeet" },
     ],
   });
 

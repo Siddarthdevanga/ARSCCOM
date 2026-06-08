@@ -37,6 +37,7 @@ async function handleInbound(body) {
 
   const msgType = payload.type;
   const phone   = payload.sender?.phone;
+  const name    = payload.sender?.name || null;
   console.log(`[WA] eventType=${eventType} msgType=${msgType} phone=${phone}`);
 
   if (!phone) {
@@ -58,21 +59,21 @@ async function handleInbound(body) {
       inner.button_reply?.title ||
       "";
     console.log(`[WA] Button pressed: "${buttonTitle}" (msgType=${msgType})`);
-    await handleButton(phone, buttonTitle);
+    await handleButton(phone, buttonTitle, name);
     return;
   }
 
   // text, image, audio, or any other — send intro
   console.log(`[WA] Inbound message from ${phone}, sending intro`);
-  await upsertLead(phone, null);
+  await upsertLead(phone, name, null);
   await sendIntroMessage(phone);
 }
 
-async function handleButton(phone, title) {
+async function handleButton(phone, title, name) {
   const normalised = (title || "").trim().toLowerCase();
 
   if (normalised === "start with promeet") {
-    await upsertLead(phone, "start_with_promeet");
+    await upsertLead(phone, name, "start_with_promeet");
     await sendTextMessage(
       phone,
       "🚀 Get started with Promeet here:\nhttps://www.promeet.zodopt.com/auth/register"
@@ -81,25 +82,26 @@ async function handleButton(phone, title) {
   }
 
   if (normalised === "book a demo") {
-    await upsertLead(phone, "book_a_demo");
+    await upsertLead(phone, name, "book_a_demo");
     // Redirect configured in Gupshup dashboard — no bot reply needed
     return;
   }
 
   // Unknown input — re-send intro
-  await upsertLead(phone, null);
+  await upsertLead(phone, name, null);
   await sendIntroMessage(phone);
 }
 
-async function upsertLead(phone, action) {
+async function upsertLead(phone, name, action) {
   try {
     await db.query(
-      `INSERT INTO whatsapp_leads (phone, last_action, updated_at)
-       VALUES (?, ?, NOW())
+      `INSERT INTO whatsapp_leads (phone, name, last_action, updated_at)
+       VALUES (?, ?, ?, NOW())
        ON DUPLICATE KEY UPDATE
+         name        = COALESCE(VALUES(name), name),
          last_action = COALESCE(VALUES(last_action), last_action),
          updated_at  = NOW()`,
-      [phone, action]
+      [phone, name, action]
     );
   } catch (e) {
     console.error("[WA LEAD UPSERT]", e.message);
