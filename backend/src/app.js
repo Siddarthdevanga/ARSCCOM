@@ -22,6 +22,7 @@ import superAdminRoutes from "./routes/superadmin.routes.js";
 import employeeRoutes from "./routes/employee.routes.js";
 import visitResponseRoutes from "./routes/visitResponse.routes.js";
 import logoRoutes from "./routes/logo.routes.js";
+import whatsappRoutes from "./routes/whatsapp.routes.js";
 
 /* ================= RATE LIMITERS ================= */
 import {
@@ -224,6 +225,9 @@ app.use("/api/billing/cron",   generalLimiter, billingCron);
 
 // Webhooks — no rate limiting (Zoho needs to call freely)
 app.use("/api/webhook", webhookRoutes);
+
+// WhatsApp bot (Gupshup inbound) — no auth, no rate limit
+app.use("/api/whatsapp", whatsappRoutes);
 
 /* =====================================================
    SUPERADMIN ROUTES
