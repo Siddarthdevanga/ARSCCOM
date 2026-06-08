@@ -73,17 +73,14 @@ async function handleButton(phone, title, name) {
   const normalised = (title || "").trim().toLowerCase();
 
   if (normalised === "start with promeet") {
+    // CTA template: URL opens directly, no bot reply needed
     await upsertLead(phone, name, "start_with_promeet");
-    await sendTextMessage(
-      phone,
-      "🚀 Get started with Promeet here:\nhttps://www.promeet.zodopt.com/auth/register"
-    );
     return;
   }
 
   if (normalised === "book a demo") {
+    // CTA template: URL opens directly, no bot reply needed
     await upsertLead(phone, name, "book_a_demo");
-    // Redirect configured in Gupshup dashboard — no bot reply needed
     return;
   }
 

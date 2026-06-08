@@ -5,15 +5,16 @@ import axios from "axios";
 // are untouched — this service uses the BOT_ prefixed vars only.
 const getConfig = () => {
   const cfg = {
-    apiKey  : process.env.GUPSHUP_BOT_API_KEY        || "",
-    appName : process.env.GUPSHUP_BOT_APP_NAME       || "",
-    srcNum  : process.env.GUPSHUP_BOT_SOURCE_NUMBER  || "",
+    apiKey       : process.env.GUPSHUP_BOT_API_KEY           || "",
+    appName      : process.env.GUPSHUP_BOT_APP_NAME          || "",
+    srcNum       : process.env.GUPSHUP_BOT_SOURCE_NUMBER     || "",
+    introTemplate: process.env.GUPSHUP_BOT_INTRO_TEMPLATE    || "",
   };
-  console.log(`[WA CONFIG] appName="${cfg.appName}" srcNum="${cfg.srcNum}" apiKey="${cfg.apiKey ? cfg.apiKey.slice(0,6) + "…" : "MISSING"}"`);
   return cfg;
 };
 
-const API_URL = "https://api.gupshup.io/wa/api/v1/msg";
+const MSG_URL      = "https://api.gupshup.io/wa/api/v1/msg";
+const TEMPLATE_URL = "https://api.gupshup.io/wa/api/v1/template/msg";
 
 const INTRO_TEXT =
   "*Welcome to Promeet!*\n\n" +
@@ -21,20 +22,44 @@ const INTRO_TEXT =
   "✨ Manage visitor check-ins, visitor records, and visitor history digitally.\n" +
   "✨ Track visitor details, photos, meeting hosts, and items carried.\n" +
   "✨ Get real-time visibility of checked-in/check-out visitors with detailed analytics.\n" +
-  "✨ Book and manage meeting & conference rooms efficiently from a single platform.\n\n" +
-  "What would you like to do?";
+  "✨ Book and manage meeting & conference rooms efficiently from a single platform.";
 
+/* --------------------------------------------------
+   Send intro — uses approved CTA-URL template if
+   GUPSHUP_BOT_INTRO_TEMPLATE is set, otherwise falls
+   back to quick_reply buttons (useful during testing
+   before the template is approved).
+-------------------------------------------------- */
 export const sendIntroMessage = async (destination) => {
-  const { apiKey, appName, srcNum } = getConfig();
+  const { apiKey, appName, srcNum, introTemplate } = getConfig();
 
+  if (introTemplate) {
+    // Template with CTA URL buttons — direct URL redirect on click, no bot reply needed
+    const template = JSON.stringify({ id: introTemplate, params: [] });
+    const params = new URLSearchParams({
+      channel: "whatsapp",
+      source: srcNum,
+      destination,
+      "src.name": appName,
+      template,
+    });
+    try {
+      const { data } = await axios.post(TEMPLATE_URL, params.toString(), {
+        headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      console.log("[WA] sendIntroTemplate response:", JSON.stringify(data));
+      return data;
+    } catch (err) {
+      console.error("[WA] sendIntroTemplate failed:", err.response?.status, JSON.stringify(err.response?.data));
+      throw err;
+    }
+  }
+
+  // Fallback: quick_reply buttons (no URL redirect, used before template is approved)
   const message = JSON.stringify({
     type: "quick_reply",
     msgid: `intro_${Date.now()}`,
-    content: {
-      type: "text",
-      text: INTRO_TEXT,
-      header: "Promeet",
-    },
+    content: { type: "text", text: INTRO_TEXT + "\n\nWhat would you like to do?" },
     options: [
       { type: "text", title: "Book A Demo" },
       { type: "text", title: "Start With Promeet" },
@@ -50,11 +75,8 @@ export const sendIntroMessage = async (destination) => {
   });
 
   try {
-    const { data } = await axios.post(API_URL, params.toString(), {
-      headers: {
-        apikey: apiKey,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+    const { data } = await axios.post(MSG_URL, params.toString(), {
+      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
     });
     console.log("[WA] sendIntroMessage response:", JSON.stringify(data));
     return data;
@@ -78,11 +100,8 @@ export const sendTextMessage = async (destination, text) => {
   });
 
   try {
-    const { data } = await axios.post(API_URL, params.toString(), {
-      headers: {
-        apikey: apiKey,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+    const { data } = await axios.post(MSG_URL, params.toString(), {
+      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
     });
     console.log("[WA] sendTextMessage response:", JSON.stringify(data));
     return data;
