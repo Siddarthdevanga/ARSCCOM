@@ -8,11 +8,12 @@ const getConfig = () => {
     apiKey  : process.env.GUPSHUP_BOT_API_KEY        || "",
     appName : process.env.GUPSHUP_BOT_APP_NAME       || "",
     srcNum  : process.env.GUPSHUP_BOT_SOURCE_NUMBER  || "",
-    baseUrl : "https://api.gupshup.io",
   };
   console.log(`[WA CONFIG] appName="${cfg.appName}" srcNum="${cfg.srcNum}" apiKey="${cfg.apiKey ? cfg.apiKey.slice(0,6) + "…" : "MISSING"}"`);
   return cfg;
 };
+
+const API_URL = "https://api.gupshup.io/wa/api/v1/msg";
 
 const INTRO_TEXT =
   "👋 Welcome to *Promeet* — the smart conference room booking platform!\n\n" +
@@ -20,7 +21,7 @@ const INTRO_TEXT =
   "What would you like to do?";
 
 export const sendIntroMessage = async (destination) => {
-  const { apiKey, appName, srcNum, baseUrl } = getConfig();
+  const { apiKey, appName, srcNum } = getConfig();
 
   const message = JSON.stringify({
     type: "quick_reply",
@@ -45,7 +46,7 @@ export const sendIntroMessage = async (destination) => {
   });
 
   try {
-    const { data } = await axios.post(`${baseUrl}/sm/api/v1/msg`, params.toString(), {
+    const { data } = await axios.post(API_URL, params.toString(), {
       headers: {
         apikey: apiKey,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -60,7 +61,7 @@ export const sendIntroMessage = async (destination) => {
 };
 
 export const sendTextMessage = async (destination, text) => {
-  const { apiKey, appName, srcNum, baseUrl } = getConfig();
+  const { apiKey, appName, srcNum } = getConfig();
 
   const message = JSON.stringify({ type: "text", text });
 
@@ -72,12 +73,17 @@ export const sendTextMessage = async (destination, text) => {
     message,
   });
 
-  const { data } = await axios.post(`${baseUrl}/sm/api/v1/msg`, params.toString(), {
-    headers: {
-      apikey: apiKey,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  });
-
-  return data;
+  try {
+    const { data } = await axios.post(API_URL, params.toString(), {
+      headers: {
+        apikey: apiKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+    console.log("[WA] sendTextMessage response:", JSON.stringify(data));
+    return data;
+  } catch (err) {
+    console.error("[WA] sendTextMessage failed:", err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
 };
