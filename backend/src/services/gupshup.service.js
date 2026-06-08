@@ -16,6 +16,35 @@ const getConfig = () => {
 const MSG_URL      = "https://api.gupshup.io/wa/api/v1/msg";
 const TEMPLATE_URL = "https://api.gupshup.io/wa/api/v1/template/msg";
 
+/* --------------------------------------------------
+   Generic template sender — used for demo confirmation
+   and reminder messages.
+   params: string[]  maps to {{1}}, {{2}}, {{3}} …
+-------------------------------------------------- */
+export const sendWhatsAppTemplate = async (destination, templateName, params = []) => {
+  const { apiKey, appName, srcNum } = getConfig();
+
+  const template = JSON.stringify({ id: templateName, params });
+  const body = new URLSearchParams({
+    channel: "whatsapp",
+    source: srcNum,
+    destination,
+    "src.name": appName,
+    template,
+  });
+
+  try {
+    const { data } = await axios.post(TEMPLATE_URL, body.toString(), {
+      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    console.log(`[WA] template "${templateName}" → ${destination}:`, JSON.stringify(data));
+    return data;
+  } catch (err) {
+    console.error(`[WA] template "${templateName}" failed:`, err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
+};
+
 const INTRO_TEXT =
   "*Welcome to Promeet!*\n\n" +
   "Thank you for your interest in Promeet.\n" +

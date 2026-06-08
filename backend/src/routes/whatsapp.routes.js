@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../config/db.js";
-import { sendIntroMessage, sendTextMessage } from "../services/gupshup.service.js";
+import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate } from "../services/gupshup.service.js";
 
 const router = Router();
 
@@ -21,6 +21,82 @@ router.post("/webhook", (req, res) => {
    GET /api/whatsapp/webhook  (Gupshup verification ping)
 -------------------------------------------------- */
 router.get("/webhook", (_req, res) => res.sendStatus(200));
+
+/* --------------------------------------------------
+   POST /api/whatsapp/appointment
+   Called by external booking system when a demo is booked.
+   Saves the appointment and sends WhatsApp confirmation.
+-------------------------------------------------- */
+router.post("/appointment", async (req, res) => {
+  res.sendStatus(200); // acknowledge immediately
+
+  setImmediate(() => handleAppointment(req.body).catch((e) =>
+    console.error("[APPOINTMENT ERROR]", e.message)
+  ));
+});
+
+async function handleAppointment(body) {
+  const name     = body?.name     || "";
+  const email    = body?.email    || "";
+  const rawPhone = body?.phone    || "";
+  const appDate  = body?.app_date || ""; // YYYY-MM-DD or similar
+  const appTime  = body?.app_time || ""; // HH:MM or HH:MM:SS
+
+  if (!rawPhone || !appDate || !appTime) {
+    console.warn("[APPOINTMENT] Missing required fields:", { rawPhone, appDate, appTime });
+    return;
+  }
+
+  // Normalise phone — strip non-digits, ensure starts with country code
+  const phone = rawPhone.replace(/\D/g, "");
+
+  // Parse date for storage — handle "DD MMM YYYY" or "YYYY-MM-DD"
+  let dateISO = appDate;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(appDate)) {
+    const parsed = new Date(appDate);
+    if (!isNaN(parsed)) dateISO = parsed.toISOString().split("T")[0];
+  }
+
+  // Normalise time to HH:MM:SS
+  const timeNorm = appTime.length === 5 ? `${appTime}:00` : appTime;
+
+  // Human-readable date for WhatsApp message
+  const prettyDate = new Date(`${dateISO}T12:00:00`).toLocaleDateString("en-IN", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+
+  // Pretty time: "14:30:00" → "2:30 PM"
+  const [hh, mm] = timeNorm.split(":").map(Number);
+  const period   = hh >= 12 ? "PM" : "AM";
+  const hour     = hh % 12 || 12;
+  const prettyTime = `${hour}:${String(mm).padStart(2, "0")} ${period}`;
+
+  try {
+    await db.query(
+      `INSERT INTO demo_appointments (name, email, phone, app_date, app_time)
+       VALUES (?, ?, ?, ?, ?)`,
+      [name, email, phone, dateISO, timeNorm]
+    );
+    console.log(`[APPOINTMENT] Saved: ${name} | ${phone} | ${dateISO} ${timeNorm}`);
+  } catch (e) {
+    console.error("[APPOINTMENT] DB save failed:", e.message);
+    return;
+  }
+
+  // Send WhatsApp confirmation template
+  const confirmTemplate = process.env.GUPSHUP_DEMO_CONFIRM_TEMPLATE || "";
+  if (!confirmTemplate) {
+    console.warn("[APPOINTMENT] GUPSHUP_DEMO_CONFIRM_TEMPLATE not set, skipping WhatsApp");
+    return;
+  }
+
+  try {
+    await sendWhatsAppTemplate(phone, confirmTemplate, [name || "there", prettyDate, prettyTime]);
+    console.log(`[APPOINTMENT] Confirmation sent to ${phone}`);
+  } catch (e) {
+    console.error("[APPOINTMENT] Confirmation WhatsApp failed:", e.message);
+  }
+}
 
 async function handleInbound(body) {
   // Actual Gupshup v2 structure:
