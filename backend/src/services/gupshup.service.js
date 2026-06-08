@@ -3,19 +3,15 @@ import axios from "axios";
 // Separate config for the Promeet bot app.
 // Existing OTP/pass secrets (GUPSHUP_API_KEY, GUPSHUP_APP_NAME, GUPSHUP_SOURCE_NUMBER)
 // are untouched — this service uses the BOT_ prefixed vars only.
-let _cfg = null;
-
 const getConfig = () => {
-  if (!_cfg) {
-    _cfg = {
-      apiKey  : process.env.GUPSHUP_BOT_API_KEY        || "",
-      appName : process.env.GUPSHUP_BOT_APP_NAME       || "",
-      srcNum  : process.env.GUPSHUP_BOT_SOURCE_NUMBER  || "",
-      baseUrl : "https://api.gupshup.io",
-    };
-    console.log(`[WA CONFIG] appName="${_cfg.appName}" srcNum="${_cfg.srcNum}" apiKey="${_cfg.apiKey ? _cfg.apiKey.slice(0,6) + "…" : "MISSING"}"`);
-  }
-  return _cfg;
+  const cfg = {
+    apiKey  : process.env.GUPSHUP_BOT_API_KEY        || "",
+    appName : process.env.GUPSHUP_BOT_APP_NAME       || "",
+    srcNum  : process.env.GUPSHUP_BOT_SOURCE_NUMBER  || "",
+    baseUrl : "https://api.gupshup.io",
+  };
+  console.log(`[WA CONFIG] appName="${cfg.appName}" srcNum="${cfg.srcNum}" apiKey="${cfg.apiKey ? cfg.apiKey.slice(0,6) + "…" : "MISSING"}"`);
+  return cfg;
 };
 
 const INTRO_TEXT =
