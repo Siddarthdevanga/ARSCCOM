@@ -23,45 +23,43 @@ router.post("/webhook", (req, res) => {
 router.get("/webhook", (_req, res) => res.sendStatus(200));
 
 async function handleInbound(body) {
-  // Gupshup Smart Messaging v2 payload:
-  // body.payload.type           — "message" | "message-event"
-  // body.payload.payload.type   — "text" | "quick_reply" | etc.
-  // body.payload.sender.phone   — sender's phone (E.164 without +)
-  const payload = body?.payload;
+  // Actual Gupshup v2 structure:
+  // body.type              — "message" | "message-event" (event kind)
+  // body.payload.type      — "text" | "quick_reply" | etc. (message content type)
+  // body.payload.sender.phone — sender phone (E.164 without +)
+  const eventType = body?.type;
+  const payload   = body?.payload;
+
   if (!payload) {
     console.log("[WA] No payload found in body, skipping");
     return;
   }
 
-  const type  = payload.type;
-  const phone = payload.sender?.phone;
-  console.log(`[WA] type=${type} phone=${phone}`);
+  const msgType = payload.type;
+  const phone   = payload.sender?.phone;
+  console.log(`[WA] eventType=${eventType} msgType=${msgType} phone=${phone}`);
 
   if (!phone) {
     console.log("[WA] No phone found, skipping");
     return;
   }
 
-  if (type === "message") {
-    const msgPayload = payload.payload;
-    const msgType    = msgPayload?.type;
-    console.log(`[WA] msgType=${msgType}`);
-
-    if (msgType === "quick_reply") {
-      const buttonTitle = msgPayload?.title || msgPayload?.text || "";
-      console.log(`[WA] Button pressed: "${buttonTitle}"`);
-      await handleButton(phone, buttonTitle);
-      return;
-    }
-
-    // Any plain text message — send intro with buttons
-    console.log(`[WA] Text message from ${phone}, sending intro`);
-    await upsertLead(phone, null);
-    await sendIntroMessage(phone);
+  if (eventType !== "message") {
+    console.log(`[WA] Ignoring non-message event: ${eventType}`);
     return;
   }
 
-  console.log(`[WA] Ignoring event type: ${type}`);
+  if (msgType === "quick_reply") {
+    const buttonTitle = payload.payload?.title || payload.payload?.text || "";
+    console.log(`[WA] Button pressed: "${buttonTitle}"`);
+    await handleButton(phone, buttonTitle);
+    return;
+  }
+
+  // text, image, audio, or any other — send intro
+  console.log(`[WA] Inbound message from ${phone}, sending intro`);
+  await upsertLead(phone, null);
+  await sendIntroMessage(phone);
 }
 
 async function handleButton(phone, title) {
