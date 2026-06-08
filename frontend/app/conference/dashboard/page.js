@@ -953,7 +953,7 @@ function TodayTimeline({ rooms, bookings }) {
   };
 
   return (
-    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"hidden", position:"relative" }}>
+    <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", overflow:"clip", position:"relative" }}>
       {/* Top bar */}
       <div style={{ padding:"0.5rem 0.875rem", borderBottom:"1px solid #f3f4f6",
         display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.4rem",
@@ -1010,19 +1010,21 @@ function TodayTimeline({ rooms, bookings }) {
       {/* ── Day View ── */}
       {calView === "day" && (
         <>
-          <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa", position:"sticky", top:0, zIndex:10, overflowX:"hidden" }}>
-            <div style={{ width:TIME_W, flexShrink:0 }} />
-            {rooms.map((r, i) => {
-              const col = PALETTE[i % PALETTE.length];
-              return (
-                <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.4rem", borderLeft:"1px solid #e5e7eb", textAlign:"center", borderTop:`3px solid ${col.bg}` }}>
-                  <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
-                  <div style={{ fontSize:"0.6rem", color:"#9ca3af" }}>#{r.room_number}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div ref={scrollRef} style={{ overflowY:"auto", overflowX:"auto", maxHeight:460 }}>
+          {/* Scroll container wraps BOTH the sticky header and timeline so sticky works correctly */}
+          <div ref={scrollRef} style={{ overflowY:"auto", overflowX:"auto", maxHeight:480, overscrollBehavior:"contain" }}>
+            {/* Sticky room-name header — inside the scroll container so it sticks while scrolling vertically */}
+            <div style={{ display:"flex", borderBottom:"2px solid #e5e7eb", background:"#fafafa", position:"sticky", top:0, zIndex:10, minWidth: TIME_W + rooms.length * ROOM_COL }}>
+              <div style={{ width:TIME_W, flexShrink:0 }} />
+              {rooms.map((r, i) => {
+                const col = PALETTE[i % PALETTE.length];
+                return (
+                  <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.4rem", borderLeft:"1px solid #e5e7eb", textAlign:"center", borderTop:`3px solid ${col.bg}` }}>
+                    <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
+                    <div style={{ fontSize:"0.6rem", color:"#9ca3af" }}>#{r.room_number}</div>
+                  </div>
+                );
+              })}
+            </div>
             <div style={{ display:"flex", position:"relative", minWidth: TIME_W + rooms.length * ROOM_COL }}>
               <div style={{ width:TIME_W, flexShrink:0 }}>
                 {hours.map(h => (
@@ -1074,8 +1076,8 @@ function TodayTimeline({ rooms, bookings }) {
 
       {/* ── Week View ── */}
       {calView === "week" && (
-        <div style={{ overflowX:"auto" }}>
-          <div style={{ display:"grid", gridTemplateColumns:`repeat(7, minmax(100px, 1fr))`, borderTop:"1px solid #f3f4f6" }}>
+        <div style={{ overflowX:"auto", overflowY:"auto", maxHeight:480, overscrollBehavior:"contain" }}>
+          <div style={{ display:"grid", gridTemplateColumns:`repeat(7, minmax(120px, 1fr))`, borderTop:"1px solid #f3f4f6", minWidth:700 }}>
             {weekDates.map((d, di) => {
               const dateObj = new Date(d + "T12:00:00");
               const dayBks = bookingsByDate[d] || [];
@@ -1115,7 +1117,7 @@ function TodayTimeline({ rooms, bookings }) {
 
       {/* ── Month View ── */}
       {calView === "month" && (
-        <div style={{ padding:"0.5rem" }}>
+        <div style={{ padding:"0.5rem", overflowY:"auto", maxHeight:480, overscrollBehavior:"contain" }}>
           <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.25rem" }}>
             {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
               <div key={d} style={{ textAlign:"center", fontSize:"0.6rem", fontWeight:700, color:"#9ca3af", padding:"0.2rem 0" }}>{d}</div>
