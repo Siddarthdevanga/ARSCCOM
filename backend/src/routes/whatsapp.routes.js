@@ -4,22 +4,12 @@ import { sendIntroMessage, sendTextMessage } from "../services/gupshup.service.j
 
 const router = Router();
 
-const WEBHOOK_TOKEN = () => process.env.GUPSHUP_WEBHOOK_TOKEN || "";
-
 /* --------------------------------------------------
    POST /api/whatsapp/webhook
    Gupshup sends all inbound events here.
    Always respond 200 immediately; process async.
 -------------------------------------------------- */
 router.post("/webhook", (req, res) => {
-  const token = req.query.token || req.headers["x-gupshup-token"] || "";
-  const expected = WEBHOOK_TOKEN();
-
-  // Verify webhook token if one is configured
-  if (expected && token !== expected) {
-    return res.status(403).json({ error: "Forbidden" });
-  }
-
   res.sendStatus(200); // acknowledge instantly
 
   // Process asynchronously — do not block Gupshup delivery
@@ -29,38 +19,37 @@ router.post("/webhook", (req, res) => {
 /* --------------------------------------------------
    GET /api/whatsapp/webhook  (Gupshup verification ping)
 -------------------------------------------------- */
-router.get("/webhook", (req, res) => res.sendStatus(200));
+router.get("/webhook", (_req, res) => res.sendStatus(200));
 
 async function handleInbound(body) {
-  // Gupshup Smart Messaging webhook payload structure:
-  // body.payload.type      — "message" | "message-event"
-  // body.payload.payload   — nested message content
-  // body.payload.sender.phone — sender's phone (E.164 without +)
+  // Gupshup Smart Messaging v2 payload:
+  // body.payload.type           — "message" | "message-event"
+  // body.payload.payload.type   — "text" | "quick_reply" | etc.
+  // body.payload.sender.phone   — sender's phone (E.164 without +)
   const payload = body?.payload;
   if (!payload) return;
 
-  const type = payload.type;
+  const type  = payload.type;
   const phone = payload.sender?.phone;
   if (!phone) return;
 
   if (type === "message") {
     const msgPayload = payload.payload;
-    const msgType    = msgPayload?.type; // "text" | "quick_reply" | etc.
+    const msgType    = msgPayload?.type;
 
-    // Quick reply button chosen
     if (msgType === "quick_reply") {
       const buttonTitle = msgPayload?.title || msgPayload?.text || "";
       await handleButton(phone, buttonTitle);
       return;
     }
 
-    // Plain text — treat as a new conversation; send intro
+    // Any plain text message — send intro with buttons
     await upsertLead(phone, null);
     await sendIntroMessage(phone);
     return;
   }
 
-  // Ignore delivery receipts / read events
+  // Ignore delivery receipts / read events / other types
 }
 
 async function handleButton(phone, title) {
@@ -77,11 +66,11 @@ async function handleButton(phone, title) {
 
   if (normalised === "book a demo") {
     await upsertLead(phone, "book_a_demo");
-    // Redirection handled in Gupshup dashboard — no bot reply needed
+    // Redirect configured in Gupshup dashboard — no bot reply needed
     return;
   }
 
-  // Unknown button — send intro again
+  // Unknown input — re-send intro
   await upsertLead(phone, null);
   await sendIntroMessage(phone);
 }
