@@ -13,6 +13,7 @@ const getConfig = () => {
       srcNum  : process.env.GUPSHUP_BOT_SOURCE_NUMBER  || "",
       baseUrl : "https://api.gupshup.io",
     };
+    console.log(`[WA CONFIG] appName="${_cfg.appName}" srcNum="${_cfg.srcNum}" apiKey="${_cfg.apiKey ? _cfg.apiKey.slice(0,6) + "…" : "MISSING"}"`);
   }
   return _cfg;
 };
@@ -47,14 +48,19 @@ export const sendIntroMessage = async (destination) => {
     message,
   });
 
-  const { data } = await axios.post(`${baseUrl}/sm/api/v1/msg`, params.toString(), {
-    headers: {
-      apikey: apiKey,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-  });
-
-  return data;
+  try {
+    const { data } = await axios.post(`${baseUrl}/sm/api/v1/msg`, params.toString(), {
+      headers: {
+        apikey: apiKey,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+    console.log("[WA] sendIntroMessage response:", JSON.stringify(data));
+    return data;
+  } catch (err) {
+    console.error("[WA] sendIntroMessage failed:", err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
 };
 
 export const sendTextMessage = async (destination, text) => {
