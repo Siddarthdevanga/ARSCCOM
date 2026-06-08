@@ -49,9 +49,15 @@ async function handleInbound(body) {
     return;
   }
 
-  if (msgType === "quick_reply") {
-    const buttonTitle = payload.payload?.title || payload.payload?.text || "";
-    console.log(`[WA] Button pressed: "${buttonTitle}"`);
+  // Button click — gupshup.ai sends type "button", "quick_reply", or "interactive"
+  if (msgType === "quick_reply" || msgType === "button" || msgType === "interactive") {
+    const inner = payload.payload || {};
+    const buttonTitle =
+      inner.title ||
+      inner.text  ||
+      inner.button_reply?.title ||
+      "";
+    console.log(`[WA] Button pressed: "${buttonTitle}" (msgType=${msgType})`);
     await handleButton(phone, buttonTitle);
     return;
   }
