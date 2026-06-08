@@ -50,7 +50,7 @@ async function handleInbound(body) {
   }
 
   // Button click — gupshup.ai sends type "button", "quick_reply", or "interactive"
-  if (msgType === "quick_reply" || msgType === "button" || msgType === "interactive") {
+  if (msgType === "quick_reply" || msgType === "button" || msgType === "button_reply" || msgType === "interactive") {
     const inner = payload.payload || {};
     const buttonTitle =
       inner.title ||
