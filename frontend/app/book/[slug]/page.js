@@ -435,9 +435,20 @@ function PublicCalendarGrid({ rooms, scrollContainerRef, dayBookings }) {
               </div>
             )}
             {b.purpose && (
-              <div>
+              <div style={{ marginBottom:"0.35rem" }}>
                 <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Purpose</span>
                 <div style={{ marginTop:1 }}>{b.purpose}</div>
+              </div>
+            )}
+            {b.team_members?.length > 0 && (
+              <div>
+                <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Team</span>
+                <div style={{ marginTop:3, display:"flex", flexWrap:"wrap", gap:"0.25rem" }}>
+                  {b.team_members.map((m, i) => (
+                    <span key={i} style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:99,
+                      padding:"2px 7px", fontSize:"0.6rem", fontWeight:700 }}>{m.name}</span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -869,6 +880,13 @@ export default function PublicConferenceBooking() {
   const [cancelModal, setCancelModal] = useState({ isOpen: false, data: null });
   const [resultModal, setResultModal] = useState({ isOpen: false, type: "", message: "" });
 
+  // Range booking
+  const [bookingMode,     setBookingMode]     = useState("single"); // "single" | "range"
+  const [rangeEndDate,    setRangeEndDate]    = useState("");
+  const [includeWeekends, setIncludeWeekends] = useState(false);
+  const [rangeResult,     setRangeResult]     = useState(null); // { booked, skipped }
+  const [rangeSubmitting, setRangeSubmitting] = useState(false);
+
   /* ================= ENHANCED TOAST MANAGEMENT ================= */
   const showToast = useCallback((message, type = "info") => {
     setToast({ show: true, message, type });
@@ -1275,6 +1293,62 @@ export default function PublicConferenceBooking() {
     } finally {
       setLoading(false);
     }
+  };
+
+  /* ================= RANGE BOOKING ================= */
+  const confirmRangeBooking = async () => {
+    const errors = {};
+    if (!roomId) errors.roomId = "Please select a room";
+    if (!date) errors.date = "Please select a start date";
+    if (!rangeEndDate) errors.rangeEndDate = "Please select an end date";
+    if (rangeEndDate && rangeEndDate < date) errors.rangeEndDate = "End date must be on or after start date";
+    if (!startTime) errors.startTime = "Please select start time";
+    if (!endTime) errors.endTime = "Please select end time";
+    if (!purpose?.trim()) errors.purpose = "Please enter a purpose";
+    if (startTime && endTime && ampmToMinutes(endTime) <= ampmToMinutes(startTime)) {
+      errors.endTime = "End time must be after start time";
+    }
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setRangeSubmitting(true);
+    try {
+      const response = await fetch(
+        `${API}/api/public/conference/company/${slug}/book-range`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            room_id: roomId,
+            booked_by: email,
+            department,
+            purpose,
+            start_date: date,
+            end_date: rangeEndDate,
+            start_time: startTime,
+            end_time: endTime,
+            include_weekends: includeWeekends,
+            teamMembers,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        await handleApiError(response, "Range booking failed");
+        return;
+      }
+
+      const data = await response.json();
+      setRangeResult(data);
+      setStartTime(""); setEndTime(""); setDepartment(""); setPurpose("");
+      setTeamMembers([]); setMemberSearch(""); setFormErrors({});
+      setRangeEndDate(""); setIncludeWeekends(false);
+      setSelectedRoom(null); setRoomId("");
+      await loadRooms(); loadBookings();
+    } catch (err) {
+      console.error("[RANGE_BOOKING_ERROR]", err);
+      showToast("Network error. Please try again.", "error");
+    } finally { setRangeSubmitting(false); }
   };
 
   /* ================= EDIT FUNCTIONS ================= */
@@ -1754,18 +1828,59 @@ export default function PublicConferenceBooking() {
             <div className={styles.card}>
               <h2>Book a Conference Room</h2>
 
-              <div className={styles.formGroup}>
-                <label htmlFor="date">Date <span className={styles.required}>*</span></label>
-                <input
-                  id="date"
-                  type="date"
-                  value={date}
-                  min={today}
-                  onChange={e => setDate(e.target.value)}
-                  className={`${styles.input} ${formErrors.date ? styles.inputError : ''}`}
-                />
-                {formErrors.date && <span className={styles.errorText}>{formErrors.date}</span>}
+              {/* Booking mode toggle */}
+              <div style={{ display:"flex", gap:"0.4rem", marginBottom:"1rem", background:"#f5f3ff",
+                borderRadius:"0.625rem", padding:"0.25rem" }}>
+                {["single","range"].map(mode => (
+                  <button key={mode} onClick={() => { setBookingMode(mode); setFormErrors({}); }}
+                    style={{ flex:1, padding:"0.45rem 0", border:"none", borderRadius:"0.45rem",
+                      fontSize:"0.82rem", fontWeight:700, cursor:"pointer", transition:"all 0.15s",
+                      background: bookingMode === mode ? "#7c3aed" : "transparent",
+                      color: bookingMode === mode ? "#fff" : "#7c3aed" }}>
+                    {mode === "single" ? "Single Day" : "Date Range"}
+                  </button>
+                ))}
               </div>
+
+              {bookingMode === "single" ? (
+                <div className={styles.formGroup}>
+                  <label htmlFor="date">Date <span className={styles.required}>*</span></label>
+                  <input
+                    id="date"
+                    type="date"
+                    value={date}
+                    min={today}
+                    onChange={e => setDate(e.target.value)}
+                    className={`${styles.input} ${formErrors.date ? styles.inputError : ''}`}
+                  />
+                  {formErrors.date && <span className={styles.errorText}>{formErrors.date}</span>}
+                </div>
+              ) : (
+                <>
+                  <div className={styles.formGroup}>
+                    <label>Start Date <span className={styles.required}>*</span></label>
+                    <input type="date" value={date} min={today}
+                      onChange={e => { setDate(e.target.value); setRangeEndDate(""); }}
+                      className={`${styles.input} ${formErrors.date ? styles.inputError : ''}`} />
+                    {formErrors.date && <span className={styles.errorText}>{formErrors.date}</span>}
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>End Date <span className={styles.required}>*</span></label>
+                    <input type="date" value={rangeEndDate} min={date || today}
+                      onChange={e => setRangeEndDate(e.target.value)}
+                      className={`${styles.input} ${formErrors.rangeEndDate ? styles.inputError : ''}`} />
+                    {formErrors.rangeEndDate && <span className={styles.errorText}>{formErrors.rangeEndDate}</span>}
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label style={{ display:"flex", alignItems:"center", gap:"0.5rem", cursor:"pointer" }}>
+                      <input type="checkbox" checked={includeWeekends}
+                        onChange={e => setIncludeWeekends(e.target.checked)}
+                        style={{ width:15, height:15, accentColor:"#7c3aed" }} />
+                      Include weekends
+                    </label>
+                  </div>
+                </>
+              )}
 
               <div className={formErrors.startTime ? styles.formGroupError : styles.formGroup}>
                 <TimeScroller
@@ -1857,11 +1972,11 @@ export default function PublicConferenceBooking() {
               </div>
 
               <button
-                onClick={initiateBooking}
-                disabled={loading || !roomId || !date}
+                onClick={bookingMode === "single" ? initiateBooking : confirmRangeBooking}
+                disabled={loading || rangeSubmitting || !roomId || !date}
                 className={styles.primaryBtn}
               >
-                {loading ? "Processing..." : "Book Room"}
+                {(loading || rangeSubmitting) ? "Processing..." : bookingMode === "single" ? "Book Room" : "Book All Days"}
               </button>
             </div>
 
@@ -2132,7 +2247,7 @@ export default function PublicConferenceBooking() {
           <p>{resultModal.message}</p>
         </div>
         <div className={styles.modalActions}>
-          <button 
+          <button
             onClick={() => setResultModal({ isOpen: false, type: "", message: "" })}
             className={styles.primaryBtn}
           >
@@ -2140,6 +2255,63 @@ export default function PublicConferenceBooking() {
           </button>
         </div>
       </Modal>
+
+      {/* Range Result Modal */}
+      {rangeResult && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:1000,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setRangeResult(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:440,
+            overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+              <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
+                textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Range Booking Result</div>
+              <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>
+                {rangeResult.total_booked} booked · {rangeResult.total_skipped} skipped
+              </div>
+            </div>
+            <div style={{ padding:"1.25rem 1.5rem", maxHeight:340, overflowY:"auto" }}>
+              {rangeResult.booked?.length > 0 && (
+                <div style={{ marginBottom:"1rem" }}>
+                  <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#15803d", marginBottom:"0.4rem" }}>
+                    Booked ({rangeResult.booked.length})
+                  </div>
+                  {rangeResult.booked.map(b => (
+                    <div key={b.id} style={{ display:"flex", alignItems:"center", gap:"0.4rem",
+                      padding:"0.35rem 0", borderBottom:"1px solid #f0fdf4", fontSize:"0.82rem" }}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background:"#16a34a", flexShrink:0 }} />
+                      <span style={{ color:"#166534" }}>{b.date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {rangeResult.skipped?.length > 0 && (
+                <div>
+                  <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#b91c1c", marginBottom:"0.4rem" }}>
+                    Skipped ({rangeResult.skipped.length})
+                  </div>
+                  {rangeResult.skipped.map((b, i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:"0.4rem",
+                      padding:"0.35rem 0", borderBottom:"1px solid #fef2f2", fontSize:"0.82rem" }}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444", flexShrink:0 }} />
+                      <span style={{ color:"#991b1b" }}>{b.date}</span>
+                      <span style={{ color:"#9ca3af", fontSize:"0.75rem", marginLeft:"auto" }}>{b.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"0 1.5rem 1.25rem" }}>
+              <button onClick={() => setRangeResult(null)}
+                style={{ width:"100%", padding:"0.7rem", borderRadius:"0.625rem", border:"none",
+                  background:"#7c3aed", color:"#fff", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

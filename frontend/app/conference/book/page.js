@@ -283,6 +283,13 @@ export default function ConferenceBookPage() {
   const [extendMsg, setExtendMsg] = useState("");
   const [confirmPreview, setConfirmPreview] = useState(null);
 
+  // Range booking
+  const [bookingMode,     setBookingMode]     = useState("single"); // "single" | "range"
+  const [rangeEndDate,    setRangeEndDate]    = useState("");
+  const [includeWeekends, setIncludeWeekends] = useState(false);
+  const [rangeResult,     setRangeResult]     = useState(null); // { booked, skipped }
+  const [rangeSubmitting, setRangeSubmitting] = useState(false);
+
   // Book on behalf of
   const [onBehalfOf, setOnBehalfOf] = useState(null);
 
@@ -499,6 +506,42 @@ export default function ConferenceBookPage() {
     } finally { setSubmitting(false); }
   };
 
+  const handleBookRange = async () => {
+    if (!bookingDate)    { setFormError("Start date is required"); return; }
+    if (!rangeEndDate)   { setFormError("End date is required"); return; }
+    if (rangeEndDate < bookingDate) { setFormError("End date must be on or after start date"); return; }
+    if (!startTime)      { setFormError("Start time is required"); return; }
+    if (!endTime)        { setFormError("End time is required"); return; }
+    if (ampmToMinutes(endTime) <= ampmToMinutes(startTime)) { setFormError("End time must be after start time"); return; }
+    if (!purpose.trim()) { setFormError("Purpose is required"); return; }
+    setFormError("");
+    setRangeSubmitting(true);
+    try {
+      const data = await apiFetch("/api/conference/bookings/range", {
+        method: "POST",
+        body: JSON.stringify({
+          room_id:          selected.id,
+          booked_by:        onBehalfOf?.email || "ADMIN",
+          department:       department.trim() || undefined,
+          purpose:          purpose.trim(),
+          start_date:       bookingDate,
+          end_date:         rangeEndDate,
+          start_time:       startTime,
+          end_time:         endTime,
+          include_weekends: includeWeekends,
+          teamMembers:      teamMembers.length > 0 ? teamMembers : undefined,
+        }),
+      });
+      setRangeResult(data);
+      setStartTime(""); setEndTime(""); setPurpose(""); setDepartment("");
+      setOnBehalfOf(null); setTeamMembers([]); setMemberSearch("");
+      setRangeEndDate(""); setIncludeWeekends(false);
+      loadRoomSchedule(selected.id);
+    } catch (err) {
+      setFormError(err?.message || "Range booking failed. Please try again.");
+    } finally { setRangeSubmitting(false); }
+  };
+
   if (loading) return (
     <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"sans-serif", color:"#7c3aed" }}>
       Loading rooms…
@@ -561,6 +604,63 @@ export default function ConferenceBookPage() {
                   background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
                   fontSize:"0.875rem", fontWeight:700, cursor: submitting ? "not-allowed" : "pointer" }}>
                 {submitting ? "Booking…" : "Confirm Booking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== RANGE RESULT MODAL ===== */}
+      {rangeResult && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1000,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setRangeResult(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:440,
+            overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+              <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
+                textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Range Booking Result</div>
+              <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>
+                {rangeResult.total_booked} booked · {rangeResult.total_skipped} skipped
+              </div>
+            </div>
+            <div style={{ padding:"1.25rem 1.5rem", maxHeight:340, overflowY:"auto" }}>
+              {rangeResult.booked?.length > 0 && (
+                <div style={{ marginBottom:"1rem" }}>
+                  <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#15803d", marginBottom:"0.4rem" }}>
+                    Booked ({rangeResult.booked.length})
+                  </div>
+                  {rangeResult.booked.map(b => (
+                    <div key={b.id} style={{ display:"flex", alignItems:"center", gap:"0.4rem",
+                      padding:"0.35rem 0", borderBottom:"1px solid #f0fdf4", fontSize:"0.82rem" }}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background:"#16a34a", flexShrink:0 }} />
+                      <span style={{ color:"#166534" }}>{b.date}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {rangeResult.skipped?.length > 0 && (
+                <div>
+                  <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#b91c1c", marginBottom:"0.4rem" }}>
+                    Skipped ({rangeResult.skipped.length})
+                  </div>
+                  {rangeResult.skipped.map((b, i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:"0.4rem",
+                      padding:"0.35rem 0", borderBottom:"1px solid #fef2f2", fontSize:"0.82rem" }}>
+                      <span style={{ width:8, height:8, borderRadius:"50%", background:"#ef4444", flexShrink:0 }} />
+                      <span style={{ color:"#991b1b" }}>{b.date}</span>
+                      <span style={{ color:"#9ca3af", fontSize:"0.75rem", marginLeft:"auto" }}>{b.reason}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"0 1.5rem 1.25rem" }}>
+              <button onClick={() => setRangeResult(null)}
+                style={{ width:"100%", padding:"0.7rem", borderRadius:"0.625rem", border:"none",
+                  background:"#7c3aed", color:"#fff", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
+                Done
               </button>
             </div>
           </div>
@@ -672,6 +772,20 @@ export default function ConferenceBookPage() {
                   </div>
                 )}
 
+                {/* Booking mode toggle */}
+                <div style={{ display:"flex", gap:"0.5rem", marginBottom:"1rem", background:"#f5f3ff",
+                  borderRadius:"0.625rem", padding:"0.25rem" }}>
+                  {["single","range"].map(mode => (
+                    <button key={mode} onClick={() => { setBookingMode(mode); setFormError(""); }}
+                      style={{ flex:1, padding:"0.45rem 0", border:"none", borderRadius:"0.45rem",
+                        fontSize:"0.82rem", fontWeight:700, cursor:"pointer", transition:"all 0.15s",
+                        background: bookingMode === mode ? "#7c3aed" : "transparent",
+                        color: bookingMode === mode ? "#fff" : "#7c3aed" }}>
+                      {mode === "single" ? "Single Day" : "Date Range"}
+                    </button>
+                  ))}
+                </div>
+
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1rem" }}>
                   <div style={{ gridColumn:"1/-1" }}>
                     <EmployeeSearch
@@ -679,11 +793,35 @@ export default function ConferenceBookPage() {
                       selected={onBehalfOf} onSelect={setOnBehalfOf} onClear={() => setOnBehalfOf(null)}
                     />
                   </div>
-                  <div style={{ gridColumn:"1/-1" }}>
-                    <label style={lbl}>Date</label>
-                    <input type="date" value={bookingDate} min={today}
-                      onChange={e => { setBookingDate(e.target.value); setStartTime(""); setEndTime(""); }} style={inp} />
-                  </div>
+                  {bookingMode === "single" ? (
+                    <div style={{ gridColumn:"1/-1" }}>
+                      <label style={lbl}>Date</label>
+                      <input type="date" value={bookingDate} min={today}
+                        onChange={e => { setBookingDate(e.target.value); setStartTime(""); setEndTime(""); }} style={inp} />
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label style={lbl}>Start Date</label>
+                        <input type="date" value={bookingDate} min={today}
+                          onChange={e => { setBookingDate(e.target.value); setStartTime(""); setEndTime(""); setRangeEndDate(""); }} style={inp} />
+                      </div>
+                      <div>
+                        <label style={lbl}>End Date</label>
+                        <input type="date" value={rangeEndDate} min={bookingDate || today}
+                          onChange={e => setRangeEndDate(e.target.value)} style={inp} />
+                      </div>
+                      <div style={{ gridColumn:"1/-1" }}>
+                        <label style={{ display:"flex", alignItems:"center", gap:"0.5rem", cursor:"pointer",
+                          fontSize:"0.82rem", fontWeight:600, color:"#374151" }}>
+                          <input type="checkbox" checked={includeWeekends}
+                            onChange={e => setIncludeWeekends(e.target.checked)}
+                            style={{ width:15, height:15, accentColor:"#7c3aed" }} />
+                          Include weekends
+                        </label>
+                      </div>
+                    </>
+                  )}
                   <div>
                     <label style={lbl}>Start Time</label>
                     <TimePicker value={startTime} onChange={v => { setStartTime(v); setEndTime(""); }} label="Select start time"
@@ -751,13 +889,15 @@ export default function ConferenceBookPage() {
                   Booking as: <strong>{onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin"}</strong>
                 </div>
 
-                <button onClick={handleBook} disabled={submitting}
+                <button
+                  onClick={bookingMode === "single" ? handleBook : handleBookRange}
+                  disabled={submitting || rangeSubmitting}
                   style={{ marginTop:"1.25rem", width:"100%", padding:"0.75rem",
-                    background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                    background: (submitting || rangeSubmitting) ? "#a78bfa" : "#7c3aed", color:"#fff",
                     border:"none", borderRadius:"0.625rem", fontSize:"0.9rem",
-                    fontWeight:700, cursor: submitting ? "not-allowed" : "pointer",
+                    fontWeight:700, cursor: (submitting || rangeSubmitting) ? "not-allowed" : "pointer",
                     display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
-                  {submitting ? "Booking…" : (<><IconCheck /> Confirm Booking</>)}
+                  {(submitting || rangeSubmitting) ? "Booking…" : (<><IconCheck /> {bookingMode === "single" ? "Confirm Booking" : "Book All Days"}</>)}
                 </button>
               </div>
             </div>

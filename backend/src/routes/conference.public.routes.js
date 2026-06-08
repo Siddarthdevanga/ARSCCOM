@@ -547,7 +547,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
     if (roomIds.length) {
       const placeholders = roomIds.map(() => "?").join(",");
       const [bookings] = await db.query(
-        `SELECT cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose, cb.department,
+        `SELECT cb.id, cb.room_id, cb.start_time, cb.end_time, cb.booked_by, cb.purpose, cb.department,
                 COALESCE(ce.name, '') AS employee_name
          FROM conference_bookings cb
          LEFT JOIN company_employees ce
@@ -567,6 +567,21 @@ router.get("/company/:slug/rooms", async (req, res) => {
       );
       for (const r of countRows) totalByRoom[r.room_id] = r.total;
 
+      // Fetch team members for today's bookings
+      const todayIds = bookings.map(b => b.id);
+      const memberMap = {};
+      if (todayIds.length > 0) {
+        const phM = todayIds.map(() => "?").join(",");
+        const [mems] = await db.query(
+          `SELECT booking_id, name, email FROM conference_booking_members WHERE booking_id IN (${phM})`,
+          todayIds
+        );
+        for (const m of mems) {
+          if (!memberMap[m.booking_id]) memberMap[m.booking_id] = [];
+          memberMap[m.booking_id].push({ name: m.name, email: m.email });
+        }
+      }
+
       for (const b of bookings) {
         if (!bookingsByRoom[b.room_id]) bookingsByRoom[b.room_id] = [];
         const name = b.employee_name || b.booked_by;
@@ -577,6 +592,7 @@ router.get("/company/:slug/rooms", async (req, res) => {
           booked_by_email: b.booked_by,
           purpose:         b.purpose || null,
           department:      b.department || null,
+          team_members:    memberMap[b.id] || [],
         });
       }
     }
@@ -891,6 +907,133 @@ router.post("/company/:slug/book", async (req, res) => {
 });
 
 /**
+ * POST /company/:slug/book-range - Book multiple dates at once (skip conflicts)
+ */
+router.post("/company/:slug/book-range", async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const slug = normalizeSlug(req.params.slug);
+    const {
+      room_id,
+      booked_by,
+      department,
+      purpose = "",
+      start_date,
+      end_date,
+      start_time: rawStartTime,
+      end_time: rawEndTime,
+      include_weekends = false,
+      teamMembers = [],
+    } = req.body;
+
+    const email = normalizeEmail(booked_by);
+    const cleanDepartment = String(department || "").trim();
+    const cleanPurpose = String(purpose || "").trim();
+
+    if (!room_id || !email || !start_date || !end_date || !rawStartTime || !rawEndTime || !cleanPurpose) {
+      return res.status(400).json({ message: ERROR_MESSAGES.MISSING_FIELDS });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: ERROR_MESSAGES.INVALID_EMAIL });
+    }
+
+    let startTime, endTime;
+    try {
+      startTime = normalizeAmPmTime(rawStartTime);
+      endTime   = normalizeAmPmTime(rawEndTime);
+    } catch (e) { return res.status(400).json({ message: e.message }); }
+    if (endTime <= startTime) return res.status(400).json({ message: ERROR_MESSAGES.INVALID_TIME_RANGE });
+
+    const startD = new Date(start_date + "T12:00:00");
+    const endD   = new Date(end_date   + "T12:00:00");
+    if (endD < startD) return res.status(400).json({ message: "End date must be on or after start date" });
+
+    const company = await getCompanyBySlug(slug, "id, name, logo_url");
+    if (!company) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+
+    // Subscription check
+    try {
+      const sub = await validateSubscription(company.id, "BOOKING", true);
+      if (!sub.withinLimits && sub.usage) {
+        return res.status(403).json({ message: ERROR_MESSAGES.BOOKING_UNAVAILABLE, code: "BOOKING_LIMIT_REACHED" });
+      }
+    } catch (e) {
+      if (e.isSubscriptionIssue) return res.status(403).json({ message: ERROR_MESSAGES.SERVICE_UNAVAILABLE, code: e.code });
+      throw e;
+    }
+
+    // OTP check
+    const verified = await isOtpVerified(company.id, email);
+    if (!verified) return res.status(401).json({ message: ERROR_MESSAGES.OTP_REQUIRED });
+
+    // Build candidate dates
+    const dates = [];
+    const cur = new Date(startD);
+    while (cur <= endD) {
+      const d = cur.getDay();
+      if (include_weekends || (d !== 0 && d !== 6)) dates.push(cur.toLocaleDateString("en-CA"));
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (dates.length === 0) return res.status(400).json({ message: "No valid dates in the selected range" });
+
+    const room = await getRoomById(room_id);
+    if (!room) return res.status(404).json({ message: "Conference room not found" });
+
+    const validMembers = Array.isArray(teamMembers) ? teamMembers.filter(m => m?.id && m?.name) : [];
+
+    await conn.beginTransaction();
+    const booked = [], skipped = [];
+
+    for (const booking_date of dates) {
+      const [[conflict]] = await conn.query(
+        `SELECT COUNT(*) AS cnt FROM conference_bookings
+         WHERE company_id=? AND room_id=? AND booking_date=? AND status='BOOKED'
+         AND start_time < ? AND end_time > ?`,
+        [company.id, room_id, booking_date, endTime, startTime]
+      );
+      if (conflict.cnt > 0) { skipped.push({ date: booking_date, reason: "Slot already booked" }); continue; }
+
+      const [ins] = await conn.query(
+        `INSERT INTO conference_bookings
+         (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED')`,
+        [company.id, room_id, email, cleanDepartment, cleanPurpose, booking_date, startTime, endTime]
+      );
+      const bookingId = ins.insertId;
+      for (const m of validMembers) {
+        await conn.query(
+          `INSERT INTO conference_booking_members (booking_id, employee_id, name, email) VALUES (?, ?, ?, ?)`,
+          [bookingId, m.id, m.name, m.email || null]
+        );
+      }
+      booked.push({ date: booking_date, id: bookingId });
+    }
+    await conn.commit();
+
+    // Consolidated confirmation email
+    if (booked.length > 0) {
+      const datesStr = booked.map(b => b.date).join(", ");
+      const syntheticBooking = {
+        booking_date: datesStr, start_time: startTime, end_time: endTime,
+        department: cleanDepartment, purpose: cleanPurpose,
+      };
+      try {
+        await sendBookingEmail(email, company, room, syntheticBooking);
+        for (const m of validMembers) {
+          if (m.email) await sendTeamMemberEmail(m.email, m.name, email, company, room, syntheticBooking);
+        }
+      } catch (mailErr) { console.error("[RANGE EMAIL]", mailErr.message); }
+    }
+
+    res.status(201).json({ total_booked: booked.length, total_skipped: skipped.length, booked, skipped });
+  } catch (err) {
+    await conn.rollback();
+    console.error("[PUBLIC][BOOK_RANGE]", err);
+    res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  } finally { conn.release(); }
+});
+
+/**
  * GET /company/:slug/employees/search - Search employees by name or department
  */
 router.get("/company/:slug/employees/search", async (req, res) => {
@@ -1186,6 +1329,21 @@ router.get("/company/:slug/rooms/bookings/range", async (req, res) => {
       [company.id, company.id, start_date, end_date]
     );
 
+    // Attach team members
+    const bookingIds = rows.map(r => r.id).filter(Boolean);
+    const memberMap = {};
+    if (bookingIds.length > 0) {
+      const phM = bookingIds.map(() => "?").join(",");
+      const [mems] = await db.query(
+        `SELECT booking_id, name, email FROM conference_booking_members WHERE booking_id IN (${phM})`,
+        bookingIds
+      );
+      for (const m of mems) {
+        if (!memberMap[m.booking_id]) memberMap[m.booking_id] = [];
+        memberMap[m.booking_id].push({ name: m.name, email: m.email });
+      }
+    }
+
     res.json(rows.map(b => ({
       room_id:         b.room_id,
       booking_date:    b.booking_date instanceof Date
@@ -1197,6 +1355,7 @@ router.get("/company/:slug/rooms/bookings/range", async (req, res) => {
       booked_by_email: b.booked_by,
       purpose:         b.purpose || null,
       department:      b.department || null,
+      team_members:    memberMap[b.id] || [],
     })));
   } catch (err) {
     console.error("[PUBLIC][RANGE]", err.message);

@@ -1045,6 +1045,23 @@ router.get("/bookings", async (req, res) => {
     sql += " ORDER BY b.booking_date DESC, b.start_time DESC LIMIT 500";
 
     const [rows] = await db.query(sql, params);
+
+    // Attach team members per booking
+    if (rows.length > 0) {
+      const ids = rows.map(r => r.id);
+      const ph2 = ids.map(() => "?").join(",");
+      const [members] = await db.query(
+        `SELECT booking_id, name, email FROM conference_booking_members WHERE booking_id IN (${ph2})`,
+        ids
+      );
+      const memberMap = {};
+      for (const m of members) {
+        if (!memberMap[m.booking_id]) memberMap[m.booking_id] = [];
+        memberMap[m.booking_id].push({ name: m.name, email: m.email });
+      }
+      for (const r of rows) r.team_members = memberMap[r.id] || [];
+    }
+
     res.json(rows || []);
   } catch (err) {
     console.error("[GET /bookings]", err.message);
@@ -1180,6 +1197,116 @@ router.post("/bookings", async (req, res) => {
   } finally {
     conn.release();
   }
+});
+
+/* ── Range Booking ── */
+router.post("/bookings/range", async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const companyId = getCompanyId(req.user);
+    const { email: adminEmail } = req.user;
+    const { bookingLimit } = await validateCompanySubscription(companyId);
+
+    let { room_id, booked_by, department, purpose = "", start_date, end_date, start_time, end_time,
+      include_weekends = false, teamMembers = [] } = req.body;
+
+    if (!room_id || !booked_by || !start_date || !end_date || !start_time || !end_time || !(purpose || "").trim()) {
+      return res.status(400).json({ message: "All required fields must be provided" });
+    }
+    start_time = normalizeTime(start_time);
+    end_time   = normalizeTime(end_time);
+    if (end_time <= start_time) return res.status(400).json({ message: "End time must be after start time" });
+
+    const startD = new Date(start_date + "T12:00:00");
+    const endD   = new Date(end_date   + "T12:00:00");
+    if (endD < startD) return res.status(400).json({ message: "End date must be on or after start date" });
+
+    // Build list of candidate dates
+    const dates = [];
+    const cur = new Date(startD);
+    while (cur <= endD) {
+      const d = cur.getDay();
+      if (include_weekends || (d !== 0 && d !== 6)) dates.push(cur.toLocaleDateString("en-CA"));
+      cur.setDate(cur.getDate() + 1);
+    }
+    if (dates.length === 0) return res.status(400).json({ message: "No valid dates in the selected range" });
+
+    const [[room]] = await db.query(
+      `SELECT id, room_name FROM conference_rooms WHERE id = ? AND company_id = ? LIMIT 1`,
+      [room_id, companyId]
+    );
+    if (!room) return res.status(403).json({ message: "Invalid room" });
+
+    // Remaining booking quota
+    let remainingQuota = Infinity;
+    if (bookingLimit !== Infinity) {
+      const [[cnt]] = await db.query(
+        `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? AND status = 'BOOKED'`,
+        [companyId]
+      );
+      remainingQuota = Math.max(0, bookingLimit - cnt.total);
+    }
+
+    await conn.beginTransaction();
+    const booked = [], skipped = [];
+    const validMembers = Array.isArray(teamMembers) ? teamMembers.filter(m => m?.id && m?.name) : [];
+
+    for (const booking_date of dates) {
+      if (booked.length >= remainingQuota) {
+        skipped.push({ date: booking_date, reason: "Booking limit reached" }); continue;
+      }
+      const [[conflict]] = await conn.query(
+        `SELECT COUNT(*) AS cnt FROM conference_bookings
+         WHERE company_id=? AND room_id=? AND booking_date=? AND status='BOOKED'
+         AND start_time < ? AND end_time > ?`,
+        [companyId, room_id, booking_date, end_time, start_time]
+      );
+      if (conflict.cnt > 0) { skipped.push({ date: booking_date, reason: "Slot already booked" }); continue; }
+
+      const [ins] = await conn.query(
+        `INSERT INTO conference_bookings
+         (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [companyId, room_id, booked_by, (department||"").trim(), (purpose||"").trim(), booking_date, start_time, end_time]
+      );
+      const bookingId = ins.insertId;
+      for (const m of validMembers) {
+        await conn.query(
+          `INSERT INTO conference_booking_members (booking_id, employee_id, name, email) VALUES (?, ?, ?, ?)`,
+          [bookingId, m.id, m.name, m.email || null]
+        );
+      }
+      booked.push({ date: booking_date, id: bookingId });
+    }
+    await conn.commit();
+
+    if (booked.length > 0) {
+      try {
+        const companyInfo = await getCompanyInfo(companyId);
+        const [[roomRow]] = await db.query(`SELECT image_url FROM conference_rooms WHERE id=? LIMIT 1`, [room_id]);
+        const roomImageUrl = roomRow?.image_url ? await getPresignedUrl(roomRow.image_url, 3600).catch(() => null) : null;
+        const datesStr = booked.map(b => b.date).join(", ");
+        await sendBookingMail({
+          adminEmail, userEmail: booked_by,
+          subject: `Conference Room Booked for ${booked.length} Day${booked.length !== 1 ? "s" : ""}`,
+          heading: `Booking Confirmed (${booked.length} Day${booked.length !== 1 ? "s" : ""}) 🎉`,
+          booking: {
+            room_name: room.room_name,
+            booking_date: datesStr,
+            start_time, end_time, department, purpose, status: "CONFIRMED",
+          },
+          company: companyInfo, teamMembers: validMembers, roomImageUrl,
+        });
+      } catch (mailErr) { console.error("[RANGE EMAIL]", mailErr.message); }
+    }
+
+    res.status(201).json({ total_booked: booked.length, total_skipped: skipped.length, booked, skipped });
+  } catch (err) {
+    await conn.rollback();
+    console.error("[POST /bookings/range]", err.message);
+    const code = err.message?.includes("inactive") || err.message?.includes("renew") ? 403 : 500;
+    res.status(code).json({ message: err.message || "Unable to create bookings" });
+  } finally { conn.release(); }
 });
 
 router.patch("/bookings/:id", async (req, res) => {

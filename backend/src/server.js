@@ -137,6 +137,13 @@ async function startServer() {
 
     console.log("✅ Grace Period Cron Job Scheduled (Daily 12:00 AM IST)");
 
+    /* ========= MEETING REMINDER CRON JOB ========= */
+    const { sendMeetingReminders } = await import("./cron/reminderCron.js");
+    cron.default.schedule('* * * * *', async () => {
+      try { await sendMeetingReminders(); } catch (e) { console.error("❌ Reminder cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Meeting Reminder Cron Scheduled (Every Minute IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;
