@@ -25,7 +25,8 @@ const CONFIG = {
     email:      'admin@promeet.zodopt.com',
     whatsapp:   'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Promeet+-+Visitor+Management+Platform',
     loginUrl:   'https://www.promeet.zodopt.com/auth/login',
-    phone:      '+91 8647878785',
+    registerUrl:'https://www.promeet.zodopt.com/auth/register',
+    phone:      '+91 63668 34745',
   },
   trial: {
     price:            '₹49',
@@ -223,7 +224,7 @@ const PRICING_PLANS = [
       `${CONFIG.trial.roomLimit} Conference Rooms`,
     ],
     cta:     'Get Started',
-    ctaLink: CONFIG.company.loginUrl,
+    ctaLink: CONFIG.company.registerUrl,
     popular: false,
   },
   {
@@ -238,7 +239,7 @@ const PRICING_PLANS = [
       'Advanced Analytics & Reports',
     ],
     cta:     'Get Started',
-    ctaLink: CONFIG.company.loginUrl,
+    ctaLink: CONFIG.company.registerUrl,
     popular: true,
   },
   {
@@ -322,12 +323,9 @@ const IconEmail = ({ size = 24 }) => (
    MAIN COMPONENT
    ══════════════════════════════════════════════════════════ */
 export default function LandingPage() {
-  const [mounted,        setMounted]        = useState(false);
-  const [showWaTooltip,  setShowWaTooltip]  = useState(false);
+  const [showWaTooltip, setShowWaTooltip] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-
     /* ── Hero animation ─────────────────────────────────── */
     const heroEls = document.querySelectorAll(
       '.heroBrandBlock, .heroPill, .hero h2, .hero p, .heroButtons'
@@ -436,7 +434,7 @@ export default function LandingPage() {
 
         <div className="headerAuth">
           <Link href={CONFIG.company.loginUrl} className="btnSignin">Sign In</Link>
-          <Link href={CONFIG.company.loginUrl} className="btnSignup">Sign Up</Link>
+          <Link href={CONFIG.company.registerUrl} className="btnSignup">Sign Up</Link>
         </div>
       </header>
 
@@ -465,7 +463,7 @@ export default function LandingPage() {
         <div className="heroButtons">
           <Link
             className="btnPrimary"
-            href={CONFIG.company.loginUrl}
+            href={CONFIG.company.registerUrl}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => gaEvent('cta_click', { section: 'hero', label: 'trial' })}
@@ -479,7 +477,7 @@ export default function LandingPage() {
             rel="noopener noreferrer"
             onClick={() => gaEvent('cta_click', { section: 'hero', label: 'demo' })}
           >
-            Watch Demo
+            Chat with Us
           </Link>
         </div>
       </section>
