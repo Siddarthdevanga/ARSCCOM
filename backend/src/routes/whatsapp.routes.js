@@ -10,6 +10,7 @@ const router = Router();
    Always respond 200 immediately; process async.
 -------------------------------------------------- */
 router.post("/webhook", (req, res) => {
+  console.log("[WA WEBHOOK] Inbound:", JSON.stringify(req.body));
   res.sendStatus(200); // acknowledge instantly
 
   // Process asynchronously — do not block Gupshup delivery
@@ -27,29 +28,40 @@ async function handleInbound(body) {
   // body.payload.payload.type   — "text" | "quick_reply" | etc.
   // body.payload.sender.phone   — sender's phone (E.164 without +)
   const payload = body?.payload;
-  if (!payload) return;
+  if (!payload) {
+    console.log("[WA] No payload found in body, skipping");
+    return;
+  }
 
   const type  = payload.type;
   const phone = payload.sender?.phone;
-  if (!phone) return;
+  console.log(`[WA] type=${type} phone=${phone}`);
+
+  if (!phone) {
+    console.log("[WA] No phone found, skipping");
+    return;
+  }
 
   if (type === "message") {
     const msgPayload = payload.payload;
     const msgType    = msgPayload?.type;
+    console.log(`[WA] msgType=${msgType}`);
 
     if (msgType === "quick_reply") {
       const buttonTitle = msgPayload?.title || msgPayload?.text || "";
+      console.log(`[WA] Button pressed: "${buttonTitle}"`);
       await handleButton(phone, buttonTitle);
       return;
     }
 
     // Any plain text message — send intro with buttons
+    console.log(`[WA] Text message from ${phone}, sending intro`);
     await upsertLead(phone, null);
     await sendIntroMessage(phone);
     return;
   }
 
-  // Ignore delivery receipts / read events / other types
+  console.log(`[WA] Ignoring event type: ${type}`);
 }
 
 async function handleButton(phone, title) {
