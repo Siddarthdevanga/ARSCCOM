@@ -1012,9 +1012,10 @@ router.post("/company/:slug/book-range", async (req, res) => {
 
     // Consolidated confirmation email
     if (booked.length > 0) {
-      const datesStr = booked.map(b => b.date).join(", ");
+      const fmtDate = (ds) => new Date(ds + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+      const rangeLabel = `${fmtDate(start_date)} → ${fmtDate(end_date)}`;
       const syntheticBooking = {
-        booking_date: datesStr, start_time: startTime, end_time: endTime,
+        booking_date: rangeLabel, start_time: startTime, end_time: endTime,
         department: cleanDepartment, purpose: cleanPurpose,
       };
       try {

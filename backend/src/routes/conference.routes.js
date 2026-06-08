@@ -1285,14 +1285,16 @@ router.post("/bookings/range", async (req, res) => {
         const companyInfo = await getCompanyInfo(companyId);
         const [[roomRow]] = await db.query(`SELECT image_url FROM conference_rooms WHERE id=? LIMIT 1`, [room_id]);
         const roomImageUrl = roomRow?.image_url ? await getPresignedUrl(roomRow.image_url, 3600).catch(() => null) : null;
-        const datesStr = booked.map(b => b.date).join(", ");
+        const fmtDate = (ds) => new Date(ds + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+        const rangeLabel = `${fmtDate(start_date)} → ${fmtDate(end_date)}`;
+        const n = booked.length;
         await sendBookingMail({
           adminEmail, userEmail: booked_by,
-          subject: `Conference Room Booked for ${booked.length} Day${booked.length !== 1 ? "s" : ""}`,
-          heading: `Booking Confirmed (${booked.length} Day${booked.length !== 1 ? "s" : ""}) 🎉`,
+          subject: `Conference Room Booked for ${n} Day${n !== 1 ? "s" : ""} · ${rangeLabel}`,
+          heading: `Booked for ${n} Day${n !== 1 ? "s" : ""} 🎉`,
           booking: {
             room_name: room.room_name,
-            booking_date: datesStr,
+            booking_date: rangeLabel,
             start_time, end_time, department, purpose, status: "CONFIRMED",
           },
           company: companyInfo, teamMembers: validMembers, roomImageUrl,

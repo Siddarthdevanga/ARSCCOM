@@ -284,11 +284,12 @@ export default function ConferenceBookPage() {
   const [confirmPreview, setConfirmPreview] = useState(null);
 
   // Range booking
-  const [bookingMode,     setBookingMode]     = useState("single"); // "single" | "range"
-  const [rangeEndDate,    setRangeEndDate]    = useState("");
-  const [includeWeekends, setIncludeWeekends] = useState(false);
-  const [rangeResult,     setRangeResult]     = useState(null); // { booked, skipped }
-  const [rangeSubmitting, setRangeSubmitting] = useState(false);
+  const [bookingMode,       setBookingMode]       = useState("single"); // "single" | "range"
+  const [rangeEndDate,      setRangeEndDate]      = useState("");
+  const [includeWeekends,   setIncludeWeekends]   = useState(false);
+  const [rangeResult,       setRangeResult]       = useState(null);
+  const [rangeSubmitting,   setRangeSubmitting]   = useState(false);
+  const [rangeConfirmPreview, setRangeConfirmPreview] = useState(null);
 
   // Book on behalf of
   const [onBehalfOf, setOnBehalfOf] = useState(null);
@@ -506,7 +507,7 @@ export default function ConferenceBookPage() {
     } finally { setSubmitting(false); }
   };
 
-  const handleBookRange = async () => {
+  const handleBookRange = () => {
     if (!bookingDate)    { setFormError("Start date is required"); return; }
     if (!rangeEndDate)   { setFormError("End date is required"); return; }
     if (rangeEndDate < bookingDate) { setFormError("End date must be on or after start date"); return; }
@@ -515,6 +516,23 @@ export default function ConferenceBookPage() {
     if (ampmToMinutes(endTime) <= ampmToMinutes(startTime)) { setFormError("End time must be after start time"); return; }
     if (!purpose.trim()) { setFormError("Purpose is required"); return; }
     setFormError("");
+    setRangeConfirmPreview({
+      room:           selected.room_name,
+      roomNumber:     selected.room_number,
+      startDate:      bookingDate,
+      endDate:        rangeEndDate,
+      startTime,
+      endTime,
+      bookedBy:       onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin",
+      purpose:        purpose.trim(),
+      department:     department.trim() || "—",
+      includeWeekends,
+      teamMembers,
+    });
+  };
+
+  const handleConfirmRangeBooking = async () => {
+    setRangeConfirmPreview(null);
     setRangeSubmitting(true);
     try {
       const data = await apiFetch("/api/conference/bookings/range", {
@@ -604,6 +622,58 @@ export default function ConferenceBookPage() {
                   background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
                   fontSize:"0.875rem", fontWeight:700, cursor: submitting ? "not-allowed" : "pointer" }}>
                 {submitting ? "Booking…" : "Confirm Booking"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== RANGE CONFIRM MODAL ===== */}
+      {rangeConfirmPreview && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:1000,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setRangeConfirmPreview(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:420,
+            overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+              <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
+                textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Confirm Range Booking</div>
+              <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>{rangeConfirmPreview.room}</div>
+              {rangeConfirmPreview.roomNumber && (
+                <div style={{ fontSize:"0.78rem", color:"rgba(255,255,255,0.8)", marginTop:2 }}>Room #{rangeConfirmPreview.roomNumber}</div>
+              )}
+            </div>
+            <div style={{ padding:"1.25rem 1.5rem" }}>
+              {[
+                ["Date Range",  `${rangeConfirmPreview.startDate} → ${rangeConfirmPreview.endDate}`],
+                ["Weekends",    rangeConfirmPreview.includeWeekends ? "Included" : "Excluded"],
+                ["Time",        `${rangeConfirmPreview.startTime} – ${rangeConfirmPreview.endTime}`],
+                ["Booked by",   rangeConfirmPreview.bookedBy],
+                ["Purpose",     rangeConfirmPreview.purpose],
+                ["Department",  rangeConfirmPreview.department],
+                ...(rangeConfirmPreview.teamMembers.length > 0
+                  ? [["Team", rangeConfirmPreview.teamMembers.map(m => m.name).join(", ")]]
+                  : []),
+              ].map(([label, value]) => (
+                <div key={label} style={{ display:"flex", justifyContent:"space-between",
+                  padding:"0.5rem 0", borderBottom:"1px solid #f3f4f6", fontSize:"0.83rem" }}>
+                  <span style={{ color:"#6b7280", fontWeight:600 }}>{label}</span>
+                  <span style={{ color:"#111827", fontWeight:700, textAlign:"right", maxWidth:"60%" }}>{value}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ padding:"0 1.5rem 1.25rem", display:"flex", gap:"0.75rem" }}>
+              <button onClick={() => setRangeConfirmPreview(null)}
+                style={{ flex:1, padding:"0.7rem", borderRadius:"0.625rem", border:"1px solid #d1d5db",
+                  background:"#fff", color:"#374151", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleConfirmRangeBooking} disabled={rangeSubmitting}
+                style={{ flex:2, padding:"0.7rem", borderRadius:"0.625rem", border:"none",
+                  background: rangeSubmitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                  fontSize:"0.875rem", fontWeight:700, cursor: rangeSubmitting ? "not-allowed" : "pointer" }}>
+                {rangeSubmitting ? "Booking…" : "Book All Days"}
               </button>
             </div>
           </div>
