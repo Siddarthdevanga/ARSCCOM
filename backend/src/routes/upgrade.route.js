@@ -41,6 +41,8 @@ const calcPrice = (plan) => {
 // Keep legacy constants used in business block below
 const BUSINESS_TOTAL_PRICE = calcPrice("business").total;
 const BUSINESS_TOTAL_STR   = calcPrice("business").totalStr;
+const BUSINESS_BASE_PRICE  = calcPrice("business").base;
+const BUSINESS_GST_AMOUNT  = calcPrice("business").gst;
 
 /* ======================================================
    POST /api/upgrade
