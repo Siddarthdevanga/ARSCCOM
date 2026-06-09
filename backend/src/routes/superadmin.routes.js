@@ -22,6 +22,9 @@ router.get("/dashboard", ctrl.dashboard);
 // ── WhatsApp Leads ─────────────────────────────────────
 router.get("/whatsapp-leads", ctrl.whatsappLeads);
 
+// ── Video Broadcast ────────────────────────────────────
+router.post("/send-video-message", ctrl.sendVideoMessage);
+
 // ── Company ────────────────────────────────────────────
 router.get   ("/companies/:id",                   ctrl.companyDetail);
 router.get   ("/companies/:id/users",             ctrl.companyUsers);

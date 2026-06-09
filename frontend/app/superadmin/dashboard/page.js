@@ -542,6 +542,7 @@ export default function SuperAdminDashboard() {
         <div className={styles.headerRight}>
           <span className={styles.adminEmail}>{admin?.email}</span>
           <a href="/superadmin/whatsapp-leads" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Leads</a>
+          <a href="/superadmin/video-broadcast" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>Video Broadcast</a>
           <button className={styles.logoutBtn} onClick={logout}>Logout</button>
         </div>
       </header>
