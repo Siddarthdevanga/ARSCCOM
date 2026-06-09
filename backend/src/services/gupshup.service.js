@@ -129,10 +129,10 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
   const template = JSON.stringify({
     id: templateId,
     params: [bodyText],
-  });
-  const media = JSON.stringify({
-    type: "video",
-    url: videoUrl,
+    header: {
+      type: "video",
+      video: { link: videoUrl },
+    },
   });
 
   const body = new URLSearchParams({
@@ -141,7 +141,6 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
     destination,
     "src.name":  appName,
     template,
-    media,
   });
 
   try {
