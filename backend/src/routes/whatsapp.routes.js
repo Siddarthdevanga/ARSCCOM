@@ -36,14 +36,24 @@ router.post("/appointment", async (req, res) => {
 });
 
 async function handleAppointment(body) {
-  const name     = body?.name     || "";
-  const email    = body?.email    || "";
-  const rawPhone = body?.phone    || "";
-  const appDate  = body?.app_date || ""; // YYYY-MM-DD or similar
-  const appTime  = body?.app_time || ""; // HH:MM or HH:MM:SS
+  console.log("[APPOINTMENT] Raw payload:", JSON.stringify(body));
+
+  // Accept multiple possible field name variants from different booking systems
+  const name     = body?.name      || body?.full_name    || body?.customer_name || "";
+  const email    = body?.email     || body?.email_address || "";
+  const rawPhone = body?.phone     || body?.mobile        || body?.phone_number  || body?.contact || "";
+  const appDate  = body?.app_date  || body?.appointment_date || body?.date || body?.booking_date || "";
+  const appTime  = body?.app_time  || body?.appointment_time || body?.time || body?.booking_time || "";
 
   if (!rawPhone || !appDate || !appTime) {
     console.warn("[APPOINTMENT] Missing required fields:", { rawPhone, appDate, appTime });
+    console.warn("[APPOINTMENT] Full body keys:", Object.keys(body || {}));
+    return;
+  }
+
+  // Reject unresolved template variables (e.g. {%calendar.appointment_date%})
+  if (/\{%.*%\}/.test(appDate) || /\{%.*%\}/.test(appTime)) {
+    console.warn("[APPOINTMENT] Unresolved template variable in date/time — check external system field mapping:", { appDate, appTime });
     return;
   }
 
@@ -58,7 +68,26 @@ async function handleAppointment(body) {
   }
 
   // Normalise time to HH:MM:SS
-  const timeNorm = appTime.length === 5 ? `${appTime}:00` : appTime;
+  // Handles: "14:30", "14:30:00", "2:30 PM", "10:00am", "12:00pm"
+  const parseTime = (raw) => {
+    const s = String(raw).trim();
+    // Already HH:MM:SS
+    if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s;
+    // HH:MM
+    if (/^\d{1,2}:\d{2}$/.test(s)) return `${s}:00`;
+    // 12-hour with am/pm (e.g. "10:00am", "2:30 PM", "12:00pm")
+    const match = s.match(/^(\d{1,2}):(\d{2})\s*(am|pm)$/i);
+    if (match) {
+      let h = parseInt(match[1]);
+      const m = match[2];
+      const period = match[3].toLowerCase();
+      if (period === "am" && h === 12) h = 0;
+      if (period === "pm" && h !== 12) h += 12;
+      return `${String(h).padStart(2,"0")}:${m}:00`;
+    }
+    return s; // return as-is, let DB validate
+  };
+  const timeNorm = parseTime(appTime);
 
   // Human-readable date for WhatsApp message
   const prettyDate = new Date(`${dateISO}T12:00:00`).toLocaleDateString("en-IN", {
