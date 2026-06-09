@@ -116,20 +116,20 @@ export const sendIntroMessage = async (destination) => {
 };
 
 /* --------------------------------------------------
-   Send video template — marketing bot app
-   Template must have VIDEO header + {{1}} body.
-   videoUrl: publicly accessible direct video URL.
+   Send image template — marketing bot app
+   Template must have IMAGE header + {{1}} body.
+   imageUrl: publicly accessible image URL (JPEG/PNG).
 -------------------------------------------------- */
-export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
+export const sendImageWhatsApp = async (destination, imageUrl, bodyText) => {
   const { apiKey, appName, srcNum } = getConfig();
-  const templateId = process.env.GUPSHUP_VIDEO_TEMPLATE;
+  const templateId = process.env.GUPSHUP_IMAGE_TEMPLATE;
 
-  if (!templateId) throw new Error("GUPSHUP_VIDEO_TEMPLATE not configured");
+  if (!templateId) throw new Error("GUPSHUP_IMAGE_TEMPLATE not configured");
 
   const template = JSON.stringify({
     id:             templateId,
     params:         [bodyText],
-    headerMediaUrl: videoUrl,
+    headerMediaUrl: imageUrl,
   });
 
   const body = new URLSearchParams({
@@ -144,10 +144,10 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
     const { data } = await axios.post(TEMPLATE_URL, body.toString(), {
       headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
     });
-    console.log(`[WA] video template → ${destination}:`, JSON.stringify(data));
+    console.log(`[WA] image template → ${destination}:`, JSON.stringify(data));
     return data;
   } catch (err) {
-    console.error(`[WA] video template failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
+    console.error(`[WA] image template failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
     throw err;
   }
 };

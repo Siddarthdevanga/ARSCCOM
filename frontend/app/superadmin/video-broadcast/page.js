@@ -61,9 +61,9 @@ export default function VideoBroadcast() {
       </header>
 
       <div style={{ maxWidth: 680, margin: "2rem auto", padding: "0 1rem" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>Video Broadcast</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>Image Broadcast</h1>
         <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-          Send a WhatsApp video message to one or multiple phone numbers.
+          Send a WhatsApp image message to one or multiple phone numbers.
         </p>
 
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "1.5rem", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -71,11 +71,11 @@ export default function VideoBroadcast() {
           {/* Video URL */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
-              Video URL <span style={{ color: "#ef4444" }}>*</span>
+              Image URL <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <input
               type="url"
-              placeholder="https://example.com/video.mp4"
+              placeholder="https://example.com/image.jpg"
               value={videoUrl}
               onChange={e => setVideoUrl(e.target.value)}
               style={{
@@ -85,7 +85,7 @@ export default function VideoBroadcast() {
               }}
             />
             <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-              Must be a publicly accessible direct video URL (MP4 recommended)
+              Must be a publicly accessible image URL (JPEG or PNG)
             </p>
           </div>
 

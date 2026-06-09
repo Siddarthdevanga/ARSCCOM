@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as service from "../services/superadmin.service.js";
 import { db } from "../config/db.js";
-import { sendVideoWhatsApp } from "../services/gupshup.service.js";
+import { sendImageWhatsApp } from "../services/gupshup.service.js";
 
 const JWT_EXPIRY = "12h";
 
@@ -375,7 +375,7 @@ export const sendVideoMessage = async (req, res) => {
     for (const rawPhone of phoneList) {
       const destination = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
       try {
-        await sendVideoWhatsApp(destination, videoUrl, message);
+        await sendImageWhatsApp(destination, videoUrl, message);
         results.sent.push(destination);
       } catch (e) {
         console.error(`[VIDEO BROADCAST] Failed for ${destination}:`, e.message);
