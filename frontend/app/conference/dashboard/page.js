@@ -1116,39 +1116,79 @@ function TodayTimeline({ rooms, bookings }) {
       )}
 
       {/* ── Month View ── */}
-      {calView === "month" && (
-        <div style={{ padding:"0.5rem", overflowY:"auto", maxHeight:480, overscrollBehavior:"contain" }}>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.25rem" }}>
-            {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
-              <div key={d} style={{ textAlign:"center", fontSize:"0.6rem", fontWeight:700, color:"#9ca3af", padding:"0.2rem 0" }}>{d}</div>
-            ))}
-          </div>
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:2 }}>
-            {monthCells.map((d, idx) => {
-              if (!d) return <div key={idx} />;
-              const isTd = d === todayIST;
-              const dayBks = bookingsByDate[d] || [];
-              return (
-                <div key={d}
-                  onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
-                  style={{ padding:"0.3rem", borderRadius:"0.35rem", minHeight:52, cursor:"pointer",
-                    background: isTd ? "#f5f3ff" : "#fafafa", border:`1px solid ${isTd ? "#a78bfa" : "#e5e7eb"}` }}
-                  onMouseEnter={e => !isTd && (e.currentTarget.style.background="#f3f4f6")}
-                  onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fafafa")}>
-                  <div style={{ fontSize:"0.7rem", fontWeight: isTd ? 800 : 600, color: isTd ? "#7c3aed" : "#374151" }}>
-                    {parseInt(d.split("-")[2])}
+      {calView === "month" && (() => {
+        const fmt2 = (t) => { if (!t) return ""; const [h, m] = String(t).split(":").map(Number); return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`; };
+        const MAX_CHIPS = 2;
+        return (
+          <div style={{ padding:"0.5rem", overflowY:"auto", maxHeight:480, overscrollBehavior:"contain" }}>
+            {/* Day header row */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.3rem" }}>
+              {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
+                <div key={d} style={{ textAlign:"center", fontSize:"0.62rem", fontWeight:700, color:"#7c3aed", padding:"0.25rem 0", letterSpacing:"0.04em" }}>{d}</div>
+              ))}
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:3 }}>
+              {monthCells.map((d, idx) => {
+                if (!d) return <div key={idx} />;
+                const isTd = d === todayIST;
+                const dayBks = bookingsByDate[d] || [];
+                const shown  = dayBks.slice(0, MAX_CHIPS);
+                const extra  = dayBks.length - MAX_CHIPS;
+                return (
+                  <div key={d}
+                    onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
+                    style={{ padding:"0.3rem 0.28rem", borderRadius:"0.5rem", minHeight:72, cursor:"pointer",
+                      background: isTd ? "#f5f3ff" : "#fff",
+                      border:`1.5px solid ${isTd ? "#a78bfa" : "#e5e7eb"}`,
+                      boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(124,58,237,0.06)" : "none",
+                      transition:"background 0.12s" }}
+                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ede9fe" : "#f5f3ff"; e.currentTarget.style.borderColor = "#a78bfa"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#a78bfa" : "#e5e7eb"; }}>
+                    {/* Date number */}
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
+                      <span style={{
+                        fontSize:"0.7rem", fontWeight: isTd ? 800 : 600,
+                        color: isTd ? "#fff" : "#374151",
+                        background: isTd ? "#7c3aed" : "transparent",
+                        borderRadius:"50%", width:18, height:18,
+                        display:"flex", alignItems:"center", justifyContent:"center"
+                      }}>{parseInt(d.split("-")[2])}</span>
+                      {dayBks.length > 0 && (
+                        <span style={{ fontSize:"0.5rem", fontWeight:700, color:"#7c3aed", background:"#ede9fe", borderRadius:99, padding:"1px 5px" }}>
+                          {dayBks.length}
+                        </span>
+                      )}
+                    </div>
+                    {/* Booking chips */}
+                    <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
+                      {shown.map((b, bi) => {
+                        const rIdx = rooms.findIndex(r => r.id === b.room_id);
+                        const col  = PALETTE[rIdx >= 0 ? rIdx % PALETTE.length : 0].bg;
+                        return (
+                          <div key={bi} style={{
+                            background: col, color:"#fff",
+                            borderRadius:3, padding:"1px 4px",
+                            fontSize:"0.5rem", fontWeight:700,
+                            whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                            lineHeight:"1.5"
+                          }}>
+                            {b.room_name || "Room"} · {fmt2(b.start_time)}
+                          </div>
+                        );
+                      })}
+                      {extra > 0 && (
+                        <div style={{ fontSize:"0.48rem", color:"#7c3aed", fontWeight:700, paddingLeft:2 }}>
+                          +{extra} more
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  {dayBks.length > 0 && (
-                    <span style={{ fontSize:"0.55rem", fontWeight:700, color:"#7c3aed", background:"#ede9fe", borderRadius:99, padding:"0 4px", marginTop:2, display:"inline-block" }}>
-                      {dayBks.length}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Single booking popup (day view click) ── */}
       {popup && !popup.type && (
