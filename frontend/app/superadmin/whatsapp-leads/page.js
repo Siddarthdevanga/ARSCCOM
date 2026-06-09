@@ -15,10 +15,51 @@ const ACTION_COLOR = {
   book_a_demo:        "#d97706",
 };
 
+const NURTURE_LABEL = ["—", "Step 1", "Step 2", "Final", "Closed"];
+const NURTURE_COLOR = ["#9ca3af", "#3b82f6", "#8b5cf6", "#f59e0b", "#6b7280"];
+
 const fmtDate = (d) => {
   if (!d) return "—";
   return new Date(d).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 };
+
+const fmtDemoDate = (date, time) => {
+  if (!date) return null;
+  const d = String(date).split("T")[0];
+  const t = String(time).substring(0, 5);
+  return `${d} ${t}`;
+};
+
+function DemoStatus({ lead, onMarkAttended }) {
+  if (!lead.demo_id) return <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>;
+
+  if (lead.demo_attended === 1)
+    return <span style={{ background: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>✅ Attended</span>;
+
+  if (lead.demo_attended === 0)
+    return <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>❌ Missed</span>;
+
+  // attended IS NULL — upcoming or past
+  const demoDateTime = new Date(`${String(lead.demo_date).split("T")[0]}T${String(lead.demo_time).substring(0, 8)}`);
+  const now = new Date();
+  const isPast = demoDateTime < now;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+      <span style={{ background: isPast ? "#fef3c7" : "#ede9fe", color: isPast ? "#92400e" : "#5b21b6", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+        {isPast ? "⏳ Pending" : "📅 Upcoming"}: {fmtDemoDate(lead.demo_date, lead.demo_time)}
+      </span>
+      {isPast && (
+        <button
+          onClick={() => onMarkAttended(lead.demo_id)}
+          style={{ fontSize: 11, fontWeight: 700, color: "#fff", background: "#10b981", border: "none", borderRadius: 6, padding: "3px 8px", cursor: "pointer" }}
+        >
+          Mark Attended
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function WhatsAppLeadsPage() {
   const router  = useRouter();
@@ -59,6 +100,17 @@ export default function WhatsAppLeadsPage() {
     localStorage.removeItem("sa_token");
     localStorage.removeItem("sa_admin");
     router.replace("/auth/login");
+  };
+
+  const markAttended = async (demoId) => {
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/demo-appointments/${demoId}/mark-attended`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) fetchLeads(token);
+    } catch { /* silent */ }
   };
 
   /* ── FILTER ── */
@@ -115,9 +167,9 @@ export default function WhatsAppLeadsPage() {
               </div>
             </div>
             <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>No Action Yet</div>
-              <div className={styles.heroStatValue}>
-                {leads.filter((l) => !l.last_action).length}
+              <div className={styles.heroStatLabel}>Unsubscribed</div>
+              <div className={styles.heroStatValue} style={{ color: "#ef4444" }}>
+                {leads.filter((l) => l.unsubscribed).length}
               </div>
             </div>
           </div>
@@ -156,6 +208,8 @@ export default function WhatsAppLeadsPage() {
                   <th style={th}>Name</th>
                   <th style={th}>Phone</th>
                   <th style={th}>Action Taken</th>
+                  <th style={th}>Demo Status</th>
+                  <th style={th}>Nurture</th>
                   <th style={th}>First Contact</th>
                   <th style={th}>Last Activity</th>
                 </tr>
@@ -164,7 +218,9 @@ export default function WhatsAppLeadsPage() {
                 {filtered.map((lead, i) => (
                   <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ede9fe" }}>
                     <td style={td}>{i + 1}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{lead.name || "—"}</td>
+                    <td style={{ ...td, fontWeight: 600 }}>
+                      {lead.unsubscribed ? <span style={{ color: "#9ca3af" }}>🚫 {lead.name || "—"}</span> : (lead.name || "—")}
+                    </td>
                     <td style={{ ...td, fontFamily: "monospace" }}>{lead.phone ? `+${lead.phone}` : "—"}</td>
                     <td style={td}>
                       {lead.last_action ? (
@@ -173,6 +229,18 @@ export default function WhatsAppLeadsPage() {
                         </span>
                       ) : (
                         <span style={{ color: "#9ca3af", fontSize: "13px" }}>No action</span>
+                      )}
+                    </td>
+                    <td style={td}>
+                      <DemoStatus lead={lead} onMarkAttended={markAttended} />
+                    </td>
+                    <td style={td}>
+                      {lead.unsubscribed ? (
+                        <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Unsubscribed</span>
+                      ) : (
+                        <span style={{ background: NURTURE_COLOR[lead.nurture_step || 0] + "22", color: NURTURE_COLOR[lead.nurture_step || 0], padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                          {NURTURE_LABEL[lead.nurture_step || 0]}
+                        </span>
                       )}
                     </td>
                     <td style={{ ...td, color: "#6b7280", fontSize: "13px" }}>{fmtDate(lead.created_at)}</td>

@@ -401,13 +401,66 @@ export const sendVideoMessage = async (req, res) => {
 export const whatsappLeads = async (req, res) => {
   try {
     const [leads] = await db.query(
-      `SELECT id, phone, name, last_action, created_at, updated_at
-       FROM whatsapp_leads
-       ORDER BY updated_at DESC`
+      `SELECT
+         wl.id, wl.phone, wl.name, wl.last_action, wl.created_at, wl.updated_at,
+         wl.nurture_step, wl.last_nurture_sent_at, wl.unsubscribed,
+         da.id         AS demo_id,
+         da.app_date   AS demo_date,
+         da.app_time   AS demo_time,
+         da.attended   AS demo_attended,
+         da.post_demo_sent
+       FROM whatsapp_leads wl
+       LEFT JOIN demo_appointments da
+         ON da.phone = wl.phone
+         AND da.id = (
+           SELECT id FROM demo_appointments
+           WHERE phone = wl.phone
+           ORDER BY created_at DESC LIMIT 1
+         )
+       ORDER BY wl.updated_at DESC`
     );
     return res.status(200).json({ success: true, leads });
   } catch (err) {
     console.error("SUPERADMIN WHATSAPP LEADS ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   MARK DEMO ATTENDED
+   POST /api/superadmin/demo-appointments/:id/mark-attended
+====================================================== */
+export const markDemoAttended = async (req, res) => {
+  try {
+    const demoId = parseInt(req.params.id);
+    if (isNaN(demoId)) return res.status(400).json({ success: false, message: "Invalid demo ID" });
+
+    const [[appt]] = await db.query(
+      `SELECT id, name, phone, attended, post_demo_sent FROM demo_appointments WHERE id = ?`,
+      [demoId]
+    );
+    if (!appt) return res.status(404).json({ success: false, message: "Appointment not found" });
+
+    await db.query(`UPDATE demo_appointments SET attended = 1 WHERE id = ?`, [demoId]);
+
+    // Immediately send attended follow-up if not yet sent
+    if (!appt.post_demo_sent) {
+      const attendedTemplate = process.env.GUPSHUP_DEMO_ATTENDED_TEMPLATE || "";
+      if (attendedTemplate) {
+        try {
+          const { sendWhatsAppTemplate } = await import("../services/gupshup.service.js");
+          await sendWhatsAppTemplate(appt.phone, attendedTemplate, [appt.name || "there"]);
+          await db.query(`UPDATE demo_appointments SET post_demo_sent = 1 WHERE id = ?`, [demoId]);
+          console.log(`[MARK ATTENDED] Follow-up sent to ${appt.phone}`);
+        } catch (e) {
+          console.error(`[MARK ATTENDED] WhatsApp failed:`, e.message);
+        }
+      }
+    }
+
+    return res.json({ success: true, message: "Marked as attended" });
+  } catch (err) {
+    console.error("MARK ATTENDED ERROR:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

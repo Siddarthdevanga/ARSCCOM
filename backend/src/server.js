@@ -156,6 +156,18 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Visitor Feedback Cron Scheduled (Every Minute IST)");
 
+    const { sendPostDemoMessages } = await import("./cron/postDemoCron.js");
+    cron.default.schedule('* * * * *', async () => {
+      try { await sendPostDemoMessages(); } catch (e) { console.error("❌ Post-demo cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Post-Demo Follow-up Cron Scheduled (Every Minute IST)");
+
+    const { sendNurtureMessages } = await import("./cron/nurtureCron.js");
+    cron.default.schedule('* * * * *', async () => {
+      try { await sendNurtureMessages(); } catch (e) { console.error("❌ Nurture cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Nurture Cron Scheduled (Every Minute IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;

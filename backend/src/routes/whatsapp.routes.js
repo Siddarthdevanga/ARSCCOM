@@ -175,6 +175,13 @@ async function handleInbound(body) {
     return;
   }
 
+  // Check text for unsubscribe
+  const rawText = (payload.payload?.text || payload.payload?.content?.text || "").trim().toLowerCase();
+  if (rawText === "unsubscribe") {
+    await handleUnsubscribe(phone);
+    return;
+  }
+
   // text, image, audio, or any other — send intro
   console.log(`[WA] Inbound message from ${phone}, sending intro`);
   await upsertLead(phone, name, null);
@@ -196,9 +203,24 @@ async function handleButton(phone, title, name) {
     return;
   }
 
+  if (normalised === "unsubscribe") {
+    await handleUnsubscribe(phone);
+    return;
+  }
+
   // Unknown input — re-send intro
   await upsertLead(phone, name, null);
   await sendIntroMessage(phone);
+}
+
+async function handleUnsubscribe(phone) {
+  try {
+    await db.query(`UPDATE whatsapp_leads SET unsubscribed = 1 WHERE phone = ?`, [phone]);
+    await sendTextMessage(phone, "You have been unsubscribed from Promeet communications. You can always reach out to us whenever you're ready. 🙏");
+    console.log(`[WA] Unsubscribed: ${phone}`);
+  } catch (e) {
+    console.error("[WA UNSUBSCRIBE ERROR]", e.message);
+  }
 }
 
 async function upsertLead(phone, name, action) {

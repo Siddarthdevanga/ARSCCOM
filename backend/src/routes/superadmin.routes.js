@@ -20,7 +20,8 @@ router.use(authenticateSuperAdmin);
 router.get("/dashboard", ctrl.dashboard);
 
 // ── WhatsApp Leads ─────────────────────────────────────
-router.get("/whatsapp-leads", ctrl.whatsappLeads);
+router.get ("/whatsapp-leads",                              ctrl.whatsappLeads);
+router.post("/demo-appointments/:id/mark-attended",         ctrl.markDemoAttended);
 
 // ── Video Broadcast ────────────────────────────────────
 router.post("/send-video-message", ctrl.sendVideoMessage);
