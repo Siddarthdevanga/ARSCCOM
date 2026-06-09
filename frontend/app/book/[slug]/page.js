@@ -624,10 +624,16 @@ function CalendarScrollWrapper({ rooms, slug }) {
                         <div style={{ fontSize:"0.58rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.15rem" }}>{dayBks.length} bk.</div>
                         {dayBks.slice(0,3).map((b, i) => {
                           const rIdx = rooms.findIndex(r => r.id === b.room_id);
-                          const color = PUB_PALETTE[rIdx >= 0 ? rIdx % PUB_PALETTE.length : 0];
+                          const col = PUB_PALETTE[rIdx >= 0 ? rIdx % PUB_PALETTE.length : 0];
                           return (
-                            <div key={i} style={{ fontSize:"0.53rem", color:"#374151", marginBottom:2, padding:"1px 3px", borderLeft:`2px solid ${color}`, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                              {fmt(b.start_time)}
+                            <div key={i} style={{
+                              background: col, color:"#fff",
+                              borderRadius:3, padding:"1px 3px",
+                              fontSize:"0.53rem", fontWeight:700,
+                              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                              lineHeight:"1.5", marginBottom:2
+                            }}>
+                              {b.room_name || "Room"} · {fmt(b.start_time)}
                             </div>
                           );
                         })}

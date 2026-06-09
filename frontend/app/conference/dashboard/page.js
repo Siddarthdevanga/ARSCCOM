@@ -1098,10 +1098,16 @@ function TodayTimeline({ rooms, bookings }) {
                         <div style={{ fontSize:"0.6rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.2rem" }}>{dayBks.length} booking{dayBks.length !== 1 ? "s" : ""}</div>
                         {dayBks.slice(0,3).map((b, i) => {
                           const rIdx = rooms.findIndex(r => r.id === b.room_id);
-                          const color = PALETTE[rIdx >= 0 ? rIdx % PALETTE.length : 0].bg;
+                          const col = PALETTE[rIdx >= 0 ? rIdx % PALETTE.length : 0].bg;
                           return (
-                            <div key={i} style={{ fontSize:"0.56rem", color:"#374151", marginBottom:2, padding:"1px 4px", borderLeft:`2px solid ${color}`, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                              {fmt(b.start_time)} · {b.room_name}
+                            <div key={i} style={{
+                              background: col, color:"#fff",
+                              borderRadius:3, padding:"1px 4px",
+                              fontSize:"0.56rem", fontWeight:700,
+                              whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                              lineHeight:"1.5", marginBottom:2
+                            }}>
+                              {b.room_name || "Room"} · {fmt(b.start_time)}
                             </div>
                           );
                         })}
