@@ -60,11 +60,18 @@ async function handleAppointment(body) {
   // Normalise phone — strip non-digits, ensure starts with country code
   const phone = rawPhone.replace(/\D/g, "");
 
-  // Parse date for storage — handle "DD MMM YYYY" or "YYYY-MM-DD"
+  // Parse date for storage
+  // Priority: YYYY-MM-DD → DD/MM/YYYY → DD-MM-YYYY → fallback new Date()
   let dateISO = appDate;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(appDate)) {
-    const parsed = new Date(appDate);
-    if (!isNaN(parsed)) dateISO = parsed.toISOString().split("T")[0];
+    const ddmm = appDate.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (ddmm) {
+      // Treat as DD/MM/YYYY (Indian format)
+      dateISO = `${ddmm[3]}-${String(ddmm[2]).padStart(2,"0")}-${String(ddmm[1]).padStart(2,"0")}`;
+    } else {
+      const parsed = new Date(appDate);
+      if (!isNaN(parsed)) dateISO = parsed.toISOString().split("T")[0];
+    }
   }
 
   // Normalise time to HH:MM:SS
