@@ -11,6 +11,7 @@ import {
   updateVisitStatus,
   getYesterdaySummary,
   getReturningVisitor,
+  visitorFeedbackWebhook,
 } from "../controllers/visitor.controller.js";
 
 const router = express.Router();
@@ -24,6 +25,10 @@ const router = express.Router();
 
 /* ── PUBLIC — NO AUTH ── */
 router.get("/public/code/:visitorCode", getPublicVisitorPass);
+
+/* Gupshup PROMEET app sends feedback button clicks here */
+router.post("/feedback-webhook", visitorFeedbackWebhook);
+router.get("/feedback-webhook", (_req, res) => res.sendStatus(200));
 
 /* ── CREATE VISITOR ── */
 router.post("/", authenticate, upload.single("photo"), createVisitor);

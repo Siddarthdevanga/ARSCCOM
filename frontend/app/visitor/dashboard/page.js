@@ -32,6 +32,28 @@ function VisitStatusBadge({ status }) {
   );
 }
 
+/* ─── Feedback Rating Badge ──────────────── */
+const FEEDBACK_CONFIG = {
+  excellent:        { label: "👍 Excellent",        bg: "rgba(0,184,148,0.12)",  color: "#00a875" },
+  good:             { label: "😊 Good",              bg: "rgba(59,130,246,0.12)", color: "#2563eb" },
+  needs_improvement:{ label: "😐 Needs Improvement", bg: "rgba(240,165,0,0.12)",  color: "#c77800" },
+};
+
+function FeedbackBadge({ rating }) {
+  if (!rating) return <span style={{ fontSize: 11, color: "#ccc" }}>—</span>;
+  const cfg = FEEDBACK_CONFIG[rating] || { label: rating, bg: "rgba(200,200,200,0.2)", color: "#666" };
+  return (
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 3,
+      padding: "3px 9px", borderRadius: 50, fontSize: 10,
+      fontWeight: 800, background: cfg.bg, color: cfg.color,
+      whiteSpace: "nowrap",
+    }}>
+      {cfg.label}
+    </span>
+  );
+}
+
 /* ─── Duration formatter ─────────────────── */
 const calcDuration = (checkIn, checkOut) => {
   if (!checkIn || !checkOut) return "—";
@@ -648,6 +670,7 @@ export default function VisitorDashboard() {
                         <th>Visitor</th>
                         <th>Visit Status</th>
                         <th>Duration</th>
+                        <th>Rating</th>
                         <th>Date</th>
                       </tr>
                     </thead>
@@ -672,6 +695,9 @@ export default function VisitorDashboard() {
                           </td>
                           <td style={{ fontSize: 12, color: "#2a0050" }}>
                             {calcDuration(v.check_in, v.check_out)}
+                          </td>
+                          <td>
+                            <FeedbackBadge rating={v.feedback_rating} />
                           </td>
                           <td style={{ fontSize: 11, color: "#9980c8" }}>
                             {fmtDate(v.check_in)}

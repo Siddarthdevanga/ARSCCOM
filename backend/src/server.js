@@ -150,6 +150,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Demo Appointment Reminder Cron Scheduled (Every Minute IST)");
 
+    const { sendVisitorFeedback } = await import("./cron/visitorFeedbackCron.js");
+    cron.default.schedule('* * * * *', async () => {
+      try { await sendVisitorFeedback(); } catch (e) { console.error("❌ Visitor feedback cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Visitor Feedback Cron Scheduled (Every Minute IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;
