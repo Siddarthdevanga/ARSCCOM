@@ -223,6 +223,31 @@ export const extendTrial = async (req, res) => {
 
     await service.extendTrial(companyId, trial_ends_at);
 
+    // WhatsApp — trial activated (only when setting a date, not clearing)
+    if (trial_ends_at) {
+      const activatedTemplate = process.env.GUPSHUP_TRIAL_ACTIVATED_TEMPLATE || "";
+      if (activatedTemplate) {
+        try {
+          const [[row]] = await db.query(
+            `SELECT u.phone, c.name FROM users u JOIN companies c ON c.id = u.company_id
+             WHERE u.company_id = ? AND u.role = 'user' AND u.is_active = 1 LIMIT 1`,
+            [companyId]
+          );
+          if (row?.phone) {
+            const prettyExpiry = new Date(trial_ends_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+            const { sendWhatsAppTemplate } = await import("../services/gupshup.service.js");
+            const digits = String(row.phone).replace(/\D/g, "");
+            const phone  = digits.length === 10 ? `91${digits}` : digits;
+            await sendWhatsAppTemplate(phone, activatedTemplate, [row.name, prettyExpiry]);
+            await db.query(`UPDATE companies SET wa_reminders_sent = '' WHERE id = ?`, [companyId]);
+            console.log(`[SUPERADMIN] Trial activated WhatsApp sent to ${row.phone}`);
+          }
+        } catch (e) {
+          console.error(`[SUPERADMIN] Trial activated WhatsApp failed:`, e.message);
+        }
+      }
+    }
+
     return res.status(200).json({
       success: true,
       message: trial_ends_at === null ? "Trial end date removed" : `Trial extended to ${trial_ends_at}`,

@@ -168,6 +168,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Nurture Cron Scheduled (Every Minute IST)");
 
+    const { sendPlanReminders } = await import("./cron/planNotificationCron.js");
+    cron.default.schedule('0 9 * * *', async () => {
+      try { await sendPlanReminders(); } catch (e) { console.error("❌ Plan reminder cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Plan Reminder Cron Scheduled (Daily 9:00 AM IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;

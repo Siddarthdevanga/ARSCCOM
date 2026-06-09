@@ -1,5 +1,11 @@
 import { db } from "../config/db.js";
 import { sendGracePeriodEmail } from "../utils/gracePeriodMail.service.js";
+import { sendWhatsAppTemplate } from "../services/gupshup.service.js";
+
+const normalizePhone = (p) => {
+  const d = String(p || "").replace(/\D/g, "");
+  return d.length === 10 ? `91${d}` : d;
+};
 
 /* ======================================================
    GRACE PERIOD DAILY CHECKER
@@ -38,6 +44,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           c.id,
           c.name,
           u.email,
+          u.phone,
           c.plan,
           c.subscription_status,
           c.trial_ends_at,
@@ -98,6 +105,17 @@ export const checkAndSendGracePeriodEmails = async () => {
             console.log(`   ⚠️  ${company.name} (ID: ${company.id}) - Grace period started but email failed`);
             stats.newGracePeriods++;
           }
+
+          // WhatsApp — trial expired notice
+          const expiredTemplate = process.env.GUPSHUP_TRIAL_EXPIRED_TEMPLATE || "";
+          if (expiredTemplate && company.phone) {
+            try {
+              await sendWhatsAppTemplate(normalizePhone(company.phone), expiredTemplate, [company.name]);
+              console.log(`   📱 Trial expired WhatsApp sent to ${company.phone}`);
+            } catch (e) {
+              console.error(`   ❌ Trial expired WhatsApp failed:`, e.message);
+            }
+          }
         } catch (err) {
           await conn.rollback();
           console.error(`   ❌ Error processing ${company.name}:`, err.message);
@@ -115,6 +133,7 @@ export const checkAndSendGracePeriodEmails = async () => {
           c.id,
           c.name,
           u.email,
+          u.phone,
           c.plan,
           c.grace_period_ends_at,
           c.grace_period_day,
@@ -165,6 +184,19 @@ export const checkAndSendGracePeriodEmails = async () => {
               console.log(`   ✅ ${company.name} (ID: ${company.id}) - Day ${currentDay} email sent → ${company.email}`);
             } else {
               console.log(`   ⚠️  ${company.name} (ID: ${company.id}) - Day ${currentDay} email failed`);
+            }
+
+            // Day 9 = 1 day before 10-day grace ends → send WhatsApp final warning
+            if (currentDay === 9) {
+              const graceEndTemplate = process.env.GUPSHUP_GRACE_ENDING_TEMPLATE || "";
+              if (graceEndTemplate && company.phone) {
+                try {
+                  await sendWhatsAppTemplate(normalizePhone(company.phone), graceEndTemplate, [company.name]);
+                  console.log(`   📱 Grace ending WhatsApp sent to ${company.phone}`);
+                } catch (e) {
+                  console.error(`   ❌ Grace ending WhatsApp failed:`, e.message);
+                }
+              }
             }
           }
         } catch (err) {

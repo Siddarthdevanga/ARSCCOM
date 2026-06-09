@@ -4,6 +4,12 @@ import axios from "axios";
 import { db } from "../config/db.js";
 import { getZohoAccessToken } from "../services/zohoToken.service.js";
 import { sendEmail } from "../utils/mailer.js";
+import { sendWhatsAppTemplate } from "../services/gupshup.service.js";
+
+const normalizePhone = (p) => {
+  const d = String(p || "").replace(/\D/g, "");
+  return d.length === 10 ? `91${d}` : d;
+};
 
 const router = express.Router();
 
@@ -445,10 +451,29 @@ async function repairBilling() {
                trial_ends_at = ?,
                grace_period_ends_at = NULL,
                grace_period_day = 0,
+               wa_reminders_sent = '',
                updated_at = NOW()
              WHERE id = ?`,
             [mysqlPaid, mysqlEnds, id]
           );
+
+          // WhatsApp — trial activated
+          const activatedTemplate = process.env.GUPSHUP_TRIAL_ACTIVATED_TEMPLATE || "";
+          if (activatedTemplate) {
+            try {
+              const [[user]] = await db.query(
+                `SELECT u.phone, c.name FROM users u JOIN companies c ON c.id = u.company_id
+                 WHERE u.company_id = ? AND u.role = 'user' AND u.is_active = 1 LIMIT 1`, [id]
+              );
+              if (user?.phone) {
+                const prettyExpiry = new Date(mysqlEnds).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+                await sendWhatsAppTemplate(normalizePhone(user.phone), activatedTemplate, [user.name, prettyExpiry]);
+                console.log(`[BILLING] Trial activated WhatsApp sent to ${user.phone}`);
+              }
+            } catch (e) {
+              console.error(`[BILLING] Trial activated WhatsApp failed:`, e.message);
+            }
+          }
         } else {
           // Business OR Enterprise — both use subscription_ends_at
           await db.query(
