@@ -127,17 +127,17 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
   if (!templateId) throw new Error("GUPSHUP_VIDEO_TEMPLATE not configured");
 
   const template = JSON.stringify({
-    id:     templateId,
-    params: [bodyText],
+    id:             templateId,
+    params:         [bodyText],
+    headerMediaUrl: videoUrl,
   });
 
   const body = new URLSearchParams({
-    channel:     "whatsapp",
-    source:      srcNum,
+    channel:    "whatsapp",
+    source:     srcNum,
     destination,
-    "src.name":  appName,
+    "src.name": appName,
     template,
-    "video":     videoUrl,
   });
 
   try {
