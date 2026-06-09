@@ -11,15 +11,34 @@ export default function VideoBroadcast() {
   const [videoUrl, setVideoUrl] = useState("");
   const [phones,   setPhones]   = useState("");
   const [message,  setMessage]  = useState("");
-  const [sending,  setSending]  = useState(false);
-  const [result,   setResult]   = useState(null);
-  const [error,    setError]    = useState("");
+  const [sending,     setSending]     = useState(false);
+  const [loadingLeads,setLoadingLeads] = useState(false);
+  const [result,      setResult]      = useState(null);
+  const [error,       setError]       = useState("");
 
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
     if (!t) { router.replace("/auth/login"); return; }
     setToken(t);
   }, [router]);
+
+  const loadLeads = async () => {
+    setLoadingLeads(true);
+    setError("");
+    try {
+      const res  = await fetch(`${API}/api/superadmin/whatsapp-leads`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message);
+      const nums = data.leads.map(l => l.phone).join("\n");
+      setPhones(nums);
+    } catch (e) {
+      setError(e.message || "Failed to load leads");
+    } finally {
+      setLoadingLeads(false);
+    }
+  };
 
   const handleSend = async () => {
     setError("");
@@ -91,9 +110,22 @@ export default function VideoBroadcast() {
 
           {/* Phone Numbers */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
-              Phone Numbers <span style={{ color: "#ef4444" }}>*</span>
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+                Phone Numbers <span style={{ color: "#ef4444" }}>*</span>
+              </label>
+              <button
+                onClick={loadLeads}
+                disabled={loadingLeads}
+                style={{
+                  fontSize: 12, fontWeight: 600, color: "#7c3aed",
+                  background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.3)",
+                  borderRadius: 6, padding: "4px 10px", cursor: loadingLeads ? "not-allowed" : "pointer",
+                }}
+              >
+                {loadingLeads ? "Loading…" : "Load WhatsApp Leads"}
+              </button>
+            </div>
             <textarea
               placeholder={"917406208011\n919481560185\nor comma separated: 917406208011, 919481560185"}
               value={phones}
