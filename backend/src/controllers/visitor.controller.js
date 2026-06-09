@@ -569,10 +569,11 @@ export const visitorFeedbackWebhook = async (req, res) => {
       const last10 = digits.slice(-10);
       const normalized = `91${last10}`;
 
-      // Update the most recent checked-out or active visit for this phone
+      // Save rating and auto check-out if still checked in
       const [result] = await db.execute(
         `UPDATE visitors
-         SET feedback_rating = ?
+         SET feedback_rating = ?,
+             check_out_time  = CASE WHEN check_out_time IS NULL THEN NOW() ELSE check_out_time END
          WHERE phone = ?
            AND feedback_sent = 1
            AND feedback_rating IS NULL
@@ -582,7 +583,7 @@ export const visitorFeedbackWebhook = async (req, res) => {
       );
 
       if (result.affectedRows) {
-        console.log(`[FEEDBACK WEBHOOK] Saved rating "${rating}" for ${normalized}`);
+        console.log(`[FEEDBACK WEBHOOK] Saved rating "${rating}" for ${normalized}, auto checked-out if needed`);
       } else {
         console.log(`[FEEDBACK WEBHOOK] No matching visitor found for ${normalized}`);
       }
