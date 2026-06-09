@@ -4,7 +4,6 @@ import { sendWhatsAppTemplate } from "../services/gupshup.service.js";
 export const sendPostDemoMessages = async () => {
   const attendedTemplate = process.env.GUPSHUP_DEMO_ATTENDED_TEMPLATE || "";
   const missedTemplate   = process.env.GUPSHUP_DEMO_MISSED_TEMPLATE   || "";
-  const videoUrl         = process.env.PROMEET_PRODUCT_VIDEO_URL       || "https://www.promeet.zodopt.com";
 
   try {
     // Send attended follow-up (superadmin marked attended = 1, not yet sent)
@@ -33,7 +32,7 @@ export const sendPostDemoMessages = async () => {
       );
       for (const appt of rows) {
         try {
-          await sendWhatsAppTemplate(appt.phone, missedTemplate, [appt.name || "there", videoUrl]);
+          await sendWhatsAppTemplate(appt.phone, missedTemplate, [appt.name || "there"]);
           console.log(`[POST DEMO] Missed msg sent to ${appt.phone}`);
         } catch (e) {
           console.error(`[POST DEMO] Missed failed for ${appt.phone}:`, e.message);
