@@ -16,8 +16,8 @@ export default function VideoBroadcast() {
   const [error,    setError]    = useState("");
 
   useEffect(() => {
-    const t = localStorage.getItem("superadmin_token");
-    if (!t) { router.replace("/superadmin/login"); return; }
+    const t = localStorage.getItem("sa_token");
+    if (!t) { router.replace("/auth/login"); return; }
     setToken(t);
   }, [router]);
 
