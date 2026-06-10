@@ -3,10 +3,22 @@ import { sendWhatsAppTemplate } from "../services/gupshup.service.js";
 
 /* ======================================================
    NURTURE CRON
-   Runs every minute. Sends follow-up sequence to leads
-   who haven't booked a demo.
-   Timing: Step1 day2, Step2 day4 (+2d), Final day7 (+3d), Closure day10 (+3d)
+   Runs every minute.
+   - No demo booked: starts 2 days after created_at
+   - Demo missed: restarts 2 days after missed WhatsApp sent
+   - Demo upcoming / attended: paused
+   Timing: Step1 day2, Step2 +2d, Final +3d, Closure +3d
 ====================================================== */
+
+// Exclude only leads with an upcoming or attended demo
+const NO_ACTIVE_DEMO = `
+  NOT EXISTS (
+    SELECT 1 FROM demo_appointments da
+    WHERE da.phone = wl.phone
+      AND (da.attended IS NULL OR da.attended = 1)
+  )
+`;
+
 export const sendNurtureMessages = async () => {
   const t1 = process.env.GUPSHUP_NURTURE_1_TEMPLATE      || "";
   const t2 = process.env.GUPSHUP_NURTURE_2_TEMPLATE      || "";
@@ -29,13 +41,13 @@ export const sendNurtureMessages = async () => {
   };
 
   try {
-    // Step 1 — 2 days after created_at, no demo booked yet
+    // Step 1 — 2 days after created_at OR 2 days after missed demo reset
     if (t1) {
       const [leads] = await db.query(
         `SELECT wl.id, wl.phone, wl.name FROM whatsapp_leads wl
          WHERE wl.nurture_step = 0 AND wl.unsubscribed = 0
-           AND wl.created_at <= DATE_SUB(NOW(), INTERVAL 2 DAY)
-           AND NOT EXISTS (SELECT 1 FROM demo_appointments da WHERE da.phone = wl.phone)`
+           AND COALESCE(wl.last_nurture_sent_at, wl.created_at) <= DATE_SUB(NOW(), INTERVAL 2 DAY)
+           AND ${NO_ACTIVE_DEMO}`
       );
       for (const l of leads) await send(l, t1, 1);
     }
@@ -46,7 +58,7 @@ export const sendNurtureMessages = async () => {
         `SELECT wl.id, wl.phone, wl.name FROM whatsapp_leads wl
          WHERE wl.nurture_step = 1 AND wl.unsubscribed = 0
            AND wl.last_nurture_sent_at <= DATE_SUB(NOW(), INTERVAL 2 DAY)
-           AND NOT EXISTS (SELECT 1 FROM demo_appointments da WHERE da.phone = wl.phone)`
+           AND ${NO_ACTIVE_DEMO}`
       );
       for (const l of leads) await send(l, t2, 2);
     }
@@ -57,7 +69,7 @@ export const sendNurtureMessages = async () => {
         `SELECT wl.id, wl.phone, wl.name FROM whatsapp_leads wl
          WHERE wl.nurture_step = 2 AND wl.unsubscribed = 0
            AND wl.last_nurture_sent_at <= DATE_SUB(NOW(), INTERVAL 3 DAY)
-           AND NOT EXISTS (SELECT 1 FROM demo_appointments da WHERE da.phone = wl.phone)`
+           AND ${NO_ACTIVE_DEMO}`
       );
       for (const l of leads) await send(l, tf, 3);
     }
@@ -68,7 +80,7 @@ export const sendNurtureMessages = async () => {
         `SELECT wl.id, wl.phone, wl.name FROM whatsapp_leads wl
          WHERE wl.nurture_step = 3 AND wl.unsubscribed = 0
            AND wl.last_nurture_sent_at <= DATE_SUB(NOW(), INTERVAL 3 DAY)
-           AND NOT EXISTS (SELECT 1 FROM demo_appointments da WHERE da.phone = wl.phone)`
+           AND ${NO_ACTIVE_DEMO}`
       );
       for (const l of leads) await send(l, tc, 4);
     }

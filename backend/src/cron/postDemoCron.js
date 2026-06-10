@@ -23,12 +23,12 @@ export const sendPostDemoMessages = async () => {
       }
     }
 
-    // Auto-mark missed 30 min after appointment time, send missed follow-up
+    // Auto-mark missed 2 hours after appointment time, send missed follow-up
     if (missedTemplate) {
       const [rows] = await db.query(
         `SELECT id, name, phone FROM demo_appointments
          WHERE attended IS NULL AND post_demo_sent = 0
-           AND CAST(CONCAT(app_date, ' ', app_time) AS DATETIME) <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)`
+           AND CAST(CONCAT(app_date, ' ', app_time) AS DATETIME) <= DATE_SUB(NOW(), INTERVAL 2 HOUR)`
       );
       for (const appt of rows) {
         try {
@@ -40,6 +40,11 @@ export const sendPostDemoMessages = async () => {
         await db.query(
           `UPDATE demo_appointments SET attended = 0, post_demo_sent = 1 WHERE id = ?`,
           [appt.id]
+        );
+        // Reset nurture so it starts fresh from now (2 days after missed → step 1 fires)
+        await db.query(
+          `UPDATE whatsapp_leads SET nurture_step = 0, last_nurture_sent_at = NOW() WHERE phone = ?`,
+          [appt.phone]
         );
       }
     }
