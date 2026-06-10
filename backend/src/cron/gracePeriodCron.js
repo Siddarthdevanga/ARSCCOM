@@ -106,14 +106,16 @@ export const checkAndSendGracePeriodEmails = async () => {
             stats.newGracePeriods++;
           }
 
-          // WhatsApp — trial expired notice
-          const expiredTemplate = process.env.GUPSHUP_TRIAL_EXPIRED_TEMPLATE || "";
+          // WhatsApp — plan expired notice (plan-specific template)
+          const expiredTemplate = company.plan === "business"
+            ? (process.env.GUPSHUP_BUSINESS_EXPIRED_TEMPLATE || "")
+            : (process.env.GUPSHUP_TRIAL_EXPIRED_TEMPLATE    || "");
           if (expiredTemplate && company.phone) {
             try {
               await sendWhatsAppTemplate(normalizePhone(company.phone), expiredTemplate, [company.name]);
-              console.log(`   📱 Trial expired WhatsApp sent to ${company.phone}`);
+              console.log(`   📱 ${company.plan} expired WhatsApp sent to ${company.phone}`);
             } catch (e) {
-              console.error(`   ❌ Trial expired WhatsApp failed:`, e.message);
+              console.error(`   ❌ Expired WhatsApp failed:`, e.message);
             }
           }
         } catch (err) {
@@ -188,11 +190,13 @@ export const checkAndSendGracePeriodEmails = async () => {
 
             // Day 9 = 1 day before 10-day grace ends → send WhatsApp final warning
             if (currentDay === 9) {
-              const graceEndTemplate = process.env.GUPSHUP_GRACE_ENDING_TEMPLATE || "";
+              const graceEndTemplate = company.plan === "business"
+                ? (process.env.GUPSHUP_BUSINESS_GRACE_ENDING_TEMPLATE || "")
+                : (process.env.GUPSHUP_GRACE_ENDING_TEMPLATE          || "");
               if (graceEndTemplate && company.phone) {
                 try {
                   await sendWhatsAppTemplate(normalizePhone(company.phone), graceEndTemplate, [company.name]);
-                  console.log(`   📱 Grace ending WhatsApp sent to ${company.phone}`);
+                  console.log(`   📱 ${company.plan} grace ending WhatsApp sent to ${company.phone}`);
                 } catch (e) {
                   console.error(`   ❌ Grace ending WhatsApp failed:`, e.message);
                 }

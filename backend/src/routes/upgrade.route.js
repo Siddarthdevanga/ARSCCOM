@@ -94,6 +94,26 @@ router.post("/", authenticate, async (req, res) => {
         [companyId]
       );
 
+      // WhatsApp — enterprise acknowledgement
+      const enterpriseTemplate = process.env.GUPSHUP_ENTERPRISE_ACK_TEMPLATE || "";
+      if (enterpriseTemplate) {
+        try {
+          const [[user]] = await db.query(
+            `SELECT u.phone, c.name FROM users u JOIN companies c ON c.id = u.company_id
+             WHERE u.company_id = ? AND u.role = 'user' AND u.is_active = 1 LIMIT 1`, [companyId]
+          );
+          if (user?.phone) {
+            const { sendWhatsAppTemplate } = await import("../services/gupshup.service.js");
+            const d = String(user.phone).replace(/\D/g, "");
+            const phone = d.length === 10 ? `91${d}` : d;
+            await sendWhatsAppTemplate(phone, enterpriseTemplate, [user.name]);
+            console.log(`[UPGRADE] Enterprise ack WhatsApp sent to ${user.phone}`);
+          }
+        } catch (e) {
+          console.error(`[UPGRADE] Enterprise ack WhatsApp failed:`, e.message);
+        }
+      }
+
       return res.json({
         success: true,
         requiresContact: true,

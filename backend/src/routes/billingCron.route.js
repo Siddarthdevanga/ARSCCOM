@@ -485,10 +485,33 @@ async function repairBilling() {
                subscription_ends_at = ?,
                grace_period_ends_at = NULL,
                grace_period_day = 0,
+               wa_reminders_sent = '',
                updated_at = NOW()
              WHERE id = ?`,
             [activePlan, mysqlPaid, mysqlEnds, id]
           );
+
+          // WhatsApp — business activated or renewal thanks
+          if (activePlan === "business") {
+            const isRenewal = plan === "business";
+            const waTemplate = isRenewal
+              ? (process.env.GUPSHUP_RENEWAL_THANKS_TEMPLATE || "")
+              : (process.env.GUPSHUP_BUSINESS_ACTIVATED_TEMPLATE || "");
+            if (waTemplate) {
+              try {
+                const [[user]] = await db.query(
+                  `SELECT u.phone, c.name FROM users u JOIN companies c ON c.id = u.company_id
+                   WHERE u.company_id = ? AND u.role = 'user' AND u.is_active = 1 LIMIT 1`, [id]
+                );
+                if (user?.phone) {
+                  await sendWhatsAppTemplate(normalizePhone(user.phone), waTemplate, [user.name]);
+                  console.log(`[BILLING] Business ${isRenewal ? "renewal thanks" : "activated"} WhatsApp sent to ${user.phone}`);
+                }
+              } catch (e) {
+                console.error(`[BILLING] Business WhatsApp failed:`, e.message);
+              }
+            }
+          }
         }
 
         if (company_email) {

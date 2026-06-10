@@ -167,7 +167,35 @@ export const updatePlan = async (req, res) => {
     if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
     if (!plan)             return res.status(400).json({ success: false, message: "plan is required" });
 
-    await service.updatePlan(companyId, plan.toLowerCase());
+    const normalizedPlan = plan.toLowerCase();
+    await service.updatePlan(companyId, normalizedPlan);
+
+    // WhatsApp notification for business or enterprise
+    const templateKey = normalizedPlan === "business"
+      ? "GUPSHUP_BUSINESS_ACTIVATED_TEMPLATE"
+      : normalizedPlan === "enterprise"
+        ? "GUPSHUP_ENTERPRISE_ACK_TEMPLATE"
+        : null;
+
+    if (templateKey && process.env[templateKey]) {
+      try {
+        const [[row]] = await db.query(
+          `SELECT u.phone, c.name FROM users u JOIN companies c ON c.id = u.company_id
+           WHERE u.company_id = ? AND u.role = 'user' AND u.is_active = 1 LIMIT 1`,
+          [companyId]
+        );
+        if (row?.phone) {
+          const { sendWhatsAppTemplate } = await import("../services/gupshup.service.js");
+          const d = String(row.phone).replace(/\D/g, "");
+          const phone = d.length === 10 ? `91${d}` : d;
+          await sendWhatsAppTemplate(phone, process.env[templateKey], [row.name]);
+          console.log(`[SUPERADMIN] ${normalizedPlan} WhatsApp sent to ${row.phone}`);
+        }
+      } catch (e) {
+        console.error(`[SUPERADMIN] ${normalizedPlan} WhatsApp failed:`, e.message);
+      }
+    }
+
     return res.status(200).json({ success: true, message: `Plan updated to ${plan}` });
   } catch (err) {
     console.error("SUPERADMIN UPDATE PLAN ERROR:", err.message);
