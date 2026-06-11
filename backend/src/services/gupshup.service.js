@@ -170,6 +170,37 @@ export const sendImageWhatsApp = async (destination, imageUrl, bodyText) => {
   }
 };
 
+export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
+  const { apiKey, appName, srcNum } = getConfig();
+
+  const message = JSON.stringify({
+    type:    "video",
+    url:     videoUrl,
+    caption: bodyText,
+  });
+
+  const body = new URLSearchParams({
+    channel:    "whatsapp",
+    source:     srcNum,
+    destination,
+    "src.name": appName,
+    message,
+  });
+
+  console.log(`[WA-VID] dest=${destination} videoUrl=${videoUrl}`);
+
+  try {
+    const { data } = await axios.post(MSG_URL, body.toString(), {
+      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    console.log(`[WA] video msg → ${destination}:`, JSON.stringify(data));
+    return data;
+  } catch (err) {
+    console.error(`[WA] video msg failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
+};
+
 export const sendTextMessage = async (destination, text) => {
   const { apiKey, appName, srcNum } = getConfig();
 

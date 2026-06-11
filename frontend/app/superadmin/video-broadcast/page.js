@@ -7,10 +7,11 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export default function VideoBroadcast() {
   const router  = useRouter();
-  const [token,    setToken]    = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
-  const [phones,   setPhones]   = useState("");
-  const [message,  setMessage]  = useState("");
+  const [token,     setToken]     = useState("");
+  const [mediaType, setMediaType] = useState("image");
+  const [videoUrl,  setVideoUrl]  = useState("");
+  const [phones,    setPhones]    = useState("");
+  const [message,   setMessage]   = useState("");
   const [sending,     setSending]     = useState(false);
   const [loadingLeads,setLoadingLeads] = useState(false);
   const [result,      setResult]      = useState(null);
@@ -53,7 +54,7 @@ export default function VideoBroadcast() {
       const res  = await fetch(`${API}/api/superadmin/send-video-message`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ phones, videoUrl: videoUrl.trim(), message: message.trim() }),
+        body:    JSON.stringify({ phones, videoUrl: videoUrl.trim(), message: message.trim(), mediaType }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
@@ -80,21 +81,44 @@ export default function VideoBroadcast() {
       </header>
 
       <div style={{ maxWidth: 680, margin: "2rem auto", padding: "0 1rem" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>Image Broadcast</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>Media Broadcast</h1>
         <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-          Send a WhatsApp image message to one or multiple phone numbers.
+          Send a WhatsApp image or video message to one or multiple phone numbers.
         </p>
 
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "1.5rem", display: "flex", flexDirection: "column", gap: 20 }}>
 
-          {/* Video URL */}
+          {/* Media Type Toggle */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 8 }}>
+              Media Type
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["image", "video"].map(type => (
+                <button
+                  key={type}
+                  onClick={() => { setMediaType(type); setVideoUrl(""); }}
+                  style={{
+                    padding: "7px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                    border: mediaType === type ? "2px solid #7c3aed" : "1.5px solid #e5e7eb",
+                    background: mediaType === type ? "rgba(124,58,237,0.08)" : "#fff",
+                    color: mediaType === type ? "#7c3aed" : "#6b7280",
+                  }}
+                >
+                  {type === "image" ? "🖼 Image" : "🎥 Video"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Media URL */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
-              Image URL <span style={{ color: "#ef4444" }}>*</span>
+              {mediaType === "image" ? "Image URL" : "Video URL"} <span style={{ color: "#ef4444" }}>*</span>
             </label>
             <input
               type="url"
-              placeholder="https://example.com/image.jpg"
+              placeholder={mediaType === "image" ? "https://example.com/image.jpg" : "https://example.com/video.mp4"}
               value={videoUrl}
               onChange={e => setVideoUrl(e.target.value)}
               style={{
@@ -104,7 +128,9 @@ export default function VideoBroadcast() {
               }}
             />
             <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-              Must be a publicly accessible image URL (JPEG or PNG)
+              {mediaType === "image"
+                ? "Must be a publicly accessible image URL (JPEG or PNG)"
+                : "Must be a publicly accessible video URL (MP4)"}
             </p>
           </div>
 
@@ -199,7 +225,7 @@ export default function VideoBroadcast() {
               alignSelf: "flex-start",
             }}
           >
-            {sending ? "Sending..." : "Send Video Message"}
+            {sending ? "Sending..." : `Send ${mediaType === "video" ? "Video" : "Image"} Message`}
           </button>
         </div>
       </div>

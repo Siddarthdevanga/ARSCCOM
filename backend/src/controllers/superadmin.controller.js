@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as service from "../services/superadmin.service.js";
 import { db } from "../config/db.js";
-import { sendImageWhatsApp } from "../services/gupshup.service.js";
+import { sendImageWhatsApp, sendVideoWhatsApp } from "../services/gupshup.service.js";
 
 const JWT_EXPIRY = "12h";
 
@@ -407,13 +407,12 @@ export const deleteCompany = async (req, res) => {
 ====================================================== */
 export const sendVideoMessage = async (req, res) => {
   try {
-    const { phones, videoUrl, message } = req.body;
+    const { phones, videoUrl, message, mediaType = "image" } = req.body;
 
     if (!phones || !videoUrl || !message) {
       return res.status(400).json({ success: false, message: "phones, videoUrl and message are required" });
     }
 
-    // Parse phone numbers — split by comma or newline, clean each
     const phoneList = phones
       .split(/[\n,]+/)
       .map((p) => p.trim().replace(/\D/g, ""))
@@ -424,14 +423,15 @@ export const sendVideoMessage = async (req, res) => {
     }
 
     const results = { sent: [], failed: [] };
+    const sender = mediaType === "video" ? sendVideoWhatsApp : sendImageWhatsApp;
 
     for (const rawPhone of phoneList) {
       const destination = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
       try {
-        await sendImageWhatsApp(destination, videoUrl, message);
+        await sender(destination, videoUrl, message);
         results.sent.push(destination);
       } catch (e) {
-        console.error(`[VIDEO BROADCAST] Failed for ${destination}:`, e.message);
+        console.error(`[BROADCAST] Failed for ${destination}:`, e.message);
         results.failed.push({ phone: destination, error: e.message });
       }
     }
