@@ -2,6 +2,13 @@ import { Router } from "express";
 import { db } from "../config/db.js";
 import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate, registerOptIn } from "../services/gupshup.service.js";
 
+async function ensureOptIn(phone) {
+  const [rows] = await db.query(`SELECT optin_registered_at FROM whatsapp_leads WHERE phone = ?`, [phone]);
+  if (rows.length && rows[0].optin_registered_at) return; // already registered
+  await registerOptIn(phone);
+  await db.query(`UPDATE whatsapp_leads SET optin_registered_at = NOW() WHERE phone = ?`, [phone]);
+}
+
 const router = Router();
 
 /* --------------------------------------------------
@@ -182,8 +189,8 @@ async function handleInbound(body) {
     return;
   }
 
-  // Any inbound message = consent to receive messages — register opt-in silently
-  registerOptIn(phone).catch(() => {});
+  // Any inbound message = consent — register opt-in once if not already done
+  ensureOptIn(phone).catch(() => {});
 
   // text, image, audio, or any other — send intro
   console.log(`[WA] Inbound message from ${phone}, sending intro`);
@@ -192,7 +199,7 @@ async function handleInbound(body) {
 }
 
 async function handleButton(phone, title, name) {
-  registerOptIn(phone).catch(() => {});
+  ensureOptIn(phone).catch(() => {});
   const normalised = (title || "").trim().toLowerCase();
 
   if (normalised === "start with promeet") {

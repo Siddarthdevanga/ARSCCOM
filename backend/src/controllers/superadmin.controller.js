@@ -411,11 +411,11 @@ export const bulkOptInLeads = async (_req, res) => {
     for (const lead of leads) {
       try {
         await registerOptIn(lead.phone);
+        await db.query(`UPDATE whatsapp_leads SET optin_registered_at = NOW() WHERE phone = ?`, [lead.phone]);
         success++;
       } catch {
         failed++;
       }
-      // Small delay to avoid rate limiting
       await new Promise(r => setTimeout(r, 200));
     }
     return res.json({ success: true, message: `Opt-in registered: ${success}, failed: ${failed}`, total: leads.length });
