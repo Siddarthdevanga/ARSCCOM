@@ -24,7 +24,8 @@ router.get ("/whatsapp-leads",                              ctrl.whatsappLeads);
 router.post("/demo-appointments/:id/mark-attended",         ctrl.markDemoAttended);
 
 // ── Video Broadcast ────────────────────────────────────
-router.post("/send-video-message", ctrl.sendVideoMessage);
+router.post("/send-video-message",  ctrl.sendVideoMessage);
+router.post("/bulk-optin-leads",    ctrl.bulkOptInLeads);
 
 // ── Company ────────────────────────────────────────────
 router.get   ("/companies/:id",                   ctrl.companyDetail);

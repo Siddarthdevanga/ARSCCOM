@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as service from "../services/superadmin.service.js";
 import { db } from "../config/db.js";
-import { sendImageWhatsApp, sendVideoWhatsApp } from "../services/gupshup.service.js";
+import { sendImageWhatsApp, sendVideoWhatsApp, registerOptIn } from "../services/gupshup.service.js";
 
 const JWT_EXPIRY = "12h";
 
@@ -397,6 +397,30 @@ export const deleteCompany = async (req, res) => {
     console.error("SUPERADMIN DELETE COMPANY ERROR:", err.message);
     const status = err.message === "Company not found" ? 404 : 500;
     return res.status(status).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
+   BULK OPT-IN ALL EXISTING WHATSAPP LEADS
+   POST /api/superadmin/bulk-optin-leads
+====================================================== */
+export const bulkOptInLeads = async (_req, res) => {
+  try {
+    const [leads] = await db.query(`SELECT phone FROM whatsapp_leads WHERE unsubscribed = 0 OR unsubscribed IS NULL`);
+    let success = 0, failed = 0;
+    for (const lead of leads) {
+      try {
+        await registerOptIn(lead.phone);
+        success++;
+      } catch {
+        failed++;
+      }
+      // Small delay to avoid rate limiting
+      await new Promise(r => setTimeout(r, 200));
+    }
+    return res.json({ success: true, message: `Opt-in registered: ${success}, failed: ${failed}`, total: leads.length });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "../config/db.js";
-import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate } from "../services/gupshup.service.js";
+import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate, registerOptIn } from "../services/gupshup.service.js";
 
 const router = Router();
 
@@ -182,6 +182,9 @@ async function handleInbound(body) {
     return;
   }
 
+  // Any inbound message = consent to receive messages — register opt-in silently
+  registerOptIn(phone).catch(() => {});
+
   // text, image, audio, or any other — send intro
   console.log(`[WA] Inbound message from ${phone}, sending intro`);
   await upsertLead(phone, name, null);
@@ -189,6 +192,7 @@ async function handleInbound(body) {
 }
 
 async function handleButton(phone, title, name) {
+  registerOptIn(phone).catch(() => {});
   const normalised = (title || "").trim().toLowerCase();
 
   if (normalised === "start with promeet") {

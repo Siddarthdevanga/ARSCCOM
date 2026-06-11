@@ -20,17 +20,23 @@ const OPTIN_URL    = "https://api.gupshup.io/sm/api/v1/app/opt/in";
 /* Register a phone number as opted-in for marketing messages */
 export const registerOptIn = async (phone) => {
   const { appName } = getConfig();
-  // Opt-in API is account-level — uses the main API key, not the bot app key
-  const apiKey = process.env.GUPSHUP_API_KEY || "";
-  try {
-    const body = new URLSearchParams({ user: phone });
-    const { data } = await axios.post(`${OPTIN_URL}/${appName}`, body.toString(), {
-      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    console.log(`[WA] opt-in registered for ${phone}:`, JSON.stringify(data));
-    return data;
-  } catch (err) {
-    console.error(`[WA] opt-in failed for ${phone}:`, err.response?.status, JSON.stringify(err.response?.data));
+  const botApiKey  = process.env.GUPSHUP_BOT_API_KEY || "";
+  const mainApiKey = process.env.GUPSHUP_API_KEY || "";
+
+  // Try bot API key first, then fall back to main API key
+  for (const [label, apiKey] of [["BOT", botApiKey], ["MAIN", mainApiKey]]) {
+    if (!apiKey) continue;
+    try {
+      const body = new URLSearchParams({ user: phone, optInSource: "WEB_FORM" });
+      console.log(`[WA-OPTIN] trying ${label} key for appName="${appName}" phone=${phone}`);
+      const { data } = await axios.post(`${OPTIN_URL}/${encodeURIComponent(appName)}`, body.toString(), {
+        headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+      });
+      console.log(`[WA-OPTIN] success (${label}) for ${phone}:`, JSON.stringify(data));
+      return data;
+    } catch (err) {
+      console.error(`[WA-OPTIN] failed (${label}) for ${phone}:`, err.response?.status, JSON.stringify(err.response?.data));
+    }
   }
 };
 
