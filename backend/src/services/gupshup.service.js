@@ -140,38 +140,32 @@ export const sendIntroMessage = async (destination) => {
 -------------------------------------------------- */
 export const sendImageWhatsApp = async (destination, imageUrl, bodyText) => {
   const { apiKey, appName, srcNum } = getConfig();
-  const templateId = process.env.GUPSHUP_IMAGE_TEMPLATE;
 
-  // Marketing templates require opt-in — register before sending
-  await registerOptIn(destination);
-
-  if (!templateId) throw new Error("GUPSHUP_IMAGE_TEMPLATE not configured");
-
-  const templateObj = {
-    id:             templateId,
-    params:         [bodyText],
-    headerMediaUrl: imageUrl,
-  };
+  const message = JSON.stringify({
+    type:        "image",
+    originalUrl: imageUrl,
+    previewUrl:  imageUrl,
+    caption:     bodyText,
+  });
 
   const body = new URLSearchParams({
     channel:    "whatsapp",
     source:     srcNum,
     destination,
     "src.name": appName,
-    template:   JSON.stringify(templateObj),
+    message,
   });
 
-  console.log(`[WA-IMG] templateId=${templateId} dest=${destination} imageUrl=${imageUrl} bodyText=${bodyText}`);
-  console.log(`[WA-IMG] raw body:`, body.toString());
+  console.log(`[WA-IMG] dest=${destination} imageUrl=${imageUrl}`);
 
   try {
-    const { data } = await axios.post(TEMPLATE_URL, body.toString(), {
+    const { data } = await axios.post(MSG_URL, body.toString(), {
       headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
     });
-    console.log(`[WA] image template → ${destination}:`, JSON.stringify(data));
+    console.log(`[WA] image msg → ${destination}:`, JSON.stringify(data));
     return data;
   } catch (err) {
-    console.error(`[WA] image template failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
+    console.error(`[WA] image msg failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
     throw err;
   }
 };
