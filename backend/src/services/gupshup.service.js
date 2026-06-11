@@ -147,19 +147,22 @@ export const sendImageWhatsApp = async (destination, imageUrl, bodyText) => {
 
   if (!templateId) throw new Error("GUPSHUP_IMAGE_TEMPLATE not configured");
 
-  const template = JSON.stringify({
+  const templateObj = {
     id:             templateId,
     params:         [bodyText],
     headerMediaUrl: imageUrl,
-  });
+  };
 
   const body = new URLSearchParams({
     channel:    "whatsapp",
     source:     srcNum,
     destination,
     "src.name": appName,
-    template,
+    template:   JSON.stringify(templateObj),
   });
+
+  console.log(`[WA-IMG] templateId=${templateId} dest=${destination} imageUrl=${imageUrl} bodyText=${bodyText}`);
+  console.log(`[WA-IMG] raw body:`, body.toString());
 
   try {
     const { data } = await axios.post(TEMPLATE_URL, body.toString(), {
