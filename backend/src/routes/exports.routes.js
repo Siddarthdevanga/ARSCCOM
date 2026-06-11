@@ -421,7 +421,7 @@ router.get("/analytics", async (req, res) => {
     );
     const [[feedbackTotals]] = await db.query(
       `SELECT
-         COUNT(*) AS total,
+         SUM(feedback_rating IS NOT NULL) AS total,
          SUM(feedback_rating IN ('excellent','good')) AS satisfied,
          SUM(feedback_sent = 1) AS sent
        FROM visitors WHERE company_id = ? ${vWhere}`,
