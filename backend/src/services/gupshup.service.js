@@ -15,7 +15,7 @@ const getConfig = () => {
 
 const MSG_URL      = "https://api.gupshup.io/wa/api/v1/msg";
 const TEMPLATE_URL = "https://api.gupshup.io/wa/api/v1/template/msg";
-const OPTIN_URL    = "https://api.gupshup.io/wa/api/v1/app/opt/in";
+const OPTIN_URL    = "https://api.gupshup.io/sm/api/v1/app/opt/in";
 
 /* Register a phone number as opted-in for marketing messages */
 export const registerOptIn = async (phone) => {
