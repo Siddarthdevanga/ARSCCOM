@@ -573,7 +573,7 @@ export const visitorFeedbackWebhook = async (req, res) => {
       const [result] = await db.execute(
         `UPDATE visitors
          SET feedback_rating = ?,
-             check_out_time  = CASE WHEN check_out_time IS NULL THEN NOW() ELSE check_out_time END
+             check_out = CASE WHEN check_out IS NULL THEN NOW() ELSE check_out END
          WHERE phone = ?
            AND feedback_sent = 1
            AND feedback_rating IS NULL
