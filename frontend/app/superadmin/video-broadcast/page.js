@@ -59,6 +59,8 @@ export default function VideoBroadcast() {
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
       setResult(data);
+      if (data.results?.skipped?.length > 0)
+        setError(`${data.results.skipped.length} number(s) skipped — not opted-in yet (must message the bot first)`);
     } catch (e) {
       setError(e.message || "Failed to send");
     } finally {

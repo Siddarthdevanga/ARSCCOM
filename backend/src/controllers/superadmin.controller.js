@@ -446,11 +446,24 @@ export const sendVideoMessage = async (req, res) => {
       return res.status(400).json({ success: false, message: "No valid phone numbers provided" });
     }
 
-    const results = { sent: [], failed: [] };
+    // Only send to leads who have opted-in (messaged the bot at least once)
+    const normalised = phoneList.map(p => p.length === 10 ? `91${p}` : p);
+    const placeholders = normalised.map(() => "?").join(",");
+    const [optedIn] = await db.query(
+      `SELECT phone FROM whatsapp_leads WHERE phone IN (${placeholders}) AND opted_in = 1`,
+      normalised
+    );
+    const optedInSet = new Set(optedIn.map(r => r.phone));
+
+    const results = { sent: [], failed: [], skipped: [] };
     const sender = mediaType === "video" ? sendVideoWhatsApp : sendImageWhatsApp;
 
     for (const rawPhone of phoneList) {
       const destination = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
+      if (!optedInSet.has(destination)) {
+        results.skipped.push(destination);
+        continue;
+      }
       try {
         await sender(destination, videoUrl, message);
         results.sent.push(destination);

@@ -1,12 +1,13 @@
 import { Router } from "express";
 import { db } from "../config/db.js";
-import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate, registerOptIn } from "../services/gupshup.service.js";
+import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate } from "../services/gupshup.service.js";
 
 async function ensureOptIn(phone) {
-  const [rows] = await db.query(`SELECT optin_registered_at FROM whatsapp_leads WHERE phone = ?`, [phone]);
-  if (rows.length && rows[0].optin_registered_at) return; // already registered
-  await registerOptIn(phone);
-  await db.query(`UPDATE whatsapp_leads SET optin_registered_at = NOW() WHERE phone = ?`, [phone]);
+  // Mark opted_in permanently in DB — one-time, based on their message to the bot
+  await db.query(
+    `UPDATE whatsapp_leads SET opted_in = 1, optin_registered_at = COALESCE(optin_registered_at, NOW()) WHERE phone = ? AND opted_in = 0`,
+    [phone]
+  );
 }
 
 const router = Router();
