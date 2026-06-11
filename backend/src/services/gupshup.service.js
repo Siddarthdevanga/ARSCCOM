@@ -19,7 +19,9 @@ const OPTIN_URL    = "https://api.gupshup.io/sm/api/v1/app/opt/in";
 
 /* Register a phone number as opted-in for marketing messages */
 export const registerOptIn = async (phone) => {
-  const { apiKey, appName } = getConfig();
+  const { appName } = getConfig();
+  // Opt-in API is account-level — uses the main API key, not the bot app key
+  const apiKey = process.env.GUPSHUP_API_KEY || "";
   try {
     const body = new URLSearchParams({ user: phone });
     const { data } = await axios.post(`${OPTIN_URL}/${appName}`, body.toString(), {
