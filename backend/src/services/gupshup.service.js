@@ -15,6 +15,22 @@ const getConfig = () => {
 
 const MSG_URL      = "https://api.gupshup.io/wa/api/v1/msg";
 const TEMPLATE_URL = "https://api.gupshup.io/wa/api/v1/template/msg";
+const OPTIN_URL    = "https://api.gupshup.io/wa/api/v1/app/opt/in";
+
+/* Register a phone number as opted-in for marketing messages */
+export const registerOptIn = async (phone) => {
+  const { apiKey, appName } = getConfig();
+  try {
+    const body = new URLSearchParams({ user: phone });
+    const { data } = await axios.post(`${OPTIN_URL}/${appName}`, body.toString(), {
+      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    console.log(`[WA] opt-in registered for ${phone}:`, JSON.stringify(data));
+    return data;
+  } catch (err) {
+    console.error(`[WA] opt-in failed for ${phone}:`, err.response?.status, JSON.stringify(err.response?.data));
+  }
+};
 
 /* --------------------------------------------------
    Generic template sender — used for demo confirmation
@@ -123,6 +139,9 @@ export const sendIntroMessage = async (destination) => {
 export const sendImageWhatsApp = async (destination, imageUrl, bodyText) => {
   const { apiKey, appName, srcNum } = getConfig();
   const templateId = process.env.GUPSHUP_IMAGE_TEMPLATE;
+
+  // Marketing templates require opt-in — register before sending
+  await registerOptIn(destination);
 
   if (!templateId) throw new Error("GUPSHUP_IMAGE_TEMPLATE not configured");
 
