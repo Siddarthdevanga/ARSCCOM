@@ -6,63 +6,74 @@ import Image from "next/image";
 import { Users, Calendar, CheckCircle, XCircle, MessageSquare, Star, UserMinus } from "lucide-react";
 import styles from "../dashboard/style.module.css";
 
-/* ───────────── TREE LAYOUT ───────────── */
+/* ─────────────── TREE LAYOUT ─────────────── */
 
 const NODE_W    = 138;
 const NODE_H    = 72;
 const NODE_SM_W = 84;
 const NODE_SM_H = 44;
-const TREE_W    = 1060;
-const TREE_H    = 595;
+const TREE_W    = 1020;
+const TREE_H    = 585;
 
 /*
-  Tree structure:
-                        [Bot Interaction]
-                       /                 \(dashed)
-               [Demo Booked]          [Unsubscribed]
-              /             \
-        [Attended]        [Missed]
-             |                |
-        [Converted]       [In Nurture]
-        /  |  |  \          /  |  |  \
-    Trial Biz Ent Exp    S1  S2 Fin Cls
+  Full journey tree:
+
+  [Bot Interaction]
+  ├─ (dashed) [No Action]           ← never booked demo, no start action
+  ├──────────  [Demo Booked]
+  │            ├── [Attended]
+  │            │   ├─ (dashed) [No Conversion]   ← attended, didn't buy, not nurtured
+  │            │   └──────────  [Converted]
+  │            │                └── [Trial][Business][Enterprise][Expired·dashed]
+  │            └── [Missed]
+  │                └── [In Nurture]
+  │                    └── [Step 1][Step 2][Final][Closed]
+  └─ (dashed) [Unsubscribed]
 */
 const TREE_NODES = [
-  // Main nodes (size: "lg")
-  { key: "botInteraction", label: "Bot Interaction", Icon: Users,         color: "#7c3aed", cx: 620, cy: 55,  size: "lg" },
-  { key: "demoBooked",     label: "Demo Booked",     Icon: Calendar,      color: "#3b82f6", cx: 410, cy: 180, size: "lg" },
-  { key: "unsubscribed",   label: "Unsubscribed",    Icon: UserMinus,     color: "#6b7280", cx: 950, cy: 180, size: "lg" },
-  { key: "demoAttended",   label: "Attended",        Icon: CheckCircle,   color: "#10b981", cx: 225, cy: 310, size: "lg" },
-  { key: "demoMissed",     label: "Missed",          Icon: XCircle,       color: "#ef4444", cx: 610, cy: 310, size: "lg" },
-  { key: "converted",      label: "Converted",       Icon: Star,          color: "#f59e0b", cx: 225, cy: 430, size: "lg" },
-  { key: "inNurture",      label: "In Nurture",      Icon: MessageSquare, color: "#8b5cf6", cx: 610, cy: 430, size: "lg" },
-  // Plan sub-nodes under Converted (size: "sm") — centered around cx=225, spread 84+8px each
-  { key: "planTrial",      label: "Trial",           Icon: Users,         color: "#0ea5e9", cx: 87,  cy: 545, size: "sm" },
-  { key: "planBusiness",   label: "Business",        Icon: CheckCircle,   color: "#10b981", cx: 179, cy: 545, size: "sm" },
-  { key: "planEnterprise", label: "Enterprise",      Icon: Star,          color: "#7c3aed", cx: 271, cy: 545, size: "sm" },
-  { key: "planExpired",    label: "Expired",         Icon: XCircle,       color: "#ef4444", cx: 363, cy: 545, size: "sm" },
-  // Nurture step sub-nodes under In Nurture (size: "sm") — centered around cx=610
-  { key: "nurtureStep1",   label: "Step 1",          Icon: MessageSquare, color: "#3b82f6", cx: 472, cy: 545, size: "sm" },
-  { key: "nurtureStep2",   label: "Step 2",          Icon: MessageSquare, color: "#8b5cf6", cx: 564, cy: 545, size: "sm" },
-  { key: "nurtureFinal",   label: "Final",           Icon: MessageSquare, color: "#f59e0b", cx: 656, cy: 545, size: "sm" },
-  { key: "nurtureClosed",  label: "Closed",          Icon: UserMinus,     color: "#6b7280", cx: 748, cy: 545, size: "sm" },
+  // Level 1
+  { key: "botInteraction", label: "Bot Interaction", Icon: Users,         color: "#7c3aed", cx: 590,  cy: 55,  size: "lg" },
+  // Level 2
+  { key: "noAction",       label: "No Action",       Icon: UserMinus,     color: "#94a3b8", cx: 110,  cy: 185, size: "lg" },
+  { key: "demoBooked",     label: "Demo Booked",     Icon: Calendar,      color: "#3b82f6", cx: 440,  cy: 185, size: "lg" },
+  { key: "unsubscribed",   label: "Unsubscribed",    Icon: UserMinus,     color: "#6b7280", cx: 910,  cy: 185, size: "lg" },
+  // Level 3
+  { key: "demoAttended",   label: "Attended",        Icon: CheckCircle,   color: "#10b981", cx: 190,  cy: 315, size: "lg" },
+  { key: "demoMissed",     label: "Missed",          Icon: XCircle,       color: "#ef4444", cx: 700,  cy: 315, size: "lg" },
+  // Level 4
+  { key: "noConversion",   label: "No Conversion",   Icon: XCircle,       color: "#f97316", cx: 100,  cy: 430, size: "lg" },
+  { key: "converted",      label: "Converted",       Icon: Star,          color: "#f59e0b", cx: 280,  cy: 430, size: "lg" },
+  { key: "inNurture",      label: "In Nurture",      Icon: MessageSquare, color: "#8b5cf6", cx: 700,  cy: 430, size: "lg" },
+  // Level 5 — Plan breakdown under Converted (centered at cx=280)
+  { key: "planTrial",      label: "Trial",           Icon: Users,         color: "#0ea5e9", cx: 142,  cy: 545, size: "sm" },
+  { key: "planBusiness",   label: "Business",        Icon: CheckCircle,   color: "#10b981", cx: 234,  cy: 545, size: "sm" },
+  { key: "planEnterprise", label: "Enterprise",      Icon: Star,          color: "#7c3aed", cx: 326,  cy: 545, size: "sm" },
+  { key: "planExpired",    label: "Expired",         Icon: XCircle,       color: "#ef4444", cx: 418,  cy: 545, size: "sm" },
+  // Level 5 — Nurture steps under In Nurture (centered at cx=700)
+  { key: "nurtureStep1",   label: "Step 1",          Icon: MessageSquare, color: "#3b82f6", cx: 562,  cy: 545, size: "sm" },
+  { key: "nurtureStep2",   label: "Step 2",          Icon: MessageSquare, color: "#8b5cf6", cx: 654,  cy: 545, size: "sm" },
+  { key: "nurtureFinal",   label: "Final",           Icon: MessageSquare, color: "#f59e0b", cx: 746,  cy: 545, size: "sm" },
+  { key: "nurtureClosed",  label: "Closed",          Icon: UserMinus,     color: "#6b7280", cx: 838,  cy: 545, size: "sm" },
 ];
 
+// labeled: true → show count+% pill on the edge midpoint
 const TREE_EDGES = [
-  { from: "botInteraction", to: "demoBooked",     dashed: false },
-  { from: "botInteraction", to: "unsubscribed",   dashed: true  },
-  { from: "demoBooked",     to: "demoAttended",   dashed: false },
-  { from: "demoBooked",     to: "demoMissed",     dashed: false },
-  { from: "demoAttended",   to: "converted",      dashed: false },
-  { from: "demoMissed",     to: "inNurture",      dashed: false },
-  { from: "converted",      to: "planTrial",      dashed: false },
-  { from: "converted",      to: "planBusiness",   dashed: false },
-  { from: "converted",      to: "planEnterprise", dashed: false },
-  { from: "converted",      to: "planExpired",    dashed: true  },
-  { from: "inNurture",      to: "nurtureStep1",   dashed: false },
-  { from: "inNurture",      to: "nurtureStep2",   dashed: false },
-  { from: "inNurture",      to: "nurtureFinal",   dashed: false },
-  { from: "inNurture",      to: "nurtureClosed",  dashed: false },
+  { from: "botInteraction", to: "noAction",       dashed: true,  labeled: true  },
+  { from: "botInteraction", to: "demoBooked",     dashed: false, labeled: true  },
+  { from: "botInteraction", to: "unsubscribed",   dashed: true,  labeled: true  },
+  { from: "demoBooked",     to: "demoAttended",   dashed: false, labeled: true  },
+  { from: "demoBooked",     to: "demoMissed",     dashed: false, labeled: true  },
+  { from: "demoAttended",   to: "noConversion",   dashed: true,  labeled: true  },
+  { from: "demoAttended",   to: "converted",      dashed: false, labeled: true  },
+  { from: "demoMissed",     to: "inNurture",      dashed: false, labeled: true  },
+  { from: "converted",      to: "planTrial",      dashed: false, labeled: false },
+  { from: "converted",      to: "planBusiness",   dashed: false, labeled: false },
+  { from: "converted",      to: "planEnterprise", dashed: false, labeled: false },
+  { from: "converted",      to: "planExpired",    dashed: true,  labeled: false },
+  { from: "inNurture",      to: "nurtureStep1",   dashed: false, labeled: false },
+  { from: "inNurture",      to: "nurtureStep2",   dashed: false, labeled: false },
+  { from: "inNurture",      to: "nurtureFinal",   dashed: false, labeled: false },
+  { from: "inNurture",      to: "nurtureClosed",  dashed: false, labeled: false },
 ];
 
 const FLOW_PERIODS = [
@@ -72,20 +83,22 @@ const FLOW_PERIODS = [
   { key: "all",   label: "All Time"   },
 ];
 
-/* ───────────── STAGE FILTERS ───────────── */
+/* ─────────────── STAGE FILTERS ─────────────── */
 
 const STAGE_FILTER = {
   botInteraction: ()  => true,
+  noAction:       (l) => !l.demo_id && !["start_with_promeet","book_a_demo"].includes(l.last_action) && !l.unsubscribed,
   demoBooked:     (l) => !!l.demo_id,
+  unsubscribed:   (l) => !!l.unsubscribed,
   demoAttended:   (l) => l.demo_attended == 1,
   demoMissed:     (l) => !!l.demo_id && l.demo_attended == 0,
-  inNurture:      (l) => (l.nurture_step || 0) > 0 && !l.unsubscribed,
+  noConversion:   (l) => l.demo_attended == 1 && l.is_converted != 1 && (l.nurture_step || 0) == 0 && !l.unsubscribed,
   converted:      (l) => l.is_converted == 1,
-  unsubscribed:   (l) => !!l.unsubscribed,
+  inNurture:      (l) => (l.nurture_step || 0) > 0 && !l.unsubscribed,
   planTrial:      (l) => l.company_plan?.toUpperCase() === "TRIAL",
   planBusiness:   (l) => l.company_plan?.toUpperCase() === "BUSINESS",
   planEnterprise: (l) => l.company_plan?.toUpperCase() === "ENTERPRISE",
-  planExpired:    (l) => ["expired", "suspended"].includes(l.company_sub_status),
+  planExpired:    (l) => ["expired","suspended"].includes(l.company_sub_status),
   nurtureStep1:   (l) => l.nurture_step == 1 && !l.unsubscribed,
   nurtureStep2:   (l) => l.nurture_step == 2 && !l.unsubscribed,
   nurtureFinal:   (l) => l.nurture_step == 3 && !l.unsubscribed,
@@ -100,16 +113,18 @@ function computeFlowStats(leads, period) {
     : leads;
   return {
     botInteraction: fl.length,
+    noAction:       fl.filter((l) => !l.demo_id && !["start_with_promeet","book_a_demo"].includes(l.last_action) && !l.unsubscribed).length,
     demoBooked:     fl.filter((l) => !!l.demo_id).length,
+    unsubscribed:   fl.filter((l) => !!l.unsubscribed).length,
     demoAttended:   fl.filter((l) => l.demo_attended == 1).length,
     demoMissed:     fl.filter((l) => !!l.demo_id && l.demo_attended == 0).length,
-    inNurture:      fl.filter((l) => (l.nurture_step || 0) > 0 && !l.unsubscribed).length,
+    noConversion:   fl.filter((l) => l.demo_attended == 1 && l.is_converted != 1 && (l.nurture_step || 0) == 0 && !l.unsubscribed).length,
     converted:      fl.filter((l) => l.is_converted == 1).length,
-    unsubscribed:   fl.filter((l) => !!l.unsubscribed).length,
+    inNurture:      fl.filter((l) => (l.nurture_step || 0) > 0 && !l.unsubscribed).length,
     planTrial:      fl.filter((l) => l.company_plan?.toUpperCase() === "TRIAL").length,
     planBusiness:   fl.filter((l) => l.company_plan?.toUpperCase() === "BUSINESS").length,
     planEnterprise: fl.filter((l) => l.company_plan?.toUpperCase() === "ENTERPRISE").length,
-    planExpired:    fl.filter((l) => ["expired", "suspended"].includes(l.company_sub_status)).length,
+    planExpired:    fl.filter((l) => ["expired","suspended"].includes(l.company_sub_status)).length,
     nurtureStep1:   fl.filter((l) => l.nurture_step == 1 && !l.unsubscribed).length,
     nurtureStep2:   fl.filter((l) => l.nurture_step == 2 && !l.unsubscribed).length,
     nurtureFinal:   fl.filter((l) => l.nurture_step == 3 && !l.unsubscribed).length,
@@ -117,7 +132,7 @@ function computeFlowStats(leads, period) {
   };
 }
 
-/* ───────────── TREE DIAGRAM ───────────── */
+/* ─────────────── TREE DIAGRAM COMPONENT ─────────────── */
 
 function LeadFlowTree({ leads, activeStage, onStageClick }) {
   const [flowPeriod, setFlowPeriod] = useState("all");
@@ -132,7 +147,9 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 800, color: "#1a0038", margin: 0 }}>Lead Journey Tree</h3>
-          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>Click any node to filter leads · dashed = dropout</p>
+          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>
+            Click any node to filter leads below · dashed = dropout/no-progress · pill = count · %
+          </p>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FLOW_PERIODS.map((p) => (
@@ -151,32 +168,32 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
       <div style={{ overflowX: "auto", paddingBottom: 4 }}>
         <div style={{ position: "relative", width: TREE_W, height: TREE_H, margin: "0 auto" }}>
 
-          {/* SVG edges */}
+          {/* ── SVG edges ── */}
           <svg width={TREE_W} height={TREE_H}
             style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
             {TREE_EDGES.map(({ from, to, dashed }) => {
-              const fn    = nodeMap[from];
-              const tn    = nodeMap[to];
-              const hn_f  = fn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
-              const hn_t  = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
-              const x1    = fn.cx;
-              const y1    = fn.cy + hn_f;
-              const x2    = tn.cx;
-              const y2    = tn.cy - hn_t;
-              const midY  = (y1 + y2) / 2;
-              const isHi  = activeStage === to;
+              const fn   = nodeMap[from];
+              const tn   = nodeMap[to];
+              const hn_f = fn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
+              const hn_t = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
+              const x1   = fn.cx;
+              const y1   = fn.cy + hn_f;
+              const x2   = tn.cx;
+              const y2   = tn.cy - hn_t;
+              const midY = (y1 + y2) / 2;
+              const isHi = activeStage === to;
               return (
-                <path key={`${from}-${to}`}
+                <path key={`e-${from}-${to}`}
                   d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                   fill="none"
-                  stroke={isHi ? tn.color : "#d1d5db"}
+                  stroke={isHi ? tn.color : dashed ? "#cbd5e1" : "#d1d5db"}
                   strokeWidth={isHi ? 2.5 : 1.5}
                   strokeDasharray={dashed ? "6 4" : undefined}
                   strokeLinecap="round"
                 />
               );
             })}
-            {/* arrowheads */}
+            {/* Arrowheads */}
             {TREE_EDGES.map(({ from, to }) => {
               const tn   = nodeMap[to];
               const hn_t = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
@@ -192,7 +209,44 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
             })}
           </svg>
 
-          {/* Node cards */}
+          {/* ── Edge count labels (positioned divs, on top of SVG) ── */}
+          {TREE_EDGES.filter((e) => e.labeled).map(({ from, to }) => {
+            const fn     = nodeMap[from];
+            const tn     = nodeMap[to];
+            const x1     = fn.cx;
+            const y1     = fn.cy + NODE_H / 2;
+            const x2     = tn.cx;
+            const y2     = tn.cy - NODE_H / 2;
+            const lx     = (x1 + x2) / 2;
+            const ly     = (y1 + y2) / 2;
+            const cnt    = stats[to];
+            const parent = stats[from] || 1;
+            const pct    = Math.round((cnt / parent) * 100);
+            return (
+              <div key={`lbl-${from}-${to}`}
+                style={{
+                  position: "absolute",
+                  left: lx - 20,
+                  top:  ly - 9,
+                  background: "rgba(255,255,255,0.97)",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: 6,
+                  padding: "1px 5px",
+                  fontSize: 9,
+                  fontWeight: 700,
+                  color: "#6b7280",
+                  pointerEvents: "none",
+                  whiteSpace: "nowrap",
+                  lineHeight: "16px",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
+                  zIndex: 2,
+                }}>
+                {cnt} · {pct}%
+              </div>
+            );
+          })}
+
+          {/* ── Node cards ── */}
           {TREE_NODES.map((node) => {
             const { Icon } = node;
             const count    = stats[node.key];
@@ -225,6 +279,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
                   justifyContent: isSm ? "flex-start" : "center",
                   gap: isSm ? 6 : 3,
                   userSelect: "none",
+                  zIndex: 3,
                 }}>
                 {isSm ? (
                   <>
@@ -261,7 +316,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
       {/* Active filter chip */}
       {activeStage && (
         <div style={{ marginTop: 12, padding: "8px 14px", background: "rgba(124,58,237,0.06)", borderRadius: 8, fontSize: 12, color: "#7c3aed", fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span>Filtering by: {TREE_NODES.find((n) => n.key === activeStage)?.label}</span>
+          <span>Filtering by: <strong>{TREE_NODES.find((n) => n.key === activeStage)?.label}</strong></span>
           <button onClick={() => onStageClick(null)} style={{ background: "none", border: "none", color: "#7c3aed", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
             ✕ Clear
           </button>
@@ -271,7 +326,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
   );
 }
 
-/* ───────────── TABLE HELPERS ───────────── */
+/* ─────────────── TABLE HELPERS ─────────────── */
 
 const ACTION_LABEL = {
   start_with_promeet: "Start With Promeet",
@@ -281,7 +336,6 @@ const ACTION_COLOR = {
   start_with_promeet: "#7c3aed",
   book_a_demo:        "#d97706",
 };
-
 const NURTURE_LABEL = ["—", "Step 1", "Step 2", "Final", "Closed"];
 const NURTURE_COLOR = ["#9ca3af", "#3b82f6", "#8b5cf6", "#f59e0b", "#6b7280"];
 
@@ -292,24 +346,18 @@ const fmtDate = (d) => {
     year: "numeric", hour: "2-digit", minute: "2-digit",
   });
 };
-
-const fmtDemoDate = (date, time) => {
-  if (!date) return null;
-  return `${String(date).split("T")[0]} ${String(time).substring(0, 5)}`;
-};
+const fmtDemoDate = (date, time) =>
+  date ? `${String(date).split("T")[0]} ${String(time).substring(0, 5)}` : null;
 
 function DemoStatus({ lead, onMarkAttended }) {
   if (!lead.demo_id) return <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>;
-
   if (lead.demo_attended == 1)
     return <span style={{ background: "#d1fae5", color: "#065f46", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Attended</span>;
-
   if (lead.demo_attended == 0)
     return <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Missed</span>;
 
   const demoDateTime = new Date(`${String(lead.demo_date).split("T")[0]}T${String(lead.demo_time).substring(0, 8)}`);
   const isPast = demoDateTime < new Date();
-
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <span style={{ background: isPast ? "#fef3c7" : "#ede9fe", color: isPast ? "#92400e" : "#5b21b6", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
@@ -325,7 +373,7 @@ function DemoStatus({ lead, onMarkAttended }) {
   );
 }
 
-/* ───────────── PAGE ───────────── */
+/* ─────────────── PAGE ─────────────── */
 
 export default function WhatsAppLeadsPage() {
   const router  = useRouter();
@@ -346,8 +394,7 @@ export default function WhatsAppLeadsPage() {
     if (!t || !a) { router.replace("/auth/login"); return; }
     try { setToken(t); setAdmin(JSON.parse(a)); }
     catch {
-      localStorage.removeItem("sa_token");
-      localStorage.removeItem("sa_admin");
+      localStorage.removeItem("sa_token"); localStorage.removeItem("sa_admin");
       router.replace("/auth/login");
     }
   }, [router]);
@@ -367,8 +414,7 @@ export default function WhatsAppLeadsPage() {
   useEffect(() => { if (token) fetchLeads(token); }, [token, fetchLeads]);
 
   const logout = () => {
-    localStorage.removeItem("sa_token");
-    localStorage.removeItem("sa_admin");
+    localStorage.removeItem("sa_token"); localStorage.removeItem("sa_admin");
     router.replace("/auth/login");
   };
 
@@ -395,7 +441,6 @@ export default function WhatsAppLeadsPage() {
 
   return (
     <div className={styles.container}>
-
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
@@ -411,11 +456,9 @@ export default function WhatsAppLeadsPage() {
       </header>
 
       <div className={styles.scrollBody}>
-
         <section className={styles.hero}>
           <h1 className={styles.heroTitle}>WhatsApp <span>Leads</span></h1>
           <p className={styles.heroSub}>All contacts who messaged the Promeet WhatsApp bot</p>
-
           <div className={styles.heroStats}>
             <div className={styles.heroStatCard}>
               <div className={styles.heroStatLabel}>Total Leads</div>
@@ -443,21 +486,14 @@ export default function WhatsAppLeadsPage() {
         </section>
 
         <div className={styles.filterBar}>
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="Search by phone or name…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <input className={styles.searchInput} type="text" placeholder="Search by phone or name…"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className={styles.filterSelect} value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="all">All Actions</option>
             <option value="start_with_promeet">Start With Promeet</option>
             <option value="book_a_demo">Book A Demo</option>
           </select>
-          <button className={styles.filterSelect} style={{ cursor: "pointer" }} onClick={() => fetchLeads(token)}>
-            Refresh
-          </button>
+          <button className={styles.filterSelect} style={{ cursor: "pointer" }} onClick={() => fetchLeads(token)}>Refresh</button>
           <button
             onClick={() => { setShowFlow((v) => !v); setActiveStage(null); }}
             style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
@@ -498,10 +534,10 @@ export default function WhatsAppLeadsPage() {
               </thead>
               <tbody>
                 {filtered.map((lead, i) => {
-                  const plan = lead.company_plan?.toUpperCase();
+                  const plan      = lead.company_plan?.toUpperCase();
                   const subStatus = lead.company_sub_status;
+                  const isExpired = ["expired","suspended"].includes(subStatus);
                   const planColor = plan === "TRIAL" ? "#0ea5e9" : plan === "BUSINESS" ? "#10b981" : plan === "ENTERPRISE" ? "#7c3aed" : null;
-                  const isExpired = ["expired", "suspended"].includes(subStatus);
                   return (
                     <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ede9fe" }}>
                       <td style={td}>{i + 1}</td>
@@ -510,30 +546,22 @@ export default function WhatsAppLeadsPage() {
                       </td>
                       <td style={{ ...td, fontFamily: "monospace" }}>{lead.phone ? `+${lead.phone}` : "—"}</td>
                       <td style={td}>
-                        {lead.last_action ? (
-                          <span style={{ background: ACTION_COLOR[lead.last_action] || "#6b7280", color: "#fff", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                            {ACTION_LABEL[lead.last_action] || lead.last_action}
-                          </span>
-                        ) : <span style={{ color: "#9ca3af", fontSize: 13 }}>No action</span>}
+                        {lead.last_action
+                          ? <span style={{ background: ACTION_COLOR[lead.last_action] || "#6b7280", color: "#fff", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{ACTION_LABEL[lead.last_action] || lead.last_action}</span>
+                          : <span style={{ color: "#9ca3af", fontSize: 13 }}>No action</span>}
+                      </td>
+                      <td style={td}><DemoStatus lead={lead} onMarkAttended={markAttended} /></td>
+                      <td style={td}>
+                        {lead.unsubscribed
+                          ? <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Unsubscribed</span>
+                          : <span style={{ background: NURTURE_COLOR[lead.nurture_step || 0] + "22", color: NURTURE_COLOR[lead.nurture_step || 0], padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{NURTURE_LABEL[lead.nurture_step || 0]}</span>}
                       </td>
                       <td style={td}>
-                        <DemoStatus lead={lead} onMarkAttended={markAttended} />
-                      </td>
-                      <td style={td}>
-                        {lead.unsubscribed ? (
-                          <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Unsubscribed</span>
-                        ) : (
-                          <span style={{ background: NURTURE_COLOR[lead.nurture_step || 0] + "22", color: NURTURE_COLOR[lead.nurture_step || 0], padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                            {NURTURE_LABEL[lead.nurture_step || 0]}
-                          </span>
-                        )}
-                      </td>
-                      <td style={td}>
-                        {plan ? (
-                          <span style={{ background: (isExpired ? "#ef4444" : planColor) + "18", color: isExpired ? "#ef4444" : planColor, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                            {isExpired ? `${plan} (Expired)` : plan}
-                          </span>
-                        ) : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}
+                        {plan
+                          ? <span style={{ background: (isExpired ? "#ef4444" : planColor) + "18", color: isExpired ? "#ef4444" : planColor, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                              {isExpired ? `${plan} (Expired)` : plan}
+                            </span>
+                          : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}
                       </td>
                       <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.created_at)}</td>
                       <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.updated_at)}</td>
@@ -544,7 +572,6 @@ export default function WhatsAppLeadsPage() {
             </table>
           </div>
         )}
-
       </div>
     </div>
   );
