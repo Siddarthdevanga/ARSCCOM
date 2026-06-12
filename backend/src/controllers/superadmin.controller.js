@@ -502,10 +502,28 @@ export const whatsappLeads = async (req, res) => {
          EXISTS(
            SELECT 1 FROM users u
            JOIN companies c ON c.id = u.company_id
-           WHERE (u.phone = wl.phone OR CONCAT('91', u.phone) = wl.phone OR u.phone = RIGHT(wl.phone, 10))
+           WHERE (
+             u.phone COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+             OR CONCAT('91', u.phone) COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+             OR u.phone COLLATE utf8mb4_unicode_ci = RIGHT(wl.phone, 10) COLLATE utf8mb4_unicode_ci
+           )
              AND c.subscription_status NOT IN ('expired','suspended')
              AND u.role = 'user'
-         ) AS is_converted
+         ) AS is_converted,
+         (SELECT c.plan FROM users u JOIN companies c ON c.id = u.company_id
+          WHERE (
+            u.phone COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+            OR CONCAT('91', u.phone) COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+            OR u.phone COLLATE utf8mb4_unicode_ci = RIGHT(wl.phone, 10) COLLATE utf8mb4_unicode_ci
+          ) AND u.role = 'user' LIMIT 1
+         ) AS company_plan,
+         (SELECT c.subscription_status FROM users u JOIN companies c ON c.id = u.company_id
+          WHERE (
+            u.phone COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+            OR CONCAT('91', u.phone) COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+            OR u.phone COLLATE utf8mb4_unicode_ci = RIGHT(wl.phone, 10) COLLATE utf8mb4_unicode_ci
+          ) AND u.role = 'user' LIMIT 1
+         ) AS company_sub_status
        FROM whatsapp_leads wl
        LEFT JOIN demo_appointments da
          ON da.phone = wl.phone

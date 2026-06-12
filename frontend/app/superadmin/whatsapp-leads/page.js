@@ -6,7 +6,64 @@ import Image from "next/image";
 import { Users, Calendar, CheckCircle, XCircle, MessageSquare, Star, UserMinus } from "lucide-react";
 import styles from "../dashboard/style.module.css";
 
-/* ───────────── FLOW TREE CONSTANTS ───────────── */
+/* ───────────── TREE LAYOUT ───────────── */
+
+const NODE_W    = 138;
+const NODE_H    = 72;
+const NODE_SM_W = 84;
+const NODE_SM_H = 44;
+const TREE_W    = 1060;
+const TREE_H    = 595;
+
+/*
+  Tree structure:
+                        [Bot Interaction]
+                       /                 \(dashed)
+               [Demo Booked]          [Unsubscribed]
+              /             \
+        [Attended]        [Missed]
+             |                |
+        [Converted]       [In Nurture]
+        /  |  |  \          /  |  |  \
+    Trial Biz Ent Exp    S1  S2 Fin Cls
+*/
+const TREE_NODES = [
+  // Main nodes (size: "lg")
+  { key: "botInteraction", label: "Bot Interaction", Icon: Users,         color: "#7c3aed", cx: 620, cy: 55,  size: "lg" },
+  { key: "demoBooked",     label: "Demo Booked",     Icon: Calendar,      color: "#3b82f6", cx: 410, cy: 180, size: "lg" },
+  { key: "unsubscribed",   label: "Unsubscribed",    Icon: UserMinus,     color: "#6b7280", cx: 950, cy: 180, size: "lg" },
+  { key: "demoAttended",   label: "Attended",        Icon: CheckCircle,   color: "#10b981", cx: 225, cy: 310, size: "lg" },
+  { key: "demoMissed",     label: "Missed",          Icon: XCircle,       color: "#ef4444", cx: 610, cy: 310, size: "lg" },
+  { key: "converted",      label: "Converted",       Icon: Star,          color: "#f59e0b", cx: 225, cy: 430, size: "lg" },
+  { key: "inNurture",      label: "In Nurture",      Icon: MessageSquare, color: "#8b5cf6", cx: 610, cy: 430, size: "lg" },
+  // Plan sub-nodes under Converted (size: "sm") — centered around cx=225, spread 84+8px each
+  { key: "planTrial",      label: "Trial",           Icon: Users,         color: "#0ea5e9", cx: 87,  cy: 545, size: "sm" },
+  { key: "planBusiness",   label: "Business",        Icon: CheckCircle,   color: "#10b981", cx: 179, cy: 545, size: "sm" },
+  { key: "planEnterprise", label: "Enterprise",      Icon: Star,          color: "#7c3aed", cx: 271, cy: 545, size: "sm" },
+  { key: "planExpired",    label: "Expired",         Icon: XCircle,       color: "#ef4444", cx: 363, cy: 545, size: "sm" },
+  // Nurture step sub-nodes under In Nurture (size: "sm") — centered around cx=610
+  { key: "nurtureStep1",   label: "Step 1",          Icon: MessageSquare, color: "#3b82f6", cx: 472, cy: 545, size: "sm" },
+  { key: "nurtureStep2",   label: "Step 2",          Icon: MessageSquare, color: "#8b5cf6", cx: 564, cy: 545, size: "sm" },
+  { key: "nurtureFinal",   label: "Final",           Icon: MessageSquare, color: "#f59e0b", cx: 656, cy: 545, size: "sm" },
+  { key: "nurtureClosed",  label: "Closed",          Icon: UserMinus,     color: "#6b7280", cx: 748, cy: 545, size: "sm" },
+];
+
+const TREE_EDGES = [
+  { from: "botInteraction", to: "demoBooked",     dashed: false },
+  { from: "botInteraction", to: "unsubscribed",   dashed: true  },
+  { from: "demoBooked",     to: "demoAttended",   dashed: false },
+  { from: "demoBooked",     to: "demoMissed",     dashed: false },
+  { from: "demoAttended",   to: "converted",      dashed: false },
+  { from: "demoMissed",     to: "inNurture",      dashed: false },
+  { from: "converted",      to: "planTrial",      dashed: false },
+  { from: "converted",      to: "planBusiness",   dashed: false },
+  { from: "converted",      to: "planEnterprise", dashed: false },
+  { from: "converted",      to: "planExpired",    dashed: true  },
+  { from: "inNurture",      to: "nurtureStep1",   dashed: false },
+  { from: "inNurture",      to: "nurtureStep2",   dashed: false },
+  { from: "inNurture",      to: "nurtureFinal",   dashed: false },
+  { from: "inNurture",      to: "nurtureClosed",  dashed: false },
+];
 
 const FLOW_PERIODS = [
   { key: "week",  label: "This Week"  },
@@ -15,32 +72,7 @@ const FLOW_PERIODS = [
   { key: "all",   label: "All Time"   },
 ];
 
-const NODE_W  = 138;
-const NODE_H  = 74;
-const TREE_W  = 700;
-const TREE_H  = 490;
-
-// cx / cy = center of each node in the SVG canvas
-const TREE_NODES = [
-  { key: "botInteraction", label: "Bot Interaction", Icon: Users,         color: "#7c3aed", cx: 350, cy: 55  },
-  { key: "demoBooked",     label: "Demo Booked",     Icon: Calendar,      color: "#3b82f6", cx: 190, cy: 185 },
-  { key: "unsubscribed",   label: "Unsubscribed",    Icon: UserMinus,     color: "#6b7280", cx: 548, cy: 185 },
-  { key: "demoAttended",   label: "Attended",        Icon: CheckCircle,   color: "#10b981", cx: 82,  cy: 315 },
-  { key: "demoMissed",     label: "Missed",          Icon: XCircle,       color: "#ef4444", cx: 300, cy: 315 },
-  { key: "converted",      label: "Converted",       Icon: Star,          color: "#f59e0b", cx: 82,  cy: 440 },
-  { key: "inNurture",      label: "In Nurture",      Icon: MessageSquare, color: "#8b5cf6", cx: 300, cy: 440 },
-];
-
-const TREE_EDGES = [
-  { from: "botInteraction", to: "demoBooked",   dashed: false },
-  { from: "botInteraction", to: "unsubscribed", dashed: true  },
-  { from: "demoBooked",     to: "demoAttended", dashed: false },
-  { from: "demoBooked",     to: "demoMissed",   dashed: false },
-  { from: "demoAttended",   to: "converted",    dashed: false },
-  { from: "demoMissed",     to: "inNurture",    dashed: false },
-];
-
-/* ───────────── STAGE FILTERS (used for table) ───────────── */
+/* ───────────── STAGE FILTERS ───────────── */
 
 const STAGE_FILTER = {
   botInteraction: ()  => true,
@@ -50,6 +82,14 @@ const STAGE_FILTER = {
   inNurture:      (l) => (l.nurture_step || 0) > 0 && !l.unsubscribed,
   converted:      (l) => l.is_converted == 1,
   unsubscribed:   (l) => !!l.unsubscribed,
+  planTrial:      (l) => l.company_plan?.toUpperCase() === "TRIAL",
+  planBusiness:   (l) => l.company_plan?.toUpperCase() === "BUSINESS",
+  planEnterprise: (l) => l.company_plan?.toUpperCase() === "ENTERPRISE",
+  planExpired:    (l) => ["expired", "suspended"].includes(l.company_sub_status),
+  nurtureStep1:   (l) => l.nurture_step == 1 && !l.unsubscribed,
+  nurtureStep2:   (l) => l.nurture_step == 2 && !l.unsubscribed,
+  nurtureFinal:   (l) => l.nurture_step == 3 && !l.unsubscribed,
+  nurtureClosed:  (l) => l.nurture_step == 4 && !l.unsubscribed,
 };
 
 function computeFlowStats(leads, period) {
@@ -66,15 +106,24 @@ function computeFlowStats(leads, period) {
     inNurture:      fl.filter((l) => (l.nurture_step || 0) > 0 && !l.unsubscribed).length,
     converted:      fl.filter((l) => l.is_converted == 1).length,
     unsubscribed:   fl.filter((l) => !!l.unsubscribed).length,
+    planTrial:      fl.filter((l) => l.company_plan?.toUpperCase() === "TRIAL").length,
+    planBusiness:   fl.filter((l) => l.company_plan?.toUpperCase() === "BUSINESS").length,
+    planEnterprise: fl.filter((l) => l.company_plan?.toUpperCase() === "ENTERPRISE").length,
+    planExpired:    fl.filter((l) => ["expired", "suspended"].includes(l.company_sub_status)).length,
+    nurtureStep1:   fl.filter((l) => l.nurture_step == 1 && !l.unsubscribed).length,
+    nurtureStep2:   fl.filter((l) => l.nurture_step == 2 && !l.unsubscribed).length,
+    nurtureFinal:   fl.filter((l) => l.nurture_step == 3 && !l.unsubscribed).length,
+    nurtureClosed:  fl.filter((l) => l.nurture_step == 4 && !l.unsubscribed).length,
   };
 }
 
-/* ───────────── TREE DIAGRAM COMPONENT ───────────── */
+/* ───────────── TREE DIAGRAM ───────────── */
 
 function LeadFlowTree({ leads, activeStage, onStageClick }) {
   const [flowPeriod, setFlowPeriod] = useState("all");
   const stats   = computeFlowStats(leads, flowPeriod);
   const nodeMap = Object.fromEntries(TREE_NODES.map((n) => [n.key, n]));
+  const total   = stats.botInteraction || 1;
 
   return (
     <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #ede9fe", padding: "1.5rem", margin: "0 1.5rem 1.5rem" }}>
@@ -83,7 +132,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div>
           <h3 style={{ fontSize: 15, fontWeight: 800, color: "#1a0038", margin: 0 }}>Lead Journey Tree</h3>
-          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>Click any node to filter leads below · dashed line = dropout</p>
+          <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>Click any node to filter leads · dashed = dropout</p>
         </div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {FLOW_PERIODS.map((p) => (
@@ -103,25 +152,25 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
         <div style={{ position: "relative", width: TREE_W, height: TREE_H, margin: "0 auto" }}>
 
           {/* SVG edges */}
-          <svg
-            width={TREE_W} height={TREE_H}
+          <svg width={TREE_W} height={TREE_H}
             style={{ position: "absolute", inset: 0, pointerEvents: "none" }}>
             {TREE_EDGES.map(({ from, to, dashed }) => {
-              const fn  = nodeMap[from];
-              const tn  = nodeMap[to];
-              const x1  = fn.cx;
-              const y1  = fn.cy + NODE_H / 2;
-              const x2  = tn.cx;
-              const y2  = tn.cy - NODE_H / 2;
-              const midY = (y1 + y2) / 2;
-              const isHighlighted = activeStage === to;
+              const fn    = nodeMap[from];
+              const tn    = nodeMap[to];
+              const hn_f  = fn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
+              const hn_t  = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
+              const x1    = fn.cx;
+              const y1    = fn.cy + hn_f;
+              const x2    = tn.cx;
+              const y2    = tn.cy - hn_t;
+              const midY  = (y1 + y2) / 2;
+              const isHi  = activeStage === to;
               return (
-                <path
-                  key={`${from}-${to}`}
+                <path key={`${from}-${to}`}
                   d={`M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`}
                   fill="none"
-                  stroke={isHighlighted ? tn.color : "#d1d5db"}
-                  strokeWidth={isHighlighted ? 2.5 : 1.5}
+                  stroke={isHi ? tn.color : "#d1d5db"}
+                  strokeWidth={isHi ? 2.5 : 1.5}
                   strokeDasharray={dashed ? "6 4" : undefined}
                   strokeLinecap="round"
                 />
@@ -129,15 +178,15 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
             })}
             {/* arrowheads */}
             {TREE_EDGES.map(({ from, to }) => {
-              const tn = nodeMap[to];
-              const x2 = tn.cx;
-              const y2 = tn.cy - NODE_H / 2;
-              const isHighlighted = activeStage === to;
+              const tn   = nodeMap[to];
+              const hn_t = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
+              const x2   = tn.cx;
+              const y2   = tn.cy - hn_t;
+              const isHi = activeStage === to;
               return (
-                <polygon
-                  key={`arr-${from}-${to}`}
-                  points={`${x2},${y2} ${x2 - 5},${y2 - 9} ${x2 + 5},${y2 - 9}`}
-                  fill={isHighlighted ? tn.color : "#d1d5db"}
+                <polygon key={`arr-${from}-${to}`}
+                  points={`${x2},${y2} ${x2 - 5},${y2 - 8} ${x2 + 5},${y2 - 8}`}
+                  fill={isHi ? tn.color : "#d1d5db"}
                 />
               );
             })}
@@ -148,45 +197,61 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
             const { Icon } = node;
             const count    = stats[node.key];
             const isActive = activeStage === node.key;
-            const pct      = stats.botInteraction > 0
-              ? Math.round((count / stats.botInteraction) * 100)
-              : 0;
+            const pct      = Math.round((count / total) * 100);
+            const isSm     = node.size === "sm";
+            const w        = isSm ? NODE_SM_W : NODE_W;
+            const h        = isSm ? NODE_SM_H : NODE_H;
+
             return (
-              <div
-                key={node.key}
+              <div key={node.key}
                 onClick={() => onStageClick(isActive ? null : node.key)}
                 title={`${count} leads (${pct}%) — click to filter`}
                 style={{
                   position: "absolute",
-                  left:   node.cx - NODE_W / 2,
-                  top:    node.cy - NODE_H / 2,
-                  width:  NODE_W,
-                  height: NODE_H,
+                  left: node.cx - w / 2,
+                  top:  node.cy - h / 2,
+                  width: w, height: h,
                   background: isActive ? `${node.color}12` : "#fafafa",
                   border: isActive ? `2px solid ${node.color}` : "1.5px solid #e9e3f5",
-                  borderRadius: 12,
+                  borderRadius: isSm ? 9 : 12,
                   cursor: "pointer",
-                  padding: "10px 10px 8px",
+                  padding: isSm ? "6px 8px" : "10px 10px 8px",
                   boxSizing: "border-box",
-                  boxShadow: isActive ? `0 0 0 4px ${node.color}25` : "0 1px 3px rgba(0,0,0,0.07)",
+                  boxShadow: isActive ? `0 0 0 3px ${node.color}25` : "0 1px 3px rgba(0,0,0,0.07)",
                   transition: "all 0.15s",
                   display: "flex",
-                  flexDirection: "column",
+                  flexDirection: isSm ? "row" : "column",
                   alignItems: "center",
-                  justifyContent: "center",
-                  gap: 3,
+                  justifyContent: isSm ? "flex-start" : "center",
+                  gap: isSm ? 6 : 3,
                   userSelect: "none",
                 }}>
-                <div style={{ background: `${node.color}18`, borderRadius: 7, padding: "4px 6px", display: "flex", alignItems: "center", gap: 5 }}>
-                  <Icon size={14} color={node.color} />
-                  <span style={{ fontSize: 20, fontWeight: 900, color: node.color, lineHeight: 1 }}>{count}</span>
-                </div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center", lineHeight: 1.3 }}>
-                  {node.label}
-                </div>
-                <div style={{ width: "80%", height: 3, borderRadius: 3, background: "#ede9fe", overflow: "hidden" }}>
-                  <div style={{ height: "100%", width: `${pct}%`, background: node.color, borderRadius: 3 }} />
-                </div>
+                {isSm ? (
+                  <>
+                    <div style={{ background: `${node.color}18`, borderRadius: 6, padding: "3px 4px", flexShrink: 0 }}>
+                      <Icon size={12} color={node.color} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 16, fontWeight: 900, color: node.color, lineHeight: 1 }}>{count}</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.04em", lineHeight: 1.2 }}>
+                        {node.label}
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ background: `${node.color}18`, borderRadius: 7, padding: "4px 6px", display: "flex", alignItems: "center", gap: 5 }}>
+                      <Icon size={14} color={node.color} />
+                      <span style={{ fontSize: 22, fontWeight: 900, color: node.color, lineHeight: 1 }}>{count}</span>
+                    </div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center", lineHeight: 1.3 }}>
+                      {node.label}
+                    </div>
+                    <div style={{ width: "80%", height: 3, borderRadius: 3, background: "#ede9fe", overflow: "hidden" }}>
+                      <div style={{ height: "100%", width: `${pct}%`, background: node.color, borderRadius: 3 }} />
+                    </div>
+                  </>
+                )}
               </div>
             );
           })}
@@ -212,7 +277,6 @@ const ACTION_LABEL = {
   start_with_promeet: "Start With Promeet",
   book_a_demo:        "Book A Demo",
 };
-
 const ACTION_COLOR = {
   start_with_promeet: "#7c3aed",
   book_a_demo:        "#d97706",
@@ -231,9 +295,7 @@ const fmtDate = (d) => {
 
 const fmtDemoDate = (date, time) => {
   if (!date) return null;
-  const d = String(date).split("T")[0];
-  const t = String(time).substring(0, 5);
-  return `${d} ${t}`;
+  return `${String(date).split("T")[0]} ${String(time).substring(0, 5)}`;
 };
 
 function DemoStatus({ lead, onMarkAttended }) {
@@ -278,7 +340,6 @@ export default function WhatsAppLeadsPage() {
   const [showFlow,    setShowFlow]    = useState(false);
   const [activeStage, setActiveStage] = useState(null);
 
-  /* AUTH */
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
     const a = localStorage.getItem("sa_admin");
@@ -291,7 +352,6 @@ export default function WhatsAppLeadsPage() {
     }
   }, [router]);
 
-  /* FETCH */
   const fetchLeads = useCallback(async (t) => {
     if (!t) return;
     setLoading(true);
@@ -322,7 +382,6 @@ export default function WhatsAppLeadsPage() {
     } catch { /* silent */ }
   };
 
-  /* FILTER */
   const filtered = leads.filter((l) => {
     const matchSearch = !search ||
       (l.phone || "").includes(search) ||
@@ -337,7 +396,6 @@ export default function WhatsAppLeadsPage() {
   return (
     <div className={styles.container}>
 
-      {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
@@ -354,7 +412,6 @@ export default function WhatsAppLeadsPage() {
 
       <div className={styles.scrollBody}>
 
-        {/* HERO */}
         <section className={styles.hero}>
           <h1 className={styles.heroTitle}>WhatsApp <span>Leads</span></h1>
           <p className={styles.heroSub}>All contacts who messaged the Promeet WhatsApp bot</p>
@@ -385,7 +442,6 @@ export default function WhatsAppLeadsPage() {
           </div>
         </section>
 
-        {/* FILTERS */}
         <div className={styles.filterBar}>
           <input
             className={styles.searchInput}
@@ -412,21 +468,17 @@ export default function WhatsAppLeadsPage() {
           </button>
         </div>
 
-        {/* FLOW TREE */}
         {showFlow && (
-          <LeadFlowTree
-            leads={leads}
-            activeStage={activeStage}
-            onStageClick={setActiveStage}
-          />
+          <LeadFlowTree leads={leads} activeStage={activeStage} onStageClick={setActiveStage} />
         )}
 
-        {/* TABLE */}
         {loading ? (
           <div style={{ textAlign: "center", padding: "60px", color: "#6b7280", fontSize: 16 }}>Loading leads…</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: "center", padding: "60px", color: "#6b7280", fontSize: 16 }}>
-            {activeStage ? `No leads in "${TREE_NODES.find((n) => n.key === activeStage)?.label}" stage.` : "No leads found."}
+            {activeStage
+              ? `No leads in "${TREE_NODES.find((n) => n.key === activeStage)?.label}" stage.`
+              : "No leads found."}
           </div>
         ) : (
           <div style={{ overflowX: "auto", padding: "0 1.5rem 2rem" }}>
@@ -439,45 +491,55 @@ export default function WhatsAppLeadsPage() {
                   <th style={th}>Action Taken</th>
                   <th style={th}>Demo Status</th>
                   <th style={th}>Nurture</th>
+                  <th style={th}>Plan</th>
                   <th style={th}>First Contact</th>
                   <th style={th}>Last Activity</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((lead, i) => (
-                  <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ede9fe" }}>
-                    <td style={td}>{i + 1}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>
-                      {lead.unsubscribed
-                        ? <span style={{ color: "#9ca3af" }}>{lead.name || "—"}</span>
-                        : (lead.name || "—")}
-                    </td>
-                    <td style={{ ...td, fontFamily: "monospace" }}>{lead.phone ? `+${lead.phone}` : "—"}</td>
-                    <td style={td}>
-                      {lead.last_action ? (
-                        <span style={{ background: ACTION_COLOR[lead.last_action] || "#6b7280", color: "#fff", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
-                          {ACTION_LABEL[lead.last_action] || lead.last_action}
-                        </span>
-                      ) : (
-                        <span style={{ color: "#9ca3af", fontSize: 13 }}>No action</span>
-                      )}
-                    </td>
-                    <td style={td}>
-                      <DemoStatus lead={lead} onMarkAttended={markAttended} />
-                    </td>
-                    <td style={td}>
-                      {lead.unsubscribed ? (
-                        <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Unsubscribed</span>
-                      ) : (
-                        <span style={{ background: NURTURE_COLOR[lead.nurture_step || 0] + "22", color: NURTURE_COLOR[lead.nurture_step || 0], padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
-                          {NURTURE_LABEL[lead.nurture_step || 0]}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.created_at)}</td>
-                    <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.updated_at)}</td>
-                  </tr>
-                ))}
+                {filtered.map((lead, i) => {
+                  const plan = lead.company_plan?.toUpperCase();
+                  const subStatus = lead.company_sub_status;
+                  const planColor = plan === "TRIAL" ? "#0ea5e9" : plan === "BUSINESS" ? "#10b981" : plan === "ENTERPRISE" ? "#7c3aed" : null;
+                  const isExpired = ["expired", "suspended"].includes(subStatus);
+                  return (
+                    <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ede9fe" }}>
+                      <td style={td}>{i + 1}</td>
+                      <td style={{ ...td, fontWeight: 600 }}>
+                        {lead.unsubscribed ? <span style={{ color: "#9ca3af" }}>{lead.name || "—"}</span> : (lead.name || "—")}
+                      </td>
+                      <td style={{ ...td, fontFamily: "monospace" }}>{lead.phone ? `+${lead.phone}` : "—"}</td>
+                      <td style={td}>
+                        {lead.last_action ? (
+                          <span style={{ background: ACTION_COLOR[lead.last_action] || "#6b7280", color: "#fff", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>
+                            {ACTION_LABEL[lead.last_action] || lead.last_action}
+                          </span>
+                        ) : <span style={{ color: "#9ca3af", fontSize: 13 }}>No action</span>}
+                      </td>
+                      <td style={td}>
+                        <DemoStatus lead={lead} onMarkAttended={markAttended} />
+                      </td>
+                      <td style={td}>
+                        {lead.unsubscribed ? (
+                          <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Unsubscribed</span>
+                        ) : (
+                          <span style={{ background: NURTURE_COLOR[lead.nurture_step || 0] + "22", color: NURTURE_COLOR[lead.nurture_step || 0], padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                            {NURTURE_LABEL[lead.nurture_step || 0]}
+                          </span>
+                        )}
+                      </td>
+                      <td style={td}>
+                        {plan ? (
+                          <span style={{ background: (isExpired ? "#ef4444" : planColor) + "18", color: isExpired ? "#ef4444" : planColor, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+                            {isExpired ? `${plan} (Expired)` : plan}
+                          </span>
+                        ) : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}
+                      </td>
+                      <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.created_at)}</td>
+                      <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.updated_at)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
