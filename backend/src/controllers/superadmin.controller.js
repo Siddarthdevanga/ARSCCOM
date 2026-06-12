@@ -498,7 +498,14 @@ export const whatsappLeads = async (req, res) => {
          da.app_date   AS demo_date,
          da.app_time   AS demo_time,
          da.attended   AS demo_attended,
-         da.post_demo_sent
+         da.post_demo_sent,
+         EXISTS(
+           SELECT 1 FROM users u
+           JOIN companies c ON c.id = u.company_id
+           WHERE (u.phone = wl.phone OR CONCAT('91', u.phone) = wl.phone OR u.phone = RIGHT(wl.phone, 10))
+             AND c.subscription_status NOT IN ('expired','suspended')
+             AND u.role = 'user'
+         ) AS is_converted
        FROM whatsapp_leads wl
        LEFT JOIN demo_appointments da
          ON da.phone = wl.phone
