@@ -493,7 +493,9 @@ export const whatsappLeads = async (req, res) => {
     const [leads] = await db.query(
       `SELECT
          wl.id, wl.phone, wl.name, wl.last_action, wl.created_at, wl.updated_at,
-         wl.nurture_step, wl.last_nurture_sent_at, wl.unsubscribed,
+         wl.nurture_step, wl.last_nurture_sent_at,
+         wl.pre_nurture_step, wl.last_pre_nurture_sent_at,
+         wl.unsubscribed,
          da.id         AS demo_id,
          da.app_date   AS demo_date,
          da.app_time   AS demo_time,

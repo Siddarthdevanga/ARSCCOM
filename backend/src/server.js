@@ -168,6 +168,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Nurture Cron Scheduled (Every Minute IST)");
 
+    const { sendPreNurtureMessages } = await import("./cron/preNurtureCron.js");
+    cron.default.schedule('* * * * *', async () => {
+      try { await sendPreNurtureMessages(); } catch (e) { console.error("❌ Pre-nurture cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Pre-Nurture Cron Scheduled (Every Minute IST)");
+
     const { sendPlanReminders } = await import("./cron/planNotificationCron.js");
     cron.default.schedule('0 9 * * *', async () => {
       try { await sendPlanReminders(); } catch (e) { console.error("❌ Plan reminder cron failed:", e); }

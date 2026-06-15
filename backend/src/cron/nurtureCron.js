@@ -41,13 +41,15 @@ export const sendNurtureMessages = async () => {
   };
 
   try {
-    // Step 1 — 2 days after created_at OR 2 days after missed demo reset
+    // Step 1 — 2 days after missed demo reset
+    // Only for leads with demo history (no-demo leads handled by preNurtureCron)
     if (t1) {
       const [leads] = await db.query(
         `SELECT wl.id, wl.phone, wl.name FROM whatsapp_leads wl
          WHERE wl.nurture_step = 0 AND wl.unsubscribed = 0
            AND COALESCE(wl.last_nurture_sent_at, wl.created_at) <= DATE_SUB(NOW(), INTERVAL 2 DAY)
-           AND ${NO_ACTIVE_DEMO}`
+           AND ${NO_ACTIVE_DEMO}
+           AND EXISTS (SELECT 1 FROM demo_appointments WHERE phone = wl.phone)`
       );
       for (const l of leads) await send(l, t1, 1);
     }
