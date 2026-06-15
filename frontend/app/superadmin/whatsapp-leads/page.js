@@ -10,10 +10,17 @@ import styles from "../dashboard/style.module.css";
 
 const NODE_W    = 138;
 const NODE_H    = 72;
+const NODE_SUB_H = 90; // lg node with subtitle line
 const NODE_SM_W = 84;
 const NODE_SM_H = 44;
-const TREE_W    = 1180;
-const TREE_H    = 590;
+const TREE_W    = 1260;
+const TREE_H    = 640;
+
+// Returns actual half-height of a node (accounts for subtitle)
+const halfH = (node) => {
+  if (node.size === "sm") return NODE_SM_H / 2;
+  return node.subtitle ? NODE_SUB_H / 2 : NODE_H / 2;
+};
 
 /*
   Full journey tree:
@@ -39,28 +46,28 @@ const TREE_NODES = [
   { key: "noAction",       label: "No Action",       Icon: UserMinus,     color: "#94a3b8", cx: 110,  cy: 185, size: "lg" },
   { key: "demoBooked",     label: "Demo Booked",     Icon: Calendar,      color: "#3b82f6", cx: 580,  cy: 185, size: "lg" },
   { key: "unsubscribed",   label: "Unsubscribed",    Icon: UserMinus,     color: "#6b7280", cx: 1040, cy: 185, size: "lg" },
-  // Level 3 — Pre-nurture chain below No Action (horizontal)
-  { key: "preNurtureS1",   label: "Msg 1",           Icon: MessageSquare, color: "#64748b", cx: 110,  cy: 315, size: "sm" },
-  { key: "preNurtureS2",   label: "Msg 2",           Icon: MessageSquare, color: "#64748b", cx: 215,  cy: 315, size: "sm" },
-  { key: "preNurtureS3",   label: "Msg 3",           Icon: MessageSquare, color: "#64748b", cx: 320,  cy: 315, size: "sm" },
+  // Level 3–5 — Pre-nurture vertical chain below No Action
+  // S1 cy=325, S2=325+90+18=433, S3=433+90+18=541
+  { key: "preNurtureS1",   label: "Msg 1",  subtitle: "Day 1 · Re-engage",   Icon: MessageSquare, color: "#64748b", cx: 110, cy: 325, size: "lg" },
+  { key: "preNurtureS2",   label: "Msg 2",  subtitle: "Day 4 · Follow up",   Icon: MessageSquare, color: "#64748b", cx: 110, cy: 433, size: "lg" },
+  { key: "preNurtureS3",   label: "Msg 3",  subtitle: "Day 8 · Final nudge", Icon: MessageSquare, color: "#64748b", cx: 110, cy: 541, size: "lg" },
   // Level 3 — Demo outcomes
-  { key: "demoAttended",   label: "Attended",        Icon: CheckCircle,   color: "#10b981", cx: 470,  cy: 315, size: "lg" },
-  { key: "demoMissed",     label: "Missed",          Icon: XCircle,       color: "#ef4444", cx: 800,  cy: 315, size: "lg" },
+  { key: "demoAttended",   label: "Attended",      Icon: CheckCircle,   color: "#10b981", cx: 500,  cy: 325, size: "lg" },
+  { key: "demoMissed",     label: "Missed",        Icon: XCircle,       color: "#ef4444", cx: 850,  cy: 325, size: "lg" },
   // Level 4
-  { key: "noConversion",   label: "No Conversion",   Icon: XCircle,       color: "#f97316", cx: 360,  cy: 430, size: "lg" },
-  { key: "converted",      label: "Converted",       Icon: Star,          color: "#f59e0b", cx: 570,  cy: 430, size: "lg" },
-  { key: "inNurture",      label: "In Nurture",      Icon: MessageSquare, color: "#8b5cf6", cx: 800,  cy: 430, size: "lg" },
+  { key: "noConversion",   label: "No Conversion", Icon: XCircle,       color: "#f97316", cx: 390,  cy: 450, size: "lg" },
+  { key: "converted",      label: "Converted",     Icon: Star,          color: "#f59e0b", cx: 600,  cy: 450, size: "lg" },
+  { key: "inNurture",      label: "In Nurture",    Icon: MessageSquare, color: "#8b5cf6", cx: 850,  cy: 450, size: "lg" },
   // Level 5 — Plan breakdown under Converted
-  { key: "planTrial",      label: "Trial",           Icon: Users,         color: "#0ea5e9", cx: 420,  cy: 545, size: "sm" },
-  { key: "planBusiness",   label: "Business",        Icon: CheckCircle,   color: "#10b981", cx: 513,  cy: 545, size: "sm" },
-  { key: "planEnterprise", label: "Enterprise",      Icon: Star,          color: "#7c3aed", cx: 606,  cy: 545, size: "sm" },
-  { key: "planExpired",    label: "Expired",         Icon: XCircle,       color: "#ef4444", cx: 699,  cy: 545, size: "sm" },
-  // Level 5 — Nurture chain: directly below In Nurture then flowing right
-  // Counts are CUMULATIVE: Step1 = entered nurture, Step2 = moved past step1, etc.
-  { key: "nurtureStep1",   label: "Step 1",          Icon: MessageSquare, color: "#3b82f6", cx: 800,  cy: 545, size: "sm" },
-  { key: "nurtureStep2",   label: "Step 2",          Icon: MessageSquare, color: "#8b5cf6", cx: 900,  cy: 545, size: "sm" },
-  { key: "nurtureFinal",   label: "Final",           Icon: MessageSquare, color: "#f59e0b", cx: 1000, cy: 545, size: "sm" },
-  { key: "nurtureClosed",  label: "Closed",          Icon: UserMinus,     color: "#6b7280", cx: 1100, cy: 545, size: "sm" },
+  { key: "planTrial",      label: "Trial",      Icon: Users,         color: "#0ea5e9", cx: 450,  cy: 575, size: "sm" },
+  { key: "planBusiness",   label: "Business",   Icon: CheckCircle,   color: "#10b981", cx: 543,  cy: 575, size: "sm" },
+  { key: "planEnterprise", label: "Enterprise", Icon: Star,          color: "#7c3aed", cx: 636,  cy: 575, size: "sm" },
+  { key: "planExpired",    label: "Expired",    Icon: XCircle,       color: "#ef4444", cx: 729,  cy: 575, size: "sm" },
+  // Level 5 — Nurture chain: directly below In Nurture then flowing right (120px gaps)
+  { key: "nurtureStep1",   label: "Step 1", Icon: MessageSquare, color: "#3b82f6", cx: 850,  cy: 575, size: "sm" },
+  { key: "nurtureStep2",   label: "Step 2", Icon: MessageSquare, color: "#8b5cf6", cx: 980,  cy: 575, size: "sm" },
+  { key: "nurtureFinal",   label: "Final",  Icon: MessageSquare, color: "#f59e0b", cx: 1110, cy: 575, size: "sm" },
+  { key: "nurtureClosed",  label: "Closed", Icon: UserMinus,     color: "#6b7280", cx: 1210, cy: 575, size: "sm" },
 ];
 
 // orient "h" = horizontal right-to-left connection; labeled = show count·% pill
@@ -68,10 +75,10 @@ const TREE_EDGES = [
   { from: "botInteraction", to: "noAction",       dashed: true,  labeled: true,  orient: "v" },
   { from: "botInteraction", to: "demoBooked",     dashed: false, labeled: true,  orient: "v" },
   { from: "botInteraction", to: "unsubscribed",   dashed: true,  labeled: true,  orient: "v" },
-  // Pre-nurture chain below No Action
+  // Pre-nurture vertical chain below No Action
   { from: "noAction",       to: "preNurtureS1",   dashed: false, labeled: false, orient: "v" },
-  { from: "preNurtureS1",   to: "preNurtureS2",   dashed: false, labeled: true,  orient: "h" },
-  { from: "preNurtureS2",   to: "preNurtureS3",   dashed: false, labeled: true,  orient: "h" },
+  { from: "preNurtureS1",   to: "preNurtureS2",   dashed: false, labeled: true,  orient: "v" },
+  { from: "preNurtureS2",   to: "preNurtureS3",   dashed: false, labeled: true,  orient: "v" },
   { from: "demoBooked",     to: "demoAttended",   dashed: false, labeled: true,  orient: "v" },
   { from: "demoBooked",     to: "demoMissed",     dashed: false, labeled: true,  orient: "v" },
   { from: "demoAttended",   to: "noConversion",   dashed: true,  labeled: true,  orient: "v" },
@@ -199,7 +206,6 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
               const color = isHi ? tn.color : dashed ? "#cbd5e1" : "#d1d5db";
               let d;
               if (orient === "h") {
-                // horizontal: right-center of source → left-center of dest
                 const hw_f = fn.size === "sm" ? NODE_SM_W / 2 : NODE_W / 2;
                 const hw_t = tn.size === "sm" ? NODE_SM_W / 2 : NODE_W / 2;
                 const x1 = fn.cx + hw_f, y1 = fn.cy;
@@ -207,11 +213,8 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
                 const mx = (x1 + x2) / 2;
                 d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
               } else {
-                // vertical: bottom-center of source → top-center of dest
-                const hn_f = fn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
-                const hn_t = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
-                const x1 = fn.cx, y1 = fn.cy + hn_f;
-                const x2 = tn.cx, y2 = tn.cy - hn_t;
+                const x1 = fn.cx, y1 = fn.cy + halfH(fn);
+                const x2 = tn.cx, y2 = tn.cy - halfH(tn);
                 const my = (y1 + y2) / 2;
                 d = `M ${x1} ${y1} C ${x1} ${my}, ${x2} ${my}, ${x2} ${y2}`;
               }
@@ -230,15 +233,12 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
               const isHi = activeStage === to;
               const fill = isHi ? tn.color : "#d1d5db";
               if (orient === "h") {
-                // right-pointing arrowhead at left-center of dest
                 const hw_t = tn.size === "sm" ? NODE_SM_W / 2 : NODE_W / 2;
                 const x2 = tn.cx - hw_t, y2 = tn.cy;
                 return <polygon key={`arr-${from}-${to}`} fill={fill}
                   points={`${x2},${y2} ${x2 - 8},${y2 - 4} ${x2 - 8},${y2 + 4}`} />;
               }
-              // up-pointing arrowhead at top-center of dest
-              const hn_t = tn.size === "sm" ? NODE_SM_H / 2 : NODE_H / 2;
-              const x2 = tn.cx, y2 = tn.cy - hn_t;
+              const x2 = tn.cx, y2 = tn.cy - halfH(tn);
               return <polygon key={`arr-${from}-${to}`} fill={fill}
                 points={`${x2},${y2} ${x2 - 5},${y2 - 8} ${x2 + 5},${y2 - 8}`} />;
             })}
@@ -253,10 +253,10 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
               const hw_f = fn.size === "sm" ? NODE_SM_W / 2 : NODE_W / 2;
               const hw_t = tn.size === "sm" ? NODE_SM_W / 2 : NODE_W / 2;
               lx = (fn.cx + hw_f + tn.cx - hw_t) / 2;
-              ly = fn.cy - 12; // above the horizontal edge
+              ly = fn.cy - 12;
             } else {
-              lx = (fn.cx + tn.cx) / 2;
-              ly = (fn.cy + NODE_H / 2 + tn.cy - NODE_H / 2) / 2;
+              lx = (fn.cx + tn.cx) / 2 + 6;
+              ly = (fn.cy + halfH(fn) + tn.cy - halfH(tn)) / 2;
             }
             const cnt    = stats[to];
             const parent = stats[from] || 1;
@@ -293,7 +293,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
             const pct      = Math.round((count / total) * 100);
             const isSm     = node.size === "sm";
             const w        = isSm ? NODE_SM_W : NODE_W;
-            const h        = isSm ? NODE_SM_H : NODE_H;
+            const h        = isSm ? NODE_SM_H : node.subtitle ? NODE_SUB_H : NODE_H;
 
             return (
               <div key={node.key}
@@ -308,7 +308,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
                   border: isActive ? `2px solid ${node.color}` : "1.5px solid #e9e3f5",
                   borderRadius: isSm ? 9 : 12,
                   cursor: "pointer",
-                  padding: isSm ? "6px 8px" : "10px 10px 8px",
+                  padding: isSm ? "6px 8px" : "8px 10px",
                   boxSizing: "border-box",
                   boxShadow: isActive ? `0 0 0 3px ${node.color}25` : "0 1px 3px rgba(0,0,0,0.07)",
                   transition: "all 0.15s",
@@ -341,9 +341,15 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.05em", textAlign: "center", lineHeight: 1.3 }}>
                       {node.label}
                     </div>
-                    <div style={{ width: "80%", height: 3, borderRadius: 3, background: "#ede9fe", overflow: "hidden" }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: node.color, borderRadius: 3 }} />
-                    </div>
+                    {node.subtitle ? (
+                      <div style={{ fontSize: 9, color: "#94a3b8", textAlign: "center", lineHeight: 1.3, marginTop: 1 }}>
+                        {node.subtitle}
+                      </div>
+                    ) : (
+                      <div style={{ width: "80%", height: 3, borderRadius: 3, background: "#ede9fe", overflow: "hidden" }}>
+                        <div style={{ height: "100%", width: `${pct}%`, background: node.color, borderRadius: 3 }} />
+                      </div>
+                    )}
                   </>
                 )}
               </div>
