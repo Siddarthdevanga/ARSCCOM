@@ -302,11 +302,12 @@ export default function ConferenceBookPage() {
   const memberRef = useRef(null);
 
   // Room schedule sidebar
-  const [roomSchedule,    setRoomSchedule]    = useState([]);
-  const [scheduleLoading, setScheduleLoading] = useState(false);
-  const [scheduleDate,    setScheduleDate]    = useState(""); // date currently shown in right panel
-  const [rangeBookings,   setRangeBookings]   = useState([]); // grouped range bookings for left panel
-  const [rangeLoading,    setRangeLoading]    = useState(false);
+  const [roomSchedule,      setRoomSchedule]      = useState([]);
+  const [scheduleLoading,   setScheduleLoading]   = useState(false);
+  const [scheduleDate,      setScheduleDate]      = useState(""); // date currently shown in right panel
+  const [rangeBookings,     setRangeBookings]     = useState([]); // grouped range bookings for left panel
+  const [rangeLoading,      setRangeLoading]      = useState(false);
+  const [scheduleRangeData, setScheduleRangeData] = useState({}); // range_booking_id → full day list for right panel
 
   // Reschedule modal
   const [rescheduleTarget, setRescheduleTarget] = useState(null); // booking
@@ -455,6 +456,21 @@ export default function ConferenceBookPage() {
     if (selected && bookingDate) loadRoomSchedule(selected.id, bookingDate);
     else if (selected) loadRoomSchedule(selected.id, today);
   }, [bookingDate]);
+
+  // After schedule loads, fetch full day list for any range found
+  useEffect(() => {
+    const rids = [...new Set(roomSchedule.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
+    if (rids.length === 0) { setScheduleRangeData({}); return; }
+    Promise.all(rids.map(rid =>
+      apiFetch(`/api/conference/bookings/range/${rid}`)
+        .then(data => [rid, data])
+        .catch(() => [rid, null])
+    )).then(results => {
+      const map = {};
+      for (const [rid, data] of results) { if (data) map[rid] = data; }
+      setScheduleRangeData(map);
+    });
+  }, [roomSchedule]);
 
   const classifyBooking = (b) => {
     const bDate = (b.booking_date || "").split("T")[0];
@@ -1141,96 +1157,180 @@ export default function ConferenceBookPage() {
                   <div style={{ textAlign:"center", padding:"2rem", color:"#9ca3af", fontSize:"0.82rem" }}>
                     No bookings for this date
                   </div>
-                ) : (
-                  [...roomSchedule].sort((a,b) => a.start_time.localeCompare(b.start_time)).map(b => {
-                    const state = classifyBooking(b);
-                    const isPast = state === "past" || state === "active";
-                    const booker = b.booked_by === "ADMIN" ? "Admin" : b.booked_by;
-                    return (
-                      <div key={b.id} style={{ marginBottom:"0.6rem", borderRadius:"0.5rem",
-                        border:`1px solid ${isPast ? "#e5e7eb" : "#7c3aed"}`,
-                        background: isPast ? "#f9fafb" : "#fff",
-                        opacity: isPast ? 0.6 : 1, padding:"0.6rem 0.75rem" }}>
-                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-                          <div style={{ fontSize:"0.78rem", fontWeight:700,
-                            color: isPast ? "#9ca3af" : "#1f2937" }}>
-                            {prettyTime(b.start_time)} – {prettyTime(b.end_time)}
-                          </div>
-                          {state === "active" && (
-                            <span style={{ display:"flex", alignItems:"center", gap:"0.3rem",
-                              fontSize:"0.62rem", background:"#dcfce7", color:"#15803d",
-                              borderRadius:99, padding:"2px 7px", fontWeight:700 }}>
-                              <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a",
-                                display:"inline-block", animation:"pulse 1.5s infinite" }} />
-                              In Progress
-                            </span>
-                          )}
-                          {state === "past" && (
-                            <span style={{ fontSize:"0.62rem", background:"#f3f4f6", color:"#9ca3af",
-                              borderRadius:99, padding:"1px 6px", fontWeight:700 }}>Ended</span>
-                          )}
-                        </div>
-                        <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:2 }}>
-                          {b.department && <span>{b.department} · </span>}{booker}
-                        </div>
-                        {state === "active" && (
-                          <div style={{ marginTop:"0.5rem" }}>
-                            <div style={{ fontSize:"0.62rem", fontWeight:700, color:"#15803d", marginBottom:"0.3rem" }}>Extend meeting</div>
-                            <div style={{ display:"flex", gap:"0.3rem" }}>
-                              {[15, 30, 60].map(mins => (
-                                <button key={mins} onClick={() => extendBooking(b, mins)}
-                                  style={{ flex:1, padding:"0.3rem 0", background:"#16a34a", color:"#fff",
-                                    border:"none", borderRadius:"0.35rem", fontSize:"0.7rem",
-                                    fontWeight:700, cursor:"pointer", boxShadow:"0 1px 4px rgba(22,163,74,0.35)" }}>
-                                  +{mins}m
-                                </button>
-                              ))}
+                ) : (() => {
+                  const rangeIds = [...new Set(roomSchedule.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
+                  const singles = roomSchedule.filter(b => !b.range_booking_id).sort((a,b) => a.start_time.localeCompare(b.start_time));
+                  return (
+                    <>
+                      {/* ── RANGE GROUPS ── */}
+                      {rangeIds.map(rid => {
+                        const group = scheduleRangeData[rid];
+                        const ref = roomSchedule.find(b => b.range_booking_id === rid);
+                        const days = (group?.days || []).sort((a,b) => a.booking_date.localeCompare(b.booking_date));
+                        const upcomingDays = days.filter(d => classifyBooking(d) !== "past");
+                        const firstDay = days[0] || ref;
+                        const lastDay = days[days.length - 1] || ref;
+                        return (
+                          <div key={rid} style={{ marginBottom:"0.75rem", borderRadius:"0.5rem",
+                            border:"1.5px solid #ddd6fe", overflow:"hidden" }}>
+                            {/* Group header */}
+                            <div style={{ background:"#f5f3ff", padding:"0.55rem 0.75rem",
+                              borderBottom:"1px solid #ddd6fe" }}>
+                              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.4rem" }}>
+                                <div>
+                                  <div style={{ fontSize:"0.78rem", fontWeight:800, color:"#1f2937" }}>
+                                    {prettyTime(firstDay?.start_time || ref?.start_time)} – {prettyTime(firstDay?.end_time || ref?.end_time)}
+                                  </div>
+                                  <div style={{ fontSize:"0.68rem", color:"#6b7280", marginTop:"0.1rem" }}>
+                                    📅 {(firstDay?.booking_date||"").split("T")[0]} → {(lastDay?.booking_date||"").split("T")[0]}
+                                  </div>
+                                  {ref?.department && <div style={{ fontSize:"0.65rem", color:"#9ca3af" }}>{ref.department} · {ref.booked_by === "ADMIN" ? "Admin" : ref.booked_by}</div>}
+                                  <div style={{ fontSize:"0.65rem", color:"#9ca3af" }}>{upcomingDays.length} day{upcomingDays.length !== 1 ? "s" : ""} remaining</div>
+                                </div>
+                                {upcomingDays.length > 0 && (
+                                  <div style={{ display:"flex", flexDirection:"column", gap:"0.25rem", flexShrink:0 }}>
+                                    <button onClick={() => openScopePicker({ ...ref, _forceRange: true }, "reschedule")}
+                                      style={{ padding:"0.22rem 0.45rem", background:"#ede9fe", color:"#7c3aed",
+                                        border:"none", borderRadius:"0.3rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+                                      Reschedule all
+                                    </button>
+                                    <button onClick={() => openScopePicker({ ...ref, _forceRange: true }, "cancel")}
+                                      style={{ padding:"0.22rem 0.45rem", background:"#fef2f2", color:"#b91c1c",
+                                        border:"none", borderRadius:"0.3rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
+                                      Cancel all
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            {extendMsg && (
-                              <div style={{ marginTop:"0.4rem", padding:"0.35rem 0.6rem",
-                                background:"#f0fdf4", border:"1px solid #86efac", borderRadius:"0.35rem",
-                                fontSize:"0.68rem", fontWeight:700, color:"#166534",
-                                display:"flex", alignItems:"center", gap:"0.3rem" }}>
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                  <polyline points="20 6 9 17 4 12"/>
-                                </svg>
-                                {extendMsg}
+                            {/* Day rows */}
+                            {days.length === 0 ? (
+                              <div style={{ padding:"0.5rem 0.75rem", fontSize:"0.7rem", color:"#9ca3af" }}>Loading…</div>
+                            ) : days.map(d => {
+                              const st = classifyBooking(d);
+                              const isPastDay = st === "past";
+                              const isActive = st === "active";
+                              const dDate = (d.booking_date||"").split("T")[0];
+                              return (
+                                <div key={d.id} style={{ padding:"0.45rem 0.75rem",
+                                  borderBottom:"1px solid #f3f4f6",
+                                  background: isPastDay ? "#fafafa" : "#fff",
+                                  opacity: isPastDay ? 0.65 : 1,
+                                  display:"flex", justifyContent:"space-between", alignItems:"center", gap:"0.4rem" }}>
+                                  <div>
+                                    <div style={{ fontSize:"0.72rem", fontWeight:600, color: isPastDay ? "#9ca3af" : "#1f2937" }}>{dDate}</div>
+                                    <div style={{ fontSize:"0.62rem", fontWeight:700, marginTop:"0.05rem",
+                                      color: isActive ? "#16a34a" : isPastDay ? "#9ca3af" : "#7c3aed" }}>
+                                      {isActive ? "● In Progress" : isPastDay ? "Ended" : "Upcoming"}
+                                    </div>
+                                  </div>
+                                  <div style={{ display:"flex", gap:"0.25rem", flexShrink:0 }}>
+                                    {isActive && [15,30,60].map(m => (
+                                      <button key={m} onClick={() => extendBooking(d, m)}
+                                        style={{ padding:"0.18rem 0.3rem", background:"#16a34a", color:"#fff",
+                                          border:"none", borderRadius:"0.25rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer" }}>
+                                        +{m}m
+                                      </button>
+                                    ))}
+                                    {!isPastDay && !isActive && (
+                                      <>
+                                        <button onClick={() => { setRsScope("single"); openRescheduleModal(d); }}
+                                          style={{ padding:"0.18rem 0.4rem", background:"#ede9fe", color:"#7c3aed",
+                                            border:"none", borderRadius:"0.25rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer" }}>
+                                          Reschedule
+                                        </button>
+                                        <button onClick={() => { setCancelScope("single"); setCancelTarget(d); }}
+                                          style={{ padding:"0.18rem 0.4rem", background:"#fef2f2", color:"#b91c1c",
+                                            border:"none", borderRadius:"0.25rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer" }}>
+                                          Cancel
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
+
+                      {/* ── SINGLE BOOKINGS ── */}
+                      {singles.map(b => {
+                        const state = classifyBooking(b);
+                        const isPast = state === "past";
+                        const booker = b.booked_by === "ADMIN" ? "Admin" : b.booked_by;
+                        return (
+                          <div key={b.id} style={{ marginBottom:"0.6rem", borderRadius:"0.5rem",
+                            border:`1px solid ${isPast ? "#e5e7eb" : "#7c3aed"}`,
+                            background: isPast ? "#f9fafb" : "#fff",
+                            opacity: isPast ? 0.6 : 1, padding:"0.6rem 0.75rem" }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                              <div style={{ fontSize:"0.78rem", fontWeight:700, color: isPast ? "#9ca3af" : "#1f2937" }}>
+                                {prettyTime(b.start_time)} – {prettyTime(b.end_time)}
+                              </div>
+                              {state === "active" && (
+                                <span style={{ display:"flex", alignItems:"center", gap:"0.3rem",
+                                  fontSize:"0.62rem", background:"#dcfce7", color:"#15803d",
+                                  borderRadius:99, padding:"2px 7px", fontWeight:700 }}>
+                                  <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a",
+                                    display:"inline-block", animation:"pulse 1.5s infinite" }} />
+                                  In Progress
+                                </span>
+                              )}
+                              {state === "past" && (
+                                <span style={{ fontSize:"0.62rem", background:"#f3f4f6", color:"#9ca3af",
+                                  borderRadius:99, padding:"1px 6px", fontWeight:700 }}>Ended</span>
+                              )}
+                            </div>
+                            <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:2 }}>
+                              {b.department && <span>{b.department} · </span>}{booker}
+                            </div>
+                            {state === "active" && (
+                              <div style={{ marginTop:"0.5rem" }}>
+                                <div style={{ fontSize:"0.62rem", fontWeight:700, color:"#15803d", marginBottom:"0.3rem" }}>Extend meeting</div>
+                                <div style={{ display:"flex", gap:"0.3rem" }}>
+                                  {[15,30,60].map(mins => (
+                                    <button key={mins} onClick={() => extendBooking(b, mins)}
+                                      style={{ flex:1, padding:"0.3rem 0", background:"#16a34a", color:"#fff",
+                                        border:"none", borderRadius:"0.35rem", fontSize:"0.7rem",
+                                        fontWeight:700, cursor:"pointer", boxShadow:"0 1px 4px rgba(22,163,74,0.35)" }}>
+                                      +{mins}m
+                                    </button>
+                                  ))}
+                                </div>
+                                {extendMsg && (
+                                  <div style={{ marginTop:"0.4rem", padding:"0.35rem 0.6rem",
+                                    background:"#f0fdf4", border:"1px solid #86efac", borderRadius:"0.35rem",
+                                    fontSize:"0.68rem", fontWeight:700, color:"#166534",
+                                    display:"flex", alignItems:"center", gap:"0.3rem" }}>
+                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                      <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    {extendMsg}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {state === "upcoming" && (
+                              <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
+                                <button onClick={() => openScopePicker(b, "reschedule")}
+                                  style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
+                                    border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
+                                  Reschedule
+                                </button>
+                                <button onClick={() => openScopePicker(b, "cancel")}
+                                  style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
+                                    border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
+                                  Cancel
+                                </button>
                               </div>
                             )}
                           </div>
-                        )}
-                        {state === "upcoming" && (
-                          <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
-                            <button onClick={() => openScopePicker(b, "reschedule")}
-                              style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
-                                border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
-                              Reschedule
-                            </button>
-                            <button onClick={() => openScopePicker(b, "cancel")}
-                              style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
-                                border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
-                              Cancel
-                            </button>
-                          </div>
-                        )}
-                        {(state === "past" || state === "active") && b.range_booking_id && (
-                          <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
-                            <button onClick={() => openScopePicker({ ...b, _forceRange: true }, "reschedule")}
-                              style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
-                                border:"none", borderRadius:"0.35rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
-                              Reschedule remaining
-                            </button>
-                            <button onClick={() => openScopePicker({ ...b, _forceRange: true }, "cancel")}
-                              style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
-                                border:"none", borderRadius:"0.35rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
-                              Cancel remaining
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
+                        );
+                      })}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           </div>
