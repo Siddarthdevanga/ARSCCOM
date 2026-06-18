@@ -686,6 +686,10 @@ export default function ConferenceBookPage() {
   const lbl = { display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" };
   const opt = { color:"#9ca3af", fontWeight:400, fontSize:"0.75rem" };
 
+  // Pre-computed grouping for schedule panel
+  const scheduleRangeIds = [...new Set(roomSchedule.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
+  const scheduleSingles  = roomSchedule.filter(b => !b.range_booking_id).sort((a,b) => a.start_time.localeCompare(b.start_time));
+
   return (
     <div style={{ background:"#f8f7ff", fontFamily:"'Nunito', sans-serif", paddingBottom:"3rem" }}>
 
@@ -1159,13 +1163,10 @@ export default function ConferenceBookPage() {
                   <div style={{ textAlign:"center", padding:"2rem", color:"#9ca3af", fontSize:"0.82rem" }}>
                     No bookings for this date
                   </div>
-                ) : (() => {
-                  const rangeIds = [...new Set(roomSchedule.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
-                  const singles = roomSchedule.filter(b => !b.range_booking_id).sort((a,b) => a.start_time.localeCompare(b.start_time));
-                  return (
+                ) : (
                     <>
                       {/* ── RANGE GROUPS ── */}
-                      {rangeIds.map(rid => {
+                      {scheduleRangeIds.map(rid => {
                         const group = scheduleRangeData[rid];
                         const ref = roomSchedule.find(b => b.range_booking_id === rid);
                         const days = (group?.days || []).sort((a,b) => a.booking_date.localeCompare(b.booking_date));
@@ -1257,7 +1258,7 @@ export default function ConferenceBookPage() {
                       })}
 
                       {/* ── SINGLE BOOKINGS ── */}
-                      {singles.map(b => {
+                      {scheduleSingles.map(b => {
                         const state = classifyBooking(b);
                         const isPast = state === "past";
                         const booker = b.booked_by === "ADMIN" ? "Admin" : b.booked_by;
@@ -1331,8 +1332,7 @@ export default function ConferenceBookPage() {
                         );
                       })}
                     </>
-                  );
-                })()}
+                )}
               </div>
             </div>
           </div>
