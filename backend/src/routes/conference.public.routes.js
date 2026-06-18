@@ -1088,8 +1088,9 @@ router.get("/company/:slug/bookings/range/:rangeId", async (req, res) => {
     );
     if (!rows.length) return res.status(404).json({ message: "Range not found" });
 
-    const upcoming = rows.filter(r => r.booking_date >= today && r.status === "BOOKED").length;
-    res.json({ range_booking_id: rangeId, total: rows.length, upcoming_count: upcoming, bookings: rows });
+    const toStr = (d) => d instanceof Date ? d.toISOString().split("T")[0] : String(d).split("T")[0];
+    const upcoming = rows.filter(r => toStr(r.booking_date) >= today && r.status === "BOOKED").length;
+    res.json({ range_booking_id: rangeId, total: rows.length, upcoming_count: upcoming, bookings: rows.map(r => ({ ...r, booking_date: toStr(r.booking_date) })) });
   } catch (err) {
     console.error("[PUBLIC][GET_RANGE]", err);
     res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
@@ -1133,10 +1134,11 @@ router.patch("/company/:slug/bookings/range/:rangeId/cancel", async (req, res) =
     const room    = await getRoomById(upcoming[0].room_id);
     const first   = upcoming[0];
     const last    = upcoming[upcoming.length - 1];
-    const fmtD    = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+    const toDateStr = (d) => d instanceof Date ? d.toISOString().split("T")[0] : String(d).split("T")[0];
+    const fmtD    = (d) => new Date(toDateStr(d) + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
     const syntheticBooking = {
       ...first,
-      booking_date: first.booking_date === last.booking_date ? fmtD(first.booking_date) : `${fmtD(first.booking_date)} → ${fmtD(last.booking_date)}`,
+      booking_date: toDateStr(first.booking_date) === toDateStr(last.booking_date) ? fmtD(first.booking_date) : `${fmtD(first.booking_date)} → ${fmtD(last.booking_date)}`,
     };
 
     const [members] = await db.query(

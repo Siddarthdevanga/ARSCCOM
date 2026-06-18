@@ -1571,7 +1571,7 @@ export default function PublicConferenceBooking() {
       setEditingId(null);
       setEditStart("");
       setEditEnd("");
-      loadBookings(); loadMyRangeBookings();
+      loadBookings();
     } catch (error) {
       console.error("[RESCHEDULE_ERROR]", error);
       setResultModal({ isOpen: true, type: "error", message: "Network error occurred. Please try again." });
@@ -1636,7 +1636,7 @@ export default function PublicConferenceBooking() {
           : "Your booking has been cancelled successfully. A confirmation email has been sent to you."
       });
 
-      loadBookings(); loadMyRangeBookings();
+      loadBookings();
     } catch (error) {
       console.error("[CANCELLATION_ERROR]", error);
       setResultModal({
@@ -2225,7 +2225,7 @@ export default function PublicConferenceBooking() {
                                       <button onClick={showRescheduleConfirmation} className={styles.primaryBtn} disabled={loading} style={{ flex:1, padding:"0.4rem" }}>
                                         {loading ? "Saving…" : "Confirm"}
                                       </button>
-                                      <button onClick={cancelEdit} className={styles.secondaryBtn} disabled={loading} style={{ padding:"0.4rem 0.75rem" }}>
+                                      <button onClick={cancelEdit} disabled={loading} style={{ padding:"0.3rem 0.6rem", background:"#f3f4f6", border:"1px solid #d1d5db", borderRadius:"0.4rem", color:"#6b7280", fontWeight:700, cursor:"pointer", fontSize:"0.85rem" }}>
                                         ✕
                                       </button>
                                     </div>
