@@ -467,7 +467,9 @@ export default function ConferenceBookPage() {
         .catch(() => [rid, null])
     )).then(results => {
       const map = {};
-      for (const [rid, data] of results) { if (data) map[rid] = data; }
+      for (const [rid, data] of results) {
+        if (data) map[rid] = { ...data, days: data.bookings || data.days || [] };
+      }
       setScheduleRangeData(map);
     });
   }, [roomSchedule]);

@@ -1096,7 +1096,7 @@ export default function PublicConferenceBooking() {
         if (data) {
           map[rid] = {
             ...data,
-            days: (data.days || []).map(d => ({
+            days: (data.bookings || data.days || []).map(d => ({
               ...d,
               start_time: dbToAmPm(d.start_time),
               end_time: dbToAmPm(d.end_time),
