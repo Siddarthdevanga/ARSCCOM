@@ -2286,8 +2286,8 @@ export default function PublicConferenceBooking() {
                     {singleBookings_cb.map(b => {
                       const bDate = (b.booking_date || "").split("T")[0];
                       const sMins = ampmToMinutes(b.start_time), eMins = ampmToMinutes(b.end_time);
-                      const isInProgress = bDate === today && sMins <= nowMins && eMins > nowMins;
-                      const isPast = !isInProgress && (bDate < today || (bDate === today && eMins <= nowMins));
+                      const isInProgress = bDate === today && sMins <= nowMins_cb && eMins > nowMins_cb;
+                      const isPast = !isInProgress && (bDate < today || (bDate === today && eMins <= nowMins_cb));
                       return (
                         <div key={b.id} className={styles.bookingItem}
                           style={isPast ? { opacity:0.55, background:"#f9fafb", borderColor:"#e5e7eb" } :
