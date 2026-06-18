@@ -1685,6 +1685,19 @@ export default function PublicConferenceBooking() {
     </div>
   );
 
+  /* ── Grouping for Current Bookings panel ── */
+  const nowIST_cb = new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" }));
+  const nowMins_cb = nowIST_cb.getHours() * 60 + nowIST_cb.getMinutes();
+  const classifyDay_cb = (d) => {
+    const dDate = (d.booking_date || "").split("T")[0];
+    const sMins = ampmToMinutes(d.start_time), eMins = ampmToMinutes(d.end_time);
+    if (dDate < today || (dDate === today && eMins <= nowMins_cb)) return "past";
+    if (dDate === today && sMins <= nowMins_cb && eMins > nowMins_cb) return "active";
+    return "upcoming";
+  };
+  const rangeIds_cb = [...new Set(bookings.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
+  const singleBookings_cb = bookings.filter(b => !b.range_booking_id);
+
   return (
     <div className={styles.page}>
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}`}</style>
@@ -2131,27 +2144,15 @@ export default function PublicConferenceBooking() {
                 <p className={styles.emptyState}>Select a room and date to view bookings</p>
               ) : !bookings.length ? (
                 <p className={styles.emptyState}>No bookings for this date</p>
-              ) : (() => {
-                const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" }));
-                const nowMins = nowIST.getHours() * 60 + nowIST.getMinutes();
-                const classifyDay = (d) => {
-                  const dDate = (d.booking_date || "").split("T")[0];
-                  const sMins = ampmToMinutes(d.start_time), eMins = ampmToMinutes(d.end_time);
-                  if (dDate < today || (dDate === today && eMins <= nowMins)) return "past";
-                  if (dDate === today && sMins <= nowMins && eMins > nowMins) return "active";
-                  return "upcoming";
-                };
-                const rangeIds = [...new Set(bookings.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
-                const singleBookings = bookings.filter(b => !b.range_booking_id);
-                return (
-                  <div className={styles.bookingsList}>
+              ) : (
+                <div className={styles.bookingsList}>
                     {/* ── RANGE GROUPS ── */}
-                    {rangeIds.map(rid => {
+                    {rangeIds_cb.map(rid => {
                       const group = rangeGroupData[rid];
                       const refBooking = bookings.find(b => b.range_booking_id === rid);
                       const canModify = refBooking?.can_modify;
                       const days = group?.days || [];
-                      const upcomingDays = days.filter(d => classifyDay(d) !== "past");
+                      const upcomingDays = days.filter(d => classifyDay_cb(d) !== "past");
                       const firstDay = days[0] || refBooking;
                       const lastDay = days[days.length - 1] || refBooking;
                       const startDate = (firstDay?.booking_date || "").split("T")[0];
@@ -2203,7 +2204,7 @@ export default function PublicConferenceBooking() {
                           {rangeGroupLoading && days.length === 0 ? (
                             <div style={{ padding:"0.75rem 1rem", fontSize:"0.78rem", color:"#9ca3af" }}>Loading days…</div>
                           ) : days.map(d => {
-                            const state = classifyDay(d);
+                            const state = classifyDay_cb(d);
                             const isPastDay = state === "past";
                             const isActiveDay = state === "active";
                             const dDate = (d.booking_date || "").split("T")[0];
@@ -2282,7 +2283,7 @@ export default function PublicConferenceBooking() {
                     })}
 
                     {/* ── SINGLE BOOKINGS ── */}
-                    {singleBookings.map(b => {
+                    {singleBookings_cb.map(b => {
                       const bDate = (b.booking_date || "").split("T")[0];
                       const sMins = ampmToMinutes(b.start_time), eMins = ampmToMinutes(b.end_time);
                       const isInProgress = bDate === today && sMins <= nowMins && eMins > nowMins;
@@ -2354,9 +2355,8 @@ export default function PublicConferenceBooking() {
                         </div>
                       );
                     })}
-                  </div>
-                );
-              })()}
+                </div>
+              )}
             </div>
 
           </div>
