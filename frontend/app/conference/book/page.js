@@ -313,10 +313,17 @@ export default function ConferenceBookPage() {
   const [rsEnd,   setRsEnd]   = useState("");
   const [rsError, setRsError] = useState("");
   const [rsSaving,setRsSaving]= useState(false);
+  const [rsScope, setRsScope] = useState("single"); // "single" | "range"
 
   // Cancel modal
   const [cancelTarget,  setCancelTarget]  = useState(null);
   const [cancelSaving,  setCancelSaving]  = useState(false);
+  const [cancelScope,   setCancelScope]   = useState("single"); // "single" | "range"
+
+  // Range scope picker (shown before cancel/reschedule when booking has range_booking_id)
+  const [scopePicker,        setScopePicker]        = useState(null); // { booking, action: "cancel"|"reschedule" }
+  const [scopeRangeUpcoming, setScopeRangeUpcoming] = useState(0);
+  const [scopeLoading,       setScopeLoading]        = useState(false);
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], []);
   const nowMinutes = useMemo(() => {
@@ -421,8 +428,35 @@ export default function ConferenceBookPage() {
     return "upcoming";
   };
 
-  // Open reschedule modal
-  const openReschedule = (b) => {
+  // Open scope picker if booking belongs to a range, otherwise go straight to modal
+  const openScopePicker = async (b, action) => {
+    if (!b.range_booking_id) {
+      if (action === "cancel") { setCancelScope("single"); setCancelTarget(b); }
+      else { setRsScope("single"); openRescheduleModal(b); }
+      return;
+    }
+    setScopeLoading(true);
+    setScopePicker({ booking: b, action });
+    try {
+      const data = await apiFetch(`/api/conference/bookings/range/${b.range_booking_id}`);
+      setScopeRangeUpcoming(data.upcoming_count || 0);
+    } catch { setScopeRangeUpcoming(0); }
+    finally { setScopeLoading(false); }
+  };
+
+  const confirmScopeChoice = (scope) => {
+    const { booking, action } = scopePicker;
+    setScopePicker(null);
+    if (action === "cancel") {
+      setCancelScope(scope);
+      setCancelTarget(booking);
+    } else {
+      setRsScope(scope);
+      openRescheduleModal(booking);
+    }
+  };
+
+  const openRescheduleModal = (b) => {
     setRescheduleTarget(b);
     setRsDate(b.booking_date?.split("T")[0] || today);
     setRsRoom(String(b.room_id));
@@ -436,10 +470,17 @@ export default function ConferenceBookPage() {
     if (ampmToMinutes(rsEnd) <= ampmToMinutes(rsStart)) { setRsError("End must be after start"); return; }
     setRsError(""); setRsSaving(true);
     try {
-      await apiFetch(`/api/conference/bookings/${rescheduleTarget.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ start_time: rsStart, end_time: rsEnd, booking_date: rsDate, room_id: Number(rsRoom) }),
-      });
+      if (rsScope === "range" && rescheduleTarget.range_booking_id) {
+        await apiFetch(`/api/conference/bookings/range/${rescheduleTarget.range_booking_id}/reschedule`, {
+          method: "PATCH",
+          body: JSON.stringify({ start_time: rsStart, end_time: rsEnd, room_id: Number(rsRoom) }),
+        });
+      } else {
+        await apiFetch(`/api/conference/bookings/${rescheduleTarget.id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ start_time: rsStart, end_time: rsEnd, booking_date: rsDate, room_id: Number(rsRoom) }),
+        });
+      }
       setRescheduleTarget(null);
       loadRoomSchedule(selected.id);
     } catch (err) { setRsError(err?.message || "Reschedule failed"); }
@@ -449,7 +490,11 @@ export default function ConferenceBookPage() {
   const confirmCancel = async () => {
     setCancelSaving(true);
     try {
-      await apiFetch(`/api/conference/bookings/${cancelTarget.id}/cancel`, { method: "PATCH" });
+      if (cancelScope === "range" && cancelTarget.range_booking_id) {
+        await apiFetch(`/api/conference/bookings/range/${cancelTarget.range_booking_id}/cancel`, { method: "PATCH" });
+      } else {
+        await apiFetch(`/api/conference/bookings/${cancelTarget.id}/cancel`, { method: "PATCH" });
+      }
       setCancelTarget(null);
       loadRoomSchedule(selected.id);
     } catch { /* silent */ }
@@ -1047,12 +1092,12 @@ export default function ConferenceBookPage() {
                         )}
                         {state === "upcoming" && (
                           <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
-                            <button onClick={() => openReschedule(b)}
+                            <button onClick={() => openScopePicker(b, "reschedule")}
                               style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
                                 border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
                               Reschedule
                             </button>
-                            <button onClick={() => setCancelTarget(b)}
+                            <button onClick={() => openScopePicker(b, "cancel")}
                               style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
                                 border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
                               Cancel
@@ -1068,6 +1113,53 @@ export default function ConferenceBookPage() {
           </div>
         )}
       </div>
+
+      {/* ── Scope Picker Modal (range booking: this day vs entire range) ── */}
+      {scopePicker && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.4)", zIndex:100,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setScopePicker(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:380,
+            boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb",
+              background: scopePicker.action === "cancel" ? "#fef2f2" : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+              borderRadius:"1rem 1rem 0 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:800, fontSize:"0.95rem",
+                color: scopePicker.action === "cancel" ? "#b91c1c" : "#fff" }}>
+                {scopePicker.action === "cancel" ? "Cancel Booking" : "Reschedule Booking"}
+              </span>
+              <button onClick={() => setScopePicker(null)}
+                style={{ background:"rgba(0,0,0,0.1)", border:"none",
+                  color: scopePicker.action === "cancel" ? "#b91c1c" : "#fff",
+                  borderRadius:"50%", width:28, height:28, cursor:"pointer", fontSize:"1rem" }}>×</button>
+            </div>
+            <div style={{ padding:"1.25rem" }}>
+              <p style={{ fontSize:"0.82rem", color:"#6b7280", marginBottom:"1rem" }}>
+                This booking is part of a multi-day range. What would you like to {scopePicker.action}?
+              </p>
+              <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+                <button onClick={() => confirmScopeChoice("single")}
+                  style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
+                    border:"1.5px solid #e5e7eb", background:"#fafafa", cursor:"pointer" }}>
+                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#111827" }}>This day only</div>
+                  <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
+                    {new Date((scopePicker.booking.booking_date?.split("T")[0] || "") + "T12:00:00")
+                      .toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" })}
+                  </div>
+                </button>
+                <button onClick={() => confirmScopeChoice("range")}
+                  style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
+                    border:"1.5px solid #7c3aed", background:"#f5f3ff", cursor:"pointer" }}>
+                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#7c3aed" }}>Entire remaining range</div>
+                  <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
+                    {scopeLoading ? "Loading…" : `${scopeRangeUpcoming} upcoming day${scopeRangeUpcoming !== 1 ? "s" : ""} will be affected`}
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Reschedule Modal ── */}
       {rescheduleTarget && (
@@ -1090,13 +1182,21 @@ export default function ConferenceBookPage() {
                 Current: <strong>{prettyTime(rescheduleTarget.start_time)} – {prettyTime(rescheduleTarget.end_time)}</strong>
                 {" · "}{rescheduleTarget.booked_by === "ADMIN" ? "Admin" : rescheduleTarget.booked_by}
               </div>
+              {rsScope === "range" && (
+                <div style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:"0.5rem",
+                  padding:"0.5rem 0.75rem", fontSize:"0.78rem", fontWeight:600, marginBottom:"0.75rem" }}>
+                  ℹ️ New time &amp; room will apply to all {scopeRangeUpcoming} upcoming days in this range
+                </div>
+              )}
               {rsError && <div style={{ background:"#fef2f2", color:"#b91c1c", borderRadius:"0.5rem",
                 padding:"0.5rem 0.75rem", fontSize:"0.8rem", marginBottom:"0.75rem" }}>{rsError}</div>}
               <div style={{ display:"grid", gap:"0.75rem" }}>
+                {rsScope === "single" && (
                 <div>
                   <label style={lbl}>Date</label>
                   <input type="date" value={rsDate} min={today} onChange={e => setRsDate(e.target.value)} style={inp} />
                 </div>
+                )}
                 <div>
                   <label style={lbl}>Room</label>
                   <select value={rsRoom} onChange={e => setRsRoom(e.target.value)} style={inp}>
@@ -1149,8 +1249,10 @@ export default function ConferenceBookPage() {
             </div>
             <div style={{ padding:"1.25rem" }}>
               <p style={{ fontSize:"0.875rem", color:"#374151", marginBottom:"0.75rem" }}>
-                Are you sure you want to cancel this booking?
-                A cancellation email will be sent to the booker and all team members.
+                {cancelScope === "range"
+                  ? `Are you sure you want to cancel all ${scopeRangeUpcoming} upcoming day${scopeRangeUpcoming !== 1 ? "s" : ""} in this range?`
+                  : "Are you sure you want to cancel this booking?"}
+                {" "}A cancellation email will be sent to the booker and all team members.
               </p>
               <div style={{ background:"#f9fafb", borderRadius:"0.5rem", padding:"0.625rem 0.875rem",
                 fontSize:"0.82rem", color:"#374151", marginBottom:"1.25rem" }}>
