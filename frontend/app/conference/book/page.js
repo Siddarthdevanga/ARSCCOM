@@ -304,6 +304,9 @@ export default function ConferenceBookPage() {
   // Room schedule sidebar
   const [roomSchedule,    setRoomSchedule]    = useState([]);
   const [scheduleLoading, setScheduleLoading] = useState(false);
+  const [scheduleDate,    setScheduleDate]    = useState(""); // date currently shown in right panel
+  const [rangeBookings,   setRangeBookings]   = useState([]); // grouped range bookings for left panel
+  const [rangeLoading,    setRangeLoading]    = useState(false);
 
   // Reschedule modal
   const [rescheduleTarget, setRescheduleTarget] = useState(null); // booking
@@ -387,18 +390,45 @@ export default function ConferenceBookPage() {
   const removeMember = (id) => setTeamMembers(p => p.filter(m => m.id !== id));
 
   // Fetch today's bookings for selected room
-  const loadRoomSchedule = (roomId) => {
+  const loadRoomSchedule = (roomId, date) => {
     if (!roomId) return;
+    const d = date || today;
+    setScheduleDate(d);
     setScheduleLoading(true);
-    apiFetch(`/api/conference/bookings?roomId=${roomId}&date=${today}`)
+    apiFetch(`/api/conference/bookings?roomId=${roomId}&date=${d}`)
       .then(data => setRoomSchedule(Array.isArray(data) ? data.filter(b => b.status === "BOOKED") : []))
       .catch(() => setRoomSchedule([]))
       .finally(() => setScheduleLoading(false));
   };
 
+  const loadRangeBookings = (roomId) => {
+    if (!roomId) return;
+    setRangeLoading(true);
+    apiFetch(`/api/conference/bookings?roomId=${roomId}`)
+      .then(data => {
+        const all = Array.isArray(data) ? data : [];
+        // Group by range_booking_id, only include groups with upcoming BOOKED days
+        const groups = {};
+        for (const b of all) {
+          if (!b.range_booking_id || b.status !== "BOOKED") continue;
+          if (!groups[b.range_booking_id]) groups[b.range_booking_id] = [];
+          groups[b.range_booking_id].push(b);
+        }
+        const result = Object.entries(groups)
+          .map(([rid, days]) => {
+            const upcoming = days.filter(d => d.booking_date >= today).sort((a,b) => a.booking_date.localeCompare(b.booking_date));
+            return { range_booking_id: rid, days: days.sort((a,b) => a.booking_date.localeCompare(b.booking_date)), upcoming };
+          })
+          .filter(g => g.upcoming.length > 0);
+        setRangeBookings(result);
+      })
+      .catch(() => setRangeBookings([]))
+      .finally(() => setRangeLoading(false));
+  };
+
   useEffect(() => {
-    if (selected) loadRoomSchedule(selected.id);
-    else setRoomSchedule([]);
+    if (selected) { loadRoomSchedule(selected.id); loadRangeBookings(selected.id); }
+    else { setRoomSchedule([]); setRangeBookings([]); }
   }, [selected]);
 
   // Classify a booking relative to now
@@ -414,17 +444,27 @@ export default function ConferenceBookPage() {
         : `Extended by ${extraMinutes} minutes`;
       setExtendMsg(msg);
       setTimeout(() => setExtendMsg(""), 4000);
-      loadRoomSchedule(selected.id);
+      loadRoomSchedule(selected.id, bookingDate || today); loadRangeBookings(selected.id);
     } catch (err) {
       setFormError(err?.message || "Could not extend booking");
     }
   };
 
+  // Reload schedule when selected date changes
+  useEffect(() => {
+    if (selected && bookingDate) loadRoomSchedule(selected.id, bookingDate);
+    else if (selected) loadRoomSchedule(selected.id, today);
+  }, [bookingDate]);
+
   const classifyBooking = (b) => {
+    const bDate = (b.booking_date || "").split("T")[0];
+    if (bDate > today) return "upcoming";
+    if (bDate < today) return "past";
+    // Same day: use time comparison
     const toMin = (t) => { const [h, m] = String(t).split(":").map(Number); return h * 60 + (m || 0); };
     const s = toMin(b.start_time), e = toMin(b.end_time);
     if (e <= nowMinutes) return "past";
-    if (s <= nowMinutes && e > nowMinutes) return "active"; // in-progress
+    if (s <= nowMinutes && e > nowMinutes) return "active";
     return "upcoming";
   };
 
@@ -494,7 +534,7 @@ export default function ConferenceBookPage() {
         });
       }
       setRescheduleTarget(null);
-      loadRoomSchedule(selected.id);
+      loadRoomSchedule(selected.id, bookingDate || today); loadRangeBookings(selected.id);
     } catch (err) { setRsError(err?.message || "Reschedule failed"); }
     finally { setRsSaving(false); }
   };
@@ -508,7 +548,7 @@ export default function ConferenceBookPage() {
         await apiFetch(`/api/conference/bookings/${cancelTarget.id}/cancel`, { method: "PATCH" });
       }
       setCancelTarget(null);
-      loadRoomSchedule(selected.id);
+      loadRoomSchedule(selected.id, bookingDate || today); loadRangeBookings(selected.id);
     } catch { /* silent */ }
     finally { setCancelSaving(false); }
   };
@@ -557,7 +597,7 @@ export default function ConferenceBookPage() {
       setStartTime(""); setEndTime(""); setPurpose(""); setDepartment("");
       setOnBehalfOf(null); setTeamMembers([]); setMemberSearch("");
       setBookingSuccess(`Booking confirmed for ${selected.room_name} on ${bookingDate} · ${startTime} – ${endTime}`);
-      loadRoomSchedule(selected.id);
+      loadRoomSchedule(selected.id, bookingDate || today); loadRangeBookings(selected.id);
       setTimeout(() => setBookingSuccess(""), 6000);
     } catch (err) {
       setFormError(err?.message || "Booking failed. Please try again.");
@@ -611,7 +651,7 @@ export default function ConferenceBookPage() {
       setStartTime(""); setEndTime(""); setPurpose(""); setDepartment("");
       setOnBehalfOf(null); setTeamMembers([]); setMemberSearch("");
       setRangeEndDate(""); setIncludeWeekends(false);
-      loadRoomSchedule(selected.id);
+      loadRoomSchedule(selected.id, bookingDate || today); loadRangeBookings(selected.id);
     } catch (err) {
       setFormError(err?.message || "Range booking failed. Please try again.");
     } finally { setRangeSubmitting(false); }
@@ -1027,14 +1067,71 @@ export default function ConferenceBookPage() {
                   {(submitting || rangeSubmitting) ? "Booking…" : (<><IconCheck /> {bookingMode === "single" ? "Confirm Booking" : "Book All Days"}</>)}
                 </button>
               </div>
+
+              {/* ── Date Range Bookings for this room ── */}
+              {(rangeLoading || rangeBookings.length > 0) && (
+                <div style={{ marginTop:"1.25rem", background:"#fff", borderRadius:"0.875rem",
+                  border:"1px solid #e5e7eb", padding:"1rem" }}>
+                  <div style={{ fontSize:"0.78rem", fontWeight:800, color:"#7c3aed",
+                    textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.75rem" }}>
+                    Date Range Bookings
+                  </div>
+                  {rangeLoading ? (
+                    <div style={{ fontSize:"0.8rem", color:"#9ca3af", textAlign:"center", padding:"1rem" }}>Loading…</div>
+                  ) : rangeBookings.map(group => {
+                    const first = group.days[0];
+                    const last = group.days[group.days.length - 1];
+                    const rep = group.upcoming[0];
+                    const booker = first.booked_by === "ADMIN" ? "Admin" : first.booked_by_name || first.booked_by;
+                    return (
+                      <div key={group.range_booking_id} style={{ marginBottom:"0.75rem", padding:"0.75rem",
+                        background:"#f5f3ff", borderRadius:"0.625rem", border:"1px solid #ddd6fe" }}>
+                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem" }}>
+                          <div>
+                            <div style={{ fontSize:"0.82rem", fontWeight:700, color:"#1f2937" }}>
+                              {prettyTime(first.start_time)} – {prettyTime(first.end_time)}
+                            </div>
+                            <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:"0.2rem" }}>
+                              {first.booking_date} → {last.booking_date}
+                            </div>
+                            <div style={{ fontSize:"0.7rem", color:"#9ca3af", marginTop:"0.15rem" }}>
+                              {booker} · {group.upcoming.length} day{group.upcoming.length !== 1 ? "s" : ""} remaining
+                            </div>
+                          </div>
+                          <div style={{ display:"flex", flexDirection:"column", gap:"0.35rem", flexShrink:0 }}>
+                            <button onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "reschedule")}
+                              style={{ fontSize:"0.68rem", fontWeight:700, padding:"0.3rem 0.5rem",
+                                background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.4rem", cursor:"pointer" }}>
+                              Reschedule
+                            </button>
+                            <button onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "cancel")}
+                              style={{ fontSize:"0.68rem", fontWeight:700, padding:"0.3rem 0.5rem",
+                                background:"#fef2f2", color:"#b91c1c", border:"1px solid #fecaca", borderRadius:"0.4rem", cursor:"pointer" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                        {first.purpose && (
+                          <div style={{ fontSize:"0.7rem", color:"#6b7280", marginTop:"0.35rem",
+                            borderTop:"1px solid #ede9fe", paddingTop:"0.35rem" }}>
+                            {first.purpose}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {/* ── RIGHT: Today's room schedule ── */}
+            {/* ── RIGHT: Room schedule for selected date ── */}
             <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
               overflow:"hidden", position:"sticky", top:80 }}>
               <div style={{ padding:"0.75rem 1rem", borderBottom:"1px solid #f3f4f6",
                 background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
-                <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>Today&apos;s Schedule</div>
+                <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>
+                  {scheduleDate && scheduleDate !== today ? `Schedule · ${scheduleDate}` : "Today's Schedule"}
+                </div>
                 <div style={{ fontSize:"0.7rem", color:"rgba(255,255,255,0.8)", marginTop:2 }}>{selected.room_name}</div>
               </div>
               <div style={{ padding:"0.75rem", maxHeight:500, overflowY:"auto" }}>
@@ -1042,7 +1139,7 @@ export default function ConferenceBookPage() {
                   <div style={{ textAlign:"center", padding:"2rem", color:"#9ca3af", fontSize:"0.82rem" }}>Loading…</div>
                 ) : roomSchedule.length === 0 ? (
                   <div style={{ textAlign:"center", padding:"2rem", color:"#9ca3af", fontSize:"0.82rem" }}>
-                    No bookings today for this room
+                    No bookings for this date
                   </div>
                 ) : (
                   [...roomSchedule].sort((a,b) => a.start_time.localeCompare(b.start_time)).map(b => {
