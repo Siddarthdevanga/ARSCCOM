@@ -925,6 +925,13 @@ export default function PublicConferenceBooking() {
   const [cancelModal, setCancelModal] = useState({ isOpen: false, data: null });
   const [resultModal, setResultModal] = useState({ isOpen: false, type: "", message: "" });
 
+  // Range scope picker
+  const [scopePicker,        setScopePicker]        = useState(null); // { booking, action: "cancel"|"reschedule" }
+  const [scopeRangeUpcoming, setScopeRangeUpcoming] = useState(0);
+  const [scopeLoading,       setScopeLoading]       = useState(false);
+  const [cancelScope,        setCancelScope]         = useState("single");
+  const [rescheduleScope,    setRescheduleScope]     = useState("single");
+
   // Range booking
   const [bookingMode,         setBookingMode]         = useState("single"); // "single" | "range"
   const [rangeEndDate,        setRangeEndDate]        = useState("");
@@ -1414,6 +1421,30 @@ export default function PublicConferenceBooking() {
     } finally { setRangeSubmitting(false); }
   };
 
+  /* ================= SCOPE PICKER ================= */
+  const openScopePicker = async (booking, action) => {
+    if (!booking.range_booking_id) {
+      if (action === "cancel") { setCancelScope("single"); initiateCancellationDirect(booking); }
+      else { setRescheduleScope("single"); initiateEdit(booking); }
+      return;
+    }
+    setScopeLoading(true);
+    setScopePicker({ booking, action });
+    try {
+      const res = await fetch(`${API}/api/public/conference/company/${slug}/bookings/range/${booking.range_booking_id}`);
+      const data = res.ok ? await res.json() : {};
+      setScopeRangeUpcoming(data.upcoming_count || 0);
+    } catch { setScopeRangeUpcoming(0); }
+    finally { setScopeLoading(false); }
+  };
+
+  const confirmScopeChoice = (scope) => {
+    const { booking, action } = scopePicker;
+    setScopePicker(null);
+    if (action === "cancel") { setCancelScope(scope); initiateCancellationDirect(booking); }
+    else { setRescheduleScope(scope); initiateEdit(booking); }
+  };
+
   /* ================= EDIT FUNCTIONS ================= */
   const initiateEdit = (booking) => {
     setEditingId(booking.id);
@@ -1447,6 +1478,7 @@ export default function PublicConferenceBooking() {
       isOpen: true,
       data: {
         id: editingId,
+        rangeBookingId: booking.range_booking_id || null,
         room: selectedRoom?.room_name || "Unknown Room",
         roomNumber: selectedRoom?.room_number || "",
         date: booking.booking_date,
@@ -1459,23 +1491,21 @@ export default function PublicConferenceBooking() {
   };
 
   const confirmReschedule = async () => {
-    const { id } = rescheduleModal.data;
+    const { id, rangeBookingId } = rescheduleModal.data;
     setRescheduleModal({ isOpen: false, data: null });
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/bookings/${id}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            start_time: editStart,
-            end_time: editEnd,
-            email
-          })
-        }
-      );
+      const isRange = rescheduleScope === "range" && rangeBookingId;
+      const url = isRange
+        ? `${API}/api/public/conference/company/${slug}/bookings/range/${rangeBookingId}/reschedule`
+        : `${API}/api/public/conference/company/${slug}/bookings/${id}`;
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ start_time: editStart, end_time: editEnd, email })
+      });
 
       if (!response.ok) {
         await handleApiError(response, "Failed to reschedule booking");
@@ -1485,7 +1515,9 @@ export default function PublicConferenceBooking() {
       setResultModal({
         isOpen: true,
         type: "success",
-        message: "Your booking has been rescheduled successfully! A confirmation email has been sent to you."
+        message: isRange
+          ? "All upcoming days in this range have been rescheduled. A confirmation email has been sent."
+          : "Your booking has been rescheduled successfully! A confirmation email has been sent to you."
       });
 
       setEditingId(null);
@@ -1494,11 +1526,7 @@ export default function PublicConferenceBooking() {
       loadBookings();
     } catch (error) {
       console.error("[RESCHEDULE_ERROR]", error);
-      setResultModal({
-        isOpen: true,
-        type: "error",
-        message: "Network error occurred. Please try again."
-      });
+      setResultModal({ isOpen: true, type: "error", message: "Network error occurred. Please try again." });
     } finally {
       setLoading(false);
     }
@@ -1512,13 +1540,13 @@ export default function PublicConferenceBooking() {
   };
 
   /* ================= CANCEL FUNCTIONS ================= */
-  const initiateCancellation = (booking) => {
+  const initiateCancellationDirect = (booking) => {
     const selectedRoom = rooms.find(r => r.id === booking.room_id);
-    
     setCancelModal({
       isOpen: true,
       data: {
         id: booking.id,
+        rangeBookingId: booking.range_booking_id || null,
         room: selectedRoom?.room_name || "Unknown Room",
         roomNumber: selectedRoom?.room_number || "",
         date: booking.booking_date,
@@ -1530,19 +1558,21 @@ export default function PublicConferenceBooking() {
   };
 
   const confirmCancellation = async () => {
-    const { id } = cancelModal.data;
+    const { id, rangeBookingId } = cancelModal.data;
     setCancelModal({ isOpen: false, data: null });
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API}/api/public/conference/company/${slug}/bookings/${id}/cancel`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
-        }
-      );
+      const isRange = cancelScope === "range" && rangeBookingId;
+      const url = isRange
+        ? `${API}/api/public/conference/company/${slug}/bookings/range/${rangeBookingId}/cancel`
+        : `${API}/api/public/conference/company/${slug}/bookings/${id}/cancel`;
+
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email })
+      });
 
       if (!response.ok) {
         await handleApiError(response, "Failed to cancel booking");
@@ -1552,7 +1582,9 @@ export default function PublicConferenceBooking() {
       setResultModal({
         isOpen: true,
         type: "success",
-        message: "Your booking has been cancelled successfully. A confirmation email has been sent to you."
+        message: isRange
+          ? "All upcoming days in this range have been cancelled. A confirmation email has been sent."
+          : "Your booking has been cancelled successfully. A confirmation email has been sent to you."
       });
 
       loadBookings();
@@ -2157,7 +2189,7 @@ export default function PublicConferenceBooking() {
                           {!isInProgress && b.can_modify && (
                             <div className={styles.bookingActions}>
                               <button
-                                onClick={() => !isPast && initiateEdit(b)}
+                                onClick={() => !isPast && openScopePicker(b, "reschedule")}
                                 className={styles.editBtn}
                                 disabled={loading || isPast}
                                 style={isPast ? { opacity:0.45, cursor:"not-allowed", pointerEvents:"none" } : {}}
@@ -2165,7 +2197,7 @@ export default function PublicConferenceBooking() {
                                 Reschedule
                               </button>
                               <button
-                                onClick={() => !isPast && initiateCancellation(b)}
+                                onClick={() => !isPast && openScopePicker(b, "cancel")}
                                 className={styles.cancelBtn}
                                 disabled={loading || isPast}
                                 style={isPast ? { opacity:0.45, cursor:"not-allowed", pointerEvents:"none" } : {}}
@@ -2193,7 +2225,53 @@ export default function PublicConferenceBooking() {
       )}
 
       {/* ================= MODALS ================= */}
-      
+
+      {/* Scope Picker Modal */}
+      {scopePicker && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", zIndex:200,
+          display:"flex", alignItems:"center", justifyContent:"center", padding:"1rem" }}
+          onClick={() => setScopePicker(null)}>
+          <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:360,
+            boxShadow:"0 20px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb",
+              background: scopePicker.action === "cancel" ? "#fef2f2" : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+              borderRadius:"1rem 1rem 0 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontWeight:800, fontSize:"0.95rem",
+                color: scopePicker.action === "cancel" ? "#b91c1c" : "#fff" }}>
+                {scopePicker.action === "cancel" ? "Cancel Booking" : "Reschedule Booking"}
+              </span>
+              <button onClick={() => setScopePicker(null)}
+                style={{ background:"rgba(0,0,0,0.1)", border:"none",
+                  color: scopePicker.action === "cancel" ? "#b91c1c" : "#fff",
+                  borderRadius:"50%", width:28, height:28, cursor:"pointer", fontSize:"1rem" }}>×</button>
+            </div>
+            <div style={{ padding:"1.25rem" }}>
+              <p style={{ fontSize:"0.82rem", color:"#6b7280", marginBottom:"1rem" }}>
+                This booking is part of a multi-day range. What would you like to {scopePicker.action}?
+              </p>
+              <div style={{ display:"flex", flexDirection:"column", gap:"0.6rem" }}>
+                <button onClick={() => confirmScopeChoice("single")}
+                  style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
+                    border:"1.5px solid #e5e7eb", background:"#fafafa", cursor:"pointer" }}>
+                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#111827" }}>This day only</div>
+                  <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
+                    {scopePicker.booking.booking_date}
+                  </div>
+                </button>
+                <button onClick={() => confirmScopeChoice("range")}
+                  style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
+                    border:"1.5px solid #7c3aed", background:"#f5f3ff", cursor:"pointer" }}>
+                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#7c3aed" }}>Entire remaining range</div>
+                  <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
+                    {scopeLoading ? "Loading…" : `${scopeRangeUpcoming} upcoming day${scopeRangeUpcoming !== 1 ? "s" : ""} will be affected`}
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Booking Confirmation Modal */}
       <Modal
         isOpen={confirmModal.isOpen}

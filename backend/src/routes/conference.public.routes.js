@@ -1,4 +1,5 @@
 import express from "express";
+import { randomUUID } from "crypto";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
 import { getPresignedUrl } from "../services/s3.service.js";
@@ -648,7 +649,7 @@ router.get("/company/:slug/bookings", async (req, res) => {
 
     const [bookings] = await db.query(
       `SELECT id, room_id, booking_date, start_time, end_time,
-              department, booked_by, purpose
+              department, booked_by, purpose, range_booking_id
        FROM conference_bookings
        WHERE company_id = ? AND room_id = ? AND booking_date = ? AND status = 'BOOKED'
        ORDER BY start_time ASC`,
@@ -983,6 +984,7 @@ router.post("/company/:slug/book-range", async (req, res) => {
 
     await conn.beginTransaction();
     const booked = [], skipped = [];
+    const rangeBookingId = randomUUID();
 
     for (const booking_date of dates) {
       const [[conflict]] = await conn.query(
@@ -995,9 +997,9 @@ router.post("/company/:slug/book-range", async (req, res) => {
 
       const [ins] = await conn.query(
         `INSERT INTO conference_bookings
-         (company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED')`,
-        [company.id, room_id, email, cleanDepartment, cleanPurpose, booking_date, startTime, endTime]
+         (range_booking_id, company_id, room_id, booked_by, department, purpose, booking_date, start_time, end_time, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'BOOKED')`,
+        [rangeBookingId, company.id, room_id, email, cleanDepartment, cleanPurpose, booking_date, startTime, endTime]
       );
       const bookingId = ins.insertId;
       for (const m of validMembers) {
@@ -1026,7 +1028,7 @@ router.post("/company/:slug/book-range", async (req, res) => {
       } catch (mailErr) { console.error("[RANGE EMAIL]", mailErr.message); }
     }
 
-    res.status(201).json({ total_booked: booked.length, total_skipped: skipped.length, booked, skipped });
+    res.status(201).json({ total_booked: booked.length, total_skipped: skipped.length, range_booking_id: rangeBookingId, booked, skipped });
   } catch (err) {
     await conn.rollback();
     console.error("[PUBLIC][BOOK_RANGE]", err);
@@ -1061,6 +1063,184 @@ router.get("/company/:slug/employees/search", async (req, res) => {
     console.error("[CONF][EMP_SEARCH]", err);
     res.status(500).json({ message: "Server error" });
   }
+});
+
+/**
+ * GET /company/:slug/bookings/range/:rangeId - Fetch all days in a range group
+ */
+router.get("/company/:slug/bookings/range/:rangeId", async (req, res) => {
+  try {
+    const slug    = normalizeSlug(req.params.slug);
+    const rangeId = req.params.rangeId;
+    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const today    = todayIST.toISOString().split("T")[0];
+
+    const company = await getCompanyBySlug(slug, "id");
+    if (!company) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+
+    const [rows] = await db.query(
+      `SELECT b.id, b.booking_date, b.start_time, b.end_time, b.status, b.room_id, r.room_name
+       FROM conference_bookings b
+       JOIN conference_rooms r ON r.id = b.room_id
+       WHERE b.range_booking_id = ? AND b.company_id = ?
+       ORDER BY b.booking_date ASC`,
+      [rangeId, company.id]
+    );
+    if (!rows.length) return res.status(404).json({ message: "Range not found" });
+
+    const upcoming = rows.filter(r => r.booking_date >= today && r.status === "BOOKED").length;
+    res.json({ range_booking_id: rangeId, total: rows.length, upcoming_count: upcoming, bookings: rows });
+  } catch (err) {
+    console.error("[PUBLIC][GET_RANGE]", err);
+    res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+});
+
+/**
+ * PATCH /company/:slug/bookings/range/:rangeId/cancel - Cancel all upcoming days in a range
+ */
+router.patch("/company/:slug/bookings/range/:rangeId/cancel", async (req, res) => {
+  try {
+    const slug    = normalizeSlug(req.params.slug);
+    const rangeId = req.params.rangeId;
+    const email   = normalizeEmail(req.body?.email || "");
+
+    if (!email) return res.status(400).json({ message: "Email required" });
+
+    const company = await getCompanyBySlug(slug, "id, name, logo_url");
+    if (!company) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+
+    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const today    = todayIST.toISOString().split("T")[0];
+
+    const [upcoming] = await db.query(
+      `SELECT b.id, b.booking_date, b.booked_by, b.room_id, b.start_time, b.end_time
+       FROM conference_bookings b
+       WHERE b.range_booking_id = ? AND b.company_id = ?
+         AND b.status = 'BOOKED' AND b.booking_date >= ?
+       ORDER BY b.booking_date ASC`,
+      [rangeId, company.id, today]
+    );
+    if (!upcoming.length) return res.status(404).json({ message: "No upcoming bookings to cancel in this range" });
+
+    // Verify the requester owns this range
+    if (upcoming[0].booked_by !== email) return res.status(403).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+
+    const ids = upcoming.map(b => b.id);
+    const ph  = ids.map(() => "?").join(",");
+    await db.query(`UPDATE conference_bookings SET status = 'CANCELLED' WHERE id IN (${ph})`, ids);
+
+    const room    = await getRoomById(upcoming[0].room_id);
+    const first   = upcoming[0];
+    const last    = upcoming[upcoming.length - 1];
+    const fmtD    = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+    const syntheticBooking = {
+      ...first,
+      booking_date: first.booking_date === last.booking_date ? fmtD(first.booking_date) : `${fmtD(first.booking_date)} → ${fmtD(last.booking_date)}`,
+    };
+
+    const [members] = await db.query(
+      `SELECT DISTINCT name, email FROM conference_booking_members WHERE booking_id IN (${ph}) AND email IS NOT NULL`,
+      ids
+    );
+
+    try { await sendCancelEmail(email, company, room, syntheticBooking); } catch (e) { console.warn("[RANGE_CANCEL_EMAIL]", e.message); }
+    for (const m of members) {
+      if (m.email) try { await sendCancelEmail(m.email, company, room, { ...syntheticBooking, booked_by: email }); } catch {}
+    }
+
+    res.json({ message: `${ids.length} booking${ids.length !== 1 ? "s" : ""} cancelled`, cancelled_count: ids.length });
+  } catch (err) {
+    console.error("[PUBLIC][RANGE_CANCEL]", err);
+    res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  }
+});
+
+/**
+ * PATCH /company/:slug/bookings/range/:rangeId/reschedule - Change time/room for all upcoming days
+ */
+router.patch("/company/:slug/bookings/range/:rangeId/reschedule", async (req, res) => {
+  const conn = await db.getConnection();
+  try {
+    const slug    = normalizeSlug(req.params.slug);
+    const rangeId = req.params.rangeId;
+    const { email, start_time: rawStartTime, end_time: rawEndTime, room_id } = req.body;
+
+    const userEmail = normalizeEmail(email || "");
+    if (!userEmail || !rawStartTime || !rawEndTime) return res.status(400).json({ message: "Email, start time and end time required" });
+
+    let startTime, endTime;
+    try {
+      startTime = normalizeAmPmTime(rawStartTime);
+      endTime   = normalizeAmPmTime(rawEndTime);
+    } catch (e) { return res.status(400).json({ message: e.message }); }
+    if (endTime <= startTime) return res.status(400).json({ message: ERROR_MESSAGES.INVALID_TIME_RANGE });
+
+    const company = await getCompanyBySlug(slug, "id, name, logo_url");
+    if (!company) return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+
+    const todayIST = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    const today    = todayIST.toISOString().split("T")[0];
+
+    const [upcoming] = await db.query(
+      `SELECT b.id, b.booking_date, b.booked_by, b.room_id, b.start_time, b.end_time
+       FROM conference_bookings b
+       WHERE b.range_booking_id = ? AND b.company_id = ?
+         AND b.status = 'BOOKED' AND b.booking_date >= ?
+       ORDER BY b.booking_date ASC`,
+      [rangeId, company.id, today]
+    );
+    if (!upcoming.length) return res.status(404).json({ message: "No upcoming bookings to reschedule in this range" });
+    if (upcoming[0].booked_by !== userEmail) return res.status(403).json({ message: ERROR_MESSAGES.UNAUTHORIZED });
+
+    const newRoomId = room_id ? Number(room_id) : upcoming[0].room_id;
+    const room      = await getRoomById(newRoomId);
+    if (!room) return res.status(404).json({ message: "Conference room not found" });
+
+    await conn.beginTransaction();
+    const conflicts = [];
+    for (const b of upcoming) {
+      const [[c]] = await conn.query(
+        `SELECT COUNT(*) AS cnt FROM conference_bookings
+         WHERE company_id = ? AND room_id = ? AND booking_date = ? AND id <> ? AND status = 'BOOKED'
+         AND start_time < ? AND end_time > ?`,
+        [company.id, newRoomId, b.booking_date, b.id, endTime, startTime]
+      );
+      if (c.cnt > 0) { conflicts.push(b.booking_date); continue; }
+      await conn.query(
+        `UPDATE conference_bookings SET start_time = ?, end_time = ?, room_id = ? WHERE id = ?`,
+        [startTime, endTime, newRoomId, b.id]
+      );
+    }
+    await conn.commit();
+
+    const rescheduled = upcoming.length - conflicts.length;
+    const ids  = upcoming.map(b => b.id);
+    const ph   = ids.map(() => "?").join(",");
+    const [members] = await db.query(
+      `SELECT DISTINCT name, email FROM conference_booking_members WHERE booking_id IN (${ph}) AND email IS NOT NULL`,
+      ids
+    );
+
+    const first  = upcoming[0];
+    const last   = upcoming[upcoming.length - 1];
+    const fmtD   = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
+    const syntheticBooking = {
+      ...first, room_id: newRoomId, start_time: startTime, end_time: endTime,
+      booking_date: first.booking_date === last.booking_date ? fmtD(first.booking_date) : `${fmtD(first.booking_date)} → ${fmtD(last.booking_date)}`,
+    };
+
+    try { await sendUpdateEmail(userEmail, company, room, syntheticBooking); } catch (e) { console.warn("[RANGE_RS_EMAIL]", e.message); }
+    for (const m of members) {
+      if (m.email) try { await sendUpdateEmail(m.email, company, room, syntheticBooking); } catch {}
+    }
+
+    res.json({ message: `${rescheduled} booking${rescheduled !== 1 ? "s" : ""} rescheduled`, rescheduled_count: rescheduled, skipped_dates: conflicts });
+  } catch (err) {
+    await conn.rollback();
+    console.error("[PUBLIC][RANGE_RESCHEDULE]", err);
+    res.status(500).json({ message: ERROR_MESSAGES.SERVER_ERROR });
+  } finally { conn.release(); }
 });
 
 /**
