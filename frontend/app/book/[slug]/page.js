@@ -908,6 +908,7 @@ export default function PublicConferenceBooking() {
   const [editingId, setEditingId] = useState(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
+  const [editingSingleInGroup, setEditingSingleInGroup] = useState(false);
 
   const [teamMembers, setTeamMembers]         = useState([]);
   const [memberSearch, setMemberSearch]       = useState("");
@@ -932,9 +933,9 @@ export default function PublicConferenceBooking() {
   const [cancelScope,        setCancelScope]         = useState("single");
   const [rescheduleScope,    setRescheduleScope]     = useState("single");
 
-  // My date range bookings panel
-  const [myRangeBookings,    setMyRangeBookings]    = useState([]);
-  const [myRangeLoading,     setMyRangeLoading]     = useState(false);
+  // Range group data: maps range_booking_id → { days, upcoming_count }
+  const [rangeGroupData,     setRangeGroupData]     = useState({});
+  const [rangeGroupLoading,  setRangeGroupLoading]  = useState(false);
 
   // Range booking
   const [bookingMode,         setBookingMode]         = useState("single"); // "single" | "range"
@@ -1079,32 +1080,33 @@ export default function PublicConferenceBooking() {
     loadBookings();
   }, [loadBookings, otpVerified]);
 
-  const loadMyRangeBookings = useCallback(async () => {
-    if (!roomId || !otpVerified || !email) { setMyRangeBookings([]); return; }
-    setMyRangeLoading(true);
-    try {
-      const res = await fetch(`${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&userEmail=${email}`);
-      if (!res.ok) { setMyRangeBookings([]); return; }
-      const data = await res.json();
-      const all = (Array.isArray(data) ? data : [])
-        .filter(b => b.status === "BOOKED" && b.range_booking_id && b.can_modify)
-        .map(b => ({ ...b, start_time: dbToAmPm(b.start_time), end_time: dbToAmPm(b.end_time) }));
-      const groups = {};
-      for (const b of all) {
-        if (!groups[b.range_booking_id]) groups[b.range_booking_id] = [];
-        groups[b.range_booking_id].push(b);
+  // After bookings load, fetch full day list for any range_booking_id found
+  useEffect(() => {
+    const rids = [...new Set(bookings.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
+    if (rids.length === 0) { setRangeGroupData({}); return; }
+    setRangeGroupLoading(true);
+    Promise.all(rids.map(rid =>
+      fetch(`${API}/api/public/conference/company/${slug}/bookings/range/${rid}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => [rid, data])
+        .catch(() => [rid, null])
+    )).then(results => {
+      const map = {};
+      for (const [rid, data] of results) {
+        if (data) {
+          map[rid] = {
+            ...data,
+            days: (data.days || []).map(d => ({
+              ...d,
+              start_time: dbToAmPm(d.start_time),
+              end_time: dbToAmPm(d.end_time),
+            })),
+          };
+        }
       }
-      const result = Object.entries(groups).map(([rid, days]) => {
-        const sorted = days.sort((a, b) => a.booking_date.localeCompare(b.booking_date));
-        const upcoming = sorted.filter(d => (d.booking_date?.split("T")[0] || "") >= today);
-        return { range_booking_id: rid, days: sorted, upcoming };
-      }).filter(g => g.upcoming.length > 0);
-      setMyRangeBookings(result);
-    } catch { setMyRangeBookings([]); }
-    finally { setMyRangeLoading(false); }
-  }, [roomId, slug, email, otpVerified]);
-
-  useEffect(() => { loadMyRangeBookings(); }, [loadMyRangeBookings]);
+      setRangeGroupData(map);
+    }).finally(() => setRangeGroupLoading(false));
+  }, [bookings]);
 
   // Auto-refresh rooms (cards + calendar) and bookings every 60 seconds
   useEffect(() => {
@@ -1510,19 +1512,21 @@ export default function PublicConferenceBooking() {
       return;
     }
 
-    if (!isSlotFree(editStart, editEnd, editingId)) {
+    if (!editingSingleInGroup && !isSlotFree(editStart, editEnd, editingId)) {
       showToast("Selected time slot is not available", "error");
       return;
     }
 
-    const booking = bookings.find(b => b.id === editingId);
+    const allDays = Object.values(rangeGroupData).flatMap(g => g.days || []);
+    const booking = bookings.find(b => b.id === editingId) || allDays.find(d => d.id === editingId);
+    if (!booking) return;
     const selectedRoom = rooms.find(r => r.id === booking.room_id);
 
     setRescheduleModal({
       isOpen: true,
       data: {
         id: editingId,
-        rangeBookingId: booking.range_booking_id || null,
+        rangeBookingId: editingSingleInGroup ? null : (booking.range_booking_id || null),
         room: selectedRoom?.room_name || "Unknown Room",
         roomNumber: selectedRoom?.room_number || "",
         date: booking.booking_date,
@@ -1580,6 +1584,7 @@ export default function PublicConferenceBooking() {
     setEditingId(null);
     setEditStart("");
     setEditEnd("");
+    setEditingSingleInGroup(false);
     hideToast();
   };
 
@@ -2119,227 +2124,240 @@ export default function PublicConferenceBooking() {
               </button>
             </div>
 
-            {/* ================= BOOKINGS LIST ================= */}
+            {/* ================= BOOKINGS LIST (GROUPED) ================= */}
             <div className={styles.card}>
               <h2>Current Bookings</h2>
-              
               {!roomId || !date ? (
                 <p className={styles.emptyState}>Select a room and date to view bookings</p>
               ) : !bookings.length ? (
                 <p className={styles.emptyState}>No bookings for this date</p>
-              ) : (
-                <div className={styles.bookingsList}>
-                  {bookings.map(b => {
-                    const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" }));
-                    const nowMins = nowIST.getHours() * 60 + nowIST.getMinutes();
-                    const bDate = b.booking_date?.split("T")[0] || b.booking_date;
-                    const sMins = ampmToMinutes(b.start_time), eMins = ampmToMinutes(b.end_time);
-                    const isInProgress = bDate === today && sMins <= nowMins && eMins > nowMins;
-                    const isPast = !isInProgress && (bDate < today || (bDate === today && eMins <= nowMins));
-                    return (
-                    <div key={b.id} className={styles.bookingItem}
-                      style={isPast ? { opacity:0.55, background:"#f9fafb", borderColor:"#e5e7eb" } :
-                             isInProgress ? { borderColor:"#16a34a", boxShadow:"0 0 0 2px #bbf7d0" } : {}}>
-                      {editingId === b.id ? (
-                        <>
-                          <div className={styles.bookingHeader}>
-                            <h4>Reschedule Booking</h4>
-                          </div>
-                          
-                          <div className={styles.bookingDetails}>
-                            <p><strong>Department:</strong> {b.department}</p>
-                          </div>
-
-                          <TimeScroller
-                            value={editStart}
-                            onChange={setEditStart}
-                            label="New Start Time"
-                            currentDate={b.booking_date}
-                            today={today}
-                          />
-
-                          <TimeScroller
-                            value={editEnd}
-                            onChange={setEditEnd}
-                            label="New End Time"
-                            minTime={editStart}
-                            currentDate={b.booking_date}
-                            today={today}
-                          />
-
-                          <div className={styles.bookingActions}>
-                            <button 
-                              onClick={showRescheduleConfirmation}
-                              className={styles.primaryBtn}
-                              disabled={loading}
-                            >
-                              {loading ? "Saving..." : "Save Changes"}
-                            </button>
-                            <button 
-                              onClick={cancelEdit}
-                              className={styles.secondaryBtn}
-                              disabled={loading}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className={styles.bookingHeader}>
-                            <div className={styles.bookingTime}>
-                              <span className={styles.timeIcon}>🕒</span>
-                              <strong>{b.start_time} – {b.end_time}</strong>
-                            </div>
-                            {isInProgress ? (
-                              <span style={{ display:"flex", alignItems:"center", gap:"0.3rem",
-                                fontSize:"0.68rem", background:"#dcfce7", color:"#15803d",
-                                borderRadius:99, padding:"2px 8px", fontWeight:700 }}>
-                                <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a",
-                                  display:"inline-block", animation:"pulse 1.5s infinite" }} />
-                                In Progress
-                              </span>
-                            ) : b.can_modify && (
-                              <span className={styles.bookingBadge}>Your Booking</span>
-                            )}
-                          </div>
-
-                          <div className={styles.bookingDetails}>
-                            <p><strong>Department:</strong> {b.department}</p>
-                            {b.purpose && <p><strong>Purpose:</strong> {b.purpose}</p>}
-                            <p className={styles.bookedBy}>
-                              <span>👤</span> {b.booked_by}
-                            </p>
-                          </div>
-
-                          {isInProgress && b.can_modify && (
-                            <div style={{ marginTop:"0.5rem" }}>
-                              <div style={{ fontSize:"0.7rem", fontWeight:700, color:"#15803d", marginBottom:"0.3rem" }}>
-                                Extend meeting
+              ) : (() => {
+                const nowIST = new Date(new Date().toLocaleString("en-US", { timeZone:"Asia/Kolkata" }));
+                const nowMins = nowIST.getHours() * 60 + nowIST.getMinutes();
+                const classifyDay = (d) => {
+                  const dDate = (d.booking_date || "").split("T")[0];
+                  const sMins = ampmToMinutes(d.start_time), eMins = ampmToMinutes(d.end_time);
+                  if (dDate < today || (dDate === today && eMins <= nowMins)) return "past";
+                  if (dDate === today && sMins <= nowMins && eMins > nowMins) return "active";
+                  return "upcoming";
+                };
+                const rangeIds = [...new Set(bookings.filter(b => b.range_booking_id).map(b => b.range_booking_id))];
+                const singleBookings = bookings.filter(b => !b.range_booking_id);
+                return (
+                  <div className={styles.bookingsList}>
+                    {/* ── RANGE GROUPS ── */}
+                    {rangeIds.map(rid => {
+                      const group = rangeGroupData[rid];
+                      const refBooking = bookings.find(b => b.range_booking_id === rid);
+                      const canModify = refBooking?.can_modify;
+                      const days = group?.days || [];
+                      const upcomingDays = days.filter(d => classifyDay(d) !== "past");
+                      const firstDay = days[0] || refBooking;
+                      const lastDay = days[days.length - 1] || refBooking;
+                      const startDate = (firstDay?.booking_date || "").split("T")[0];
+                      const endDate = (lastDay?.booking_date || "").split("T")[0];
+                      return (
+                        <div key={rid} style={{ marginBottom:"1rem", borderRadius:"0.75rem",
+                          border:"1.5px solid #ddd6fe", overflow:"hidden" }}>
+                          {/* Group header */}
+                          <div style={{ background:"#f5f3ff", padding:"0.75rem 1rem",
+                            borderBottom:"1px solid #ddd6fe" }}>
+                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem", flexWrap:"wrap" }}>
+                              <div>
+                                <div style={{ fontSize:"0.9rem", fontWeight:800, color:"#1f2937" }}>
+                                  {(firstDay?.start_time) || refBooking?.start_time} – {(firstDay?.end_time) || refBooking?.end_time}
+                                </div>
+                                <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.15rem" }}>
+                                  📅 {startDate} → {endDate}
+                                </div>
+                                {firstDay?.purpose && (
+                                  <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:"0.1rem" }}>{firstDay.purpose}</div>
+                                )}
+                                <div style={{ fontSize:"0.7rem", color:"#9ca3af", marginTop:"0.1rem" }}>
+                                  {upcomingDays.length} day{upcomingDays.length !== 1 ? "s" : ""} remaining
+                                </div>
                               </div>
-                              <div style={{ display:"flex", gap:"0.4rem" }}>
-                                {[15, 30, 60].map(mins => (
-                                  <button key={mins} onClick={() => extendBooking(b.id, mins)}
-                                    disabled={loading}
-                                    style={{ flex:1, padding:"0.35rem 0", background:"#16a34a", color:"#fff",
-                                      border:"none", borderRadius:"0.4rem", fontSize:"0.75rem",
-                                      fontWeight:700, cursor:"pointer", boxShadow:"0 1px 4px rgba(22,163,74,0.35)" }}>
-                                    +{mins}m
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {!isInProgress && b.can_modify && (
-                            <div className={styles.bookingActions}>
-                              <button
-                                onClick={() => !isPast && openScopePicker(b, "reschedule")}
-                                className={styles.editBtn}
-                                disabled={loading || isPast}
-                                style={isPast ? { opacity:0.45, cursor:"not-allowed", pointerEvents:"none" } : {}}
-                              >
-                                Reschedule
-                              </button>
-                              <button
-                                onClick={() => !isPast && openScopePicker(b, "cancel")}
-                                className={styles.cancelBtn}
-                                disabled={loading || isPast}
-                                style={isPast ? { opacity:0.45, cursor:"not-allowed", pointerEvents:"none" } : {}}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                          {isPast && (
-                            <div style={{ marginTop:"0.4rem" }}>
-                              <div style={{ fontSize:"0.7rem", fontWeight:700, color:"#9ca3af", letterSpacing:"0.3px" }}>
-                                This booking has ended
-                              </div>
-                              {b.can_modify && b.range_booking_id && (
-                                <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.4rem" }}>
+                              {canModify && upcomingDays.length > 0 && (
+                                <div style={{ display:"flex", flexDirection:"column", gap:"0.3rem", flexShrink:0 }}>
                                   <button
-                                    onClick={() => openScopePicker({ ...b, _forceRange: true }, "reschedule")}
+                                    onClick={() => openScopePicker({ ...refBooking, _forceRange: true }, "reschedule")}
                                     className={styles.editBtn}
+                                    style={{ fontSize:"0.68rem", padding:"0.25rem 0.5rem", whiteSpace:"nowrap" }}
                                     disabled={loading}
-                                    style={{ fontSize:"0.65rem", padding:"0.2rem 0.5rem" }}
                                   >
-                                    Reschedule remaining
+                                    Reschedule all remaining
                                   </button>
                                   <button
-                                    onClick={() => openScopePicker({ ...b, _forceRange: true }, "cancel")}
+                                    onClick={() => openScopePicker({ ...refBooking, _forceRange: true }, "cancel")}
                                     className={styles.cancelBtn}
+                                    style={{ fontSize:"0.68rem", padding:"0.25rem 0.5rem", whiteSpace:"nowrap" }}
                                     disabled={loading}
-                                    style={{ fontSize:"0.65rem", padding:"0.2rem 0.5rem" }}
                                   >
-                                    Cancel remaining
+                                    Cancel all remaining
                                   </button>
                                 </div>
                               )}
                             </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+                          </div>
+                          {/* Day rows */}
+                          {rangeGroupLoading && days.length === 0 ? (
+                            <div style={{ padding:"0.75rem 1rem", fontSize:"0.78rem", color:"#9ca3af" }}>Loading days…</div>
+                          ) : days.map(d => {
+                            const state = classifyDay(d);
+                            const isPastDay = state === "past";
+                            const isActiveDay = state === "active";
+                            const dDate = (d.booking_date || "").split("T")[0];
+                            const isEditing = editingId === d.id;
+                            return (
+                              <div key={d.id} style={{ padding:"0.6rem 1rem",
+                                borderBottom:"1px solid #f3f4f6",
+                                background: isPastDay ? "#fafafa" : "#fff",
+                                opacity: isPastDay ? 0.65 : 1 }}>
+                                {isEditing ? (
+                                  <div>
+                                    <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.4rem" }}>
+                                      Reschedule {dDate}
+                                    </div>
+                                    <TimeScroller value={editStart} onChange={setEditStart} label="New Start Time" currentDate={d.booking_date} today={today} />
+                                    <TimeScroller value={editEnd} onChange={setEditEnd} label="New End Time" minTime={editStart} currentDate={d.booking_date} today={today} />
+                                    <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
+                                      <button onClick={showRescheduleConfirmation} className={styles.primaryBtn} disabled={loading} style={{ flex:1, padding:"0.4rem" }}>
+                                        {loading ? "Saving…" : "Confirm"}
+                                      </button>
+                                      <button onClick={cancelEdit} className={styles.secondaryBtn} disabled={loading} style={{ padding:"0.4rem 0.75rem" }}>
+                                        ✕
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", gap:"0.5rem" }}>
+                                    <div>
+                                      <div style={{ fontSize:"0.78rem", fontWeight:600, color: isPastDay ? "#9ca3af" : "#1f2937" }}>
+                                        {dDate}
+                                      </div>
+                                      <div style={{ fontSize:"0.68rem", marginTop:"0.1rem",
+                                        color: isActiveDay ? "#16a34a" : isPastDay ? "#9ca3af" : "#7c3aed",
+                                        fontWeight:700 }}>
+                                        {isActiveDay ? "● In Progress" : isPastDay ? "Ended" : "Upcoming"}
+                                      </div>
+                                    </div>
+                                    {canModify && !isPastDay && (
+                                      <div style={{ display:"flex", gap:"0.3rem" }}>
+                                        <button
+                                          onClick={() => { setEditingSingleInGroup(true); initiateEdit(d); }}
+                                          className={styles.editBtn}
+                                          style={{ fontSize:"0.65rem", padding:"0.2rem 0.45rem" }}
+                                          disabled={loading}
+                                        >
+                                          Reschedule
+                                        </button>
+                                        <button
+                                          onClick={() => { setCancelScope("single"); initiateCancellationDirect({ ...d, range_booking_id: null }); }}
+                                          className={styles.cancelBtn}
+                                          style={{ fontSize:"0.65rem", padding:"0.2rem 0.45rem" }}
+                                          disabled={loading}
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    )}
+                                    {isActiveDay && canModify && (
+                                      <div style={{ display:"flex", gap:"0.3rem" }}>
+                                        {[15, 30, 60].map(mins => (
+                                          <button key={mins} onClick={() => extendBooking(d.id, mins)} disabled={loading}
+                                            style={{ padding:"0.2rem 0.35rem", background:"#16a34a", color:"#fff",
+                                              border:"none", borderRadius:"0.3rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
+                                            +{mins}m
+                                          </button>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
 
-            {/* ── My Date Range Bookings ── */}
-            {otpVerified && roomId && (myRangeLoading || myRangeBookings.length > 0) && (
-              <div className={styles.card}>
-                <h2 style={{ marginBottom:"0.75rem" }}>Your Date Range Bookings</h2>
-                {myRangeLoading ? (
-                  <p className={styles.emptyState}>Loading…</p>
-                ) : myRangeBookings.map(group => {
-                  const first = group.days[0];
-                  const last = group.days[group.days.length - 1];
-                  const rep = group.upcoming[0];
-                  const startDate = (first.booking_date || "").split("T")[0];
-                  const endDate = (last.booking_date || "").split("T")[0];
-                  return (
-                    <div key={group.range_booking_id} style={{ marginBottom:"0.75rem", padding:"0.875rem",
-                      background:"#f5f3ff", borderRadius:"0.625rem", border:"1px solid #ddd6fe" }}>
-                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem" }}>
-                        <div>
-                          <div style={{ fontSize:"0.88rem", fontWeight:700, color:"#1f2937" }}>
-                            {first.start_time} – {first.end_time}
-                          </div>
-                          <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.2rem" }}>
-                            {startDate} → {endDate}
-                          </div>
-                          <div style={{ fontSize:"0.72rem", color:"#9ca3af", marginTop:"0.15rem" }}>
-                            {group.upcoming.length} day{group.upcoming.length !== 1 ? "s" : ""} remaining
-                          </div>
-                          {first.purpose && (
-                            <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:"0.2rem" }}>
-                              {first.purpose}
-                            </div>
+                    {/* ── SINGLE BOOKINGS ── */}
+                    {singleBookings.map(b => {
+                      const bDate = (b.booking_date || "").split("T")[0];
+                      const sMins = ampmToMinutes(b.start_time), eMins = ampmToMinutes(b.end_time);
+                      const isInProgress = bDate === today && sMins <= nowMins && eMins > nowMins;
+                      const isPast = !isInProgress && (bDate < today || (bDate === today && eMins <= nowMins));
+                      return (
+                        <div key={b.id} className={styles.bookingItem}
+                          style={isPast ? { opacity:0.55, background:"#f9fafb", borderColor:"#e5e7eb" } :
+                                 isInProgress ? { borderColor:"#16a34a", boxShadow:"0 0 0 2px #bbf7d0" } : {}}>
+                          {editingId === b.id ? (
+                            <>
+                              <div className={styles.bookingHeader}><h4>Reschedule Booking</h4></div>
+                              <div className={styles.bookingDetails}><p><strong>Department:</strong> {b.department}</p></div>
+                              <TimeScroller value={editStart} onChange={setEditStart} label="New Start Time" currentDate={b.booking_date} today={today} />
+                              <TimeScroller value={editEnd} onChange={setEditEnd} label="New End Time" minTime={editStart} currentDate={b.booking_date} today={today} />
+                              <div className={styles.bookingActions}>
+                                <button onClick={showRescheduleConfirmation} className={styles.primaryBtn} disabled={loading}>
+                                  {loading ? "Saving..." : "Save Changes"}
+                                </button>
+                                <button onClick={cancelEdit} className={styles.secondaryBtn} disabled={loading}>Cancel</button>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className={styles.bookingHeader}>
+                                <div className={styles.bookingTime}>
+                                  <span className={styles.timeIcon}>🕒</span>
+                                  <strong>{b.start_time} – {b.end_time}</strong>
+                                </div>
+                                {isInProgress ? (
+                                  <span style={{ display:"flex", alignItems:"center", gap:"0.3rem", fontSize:"0.68rem",
+                                    background:"#dcfce7", color:"#15803d", borderRadius:99, padding:"2px 8px", fontWeight:700 }}>
+                                    <span style={{ width:6, height:6, borderRadius:"50%", background:"#16a34a", display:"inline-block" }} />
+                                    In Progress
+                                  </span>
+                                ) : b.can_modify && <span className={styles.bookingBadge}>Your Booking</span>}
+                              </div>
+                              <div className={styles.bookingDetails}>
+                                <p><strong>Department:</strong> {b.department}</p>
+                                {b.purpose && <p><strong>Purpose:</strong> {b.purpose}</p>}
+                                <p className={styles.bookedBy}><span>👤</span> {b.booked_by}</p>
+                              </div>
+                              {isInProgress && b.can_modify && (
+                                <div style={{ marginTop:"0.5rem" }}>
+                                  <div style={{ fontSize:"0.7rem", fontWeight:700, color:"#15803d", marginBottom:"0.3rem" }}>Extend meeting</div>
+                                  <div style={{ display:"flex", gap:"0.4rem" }}>
+                                    {[15, 30, 60].map(mins => (
+                                      <button key={mins} onClick={() => extendBooking(b.id, mins)} disabled={loading}
+                                        style={{ flex:1, padding:"0.35rem 0", background:"#16a34a", color:"#fff",
+                                          border:"none", borderRadius:"0.4rem", fontSize:"0.75rem", fontWeight:700, cursor:"pointer" }}>
+                                        +{mins}m
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              {!isInProgress && b.can_modify && !isPast && (
+                                <div className={styles.bookingActions}>
+                                  <button onClick={() => openScopePicker(b, "reschedule")} className={styles.editBtn} disabled={loading}>Reschedule</button>
+                                  <button onClick={() => openScopePicker(b, "cancel")} className={styles.cancelBtn} disabled={loading}>Cancel</button>
+                                </div>
+                              )}
+                              {isPast && (
+                                <div style={{ marginTop:"0.4rem", fontSize:"0.7rem", fontWeight:700, color:"#9ca3af" }}>
+                                  This booking has ended
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
-                        <div style={{ display:"flex", flexDirection:"column", gap:"0.35rem", flexShrink:0 }}>
-                          <button
-                            onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "reschedule")}
-                            className={styles.editBtn}
-                            style={{ fontSize:"0.72rem", padding:"0.3rem 0.625rem" }}
-                          >
-                            Reschedule
-                          </button>
-                          <button
-                            onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "cancel")}
-                            className={styles.cancelBtn}
-                            style={{ fontSize:"0.72rem", padding:"0.3rem 0.625rem" }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
 
           </div>
         </div>
