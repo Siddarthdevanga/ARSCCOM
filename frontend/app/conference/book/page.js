@@ -435,6 +435,18 @@ export default function ConferenceBookPage() {
       else { setRsScope("single"); openRescheduleModal(b); }
       return;
     }
+    // Today's slot already ended — skip scope picker, go straight to range action
+    if (b._forceRange) {
+      setScopeLoading(true);
+      try {
+        const data = await apiFetch(`/api/conference/bookings/range/${b.range_booking_id}`);
+        setScopeRangeUpcoming(data.upcoming_count || 0);
+      } catch { setScopeRangeUpcoming(0); }
+      finally { setScopeLoading(false); }
+      if (action === "cancel") { setCancelScope("range"); setCancelTarget(b); }
+      else { setRsScope("range"); openRescheduleModal(b); }
+      return;
+    }
     setScopeLoading(true);
     setScopePicker({ booking: b, action });
     try {
@@ -1101,6 +1113,20 @@ export default function ConferenceBookPage() {
                               style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
                                 border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
                               Cancel
+                            </button>
+                          </div>
+                        )}
+                        {(state === "past" || state === "active") && b.range_booking_id && (
+                          <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
+                            <button onClick={() => openScopePicker({ ...b, _forceRange: true }, "reschedule")}
+                              style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
+                                border:"none", borderRadius:"0.35rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
+                              Reschedule remaining
+                            </button>
+                            <button onClick={() => openScopePicker({ ...b, _forceRange: true }, "cancel")}
+                              style={{ flex:1, padding:"0.28rem 0", background:"#fef2f2", color:"#b91c1c",
+                                border:"none", borderRadius:"0.35rem", fontSize:"0.65rem", fontWeight:700, cursor:"pointer" }}>
+                              Cancel remaining
                             </button>
                           </div>
                         )}

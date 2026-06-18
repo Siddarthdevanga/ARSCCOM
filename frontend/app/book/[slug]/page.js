@@ -1428,6 +1428,19 @@ export default function PublicConferenceBooking() {
       else { setRescheduleScope("single"); initiateEdit(booking); }
       return;
     }
+    // If booking has already ended (_forceRange), skip scope picker and go straight to range action
+    if (booking._forceRange) {
+      setScopeLoading(true);
+      try {
+        const res = await fetch(`${API}/api/public/conference/company/${slug}/bookings/range/${booking.range_booking_id}`);
+        const data = res.ok ? await res.json() : {};
+        setScopeRangeUpcoming(data.upcoming_count || 0);
+      } catch { setScopeRangeUpcoming(0); }
+      finally { setScopeLoading(false); }
+      if (action === "cancel") { setCancelScope("range"); initiateCancellationDirect(booking); }
+      else { setRescheduleScope("range"); initiateEdit(booking); }
+      return;
+    }
     setScopeLoading(true);
     setScopePicker({ booking, action });
     try {
@@ -2207,9 +2220,30 @@ export default function PublicConferenceBooking() {
                             </div>
                           )}
                           {isPast && (
-                            <div style={{ marginTop:"0.4rem", fontSize:"0.7rem", fontWeight:700,
-                              color:"#9ca3af", letterSpacing:"0.3px" }}>
-                              This booking has ended
+                            <div style={{ marginTop:"0.4rem" }}>
+                              <div style={{ fontSize:"0.7rem", fontWeight:700, color:"#9ca3af", letterSpacing:"0.3px" }}>
+                                This booking has ended
+                              </div>
+                              {b.can_modify && b.range_booking_id && (
+                                <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.4rem" }}>
+                                  <button
+                                    onClick={() => openScopePicker({ ...b, _forceRange: true }, "reschedule")}
+                                    className={styles.editBtn}
+                                    disabled={loading}
+                                    style={{ fontSize:"0.65rem", padding:"0.2rem 0.5rem" }}
+                                  >
+                                    Reschedule remaining
+                                  </button>
+                                  <button
+                                    onClick={() => openScopePicker({ ...b, _forceRange: true }, "cancel")}
+                                    className={styles.cancelBtn}
+                                    disabled={loading}
+                                    style={{ fontSize:"0.65rem", padding:"0.2rem 0.5rem" }}
+                                  >
+                                    Cancel remaining
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </>
