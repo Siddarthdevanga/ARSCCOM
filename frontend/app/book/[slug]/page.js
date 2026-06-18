@@ -932,6 +932,10 @@ export default function PublicConferenceBooking() {
   const [cancelScope,        setCancelScope]         = useState("single");
   const [rescheduleScope,    setRescheduleScope]     = useState("single");
 
+  // My date range bookings panel
+  const [myRangeBookings,    setMyRangeBookings]    = useState([]);
+  const [myRangeLoading,     setMyRangeLoading]     = useState(false);
+
   // Range booking
   const [bookingMode,         setBookingMode]         = useState("single"); // "single" | "range"
   const [rangeEndDate,        setRangeEndDate]        = useState("");
@@ -1074,6 +1078,33 @@ export default function PublicConferenceBooking() {
   useEffect(() => {
     loadBookings();
   }, [loadBookings, otpVerified]);
+
+  const loadMyRangeBookings = useCallback(async () => {
+    if (!roomId || !otpVerified || !email) { setMyRangeBookings([]); return; }
+    setMyRangeLoading(true);
+    try {
+      const res = await fetch(`${API}/api/public/conference/company/${slug}/bookings?roomId=${roomId}&userEmail=${email}`);
+      if (!res.ok) { setMyRangeBookings([]); return; }
+      const data = await res.json();
+      const all = (Array.isArray(data) ? data : [])
+        .filter(b => b.status === "BOOKED" && b.range_booking_id && b.can_modify)
+        .map(b => ({ ...b, start_time: dbToAmPm(b.start_time), end_time: dbToAmPm(b.end_time) }));
+      const groups = {};
+      for (const b of all) {
+        if (!groups[b.range_booking_id]) groups[b.range_booking_id] = [];
+        groups[b.range_booking_id].push(b);
+      }
+      const result = Object.entries(groups).map(([rid, days]) => {
+        const sorted = days.sort((a, b) => a.booking_date.localeCompare(b.booking_date));
+        const upcoming = sorted.filter(d => (d.booking_date?.split("T")[0] || "") >= today);
+        return { range_booking_id: rid, days: sorted, upcoming };
+      }).filter(g => g.upcoming.length > 0);
+      setMyRangeBookings(result);
+    } catch { setMyRangeBookings([]); }
+    finally { setMyRangeLoading(false); }
+  }, [roomId, slug, email, otpVerified]);
+
+  useEffect(() => { loadMyRangeBookings(); }, [loadMyRangeBookings]);
 
   // Auto-refresh rooms (cards + calendar) and bookings every 60 seconds
   useEffect(() => {
@@ -1536,7 +1567,7 @@ export default function PublicConferenceBooking() {
       setEditingId(null);
       setEditStart("");
       setEditEnd("");
-      loadBookings();
+      loadBookings(); loadMyRangeBookings();
     } catch (error) {
       console.error("[RESCHEDULE_ERROR]", error);
       setResultModal({ isOpen: true, type: "error", message: "Network error occurred. Please try again." });
@@ -1600,7 +1631,7 @@ export default function PublicConferenceBooking() {
           : "Your booking has been cancelled successfully. A confirmation email has been sent to you."
       });
 
-      loadBookings();
+      loadBookings(); loadMyRangeBookings();
     } catch (error) {
       console.error("[CANCELLATION_ERROR]", error);
       setResultModal({
@@ -2254,6 +2285,62 @@ export default function PublicConferenceBooking() {
                 </div>
               )}
             </div>
+
+            {/* ── My Date Range Bookings ── */}
+            {otpVerified && roomId && (myRangeLoading || myRangeBookings.length > 0) && (
+              <div className={styles.card}>
+                <h2 style={{ marginBottom:"0.75rem" }}>Your Date Range Bookings</h2>
+                {myRangeLoading ? (
+                  <p className={styles.emptyState}>Loading…</p>
+                ) : myRangeBookings.map(group => {
+                  const first = group.days[0];
+                  const last = group.days[group.days.length - 1];
+                  const rep = group.upcoming[0];
+                  const startDate = (first.booking_date || "").split("T")[0];
+                  const endDate = (last.booking_date || "").split("T")[0];
+                  return (
+                    <div key={group.range_booking_id} style={{ marginBottom:"0.75rem", padding:"0.875rem",
+                      background:"#f5f3ff", borderRadius:"0.625rem", border:"1px solid #ddd6fe" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem" }}>
+                        <div>
+                          <div style={{ fontSize:"0.88rem", fontWeight:700, color:"#1f2937" }}>
+                            {first.start_time} – {first.end_time}
+                          </div>
+                          <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:"0.2rem" }}>
+                            {startDate} → {endDate}
+                          </div>
+                          <div style={{ fontSize:"0.72rem", color:"#9ca3af", marginTop:"0.15rem" }}>
+                            {group.upcoming.length} day{group.upcoming.length !== 1 ? "s" : ""} remaining
+                          </div>
+                          {first.purpose && (
+                            <div style={{ fontSize:"0.72rem", color:"#6b7280", marginTop:"0.2rem" }}>
+                              {first.purpose}
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:"0.35rem", flexShrink:0 }}>
+                          <button
+                            onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "reschedule")}
+                            className={styles.editBtn}
+                            style={{ fontSize:"0.72rem", padding:"0.3rem 0.625rem" }}
+                          >
+                            Reschedule
+                          </button>
+                          <button
+                            onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "cancel")}
+                            className={styles.cancelBtn}
+                            style={{ fontSize:"0.72rem", padding:"0.3rem 0.625rem" }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
           </div>
         </div>
       )}
