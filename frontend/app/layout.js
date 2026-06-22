@@ -1,7 +1,8 @@
 import Script from 'next/script';
 import './globals.css';
 
-const GA_ID = 'AW-17980176621';
+const GA_ID  = 'AW-17980176621';
+const GA4_ID = 'G-HRFN50WPZX';
 
 /* ── Site-wide constants (single source of truth) ───────── */
 export const SITE = {
@@ -266,6 +267,7 @@ export default function RootLayout({ children }) {
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', '${GA_ID}', { page_path: window.location.pathname });
+            gtag('config', '${GA4_ID}', { page_path: window.location.pathname });
           `}
         </Script>
       </body>

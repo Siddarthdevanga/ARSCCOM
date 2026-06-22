@@ -3,11 +3,9 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import Script from 'next/script';
 import './landing.css';
 
 /* ── Google Analytics helper ─────────────────────────────── */
-const GA_ID = 'AW-17980176621';
 const gaEvent = (eventName, params = {}) => {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
     window.gtag('event', eventName, params);
@@ -227,6 +225,7 @@ const PRICING_PLANS = [
     cta:     'Get Started',
     ctaLink: CONFIG.company.registerUrl,
     popular: false,
+    leadValue: 49,
   },
   {
     name:     'Business',
@@ -242,6 +241,7 @@ const PRICING_PLANS = [
     cta:     'Get Started',
     ctaLink: CONFIG.company.registerUrl,
     popular: true,
+    leadValue: 500,
   },
   {
     name:     'Enterprise',
@@ -383,15 +383,6 @@ export default function LandingPage() {
 
   return (
     <>
-      {/* ── Google Analytics ───────────────────────────── */}
-      <Script src="https://www.googletagmanager.com/gtag/js?id=G-HRFN50WPZX" strategy="afterInteractive" />
-      <Script id="ga-init" strategy="afterInteractive">{`
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
-        gtag('js', new Date());
-        gtag('config', 'G-HRFN50WPZX');
-      `}</Script>
-
       {/* ── Floating WhatsApp ───────────────────────────── */}
       <a
         href={CONFIG.company.whatsapp}
@@ -727,7 +718,10 @@ export default function LandingPage() {
               <Link
                 href={plan.ctaLink}
                 className="planCta"
-                onClick={() => gaEvent('pricing_click', { plan: plan.name })}
+                onClick={() => {
+                  gaEvent('pricing_click', { plan: plan.name });
+                  if (plan.leadValue) gaEvent('generate_lead', { value: plan.leadValue, currency: 'INR', plan: plan.name.toLowerCase() });
+                }}
               >
                 {plan.cta}
               </Link>

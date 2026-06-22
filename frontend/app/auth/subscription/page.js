@@ -52,6 +52,18 @@ export default function SubscriptionPage() {
   /* ======================================================
         HANDLE PLAN SELECTION
   ====================================================== */
+  const PLAN_VALUES = { free: 49, business: 500 };
+
+  const gaLead = (planKey) => {
+    if (typeof window !== "undefined" && typeof window.gtag === "function") {
+      window.gtag("event", "generate_lead", {
+        value:    PLAN_VALUES[planKey] || 0,
+        currency: "INR",
+        plan:     planKey,
+      });
+    }
+  };
+
   const choosePlan = async (plan) => {
     if (loadingPlan) return;
 
@@ -63,6 +75,8 @@ export default function SubscriptionPage() {
       setLoadingPlan("");
       return;
     }
+
+    gaLead(plan);
 
     try {
       const token = localStorage.getItem("token");
@@ -107,6 +121,9 @@ export default function SubscriptionPage() {
       }
 
       if (data?.url) {
+        if (typeof window !== "undefined" && typeof window.gtag === "function") {
+          window.gtag("event", "begin_checkout", { value: PLAN_VALUES[plan] || 0, currency: "INR", plan });
+        }
         window.location.href = data.url;
         return;
       }
