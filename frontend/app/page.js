@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import Script from 'next/script';
 import './landing.css';
 
 /* ── Google Analytics helper ─────────────────────────────── */
@@ -382,6 +383,15 @@ export default function LandingPage() {
 
   return (
     <>
+      {/* ── Google Analytics ───────────────────────────── */}
+      <Script src="https://www.googletagmanager.com/gtag/js?id=G-HRFN50WPZX" strategy="afterInteractive" />
+      <Script id="ga-init" strategy="afterInteractive">{`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-HRFN50WPZX');
+      `}</Script>
+
       {/* ── Floating WhatsApp ───────────────────────────── */}
       <a
         href={CONFIG.company.whatsapp}
