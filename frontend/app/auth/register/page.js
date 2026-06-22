@@ -79,6 +79,7 @@ export default function RegisterPage() {
     try {
       setLoading(true);
       const res = await fetch(`${API_BASE}/api/auth/register`, { method: "POST", body: formPayload, credentials: "include" });
+      if (res.status === 413) { setError("Logo file is too large. Please upload an image under 1 MB."); return; }
       const data = await res.json();
       if (!res.ok) { setError(data?.message || "Registration failed"); return; }
       const normalizedEmail = email.trim().toLowerCase();
