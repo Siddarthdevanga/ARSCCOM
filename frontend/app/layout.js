@@ -1,8 +1,7 @@
 import Script from 'next/script';
 import './globals.css';
 
-const GA_ID  = 'AW-17980176621';
-const GA4_ID = 'G-HRFN50WPZX';
+const GTM_ID = 'GTM-TKM6L3H8';
 
 /* ── Site-wide constants (single source of truth) ───────── */
 export const SITE = {
@@ -243,6 +242,15 @@ export default function RootLayout({ children }) {
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
+        {/* Google Tag Manager */}
+        <Script id="gtm-head" strategy="beforeInteractive">{`
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','${GTM_ID}');
+        `}</Script>
+
         {/* Structured Data */}
         {structuredData.map((schema, i) => (
           <script
@@ -254,22 +262,16 @@ export default function RootLayout({ children }) {
       </head>
 
       <body>
-        {children}
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_ID}`}
+            height="0" width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
 
-        {/* Google Tag Manager / Ads */}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', '${GA_ID}', { page_path: window.location.pathname });
-            gtag('config', '${GA4_ID}', { page_path: window.location.pathname });
-          `}
-        </Script>
+        {children}
       </body>
     </html>
   );
