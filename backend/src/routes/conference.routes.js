@@ -1819,4 +1819,33 @@ router.get("/qr-code/download", async (req, res) => {
   }
 });
 
+// GET /settings/booking-restriction
+router.get("/settings/booking-restriction", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const [[row]] = await db.query(
+      `SELECT conference_booking_restricted FROM companies WHERE id = ? LIMIT 1`,
+      [companyId]
+    );
+    res.json({ restricted: !!row?.conference_booking_restricted });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// PATCH /settings/booking-restriction
+router.patch("/settings/booking-restriction", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const restricted = req.body.restricted ? 1 : 0;
+    await db.query(
+      `UPDATE companies SET conference_booking_restricted = ? WHERE id = ?`,
+      [restricted, companyId]
+    );
+    res.json({ restricted: !!restricted });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

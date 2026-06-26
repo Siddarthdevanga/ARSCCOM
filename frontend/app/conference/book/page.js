@@ -293,6 +293,7 @@ export default function ConferenceBookPage() {
 
   // Book on behalf of
   const [onBehalfOf, setOnBehalfOf] = useState(null);
+  const [bookingRestricted, setBookingRestricted] = useState(false);
 
   // Team members
   const [teamMembers,    setTeamMembers]    = useState([]);
@@ -364,6 +365,10 @@ export default function ConferenceBookPage() {
       .then(data => setRooms(Array.isArray(data) ? data : []))
       .catch(() => setRooms([]))
       .finally(() => setLoading(false));
+
+    apiFetch("/api/conference/settings/booking-restriction")
+      .then(data => setBookingRestricted(!!data.restricted))
+      .catch(() => {});
   }, [router, today]);
 
   // Team member search
@@ -981,6 +986,14 @@ export default function ConferenceBookPage() {
                       label={<>Book on behalf of <span style={opt}>(optional)</span></>}
                       selected={onBehalfOf} onSelect={setOnBehalfOf} onClear={() => setOnBehalfOf(null)}
                     />
+                    {bookingRestricted && (
+                      <div style={{ marginTop:"0.4rem", padding:"0.4rem 0.65rem", background:"#fef3c7",
+                        border:"1px solid #f59e0b", borderRadius:"0.4rem",
+                        fontSize:"0.72rem", color:"#92400e", display:"flex", alignItems:"center", gap:"0.35rem" }}>
+                        <span>⚠️</span>
+                        <span>Conference booking is restricted to employees only. Public users outside the directory cannot book.</span>
+                      </div>
+                    )}
                   </div>
                   {bookingMode === "single" ? (
                     <div style={{ gridColumn:"1/-1" }}>

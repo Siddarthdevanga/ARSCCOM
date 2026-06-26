@@ -1180,6 +1180,17 @@ export default function PublicConferenceBooking() {
       );
 
       if (!response.ok) {
+        if (response.status === 403) {
+          const data = await response.json().catch(() => ({}));
+          if (data.message === "BOOKING_RESTRICTED") {
+            setResultModal({
+              isOpen: true,
+              type: "error",
+              message: "You are not authorised to book this conference room. Please contact your administrator."
+            });
+            return;
+          }
+        }
         await handleApiError(response, "Failed to send OTP");
         return;
       }

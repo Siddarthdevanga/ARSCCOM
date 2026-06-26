@@ -683,9 +683,20 @@ router.post("/company/:slug/send-otp", async (req, res) => {
       return res.status(400).json({ message: ERROR_MESSAGES.INVALID_EMAIL });
     }
 
-    const company = await getCompanyBySlug(slug, "id, name, logo_url");
+    const company = await getCompanyBySlug(slug, "id, name, logo_url, conference_booking_restricted");
     if (!company) {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
+    }
+
+    // Check if conference booking is restricted to employees only
+    if (company.conference_booking_restricted) {
+      const [[emp]] = await db.query(
+        `SELECT id FROM company_employees WHERE company_id = ? AND LOWER(email) = ? AND is_active = 1 LIMIT 1`,
+        [company.id, email]
+      );
+      if (!emp) {
+        return res.status(403).json({ message: "BOOKING_RESTRICTED" });
+      }
     }
 
     // Allow OTP sending with graceful subscription handling

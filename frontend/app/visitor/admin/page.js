@@ -26,10 +26,12 @@ export default function AdminEmployeesPage() {
   const [bulkModal, setBulkModal]         = useState(false);
   const [bulkRows, setBulkRows]           = useState([]);
   const [bulkErrors, setBulkErrors]       = useState([]);
-  const [bulkUploading, setBulkUploading] = useState(false);
-  const [bulkFileName, setBulkFileName]   = useState("");
-  const fileInputRef                      = useRef(null);
-  const toastTimer                        = useRef(null);
+  const [bulkUploading, setBulkUploading]         = useState(false);
+  const [bulkFileName, setBulkFileName]           = useState("");
+  const [bookingRestricted, setBookingRestricted] = useState(false);
+  const [restrictToggling, setRestrictToggling]   = useState(false);
+  const fileInputRef                              = useRef(null);
+  const toastTimer                                = useRef(null);
 
   const showToast = (msg, type = "success") => {
     if (toastTimer.current) clearTimeout(toastTimer.current);
@@ -38,6 +40,24 @@ export default function AdminEmployeesPage() {
   };
 
   const getToken = () => localStorage.getItem("token");
+
+  const toggleBookingRestriction = async () => {
+    setRestrictToggling(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/settings/booking-restriction`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ restricted: !bookingRestricted }),
+      });
+      const data = await res.json();
+      setBookingRestricted(!!data.restricted);
+      showToast(data.restricted ? "Conference booking restricted to employees only" : "Conference booking open to everyone");
+    } catch {
+      showToast("Failed to update setting", "error");
+    } finally {
+      setRestrictToggling(false);
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -57,6 +77,9 @@ export default function AdminEmployeesPage() {
     if (!token) { router.replace("/"); return; }
     if (stored) { try { setCompany(JSON.parse(stored)); } catch {} }
     fetchEmployees().finally(() => setLoading(false));
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/settings/booking-restriction`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(r => r.json()).then(d => setBookingRestricted(!!d.restricted)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -290,6 +313,29 @@ export default function AdminEmployeesPage() {
             <div className={styles.statPill}>
               <span className={styles.statNum}>{employees.length}</span>
               <span className={styles.statLabel}>Total</span>
+            </div>
+            <div className={styles.statDivider} />
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.3rem" }}>
+              <button
+                onClick={toggleBookingRestriction}
+                disabled={restrictToggling}
+                style={{
+                  display: "flex", alignItems: "center", gap: "0.5rem",
+                  padding: "0.4rem 0.9rem", borderRadius: "2rem", border: "none",
+                  background: bookingRestricted ? "#7c3aed" : "#e5e7eb",
+                  color: bookingRestricted ? "#fff" : "#6b7280",
+                  fontWeight: 700, fontSize: "0.75rem", cursor: "pointer",
+                  transition: "all 0.2s", opacity: restrictToggling ? 0.6 : 1,
+                }}
+              >
+                <span style={{
+                  width: 10, height: 10, borderRadius: "50%",
+                  background: bookingRestricted ? "#fff" : "#9ca3af",
+                  display: "inline-block", flexShrink: 0,
+                }} />
+                {bookingRestricted ? "Employees Only" : "Open to All"}
+              </button>
+              <span style={{ fontSize: "0.65rem", color: "#9ca3af" }}>Conference Booking</span>
             </div>
           </div>
         </div>
