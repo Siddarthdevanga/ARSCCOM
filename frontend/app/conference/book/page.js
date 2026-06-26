@@ -240,7 +240,7 @@ function EmployeeSearch({ label, selected, onSelect, onClear, placeholder = "Sea
           boxShadow:"0 4px 16px rgba(0,0,0,0.1)", padding:"0.75rem", fontSize:"0.82rem", color:"#6b7280" }}>
           Searching…
         </div>}
-        {!searching && results.length > 0 && (
+        {!searching && (results.length > 0 || (query.includes("@") && query.trim().length > 3)) && (
           <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:50, marginTop:4,
             background:"#fff", border:"1px solid #e5e7eb", borderRadius:"0.5rem",
             boxShadow:"0 4px 16px rgba(0,0,0,0.1)", maxHeight:200, overflowY:"auto" }}>
@@ -253,6 +253,16 @@ function EmployeeSearch({ label, selected, onSelect, onClear, placeholder = "Sea
                 <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{emp.email}{emp.department ? ` · ${emp.department}` : ""}</div>
               </div>
             ))}
+            {query.includes("@") && !results.some(e => e.email.toLowerCase() === query.trim().toLowerCase()) && (
+              <div onClick={() => { onSelect({ id: null, name: query.trim(), email: query.trim() }); setQuery(""); setResults([]); }}
+                style={{ padding:"0.5rem 0.875rem", cursor:"pointer", borderTop: results.length > 0 ? "1px solid #e5e7eb" : "none",
+                  background:"#fafafa" }}
+                onMouseEnter={e => e.currentTarget.style.background="#f5f3ff"}
+                onMouseLeave={e => e.currentTarget.style.background="#fafafa"}>
+                <div style={{ fontSize:"0.78rem", color:"#7c3aed", fontWeight:700 }}>Use "{query.trim()}"</div>
+                <div style={{ fontSize:"0.7rem", color:"#9ca3af" }}>Not in employee directory</div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -733,6 +743,12 @@ export default function ConferenceBookPage() {
                   <span style={{ color:"#111827", fontWeight:700, textAlign:"right", maxWidth:"60%" }}>{value}</span>
                 </div>
               ))}
+              {bookingRestricted && onBehalfOf && !onBehalfOf.id && (
+                <div style={{ marginTop:"0.75rem", padding:"0.5rem 0.75rem", background:"#fef3c7",
+                  border:"1px solid #f59e0b", borderRadius:"0.4rem", fontSize:"0.75rem", color:"#92400e" }}>
+                  ⚠️ This person is not in the employee directory. Only admin-made bookings are allowed for non-employees.
+                </div>
+              )}
             </div>
             {/* Actions */}
             <div style={{ padding:"0 1.5rem 1.25rem", display:"flex", gap:"0.75rem" }}>
@@ -786,6 +802,12 @@ export default function ConferenceBookPage() {
                   <span style={{ color:"#111827", fontWeight:700, textAlign:"right", maxWidth:"60%" }}>{value}</span>
                 </div>
               ))}
+              {bookingRestricted && onBehalfOf && !onBehalfOf.id && (
+                <div style={{ marginTop:"0.75rem", padding:"0.5rem 0.75rem", background:"#fef3c7",
+                  border:"1px solid #f59e0b", borderRadius:"0.4rem", fontSize:"0.75rem", color:"#92400e" }}>
+                  ⚠️ This person is not in the employee directory. Only admin-made bookings are allowed for non-employees.
+                </div>
+              )}
             </div>
             <div style={{ padding:"0 1.5rem 1.25rem", display:"flex", gap:"0.75rem" }}>
               <button onClick={() => setRangeConfirmPreview(null)}
@@ -986,14 +1008,6 @@ export default function ConferenceBookPage() {
                       label={<>Book on behalf of <span style={opt}>(optional)</span></>}
                       selected={onBehalfOf} onSelect={setOnBehalfOf} onClear={() => setOnBehalfOf(null)}
                     />
-                    {bookingRestricted && (
-                      <div style={{ marginTop:"0.4rem", padding:"0.4rem 0.65rem", background:"#fef3c7",
-                        border:"1px solid #f59e0b", borderRadius:"0.4rem",
-                        fontSize:"0.72rem", color:"#92400e", display:"flex", alignItems:"center", gap:"0.35rem" }}>
-                        <span>⚠️</span>
-                        <span>Conference booking is restricted to employees only. Public users outside the directory cannot book.</span>
-                      </div>
-                    )}
                   </div>
                   {bookingMode === "single" ? (
                     <div style={{ gridColumn:"1/-1" }}>
