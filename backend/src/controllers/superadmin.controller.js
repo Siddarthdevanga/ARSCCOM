@@ -525,7 +525,14 @@ export const whatsappLeads = async (req, res) => {
             OR CONCAT('91', u.phone) COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
             OR u.phone COLLATE utf8mb4_unicode_ci = RIGHT(wl.phone, 10) COLLATE utf8mb4_unicode_ci
           ) AND u.role = 'user' LIMIT 1
-         ) AS company_sub_status
+         ) AS company_sub_status,
+         (SELECT c.payment_nurture_step FROM users u JOIN companies c ON c.id = u.company_id
+          WHERE (
+            u.phone COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+            OR CONCAT('91', u.phone) COLLATE utf8mb4_unicode_ci = wl.phone COLLATE utf8mb4_unicode_ci
+            OR u.phone COLLATE utf8mb4_unicode_ci = RIGHT(wl.phone, 10) COLLATE utf8mb4_unicode_ci
+          ) AND u.role = 'user' LIMIT 1
+         ) AS company_payment_nurture_step
        FROM whatsapp_leads wl
        LEFT JOIN demo_appointments da
          ON da.phone = wl.phone

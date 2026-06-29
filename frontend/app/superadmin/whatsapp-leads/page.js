@@ -14,7 +14,7 @@ const NODE_SUB_H = 90; // lg node with subtitle line
 const NODE_SM_W = 84;
 const NODE_SM_H = 44;
 const TREE_W    = 1260;
-const TREE_H    = 640;
+const TREE_H    = 800;
 
 // Returns actual half-height of a node (accounts for subtitle)
 const halfH = (node) => {
@@ -68,6 +68,11 @@ const TREE_NODES = [
   { key: "nurtureStep2",   label: "Step 2", Icon: MessageSquare, color: "#8b5cf6", cx: 980,  cy: 575, size: "sm" },
   { key: "nurtureFinal",   label: "Final",  Icon: MessageSquare, color: "#f59e0b", cx: 1110, cy: 575, size: "sm" },
   { key: "nurtureClosed",  label: "Closed", Icon: UserMinus,     color: "#6b7280", cx: 1210, cy: 575, size: "sm" },
+  // Level 6 — Payment Pending nurture (below plan nodes)
+  { key: "payPending",    label: "Pay Pending", subtitle: "Clicked · No Payment", Icon: XCircle,       color: "#f97316", cx: 543,  cy: 680, size: "lg" },
+  { key: "payNurture1",   label: "P-Msg 1",     Icon: MessageSquare, color: "#64748b", cx: 400,  cy: 765, size: "sm" },
+  { key: "payNurture2",   label: "P-Msg 2",     Icon: MessageSquare, color: "#64748b", cx: 543,  cy: 765, size: "sm" },
+  { key: "payNurture3",   label: "P-Msg 3",     Icon: MessageSquare, color: "#f97316", cx: 686,  cy: 765, size: "sm" },
 ];
 
 // orient "h" = horizontal right-to-left connection; labeled = show count·% pill
@@ -94,6 +99,12 @@ const TREE_EDGES = [
   { from: "nurtureStep1",   to: "nurtureStep2",   dashed: false, labeled: true,  orient: "h" },
   { from: "nurtureStep2",   to: "nurtureFinal",   dashed: false, labeled: true,  orient: "h" },
   { from: "nurtureFinal",   to: "nurtureClosed",  dashed: false, labeled: true,  orient: "h" },
+  // Payment pending funnel — from planTrial & planBusiness down to payPending
+  { from: "planTrial",      to: "payPending",     dashed: true,  labeled: false, orient: "v" },
+  { from: "planBusiness",   to: "payPending",     dashed: true,  labeled: false, orient: "v" },
+  { from: "payPending",     to: "payNurture1",    dashed: false, labeled: false, orient: "v" },
+  { from: "payNurture1",    to: "payNurture2",    dashed: false, labeled: true,  orient: "h" },
+  { from: "payNurture2",    to: "payNurture3",    dashed: false, labeled: true,  orient: "h" },
 ];
 
 const FLOW_PERIODS = [
@@ -128,6 +139,11 @@ const STAGE_FILTER = {
   nurtureStep2:   (l) => l.nurture_step >= 2 && !l.unsubscribed,
   nurtureFinal:   (l) => l.nurture_step >= 3 && !l.unsubscribed,
   nurtureClosed:  (l) => l.nurture_step >= 4 && !l.unsubscribed,
+  // Payment pending nurture
+  payPending:     (l) => l.company_sub_status === "pending",
+  payNurture1:    (l) => l.company_sub_status === "pending" && (l.company_payment_nurture_step || 0) >= 1,
+  payNurture2:    (l) => l.company_sub_status === "pending" && (l.company_payment_nurture_step || 0) >= 2,
+  payNurture3:    (l) => l.company_sub_status === "pending" && (l.company_payment_nurture_step || 0) >= 3,
 };
 
 function computeFlowStats(leads, period) {
@@ -157,6 +173,10 @@ function computeFlowStats(leads, period) {
     nurtureStep2:   fl.filter((l) => l.nurture_step >= 2 && !l.unsubscribed).length,
     nurtureFinal:   fl.filter((l) => l.nurture_step >= 3 && !l.unsubscribed).length,
     nurtureClosed:  fl.filter((l) => l.nurture_step >= 4 && !l.unsubscribed).length,
+    payPending:     fl.filter((l) => l.company_sub_status === "pending").length,
+    payNurture1:    fl.filter((l) => l.company_sub_status === "pending" && (l.company_payment_nurture_step || 0) >= 1).length,
+    payNurture2:    fl.filter((l) => l.company_sub_status === "pending" && (l.company_payment_nurture_step || 0) >= 2).length,
+    payNurture3:    fl.filter((l) => l.company_sub_status === "pending" && (l.company_payment_nurture_step || 0) >= 3).length,
   };
 }
 

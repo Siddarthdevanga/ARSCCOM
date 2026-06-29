@@ -174,6 +174,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Pre-Nurture Cron Scheduled (Every Minute IST)");
 
+    const { sendPaymentNurtureMessages } = await import("./cron/paymentNurtureCron.js");
+    cron.default.schedule('* * * * *', async () => {
+      try { await sendPaymentNurtureMessages(); } catch (e) { console.error("❌ Payment nurture cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Payment Nurture Cron Scheduled (Every Minute IST)");
+
     const { sendPlanReminders } = await import("./cron/planNotificationCron.js");
     cron.default.schedule('0 9 * * *', async () => {
       try { await sendPlanReminders(); } catch (e) { console.error("❌ Plan reminder cron failed:", e); }

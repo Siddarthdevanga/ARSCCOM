@@ -207,6 +207,48 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
   }
 };
 
+/* --------------------------------------------------
+   Payment Nurture — interactive quick_reply messages
+   Msg 1 (5h), Msg 2 (24h), Msg 3 (3d) after pending payment.
+   Session messages: work best within 24h of last bot interaction.
+-------------------------------------------------- */
+const PAYMENT_NURTURE_TEXTS = [
+  `Hi {name}! 👋 We noticed you started your Promeet journey but haven't completed your payment yet.\n\nYour workspace is almost ready! Complete your payment to unlock:\n✅ Smart Visitor Management\n✅ Conference Room Booking\n✅ Real-time Analytics\n\nLogin to complete: https://myappz.ai/auth/login`,
+  `Hi {name}! 😊 Still thinking about Promeet?\n\nBusinesses like yours save hours every week with smart visitor & conference management. Your team deserves better tools!\n\nDon't let your account sit idle — complete your payment today.\n\nLogin: https://myappz.ai/auth/login`,
+  `Hi {name}! 🙏 Final reminder from us.\n\nYour Promeet account is ready and waiting. Hundreds of businesses trust Promeet to manage visitors and conference rooms effortlessly.\n\nComplete your payment now — takes less than 2 minutes.\n\nLogin: https://myappz.ai/auth/login`,
+];
+
+export const sendPaymentNurtureMessage = async (destination, name, msgNum) => {
+  const { apiKey, appName, srcNum } = getConfig();
+  const text = PAYMENT_NURTURE_TEXTS[msgNum - 1].replace("{name}", name || "there");
+  const message = JSON.stringify({
+    type:    "quick_reply",
+    msgid:   `pay_nurture_${msgNum}_${Date.now()}`,
+    content: { type: "text", text },
+    options: [
+      { type: "text", title: "Complete Payment" },
+      { type: "text", title: "Book a Demo" },
+    ],
+  });
+  const params = new URLSearchParams({
+    channel:    "whatsapp",
+    source:     srcNum,
+    destination,
+    "src.name": appName,
+    message,
+  });
+  try {
+    const { data } = await axios.post(MSG_URL, params.toString(), {
+      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
+    });
+    console.log(`[WA] payNurture Msg${msgNum} → ${destination}:`, JSON.stringify(data));
+    return data;
+  } catch (err) {
+    console.error(`[WA] payNurture Msg${msgNum} failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
+};
+
 export const sendTextMessage = async (destination, text) => {
   const { apiKey, appName, srcNum } = getConfig();
 
