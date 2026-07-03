@@ -4,6 +4,20 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./style.module.css";
 
+function idNumberError(idType, idNumber) {
+  if (!idType || !idNumber.trim()) return "";
+  const n = idNumber.trim().toUpperCase();
+  if (idType === "aadhaar"  && !/^\d{12}$/.test(n))                    return "Aadhaar must be exactly 12 digits";
+  if (idType === "pan"      && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(n)) return "PAN format: ABCDE1234F";
+  if (idType === "passport" && !/^[A-Z][0-9]{7}$/.test(n))             return "Passport format: A1234567";
+  return "";
+}
+
+function InlineErr({ msg, show }) {
+  if (!show || !msg) return null;
+  return <p style={{ color:"#dc2626", fontSize:"0.72rem", fontWeight:700, marginTop:4, marginBottom:0 }}>{msg}</p>;
+}
+
 export default function VisitorIdentity() {
   const router = useRouter();
 
@@ -52,6 +66,7 @@ export default function VisitorIdentity() {
 
   /* ================= ERROR ================= */
   const [error, setError] = useState("");
+  const [idTouched, setIdTouched] = useState(false);
 
   const videoRef  = useRef(null);
   const canvasRef = useRef(null);
@@ -104,10 +119,9 @@ export default function VisitorIdentity() {
 
   /* ================= VALIDATION ================= */
   const validateAll = () => {
-    if (!photo && !returningKey) {
-      setError("Visitor photo is required");
-      return false;
-    }
+    if (!photo && !returningKey) { setError("Visitor photo is required"); return false; }
+    const idErr = idNumberError(idType, idNumber);
+    if (idErr) { setIdTouched(true); setError(idErr); return false; }
     return true;
   };
 
@@ -346,10 +360,13 @@ export default function VisitorIdentity() {
                   <label className={styles.label}>ID Number</label>
                   <input
                     className={styles.input}
+                    style={{ borderColor: idTouched && idNumberError(idType, idNumber) ? "#dc2626" : undefined }}
                     placeholder="Enter ID number"
                     value={idNumber}
-                    onChange={(e) => setIdNumber(e.target.value)}
+                    onChange={(e) => { setIdNumber(e.target.value); setIdTouched(false); }}
+                    onBlur={() => setIdTouched(true)}
                   />
+                  <InlineErr msg={idNumberError(idType, idNumber)} show={idTouched} />
                 </div>
 
                 <button className={styles.generateBtn} onClick={handleGeneratePass}>

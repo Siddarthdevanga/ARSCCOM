@@ -8,6 +8,58 @@ const API               = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const FETCH_TIMEOUT_MS  = 15_000;
 const UPLOAD_TIMEOUT_MS = 30_000;
 
+/* ── Shared validators ── */
+const DISPOSABLE_DOMAINS = new Set([
+  "mailinator.com","guerrillamail.com","tempmail.com","throwam.com",
+  "yopmail.com","sharklasers.com","guerrillamail.info","guerrillamail.biz",
+  "guerrillamail.de","guerrillamail.net","guerrillamail.org","spam4.me",
+  "trashmail.com","trashmail.me","trashmail.net","dispostable.com",
+  "mailnull.com","spamgourmet.com","maildrop.cc","discard.email",
+  "fakeinbox.com","mailnesia.com","spamfree24.org","mytrashmail.com",
+  "tempr.email","10minutemail.com","10minutemail.net","minuteinbox.com",
+  "throwaway.email","getnada.com","mailtemp.net","tempinbox.com",
+]);
+
+function nameError(v) {
+  const s = v.trim();
+  if (!s) return "Name is required";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (!/^[a-zA-Z\s\-'.]+$/.test(s)) return "Only letters, spaces and - . ' allowed";
+  return "";
+}
+
+function emailError(v) {
+  const s = v.trim().toLowerCase();
+  if (!s) return "Email is required";
+  if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(s)) return "Enter a valid email address";
+  const domain = s.split("@")[1];
+  if (DISPOSABLE_DOMAINS.has(domain)) return "Disposable email addresses are not allowed";
+  return "";
+}
+
+function postalCodeError(v) {
+  if (!v || !v.trim()) return "";
+  if (!/^\d{6}$/.test(v.trim())) return "Enter a valid 6-digit PIN code";
+  return "";
+}
+
+function idNumberError(idType, idNumber) {
+  if (!idType || !idNumber.trim()) return "";
+  const n = idNumber.trim().toUpperCase();
+  if (idType === "aadhaar"         && !/^\d{12}$/.test(n))                    return "Aadhaar must be exactly 12 digits";
+  if (idType === "pan"             && !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(n)) return "PAN format: ABCDE1234F";
+  if (idType === "passport"        && !/^[A-Z][0-9]{7}$/.test(n))             return "Passport format: A1234567";
+  if (idType === "driving_license" && n.length < 8)                            return "Enter a valid driving license number";
+  if (idType === "voter_id"        && !/^[A-Z]{3}[0-9]{7}$/.test(n))         return "Voter ID format: ABC1234567";
+  return "";
+}
+
+function InlineErr({ msg, show }) {
+  if (!show || !msg) return null;
+  return <p style={{ color:"#dc2626", fontSize:"0.72rem", fontWeight:700, marginTop:4, marginBottom:0, lineHeight:1.3 }}>{msg}</p>;
+}
+
 const publicFetch = async (url, options = {}) => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -259,6 +311,10 @@ export default function PublicVisitorRegistration() {
   const [photoBlob,    setPhotoBlob]    = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
 
+  const [touched,      setTouched]      = useState({});
+  const [idTouched,    setIdTouched]    = useState(false);
+  const [postalTouched, setPostalTouched] = useState(false);
+
   const [returningData,       setReturningData]       = useState(null);
   const [showReturnPreview,   setShowReturnPreview]   = useState(false);
   const [returningPhotoKey,   setReturningPhotoKey]   = useState(null);
@@ -328,9 +384,8 @@ export default function PublicVisitorRegistration() {
 
   const handleSendOTP = async () => {
     const trimmed = phone.trim().replace(/\D/g, "");
-    if (!trimmed || trimmed.length !== 10) {
-      setError("Valid 10-digit WhatsApp number required"); return;
-    }
+    if (!trimmed || trimmed.length !== 10) { setError("Valid 10-digit WhatsApp number required"); return; }
+    if (!/^[6-9]/.test(trimmed)) { setError("Number must start with 6, 7, 8 or 9"); return; }
     try {
       setError(""); setSubmitting(true);
       const data = await publicFetch(`/api/public/visitor/${slug}/otp/send`, {
@@ -402,19 +457,24 @@ export default function PublicVisitorRegistration() {
   const validateStep = useCallback(() => {
     setError("");
     if (step === 1) {
-      if (!formData.name.trim()) { setError("Visitor name is required"); return false; }
-      if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-        setError("Valid email address required"); return false;
-      }
+      setTouched({ name: true, email: true });
+      const nErr = nameError(formData.name);
+      const eErr = emailError(formData.email);
+      if (nErr) { setError(nErr); return false; }
+      if (eErr) { setError(eErr); return false; }
     }
-    if (step === 2 && !formData.personToMeet.trim()) {
-      setError("Person to meet is required"); return false;
+    if (step === 2) {
+      if (!formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
+      const pinErr = postalCodeError(formData.postalCode);
+      if (pinErr) { setPostalTouched(true); setError(pinErr); return false; }
     }
-    if (step === 3 && !photo && !returningPhotoKey) {
-      setError("Visitor photo is required"); return false;
+    if (step === 3) {
+      if (!photo && !returningPhotoKey) { setError("Visitor photo is required"); return false; }
+      const idErr = idNumberError(formData.idType, formData.idNumber);
+      if (idErr) { setIdTouched(true); setError(idErr); return false; }
     }
     return true;
-  }, [step, formData, photo, photoBlob]);
+  }, [step, formData, photo, returningPhotoKey]);
 
   const handleNext   = useCallback(() => { if (validateStep()) { setError(""); setStep((p) => p + 1); } }, [validateStep]);
 
@@ -787,7 +847,10 @@ export default function PublicVisitorRegistration() {
                 <label htmlFor="name">Full Name *</label>
                 <input id="name" className={styles.input} type="text" name="name"
                   value={formData.name} onChange={handleInputChange}
+                  onBlur={() => setTouched(p => ({ ...p, name: true }))}
+                  style={{ borderColor: touched.name && nameError(formData.name) ? "#dc2626" : undefined }}
                   placeholder="Enter your full name" autoComplete="name" />
+                <InlineErr msg={nameError(formData.name)} show={touched.name} />
               </div>
               <div className={styles.formGroup}>
                 <label>WhatsApp Number (Verified ✓)</label>
@@ -802,7 +865,10 @@ export default function PublicVisitorRegistration() {
                 <label htmlFor="email">Email Address *</label>
                 <input id="email" className={styles.input} type="email" name="email"
                   value={formData.email} onChange={handleInputChange}
+                  onBlur={() => setTouched(p => ({ ...p, email: true }))}
+                  style={{ borderColor: touched.email && emailError(formData.email) ? "#dc2626" : undefined }}
                   placeholder="your.email@example.com" autoComplete="email" autoCapitalize="none" />
+                <InlineErr msg={emailError(formData.email)} show={touched.email} />
               </div>
               <button className={styles.primaryBtn} onClick={handleNext}>Next →</button>
             </main>
@@ -837,14 +903,21 @@ export default function PublicVisitorRegistration() {
                   placeholder="Organization Address" autoComplete="street-address" />
               </div>
 
-              {/* Address details — 3-col grid */}
+              {/* Address details — city/state inline, postal code standalone for inline error */}
               <div className={styles.gridRow}>
                 <input className={styles.input} name="city"
                   value={formData.city} onChange={handleInputChange} placeholder="City" autoComplete="address-level2" />
                 <input className={styles.input} name="state"
                   value={formData.state} onChange={handleInputChange} placeholder="State" autoComplete="address-level1" />
+              </div>
+              <div className={styles.formGroup}>
                 <input className={styles.input} name="postalCode"
-                  value={formData.postalCode} onChange={handleInputChange} placeholder="Postal Code" inputMode="numeric" />
+                  value={formData.postalCode}
+                  onChange={(e) => setFormData(p => ({ ...p, postalCode: e.target.value.replace(/\D/g,"").slice(0,6) }))}
+                  onBlur={() => setPostalTouched(true)}
+                  style={{ borderColor: postalTouched && postalCodeError(formData.postalCode) ? "#dc2626" : undefined }}
+                  placeholder="6-digit PIN code" inputMode="numeric" maxLength={6} />
+                <InlineErr msg={postalCodeError(formData.postalCode)} show={postalTouched} />
               </div>
 
               {/* Country — standalone */}
@@ -972,7 +1045,12 @@ export default function PublicVisitorRegistration() {
               <div className={styles.formGroup}>
                 <label htmlFor="idNumber">ID Number</label>
                 <input id="idNumber" className={styles.input} name="idNumber"
-                  value={formData.idNumber} onChange={handleInputChange} placeholder="ID Number (Optional)" />
+                  value={formData.idNumber}
+                  onChange={(e) => { handleInputChange(e); setIdTouched(false); }}
+                  onBlur={() => setIdTouched(true)}
+                  style={{ borderColor: idTouched && idNumberError(formData.idType, formData.idNumber) ? "#dc2626" : undefined }}
+                  placeholder="ID Number (Optional)" />
+                <InlineErr msg={idNumberError(formData.idType, formData.idNumber)} show={idTouched} />
               </div>
               <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>

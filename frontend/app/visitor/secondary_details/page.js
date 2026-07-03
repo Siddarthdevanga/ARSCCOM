@@ -6,6 +6,17 @@ import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
+function postalCodeError(v) {
+  if (!v || !v.trim()) return "";
+  if (!/^\d{6}$/.test(v.trim())) return "Enter a valid 6-digit PIN code";
+  return "";
+}
+
+function InlineErr({ msg, show }) {
+  if (!show || !msg) return null;
+  return <p style={{ color:"#dc2626", fontSize:"0.72rem", fontWeight:700, marginTop:4, marginBottom:0 }}>{msg}</p>;
+}
+
 /* ─────────────────────────────────────────────────────────────────
    EMPLOYEE AUTOCOMPLETE — ADMIN FLOW
    Mirrors public page: debounce 300ms, clear button, keyboard
@@ -211,6 +222,7 @@ export default function SecondaryDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error,     setError]     = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
+  const [postalTouched, setPostalTouched] = useState(false);
 
   const [form, setForm] = useState({
     fromCompany:"", department:"", designation:"",
@@ -274,8 +286,13 @@ export default function SecondaryDetails() {
   const goNext = () => {
     if (!form.personToMeet.trim()) {
       setError("Person to Meet is required");
-      // Scroll to the field
       document.querySelector("[data-meet-field]")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    const pinErr = postalCodeError(form.postalCode);
+    if (pinErr) {
+      setPostalTouched(true);
+      setError(pinErr);
       return;
     }
     setError("");
@@ -373,8 +390,16 @@ export default function SecondaryDetails() {
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Postal Code</label>
-                <input className={styles.input} value={form.postalCode}
-                  onChange={(e) => updateField("postalCode", e.target.value)} placeholder="PIN / ZIP" inputMode="numeric" />
+                <input className={styles.input}
+                  style={{ borderColor: postalTouched && postalCodeError(form.postalCode) ? "#dc2626" : undefined }}
+                  value={form.postalCode}
+                  onChange={(e) => updateField("postalCode", e.target.value.replace(/\D/g,"").slice(0,6))}
+                  onBlur={() => setPostalTouched(true)}
+                  placeholder="6-digit PIN code"
+                  inputMode="numeric"
+                  maxLength={6}
+                />
+                <InlineErr msg={postalCodeError(form.postalCode)} show={postalTouched} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Country</label>

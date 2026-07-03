@@ -238,6 +238,7 @@ export default function NewVisitorPage() {
   useEffect(() => {
     const digits = phone.replace(/\D/g, "");
     if (digits.length !== 10) return;
+    if (!/^[6-9]/.test(digits)) return;
     let cancelled = false;
     setLooking(true);
     setProfile(null);
@@ -394,8 +395,15 @@ export default function NewVisitorPage() {
               )}
             </div>
 
+            {/* ── Phone 6-9 rule error ── */}
+            {phone.replace(/\D/g,"").length === 10 && !/^[6-9]/.test(phone) && (
+              <p style={{ color:"#dc2626", fontSize:"0.75rem", fontWeight:700, marginTop:"0.3rem" }}>
+                Number must start with 6, 7, 8 or 9
+              </p>
+            )}
+
             {/* ── New visitor ── */}
-            {!profile && phone.replace(/\D/g,"").length === 10 && (
+            {!profile && phone.replace(/\D/g,"").length === 10 && /^[6-9]/.test(phone) && (
               <button className={styles.nextBtn} onClick={handleProceedNew}
                 style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
                 Continue as New Visitor
