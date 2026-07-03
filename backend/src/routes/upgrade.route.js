@@ -286,7 +286,6 @@ router.post("/", authenticate, async (req, res) => {
       };
 
       console.log(`💳 Creating Business Upgrade Payment Link → ₹${BUSINESS_TOTAL_STR} (incl. 18% GST) for Company ${companyId}`);
-      console.log("📤 ZOHO PAYMENT PAYLOAD:", JSON.stringify(payload, null, 2));
 
       let client = await zohoClient();
       let data;

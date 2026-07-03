@@ -104,6 +104,16 @@ export const login = async (req, res) => {
       console.warn("⚠ LOGIN WARNING: Company slug missing");
     }
 
+    /* Set httpOnly cookie so the token cannot be read by JavaScript.
+       The Authorization header flow still works — this is additive. */
+    res.cookie("token", result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 12 * 60 * 60 * 1000, // 12 hours — matches JWT_EXPIRY
+      path: "/",
+    });
+
     return res.status(200).json({
       success: true,
       message: "Login successful",

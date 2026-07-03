@@ -17,7 +17,6 @@ const SUCCESS_STATUSES = ["paid", "success", "completed"];
 router.post("/push", async (req, res) => {
   try {
     console.log("📩 ZOHO WEBHOOK RECEIVED");
-    console.log("📦 Payload:", req.body);
 
     /* ================================
        SECURITY CHECK

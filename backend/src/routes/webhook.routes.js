@@ -73,9 +73,6 @@ router.post("/", async (req, res) => {
     }
 
     console.log("🔥 ZOHO WEBHOOK HIT");
-    console.log("📩 FULL PAYLOAD ===============");
-    console.dir(req.body, { depth: 10 });
-    console.log("================================");
 
     const body = req.body || {};
     const event = body.event_type || body.event || "unknown";
@@ -86,8 +83,7 @@ router.post("/", async (req, res) => {
     const customerId = extractCustomerId(body);
     const subscriptionId = extractSubscriptionId(body);
 
-    console.log("👤 Extracted Customer ID:", customerId);
-    console.log("🧾 Extracted Subscription ID:", subscriptionId);
+    console.log("🔔 Processing event for customer:", customerId ? "found" : "missing");
 
     if (!customerId) {
       console.log("❌ Customer ID missing in Zoho payload");

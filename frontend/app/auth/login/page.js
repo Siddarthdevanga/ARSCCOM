@@ -153,7 +153,6 @@ export default function LoginPage() {
       setFailedAttempts(0);
       localStorage.removeItem("regEmail");
       localStorage.setItem("token", token);
-      document.cookie = `token=${token}; path=/; SameSite=Lax`;
 
       if (!company) {
         setError("Company not found. Redirecting to registration...");

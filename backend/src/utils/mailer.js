@@ -42,9 +42,6 @@ transporter.verify((err, success) => {
     console.error(err);
   } else {
     console.log("✅ SMTP server ready to send emails");
-    console.log(`   Host: ${process.env.SMTP_HOST}`);
-    console.log(`   Port: ${process.env.SMTP_PORT}`);
-    console.log(`   User: ${process.env.SMTP_USER}`);
   }
 });
 

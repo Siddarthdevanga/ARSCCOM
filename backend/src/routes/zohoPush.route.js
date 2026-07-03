@@ -6,7 +6,10 @@ const router = express.Router();
 /* =====================================================
    CONSTANTS
 ===================================================== */
-const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY || "PROMEET_SUPER_SECRET";
+const WEBHOOK_KEY = process.env.ZOHO_WEBHOOK_KEY;
+if (!WEBHOOK_KEY) {
+  console.error("❌ CRITICAL: ZOHO_WEBHOOK_KEY env var not set — all webhook push requests will be rejected");
+}
 const SUCCESS_EVENTS = ["payment_success", "subscription_activated"];
 const SUCCESS_STATUSES = ["paid", "success", "completed"];
 
@@ -27,7 +30,6 @@ function getPlanDuration(plan) {
 router.post("/push", async (req, res) => {
   try {
     console.log("📩 ZOHO WEBHOOK RECEIVED");
-    console.log("📦 Payload:", req.body);
 
     /* ================================
        SECURITY CHECK

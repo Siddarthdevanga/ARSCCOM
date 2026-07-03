@@ -116,7 +116,7 @@ export const createPayment = async (req, res) => {
       is_partial_payment: false
     };
 
-    console.log("🔎 ZOHO PAYMENT PAYLOAD:", payload);
+    console.log("🔎 Creating Zoho payment link for amount:", payload.amount);
 
     /* ================= CREATE PAYMENT LINK ================= */
     const { data } = await client.post("/paymentlinks", payload);

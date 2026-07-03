@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
+import cookieParser from "cookie-parser";
 
 /* ================= ROUTE IMPORTS ================= */
 import authRoutes from "./routes/auth.routes.js";
@@ -36,6 +37,8 @@ import {
   generalLimiter,
   superAdminLimiter,
   exportLimiter,
+  webhookLimiter,
+  whatsappInboundLimiter,
 } from "./middlewares/rateLimiter.js";
 
 const app = express();
@@ -128,9 +131,12 @@ app.use(
   })
 );
 
+/* ================= COOKIE PARSER ================= */
+app.use(cookieParser());
+
 /* ================= BODY PARSER ================= */
-app.use(express.json({ limit: "25mb", strict: false }));
-app.use(express.urlencoded({ extended: true, limit: "25mb" }));
+app.use(express.json({ limit: "1mb", strict: false }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 /* ================= LOGGING ================= */
 app.use((req, res, next) => {
@@ -223,11 +229,11 @@ app.use("/api/settings", generalLimiter, settingsRoutes);
 app.use("/api/billing/repair", generalLimiter, billingRepair);
 app.use("/api/billing/cron",   generalLimiter, billingCron);
 
-// Webhooks — no rate limiting (Zoho needs to call freely)
-app.use("/api/webhook", webhookRoutes);
+// Webhooks — rate limited to prevent flooding
+app.use("/api/webhook", webhookLimiter, webhookRoutes);
 
-// WhatsApp bot (Gupshup inbound) — no auth, no rate limit
-app.use("/api/whatsapp", whatsappRoutes);
+// WhatsApp bot (Gupshup inbound) — rate limited
+app.use("/api/whatsapp", whatsappInboundLimiter, whatsappRoutes);
 
 /* =====================================================
    SUPERADMIN ROUTES

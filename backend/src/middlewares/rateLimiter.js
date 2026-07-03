@@ -136,3 +136,29 @@ export const exportLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+/* ======================================================
+   WEBHOOK  — Zoho payment/subscription callbacks
+   High enough for bursts but limits flooding
+====================================================== */
+export const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 60,
+  keyGenerator: keyByIp,
+  handler,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/* ======================================================
+   WHATSAPP INBOUND  — Gupshup bot callbacks
+   Higher volume expected (replies from users)
+====================================================== */
+export const whatsappInboundLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 min
+  max: 120,
+  keyGenerator: keyByIp,
+  handler,
+  standardHeaders: true,
+  legacyHeaders: false,
+});

@@ -247,7 +247,7 @@ export const sendApprovalWhatsApp = async ({
   const approveSuffix = `${responseToken}/accept`;
   const declineSuffix = `${responseToken}/decline`;
 
-  console.log(`[WHATSAPP][APPROVAL] → ${destination} | visitor: ${visitorName} | token: ${responseToken}`);
+  console.log(`[WHATSAPP][APPROVAL] → ${destination} | visitor: ${visitorName} | token: ${responseToken.substring(0, 8)}***`);
 
   // Template body: {{1}} = visitor name, {{2}} = visitor code only
   // (base URL is hardcoded in template: https://www.promeet.zodopt.com/visitor/pass?code={{2}})

@@ -5,7 +5,7 @@ export const generateToken = async (user) => {
   const s = await loadSecrets();
 
   return jwt.sign(
-    { user_id: user.id, company_id: user.company_id },
+    { userId: user.id, companyId: user.company_id },
     s.JWT_SECRET,
     { expiresIn: "12h" }
   );
