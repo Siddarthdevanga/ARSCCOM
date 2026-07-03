@@ -12,6 +12,68 @@ function postalCodeError(v) {
   return "";
 }
 
+const JUNK_WORDS = new Set([
+  "test","testing","demo","sample","temp","dummy","abc","abcd","abcde",
+  "xyz","xyzz","asd","asdf","asdfg","qwerty","qwer","zzz","xxx","yyy",
+  "qqq","aaa","bbb","ccc","hello","hai","hi","ok","no","na","none",
+  "null","undefined","random","blah","nope","nada","lol","foobar","foo","bar",
+]);
+
+function isJunk(v) {
+  const s = v.trim().toLowerCase();
+  if (JUNK_WORDS.has(s)) return true;
+  if (/^(.)\1+$/.test(s)) return true; // aaa, bbb, zzz
+  return false;
+}
+
+function fromCompanyError(v) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (isJunk(s)) return "Enter a valid company name";
+  if (!/^[a-zA-Z0-9\s\-'.&,]+$/.test(s)) return "Only letters, numbers, spaces and - ' . & , allowed";
+  return "";
+}
+
+function deptDesigError(v, label) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (isJunk(s)) return `Enter a valid ${label}`;
+  if (!/^[a-zA-Z0-9\s\-'.&,/]+$/.test(s)) return `Only letters, numbers, spaces and - ' . & , / allowed`;
+  return "";
+}
+
+function addressError(v) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 5) return "Minimum 5 characters";
+  if (/^(.)\1+$/.test(s)) return "Enter a valid address";
+  if (isJunk(s)) return "Enter a valid address";
+  return "";
+}
+
+function cityStateCountryError(v, label) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (isJunk(s)) return `Enter a valid ${label}`;
+  if (!/^[a-zA-Z\s\-]+$/.test(s)) return "Only letters, spaces and - allowed";
+  return "";
+}
+
+function purposeError(v) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 3) return "Minimum 3 characters";
+  if (/^(.)\1+$/.test(s)) return "Enter a meaningful purpose of visit";
+  if (isJunk(s)) return "Enter a meaningful purpose of visit";
+  return "";
+}
+
 function InlineErr({ msg, show }) {
   if (!show || !msg) return null;
   return <p style={{ color:"#dc2626", fontSize:"0.72rem", fontWeight:700, marginTop:4, marginBottom:0 }}>{msg}</p>;
@@ -222,7 +284,7 @@ export default function SecondaryDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error,     setError]     = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
-  const [postalTouched, setPostalTouched] = useState(false);
+  const [touched, setTouched] = useState({});
 
   const [form, setForm] = useState({
     fromCompany:"", department:"", designation:"",
@@ -283,18 +345,35 @@ export default function SecondaryDetails() {
 
   const goBack = () => router.push("/visitor/primary_details");
 
+  const handleBlur = (field) => setTouched(p => ({ ...p, [field]: true }));
+
+  const fe = {
+    fromCompany: fromCompanyError(form.fromCompany),
+    department:  deptDesigError(form.department, "department"),
+    designation: deptDesigError(form.designation, "designation"),
+    address:     addressError(form.address),
+    city:        cityStateCountryError(form.city, "city"),
+    state:       cityStateCountryError(form.state, "state"),
+    postalCode:  postalCodeError(form.postalCode),
+    country:     cityStateCountryError(form.country, "country"),
+    purpose:     purposeError(form.purpose),
+  };
+
+  const borderFor = (field) =>
+    touched[field] && fe[field] ? "1px solid #dc2626" : undefined;
+
   const goNext = () => {
     if (!form.personToMeet.trim()) {
       setError("Person to Meet is required");
       document.querySelector("[data-meet-field]")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
-    const pinErr = postalCodeError(form.postalCode);
-    if (pinErr) {
-      setPostalTouched(true);
-      setError(pinErr);
-      return;
-    }
+    const allFields = ["fromCompany","department","designation","address","city","state","postalCode","country","purpose"];
+    const newTouched = {};
+    allFields.forEach(f => { newTouched[f] = true; });
+    setTouched(newTouched);
+    const firstErr = allFields.map(f => fe[f]).find(Boolean);
+    if (firstErr) { setError(firstErr); return; }
     setError("");
     localStorage.setItem("visitor_secondary", JSON.stringify({ ...form, _employeeId: selectedEmployeeId }));
     router.push("/visitor/identity");
@@ -352,18 +431,33 @@ export default function SecondaryDetails() {
             <div className={styles.row3}>
               <div className={styles.field}>
                 <label className={styles.label}>From Company</label>
-                <input className={styles.input} value={form.fromCompany}
-                  onChange={(e) => updateField("fromCompany", e.target.value)} placeholder="Company name" />
+                <input className={styles.input}
+                  style={{ borderColor: borderFor("fromCompany") }}
+                  value={form.fromCompany}
+                  onChange={(e) => updateField("fromCompany", e.target.value)}
+                  onBlur={() => handleBlur("fromCompany")}
+                  placeholder="Company name" />
+                <InlineErr msg={fe.fromCompany} show={touched.fromCompany} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Department</label>
-                <input className={styles.input} value={form.department}
-                  onChange={(e) => updateField("department", e.target.value)} placeholder="Department" />
+                <input className={styles.input}
+                  style={{ borderColor: borderFor("department") }}
+                  value={form.department}
+                  onChange={(e) => updateField("department", e.target.value)}
+                  onBlur={() => handleBlur("department")}
+                  placeholder="Department" />
+                <InlineErr msg={fe.department} show={touched.department} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Designation</label>
-                <input className={styles.input} value={form.designation}
-                  onChange={(e) => updateField("designation", e.target.value)} placeholder="Designation" />
+                <input className={styles.input}
+                  style={{ borderColor: borderFor("designation") }}
+                  value={form.designation}
+                  onChange={(e) => updateField("designation", e.target.value)}
+                  onBlur={() => handleBlur("designation")}
+                  placeholder="Designation" />
+                <InlineErr msg={fe.designation} show={touched.designation} />
               </div>
             </div>
 
@@ -374,37 +468,57 @@ export default function SecondaryDetails() {
             </div>
             <div className={styles.fullRow}>
               <label className={styles.label}>Organization Address</label>
-              <input className={styles.input} value={form.address}
-                onChange={(e) => updateField("address", e.target.value)} placeholder="Full address" />
+              <input className={styles.input}
+                style={{ borderColor: borderFor("address") }}
+                value={form.address}
+                onChange={(e) => updateField("address", e.target.value)}
+                onBlur={() => handleBlur("address")}
+                placeholder="Full address" />
+              <InlineErr msg={fe.address} show={touched.address} />
             </div>
             <div className={styles.row4}>
               <div className={styles.field}>
                 <label className={styles.label}>City</label>
-                <input className={styles.input} value={form.city}
-                  onChange={(e) => updateField("city", e.target.value)} placeholder="City" />
+                <input className={styles.input}
+                  style={{ borderColor: borderFor("city") }}
+                  value={form.city}
+                  onChange={(e) => updateField("city", e.target.value)}
+                  onBlur={() => handleBlur("city")}
+                  placeholder="City" />
+                <InlineErr msg={fe.city} show={touched.city} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>State</label>
-                <input className={styles.input} value={form.state}
-                  onChange={(e) => updateField("state", e.target.value)} placeholder="State" />
+                <input className={styles.input}
+                  style={{ borderColor: borderFor("state") }}
+                  value={form.state}
+                  onChange={(e) => updateField("state", e.target.value)}
+                  onBlur={() => handleBlur("state")}
+                  placeholder="State" />
+                <InlineErr msg={fe.state} show={touched.state} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Postal Code</label>
                 <input className={styles.input}
-                  style={{ borderColor: postalTouched && postalCodeError(form.postalCode) ? "#dc2626" : undefined }}
+                  style={{ borderColor: borderFor("postalCode") }}
                   value={form.postalCode}
                   onChange={(e) => updateField("postalCode", e.target.value.replace(/\D/g,"").slice(0,6))}
-                  onBlur={() => setPostalTouched(true)}
+                  onBlur={() => handleBlur("postalCode")}
                   placeholder="6-digit PIN code"
                   inputMode="numeric"
                   maxLength={6}
                 />
-                <InlineErr msg={postalCodeError(form.postalCode)} show={postalTouched} />
+                <InlineErr msg={fe.postalCode} show={touched.postalCode} />
               </div>
               <div className={styles.field}>
                 <label className={styles.label}>Country</label>
-                <input className={styles.input} value={form.country}
-                  onChange={(e) => updateField("country", e.target.value)} placeholder="Country" />
+                <input className={styles.input}
+                  style={{ borderColor: borderFor("country") }}
+                  value={form.country}
+                  onChange={(e) => updateField("country", e.target.value)}
+                  onBlur={() => handleBlur("country")}
+                  placeholder="Country" />
+                <InlineErr msg={fe.country} show={touched.country} />
               </div>
             </div>
 
@@ -445,9 +559,13 @@ export default function SecondaryDetails() {
 
             <div className={styles.fullRow} style={{ marginTop:"0.75rem" }}>
               <label className={styles.label}>Purpose of Visit</label>
-              <input className={styles.input} value={form.purpose}
+              <input className={styles.input}
+                style={{ borderColor: borderFor("purpose") }}
+                value={form.purpose}
                 onChange={(e) => updateField("purpose", e.target.value)}
+                onBlur={() => handleBlur("purpose")}
                 placeholder="Meeting / Delivery / Interview…" />
+              <InlineErr msg={fe.purpose} show={touched.purpose} />
             </div>
 
             {/* Belongings */}

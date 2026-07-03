@@ -55,6 +55,68 @@ function idNumberError(idType, idNumber) {
   return "";
 }
 
+const JUNK_WORDS = new Set([
+  "test","testing","demo","sample","temp","dummy","abc","abcd","abcde",
+  "xyz","xyzz","asd","asdf","asdfg","qwerty","qwer","zzz","xxx","yyy",
+  "qqq","aaa","bbb","ccc","hello","hai","hi","ok","no","na","none",
+  "null","undefined","random","blah","nope","nada","lol","foobar","foo","bar",
+]);
+
+function isJunk(v) {
+  const s = v.trim().toLowerCase();
+  if (JUNK_WORDS.has(s)) return true;
+  if (/^(.)\1+$/.test(s)) return true;
+  return false;
+}
+
+function fromCompanyError(v) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (isJunk(s)) return "Enter a valid company name";
+  if (!/^[a-zA-Z0-9\s\-'.&,]+$/.test(s)) return "Only letters, numbers, spaces and - ' . & , allowed";
+  return "";
+}
+
+function deptDesigError(v, label) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (isJunk(s)) return `Enter a valid ${label}`;
+  if (!/^[a-zA-Z0-9\s\-'.&,/]+$/.test(s)) return `Only letters, numbers, spaces and - ' . & , / allowed`;
+  return "";
+}
+
+function addressError(v) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 5) return "Minimum 5 characters";
+  if (/^(.)\1+$/.test(s)) return "Enter a valid address";
+  if (isJunk(s)) return "Enter a valid address";
+  return "";
+}
+
+function cityStateCountryError(v, label) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 2) return "Minimum 2 characters";
+  if (/^\d+$/.test(s)) return "Cannot be numbers only";
+  if (isJunk(s)) return `Enter a valid ${label}`;
+  if (!/^[a-zA-Z\s\-]+$/.test(s)) return "Only letters, spaces and - allowed";
+  return "";
+}
+
+function purposeError(v) {
+  const s = v.trim();
+  if (!s) return "";
+  if (s.length < 3) return "Minimum 3 characters";
+  if (/^(.)\1+$/.test(s)) return "Enter a meaningful purpose of visit";
+  if (isJunk(s)) return "Enter a meaningful purpose of visit";
+  return "";
+}
+
 function InlineErr({ msg, show }) {
   if (!show || !msg) return null;
   return <p style={{ color:"#dc2626", fontSize:"0.72rem", fontWeight:700, marginTop:4, marginBottom:0, lineHeight:1.3 }}>{msg}</p>;
@@ -313,7 +375,7 @@ export default function PublicVisitorRegistration() {
 
   const [touched,      setTouched]      = useState({});
   const [idTouched,    setIdTouched]    = useState(false);
-  const [postalTouched, setPostalTouched] = useState(false);
+  const [secTouched,   setSecTouched]   = useState({});
 
   const [returningData,       setReturningData]       = useState(null);
   const [showReturnPreview,   setShowReturnPreview]   = useState(false);
@@ -465,8 +527,23 @@ export default function PublicVisitorRegistration() {
     }
     if (step === 2) {
       if (!formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
-      const pinErr = postalCodeError(formData.postalCode);
-      if (pinErr) { setPostalTouched(true); setError(pinErr); return false; }
+      const secFields = ["fromCompany","department","designation","address","city","state","postalCode","country","purpose"];
+      const allTouched = {};
+      secFields.forEach(f => { allTouched[f] = true; });
+      setSecTouched(allTouched);
+      const secErrors = {
+        fromCompany: fromCompanyError(formData.fromCompany),
+        department:  deptDesigError(formData.department, "department"),
+        designation: deptDesigError(formData.designation, "designation"),
+        address:     addressError(formData.address),
+        city:        cityStateCountryError(formData.city, "city"),
+        state:       cityStateCountryError(formData.state, "state"),
+        postalCode:  postalCodeError(formData.postalCode),
+        country:     cityStateCountryError(formData.country, "country"),
+        purpose:     purposeError(formData.purpose),
+      };
+      const firstErr = secFields.map(f => secErrors[f]).find(Boolean);
+      if (firstErr) { setError(firstErr); return false; }
     }
     if (step === 3) {
       if (!photo && !returningPhotoKey) { setError("Visitor photo is required"); return false; }
@@ -888,43 +965,79 @@ export default function PublicVisitorRegistration() {
 
               {/* Org fields — 3-col grid */}
               <div className={styles.gridRow}>
-                <input className={styles.input} name="fromCompany"
-                  value={formData.fromCompany} onChange={handleInputChange} placeholder="From Company" autoComplete="organization" />
-                <input className={styles.input} name="department"
-                  value={formData.department} onChange={handleInputChange} placeholder="Department" />
-                <input className={styles.input} name="designation"
-                  value={formData.designation} onChange={handleInputChange} placeholder="Designation" />
+                <div>
+                  <input className={styles.input} name="fromCompany"
+                    value={formData.fromCompany} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, fromCompany: true }))}
+                    style={{ borderColor: secTouched.fromCompany && fromCompanyError(formData.fromCompany) ? "#dc2626" : undefined }}
+                    placeholder="From Company" autoComplete="organization" />
+                  <InlineErr msg={fromCompanyError(formData.fromCompany)} show={secTouched.fromCompany} />
+                </div>
+                <div>
+                  <input className={styles.input} name="department"
+                    value={formData.department} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, department: true }))}
+                    style={{ borderColor: secTouched.department && deptDesigError(formData.department, "department") ? "#dc2626" : undefined }}
+                    placeholder="Department" />
+                  <InlineErr msg={deptDesigError(formData.department, "department")} show={secTouched.department} />
+                </div>
+                <div>
+                  <input className={styles.input} name="designation"
+                    value={formData.designation} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, designation: true }))}
+                    style={{ borderColor: secTouched.designation && deptDesigError(formData.designation, "designation") ? "#dc2626" : undefined }}
+                    placeholder="Designation" />
+                  <InlineErr msg={deptDesigError(formData.designation, "designation")} show={secTouched.designation} />
+                </div>
               </div>
 
               {/* Address */}
               <div className={styles.formGroup}>
                 <input className={styles.input} name="address"
                   value={formData.address} onChange={handleInputChange}
+                  onBlur={() => setSecTouched(p => ({ ...p, address: true }))}
+                  style={{ borderColor: secTouched.address && addressError(formData.address) ? "#dc2626" : undefined }}
                   placeholder="Organization Address" autoComplete="street-address" />
+                <InlineErr msg={addressError(formData.address)} show={secTouched.address} />
               </div>
 
               {/* Address details — city/state inline, postal code standalone for inline error */}
               <div className={styles.gridRow}>
-                <input className={styles.input} name="city"
-                  value={formData.city} onChange={handleInputChange} placeholder="City" autoComplete="address-level2" />
-                <input className={styles.input} name="state"
-                  value={formData.state} onChange={handleInputChange} placeholder="State" autoComplete="address-level1" />
+                <div>
+                  <input className={styles.input} name="city"
+                    value={formData.city} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, city: true }))}
+                    style={{ borderColor: secTouched.city && cityStateCountryError(formData.city, "city") ? "#dc2626" : undefined }}
+                    placeholder="City" autoComplete="address-level2" />
+                  <InlineErr msg={cityStateCountryError(formData.city, "city")} show={secTouched.city} />
+                </div>
+                <div>
+                  <input className={styles.input} name="state"
+                    value={formData.state} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, state: true }))}
+                    style={{ borderColor: secTouched.state && cityStateCountryError(formData.state, "state") ? "#dc2626" : undefined }}
+                    placeholder="State" autoComplete="address-level1" />
+                  <InlineErr msg={cityStateCountryError(formData.state, "state")} show={secTouched.state} />
+                </div>
               </div>
               <div className={styles.formGroup}>
                 <input className={styles.input} name="postalCode"
                   value={formData.postalCode}
                   onChange={(e) => setFormData(p => ({ ...p, postalCode: e.target.value.replace(/\D/g,"").slice(0,6) }))}
-                  onBlur={() => setPostalTouched(true)}
-                  style={{ borderColor: postalTouched && postalCodeError(formData.postalCode) ? "#dc2626" : undefined }}
+                  onBlur={() => setSecTouched(p => ({ ...p, postalCode: true }))}
+                  style={{ borderColor: secTouched.postalCode && postalCodeError(formData.postalCode) ? "#dc2626" : undefined }}
                   placeholder="6-digit PIN code" inputMode="numeric" maxLength={6} />
-                <InlineErr msg={postalCodeError(formData.postalCode)} show={postalTouched} />
+                <InlineErr msg={postalCodeError(formData.postalCode)} show={secTouched.postalCode} />
               </div>
 
               {/* Country — standalone */}
               <div className={styles.formGroup}>
                 <input className={styles.input} name="country"
                   value={formData.country} onChange={handleInputChange}
+                  onBlur={() => setSecTouched(p => ({ ...p, country: true }))}
+                  style={{ borderColor: secTouched.country && cityStateCountryError(formData.country, "country") ? "#dc2626" : undefined }}
                   placeholder="Country" autoComplete="country-name" />
+                <InlineErr msg={cityStateCountryError(formData.country, "country")} show={secTouched.country} />
               </div>
 
               {/*
@@ -952,7 +1065,11 @@ export default function PublicVisitorRegistration() {
               {/* Purpose — standalone */}
               <div className={styles.formGroup}>
                 <input className={styles.input} name="purpose"
-                  value={formData.purpose} onChange={handleInputChange} placeholder="Purpose of Visit" />
+                  value={formData.purpose} onChange={handleInputChange}
+                  onBlur={() => setSecTouched(p => ({ ...p, purpose: true }))}
+                  style={{ borderColor: secTouched.purpose && purposeError(formData.purpose) ? "#dc2626" : undefined }}
+                  placeholder="Purpose of Visit" />
+                <InlineErr msg={purposeError(formData.purpose)} show={secTouched.purpose} />
               </div>
 
               {/* Belongings */}
