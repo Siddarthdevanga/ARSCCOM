@@ -367,7 +367,18 @@ export default function Home() {
     toast.confirm(
       "Confirm Logout",
       "Are you sure you want to log out?",
-      () => { localStorage.clear(); router.replace("/auth/login"); },
+      async () => {
+        try {
+          const token = localStorage.getItem("token");
+          await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, {
+            method: "POST",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+            credentials: "include",
+          });
+        } catch { /* ignore — always clear local state */ }
+        localStorage.clear();
+        router.replace("/auth/login");
+      },
       () => {}
     );
   };

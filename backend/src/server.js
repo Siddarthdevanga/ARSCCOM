@@ -51,7 +51,11 @@ const REQUIRED = [
   "ZOHO_API_BASE",
   "ZOHO_CLIENT_ID",
   "ZOHO_CLIENT_SECRET",
-  "ZOHO_REFRESH_TOKEN"
+  "ZOHO_REFRESH_TOKEN",
+  "ZOHO_WEBHOOK_KEY",
+
+  // Security
+  "JWT_SECRET",
 ];
 
 function validateEnv() {

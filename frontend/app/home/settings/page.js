@@ -234,8 +234,16 @@ export default function SettingsPage() {
     finally { setSavingPassword(false); }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (confirm("Are you sure you want to logout?")) {
+      try {
+        const token = localStorage.getItem("token");
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          credentials: "include",
+        });
+      } catch { /* ignore — always clear local state */ }
       localStorage.clear();
       router.replace("/auth/login");
     }

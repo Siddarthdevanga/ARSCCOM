@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import compression from "compression";
 import cookieParser from "cookie-parser";
+import hpp from "hpp";
 
 /* ================= ROUTE IMPORTS ================= */
 import authRoutes from "./routes/auth.routes.js";
@@ -133,6 +134,9 @@ app.use(
 
 /* ================= COOKIE PARSER ================= */
 app.use(cookieParser());
+
+/* ================= HPP ================= */
+app.use(hpp());
 
 /* ================= BODY PARSER ================= */
 app.use(express.json({ limit: "1mb", strict: false }));

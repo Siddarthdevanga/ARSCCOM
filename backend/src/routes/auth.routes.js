@@ -4,7 +4,8 @@ import {
   register,
   login,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  logout,
 } from "../controllers/auth.controller.js";
 
 const router = express.Router();
@@ -120,5 +121,7 @@ router.post("/forgot-password", asyncHandler(forgotPassword));
    - Clears reset tokens
 ====================================================== */
 router.post("/reset-password", asyncHandler(resetPassword));
+
+router.post("/logout", asyncHandler(logout));
 
 export default router;
