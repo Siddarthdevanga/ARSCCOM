@@ -142,9 +142,8 @@ export default function ConferenceDashboard() {
 
   /* ================= LIFECYCLE ================= */
   useEffect(() => {
-    const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
-    if (!token || !storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/auth/login"); return; }
     setCompany(JSON.parse(storedCompany));
     loadDashboard();
   }, []);
@@ -181,12 +180,12 @@ export default function ConferenceDashboard() {
     if (!newName) { showNotification("Name cannot be empty", "error"); return; }
     if (!original?.is_active) { showNotification("Room locked.", "warning"); cancelEdit(); return; }
     try {
-      const token = localStorage.getItem("token");
       const base = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms/${roomId}`;
 
       const res = await fetch(base, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ room_name: newName, capacity: editCapacity || 0 }),
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d?.message || "Update failed"); }
@@ -195,7 +194,7 @@ export default function ConferenceDashboard() {
         const fd = new FormData();
         fd.append("image", editRoomImage);
         const imgRes = await fetch(`${base}/image`, {
-          method: "PATCH", headers: { Authorization: `Bearer ${token}` }, body: fd,
+          method: "PATCH", credentials: "include", body: fd,
         });
         if (!imgRes.ok) { const d = await imgRes.json(); throw new Error(d?.message || "Image upload failed"); }
       }
@@ -224,14 +223,13 @@ export default function ConferenceDashboard() {
     if (allRooms.some(r => String(r.room_number) === String(number))) { showNotification("Room number exists", "error"); return; }
     setIsCreatingRoom(true);
     try {
-      const token = localStorage.getItem("token");
       const fd = new FormData();
       fd.append("room_name", name);
       fd.append("room_number", number);
       fd.append("capacity", capacity);
       if (newRoomImage) fd.append("image", newRoomImage);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms`, {
-        method: "POST", headers: { Authorization: `Bearer ${token}` }, body: fd,
+        method: "POST", credentials: "include", body: fd,
       });
       if (!res.ok) { const d = await res.json(); throw new Error(d?.message || "Create failed"); }
       const response = await res.json();

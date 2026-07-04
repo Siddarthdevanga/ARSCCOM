@@ -102,12 +102,10 @@ export default function VisitorDashboard() {
     toastTimer.current = setTimeout(() => setToast(null), 3200);
   };
 
-  const getToken = () => localStorage.getItem("token");
-
   const fetchDashboard = useCallback(async () => {
     try {
       const res = await fetch(`${API}/api/visitors/dashboard`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: "include",
       });
       if (res.status === 401) { router.replace("/"); return; }
       const json = await res.json();
@@ -118,38 +116,13 @@ export default function VisitorDashboard() {
   }, [router]);
 
   useEffect(() => {
-    const token  = getToken();
     const stored = localStorage.getItem("company");
-    if (!token) { router.replace("/"); return; }
-
-    // Auto-logout when JWT expires (catches idle sessions with no API calls)
-    let autoLogoutTimer = null;
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      const msLeft  = payload.exp * 1000 - Date.now();
-      if (msLeft <= 0) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("company");
-        router.replace("/");
-        return;
-      }
-      autoLogoutTimer = setTimeout(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("company");
-        router.replace("/");
-      }, msLeft);
-    } catch {}
-
-    if (stored) {
-      try { setCompany(JSON.parse(stored)); } catch {}
-    }
+    if (!stored) { router.replace("/"); return; }
+    try { setCompany(JSON.parse(stored)); } catch {}
 
     fetchDashboard().then(() => setLoading(false));
     pollTimer.current = setInterval(fetchDashboard, 30_000);
-    return () => {
-      clearInterval(pollTimer.current);
-      if (autoLogoutTimer) clearTimeout(autoLogoutTimer);
-    };
+    return () => { clearInterval(pollTimer.current); };
   }, [fetchDashboard]);
 
   useEffect(() => {
@@ -167,7 +140,7 @@ export default function VisitorDashboard() {
     try {
       const res = await fetch(`${API}/api/visitors/${visitorCode}/checkout`, {
         method:  "POST",
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error();
       showToast("Visitor checked out.");
@@ -185,10 +158,8 @@ export default function VisitorDashboard() {
     try {
       const res = await fetch(`${API}/api/visitors/${visitorCode}/visit-status`, {
         method:  "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:  `Bearer ${getToken()}`,
-        },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ status }),
       });
       if (!res.ok) throw new Error();

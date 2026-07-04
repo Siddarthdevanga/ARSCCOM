@@ -4,20 +4,10 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
    HELPERS
 =============================================== */
 
-const getToken = () =>
-  typeof window !== "undefined" ? localStorage.getItem("token") : null;
-
-/**
- * Build headers for PROTECTED routes (attaches JWT)
- */
-const authHeaders = (extra = {}) => {
-  const token = getToken();
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...extra,
-  };
-};
+const authHeaders = (extra = {}) => ({
+  "Content-Type": "application/json",
+  ...extra,
+});
 
 /**
  * Build headers for PUBLIC routes (NO JWT attached)
@@ -39,7 +29,6 @@ export const apiFetch = async (url, options = {}) => {
   });
 
   if (res.status === 401) {
-    // Clear stale token so next page load redirects to login cleanly
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
       localStorage.removeItem("company");
@@ -95,12 +84,8 @@ export const publicFetch = async (url, options = {}) => {
    FILE DOWNLOAD HELPER (PROTECTED)
 =============================================== */
 const downloadFile = async (endpoint, filename, errorMessage = "Failed to download file") => {
-  const token = getToken();
-  if (!token) throw new Error("Authentication required");
-
   const res = await fetch(`${API}${endpoint}`, {
     method: "GET",
-    headers: { Authorization: `Bearer ${token}` },
     credentials: "include",
   });
 
@@ -281,7 +266,7 @@ export const copyToClipboard = async (text) => {
 =============================================== */
 export const isAuthenticated = () => {
   if (typeof window === "undefined") return false;
-  return !!localStorage.getItem("token");
+  return !!localStorage.getItem("company");
 };
 
 export const getStoredCompany = () => {

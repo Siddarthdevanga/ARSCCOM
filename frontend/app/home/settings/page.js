@@ -50,9 +50,8 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
-    if (!token || !storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/auth/login"); return; }
     try {
       setCompany(JSON.parse(storedCompany));
       fetchSettings();
@@ -67,7 +66,7 @@ export default function SettingsPage() {
       setLoading(true);
       setErrorMsg("");
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to load settings");
@@ -96,7 +95,7 @@ export default function SettingsPage() {
       setSavingCompanyName(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ name: tempCompanyName }),
       });
       const data = await res.json();
@@ -120,7 +119,7 @@ export default function SettingsPage() {
       setSavingWhatsapp(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ name: companyName, whatsappUrl: tempWhatsapp || null }),
       });
       const data = await res.json();
@@ -145,7 +144,7 @@ export default function SettingsPage() {
       setSavingUserName(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/profile`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ name: tempUserName, phone: userPhone }),
       });
       const data = await res.json();
@@ -166,7 +165,7 @@ export default function SettingsPage() {
       setSavingUserPhone(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/profile`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ name: userName, phone: tempUserPhone }),
       });
       const data = await res.json();
@@ -198,7 +197,7 @@ export default function SettingsPage() {
       formData.append("logo", logoFile);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company/logo`, {
         method: "PUT",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        credentials: "include",
         body: formData,
       });
       const data = await res.json();
@@ -223,7 +222,7 @@ export default function SettingsPage() {
       setSavingPassword(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/password`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: { "Content-Type": "application/json" }, credentials: "include",
         body: JSON.stringify({ currentPassword, newPassword }),
       });
       const data = await res.json();
@@ -237,10 +236,8 @@ export default function SettingsPage() {
   const handleLogout = async () => {
     if (confirm("Are you sure you want to logout?")) {
       try {
-        const token = localStorage.getItem("token");
         await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, {
           method: "POST",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
           credentials: "include",
         });
       } catch { /* ignore — always clear local state */ }

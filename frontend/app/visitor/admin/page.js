@@ -39,14 +39,13 @@ export default function AdminEmployeesPage() {
     toastTimer.current = setTimeout(() => setToast(null), 3200);
   };
 
-  const getToken = () => localStorage.getItem("token");
-
   const toggleBookingRestriction = async () => {
     setRestrictToggling(true);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/settings/booking-restriction`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ restricted: !bookingRestricted }),
       });
       const data = await res.json();
@@ -62,7 +61,7 @@ export default function AdminEmployeesPage() {
   const fetchEmployees = async () => {
     try {
       const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: "include",
       });
       const data = await res.json();
       setEmployees(Array.isArray(data) ? data : (data.employees || []));
@@ -72,13 +71,12 @@ export default function AdminEmployeesPage() {
   };
 
   useEffect(() => {
-    const token  = getToken();
     const stored = localStorage.getItem("company");
-    if (!token) { router.replace("/"); return; }
-    if (stored) { try { setCompany(JSON.parse(stored)); } catch {} }
+    if (!stored) { router.replace("/"); return; }
+    try { setCompany(JSON.parse(stored)); } catch {}
     fetchEmployees().finally(() => setLoading(false));
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/settings/booking-restriction`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     }).then(r => r.json()).then(d => setBookingRestricted(!!d.restricted)).catch(() => {});
   }, []);
 
@@ -123,7 +121,8 @@ export default function AdminEmployeesPage() {
       const url    = modal === "edit" ? `${base}/api/employees/${editTarget.id}` : `${base}/api/employees`;
       const res    = await fetch(url, {
         method,
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(form),
       });
       const data = await res.json();
@@ -144,7 +143,7 @@ export default function AdminEmployeesPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${deleteTarget.id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: "include",
       });
       if (!res.ok) throw new Error();
       showToast("Employee removed.");
@@ -216,7 +215,8 @@ export default function AdminEmployeesPage() {
       const base = process.env.NEXT_PUBLIC_API_BASE_URL || "";
       const res  = await fetch(`${base}/api/employees/bulk`, {
         method:  "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ employees: bulkRows }),
       });
       const data = await res.json();

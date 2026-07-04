@@ -58,9 +58,8 @@ export default function VisitorPrimaryDetails() {
   const [touched, setTouched] = useState({});
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
     const storedCompany = localStorage.getItem("company");
-    if (!token || !storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(storedCompany)); } catch {
       localStorage.clear(); router.replace("/auth/login"); return;
     }
@@ -82,10 +81,9 @@ export default function VisitorPrimaryDetails() {
     const digits = phone.replace(/\D/g, "");
     if (digits.length !== 10 || !/^[6-9]/.test(digits)) return;
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/returning?phone=${digits}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { credentials: "include" }
       );
       const data = await res.json();
       if (data.found && data.profile) {

@@ -112,19 +112,10 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
     if (!q.trim()) { setResults([]); setOpen(false); return; }
     setFetching(true);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        setResults([]); setOpen(true); return;
-      }
-
       const url = `${API}/api/employees?search=${encodeURIComponent(q)}&limit=10`;
 
       const res = await fetch(url, {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        credentials: "omit",
+        credentials: "include",
       });
 
       if (!res.ok) {
@@ -288,9 +279,8 @@ export default function SecondaryDetails() {
 
   useEffect(() => {
     try {
-      const token         = localStorage.getItem("token");
       const storedCompany = localStorage.getItem("company");
-      if (!token || !storedCompany) { router.replace("/auth/login"); return; }
+      if (!storedCompany) { router.replace("/auth/login"); return; }
       setCompany(JSON.parse(storedCompany));
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {

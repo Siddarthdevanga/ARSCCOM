@@ -152,7 +152,6 @@ export default function LoginPage() {
       /* Success — reset attempt counter and clear stored email */
       setFailedAttempts(0);
       localStorage.removeItem("regEmail");
-      localStorage.setItem("token", token);
 
       if (!company) {
         setError("Company not found. Redirecting to registration...");

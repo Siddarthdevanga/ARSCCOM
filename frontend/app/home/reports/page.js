@@ -436,13 +436,12 @@ export default function ReportsPage(){
   },[]);
 
   const loadAnalytics=useCallback(async(p=period,silent=false)=>{
-    const token=localStorage.getItem("token");
-    if(!token){router.replace("/auth/login");return;}
+    if(!localStorage.getItem("company")){router.replace("/auth/login");return;}
     if(!silent)setLoading(true);else setFetching(true);
     try{
       const res=await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/exports/analytics?period=${p}`,
-        {headers:{Authorization:`Bearer ${token}`}}
+        {credentials:"include"}
       );
       if(!res.ok)throw new Error();
       setAnalytics(await res.json());
@@ -471,7 +470,7 @@ export default function ReportsPage(){
       setExporting(type);
       const res=await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}?period=${period}`,
-        {headers:{Authorization:`Bearer ${localStorage.getItem("token")}`}}
+        {credentials:"include"}
       );
       if(!res.ok)throw new Error();
       const blob=await res.blob();

@@ -50,9 +50,8 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
     if (!q.trim()) { setResults([]); setOpen(false); return; }
     setFetching(true);
     try {
-      const token = localStorage.getItem("token");
       const res = await fetch(`${API}/api/employees?search=${encodeURIComponent(q)}&limit=10`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
       });
       const data = await res.json();
       const list = Array.isArray(data) ? data
@@ -218,9 +217,8 @@ export default function NewVisitorPage() {
   const [miniError,          setMiniError]          = useState("");
 
   useEffect(() => {
-    const token   = localStorage.getItem("token");
     const stored  = localStorage.getItem("company");
-    if (!token || !stored) { router.replace("/auth/login"); return; }
+    if (!stored) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
 
     // Clear all stale registration data from any previous abandoned session
@@ -245,9 +243,8 @@ export default function NewVisitorPage() {
     setError("");
     (async () => {
       try {
-        const token = localStorage.getItem("token");
         const res = await fetch(`${API}/api/visitors/returning?phone=${digits}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: "include",
         });
         const data = await res.json();
         if (cancelled) return;
@@ -288,7 +285,6 @@ export default function NewVisitorPage() {
     setMiniError("");
     setSubmitting(true);
     try {
-      const token = localStorage.getItem("token");
       const fd = new FormData();
       fd.append("name",        profile.name        || "");
       fd.append("phone",       `91${phone.replace(/\D/g, "")}`);
@@ -311,7 +307,7 @@ export default function NewVisitorPage() {
 
       const res = await fetch(`${API}/api/visitors`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
         body: fd,
       });
       const data = await res.json();

@@ -132,11 +132,9 @@ function VisitorPassContent() {
     setResendError("");
     setResendSuccess(false);
     try {
-      const token = localStorage.getItem("token");
-      if (!token) throw new Error("Authentication required");
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/${visitorCode}/resend`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
+        { method: "POST", credentials: "include" }
       );
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to resend pass");
@@ -332,8 +330,9 @@ function VisitorPassContent() {
             <div className={styles.footer}>
               <button
                 className={styles.logoutBtn}
-                onClick={() => {
-                  localStorage.clear();
+                onClick={async () => {
+                  try { await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, { method: "POST", credentials: "include" }); } catch {}
+                  localStorage.removeItem("company");
                   router.push("/auth/login");
                 }}
               >

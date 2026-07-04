@@ -365,9 +365,8 @@ export default function ConferenceBookPage() {
   }, []);
 
   useEffect(() => {
-    const token  = localStorage.getItem("token");
     const stored = localStorage.getItem("company");
-    if (!token || !stored) { router.replace("/auth/login"); return; }
+    if (!stored) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
     setBookingDate(today);
 

@@ -287,15 +287,14 @@ export default function Home() {
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const token          = localStorage.getItem("token");
     const storedCompany  = localStorage.getItem("company");
-    if (!token || !storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(storedCompany)); }
     catch { localStorage.clear(); router.replace("/auth/login"); return; }
 
     const day = new Date().getDay(); // 0=Sun … 6=Sat
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/yesterday-summary`, {
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     })
       .then((r) => r.json())
       .then((data) => {
@@ -315,7 +314,7 @@ export default function Home() {
       setSubError("");
       setSubData(null);
       const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/details`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        credentials: "include",
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.MESSAGE || "Failed to load subscription");
@@ -336,7 +335,8 @@ export default function Home() {
       setUpgradingPlan(plan);
       const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upgrade`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}`, "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
@@ -369,10 +369,8 @@ export default function Home() {
       "Are you sure you want to log out?",
       async () => {
         try {
-          const token = localStorage.getItem("token");
           await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, {
             method: "POST",
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
             credentials: "include",
           });
         } catch { /* ignore — always clear local state */ }

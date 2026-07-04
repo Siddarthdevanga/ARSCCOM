@@ -26,9 +26,8 @@ export default function VisitorIdentity() {
 
   useEffect(() => {
     const rawCompany = localStorage.getItem("company");
-    const token = localStorage.getItem("token");
 
-    if (!rawCompany || !token) {
+    if (!rawCompany) {
       router.replace("/auth/login");
       return;
     }
@@ -189,9 +188,9 @@ export default function VisitorIdentity() {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors`,
         {
-          method:  "POST",
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-          body:    formData,
+          method:      "POST",
+          credentials: "include",
+          body:        formData,
         }
       );
 

@@ -20,14 +20,12 @@ export default function SubscriptionPage() {
   ====================================================== */
   useEffect(() => {
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
+      const stored = localStorage.getItem("company");
+      if (!stored) {
         router.replace("/auth/login");
         return;
       }
 
-      const stored = localStorage.getItem("company");
-      if (!stored) return;
 
       let comp = {};
       try {
@@ -79,19 +77,9 @@ export default function SubscriptionPage() {
     gaLead(plan);
 
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        router.replace("/auth/login");
-        return;
-      }
-
       const res = await fetch(`${API_BASE}/api/payment/subscribe`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({ plan }),
       });
