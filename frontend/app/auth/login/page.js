@@ -281,6 +281,8 @@ export default function LoginPage() {
         <div className={styles.loginCard}>
           <h2 className={styles.loginTitle}>LOGIN TO YOUR ACCOUNT</h2>
 
+          <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} noValidate>
+
           {/* Email */}
           <div className={styles.inputGroup}>
             <label htmlFor="email">Email</label>
@@ -372,9 +374,11 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button className={styles.loginBtn} onClick={handleLogin} disabled={isDisabled}>
+          <button type="submit" className={styles.loginBtn} disabled={isDisabled}>
             {inCooldown ? `WAIT ${cooldownLeft}s` : loading ? "LOGGING IN..." : isRedirecting ? "REDIRECTING..." : "LOGIN"}
           </button>
+
+          </form>
 
           <div className={styles.loginLinks}>
             <Link href="/auth/register" className={styles.link}>New Registration?</Link>
