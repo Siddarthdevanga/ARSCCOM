@@ -70,8 +70,7 @@ export const login = async (req, res) => {
       user: { id: user.id, email: user.email, name: user.name, role: "superadmin" },
     });
   } catch (err) {
-    console.error("SUPERADMIN LOGIN ERROR:", err.message);
-    return res.status(401).json({ success: false, message: err.message || "Login failed" });
+    return res.status(200).json({ success: false, message: "Invalid credentials" });
   }
 };
 
