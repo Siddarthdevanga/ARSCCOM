@@ -79,9 +79,9 @@ const validateWhatsAppUrl = (url) => {
   const trimmedUrl = url.trim();
   if (!trimmedUrl) return null;
   
-  const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\/.+/i;
+  const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|whatsapp\.com\/channel)\/.+/i;
   if (!whatsappPattern.test(trimmedUrl)) {
-    throw new Error("Invalid WhatsApp URL. Accepted: https://wa.me/... or https://chat.whatsapp.com/...");
+    throw new Error("Invalid WhatsApp URL. Accepted: https://wa.me/..., https://chat.whatsapp.com/... or https://whatsapp.com/channel/...");
   }
   
   return trimmedUrl;

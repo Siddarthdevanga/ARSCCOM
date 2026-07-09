@@ -58,11 +58,17 @@ const validateWhatsAppUrl = (input) => {
     return v;
   }
 
+  // Channel URL
+  if (/^https:\/\/whatsapp\.com\/channel\/.+/i.test(v)) {
+    return v;
+  }
+
   throw new Error(
     "Invalid WhatsApp value. Accepted formats:\n" +
     "• Phone number: +918647878785\n" +
     "• Direct chat: https://wa.me/... or https://api.whatsapp.com/...\n" +
-    "• Group invite: https://chat.whatsapp.com/..."
+    "• Group invite: https://chat.whatsapp.com/...\n" +
+    "• Channel: https://whatsapp.com/channel/..."
   );
 };
 

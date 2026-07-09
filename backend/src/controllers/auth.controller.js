@@ -76,11 +76,11 @@ export const register = async (req, res) => {
     /* ---------- WHATSAPP URL VALIDATION (Optional) ---------- */
     if (whatsappUrl && whatsappUrl.trim()) {
       // Basic validation for WhatsApp URL format
-      const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\/.+/i;
+      const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|whatsapp\.com\/channel)\/.+/i;
       if (!whatsappPattern.test(whatsappUrl.trim())) {
         return res.status(400).json({
           success: false,
-          message: "Invalid WhatsApp URL. Accepted: https://wa.me/... or https://chat.whatsapp.com/...",
+          message: "Invalid WhatsApp URL. Accepted: https://wa.me/..., https://chat.whatsapp.com/... or https://whatsapp.com/channel/...",
         });
       }
     }

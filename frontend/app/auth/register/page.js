@@ -155,9 +155,9 @@ export default function RegisterPage() {
     if (firstErr) { setError(firstErr); return false; }
 
     if (formData.whatsappUrl?.trim()) {
-      const waRe = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com)\/.+/i;
+      const waRe = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|whatsapp\.com\/channel)\/.+/i;
       if (!waRe.test(formData.whatsappUrl.trim())) {
-        setError("Invalid WhatsApp URL. Accepted: https://wa.me/... or https://chat.whatsapp.com/...");
+        setError("Invalid WhatsApp URL. Accepted: https://wa.me/..., https://chat.whatsapp.com/... or https://whatsapp.com/channel/...");
         return false;
       }
     }
