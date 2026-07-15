@@ -1,661 +1,484 @@
 'use client';
-
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import './landing.css';
+import Image from 'next/image';
+import './landing-page.css';
 
-/* ── Google Analytics helper ─────────────────────────────── */
 const gaEvent = (eventName, params = {}) => {
   if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
     window.gtag('event', eventName, params);
   }
 };
 
-/* ══════════════════════════════════════════════════════════
-   SINGLE SOURCE OF TRUTH — edit here, changes everywhere
-   ══════════════════════════════════════════════════════════ */
-const CONFIG = {
-  company: {
-    name:       'Promeet',
-    brand:      'Zodopt',
-    tagline:    'Visitor Management Platform',
-    logo:       '/Brand Logo.png',
-    email:      'admin@promeet.zodopt.com',
-    whatsapp:   'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Promeet+-+Visitor+Management+Platform',
-    loginUrl:   'https://www.promeet.zodopt.com/auth/login',
-    registerUrl:'https://www.promeet.zodopt.com/auth/register',
-    phone:      '+91 63668 34745',
-  },
-  trial: {
-    price:            '₹49',
-    duration:         '15 days',
-    visitorLimit:     100,
-    conferenceLimit:  100,
-    roomLimit:        2,
-  },
-  pricing: {
-    business: {
-      price:            '₹500',
-      period:           'month',
-      conferenceLimit:  1000,
-      roomLimit:        6,
-    },
-  },
-  stats: {
-    organizations:    '500+',
-    visitorsManaged:  '50K+',
-    rating:           '4.9/5',
-    todayVisitors:    248,
-    activeMeetings:   12,
-  },
-};
-
-/* ── Static data arrays (all reference CONFIG) ───────────── */
-const NAV_ITEMS = [
-  { label: 'Features',     href: '#features' },
-  { label: 'Pricing',      href: '#Plans' },
-  { label: 'How It Works', href: '#how-it-works' },
-  { label: 'Industries',   href: '#industries' },
-  { label: 'Testimonials', href: '#testimonials' },
-  { label: 'FAQ',          href: '#faq' },
-];
+const WA_URL = 'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Promeet+-+Visitor+Management+Platform';
 
 const WHY_CARDS = [
-  {
-    className: 'card1',
-    title: 'Instant Digital Visitor Pass',
-    desc:  'Visitors receive secure virtual passes via Email/WhatsApp eliminating manual paper slips.',
-  },
-  {
-    className: 'card2',
-    title: 'Powerful Live Dashboard',
-    desc:  'Track check-ins, check-outs, approvals and analytics in real time.',
-  },
-  {
-    className: 'card3',
-    title: 'Conference Room Booking + Email Alerts',
-    desc:  'Employees can instantly book conference rooms. Organizers receive confirmation notifications.',
-  },
-  {
-    className: 'card4',
-    title: 'Company Specific Public URL',
-    desc:  `Each company receives a dedicated access link where employees log in via OTP. No HR dependency, no onboarding workload.`,
-  },
-  {
-    className: 'card5',
-    title: 'Zero Manual Work',
-    desc:  'No registers, no spreadsheets, no paper passes. Everything automated.',
-  },
-  {
-    className: 'card6',
-    title: 'Secure & Enterprise Ready',
-    desc:  'Role based authentication, encryption and compliance aligned security.',
-  },
+  { color: 'purple', title: 'Instant Digital Visitor Pass', desc: 'Visitors receive secure virtual passes via Email/WhatsApp eliminating manual paper slips.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 15.7c.5-1.4 1.7-2.3 3-2.3s2.5.9 3 2.3"/><line x1="14.5" y1="9" x2="19" y2="9"/><line x1="14.5" y1="13" x2="19" y2="13"/></svg> },
+  { color: 'orange', title: 'Powerful Live Dashboard', desc: 'Track check-ins, check-outs, approvals and analytics in real time.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 13a8 8 0 1 1 16 0"/><path d="M12 13l3.5-4"/><path d="M4 13h1M19 13h1"/></svg> },
+  { color: 'blue', title: 'Conference Room Booking + Email Alerts', desc: 'Employees can instantly book conference rooms. Organizers receive confirmation notifications.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 15h2m4 0h2"/></svg> },
+  { color: 'teal', title: 'Company Specific Public URL', desc: 'Each company receives a dedicated access link where employees log in via OTP. No HR dependency, no onboarding workload.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l1.93-1.93a5 5 0 0 0-7.07-7.07L10.5 5.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-1.93 1.93a5 5 0 0 0 7.07 7.07L13.5 18.5"/></svg> },
+  { color: 'amber', title: 'Zero Manual Work', desc: 'No registers, no spreadsheets, no paper passes. Everything automated.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z"/></svg> },
+  { color: 'green', title: 'Secure & Enterprise Ready', desc: 'Role based authentication, encryption and compliance aligned security.',
+    icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5l7 3v6c0 5-3.5 8.5-7 9.5-3.5-1-7-4.5-7-9.5v-6l7-3z"/><path d="M9 12l2 2 4-4.2"/></svg> },
 ];
 
 const STEPS = [
-  {
-    color: 'orange',
-    title: 'Visitor Registration',
-    desc:  'Visitors register their arrival by scanning a QR code or using a web link, making check-in seamless.',
-  },
-  {
-    color: 'purple',
-    title: 'Visitor Notification',
-    desc:  'Visitor receives instant notification via email or WhatsApp.',
-  },
-  {
-    color: 'blue',
-    title: 'Digital Pass Issued',
-    desc:  'Visitor receives a secure digital pass valid for a specified duration and location.',
-  },
-  {
-    color: 'pink',
-    title: 'Track & Analyze',
-    desc:  'Monitor activity on a live dashboard. Generate reports and maintain compliance.',
-  },
+  { color: 'orange', title: 'Visitor Registration', desc: 'Visitors register their arrival by scanning a QR code or using a web link, making check-in seamless.',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM14 20h3M20 14v3M20 20h.01"/></svg> },
+  { color: 'purple', title: 'Visitor Notification', desc: 'Visitor receives instant notification via email or WhatsApp.',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg> },
+  { color: 'blue', title: 'Digital Pass Issued', desc: 'Visitor receives a secure digital pass valid for a specified duration and location.',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8.5" cy="11" r="2"/><path d="M5.5 15.7c.5-1.4 1.7-2.3 3-2.3s2.5.9 3 2.3"/><line x1="14.5" y1="9" x2="19" y2="9"/><line x1="14.5" y1="13" x2="19" y2="13"/></svg> },
+  { color: 'pink', title: 'Track & Analyze', desc: 'Monitor activity on a live dashboard. Generate reports and maintain compliance.',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="12" width="3" height="8"/><rect x="11" y="6" width="3" height="14"/><rect x="16" y="9" width="3" height="11"/></svg> },
 ];
 
 const FEATURES = [
-  'Visitor Walk-in management',
-  'Digital visitor passes',
-  'Visitor notifications via email/WhatsApp',
-  'Conference room scheduling',
-  'Meeting configuration, reschedule and cancel',
-  'Meeting confirmations',
-  'Comprehensive visitor analytics & reports',
-  'Integration with access control systems',
-  'Multi-location support',
-  'Role-based access control',
-  'Mobile-responsive interface',
-  'QR code based bookings',
+  'Visitor Walk-in management','Digital visitor passes','Visitor notifications via email/WhatsApp','Conference room scheduling',
+  'Meeting configuration, reschedule and cancel','Meeting confirmations','Comprehensive visitor analytics & reports',
+  'Integration with access control systems','Multi-location support','Role-based access control','Mobile-responsive interface','QR code based bookings',
 ];
 
 const INDUSTRIES = [
-  { color: 'blue',   title: 'Corporates',               desc: 'Enterprise offices with high visitor traffic and multiple meeting rooms.' },
-  { color: 'violet', title: 'IT Parks',                 desc: 'Technology campuses with multiple tenants and shared conference facilities.' },
-  { color: 'green',  title: 'Co-working Spaces',        desc: 'Flexible workspaces managing visitors for multiple companies.' },
-  { color: 'amber',  title: 'Manufacturing Units',      desc: 'Production facilities requiring strict security and visitor tracking.' },
-  { color: 'red',    title: 'Enterprises',              desc: 'Large organizations with multi-location visitor management needs.' },
-  { color: 'sky',    title: 'Educational Institutions', desc: 'Universities and colleges managing campus visitors and event bookings.' },
+  { color: 'blue', title: 'Corporates', desc: 'Enterprise offices with high visitor traffic and multiple meeting rooms.' },
+  { color: 'violet', title: 'IT Parks', desc: 'Technology campuses with multiple tenants and shared conference facilities.' },
+  { color: 'green', title: 'Co-working Spaces', desc: 'Flexible workspaces managing visitors for multiple companies.' },
+  { color: 'amber', title: 'Manufacturing Units', desc: 'Production facilities requiring strict security and visitor tracking.' },
+  { color: 'red', title: 'Enterprises', desc: 'Large organizations with multi-location visitor management needs.' },
+  { color: 'sky', title: 'Educational Institutions', desc: 'Universities and colleges managing campus visitors and event bookings.' },
 ];
 
+const CheckSvg = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 6L9 17l-5-5"/>
+  </svg>
+);
+
+const PLANS = [
+  { name: 'Trial', price: '₹49', period: '15 days', duration: 'Perfect for testing the platform', popular: false, accent: '#ff6a00',
+    features: ['Valid for 15 days','100 Visitor Bookings','100 Conference Bookings','2 Conference Rooms'], cta: 'Get Started', isEnterprise: false },
+  { name: 'Business', price: '₹500', period: 'month', duration: 'Ideal for growing organizations', popular: true, accent: '#7c3aed',
+    features: ['Unlimited Visitors','1000 Conference Bookings/month','Up to 6 Conference Rooms','Advanced Analytics & Reports'], cta: 'Get Started', isEnterprise: false },
+  { name: 'Enterprise', price: 'Custom', period: '', duration: 'For large organizations', popular: false, accent: '#ec4899',
+    features: ['Unlimited Visitors','Unlimited Conference Bookings','Unlimited Conference Rooms','Customised Support'], cta: 'Contact Sales', isEnterprise: true },
+];
+
+const renderStars = (r) => {
+  const f = Math.floor(r);
+  const h = r % 1 >= 0.25;
+  return (
+    <>
+      {'★'.repeat(f)}
+      {h && <span style={{ display:'inline-block', clipPath:'inset(0 50% 0 0)', WebkitClipPath:'inset(0 50% 0 0)', letterSpacing:0 }}>★</span>}
+    </>
+  );
+};
+
 const TESTIMONIALS = [
-  {
-    featured: true,
-    avatar: '👨‍💼',
-    name: 'Rajesh Kumar',
-    role: 'IT Manager',
-    company: 'Tech Solutions Pvt Ltd',
-    review: `${CONFIG.company.name} has completely transformed how we manage visitors. The digital passes and real-time dashboard have eliminated all manual work. Highly recommended!`,
-  },
-  {
-    featured: false,
-    avatar: '👩‍💼',
-    name: 'Priya Sharma',
-    role: 'HR Director',
-    company: 'Global Enterprises',
-    review: 'The conference room booking feature is a game-changer. No more double bookings or confusion. Our employees love how easy it is to use.',
-  },
-  {
-    featured: false,
-    avatar: '👨‍💼',
-    name: 'Amit Patel',
-    role: 'Facility Manager',
-    company: 'Manufacturing Co.',
-    review: 'Security has improved significantly. We always know who is on our premises. WhatsApp notifications are very convenient.',
-  },
+  { name: 'Priya Nair', review: "Promeet's dashboard makes it so easy to see check-ins and check-outs in real time. The digital visitor pass feature alone has cut down so much manual paperwork at our front desk.", stars: 5 },
+  { name: 'Rajesh Iyer', review: "The conference room booking with instant email alerts is genuinely useful — no more double bookings or confusion between teams. The platform feels well-built and reliable.", stars: 4.5 },
+  { name: 'Ananya Deshmukh', review: "WhatsApp notifications for visitor passes are a nice touch — visitors get their pass instantly without any hassle. Setup was quick and the interface is clean and easy to use.", stars: 4 },
 ];
 
 const SECURITY = [
-  { color: '#4f6df5', title: 'ISO 27001', desc: 'Information Security' },
-  { color: '#059669', title: 'SSL/TLS',   desc: 'Encrypted Data' },
-  { color: '#7c3aed', title: 'GDPR',      desc: 'Compliant' },
-  { color: '#ff6a00', title: '99.9%',     desc: 'Uptime SLA' },
+  { color: '#4f6df5', title: 'ISO 27001', desc: 'Information Security',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="5"/><path d="M8.5 12.5L7 21l5-3 5 3-1.5-8.5"/></svg> },
+  { color: '#059669', title: 'SSL/TLS', desc: 'Encrypted Data',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg> },
+  { color: '#7c3aed', title: 'GDPR', desc: 'Compliant',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5l7 3v6c0 5-3.5 8.5-7 9.5-3.5-1-7-4.5-7-9.5v-6l7-3z"/><path d="M9 12l2 2 4-4.2"/></svg> },
+  { color: '#ff6a00', title: '99.9%', desc: 'Uptime SLA',
+    icon: <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg> },
 ];
 
 const FAQS = [
-  {
-    q: 'How does the 15-day trial work?',
-    a: `Pay just ${CONFIG.trial.price} to start your ${CONFIG.trial.duration} trial. You get full access to all Professional plan features. After the trial, choose to continue with a paid plan or cancel anytime — no further charges.`,
-  },
-  {
-    q: 'How long does it take to set up?',
-    a: 'Setup is incredibly quick! Most organizations are up and running within 15 minutes. We provide step-by-step guidance and our team is available to help with onboarding.',
-  },
-  {
-    q: 'Is my data secure?',
-    a: 'Absolutely. We use enterprise-grade encryption, secure cloud storage, and comply with data protection regulations. Your visitor data is stored securely and only accessible to authorized personnel.',
-  },
-  {
-    q: 'Does it work offline?',
-    a: 'An internet connection is required for real-time notifications and cloud sync. Offline check-in mode is available at reception with automatic sync when reconnected.',
-  },
-  {
-    q: 'What happens to my data if I cancel?',
-    a: 'You can export all data before cancellation in Excel or PDF format. We retain your data for 30 days post-cancellation before permanent deletion.',
-  },
-  {
-    q: 'Do you provide training for our team?',
-    a: 'Yes! All plans include onboarding training — video tutorials, documentation, and live sessions. Enterprise customers get dedicated training programs.',
-  },
-  {
-    q: 'Can we use it across multiple office locations?',
-    a: 'Yes! Professional and Enterprise plans support multiple locations, each with its own settings, hosts, and reporting under centralized management.',
-  },
-  {
-    q: 'What kind of support do you offer?',
-    a: 'Email and WhatsApp support for all plans. Professional plans get priority support. Enterprise customers get phone support and a dedicated account manager.',
-  },
+  { q: 'How does the 15-day trial work?', a: 'Pay just ₹49 to start your 15-day trial. You get full access to all Professional plan features. After the trial, choose to continue with a paid plan or cancel anytime — no further charges.' },
+  { q: 'How long does it take to set up?', a: 'Setup is incredibly quick! Most organizations are up and running within 15 minutes. We provide step-by-step guidance and our team is available to help with onboarding.' },
+  { q: 'Is my data secure?', a: 'Absolutely. We use enterprise-grade encryption, secure cloud storage, and comply with data protection regulations.' },
+  { q: 'Does it work offline?', a: 'An internet connection is required for real-time notifications and cloud sync. Offline check-in mode is available at reception with automatic sync when reconnected.' },
+  { q: 'What happens to my data if I cancel?', a: 'You can export all data before cancellation in Excel or PDF format. We retain your data for 30 days post-cancellation before permanent deletion.' },
+  { q: 'Do you provide training for our team?', a: 'Yes! All plans include onboarding training — video tutorials, documentation, and live sessions.' },
+  { q: 'Can we use it across multiple office locations?', a: 'Yes! Professional and Enterprise plans support multiple locations, each with its own settings, hosts, and reporting.' },
+  { q: 'What kind of support do you offer?', a: 'Email and WhatsApp support for all plans. Professional plans get priority support. Enterprise customers get phone support and a dedicated account manager.' },
 ];
 
-const PRICING_PLANS = [
-  {
-    name:     'Trial',
-    price:    CONFIG.trial.price,
-    period:   CONFIG.trial.duration,
-    duration: 'Perfect for testing the platform',
-    features: [
-      `Valid for ${CONFIG.trial.duration}`,
-      `${CONFIG.trial.visitorLimit} Visitor Bookings`,
-      `${CONFIG.trial.conferenceLimit} Conference Bookings`,
-      `${CONFIG.trial.roomLimit} Conference Rooms`,
-    ],
-    cta:     'Get Started',
-    ctaLink: CONFIG.company.registerUrl,
-    popular: false,
-    leadValue: 49,
-  },
-  {
-    name:     'Business',
-    price:    CONFIG.pricing.business.price,
-    period:   CONFIG.pricing.business.period,
-    duration: 'Ideal for growing organizations',
-    features: [
-      'Unlimited Visitors',
-      `${CONFIG.pricing.business.conferenceLimit} Conference Bookings/month`,
-      `Up to ${CONFIG.pricing.business.roomLimit} Conference Rooms`,
-      'Advanced Analytics & Reports',
-    ],
-    cta:     'Get Started',
-    ctaLink: CONFIG.company.registerUrl,
-    popular: true,
-    leadValue: 500,
-  },
-  {
-    name:     'Enterprise',
-    price:    'Custom',
-    period:   '',
-    duration: 'For large organizations',
-    features: [
-      'Unlimited Visitors',
-      'Unlimited Conference Bookings',
-      'Unlimited Conference Rooms',
-      'Customised Support',
-    ],
-    cta:     'Contact Sales',
-    ctaLink: CONFIG.company.whatsapp,
-    popular: false,
-  },
-];
+const FAQ_COLORS = ['#7c3aed','#ff6a00','#ec4899','#4f6df5','#0d9488','#d97706','#059669','#2a1150'];
 
-const FOOTER_FEATURES = [
-  'Digital Visitor Passes',
-  'Live Dashboard',
-  'Conference Booking',
-  'Email & WhatsApp Alerts',
-  'Multi-location Support',
-  'Analytics & Reports',
-];
-
-const TRUST_CARDS = [
-  { icon: '🛡', title: 'Secure',   subtitle: 'Enterprise Grade' },
-  { icon: '🕒', title: '24/7',     subtitle: 'Support' },
-  { icon: '✔',  title: 'Reliable', subtitle: '99.9% Uptime' },
-];
-
-/* ── SVG icons (reusable) ────────────────────────────────── */
-const IconLock = ({ size = 24, fill = 'white' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-    <path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V7a3 3 0 0 1 3-3zm0 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4z" />
+const BuildingSvg = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="8" height="18"/><rect x="13" y="8" width="8" height="13"/>
+    <line x1="7" y1="8" x2="7" y2="8.01"/><line x1="7" y1="12" x2="7" y2="12.01"/>
+    <line x1="17" y1="12" x2="17" y2="12.01"/><line x1="17" y1="16" x2="17" y2="16.01"/>
   </svg>
 );
 
-const IconUser = ({ size = 24, fill = 'white' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-    <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5z" />
-  </svg>
+const FeatureTick = () => (
+  <span className="featureTick">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 13l4 4L19 7"/>
+    </svg>
+  </span>
 );
 
-const IconShield = ({ size = 24, fill = 'white' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-    <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" />
-  </svg>
-);
-
-const IconChart = ({ size = 24, fill = 'white' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill={fill}>
-    <path d="M3 3v18h18M7 16l4-4 4 4 4-6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-  </svg>
-);
-
-const IconBuilding = ({ size = 24, color = 'currentColor' }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="8" height="18" /><rect x="13" y="8" width="8" height="13" />
-    <line x1="7" y1="8" x2="7" y2="8.01" /><line x1="7" y1="12" x2="7" y2="12.01" />
-    <line x1="17" y1="12" x2="17" y2="12.01" /><line x1="17" y1="16" x2="17" y2="16.01" />
-  </svg>
-);
-
-const IconWhatsApp = ({ size = 24 }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="white">
-    <path d="M20.52 3.48A11.91 11.91 0 0 0 12.07 0C5.5 0 .16 5.34.16 11.91c0 2.1.55 4.15 1.6 5.96L0 24l6.32-1.66a11.88 11.88 0 0 0 5.75 1.47c6.57 0 11.91-5.34 11.91-11.91 0-3.18-1.24-6.17-3.46-8.42z" />
-  </svg>
-);
-
-const IconEmail = ({ size = 24 }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="white">
-    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z" />
-  </svg>
-);
-
-/* ══════════════════════════════════════════════════════════
-   MAIN COMPONENT
-   ══════════════════════════════════════════════════════════ */
-export default function LandingPage() {
+export default function HomePage() {
+  const router = useRouter();
+  const [activeCarousel, setActiveCarousel] = useState(0);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [openFaqs, setOpenFaqs] = useState(new Set());
   const [showWaTooltip, setShowWaTooltip] = useState(false);
+  const [vpForm, setVpForm] = useState({
+    name: 'Anand Sharma', phone: '+91 98765 43210',
+    meeting: 'Priya Singh — HR Department', purpose: 'Job Interview Discussion', company: 'Tech Corp',
+  });
+  const [vpPass, setVpPass] = useState({
+    badge: 'VP-4821', name: 'Anand Sharma', phone: '+91 98765 43210',
+    meeting: 'Priya Singh — HR Department', purpose: 'Job Interview Discussion', company: 'Tech Corp', checkin: '10:30 AM',
+  });
+  const carouselTimerRef = useRef(null);
+  const n = WHY_CARDS.length;
+
+  const startCarousel = useCallback(() => {
+    clearInterval(carouselTimerRef.current);
+    carouselTimerRef.current = setInterval(() => {
+      setActiveCarousel(prev => (prev + 1) % n);
+    }, 6000);
+  }, [n]);
+
+  const resetCarousel = useCallback((idx) => {
+    setActiveCarousel(idx);
+    startCarousel();
+  }, [startCarousel]);
 
   useEffect(() => {
-    /* ── Hero animation ─────────────────────────────────── */
-    const heroEls = document.querySelectorAll(
-      '.heroBrandBlock, .heroPill, .hero h2, .hero p, .heroButtons'
-    );
-    heroEls.forEach((el, i) => {
-      setTimeout(() => el.classList.add('animate'), i * 160);
-    });
+    startCarousel();
+    return () => clearInterval(carouselTimerRef.current);
+  }, [startCarousel]);
 
-    /* ── Scroll-triggered fadeUp ────────────────────────── */
-    const observer = new IntersectionObserver(
-      (entries) => entries.forEach((e) => { if (e.isIntersecting) e.target.classList.add('fadeUp'); }),
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-    );
-    document.querySelectorAll('[data-fade]').forEach((el) => observer.observe(el));
-
-    /* ── FAQ accordion ──────────────────────────────────── */
-    const handleFaq = (e) => {
-      const btn  = e.currentTarget;
-      const item = btn.closest('.faqItem');
-      const icon = btn.querySelector('.icon');
-      const isOpen = item.classList.contains('active');
-
-      // Close all
-      document.querySelectorAll('.faqItem').forEach((f) => {
-        f.classList.remove('active');
-        const ic = f.querySelector('.faqQuestion .icon');
-        if (ic) ic.textContent = '+';
-        f.querySelector('.faqQuestion').setAttribute('aria-expanded', 'false');
-      });
-
-      // Open clicked (if was closed)
-      if (!isOpen) {
-        item.classList.add('active');
-        if (icon) icon.textContent = '−';
-        btn.setAttribute('aria-expanded', 'true');
-      }
-    };
-
-    const faqBtns = document.querySelectorAll('.faqQuestion');
-    faqBtns.forEach((btn) => btn.addEventListener('click', handleFaq));
-
-    /* ── WhatsApp tooltip auto-show ─────────────────────── */
-    const tooltipTimer = setTimeout(() => {
-      setShowWaTooltip(true);
-      setTimeout(() => setShowWaTooltip(false), 5000);
-    }, 3000);
-
-    return () => {
-      observer.disconnect();
-      faqBtns.forEach((btn) => btn.removeEventListener('click', handleFaq));
-      clearTimeout(tooltipTimer);
-    };
+  useEffect(() => {
+    const show = setTimeout(() => setShowWaTooltip(true), 3000);
+    const hide = setTimeout(() => setShowWaTooltip(false), 8000);
+    return () => { clearTimeout(show); clearTimeout(hide); };
   }, []);
 
+  const getCardClass = (i) => {
+    let diff = i - activeCarousel;
+    if (diff > n / 2) diff -= n;
+    if (diff < -n / 2) diff += n;
+    if (diff === 0) return 'pos-0';
+    if (diff === -1) return 'pos--1';
+    if (diff === 1) return 'pos-1';
+    if (diff === -2) return 'pos--2';
+    if (diff === 2) return 'pos-2';
+    return 'pos-hidden';
+  };
+
+  const handleGeneratePass = () => {
+    const badgeNum = Math.floor(1000 + Math.random() * 9000);
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const badge = `VP-${badgeNum}`;
+    setVpPass({
+      badge, checkin: now,
+      name: vpForm.name || 'Visitor', phone: vpForm.phone || '—',
+      meeting: vpForm.meeting || '—', purpose: vpForm.purpose || '—', company: vpForm.company || '—',
+    });
+    gaEvent('visitor_pass_generated', { name: vpForm.name, company: vpForm.company, purpose: vpForm.purpose });
+    const cleanPhone = (vpForm.phone || '').replace(/[\s\-\+\(\)]/g, '');
+    const passUrl = `https://www.promeet.zodopt.com/v/pass?code=${badge}`;
+    const waMsg = encodeURIComponent(
+      `*Your Digital Visitor Pass* 🏢\n\nWelcome to Promeet!\nYour visitor pass is ready.\n\n` +
+      `*Name:* ${vpForm.name}\n*Company:* ${vpForm.company}\n*Meeting:* ${vpForm.meeting}\n` +
+      `*Purpose:* ${vpForm.purpose}\n*Visitor ID:* ${badge}\n*Check-in:* ${now}\n\n` +
+      `View Pass: ${passUrl}\n\nPlease show this at reception.`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${waMsg}`, '_blank');
+  };
+
+  const toggleFaq = (i) => {
+    setOpenFaqs(prev => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next; });
+  };
+
+  const initials = (vpPass.name || 'V').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || 'V';
+  const halfFaq = Math.ceil(FAQS.length / 2);
+
   return (
-    <>
-      {/* ── Floating WhatsApp ───────────────────────────── */}
-      <a
-        href={CONFIG.company.whatsapp}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="floatingWhatsapp"
-        aria-label="Chat with us on WhatsApp"
-        onMouseEnter={() => setShowWaTooltip(true)}
-        onMouseLeave={() => setShowWaTooltip(false)}
-        onClick={() => gaEvent('whatsapp_click', { section: 'floating' })}
-      >
+    <div className="pmLanding">
+      {/* ── FLOATING WHATSAPP ── */}
+      <a href={WA_URL} target="_blank" rel="noopener noreferrer" className="floatingWhatsapp" aria-label="Chat with us on WhatsApp"
+        onMouseEnter={() => setShowWaTooltip(true)} onMouseLeave={() => setShowWaTooltip(false)}>
         <span className="waPulse" aria-hidden="true" />
         <span className="waPulse waPulse2" aria-hidden="true" />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg"
-          alt=""
-          aria-hidden="true"
-          className="waIcon"
-          width={44}
-          height={44}
-        />
-        <span className={`waTooltip${showWaTooltip ? ' waTooltipVisible' : ''}`}>
-          💬 Chat with us!
+        <span className="waIconWrap">
+          <Image className="waIconImg" src="/whatsapp-icon.png" alt="WhatsApp" width={64} height={64} />
         </span>
+        <span className={`waTooltip${showWaTooltip ? ' waTooltipVisible' : ''}`}>Chat with us on WhatsApp</span>
       </a>
 
-      {/* ── Header ──────────────────────────────────────── */}
-      <header className="header">
+      {/* ── HEADER ── */}
+      <header>
         <div className="logo">
-          <Image
-            src={CONFIG.company.logo}
-            alt={`${CONFIG.company.brand} ${CONFIG.company.name} Logo`}
-            width={28}
-            height={28}
-            className="logoImg"
-            priority
-          />
-          <div>
-            {CONFIG.company.brand}&apos;s {CONFIG.company.name}
-            <span>{CONFIG.company.tagline}</span>
-          </div>
+          <Image className="logoDot" src="/promeet-logo.png" alt="Promeet logo" width={40} height={40} />
+          <div>Zodopt&apos;s Promeet<span>Visitor Management Platform</span></div>
         </div>
-
-        <nav aria-label="Main navigation">
-          {NAV_ITEMS.map((item) => (
-            <a key={item.href} href={item.href}>{item.label}</a>
-          ))}
+        <nav>
+          <a href="#features-section">Features</a>
+          <a href="#Plans">Pricing</a>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#industries-section">Industries</a>
+          <a href="#testimonials-section">Testimonials</a>
+          <a href="#faq">FAQ</a>
         </nav>
-
         <div className="headerAuth">
-          <Link href={CONFIG.company.loginUrl} className="btnSignin">Sign In</Link>
-          <Link href={CONFIG.company.registerUrl} className="btnSignup">Sign Up</Link>
+          <Link className="btnSignin" href="/auth/login">Sign In</Link>
+          <Link className="btnSignup" href="/auth/register">Sign Up</Link>
         </div>
+        <button className={`hamburger${isMobileNavOpen ? ' active' : ''}`}
+          onClick={() => setIsMobileNavOpen(v => !v)} aria-label="Toggle navigation">
+          <span /><span /><span />
+        </button>
       </header>
 
-      {/* ── Hero ────────────────────────────────────────── */}
-      <section className="hero" aria-label="Hero">
-
-        {/* Zodopt's + Promeet stacked heading */}
-        <div className="heroBrandBlock">
-          <p className="heroBrandLabel">{CONFIG.company.brand}&apos;s</p>
-          <h1>{CONFIG.company.name}</h1>
+      {/* ── MOBILE NAV ── */}
+      <nav className={`mobileNav${isMobileNavOpen ? ' open' : ''}`}>
+        {[['Features','#features-section'],['Pricing','#Plans'],['How It Works','#how-it-works'],['Industries','#industries-section'],['Testimonials','#testimonials-section'],['FAQ','#faq']].map(([label, href]) => (
+          <a key={href} href={href} onClick={() => setIsMobileNavOpen(false)}>{label}</a>
+        ))}
+        <div className="headerAuth" style={{ display: 'flex' }}>
+          <Link className="btnSignin" href="/auth/login" onClick={() => setIsMobileNavOpen(false)}>Sign In</Link>
+          <Link className="btnSignup" href="/auth/register" onClick={() => setIsMobileNavOpen(false)}>Sign Up</Link>
         </div>
+      </nav>
 
-        {/* Pill */}
+      {/* ── HERO ── */}
+      <section className="hero gridBg" aria-label="Hero">
+        <div className="heroGlow heroGlow1" /><div className="heroGlow heroGlow2" />
+        <div className="heroBrandBlock">
+          <p className="heroBrandLabel"><span className="heroBrandLine" />Zodopt&apos;s<span className="heroBrandLine" /></p>
+          <h1>Promeet</h1>
+        </div>
         <div className="heroPill" role="status" aria-live="polite">
           <span className="pillIcon" aria-hidden="true">⚡</span>
           <span className="pillText">GO LIVE IN JUST 15 MINUTES!</span>
         </div>
-
-        <h2>{CONFIG.company.tagline}</h2>
-
-        <p>
-          A platform designed to digitalize organization entry management, streamline
-          conference bookings and ensure a professional visitor experience.
-        </p>
-
+        <h2>Visitor Management Platform</h2>
+        <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
         <div className="heroButtons">
-          <Link
-            className="btnPrimary"
-            href={CONFIG.company.registerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => gaEvent('cta_click', { section: 'hero', label: 'trial' })}
-          >
-            Start {CONFIG.trial.duration} Trial →
-          </Link>
-          <Link
-            className="btnSecondary"
-            href={CONFIG.company.whatsapp}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => gaEvent('cta_click', { section: 'hero', label: 'demo' })}
-          >
-            Chat with Us
-          </Link>
+          <Link className="btnPrimary" href="/auth/register" onClick={() => gaEvent('cta_click', { section: 'hero', label: 'trial' })}>Start 15 days Trial →</Link>
+          <a className="btnSecondary" href={WA_URL} target="_blank" rel="noopener noreferrer">Chat with Us</a>
         </div>
       </section>
 
-      {/* ── Dashboard Glass ─────────────────────────────── */}
-      <section className="dashboardGlass" aria-label="Live dashboard preview">
-        <div className="dashboardCards">
-          <div className="dashCard live">
-            <div className="liveTop">
-              <h3>⚡ Live Dashboard</h3>
-              <span aria-label="Live indicator">● LIVE</span>
-            </div>
-            <div className="liveStats">
-              <div className="stat">
-                <h2>{CONFIG.stats.todayVisitors}</h2>
-                <p>Visitors Today</p>
-              </div>
-              <div className="stat">
-                <h2>{CONFIG.stats.activeMeetings}</h2>
-                <p>Active Meetings</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="dashCard meeting">
-            <div className="meetingHead">
-              <div className="icon" aria-hidden="true">📅</div>
-              <div>
-                <h3>Conference Room A</h3>
-                <p>Board Meeting • 2:00 PM – 4:00 PM</p>
-              </div>
-            </div>
-            <div className="bars" aria-hidden="true">
-              <span className="fill" />
-              <span />
-              <span />
-            </div>
-            <div className="meetingStatus">
-              <span>8 attendees confirmed</span>
-              <strong>✔ Active</strong>
-            </div>
-          </div>
-
-          <div className="dashCard pass">
-            <small>DIGITAL VISITOR PASS</small>
-            <h3>Anand</h3>
-            <p>Meeting with HR Department</p>
-            <p style={{ marginTop: '12px' }}>Valid until 5:00 PM</p>
-          </div>
-        </div>
-
-        <div className="dashDivider" aria-hidden="true" />
-
-        <div className="dashFeatures" aria-label="Key platform attributes">
-          <div><span aria-hidden="true">🛡</span><h4>Simple</h4><p>Easy to Use</p></div>
-          <div><span aria-hidden="true">☁</span><h4>Cloud</h4><p>Based Platform</p></div>
-          <div><span aria-hidden="true">🔒</span><h4>Secure</h4><p>Data Protection</p></div>
-        </div>
-      </section>
-
-      {/* ── Why Section ─────────────────────────────────── */}
-      <section
-        className="whySection"
-        id="features"
-        aria-label={`Why Organizations Love ${CONFIG.company.name}`}
-      >
-        <div className="headingContainer">
-          <span className="badge">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true" style={{ marginRight: '6px' }}>
-              <path d="M7.5 1.018a.5.5 0 0 1 .45.28l3.5 7a.5.5 0 0 1-.9.44L8.19 4.665v6.67a.5.5 0 0 1-1 0V4.665L4.45 8.738a.5.5 0 1 1-.9-.44l3.5-7a.5.5 0 0 1 .45-.28z" />
-            </svg>
-            Powerful Features
-          </span>
-          <h2>
-            Why Organizations Love <span>{CONFIG.company.name}</span>
-          </h2>
-          <p className="subheading">
-            Everything you need to manage visitors and conference rooms seamlessly
-          </p>
-        </div>
-
-        <div className="cardsContainer">
-          {WHY_CARDS.map((card, i) => (
-            <div key={i} className={`card ${card.className}`} tabIndex={0} role="article">
-              <div className="iconContainer" aria-hidden="true">
-                <IconLock size={24} />
-              </div>
-              <h3>{card.title}</h3>
-              <p>{card.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── How It Works ────────────────────────────────── */}
-      <section className="howItWorks" id="how-it-works" aria-label="How it works">
+      {/* ── DASHBOARD GLASS ── */}
+      <section className="dashboardGlass gridBg">
         <div className="container">
-          <span className="badge">✨ Simple Process</span>
-          <h2 className="title">
-            How <span>{CONFIG.company.name}</span> Works
-          </h2>
-          <p className="subtitle">
-            A streamlined 4-step process to manage all your visitors and meetings
-          </p>
-
-          <div className="steps">
-            {STEPS.map((step, i) => (
-              <div key={i} className="stepCard">
-                <div className={`icon ${step.color}`} aria-hidden="true">
-                  <IconUser size={24} />
+          <div className="dashboardCards">
+            <div className="dashCard visitStatus" onClick={() => router.push('/auth/login')} style={{ cursor: 'pointer' }}>
+              <div className="visitStatusHead">
+                <h3>Visit Status</h3>
+                <p>Distribution for this period</p>
+              </div>
+              <div className="visitStatusBody">
+                <div className="donutWrap">
+                  <svg viewBox="0 0 100 100" width="110" height="110">
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#6b6480" strokeWidth="14" strokeDasharray="125.6 251.2" strokeDashoffset="0" transform="rotate(-90 50 50)"/>
+                    <circle cx="50" cy="50" r="40" fill="none" stroke="#7c3aed" strokeWidth="14" strokeDasharray="125.6 251.2" strokeDashoffset="-125.6" transform="rotate(-90 50 50)"/>
+                  </svg>
+                  <div className="donutCenter"><strong>6</strong><span>TOTAL</span></div>
                 </div>
-                <span className="stepNo" aria-hidden="true">0{i + 1}</span>
-                <h3>{step.title}</h3>
-                <p>{step.desc}</p>
+                <div className="visitLegend">
+                  <div className="visitLegendRow">
+                    <span className="visitLegendLeft"><span className="visitDot" style={{ background: '#6b6480' }} />Auto Checked Out</span>
+                    <span className="visitLegendRight"><span className="visitCount">3</span><span className="visitPct">50%</span></span>
+                  </div>
+                  <div className="visitLegendRow">
+                    <span className="visitLegendLeft"><span className="visitDot" style={{ background: '#7c3aed' }} />Checked Out</span>
+                    <span className="visitLegendRight"><span className="visitCount">3</span><span className="visitPct">50%</span></span>
+                  </div>
+                </div>
+              </div>
+              <div className="visitBar"><span className="segGray" /><span className="segPurple" /></div>
+            </div>
+
+            <div className="dashCard meeting peakHours" onClick={() => router.push('/auth/login')} style={{ cursor: 'pointer' }}>
+              <div className="peakHead">
+                <h3>Peak Check-in Hours</h3>
+                <p>Busiest times of day (IST)</p>
+              </div>
+              <div className="peakBars">
+                {[24,20,28,22,32,26,36,30,90,40,62,28,84,60,26,22,18,16].map((h, i) => (
+                  <span key={i} style={{ height: `${h}%` }} className={h >= 80 ? 'peak' : h >= 55 ? 'peakMed' : ''} />
+                ))}
+              </div>
+              <div className="peakLabels">
+                {['12am','4am','8am','12pm','4pm','8pm'].map(l => <span key={l}>{l}</span>)}
+              </div>
+            </div>
+
+            <div className="vpCard" onClick={() => router.push('/auth/login')} style={{ cursor: 'pointer' }}>
+              <div className="vpCardHeader">
+                <span className="vpCardHeaderLeft"><span className="vpDot" /><small>VISITOR PASS</small></span>
+                <span className="vpCardId">{vpPass.badge}</span>
+              </div>
+              <div className="vpCardTop">
+                <div className="vpCardDetails">
+                  <div className="vpDetailRow"><span className="vpLabel">Name</span><span className="vpValue">{vpPass.name}</span></div>
+                  <div className="vpDetailRow"><span className="vpLabel">Phone</span><span className="vpValue">{vpPass.phone}</span></div>
+                  <div className="vpDetailRow"><span className="vpLabel">Meeting</span><span className="vpValue">{vpPass.meeting}</span></div>
+                  <div className="vpDetailRow"><span className="vpLabel">Purpose</span><span className="vpValue">{vpPass.purpose}</span></div>
+                  <div className="vpDetailRow"><span className="vpLabel">Check-in</span><span className="vpValue">{vpPass.checkin}</span></div>
+                </div>
+                <span className="vpAvatar">{initials}</span>
+              </div>
+              <div className="vpWaBanner">
+                <div className="vpWaBannerLeft">
+                  <span className="vpWaBannerIcon">
+                    <Image src="/whatsapp-icon.png" alt="WhatsApp" width={26} height={26} />
+                  </span>
+                  <div className="vpWaBannerText">
+                    <strong>Stay Connected with Promeet</strong>
+                    <span>Join our WhatsApp group for updates and support</span>
+                  </div>
+                </div>
+                <button className="vpWaBannerBtn" type="button">Join WhatsApp Group</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="dashboardBottom">
+            <div className="vpForm">
+              <h3>Enter Your Details</h3>
+              {[
+                { label: 'Full Name', key: 'name', type: 'text', placeholder: 'e.g. Anand Sharma' },
+                { label: 'Phone Number', key: 'phone', type: 'tel', placeholder: 'e.g. +91 98765 43210' },
+                { label: 'Meeting With', key: 'meeting', type: 'text', placeholder: 'e.g. Priya Singh — HR' },
+                { label: 'Meeting Purpose', key: 'purpose', type: 'text', placeholder: 'e.g. Job Interview' },
+                { label: 'Company', key: 'company', type: 'text', placeholder: 'e.g. Tech Corp' },
+              ].map(f => (
+                <div className="formGroup" key={f.key}>
+                  <label htmlFor={`vpInput-${f.key}`}>{f.label}</label>
+                  <input id={`vpInput-${f.key}`} type={f.type} placeholder={f.placeholder} value={vpForm[f.key]}
+                    onChange={e => setVpForm(prev => ({ ...prev, [f.key]: e.target.value }))} />
+                </div>
+              ))}
+              <button className="vpBtn" onClick={handleGeneratePass}>Generate My Visitor Pass</button>
+            </div>
+
+            <div className="waPhone">
+              <div className="waHeader">
+                <span className="waBack">‹</span>
+                <div className="waAvatar" style={{ background: '#fff', overflow: 'hidden', padding: 0 }}>
+                  <Image src="/promeet-logo.png" alt="Promeet logo" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div className="waHeaderText">
+                  <div className="name">Promeet</div>
+                  <div className="handle">Zodopts_Promeet</div>
+                </div>
+              </div>
+              <div className="waBody">
+                <div className="waBubble">
+                  <p className="title">Your Digital Visitor Pass</p>
+                  <p>Welcome to Promeet!</p>
+                  <p>Your visitor pass is ready. Please show this at reception.</p>
+                  <p>View Pass:</p>
+                  <span className="link" style={{ display:'block',color:'#25d366',wordBreak:'break-all',margin:'0 0 12px' }}>
+                    https://www.promeet.zodopt.com/v/pass?code=<strong>{vpPass.badge}</strong>
+                  </span>
+                  <div className="details">
+                    <div>Visitor ID: <strong>{vpPass.badge}</strong></div>
+                    <div>Name: <strong>{vpPass.name}</strong></div>
+                    <div>Purpose: <strong>{vpPass.purpose}</strong></div>
+                    <div>Check-in: <span>{vpPass.checkin}</span></div>
+                  </div>
+                  <p>Please show your visitor pass at the reception.</p>
+                  <div className="timestamp">{vpPass.checkin}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHY SECTION — 3D CAROUSEL ── */}
+      <section className="whySection gridBg" id="features-section">
+        <div className="container">
+          <span className="badge">Powerful Features</span>
+          <h2>Why Organizations Love <span>Promeet</span></h2>
+          <p className="subheading">Everything you need to manage visitors and conference rooms seamlessly</p>
+          <div className="carousel3D">
+            <button className="carouselArrow left" onClick={() => resetCarousel((activeCarousel - 1 + n) % n)} aria-label="Previous">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <div className="carouselStage">
+              {WHY_CARDS.map((card, i) => (
+                <div key={i} className={`card ${card.color} ${getCardClass(i)}`} onClick={() => resetCarousel(i)}>
+                  <div className={`iconContainer ${card.color}`}>{card.icon}</div>
+                  <h3>{card.title}</h3>
+                  <p>{card.desc}</p>
+                </div>
+              ))}
+            </div>
+            <button className="carouselArrow right" onClick={() => resetCarousel((activeCarousel + 1) % n)} aria-label="Next">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+          <div className="carouselDots">
+            {WHY_CARDS.map((_, i) => (
+              <button key={i} className={`carouselDot${i === activeCarousel ? ' active' : ''}`}
+                onClick={() => resetCarousel(i)} aria-label={`Go to slide ${i + 1}`} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ── */}
+      <section className="howItWorks gridBg" id="how-it-works">
+        <div className="container">
+          <h2 className="title">How <span>Promeet</span> Works</h2>
+          <p className="subtitle">A streamlined 4-step process to manage all your visitors and meetings</p>
+          <div className="steps">
+            {STEPS.map((s, i) => (
+              <div key={i} className="stepCard" onClick={() => { gaEvent('cta_click', { section: 'how_it_works' }); router.push('/auth/register'); }}
+                tabIndex={0} role="link" style={{ cursor: 'pointer' }}>
+                <div className={`icon ${s.color}`}>{s.icon}</div>
+                <span className="stepNo">0{i + 1}</span>
+                <h3>{s.title}</h3>
+                <p>{s.desc}</p>
               </div>
             ))}
           </div>
-
           <p className="ctaText">Ready to experience the simplicity?</p>
-          <Link
-            href={CONFIG.company.loginUrl}
-            className="ctaBtn"
-            onClick={() => gaEvent('cta_click', { section: 'how_it_works' })}
-          >
-            Start Your Trial – Just {CONFIG.trial.price}
-          </Link>
+          <Link className="ctaBtn" href="/auth/register" onClick={() => gaEvent('cta_click', { section: 'how_it_works', label: 'trial' })}>Start Your Trial – Just ₹49</Link>
         </div>
       </section>
 
-      {/* ── Everything Section ──────────────────────────── */}
-      <section className="everythingSection" aria-label="Complete feature list">
+      {/* ── EVERYTHING SECTION ── */}
+      <section className="everythingSection gridBg">
         <div className="container">
-          <span className="badge">✨ Complete Platform</span>
-          <h2 className="title">
-            Everything You Need, <span>All in One Place</span>
-          </h2>
-          <p className="subtitle">
-            Comprehensive visitor and conference management features designed for modern organizations
-          </p>
-
+          <h2 className="title">Everything You Need, <span>All in One Place</span></h2>
+          <p className="subtitle">Comprehensive visitor and conference management features designed for modern organizations</p>
           <div className="featuresGrid">
-            {FEATURES.map((feature, i) => (
-              <div key={i} className="featureBox">{feature}</div>
+            {FEATURES.map((f, i) => (
+              <div key={i} className="featureBox"><FeatureTick /><span>{f}</span></div>
             ))}
           </div>
-
-          <div className="featuresCta">
-            <Link
-              href={CONFIG.company.loginUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ctaBtn"
-              onClick={() => gaEvent('cta_click', { section: 'features' })}
-            >
-              Get Started Today ↗
-            </Link>
-          </div>
+          <Link className="ctaBtn" href="/auth/login" onClick={() => gaEvent('cta_click', { section: 'features' })}>Get Started Today ↗</Link>
         </div>
       </section>
 
-      {/* ── Industries ──────────────────────────────────── */}
-      <section className="industriesSection" id="industries" aria-label="Industries we serve">
+      {/* ── INDUSTRIES ── */}
+      <section className="industriesSection gridBg" id="industries-section">
         <div className="container">
-          <span className="industryBadge">For Every Industry</span>
-          <h2 className="industryTitle">
-            Designed for <span>Modern Organizations</span>
-          </h2>
-          <p className="industrySubtitle">
-            {CONFIG.company.name} adapts to your industry&apos;s unique needs with flexible configurations
-          </p>
-
+          <h2 className="industryTitle">Designed for <span>Modern Organizations</span></h2>
+          <p className="industrySubtitle">Promeet adapts to your industry&apos;s unique needs with flexible configurations</p>
           <div className="industryGrid">
             {INDUSTRIES.map((ind, i) => (
-              <div key={i} className="industryCard">
-                <div className={`industryIcon ${ind.color}`} aria-hidden="true">
-                  <IconBuilding size={24} />
-                </div>
+              <div key={i} className="industryCard" onClick={() => window.open(WA_URL, '_blank')} tabIndex={0} role="link" style={{ cursor: 'pointer' }}>
+                <div className={`industryIcon ${ind.color}`}><BuildingSvg /></div>
                 <h3>{ind.title}</h3>
                 <p>{ind.desc}</p>
               </div>
@@ -664,328 +487,241 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA Banner ──────────────────────────────────── */}
-      <section className="ctaSection" aria-label="Call to action">
-        <div className="ctaBox">
-          <div className="ctaIcon" aria-hidden="true">✨</div>
-          <h2>Ready to Make Your Organization Smarter?</h2>
-          <p>
-            Join hundreds of organizations that have transformed their visitor and conference management
-            with {CONFIG.company.name}
-          </p>
-          <div className="ctaActions">
-            <Link
-              href={CONFIG.company.whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btnPrimary"
-              onClick={() => gaEvent('cta_click', { section: 'cta_banner', label: 'demo' })}
-            >
-              Schedule a Demo →
-            </Link>
-          </div>
-          <div className="ctaPoints">
-            <span>● Free Trial Available</span>
-            <span>● No Credit Card Required</span>
-            <span>● Setup in Minutes</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Pricing ─────────────────────────────────────── */}
-      <section className="pricingSection" id="Plans" aria-label="Subscription plans">
-        <div className="pricingHeader">
-          <span className="pricingBadge">💎 Flexible Plans</span>
-          <h2 className="pricingTitle">Subscription Plans</h2>
-          <p className="pricingSubtitle">
-            Choose the perfect plan for your organization. All plans include core features with scalable options.
-          </p>
-        </div>
-
+      {/* ── PRICING ── */}
+      <section className="pricingSection gridBg" id="Plans">
+        <h2 className="pricingTitle">Subscription Plans</h2>
+        <p className="pricingSubtitle">Choose the perfect plan for your organization. All plans include core features with scalable options.</p>
         <div className="pricingCards">
-          {PRICING_PLANS.map((plan, i) => (
-            <div key={i} className={`pricingCard${plan.popular ? ' featured' : ''}`}>
-              {plan.popular && <span className="popularBadge">🔥 Popular</span>}
-              <h3 className="planName">{plan.name}</h3>
-              <div className="planPrice">
-                {plan.price}
-                {plan.period && <span> / {plan.period}</span>}
+          {PLANS.map((p, i) => (
+            <div key={i} className={`pricingCard${p.popular ? ' featured' : ''}`} style={{ '--plan-accent': p.accent }}>
+              {p.popular && <span className="popularBadge">★ Most Popular</span>}
+              <div className="planIcon">
+                {i === 0 && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>}
+                {i === 1 && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5c2.8 1.4 4.8 4.2 4.8 8.5 0 2.5-.8 4.8-1.8 6.5H9c-1-1.7-1.8-4-1.8-6.5 0-4.3 2-7.1 4.8-8.5z"/><circle cx="12" cy="10" r="1.8"/><path d="M9 17.5l-2.5 3.5M15 17.5l2.5 3.5"/><path d="M7.2 13c-1.5.3-2.7 1.3-3.2 3 1.7.4 3.2 0 4.3-1M16.8 13c1.5.3 2.7 1.3 3.2 3-1.7.4-3.2 0-4.3-1"/></svg>}
+                {i === 2 && <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="8" height="18"/><rect x="13" y="8" width="8" height="13"/><line x1="7" y1="8" x2="7" y2="8.01"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="17" y1="12" x2="17" y2="12.01"/><line x1="17" y1="16" x2="17" y2="16.01"/></svg>}
               </div>
-              <p className="planDuration">{plan.duration}</p>
+              <h3 className="planName">{p.name}</h3>
+              <div className="planPrice">{p.price}{p.period && <span> / {p.period}</span>}</div>
+              <p className="planDuration">{p.duration}</p>
               <ul className="planFeatures">
-                {plan.features.map((f, j) => <li key={j}>{f}</li>)}
+                {p.features.map((f, j) => (
+                  <li key={j}><span className="checkIcon"><CheckSvg /></span>{f}</li>
+                ))}
               </ul>
-              <Link
-                href={plan.ctaLink}
-                className="planCta"
-                onClick={() => {
-                  gaEvent('pricing_click', { plan: plan.name });
-                  if (plan.leadValue) gaEvent('generate_lead', { value: plan.leadValue, currency: 'INR', plan: plan.name.toLowerCase() });
-                }}
-              >
-                {plan.cta}
-              </Link>
+              {p.isEnterprise ? (
+                <a className="planCta" href={WA_URL} target="_blank" rel="noopener noreferrer"
+                  onClick={() => gaEvent('pricing_click', { plan: p.name })}>{p.cta}</a>
+              ) : (
+                <Link className="planCta" href="/auth/register"
+                  onClick={() => { gaEvent('pricing_click', { plan: p.name }); gaEvent('generate_lead', { value: i === 0 ? 49 : 500, currency: 'INR', plan: p.name.toLowerCase() }); }}>{p.cta}</Link>
+              )}
             </div>
           ))}
         </div>
       </section>
 
-      {/* ── Testimonials ────────────────────────────────── */}
-      <section className="testimonialsSection" id="testimonials" aria-label="Customer testimonials">
-        <div className="testimonialsContainer">
-          <span className="sectionBadge">⭐ Customer Success Stories</span>
-          <h2 className="sectionTitle">
-            Trusted by <span>Organizations</span>
-          </h2>
-          <p className="sectionSubtitle">
-            See what our customers have to say about their experience with {CONFIG.company.name}
-          </p>
-
-          <div className="testimonialCards">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} className={`testimonialCard${t.featured ? ' featured' : ''}`}>
-                <div className="stars" aria-label="5 star rating">★★★★★</div>
-                <p className="review">{t.review}</p>
-                <div className="user">
-                  <div className="avatar" aria-hidden="true">{t.avatar}</div>
-                  <div>
-                    <strong>{t.name}</strong>
-                    <span>{t.role}<br />{t.company}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="testimonialStats" aria-label="Platform statistics">
-            <div><h3>{CONFIG.stats.organizations}</h3><p>Organizations</p></div>
-            <div><h3>{CONFIG.stats.visitorsManaged}</h3><p>Visitors Managed</p></div>
-            <div><h3>{CONFIG.stats.rating}</h3><p>Customer Rating</p></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Security ────────────────────────────────────── */}
-      <section className="securitySection" aria-label="Security and compliance">
-        <div className="securityContainer">
-          <h2 className="securityTitle">Enterprise-Grade Security &amp; Compliance</h2>
-          <p className="securitySubtitle">
-            Your data is protected with industry-leading security standards
-          </p>
-
-          <div className="securityCards">
-            {SECURITY.map((item, i) => (
-              <div key={i} className="securityCard">
-                <div className="securityIcon" style={{ background: item.color }} aria-hidden="true">
-                  <IconShield size={22} />
-                </div>
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="securityBar">
-            <div className="barItem"><h3>256-bit</h3><p>AES Encryption</p></div>
-            <div className="divider" aria-hidden="true" />
-            <div className="barItem"><h3>24/7</h3><p>Security Monitoring</p></div>
-            <div className="divider" aria-hidden="true" />
-            <div className="barItem"><h3>Daily</h3><p>Automated Backups</p></div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── FAQ ─────────────────────────────────────────── */}
-      <section className="faqSection" id="faq" aria-label="Frequently asked questions">
-        <div className="faqContainer">
-          <span className="faqBadge">❓ Got Questions?</span>
-          <h2 className="faqTitle">
-            Frequently Asked <span>Questions</span>
-          </h2>
-          <p className="faqSubtitle">
-            Everything you need to know about {CONFIG.company.name}
-          </p>
-
-          <div className="faqList" role="list">
-            {FAQS.map((faq, i) => (
-              <div key={i} className="faqItem" role="listitem">
-                <button
-                  className="faqQuestion"
-                  aria-expanded="false"
-                  aria-controls={`faq-answer-${i}`}
-                >
-                  <span>{faq.q}</span>
-                  <span className="icon" aria-hidden="true">+</span>
-                </button>
-                <div className="faqAnswer" id={`faq-answer-${i}`} role="region">
-                  {faq.a}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="faqCta">
-            <h3>Still have questions?</h3>
-            <p>Can&apos;t find the answer you&apos;re looking for? Our team is here to help.</p>
-            <Link
-              href={CONFIG.company.whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ctaBtn"
-              onClick={() => gaEvent('cta_click', { section: 'faq' })}
-            >
-              Contact Support
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Get Started ─────────────────────────────────── */}
-      <section className="getStarted" aria-label="Get started">
-        <div className="gsContainer">
-          <div className="gsLeft" data-fade>
-            <span className="gsBadge">⚡ Start Your Free Trial</span>
-            <h2>
-              Get Started with <br />
-              <span>{CONFIG.company.brand}&apos;s {CONFIG.company.name} Today</span>
-            </h2>
-            <p>
-              Transform your visitor management and conference room booking experience.
-              Contact us for a personalized demo.
-            </p>
-            <div className="gsContact">
-              <div className="contactItem">
-                <div className="icon whatsapp" aria-hidden="true">
-                  <IconWhatsApp size={22} />
-                </div>
-                <span>
-                  Chat on WhatsApp<br />
-                  <strong>{CONFIG.company.phone}</strong>
-                </span>
-              </div>
-              <div className="contactItem">
-                <div className="icon email" aria-hidden="true">
-                  <IconEmail size={22} />
-                </div>
-                <span>
-                  Send us an email<br />
-                  <strong>{CONFIG.company.email}</strong>
-                </span>
-              </div>
+      {/* ── COMBINED CTA + SECURITY ── */}
+      <section className="combinedSection gridBg">
+        <div className="combinedInner">
+          <div className="combinedCta">
+            <h2>Ready to Make Your Organization Smarter?</h2>
+            <p>Join hundreds of organizations that have transformed their visitor and conference management with Promeet</p>
+            <div className="ctaActions">
+              <a className="btnPrimary" href={WA_URL} target="_blank" rel="noopener noreferrer"
+                onClick={() => gaEvent('cta_click', { section: 'cta_banner', label: 'demo' })}>Schedule a Demo →</a>
+            </div>
+            <div className="ctaPoints">
+              <span>● Free Trial Available</span>
+              <span>● No Credit Card Required</span>
+              <span>● Setup in Minutes</span>
             </div>
           </div>
+          <div className="combinedDivider" />
+          <div className="combinedSecurity">
+            <h2>Enterprise-Grade Security &amp; Compliance</h2>
+            <p>Your data is protected with industry-leading security standards</p>
+            <div className="securityCards">
+              {SECURITY.map((s, i) => (
+                <div key={i} className="securityCard" onClick={() => window.open('https://zodopt.com/about-us/', '_blank')} tabIndex={0} role="link" style={{ cursor: 'pointer' }}>
+                  <div className="securityIcon" style={{ background: s.color }}>{s.icon}</div>
+                  <h3>{s.title}</h3>
+                  <p>{s.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="securityBar">
+              <div className="barItem"><h3>256-bit</h3><p>AES Encryption</p></div>
+              <div className="divider" />
+              <div className="barItem"><h3>24/7</h3><p>Security Monitoring</p></div>
+              <div className="divider" />
+              <div className="barItem"><h3>Daily</h3><p>Automated Backups</p></div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-          <div className="gsRight" data-fade>
+      {/* ── TESTIMONIALS ── */}
+      <section className="testimonialsSection gridBg" id="testimonials-section">
+        <h2 className="sectionTitle">Trusted by <span>Organizations</span></h2>
+        <p className="sectionSubtitle">See what our customers have to say about their experience with Promeet</p>
+        <div className="testimonialCards">
+          {TESTIMONIALS.map((t, i) => (
+            <div key={i} className={`testimonialCard${i === 0 ? ' featured' : ''}`}
+              onClick={() => window.open(WA_URL, '_blank')} tabIndex={0} role="link" style={{ cursor: 'pointer' }}>
+              <div className="stars">{renderStars(t.stars)}</div>
+              <p className="review">{t.review}</p>
+              <div className="user">
+                <div><strong>{t.name}</strong><span></span></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="testimonialStats" style={{ maxWidth: '800px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>
+          {[['500+','Organizations'],['50K+','Visitors Managed'],['4.8★','Average Rating']].map(([val, lbl]) => (
+            <div key={lbl} style={{ textAlign: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '38px', background: 'linear-gradient(135deg,#ff6a00,#ec4899)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{val}</h3>
+              <p style={{ margin: '4px 0 0', fontSize: '15px', color: 'rgba(255,255,255,0.65)' }}>{lbl}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="faqSection gridBg" id="faq">
+        <div className="faqContainer">
+          <h2 className="faqTitle">Frequently Asked <span>Questions</span></h2>
+          <p className="faqSubtitle">Everything you need to know about Promeet</p>
+          <div className="faqGrid">
+            <div className="faqCol">
+              {FAQS.slice(0, halfFaq).map((faq, i) => (
+                <div key={i} className={`faqItem${openFaqs.has(i) ? ' open' : ''}`} onClick={() => toggleFaq(i)}>
+                  <div className="faqItemHead">
+                    <h4>{faq.q}</h4>
+                    <span className="faqItemToggle" style={{ background: FAQ_COLORS[i % FAQ_COLORS.length] }}>+</span>
+                  </div>
+                  <div className={`faqItemAnswer${openFaqs.has(i) ? ' open' : ''}`}>{faq.a}</div>
+                </div>
+              ))}
+            </div>
+            <div className="faqCol">
+              {FAQS.slice(halfFaq).map((faq, i) => {
+                const idx = i + halfFaq;
+                return (
+                  <div key={idx} className={`faqItem${openFaqs.has(idx) ? ' open' : ''}`} onClick={() => toggleFaq(idx)}>
+                    <div className="faqItemHead">
+                      <h4>{faq.q}</h4>
+                      <span className="faqItemToggle" style={{ background: FAQ_COLORS[idx % FAQ_COLORS.length] }}>+</span>
+                    </div>
+                    <div className={`faqItemAnswer${openFaqs.has(idx) ? ' open' : ''}`}>{faq.a}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="faqCta">
+            <h3>Still have questions?</h3>
+            <p>Our team is here to help you get started with Promeet</p>
+            <a className="ctaBtn" href={WA_URL} target="_blank" rel="noopener noreferrer"
+              onClick={() => gaEvent('cta_click', { section: 'faq' })}>Chat with Our Team →</a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── GET STARTED ── */}
+      <section className="getStarted gridBg">
+        <div className="gsContainer">
+          <div className="gsLeft">
+            <span className="gsBadge">⚡ Start Your Free Trial</span>
+            <h2>Get Started with <br /><span>Zodopt&apos;s Promeet Today</span></h2>
+            <p>Transform your visitor management and conference room booking experience. Contact us for a personalized demo.</p>
+            <div className="gsContact">
+              <a className="contactItem" href={WA_URL} target="_blank" rel="noopener noreferrer"
+                style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}
+                onClick={() => gaEvent('cta_click', { section: 'get_started', label: 'whatsapp' })}>
+                <div className="icon whatsapp">
+                  <Image src="/whatsapp-icon.png" alt="WhatsApp" width={20} height={20} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                </div>
+                <span>Chat on WhatsApp<br /><strong>+91 63668 34745</strong></span>
+              </a>
+              <a className="contactItem" href="mailto:admin@promeet.zodopt.com"
+                style={{ textDecoration: 'none', color: 'inherit', display: 'flex' }}
+                onClick={() => gaEvent('cta_click', { section: 'get_started', label: 'email' })}>
+                <div className="icon email">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                    <path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"/>
+                  </svg>
+                </div>
+                <span>Send us an email<br /><strong>admin@promeet.zodopt.com</strong></span>
+              </a>
+            </div>
+          </div>
+          <div className="gsRight">
             <div className="gsCard whatsappCard">
               <h3>Chat on WhatsApp</h3>
               <p>Get instant answers to your questions from our team</p>
-              <Link
-                href={CONFIG.company.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn"
-                onClick={() => gaEvent('cta_click', { section: 'get_started', label: 'whatsapp' })}
-              >
-                Start Conversation →
-              </Link>
+              <a className="btn" href={WA_URL} target="_blank" rel="noopener noreferrer">Start Conversation →</a>
             </div>
             <div className="gsCard demoCard">
               <h3>Request a Demo</h3>
-              <p>See {CONFIG.company.name} in action with a personalized walkthrough</p>
-              <Link
-                href={`mailto:${CONFIG.company.email}`}
-                className="btn secondary"
-                onClick={() => gaEvent('cta_click', { section: 'get_started', label: 'email' })}
-              >
-                Schedule Demo →
-              </Link>
+              <p>See Promeet in action with a personalized walkthrough</p>
+              <a className="btn secondary" href="mailto:admin@promeet.zodopt.com">Schedule Demo →</a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── Footer ──────────────────────────────────────── */}
-      <footer className="footer" aria-label="Site footer">
+      {/* ── FOOTER ── */}
+      <footer className="footer gridBg">
         <div className="footerTop">
-          <div className="footerBrand" data-fade>
+          <div className="footerBrand">
             <div className="logoWrap">
-              <Image
-                src={CONFIG.company.logo}
-                alt={`${CONFIG.company.brand} ${CONFIG.company.name} Logo`}
-                width={46}
-                height={46}
-              />
-              <div>
-                <h3>{CONFIG.company.brand}&apos;s {CONFIG.company.name}</h3>
-                <span>{CONFIG.company.tagline}</span>
-              </div>
+              <Image className="logoDot" src="/promeet-logo.png" alt="Promeet logo" width={40} height={40} />
+              <div><h3>Zodopt&apos;s Promeet</h3><span>Visitor Management Platform</span></div>
             </div>
-            <p>
-              A platform designed to digitalize organization entry management, streamline
-              conference bookings and ensure a professional visitor experience.
-            </p>
+            <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
             <div className="footerCta">
-              <Link
-                href={CONFIG.company.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btnPrimary"
-              >
-                WhatsApp →
-              </Link>
-              <Link href={`mailto:${CONFIG.company.email}`} className="btnSecondary">
-                Email →
-              </Link>
+              <a className="btnPrimary" href={WA_URL} target="_blank" rel="noopener noreferrer">WhatsApp →</a>
+              <a className="btnSecondary" href="mailto:admin@promeet.zodopt.com">Email →</a>
             </div>
           </div>
-
-          <div className="footerLinks" data-fade>
+          <div className="footerLinks">
             <h4>Key Features</h4>
             <ul>
-              {FOOTER_FEATURES.map((f, i) => <li key={i}>{f}</li>)}
+              {['Digital Visitor Passes','Live Dashboard','Conference Booking','Email & WhatsApp Alerts','Multi-location Support','Analytics & Reports'].map(f => (
+                <li key={f}><a href="#features-section" style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>{f}</a></li>
+              ))}
             </ul>
           </div>
-
-          <div className="footerLinks" data-fade>
+          <div className="footerLinks">
             <h4>Industries</h4>
             <ul>
-              {INDUSTRIES.map((ind, i) => <li key={i}>{ind.title}</li>)}
+              {INDUSTRIES.map(ind => (
+                <li key={ind.title}><a href="#industries-section" style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>{ind.title}</a></li>
+              ))}
             </ul>
           </div>
         </div>
-
-        <div className="footerTrust" data-fade>
-          {TRUST_CARDS.map((card, i) => (
-            <div key={i} className="trustCard">
-              <span style={{ fontSize: '24px' }} aria-hidden="true">{card.icon}</span>
-              <div>
-                <strong>{card.title}</strong>
-                <span>{card.subtitle}</span>
-              </div>
+        <div className="footerTrust">
+          {[
+            { label: 'Secure', sub: 'Enterprise Grade', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2.5l7 3v6c0 5-3.5 8.5-7 9.5-3.5-1-7-4.5-7-9.5v-6l7-3z"/><path d="M9 12l2 2 4-4.2"/></svg> },
+            { label: '24/7', sub: 'Support', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> },
+            { label: 'Reliable', sub: '99.9% Uptime', icon: <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--orange)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg> },
+          ].map((tc, i) => (
+            <div key={i} className="trustCard" onClick={() => router.push('/auth/register')} style={{ cursor: 'pointer' }}>
+              {tc.icon}
+              <div><strong>{tc.label}</strong><span>{tc.sub}</span></div>
             </div>
           ))}
         </div>
-
-        <div className="footerBottom" data-fade>
-          <span>© {new Date().getFullYear()} {CONFIG.company.brand}&apos;s {CONFIG.company.name}. All rights reserved.</span>
-          <Link
-            href="https://zodopt.com/about-us/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="footerLink"
-          >
-            © {CONFIG.company.brand}
-          </Link>
+        <div className="footerBottom">
+          <span>© 2026 Zodopt&apos;s Promeet. All rights reserved.</span>
+          <a href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer">© Zodopt</a>
           <div className="footerLinksInline">
-            <Link href="https://zodopt.com/privacy-policy/" target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </Link>
-            <Link href="https://zodopt.com/terms-and-conditions/" target="_blank" rel="noopener noreferrer">
-              Terms and Conditions
-            </Link>
+            <a href="https://zodopt.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+            <a href="https://zodopt.com/terms-and-conditions/" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>
           </div>
         </div>
       </footer>
-    </>
+    </div>
   );
 }
