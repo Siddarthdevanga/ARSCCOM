@@ -132,10 +132,11 @@ export default function HomePage() {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const [openFaqs, setOpenFaqs] = useState(new Set());
   const [showWaTooltip, setShowWaTooltip] = useState(false);
-  const [vpForm, setVpForm] = useState({
+  const [showPass, setShowPass] = useState(false);
+  const VP_STATIC = {
     name: 'Anand Sharma', phone: '+91 98765 43210',
     meeting: 'Priya Singh — HR Department', purpose: 'Job Interview Discussion', company: 'Tech Corp',
-  });
+  };
   const [vpPass, setVpPass] = useState({
     badge: 'VP-4821', name: 'Anand Sharma', phone: '+91 98765 43210',
     meeting: 'Priya Singh — HR Department', purpose: 'Job Interview Discussion', company: 'Tech Corp', checkin: '10:30 AM',
@@ -147,7 +148,7 @@ export default function HomePage() {
     clearInterval(carouselTimerRef.current);
     carouselTimerRef.current = setInterval(() => {
       setActiveCarousel(prev => (prev + 1) % n);
-    }, 6000);
+    }, 2000);
   }, [n]);
 
   const resetCarousel = useCallback((idx) => {
@@ -164,6 +165,11 @@ export default function HomePage() {
     const show = setTimeout(() => setShowWaTooltip(true), 3000);
     const hide = setTimeout(() => setShowWaTooltip(false), 8000);
     return () => { clearTimeout(show); clearTimeout(hide); };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.style.scrollBehavior = 'smooth';
+    return () => { document.documentElement.style.scrollBehavior = ''; };
   }, []);
 
   const getCardClass = (i) => {
@@ -184,19 +190,11 @@ export default function HomePage() {
     const badge = `VP-${badgeNum}`;
     setVpPass({
       badge, checkin: now,
-      name: vpForm.name || 'Visitor', phone: vpForm.phone || '—',
-      meeting: vpForm.meeting || '—', purpose: vpForm.purpose || '—', company: vpForm.company || '—',
+      name: VP_STATIC.name, phone: VP_STATIC.phone,
+      meeting: VP_STATIC.meeting, purpose: VP_STATIC.purpose, company: VP_STATIC.company,
     });
-    gaEvent('visitor_pass_generated', { name: vpForm.name, company: vpForm.company, purpose: vpForm.purpose });
-    const cleanPhone = (vpForm.phone || '').replace(/[\s\-\+\(\)]/g, '');
-    const passUrl = `https://www.promeet.zodopt.com/v/pass?code=${badge}`;
-    const waMsg = encodeURIComponent(
-      `*Your Digital Visitor Pass* 🏢\n\nWelcome to Promeet!\nYour visitor pass is ready.\n\n` +
-      `*Name:* ${vpForm.name}\n*Company:* ${vpForm.company}\n*Meeting:* ${vpForm.meeting}\n` +
-      `*Purpose:* ${vpForm.purpose}\n*Visitor ID:* ${badge}\n*Check-in:* ${now}\n\n` +
-      `View Pass: ${passUrl}\n\nPlease show this at reception.`
-    );
-    window.open(`https://wa.me/${cleanPhone}?text=${waMsg}`, '_blank');
+    gaEvent('visitor_pass_generated', { name: VP_STATIC.name, company: VP_STATIC.company, purpose: VP_STATIC.purpose });
+    setShowPass(true);
   };
 
   const toggleFaq = (i) => {
@@ -327,7 +325,7 @@ export default function HomePage() {
               <div className="vpCardTop">
                 <div className="vpCardDetails">
                   <div className="vpDetailRow"><span className="vpLabel">Name</span><span className="vpValue">{vpPass.name}</span></div>
-                  <div className="vpDetailRow"><span className="vpLabel">Phone</span><span className="vpValue">{vpPass.phone}</span></div>
+                  <div className="vpDetailRow"><span className="vpLabel">Phone</span><span className="vpValue" style={{filter:'blur(4px)',userSelect:'none'}}>{vpPass.phone}</span></div>
                   <div className="vpDetailRow"><span className="vpLabel">Meeting</span><span className="vpValue">{vpPass.meeting}</span></div>
                   <div className="vpDetailRow"><span className="vpLabel">Purpose</span><span className="vpValue">{vpPass.purpose}</span></div>
                   <div className="vpDetailRow"><span className="vpLabel">Check-in</span><span className="vpValue">{vpPass.checkin}</span></div>
@@ -344,28 +342,59 @@ export default function HomePage() {
                     <span>Join our WhatsApp group for updates and support</span>
                   </div>
                 </div>
-                <button className="vpWaBannerBtn" type="button">Join WhatsApp Group</button>
+                <button className="vpWaBannerBtn" type="button" onClick={e => { e.stopPropagation(); window.open('https://whatsapp.com/channel/0029Vb920FW6xCSXrse9QS2v', '_blank'); }}>Join WhatsApp Group</button>
               </div>
             </div>
           </div>
 
           <div className="dashboardBottom">
             <div className="vpForm">
-              <h3>Enter Your Details</h3>
-              {[
-                { label: 'Full Name', key: 'name', type: 'text', placeholder: 'e.g. Anand Sharma' },
-                { label: 'Phone Number', key: 'phone', type: 'tel', placeholder: 'e.g. +91 98765 43210' },
-                { label: 'Meeting With', key: 'meeting', type: 'text', placeholder: 'e.g. Priya Singh — HR' },
-                { label: 'Meeting Purpose', key: 'purpose', type: 'text', placeholder: 'e.g. Job Interview' },
-                { label: 'Company', key: 'company', type: 'text', placeholder: 'e.g. Tech Corp' },
-              ].map(f => (
-                <div className="formGroup" key={f.key}>
-                  <label htmlFor={`vpInput-${f.key}`}>{f.label}</label>
-                  <input id={`vpInput-${f.key}`} type={f.type} placeholder={f.placeholder} value={vpForm[f.key]}
-                    onChange={e => setVpForm(prev => ({ ...prev, [f.key]: e.target.value }))} />
-                </div>
-              ))}
-              <button className="vpBtn" onClick={handleGeneratePass}>Generate My Visitor Pass</button>
+              {!showPass ? (
+                <>
+                  <h3>Enter Your Details</h3>
+                  {[
+                    { label: 'FULL NAME',       value: VP_STATIC.name },
+                    { label: 'PHONE NUMBER',    value: VP_STATIC.phone },
+                    { label: 'MEETING WITH',    value: VP_STATIC.meeting },
+                    { label: 'MEETING PURPOSE', value: VP_STATIC.purpose },
+                    { label: 'COMPANY',         value: VP_STATIC.company },
+                  ].map(f => (
+                    <div className="formGroup" key={f.label}>
+                      <label style={{fontSize:'11px',fontWeight:700,letterSpacing:'0.08em',color:'#888'}}>{f.label}</label>
+                      <div style={{padding:'10px 14px',background:'#f7f5fb',borderRadius:10,fontSize:'15px',color:'#1a1a2e',fontWeight:500}}>{f.value}</div>
+                    </div>
+                  ))}
+                  <button className="vpBtn" onClick={handleGeneratePass}>Generate My Visitor Pass</button>
+                </>
+              ) : (
+                <>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16}}>
+                    <h3 style={{margin:0}}>Your Visitor Pass</h3>
+                    <button onClick={() => setShowPass(false)} style={{background:'none',border:'none',cursor:'pointer',fontSize:20,color:'#888',lineHeight:1}}>✕</button>
+                  </div>
+                  <div style={{background:'linear-gradient(135deg,#7c3aed11,#ec489911)',borderRadius:14,padding:'18px 16px',display:'flex',flexDirection:'column',gap:10}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:4}}>
+                      <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.1em',color:'#7c3aed'}}>● VISITOR PASS</span>
+                      <span style={{fontWeight:700,color:'#7c3aed',fontSize:13}}>{vpPass.badge}</span>
+                    </div>
+                    {[
+                      { label: 'NAME',    value: vpPass.name },
+                      { label: 'PHONE',   value: vpPass.phone, blur: true },
+                      { label: 'MEETING', value: vpPass.meeting },
+                      { label: 'PURPOSE', value: vpPass.purpose },
+                      { label: 'CHECK-IN',value: vpPass.checkin },
+                    ].map(r => (
+                      <div key={r.label} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'6px 0',borderBottom:'1px solid #e5e0f5'}}>
+                        <span style={{fontSize:11,fontWeight:700,letterSpacing:'0.08em',color:'#888'}}>{r.label}</span>
+                        <span style={{fontWeight:600,fontSize:14,color:'#1a1a2e',filter:r.blur?'blur(4px)':'none',userSelect:r.blur?'none':'auto'}}>{r.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <button className="vpBtn" style={{marginTop:14,background:'#25d366'}} onClick={() => window.open('https://whatsapp.com/channel/0029Vb920FW6xCSXrse9QS2v','_blank')}>
+                    Join WhatsApp Group
+                  </button>
+                </>
+              )}
             </div>
 
             <div className="waPhone">
@@ -573,14 +602,6 @@ export default function HomePage() {
               <div className="user">
                 <div><strong>{t.name}</strong><span></span></div>
               </div>
-            </div>
-          ))}
-        </div>
-        <div className="testimonialStats" style={{ maxWidth: '800px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>
-          {[['500+','Organizations'],['50K+','Visitors Managed'],['4.8★','Average Rating']].map(([val, lbl]) => (
-            <div key={lbl} style={{ textAlign: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '38px', background: 'linear-gradient(135deg,#ff6a00,#ec4899)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>{val}</h3>
-              <p style={{ margin: '4px 0 0', fontSize: '15px', color: 'rgba(255,255,255,0.65)' }}>{lbl}</p>
             </div>
           ))}
         </div>
