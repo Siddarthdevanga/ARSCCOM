@@ -269,6 +269,86 @@ function InsightPanel({ items }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   EXPIRY / RENEWAL MODAL
+   ═══════════════════════════════════════════════════════════════════════════ */
+function ExpiryModal({ isExpired, planName, daysLeft, expiryDateLabel, onRenew, onDismiss }) {
+  useEffect(() => {
+    const onKeyDown = (e) => { if (e.key === "Escape") onDismiss(); };
+    document.addEventListener("keydown", onKeyDown);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onDismiss]);
+
+  return (
+    <div
+      className={graceStyles.expiryModalOverlay}
+      onClick={onDismiss}
+      role="presentation"
+    >
+      <div
+        className={graceStyles.expiryModalCard}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expiryModalTitle"
+      >
+        <div className={`${graceStyles.expiryModalHeader} ${isExpired ? graceStyles.expired : ""}`}>
+          <button className={graceStyles.expiryModalClose} onClick={onDismiss} aria-label="Close">
+            <X size={16} />
+          </button>
+          <div className={graceStyles.expiryModalIconCircle}>
+            <AlertCircle size={26} />
+          </div>
+          <h3 id="expiryModalTitle" className={graceStyles.expiryModalTitle}>
+            {isExpired
+              ? "Your subscription has expired"
+              : daysLeft === 0
+              ? "Your plan expires today"
+              : `Your plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`}
+          </h3>
+          <p className={graceStyles.expiryModalSubtitle}>
+            {isExpired
+              ? "Access to premium features is paused. Renew now to pick up right where you left off."
+              : `Renew before ${expiryDateLabel} to keep everything running without interruption.`}
+          </p>
+        </div>
+
+        <div className={graceStyles.expiryModalBody}>
+          <div className={graceStyles.expiryModalPlanRow}>
+            <div className={graceStyles.expiryModalPlanIcon}>
+              <Zap size={18} />
+            </div>
+            <div className={graceStyles.expiryModalPlanInfo}>
+              <h4>{planName} Plan</h4>
+              <p>{isExpired ? "Expired" : `Ends ${expiryDateLabel}`}</p>
+            </div>
+            {!isExpired && (
+              <div className={graceStyles.expiryModalCountdown}>
+                <span className={graceStyles.countdownNum}>{daysLeft}</span>
+                <span className={graceStyles.countdownLabel}>day{daysLeft !== 1 ? "s" : ""} left</span>
+              </div>
+            )}
+          </div>
+
+          <div className={graceStyles.expiryModalActions}>
+            <button className={graceStyles.expiryModalPrimaryBtn} onClick={onRenew}>
+              Renew Now
+            </button>
+            <button className={graceStyles.expiryModalSecondaryBtn} onClick={onDismiss}>
+              {isExpired ? "Not Now" : "Remind Me Later"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    HOME PAGE
    ═══════════════════════════════════════════════════════════════════════════ */
 export default function Home() {
@@ -283,7 +363,7 @@ export default function Home() {
   const [insightItems, setInsightItems] = useState([]);
 
   const [upgradingPlan, setUpgradingPlan] = useState("");
-  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [renewalModalDismissed, setRenewalModalDismissed] = useState(false);
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -408,6 +488,10 @@ export default function Home() {
     daysUntilExpiry >= 0 &&
     daysUntilExpiry <= 7;
 
+  const displayPlanName = currentPlan
+    ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)
+    : "Current";
+
   const { color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
   if (!company) return null;
@@ -417,6 +501,18 @@ export default function Home() {
 
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <InsightPanel items={insightItems} />
+
+      {/* ── RENEWAL POPUP — expiring soon or already expired ── */}
+      {(isExpiringSoon || needsRenewal) && !renewalModalDismissed && (
+        <ExpiryModal
+          isExpired={needsRenewal}
+          planName={displayPlanName}
+          daysLeft={daysUntilExpiry}
+          expiryDateLabel={formatDate(expiryDateRaw)}
+          onRenew={() => { setRenewalModalDismissed(true); handleOpenMenu(); }}
+          onDismiss={() => setRenewalModalDismissed(true)}
+        />
+      )}
 
       {/* ── HEADER ── */}
       <header className={styles.header}>
@@ -453,42 +549,6 @@ export default function Home() {
       {/* ── SCROLL BODY ── */}
       <div className={styles.scrollBody}>
         <main className={styles.main}>
-
-          {/* EXPIRING SOON STRIP — nudge to renew before the plan lapses */}
-          {isExpiringSoon && !bannerDismissed && (
-            <div className={graceStyles.expiryStripBanner}>
-              <AlertCircle size={20} />
-              <div className={graceStyles.stripText}>
-                {daysUntilExpiry === 0 ? (
-                  <><strong>Your plan expires today.</strong> Renew now to avoid interruption.</>
-                ) : (
-                  <><strong>Your plan expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? "s" : ""}.</strong> Renew now to keep everything running smoothly.</>
-                )}
-              </div>
-              <div className={graceStyles.stripActions}>
-                <button className={graceStyles.renewBtn} onClick={handleOpenMenu}>Renew Now</button>
-                <button className={graceStyles.dismissBtn} onClick={() => setBannerDismissed(true)} aria-label="Dismiss">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* EXPIRED STRIP — plan already lapsed */}
-          {needsRenewal && !bannerDismissed && (
-            <div className={`${graceStyles.expiryStripBanner} ${graceStyles.expiredStripBanner}`}>
-              <AlertCircle size={20} />
-              <div className={graceStyles.stripText}>
-                <strong>Your subscription has expired.</strong> Renew now to restore full access.
-              </div>
-              <div className={graceStyles.stripActions}>
-                <button className={graceStyles.renewBtn} onClick={handleOpenMenu}>Renew Now</button>
-                <button className={graceStyles.dismissBtn} onClick={() => setBannerDismissed(true)} aria-label="Dismiss">
-                  <X size={16} />
-                </button>
-              </div>
-            </div>
-          )}
 
           {/* GRACE PERIOD BANNER */}
           {inGracePeriod && (

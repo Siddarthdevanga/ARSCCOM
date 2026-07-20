@@ -66,92 +66,219 @@
 }
 
 /* ======================================================
-   EXPIRY STRIP BANNER (Home Dashboard — slim, dismissible)
+   EXPIRY MODAL (Home Dashboard — renewal popup)
 ====================================================== */
-.expiryStripBanner {
-  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-  border-left: 4px solid #F59E0B;
-  padding: 12px 16px;
-  border-radius: 10px;
+.expiryModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(23, 12, 43, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  color: #78350F;
-  animation: slideDown 0.3s ease-out;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: overlayFadeIn 0.25s ease-out;
 }
 
-.expiryStripBanner svg {
-  flex-shrink: 0;
+.expiryModalCard {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 30px 70px rgba(23, 12, 43, 0.4), 0 4px 14px rgba(23, 12, 43, 0.12);
+  animation: modalPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.expiryModalHeader {
+  position: relative;
+  padding: 30px 28px 22px;
+  background: linear-gradient(145deg, #FEF3C7 0%, #FDE68A 100%);
+}
+
+.expiryModalHeader.expired {
+  background: linear-gradient(145deg, #FEE2E2 0%, #FECACA 100%);
+}
+
+.expiryModalIconCircle {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #D97706;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
+  margin-bottom: 16px;
 }
 
-.expiryStripBanner strong {
-  color: #92400E;
-}
-
-.expiryStripBanner .stripText {
-  flex: 1;
-  line-height: 1.4;
-}
-
-.expiryStripBanner .stripActions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.expiryStripBanner .renewBtn {
-  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.expiryStripBanner .renewBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(122, 0, 255, 0.3);
-}
-
-.expiryStripBanner .dismissBtn {
-  background: transparent;
-  border: none;
-  color: #92400E;
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  opacity: 0.7;
-  transition: opacity 0.2s;
-}
-
-.expiryStripBanner .dismissBtn:hover {
-  opacity: 1;
-}
-
-.expiredStripBanner {
-  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
-  border-left: 4px solid #DC2626;
-  color: #7F1D1D;
-}
-
-.expiredStripBanner strong {
-  color: #991B1B;
-}
-
-.expiredStripBanner svg {
+.expiryModalHeader.expired .expiryModalIconCircle {
   color: #DC2626;
 }
 
-.expiredStripBanner .dismissBtn {
+.expiryModalClose {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.55);
+  color: #78350F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.expiryModalHeader.expired .expiryModalClose {
+  color: #7F1D1D;
+}
+
+.expiryModalClose:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: rotate(90deg);
+}
+
+.expiryModalTitle {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #78350F;
+}
+
+.expiryModalHeader.expired .expiryModalTitle {
+  color: #7F1D1D;
+}
+
+.expiryModalSubtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #92400E;
+}
+
+.expiryModalHeader.expired .expiryModalSubtitle {
   color: #991B1B;
+}
+
+.expiryModalBody {
+  padding: 24px 28px 28px;
+}
+
+.expiryModalPlanRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #F9F7FF;
+  border: 1px solid #ECE4FB;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 22px;
+}
+
+.expiryModalPlanIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 14px rgba(122, 0, 255, 0.28);
+}
+
+.expiryModalPlanInfo {
+  min-width: 0;
+}
+
+.expiryModalPlanInfo h4 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #2b1a4a;
+}
+
+.expiryModalPlanInfo p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #6b5b8a;
+}
+
+.expiryModalCountdown {
+  margin-left: auto;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.countdownNum {
+  display: block;
+  font-size: 24px;
+  font-weight: 900;
+  line-height: 1;
+  color: #7a00ff;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdownLabel {
+  display: block;
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8a7aab;
+}
+
+.expiryModalActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.expiryModalPrimaryBtn {
+  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  color: #fff;
+  border: none;
+  padding: 15px;
+  border-radius: 13px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(122, 0, 255, 0.32);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.expiryModalPrimaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(122, 0, 255, 0.42);
+}
+
+.expiryModalPrimaryBtn:active {
+  transform: translateY(0);
+}
+
+.expiryModalSecondaryBtn {
+  background: transparent;
+  border: none;
+  padding: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #8a7aab;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.expiryModalSecondaryBtn:hover {
+  color: #5b00cc;
 }
 
 /* ======================================================
@@ -222,6 +349,29 @@
   }
 }
 
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modalPop {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expiryModalOverlay,
+  .expiryModalCard {
+    animation: none;
+  }
+}
+
 /* ======================================================
    RESPONSIVE
 ====================================================== */
@@ -242,12 +392,19 @@
     padding: 10px 16px;
   }
 
-  .expiryStripBanner {
+  .expiryModalHeader {
+    padding: 24px 20px 18px;
+  }
+
+  .expiryModalBody {
+    padding: 20px 20px 24px;
+  }
+
+  .expiryModalPlanRow {
     flex-wrap: wrap;
   }
 
-  .expiryStripBanner .stripActions {
-    width: 100%;
-    justify-content: flex-end;
+  .expiryModalCountdown {
+    margin-left: 0;
   }
 }
