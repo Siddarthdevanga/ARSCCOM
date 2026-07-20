@@ -963,15 +963,19 @@ router.delete("/rooms/:id", async (req, res) => {
     const { plan } = await validateCompanySubscription(companyId);
     await verifyRoomAccess(roomId, companyId, false);
 
+    // Block deletion only if there are upcoming BOOKED meetings (future dates).
+    // Past bookings (concluded meetings) do not block deletion — their records are kept for audit.
     const [[bookingCheck]] = await db.query(
-      `SELECT COUNT(*) AS count FROM conference_bookings WHERE room_id = ?`,
-      [roomId]
+      `SELECT COUNT(*) AS count
+       FROM conference_bookings
+       WHERE room_id = ? AND company_id = ? AND status = 'BOOKED'
+         AND booking_date > CURDATE()`,
+      [roomId, companyId]
     );
 
     if (bookingCheck.count > 0) {
       return res.status(409).json({
-        message:
-          "Cannot delete room with existing bookings. Please cancel all bookings first.",
+        message: `Cannot delete this room — it has ${bookingCheck.count} upcoming meeting${bookingCheck.count !== 1 ? 's' : ''} scheduled. Please cancel them first.`,
       });
     }
 
