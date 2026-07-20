@@ -754,6 +754,31 @@
 .menuItemArrow { color: var(--purple-500); flex-shrink: 0; transition: all var(--t); }
 .menuItem:hover .menuItemArrow { color: var(--white); transform: translateX(3px); }
 
+/* ── Locked menu item (subscription expired) ── */
+.menuItemLocked {
+  background: linear-gradient(135deg, #f4f2f8 0%, #e9e5f0 100%);
+  border-style: dashed;
+  border-color: #c9bfe0;
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+.menuItemLocked:hover {
+  background: linear-gradient(135deg, #f4f2f8 0%, #e9e5f0 100%);
+  border-color: #c9bfe0;
+  transform: none;
+  box-shadow: none;
+}
+.menuItemLocked .menuItemIcon {
+  background: linear-gradient(145deg, #b9aed1 0%, #9c8fb8 100%);
+  border-color: transparent;
+  box-shadow: none;
+}
+.menuItemLocked:hover .menuItemIcon { background: linear-gradient(145deg, #b9aed1 0%, #9c8fb8 100%); border-color: transparent; }
+.menuItemLocked .menuItemTitle { color: #6b5f80; }
+.menuItemLocked:hover .menuItemTitle { color: #6b5f80; }
+.menuItemLocked .menuItemSubtitle { color: #8a7d9e; font-weight: 600; }
+.menuItemLocked:hover .menuItemSubtitle { color: #8a7d9e; }
+
 .renewalSection { display: flex; flex-direction: column; gap: clamp(0.5rem,1.2vh,0.75rem); flex-shrink: 0; }
 
 .alertBox {
