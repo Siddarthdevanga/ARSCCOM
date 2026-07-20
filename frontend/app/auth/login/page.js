@@ -179,12 +179,13 @@ export default function LoginPage() {
       }
 
       if (status === "expired") {
-        setError("Your subscription has expired. Redirecting to renew...");
+        setError("Your subscription has expired. Redirecting to dashboard...");
         setIsRedirecting(true);
-        setTimeout(() => router.replace("/auth/subscription"), 1500);
+        setTimeout(() => router.replace("/home"), 1000);
         return;
       }
 
+      // First-time login (pending / no plan) — show subscription selection once
       setError("Account setup required. Redirecting to subscription page...");
       setIsRedirecting(true);
       setTimeout(() => router.replace("/auth/subscription"), 1500);

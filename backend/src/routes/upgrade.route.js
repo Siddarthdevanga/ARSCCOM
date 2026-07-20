@@ -128,79 +128,10 @@ router.post("/", authenticate, async (req, res) => {
     }
 
     /* ======================================================
-       TRIAL RENEWAL — ₹49 + 18% GST = ₹57.82
-       Allowed for: trial (any status) or grace_period on any plan
+       TRIAL — blocked entirely (trial is one-time only)
     ====================================================== */
     if (plan === "trial") {
-      if (currentPlan !== "trial")
-        return res.status(403).json({ success: false, message: "Trial renewal is only available for Trial plan users." });
-
-      const pricing = calcPrice("trial");
-
-      // Reuse existing pending payment link if still valid
-      if (company.pending_upgrade_plan === "trial" && company.last_payment_link && company.last_payment_link_id) {
-        let client = await zohoClient();
-        try {
-          const { data } = await client.get(`/paymentlinks/${company.last_payment_link_id}`);
-          const linkStatus = data?.payment_link?.status?.toLowerCase();
-          const linkAmount = parseFloat(data?.payment_link?.payment_amount || "0");
-          if (["created", "sent"].includes(linkStatus) && linkAmount === pricing.total) {
-            return res.json({
-              success: true, reused: true,
-              redirectTo: data.payment_link.url,
-              message: "Existing trial renewal payment link still valid.",
-              data: { plan: "trial", baseAmount: `₹${pricing.base}`, gst: `₹${pricing.gst} (18%)`, totalAmount: `₹${pricing.totalStr}`, currency: "INR" },
-            });
-          }
-        } catch (err) {
-          console.log("⚠ Could not verify old trial link → generating new", err.message);
-        }
-      }
-
-      // Ensure Zoho customer
-      let customerId = company.zoho_customer_id;
-      if (!customerId) {
-        let client = await zohoClient();
-        const { data } = await client.post("/customers", { display_name: companyName, company_name: companyName, email });
-        customerId = data?.customer?.customer_id;
-        if (!customerId) throw new Error("Zoho failed to create customer");
-        await db.query(`UPDATE companies SET zoho_customer_id = ?, updated_at = NOW() WHERE id = ?`, [customerId, companyId]);
-      }
-
-      const payload = {
-        customer_id: customerId, customer_name: companyName, currency_code: "INR",
-        payment_amount: pricing.totalStr,
-        description: `${PRICING.trial.label} — ₹${pricing.base} + 18% GST (₹${pricing.gst})`,
-        is_partial_payment: false,
-        reference_id: `TRIAL-RENEW-${companyId}-${Date.now()}`,
-      };
-
-      console.log(`💳 Creating Trial Renewal Payment Link → ₹${pricing.totalStr} for Company ${companyId}`);
-
-      let client = await zohoClient();
-      let data;
-      try {
-        ({ data } = await client.post("/paymentlinks", payload));
-      } catch (err) {
-        if (err?.response?.status === 401) {
-          client = await zohoClient();
-          ({ data } = await client.post("/paymentlinks", payload));
-        } else throw err;
-      }
-
-      const link = data?.payment_link;
-      if (!link?.url || !link?.payment_link_id) throw new Error("Zoho did not return payment link");
-
-      await db.query(
-        `UPDATE companies SET pending_upgrade_plan = 'trial', last_payment_link = ?, last_payment_link_id = ?, last_payment_created_at = NOW(), updated_at = NOW() WHERE id = ?`,
-        [link.url, link.payment_link_id, companyId]
-      );
-
-      return res.json({
-        success: true, redirectTo: link.url,
-        message: "Trial renewal payment link generated. Your current plan remains active until you complete payment.",
-        data: { plan: "trial", baseAmount: `₹${pricing.base}`, gst: `₹${pricing.gst} (18%)`, totalAmount: `₹${pricing.totalStr}`, currency: "INR" },
-      });
+      return res.status(403).json({ success: false, message: "Trial plan can only be used once. Please upgrade to the Business plan." });
     }
 
     /* ======================================================
@@ -377,15 +308,8 @@ router.get("/options", authenticate, async (req, res) => {
     // Renewal card for current plan (always shown)
     const renewalOptions = [];
 
-    if (currentPlan === "trial") {
-      renewalOptions.push({
-        plan: "trial", name: "Renew Trial Plan", isRenewal: true,
-        basePrice: `₹${trialP.base}`, gst: `₹${trialP.gst} (18%)`,
-        totalPrice: `₹${trialP.totalStr} / 15 days`,
-        requiresPayment: true, isPending: pendingUpgrade === "trial",
-        features: ["100 visitor bookings", "100 conference bookings", "2 conference rooms"],
-      });
-    } else if (currentPlan === "business") {
+    // Trial users cannot renew trial — they must upgrade to Business
+    if (currentPlan === "business") {
       renewalOptions.push({
         plan: "business", name: "Renew Business Plan", isRenewal: true,
         basePrice: `₹${businessP.base}`, gst: `₹${businessP.gst} (18%)`,

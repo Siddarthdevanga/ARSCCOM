@@ -38,7 +38,9 @@ export default function SubscriptionPage() {
 
       console.log("🔎 SUBSCRIPTION PAGE STATUS:", status);
 
-      if (["active", "trial"].includes(status)) {
+      // Subscription page is only for first-time plan selection (pending/no plan).
+      // Expired, active, trial, and grace_period users manage plans from the home nav panel.
+      if (status !== "pending") {
         router.replace("/home");
         return;
       }

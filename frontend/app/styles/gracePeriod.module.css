@@ -66,6 +66,95 @@
 }
 
 /* ======================================================
+   EXPIRY STRIP BANNER (Home Dashboard — slim, dismissible)
+====================================================== */
+.expiryStripBanner {
+  background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
+  border-left: 4px solid #F59E0B;
+  padding: 12px 16px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #78350F;
+  animation: slideDown 0.3s ease-out;
+}
+
+.expiryStripBanner svg {
+  flex-shrink: 0;
+  color: #D97706;
+}
+
+.expiryStripBanner strong {
+  color: #92400E;
+}
+
+.expiryStripBanner .stripText {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.expiryStripBanner .stripActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.expiryStripBanner .renewBtn {
+  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.expiryStripBanner .renewBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(122, 0, 255, 0.3);
+}
+
+.expiryStripBanner .dismissBtn {
+  background: transparent;
+  border: none;
+  color: #92400E;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.expiryStripBanner .dismissBtn:hover {
+  opacity: 1;
+}
+
+.expiredStripBanner {
+  background: linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%);
+  border-left: 4px solid #DC2626;
+  color: #7F1D1D;
+}
+
+.expiredStripBanner strong {
+  color: #991B1B;
+}
+
+.expiredStripBanner svg {
+  color: #DC2626;
+}
+
+.expiredStripBanner .dismissBtn {
+  color: #991B1B;
+}
+
+/* ======================================================
    GRACE BANNER (Visitor/Conference Dashboards)
 ====================================================== */
 .graceBanner {
@@ -151,5 +240,14 @@
   .graceBanner {
     font-size: 13px;
     padding: 10px 16px;
+  }
+
+  .expiryStripBanner {
+    flex-wrap: wrap;
+  }
+
+  .expiryStripBanner .stripActions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }

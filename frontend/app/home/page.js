@@ -283,6 +283,7 @@ export default function Home() {
   const [insightItems, setInsightItems] = useState([]);
 
   const [upgradingPlan, setUpgradingPlan] = useState("");
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -291,6 +292,10 @@ export default function Home() {
     if (!storedCompany) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(storedCompany)); }
     catch { localStorage.clear(); router.replace("/auth/login"); return; }
+
+    // Fetch subscription details up front so the home-screen renewal
+    // banner can render without the user having to open the menu.
+    fetchSubscription();
 
     const day = new Date().getDay(); // 0=Sun … 6=Sat
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/yesterday-summary`, {
@@ -390,6 +395,19 @@ export default function Home() {
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
   const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
 
+  // Days remaining until the active plan expires (trial or paid), used to
+  // surface a "renew soon" nudge on the main dashboard before it lapses.
+  const expiryDateRaw   = currentPlan === "trial" ? subData?.TRIAL_ENDS_ON : subData?.EXPIRES_ON;
+  const daysUntilExpiry = expiryDateRaw
+    ? Math.ceil((new Date(expiryDateRaw) - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+  const isExpiringSoon =
+    !inGracePeriod &&
+    ["active", "trial"].includes(currentStatus) &&
+    daysUntilExpiry !== null &&
+    daysUntilExpiry >= 0 &&
+    daysUntilExpiry <= 7;
+
   const { color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
   if (!company) return null;
@@ -435,6 +453,42 @@ export default function Home() {
       {/* ── SCROLL BODY ── */}
       <div className={styles.scrollBody}>
         <main className={styles.main}>
+
+          {/* EXPIRING SOON STRIP — nudge to renew before the plan lapses */}
+          {isExpiringSoon && !bannerDismissed && (
+            <div className={graceStyles.expiryStripBanner}>
+              <AlertCircle size={20} />
+              <div className={graceStyles.stripText}>
+                {daysUntilExpiry === 0 ? (
+                  <><strong>Your plan expires today.</strong> Renew now to avoid interruption.</>
+                ) : (
+                  <><strong>Your plan expires in {daysUntilExpiry} day{daysUntilExpiry !== 1 ? "s" : ""}.</strong> Renew now to keep everything running smoothly.</>
+                )}
+              </div>
+              <div className={graceStyles.stripActions}>
+                <button className={graceStyles.renewBtn} onClick={handleOpenMenu}>Renew Now</button>
+                <button className={graceStyles.dismissBtn} onClick={() => setBannerDismissed(true)} aria-label="Dismiss">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* EXPIRED STRIP — plan already lapsed */}
+          {needsRenewal && !bannerDismissed && (
+            <div className={`${graceStyles.expiryStripBanner} ${graceStyles.expiredStripBanner}`}>
+              <AlertCircle size={20} />
+              <div className={graceStyles.stripText}>
+                <strong>Your subscription has expired.</strong> Renew now to restore full access.
+              </div>
+              <div className={graceStyles.stripActions}>
+                <button className={graceStyles.renewBtn} onClick={handleOpenMenu}>Renew Now</button>
+                <button className={graceStyles.dismissBtn} onClick={() => setBannerDismissed(true)} aria-label="Dismiss">
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* GRACE PERIOD BANNER */}
           {inGracePeriod && (
@@ -615,8 +669,8 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {/* ── RENEW CURRENT PLAN (always shown) ── */}
-                  {!needsRenewal && currentPlan && (
+                  {/* ── RENEW CURRENT PLAN (trial users don't renew trial — they upgrade) ── */}
+                  {!needsRenewal && currentPlan && currentPlan !== "trial" && (
                     <div className={styles.upgradeSection}>
                       <div className={styles.sectionHeader}>
                         <TrendingUp size={18}/>
@@ -747,19 +801,106 @@ export default function Home() {
                     </div>
                   )}
 
-                  {/* ── EXPIRED: go to subscription page ── */}
+                  {/* ── EXPIRED: inline plan cards filtered by previous plan ── */}
                   {needsRenewal && (
-                    <div className={styles.renewalSection}>
-                      <div className={styles.alertBox}>
+                    <div className={styles.upgradeSection}>
+                      <div className={styles.alertBox} style={{ marginBottom: "12px" }}>
                         <AlertCircle size={18}/>
                         <div>
                           <p className={styles.alertTitle}>Subscription Expired</p>
-                          <p className={styles.alertText}>Renew now to continue accessing all PROMEET features.</p>
+                          <p className={styles.alertText}>Choose a plan below to restore access.</p>
                         </div>
                       </div>
-                      <button className={styles.primaryBtn} onClick={handleRenew}>
-                        Renew Subscription
-                      </button>
+
+                      <div className={styles.sectionHeader}>
+                        <TrendingUp size={18}/>
+                        <h5>{currentPlan === "trial" ? "Upgrade Your Plan" : "Renew Your Plan"}</h5>
+                      </div>
+
+                      {/* Trial expired → only Business + Enterprise (no trial re-select) */}
+                      {currentPlan === "trial" && (
+                        <>
+                          <div className={styles.upgradePlanCard}>
+                            <div className={styles.planIconWrapper}><Zap size={20}/></div>
+                            <div className={styles.planInfo}>
+                              <h6>Business Plan</h6>
+                              <div className={styles.planPricing}>
+                                <span className={styles.price}>₹500</span>
+                                <span className={styles.period}> + GST / mo</span>
+                              </div>
+                            </div>
+                            <ul className={styles.featureList}>
+                              <li><CheckCircle size={13}/> Unlimited visitors</li>
+                              <li><CheckCircle size={13}/> 1,000 conference bookings</li>
+                              <li><CheckCircle size={13}/> 6 conference rooms</li>
+                              <li><CheckCircle size={13}/> Priority support</li>
+                            </ul>
+                            <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
+                              {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Upgrade to Business"}
+                            </button>
+                          </div>
+                          <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
+                            <div className={styles.planIconWrapper}><Crown size={20}/></div>
+                            <div className={styles.planInfo}>
+                              <h6>Enterprise Plan</h6>
+                              <div className={styles.planPricing}>
+                                <span className={styles.customPrice}>Custom Pricing</span>
+                              </div>
+                            </div>
+                            <ul className={styles.featureList}>
+                              <li><CheckCircle size={13}/> Unlimited everything</li>
+                              <li><CheckCircle size={13}/> Custom integrations</li>
+                              <li><CheckCircle size={13}/> Dedicated account manager</li>
+                            </ul>
+                            <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
+                              {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
+                            </button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Business expired → only Business renewal */}
+                      {currentPlan === "business" && (
+                        <div className={styles.upgradePlanCard}>
+                          <div className={styles.planIconWrapper}><Zap size={20}/></div>
+                          <div className={styles.planInfo}>
+                            <h6>Business Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.price}>₹500</span>
+                              <span className={styles.period}> + GST / mo</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={13}/> Unlimited visitors</li>
+                            <li><CheckCircle size={13}/> 1,000 conference bookings</li>
+                            <li><CheckCircle size={13}/> 6 conference rooms</li>
+                            <li><CheckCircle size={13}/> Priority support</li>
+                          </ul>
+                          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Renew Business"}
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Enterprise expired → Enterprise renewal */}
+                      {currentPlan === "enterprise" && (
+                        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
+                          <div className={styles.planIconWrapper}><Crown size={20}/></div>
+                          <div className={styles.planInfo}>
+                            <h6>Enterprise Plan</h6>
+                            <div className={styles.planPricing}>
+                              <span className={styles.customPrice}>Custom Pricing</span>
+                            </div>
+                          </div>
+                          <ul className={styles.featureList}>
+                            <li><CheckCircle size={13}/> Unlimited everything</li>
+                            <li><CheckCircle size={13}/> Dedicated support</li>
+                          </ul>
+                          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
+                            {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </>
