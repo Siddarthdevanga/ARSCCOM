@@ -495,7 +495,6 @@ export default function ReportsPage(){
 
   const v=analytics?.visitors||{};
   const b=analytics?.bookings ||{};
-  const f=analytics?.feedback ||{};
   const pl=PERIODS.find(p=>p.key===period)?.label||"Month";
   const vTotal=v.total||0;
   const bTotal=b.total||0;
@@ -629,45 +628,6 @@ export default function ReportsPage(){
               </ChartCard>
             </div>
 
-            {/* ── Feedback ── */}
-            <div className={styles.sectionDivider} style={{margin:"8px 0 20px",borderTop:"1.5px dashed #e9e3f5"}}/>
-            <div style={{marginBottom:12}}>
-              <p style={{fontSize:13,fontWeight:700,color:"#7c3aed",letterSpacing:"0.04em",textTransform:"uppercase"}}>
-                Visitor Feedback
-              </p>
-              <p style={{fontSize:12,color:"#9ca3af",marginTop:2}}>
-                Ratings collected via WhatsApp — {pl}
-              </p>
-            </div>
-
-            <div className={styles.kpiGrid}>
-              <KpiCard label="Feedback Received" value={f.total}     prev={f.prevTotal} icon={CheckCircle} accent="#00a875" loading={fetching}/>
-              <KpiCard label="Feedback Sent"      value={f.sent}                          icon={Activity}    accent="#7c3aed" loading={fetching}/>
-              <KpiCard label="Satisfied"          value={f.satisfied}                     icon={TrendingUp}  accent="#2563eb" loading={fetching}/>
-              <KpiCard label="Satisfaction Rate"
-                value={f.total>0?`${Math.round((f.satisfied/f.total)*100)}%`:"—"}
-                icon={BarChart2} accent="#10b981" loading={fetching}/>
-            </div>
-
-            <div className={styles.chartRow}>
-              <ChartCard title="Feedback Rating Breakdown" sub="Distribution by rating type">
-                <SvgDonut data={(f.breakdown||[]).map(d=>({...d}))}/>
-                <StackedBar data={f.breakdown||[]}/>
-              </ChartCard>
-              <ChartCard title="Response Rate" sub="Feedback sent vs received">
-                <div className={styles.ringGrid}>
-                  <ProgressRing
-                    value={f.total||0} max={f.sent||1}
-                    color="#00a875" label="RESPONSE" sub="Replied"/>
-                  <ProgressRing
-                    value={f.satisfied||0} max={f.total||1}
-                    color="#2563eb" label="SATISFIED" sub="Happy visitors"/>
-                  <ProgressRing
-                    value={(f.total||0)-(f.satisfied||0)} max={f.total||1}
-                    color="#f59e0b" label="IMPROVE" sub="Needs work"/>
-                </div>
-              </ChartCard>
-            </div>
           </section>
 
           {/* ══ 02 CONFERENCE ANALYTICS ══ */}

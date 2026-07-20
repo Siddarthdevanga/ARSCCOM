@@ -154,12 +154,6 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Demo Appointment Reminder Cron Scheduled (Every Minute IST)");
 
-    const { sendVisitorFeedback } = await import("./cron/visitorFeedbackCron.js");
-    cron.default.schedule('* * * * *', async () => {
-      try { await sendVisitorFeedback(); } catch (e) { console.error("❌ Visitor feedback cron failed:", e); }
-    }, { timezone: "Asia/Kolkata" });
-    console.log("✅ Visitor Feedback Cron Scheduled (Every Minute IST)");
-
     const { sendPostDemoMessages } = await import("./cron/postDemoCron.js");
     cron.default.schedule('* * * * *', async () => {
       try { await sendPostDemoMessages(); } catch (e) { console.error("❌ Post-demo cron failed:", e); }

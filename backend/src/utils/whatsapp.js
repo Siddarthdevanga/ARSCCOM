@@ -208,30 +208,6 @@ export const sendVisitorPassWhatsApp = async ({
 
    UUID: GUPSHUP_APPROVAL_TEMPLATE_ID = a649ff25-ef35-46d6-9f13-b2bed1af439b
 ====================================================== */
-/* ======================================================
-   SEND FEEDBACK REQUEST VIA WHATSAPP (to visitor after 5 hours)
-   Template: visitor_feedback (quick reply — 3 buttons)
-     Body: Hi {{1}}! We hope your visit to {{2}} was great. 😊
-           How would you rate your experience today?
-     Buttons: "👍 Excellent" | "😊 Good" | "😐 Needs Improvement"
-   Uses PROMEET app credentials (GUPSHUP_API_KEY etc.)
-====================================================== */
-export const sendFeedbackWhatsApp = async ({ phone, visitorName, companyName }) => {
-  const destination = normalizePhone(phone);
-  const templateId  = process.env.GUPSHUP_FEEDBACK_TEMPLATE;
-  if (!templateId) throw new Error("GUPSHUP_FEEDBACK_TEMPLATE not configured");
-
-  console.log(`[WHATSAPP][FEEDBACK] → ${destination} | visitor: ${visitorName} | company: ${companyName}`);
-
-  await postTemplate({
-    destination,
-    templateId,
-    params: [visitorName || "there", companyName || "our office"],
-  });
-
-  console.log(`[WHATSAPP][FEEDBACK] Sent to ${destination}`);
-};
-
 export const sendApprovalWhatsApp = async ({
   phone,
   visitor  = {},

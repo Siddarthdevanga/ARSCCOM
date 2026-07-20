@@ -281,8 +281,7 @@ export const getVisitorDashboard = async (req, res) => {
          DATE_FORMAT(CONVERT_TZ(check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
          visit_status,
          pass_mail_sent AS pass_issued,
-         person_to_meet,
-         feedback_rating
+         person_to_meet
        FROM visitors
        WHERE company_id = ? AND status = 'OUT'
          AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) =
@@ -510,87 +509,6 @@ export const getYesterdaySummary = async (req, res) => {
     console.error("YESTERDAY SUMMARY ERROR:", error);
     return res.status(500).json({ success: false, message: "Failed to fetch summary" });
   }
-};
-
-/* =========================================================
-   VISITOR FEEDBACK WEBHOOK
-   POST /api/visitors/feedback-webhook  (public — no auth)
-   Called by Gupshup PROMEET app when visitor clicks a
-   quick-reply button from the feedback template.
-   Gupshup payload mirrors the marketing bot webhook format.
-========================================================= */
-export const visitorFeedbackWebhook = async (req, res) => {
-  res.sendStatus(200); // always ack immediately
-
-  setImmediate(async () => {
-    try {
-      const body     = req.body;
-      const eventType = body?.type;
-      const payload   = body?.payload;
-
-      if (!payload || eventType !== "message") return;
-
-      const msgType = payload.type;
-      const phone   = payload.sender?.phone;
-
-      if (!phone) return;
-
-      // Only handle button clicks
-      if (!["quick_reply", "button", "button_reply", "interactive"].includes(msgType)) return;
-
-      const inner = payload.payload || {};
-      const buttonTitle = (
-        inner.title ||
-        inner.text  ||
-        inner.button_reply?.title ||
-        ""
-      ).trim();
-
-      console.log(`[FEEDBACK WEBHOOK] phone=${phone} button="${buttonTitle}"`);
-
-      // Map button text to a rating
-      const RATING_MAP = {
-        "👍 excellent":          "excellent",
-        "excellent":             "excellent",
-        "😊 good":               "good",
-        "good":                  "good",
-        "😐 needs improvement":  "needs_improvement",
-        "needs improvement":     "needs_improvement",
-      };
-
-      const rating = RATING_MAP[buttonTitle.toLowerCase()];
-      if (!rating) {
-        console.log(`[FEEDBACK WEBHOOK] Unknown button: "${buttonTitle}", ignoring`);
-        return;
-      }
-
-      // Normalize phone to match how it's stored in DB (91XXXXXXXXXX)
-      const digits = String(phone).replace(/\D/g, "");
-      const last10 = digits.slice(-10);
-      const normalized = `91${last10}`;
-
-      // Save rating and auto check-out if still checked in
-      const [result] = await db.execute(
-        `UPDATE visitors
-         SET feedback_rating = ?,
-             check_out = CASE WHEN check_out IS NULL THEN NOW() ELSE check_out END
-         WHERE phone = ?
-           AND feedback_sent = 1
-           AND feedback_rating IS NULL
-         ORDER BY check_in DESC
-         LIMIT 1`,
-        [rating, normalized]
-      );
-
-      if (result.affectedRows) {
-        console.log(`[FEEDBACK WEBHOOK] Saved rating "${rating}" for ${normalized}, auto checked-out if needed`);
-      } else {
-        console.log(`[FEEDBACK WEBHOOK] No matching visitor found for ${normalized}`);
-      }
-    } catch (err) {
-      console.error("[FEEDBACK WEBHOOK ERROR]", err.message);
-    }
-  });
 };
 
 /* =========================================================

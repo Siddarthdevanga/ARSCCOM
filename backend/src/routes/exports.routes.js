@@ -412,27 +412,6 @@ router.get("/analytics", async (req, res) => {
     const [[visitorTotals]]    = await db.query(`SELECT COUNT(*) AS total, SUM(status='IN') AS active, SUM(DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))=DATE(CONVERT_TZ(NOW(),'+00:00','+05:30'))) AS today, SUM(pass_mail_sent>0) AS passIssued FROM visitors WHERE company_id = ? ${vWhere}`, [companyId]);
     const [[visitorPrev]]      = await db.query(`SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? ${vWherePrev}`, [companyId]);
 
-    // ── Feedback queries ──
-    const [feedbackBreakdown] = await db.query(
-      `SELECT feedback_rating AS status, COUNT(*) AS count
-       FROM visitors WHERE company_id = ? AND feedback_rating IS NOT NULL ${vWhere}
-       GROUP BY feedback_rating ORDER BY count DESC`,
-      [companyId]
-    );
-    const [[feedbackTotals]] = await db.query(
-      `SELECT
-         SUM(feedback_rating IS NOT NULL) AS total,
-         SUM(feedback_rating IN ('excellent','good')) AS satisfied,
-         SUM(feedback_sent = 1) AS sent
-       FROM visitors WHERE company_id = ? ${vWhere}`,
-      [companyId]
-    );
-    const [[feedbackPrev]] = await db.query(
-      `SELECT COUNT(*) AS total FROM visitors
-       WHERE company_id = ? AND feedback_rating IS NOT NULL ${vWherePrev}`,
-      [companyId]
-    );
-
     // ── Conference queries ──
     const [dailyBookings]        = await db.query(`SELECT ${bLabel} AS date, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY ${bGroup} ORDER BY MIN(booking_date) ASC`, [companyId]);
     const [bookingStatusBreakdown] = await db.query(`SELECT status, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY status`, [companyId]);
@@ -457,13 +436,6 @@ router.get("/analytics", async (req, res) => {
         topEmployees,
         topPurposes,
         visitStatusBreakdown,
-      },
-      feedback: {
-        total:         feedbackTotals.total     || 0,
-        satisfied:     feedbackTotals.satisfied || 0,
-        sent:          feedbackTotals.sent      || 0,
-        prevTotal:     feedbackPrev.total       || 0,
-        breakdown:     feedbackBreakdown,
       },
       bookings: {
         total:              bookingTotals.total     || 0,
