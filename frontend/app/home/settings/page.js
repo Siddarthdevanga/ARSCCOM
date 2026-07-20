@@ -19,6 +19,11 @@ export default function SettingsPage() {
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
+  // Cache-busting token appended to /api/logo/{id} URLs. The endpoint itself
+  // is behind nginx/Cloudflare, which may cache the image independently of
+  // the origin's headers — a URL a cache has never seen before is the only
+  // way to guarantee a fresh fetch without needing infra-side changes.
+  const [logoBust, setLogoBust] = useState(() => Date.now());
 
   const [userName, setUserName] = useState("");
   const [userPhone, setUserPhone] = useState("");
@@ -203,6 +208,7 @@ export default function SettingsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Failed to upload logo");
       setLogoPreview(data.logo_url);
+      setLogoBust(Date.now()); // force every /api/logo/{id} <img> on this page to re-fetch
       setLogoFile(null);
       const sc = JSON.parse(localStorage.getItem("company"));
       sc.logo_url = data.logo_url;
@@ -301,7 +307,7 @@ export default function SettingsPage() {
         </div>
         <div className={styles.rightHeader}>
           {company?.id && (
-            <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`} alt="Logo" className={styles.companyLogo} onError={e => { e.currentTarget.style.display = "none"; }} />
+            <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}?v=${logoBust}`} alt="Logo" className={styles.companyLogo} onError={e => { e.currentTarget.style.display = "none"; }} />
           )}
           <button className={styles.logoutBtn} onClick={handleLogout}>Logout</button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>← Back</button>
@@ -365,7 +371,12 @@ export default function SettingsPage() {
               <div className={styles.fieldGroup}>
                 <label className={styles.fieldLabel}>Company Logo</label>
                 {logoPreview && (
-                  <div className={styles.logoPreview}><img src={logoPreview} alt="Logo preview" /></div>
+                  <div className={styles.logoPreview}>
+                    <img
+                      src={logoPreview.startsWith("data:") ? logoPreview : `${logoPreview}?v=${logoBust}`}
+                      alt="Logo preview"
+                    />
+                  </div>
                 )}
                 <label htmlFor="logo-upload" className={styles.uploadBtn}>
                   <Upload size={13} /> {logoFile ? "Change Logo" : "Upload Logo"}

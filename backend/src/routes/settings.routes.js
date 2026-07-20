@@ -1,4 +1,5 @@
 import express from "express";
+import multer from "multer";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/upload.middleware.js";
 import {
@@ -20,6 +21,27 @@ const asyncHandler = (fn) => (req, res, next) =>
     console.error("❌ SETTINGS ROUTE ERROR:", err);
     next(err);
   });
+
+/* ======================================================
+   MULTER ERROR HANDLER
+   Without this, a rejected upload (too large, wrong type)
+   falls through to the generic 500 handler with no clear
+   message — the frontend then shows a vague failure.
+====================================================== */
+const handleLogoUpload = (req, res, next) => {
+  upload.single("logo")(req, res, (err) => {
+    if (err instanceof multer.MulterError) {
+      const message = err.code === "LIMIT_FILE_SIZE"
+        ? "Logo must be under 5MB"
+        : `Upload error: ${err.message}`;
+      return res.status(400).json({ success: false, message });
+    }
+    if (err) {
+      return res.status(400).json({ success: false, message: err.message || "File upload failed" });
+    }
+    next();
+  });
+};
 
 /* ======================================================
    GET SETTINGS
@@ -63,7 +85,7 @@ router.put(
 router.put(
   "/company/logo",
   authenticate,
-  upload.single("logo"),
+  handleLogoUpload,
   asyncHandler(updateCompanyLogo)
 );
 
