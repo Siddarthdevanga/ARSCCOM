@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import PublicUnavailable from "../../components/PublicUnavailable";
 import styles from "./style.module.css";
 
 const API               = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -664,6 +665,16 @@ export default function PublicVisitorRegistration() {
           <button className={styles.primaryBtn} onClick={() => router.push("/")}>Go Home</button>
         </div>
       </div>
+    </div>
+  );
+
+  if (company.serviceUnavailable) return (
+    <div className={styles.page}>
+      <Navbar company={company} />
+      <PublicUnavailable
+        title="Registration Temporarily Unavailable"
+        subtitle="This organization's visitor registration system is currently inactive. Please contact the admin directly to arrange your visit."
+      />
     </div>
   );
 

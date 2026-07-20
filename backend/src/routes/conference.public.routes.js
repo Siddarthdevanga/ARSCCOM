@@ -485,24 +485,26 @@ router.get("/company/:slug", async (req, res) => {
       return res.status(404).json({ message: ERROR_MESSAGES.INVALID_LINK });
     }
 
-    // Check subscription status but don't block basic company info
+    // Company branding always renders, but the booking flow itself should
+    // never start if the subscription is genuinely inactive — surface that
+    // up front instead of only failing at the final booking-submit step.
     try {
       const subscriptionInfo = await validateSubscription(company.id, "ACCESS", false);
-      
-      // Only return basic company info for public use - no plan details
+
       res.json({
         id: company.id,
         name: company.name,
-        logo_url: company.logo_url
+        logo_url: company.logo_url,
+        serviceUnavailable: subscriptionInfo.isBlocked === true
       });
     } catch (error) {
-      // Even if subscription check fails, return basic company info
       console.warn(`[COMPANY_ACCESS_WARNING] ${company.id}:`, error.message);
-      
+
       res.json({
         id: company.id,
         name: company.name,
-        logo_url: company.logo_url
+        logo_url: company.logo_url,
+        serviceUnavailable: true
       });
     }
   } catch (error) {

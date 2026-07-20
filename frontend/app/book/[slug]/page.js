@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
+import PublicUnavailable from "../../components/PublicUnavailable";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -1014,9 +1015,10 @@ export default function PublicConferenceBooking() {
         setCompany({
           id: data.id,
           name: data.name,
-          logo_url: data.logo_url
+          logo_url: data.logo_url,
+          serviceUnavailable: data.serviceUnavailable === true
         });
-        
+
         console.log("[COMPANY_LOADED]", data.name);
       } catch (error) {
         console.error("[COMPANY_ERROR]", error);
@@ -1029,7 +1031,7 @@ export default function PublicConferenceBooking() {
 
   /* ================= ROOMS DATA ================= */
   const loadRooms = useCallback(async () => {
-    if (!company) return;
+    if (!company || company.serviceUnavailable) return;
     try {
       const response = await fetch(`${API}/api/public/conference/company/${slug}/rooms`);
       if (!response.ok) {
@@ -1693,6 +1695,29 @@ export default function PublicConferenceBooking() {
     <div className={styles.loadingContainer}>
       <div className={styles.spinner}></div>
       <p>Loading conference booking system...</p>
+    </div>
+  );
+
+  /* ================= SERVICE UNAVAILABLE ================= */
+  if (company.serviceUnavailable) return (
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerContent} style={{ display:"flex", alignItems:"center", gap:"0.75rem", width:"100%" }}>
+          {company.id && (
+            <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}`}
+              alt={`${company.name} logo`} className={styles.logo}
+              onError={e => { e.currentTarget.style.display = "none"; }} />
+          )}
+          <div>
+            <h1 style={{ margin:0, fontSize:"1rem", fontWeight:700 }}>{company.name}</h1>
+            <span className={styles.subtitle}>Conference Booking</span>
+          </div>
+        </div>
+      </header>
+      <PublicUnavailable
+        title="Booking Temporarily Unavailable"
+        subtitle="This organization's conference booking system is currently inactive. Please contact the admin directly to arrange your meeting."
+      />
     </div>
   );
 

@@ -92,6 +92,27 @@ const getCompanyBySlug = async (slug) => {
 };
 
 /* ======================================================
+   SUBSCRIPTION CHECK — mirrors conference.public.routes.js
+   Registration should never start (OTP, camera, form) if the
+   company's subscription is genuinely inactive; only a live
+   grace period or active/trial status lets it through.
+====================================================== */
+const isServiceUnavailable = async (companyId) => {
+  const [[row]] = await db.query(
+    `SELECT subscription_status, grace_period_ends_at
+     FROM companies WHERE id = ? LIMIT 1`,
+    [companyId]
+  );
+  if (!row) return true;
+
+  const status = (row.subscription_status || "PENDING").toUpperCase();
+  if (status === "GRACE_PERIOD") {
+    return !(row.grace_period_ends_at && new Date(row.grace_period_ends_at) > new Date());
+  }
+  return !["ACTIVE", "TRIAL"].includes(status);
+};
+
+/* ======================================================
    EMAIL TEMPLATES
 ====================================================== */
 const emailFooter = (company = {}, logoUrl = null) => `
@@ -154,12 +175,15 @@ router.get("/visitor/:slug/info", async (req, res) => {
       color: { dark: "#3c007a", light: "#ffffff" },
     });
 
+    const serviceUnavailable = await isServiceUnavailable(company.id);
+
     return res.json({
       success: true,
       company: {
         id:           company.id,
         name:         company.name,
         whatsapp_url: company.whatsapp_url || null,
+        serviceUnavailable,
       },
       qrCode,
       publicUrl,
