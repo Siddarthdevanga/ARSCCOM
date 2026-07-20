@@ -5,6 +5,7 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import styles from "./style.module.css";
 import graceStyles from "../../styles/gracePeriod.module.css";
+import LockedModule from "../../components/LockedModule";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -86,6 +87,7 @@ export default function VisitorDashboard() {
   const [data,           setData]           = useState(null);
   const [company,        setCompany]        = useState(null);
   const [loading,        setLoading]        = useState(true);
+  const [locked,         setLocked]         = useState(false);
   const [navOpen,        setNavOpen]        = useState(false);
   const [qrUrl,          setQrUrl]          = useState(null);
   const [regUrl,         setRegUrl]         = useState("");
@@ -108,6 +110,7 @@ export default function VisitorDashboard() {
         credentials: "include",
       });
       if (res.status === 401) { router.replace("/"); return; }
+      if (res.status === 403) { setLocked(true); return; }
       const json = await res.json();
       setData(json);
     } catch {
@@ -362,6 +365,8 @@ export default function VisitorDashboard() {
   if (loading) return (
     <div className={styles.loading}><div className={styles.spinner} /></div>
   );
+
+  if (locked) return <LockedModule moduleName="Visitor Management" />;
 
   const stats     = data?.stats || {};
   const active    = data?.activeVisitors    || [];

@@ -18,6 +18,7 @@ import {
   Info,
   LogOut,
   UserCog,
+  Lock,
 } from "lucide-react";
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
@@ -269,9 +270,46 @@ function InsightPanel({ items }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   EXPIRY / RENEWAL MODAL
+   EXPIRY / RENEWAL MODAL — plan-specific copy, features & pricing
    ═══════════════════════════════════════════════════════════════════════════ */
-function ExpiryModal({ isExpired, planName, daysLeft, expiryDateLabel, onRenew, onDismiss }) {
+const PLAN_RENEWAL_COPY = {
+  trial: {
+    label: "Trial",
+    // Trial is one-time-only — every CTA here points at upgrading, never renewing.
+    expiredTitle: "Your trial has ended",
+    expiredSubtitle: "Your 15-day trial has ended. Since a trial can only be used once, upgrade to Business to keep everything running.",
+    expiringSubtitle: (dateLabel) => `Upgrade to Business before ${dateLabel} — trials can't be renewed, so this is the way to keep your access.`,
+    ctaLabel: "Upgrade to Business",
+    priceLabel: "₹500",
+    priceNote: "+ GST",
+    pricePeriod: "/ month",
+    features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
+  },
+  business: {
+    label: "Business",
+    expiredTitle: "Your Business plan has expired",
+    expiredSubtitle: "Renew now to restore unlimited visitors and conference bookings for your whole team.",
+    expiringSubtitle: (dateLabel) => `Renew before ${dateLabel} to keep unlimited visitors and conference bookings running without interruption.`,
+    ctaLabel: "Renew Business",
+    priceLabel: "₹590",
+    priceNote: "incl. GST",
+    pricePeriod: "/ month",
+    features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
+  },
+  enterprise: {
+    label: "Enterprise",
+    expiredTitle: "Your Enterprise plan has expired",
+    expiredSubtitle: "Reach out to our sales team to reactivate your custom Enterprise plan.",
+    expiringSubtitle: (dateLabel) => `Your Enterprise plan expires ${dateLabel}. Contact sales to renew your custom terms.`,
+    ctaLabel: "Contact Sales",
+    priceLabel: "Custom",
+    priceNote: "",
+    pricePeriod: "pricing",
+    features: ["Unlimited everything", "Dedicated support"],
+  },
+};
+
+function ExpiryModal({ plan, isExpired, daysLeft, expiryDateLabel, onRenew, onDismiss }) {
   useEffect(() => {
     const onKeyDown = (e) => { if (e.key === "Escape") onDismiss(); };
     document.addEventListener("keydown", onKeyDown);
@@ -282,6 +320,16 @@ function ExpiryModal({ isExpired, planName, daysLeft, expiryDateLabel, onRenew, 
       document.body.style.overflow = prevOverflow;
     };
   }, [onDismiss]);
+
+  const copy = PLAN_RENEWAL_COPY[plan] || PLAN_RENEWAL_COPY.business;
+
+  const title = isExpired
+    ? copy.expiredTitle
+    : daysLeft === 0
+    ? `Your ${copy.label} plan expires today`
+    : `Your ${copy.label} plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`;
+
+  const subtitle = isExpired ? copy.expiredSubtitle : copy.expiringSubtitle(expiryDateLabel);
 
   return (
     <div
@@ -303,18 +351,8 @@ function ExpiryModal({ isExpired, planName, daysLeft, expiryDateLabel, onRenew, 
           <div className={graceStyles.expiryModalIconCircle}>
             <AlertCircle size={26} />
           </div>
-          <h3 id="expiryModalTitle" className={graceStyles.expiryModalTitle}>
-            {isExpired
-              ? "Your subscription has expired"
-              : daysLeft === 0
-              ? "Your plan expires today"
-              : `Your plan expires in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`}
-          </h3>
-          <p className={graceStyles.expiryModalSubtitle}>
-            {isExpired
-              ? "Access to premium features is paused. Renew now to pick up right where you left off."
-              : `Renew before ${expiryDateLabel} to keep everything running without interruption.`}
-          </p>
+          <h3 id="expiryModalTitle" className={graceStyles.expiryModalTitle}>{title}</h3>
+          <p className={graceStyles.expiryModalSubtitle}>{subtitle}</p>
         </div>
 
         <div className={graceStyles.expiryModalBody}>
@@ -323,7 +361,7 @@ function ExpiryModal({ isExpired, planName, daysLeft, expiryDateLabel, onRenew, 
               <Zap size={18} />
             </div>
             <div className={graceStyles.expiryModalPlanInfo}>
-              <h4>{planName} Plan</h4>
+              <h4>{copy.label} Plan</h4>
               <p>{isExpired ? "Expired" : `Ends ${expiryDateLabel}`}</p>
             </div>
             {!isExpired && (
@@ -334,9 +372,21 @@ function ExpiryModal({ isExpired, planName, daysLeft, expiryDateLabel, onRenew, 
             )}
           </div>
 
+          <ul className={graceStyles.expiryModalFeatures}>
+            {copy.features.map((f, i) => (
+              <li key={i}><CheckCircle size={14} /> {f}</li>
+            ))}
+          </ul>
+
+          <div className={graceStyles.expiryModalPriceRow}>
+            <span className={graceStyles.priceValue}>{copy.priceLabel}</span>
+            {copy.priceNote && <span className={graceStyles.priceNote}>{copy.priceNote}</span>}
+            <span className={graceStyles.pricePeriod}>{copy.pricePeriod}</span>
+          </div>
+
           <div className={graceStyles.expiryModalActions}>
             <button className={graceStyles.expiryModalPrimaryBtn} onClick={onRenew}>
-              Renew Now
+              {copy.ctaLabel}
             </button>
             <button className={graceStyles.expiryModalSecondaryBtn} onClick={onDismiss}>
               {isExpired ? "Not Now" : "Remind Me Later"}
@@ -447,6 +497,13 @@ export default function Home() {
   const handleOpenEmployees = () => { setShowMenu(false); router.push("/visitor/admin"); };
   const handleRenew         = () => { setShowMenu(false); router.push("/auth/subscription"); };
 
+  // Clicking a locked module card should never navigate through — it
+  // re-surfaces the renewal popup instead (in case it was dismissed).
+  const handleModuleClick = (path) => {
+    if (needsRenewal) { setRenewalModalDismissed(false); return; }
+    router.push(path);
+  };
+
   /* ── Logout ───────────────────────────────────────────────────────── */
   const handleLogout = () => {
     toast.confirm(
@@ -488,10 +545,6 @@ export default function Home() {
     daysUntilExpiry >= 0 &&
     daysUntilExpiry <= 7;
 
-  const displayPlanName = currentPlan
-    ? currentPlan.charAt(0).toUpperCase() + currentPlan.slice(1)
-    : "Current";
-
   const { color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
   if (!company) return null;
@@ -506,7 +559,7 @@ export default function Home() {
       {(isExpiringSoon || needsRenewal) && !renewalModalDismissed && (
         <ExpiryModal
           isExpired={needsRenewal}
-          planName={displayPlanName}
+          plan={["trial", "business", "enterprise"].includes(currentPlan) ? currentPlan : "business"}
           daysLeft={daysUntilExpiry}
           expiryDateLabel={formatDate(expiryDateRaw)}
           onRenew={() => { setRenewalModalDismissed(true); handleOpenMenu(); }}
@@ -589,40 +642,48 @@ export default function Home() {
               <div className={styles.cardGrid}>
                 {/* ── Visitor Management ── */}
                 <div
-                  className={styles.moduleCard}
-                  onClick={() => router.push("/visitor/dashboard")}
+                  className={`${styles.moduleCard} ${needsRenewal ? styles.moduleCardLocked : ""}`}
+                  onClick={() => handleModuleClick("/visitor/dashboard")}
                   role="button"
                   tabIndex={0}
-                  aria-label="Visitor Management"
-                  onKeyDown={(e) => e.key === "Enter" && router.push("/visitor/dashboard")}
+                  aria-label={needsRenewal ? "Visitor Management — locked, renew to unlock" : "Visitor Management"}
+                  onKeyDown={(e) => e.key === "Enter" && handleModuleClick("/visitor/dashboard")}
                 >
                   <div className={styles.cardIcon}><Users size={32}/></div>
                   <div className={styles.cardContent}>
                     <h3 className={styles.cardTitle}>Visitor Management</h3>
                     <p className={styles.cardDescription}>
-                      Check-ins, ID verification & digital passes
+                      {needsRenewal ? "Renew your plan to unlock this module" : "Check-ins, ID verification & digital passes"}
                     </p>
                   </div>
-                  <span className={styles.cardArrow}>→</span>
+                  {needsRenewal ? (
+                    <span className={styles.cardLockBadge}><Lock size={16}/></span>
+                  ) : (
+                    <span className={styles.cardArrow}>→</span>
+                  )}
                 </div>
 
                 {/* ── Conference Booking ── */}
                 <div
-                  className={styles.moduleCard}
-                  onClick={() => router.push("/conference/dashboard")}
+                  className={`${styles.moduleCard} ${needsRenewal ? styles.moduleCardLocked : ""}`}
+                  onClick={() => handleModuleClick("/conference/dashboard")}
                   role="button"
                   tabIndex={0}
-                  aria-label="Conference Booking"
-                  onKeyDown={(e) => e.key === "Enter" && router.push("/conference/dashboard")}
+                  aria-label={needsRenewal ? "Conference Booking — locked, renew to unlock" : "Conference Booking"}
+                  onKeyDown={(e) => e.key === "Enter" && handleModuleClick("/conference/dashboard")}
                 >
                   <div className={styles.cardIcon}><DoorOpen size={32}/></div>
                   <div className={styles.cardContent}>
                     <h3 className={styles.cardTitle}>Conference Booking</h3>
                     <p className={styles.cardDescription}>
-                      Schedule meetings & manage rooms
+                      {needsRenewal ? "Renew your plan to unlock this module" : "Schedule meetings & manage rooms"}
                     </p>
                   </div>
-                  <span className={styles.cardArrow}>→</span>
+                  {needsRenewal ? (
+                    <span className={styles.cardLockBadge}><Lock size={16}/></span>
+                  ) : (
+                    <span className={styles.cardArrow}>→</span>
+                  )}
                 </div>
               </div>
             </>

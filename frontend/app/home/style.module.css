@@ -440,6 +440,38 @@
 .cardArrow { font-size: clamp(1.25rem,3vw,1.625rem); color: var(--purple-400); transition: all var(--t); flex-shrink: 0; }
 .moduleCard:hover .cardArrow { color: var(--purple-600); transform: translateX(6px); }
 
+/* ── Locked module card (subscription expired) ── */
+.moduleCardLocked {
+  background: linear-gradient(145deg, #f4f2f8 0%, #e9e5f0 100%);
+  border-style: dashed;
+  border-color: #c9bfe0;
+}
+.moduleCardLocked::before { display: none; }
+.moduleCardLocked .cardIcon {
+  background: linear-gradient(145deg, #b9aed1 0%, #9c8fb8 100%);
+  box-shadow: none;
+  filter: grayscale(0.3);
+}
+.moduleCardLocked .cardTitle { color: #6b5f80; }
+.moduleCardLocked .cardDescription { color: #8a7d9e; font-weight: 600; opacity: 1; }
+.moduleCardLocked:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm);
+  border-color: #c9bfe0;
+  background: linear-gradient(145deg, #f4f2f8 0%, #e9e5f0 100%);
+}
+.moduleCardLocked:hover .cardIcon { transform: none; box-shadow: none; }
+
+.cardLockBadge {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: #fff;
+  color: #8a7aab;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 3px 10px rgba(23,12,43,0.1);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    REPORTS VIEW
    ═══════════════════════════════════════════════════════════════════════════ */

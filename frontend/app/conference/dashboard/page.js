@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, downloadQRCode, shareURL, fetchPublicBookingInfo } from "../../utils/api";
+import LockedModule from "../../components/LockedModule";
 import styles from "./style.module.css";
 
 
@@ -31,6 +32,7 @@ export default function ConferenceDashboard() {
   const [allRooms, setAllRooms] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [locked, setLocked] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
   const [plan, setPlan] = useState(null);
@@ -137,9 +139,12 @@ export default function ConferenceDashboard() {
         period: planRes?.bookingPeriod || "lifetime",
       });
     } catch (err) {
-      if (err?.message?.includes("expired") || err?.message?.includes("inactive")) {
-        showNotification(err.message, "error");
-      } else { router.replace("/auth/login"); }
+      const msg = err?.message || "";
+      if (err?.code === 403 || /expired|inactive/i.test(msg)) {
+        setLocked(true);
+      } else {
+        router.replace("/auth/login");
+      }
     } finally { setLoading(false); }
   };
 
@@ -320,6 +325,7 @@ export default function ConferenceDashboard() {
   };
 
   if (loading) return <div className={styles.container}><div className={styles.loadingState}>Loading dashboard...</div></div>;
+  if (locked) return <LockedModule moduleName="Conference Booking" />;
   if (!company || !stats) return <div className={styles.container}><div className={styles.loadingState}>Unable to load dashboard</div></div>;
 
   return (
