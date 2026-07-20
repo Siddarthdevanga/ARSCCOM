@@ -39,15 +39,25 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden;
+  /* In the split desktop layout this column has a fixed height (100vh via
+     .container) with no scroll of its own — if its content is ever taller
+     than the viewport (short browser window, tablet landscape), it was
+     silently clipped with no way to see the rest. This is the escape hatch. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ================= TOP NAV ================= */
 .topNav {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   align-items: center;
-  gap: clamp(40px, 5vw, 64px);
+  /* gap is vw-based off the full viewport but this row lives inside
+     .leftSection, a ~45-55% column above 900px — flex-wrap is the safety
+     net if 3 buttons + gaps ever don't fit that narrower width. */
+  gap: clamp(24px, 3.5vw, 64px);
   padding: clamp(28px, 3.5vh, 42px) clamp(32px, 3.5vw, 52px);
   position: relative;
   z-index: 10;
@@ -132,15 +142,20 @@
 
 .platformTitle {
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(20px, 3vw, 32px);
+  /* Sized in vw against the full viewport, but this element lives inside
+     .leftSection which is only ~45-55% of that width above 900px — so this
+     must stay comfortably small enough to fit a narrower column, not the
+     whole window. Wrapping is the safety net if it still doesn't fit. */
+  font-size: clamp(18px, 2.2vw, 30px);
   font-weight: 900;
-  letter-spacing: clamp(2.5px, 0.45vw, 4.5px);
+  letter-spacing: clamp(1.5px, 0.3vw, 4px);
   color: white;
   margin: 0 0 clamp(14px, 2vh, 20px) 0;
   text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
   animation: fadeIn 1s ease 0.3s both;
-  line-height: 1.2;
-  white-space: nowrap;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: break-word;
   max-width: 100%;
 }
 
@@ -456,7 +471,8 @@
   text-align: center;
   margin: 0 0 clamp(32px, 5.5vh, 42px) 0;
   letter-spacing: 0.8px;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 /* ================= INPUT GROUPS ================= */
@@ -708,7 +724,6 @@
   }
 
   .loginTitle {
-    white-space: normal;
     font-size: clamp(16px, 4.5vw, 20px);
   }
 }
