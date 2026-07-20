@@ -11,7 +11,13 @@ const router = express.Router();
    URL is permanent (no expiry) — safe to embed in emails,
    footers, and anywhere that needs a stable image URL.
 
-   Cache: 24 hours (logos rarely change).
+   Cache: ETag-validated, not time-based. The URL never
+   changes when the logo does, so a plain max-age cache would
+   keep serving the OLD logo for the full cache lifetime after
+   an upload. Instead the browser is told to always revalidate
+   (Cache-Control: no-cache) using the S3 object's own ETag —
+   unchanged logos get an instant 304 with no image re-download,
+   changed logos are served fresh immediately.
 ====================================================== */
 router.get("/:companyId", async (req, res) => {
   try {
@@ -29,10 +35,16 @@ router.get("/:companyId", async (req, res) => {
       return res.status(404).send("No logo found");
     }
 
-    const { buffer, contentType } = await getS3Object(company.logo_url);
+    const { buffer, contentType, etag } = await getS3Object(company.logo_url);
+
+    res.setHeader("Cache-Control", "public, no-cache, must-revalidate");
+    if (etag) res.setHeader("ETag", etag);
+
+    if (etag && req.headers["if-none-match"] === etag) {
+      return res.status(304).end();
+    }
 
     res.setHeader("Content-Type",  contentType);
-    res.setHeader("Cache-Control", "public, max-age=86400"); // 24h browser cache
     res.setHeader("Content-Length", buffer.length);
     res.send(buffer);
 

@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import path from "path";
 import { db } from "../config/db.js";
-import { uploadToS3 } from "../services/s3.service.js";
+import { uploadToS3, deleteFromS3 } from "../services/s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
 
 const BCRYPT_ROUNDS = 10;
@@ -209,13 +209,15 @@ export const updateCompanyLogo = async (req, res) => {
     }
 
     const [[company]] = await db.execute(
-      `SELECT slug FROM companies WHERE id = ?`,
+      `SELECT slug, logo_url FROM companies WHERE id = ?`,
       [companyId]
     );
 
     if (!company) {
       return res.status(404).json({ success: false, message: "Company not found" });
     }
+
+    const oldLogoKey = company.logo_url || null;
 
     const ext     = path.extname(req.file.originalname || "").toLowerCase() || ".png";
     const logoKey = `companies/${company.slug}/logo${ext}`;
@@ -225,6 +227,13 @@ export const updateCompanyLogo = async (req, res) => {
       `UPDATE companies SET logo_url = ? WHERE id = ?`,
       [key, companyId]
     );
+
+    // Clean up the previous logo if the new upload got a different key
+    // (happens when the file extension changes, e.g. .png → .jpg) —
+    // otherwise the old file would sit in S3 forever, unused.
+    if (oldLogoKey && oldLogoKey !== key) {
+      await deleteFromS3(oldLogoKey);
+    }
 
     return res.json({
       success:  true,

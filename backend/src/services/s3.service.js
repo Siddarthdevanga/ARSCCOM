@@ -61,7 +61,11 @@ export const getS3Object = async (keyOrUrl) => {
     Bucket: BUCKET(),
     Key:    extractKey(keyOrUrl),
   }).promise();
-  return { buffer: data.Body, contentType: data.ContentType || "image/png" };
+  return {
+    buffer:      data.Body,
+    contentType: data.ContentType || "image/png",
+    etag:        data.ETag || null, // changes automatically whenever the object's content changes
+  };
 };
 
 /* ──────────────────────────────────────────────────────────
