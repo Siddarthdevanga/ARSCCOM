@@ -1026,10 +1026,11 @@ router.get("/bookings", async (req, res) => {
     const { roomId, date } = req.query;
 
     let sql = `
-      SELECT b.*, r.room_name, r.room_number,
+      SELECT b.*, COALESCE(r.room_name, '[Deleted Room]') AS room_name,
+             COALESCE(r.room_number, '') AS room_number,
              COALESCE(e.name, '') AS booked_by_name
       FROM conference_bookings b
-      JOIN conference_rooms r ON r.id = b.room_id
+      LEFT JOIN conference_rooms r ON r.id = b.room_id
       LEFT JOIN company_employees e
         ON e.company_id = b.company_id AND LOWER(e.email) = LOWER(b.booked_by) AND e.is_active = 1
       WHERE b.company_id = ?
@@ -1519,8 +1520,9 @@ router.patch("/bookings/:id", async (req, res) => {
     }
 
     const [[booking]] = await db.query(
-      `SELECT b.*, r.room_name FROM conference_bookings b
-       JOIN conference_rooms r ON r.id = b.room_id
+      `SELECT b.*, COALESCE(r.room_name, '[Deleted Room]') AS room_name
+       FROM conference_bookings b
+       LEFT JOIN conference_rooms r ON r.id = b.room_id
        WHERE b.id = ? AND b.company_id = ? LIMIT 1`,
       [bookingId, companyId]
     );
@@ -1588,8 +1590,10 @@ router.patch("/bookings/:id/cancel", async (req, res) => {
     const bookingId = Number(req.params.id);
 
     const [[booking]] = await db.query(
-      `SELECT b.*, r.room_name, r.image_url as room_image FROM conference_bookings b
-       JOIN conference_rooms r ON r.id = b.room_id
+      `SELECT b.*, COALESCE(r.room_name, '[Deleted Room]') AS room_name,
+              r.image_url AS room_image
+       FROM conference_bookings b
+       LEFT JOIN conference_rooms r ON r.id = b.room_id
        WHERE b.id = ? AND b.company_id = ? LIMIT 1`,
       [bookingId, companyId]
     );
