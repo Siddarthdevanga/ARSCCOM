@@ -545,15 +545,31 @@ const canAddRoom = async (companyId, roomLimit) => {
   return count.total < roomLimit;
 };
 
-const canAddBooking = async (companyId, bookingLimit) => {
-  if (bookingLimit === Infinity) return true;
-
-  const [[count]] = await db.query(
-    `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? AND status = 'BOOKED'`,
+const getBookingUsage = async (companyId, plan) => {
+  if (plan === 'business') {
+    // Business plan: monthly quota — resets 1st of every calendar month
+    const [[row]] = await db.query(
+      `SELECT COUNT(*) AS total FROM conference_bookings
+       WHERE company_id = ? AND status = 'BOOKED'
+         AND MONTH(created_at) = MONTH(NOW())
+         AND YEAR(created_at)  = YEAR(NOW())`,
+      [companyId]
+    );
+    return row.total;
+  }
+  // Trial: lifetime total (no reset)
+  const [[row]] = await db.query(
+    `SELECT COUNT(*) AS total FROM conference_bookings
+     WHERE company_id = ? AND status = 'BOOKED'`,
     [companyId]
   );
+  return row.total;
+};
 
-  return count.total < bookingLimit;
+const canAddBooking = async (companyId, bookingLimit, plan) => {
+  if (bookingLimit === Infinity) return true;
+  const used = await getBookingUsage(companyId, plan);
+  return used < bookingLimit;
 };
 
 const getRoomStats = async (companyId) => {
@@ -697,10 +713,8 @@ router.get("/plan-usage", async (req, res) => {
       await validateCompanySubscription(companyId);
     const roomStats = await getRoomStats(companyId);
 
-    const [[bookingCount]] = await db.query(
-      `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ?`,
-      [companyId]
-    );
+    const bookingsUsed = await getBookingUsage(companyId, plan);
+    const isMonthly    = plan === 'business';
 
     res.json({
       plan: plan.toUpperCase(),
@@ -710,8 +724,10 @@ router.get("/plan-usage", async (req, res) => {
       lockedRooms: roomStats.locked,
       slotsAvailable: isUnlimited ? null : Math.max(0, roomLimit - roomStats.total),
       upgradeRequired: !isUnlimited && roomStats.total >= roomLimit,
-      bookingsUsed: bookingCount.total,
-      bookingsLimit: bookingLimit === Infinity ? "Unlimited" : bookingLimit,
+      bookingsUsed,
+      bookingsLimit:  bookingLimit === Infinity ? "Unlimited" : bookingLimit,
+      bookingPeriod:  isMonthly ? "monthly" : "lifetime",
+      bookingsRemaining: bookingLimit === Infinity ? null : Math.max(0, bookingLimit - bookingsUsed),
     });
   } catch (err) {
     console.error("[GET /plan-usage]", err.message);
@@ -1084,10 +1100,11 @@ router.post("/bookings", async (req, res) => {
 
     const { plan, bookingLimit } = await validateCompanySubscription(companyId);
 
-    const canBook = await canAddBooking(companyId, bookingLimit);
+    const canBook = await canAddBooking(companyId, bookingLimit, plan);
     if (!canBook) {
+      const period = plan === 'business' ? 'this month' : 'on your trial';
       return res.status(403).json({
-        message: `Your ${plan.toUpperCase()} plan allows only ${bookingLimit} booking(s). Please upgrade.`,
+        message: `You have reached the ${bookingLimit} booking limit ${period} on your ${plan.toUpperCase()} plan.${plan === 'business' ? ' Your quota resets on the 1st of next month.' : ' Please upgrade to continue.'}`,
       });
     }
 
@@ -1211,7 +1228,7 @@ router.post("/bookings/range", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
     const { email: adminEmail } = req.user;
-    const { bookingLimit } = await validateCompanySubscription(companyId);
+    const { plan, bookingLimit } = await validateCompanySubscription(companyId);
 
     let { room_id, booked_by, department, purpose = "", start_date, end_date, start_time, end_time,
       include_weekends = false, teamMembers = [] } = req.body;
@@ -1243,14 +1260,11 @@ router.post("/bookings/range", async (req, res) => {
     );
     if (!room) return res.status(403).json({ message: "Invalid room" });
 
-    // Remaining booking quota
+    // Remaining booking quota (monthly for Business, lifetime for Trial)
     let remainingQuota = Infinity;
     if (bookingLimit !== Infinity) {
-      const [[cnt]] = await db.query(
-        `SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? AND status = 'BOOKED'`,
-        [companyId]
-      );
-      remainingQuota = Math.max(0, bookingLimit - cnt.total);
+      const used = await getBookingUsage(companyId, plan);
+      remainingQuota = Math.max(0, bookingLimit - used);
     }
 
     await conn.beginTransaction();
