@@ -4,6 +4,29 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
+/* ── Icons (inline SVG — no emoji) ───────────────────────── */
+const ArrowLeftIcon = (props) => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M19 12H5" />
+    <path d="M12 19l-7-7 7-7" />
+  </svg>
+);
+
+const LockIcon = (props) => (
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <rect x="4" y="11" width="16" height="10" rx="2.2" />
+    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    <circle cx="12" cy="16" r="1.6" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const CheckCircleIcon = (props) => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+    <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+
 function ForgotPasswordForm() {
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -71,7 +94,9 @@ function ForgotPasswordForm() {
           <div className={styles.logoText}>PROMEET</div>
         </div>
         <div className={styles.rightHeader}>
-          <button className={styles.backBtn} onClick={() => router.push("/auth/login")}>← Back</button>
+          <button className={styles.backBtn} onClick={() => router.push("/auth/login")}>
+            <ArrowLeftIcon /> Back
+          </button>
         </div>
       </header>
 
@@ -93,10 +118,14 @@ function ForgotPasswordForm() {
               <h3 className={styles.cardTitle}>Reset Your Password</h3>
             </div>
 
-            <div className={styles.lockIcon}>🔐</div>
+            <div className={styles.lockIcon}><LockIcon /></div>
 
             {error && <div className={styles.errorBox}>{error}</div>}
-            {success && <div className={styles.successBox}>✓ {success}</div>}
+            {success && (
+              <div className={styles.successBox}>
+                <CheckCircleIcon /> {success}
+              </div>
+            )}
 
             <div className={styles.field}>
               <label className={styles.fieldLabel}>Email Address *</label>
@@ -124,7 +153,7 @@ function ForgotPasswordForm() {
             </button>
 
             <div className={styles.backLink} onClick={() => router.push("/auth/login")}>
-              ← Back to Login
+              <ArrowLeftIcon /> Back to Login
             </div>
           </div>
         </main>

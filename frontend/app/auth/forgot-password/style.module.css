@@ -77,6 +77,9 @@
   flex-shrink: 0;
 }
 .backBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
   color: #6200d6;
   border: 2px solid #6200d6;
@@ -179,10 +182,16 @@
 
 /* ================= LOCK ICON ================= */
 .lockIcon {
-  text-align: center;
-  font-size: 3rem;
-  margin-bottom: 20px;
-  opacity: 0.7;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6200d6 0%, #8a3ffc 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(98, 0, 214, 0.28);
 }
 
 /* ================= MESSAGES ================= */
@@ -303,7 +312,10 @@
 /* ================= BACK LINK ================= */
 .backLink {
   margin-top: 20px;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   font-size: 13px;
   font-weight: 700;
   color: #6200d6;
@@ -343,7 +355,7 @@
   .formCard { padding: 24px 18px; }
   .input { height: 44px; font-size: 13px; }
   .submitBtn { height: 46px; font-size: 14px; }
-  .lockIcon { font-size: 2.4rem; }
+  .lockIcon { width: 46px; height: 46px; }
 }
 
 .loadingState { display:flex; align-items:center; justify-content:center; height:100vh; color:#6c2bd9; font-size:0.9rem; }
