@@ -127,11 +127,14 @@ export default function ConferenceDashboard() {
       setAllRooms(Array.isArray(allRoomsRes) ? allRoomsRes : (allRoomsRes?.rooms || []));
       setBookings(bookingsRes || []);
       setPlan(planRes);
-      const bookingLimit = planRes?.plan === "TRIAL" ? 100 : planRes?.plan === "BUSINESS" ? 1000 : Infinity;
+      const bookingLimit = planRes?.bookingsLimit === "Unlimited" ? Infinity : (planRes?.bookingsLimit || (planRes?.plan === "TRIAL" ? 100 : planRes?.plan === "BUSINESS" ? 1000 : Infinity));
+      const bookingsUsed = planRes?.bookingsUsed ?? 0;
+      const bookingsRemaining = planRes?.bookingsRemaining ?? (bookingLimit === Infinity ? null : Math.max(bookingLimit - bookingsUsed, 0));
       setBookingPlan({
         limit: bookingLimit,
-        used: statsRes.totalBookings || 0,
-        remaining: bookingLimit === Infinity ? null : Math.max(bookingLimit - (statsRes.totalBookings || 0), 0),
+        used: bookingsUsed,
+        remaining: bookingsRemaining,
+        period: planRes?.bookingPeriod || "lifetime",
       });
     } catch (err) {
       if (err?.message?.includes("expired") || err?.message?.includes("inactive")) {
@@ -584,8 +587,10 @@ export default function ConferenceDashboard() {
         {bookingPlan && bookingPlan.limit !== Infinity && (
           <div className={styles.usageBarWrapper}>
             <div className={styles.usageHeader}>
-              <span className={styles.usageName}>Booking Usage</span>
-              <span>{bookingPlan.remaining} remaining</span>
+              <span className={styles.usageName}>
+                {bookingPlan.period === "monthly" ? "Bookings This Month" : "Booking Usage (Trial)"}
+              </span>
+              <span>{bookingPlan.remaining} remaining{bookingPlan.period === "monthly" ? " this month" : ""}</span>
             </div>
             <div className={styles.usageBarBg}>
               <div className={styles.usageBarFill} style={{
@@ -593,7 +598,10 @@ export default function ConferenceDashboard() {
                 background: bookingPercentage >= 90 ? "#cc1100" : bookingPercentage >= 70 ? "#f0a500" : "#00b894"
               }} />
             </div>
-            <div className={styles.usageFooter}><span>{bookingPlan.used} / {bookingPlan.limit} used</span></div>
+            <div className={styles.usageFooter}>
+              <span>{bookingPlan.used} / {bookingPlan.limit} used</span>
+              {bookingPlan.period === "monthly" && <span style={{color:"#888",fontSize:"12px"}}>Resets on the 1st</span>}
+            </div>
           </div>
         )}
 
