@@ -414,72 +414,98 @@ export default function ConferenceDashboard() {
 
               <div className={styles.roomList}>
                 {allRooms.map((r) => (
-                  <div key={r.id} className={`${styles.roomItem} ${!r.is_active ? styles.roomLocked : ""}`}>
-                    <div className={styles.roomInfo}>
-                      <div className={styles.roomNameRow}>
-                        <b>{r.room_name}</b>
-                        {r.is_active ? <span className={styles.activeBadge}>Active</span> : <span className={styles.lockBadge}>Locked</span>}
+                  <div key={r.id} className={`${styles.roomCard} ${!r.is_active ? styles.roomLocked : ""} ${editingRoomId === r.id ? styles.roomCardEditing : ""}`}>
+
+                    {/* ── Top: thumbnail + info + actions ── */}
+                    <div className={styles.roomCardRow}>
+                      {/* Photo thumbnail */}
+                      <div className={styles.roomThumb}>
+                        {r.image_url
+                          ? <img src={r.image_url} alt={r.room_name} className={styles.roomThumbImg} />
+                          : <div className={styles.roomThumbFallback}>{r.room_name?.charAt(0)?.toUpperCase() || "R"}</div>
+                        }
+                        {!r.is_active && <div className={styles.roomThumbLock}>🔒</div>}
                       </div>
-                      <small>#{r.room_number} &bull; Capacity: {r.capacity || "N/A"}</small>
+
+                      {/* Info */}
+                      <div className={styles.roomCardMeta}>
+                        <div className={styles.roomCardNameRow}>
+                          <span className={styles.roomCardName}>{r.room_name}</span>
+                          {r.is_active
+                            ? <span className={styles.activeBadge}>Active</span>
+                            : <span className={styles.lockBadge}>Locked</span>}
+                        </div>
+                        <div className={styles.roomCardSub}>
+                          <span className={styles.roomNumChip}>{r.room_number}</span>
+                          {r.capacity > 0 && (
+                            <span className={styles.roomCapChip}>
+                              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+                              {r.capacity} people
+                            </span>
+                          )}
+                          {r.is_busy_today && (
+                            <span className={styles.roomBusyChip}>
+                              {r.today_bookings?.length || 0} booking{(r.today_bookings?.length || 0) !== 1 ? "s" : ""} today
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className={styles.roomCardActions}>
+                        <button
+                          className={styles.roomEditBtn}
+                          disabled={!r.is_active}
+                          onClick={() => editingRoomId === r.id ? cancelEdit() : startEditRoom(r)}
+                        >
+                          {editingRoomId === r.id ? "Cancel" : "Edit"}
+                        </button>
+                        <button
+                          className={styles.roomDeleteBtn}
+                          disabled={!r.is_active}
+                          onClick={() => confirmDeleteRoom(r)}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
 
-                    {editingRoomId === r.id ? (
+                    {/* ── Expandable edit form ── */}
+                    {editingRoomId === r.id && (
                       <div className={styles.editForm}>
-                        <input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Room name" autoFocus />
-                        <input type="number" value={editCapacity} onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)} placeholder="Capacity" />
-                        <div style={{ marginTop:"0.75rem" }}>
-                          <label style={{ fontSize:"0.78rem", fontWeight:600, color:"#374151", display:"block", marginBottom:"0.4rem" }}>
-                            Room Photo
-                          </label>
+                        <div className={styles.editFormFields}>
+                          <div className={styles.editFieldGroup}>
+                            <label className={styles.editFieldLabel}>Room Name</label>
+                            <input className={styles.editInput} value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Room name" autoFocus />
+                          </div>
+                          <div className={styles.editFieldGroup}>
+                            <label className={styles.editFieldLabel}>Capacity</label>
+                            <input className={styles.editInput} type="number" value={editCapacity} onChange={(e) => setEditCapacity(parseInt(e.target.value) || 0)} placeholder="Capacity" />
+                          </div>
+                        </div>
+
+                        <div className={styles.editPhotoSection}>
+                          <label className={styles.editFieldLabel}>Room Photo</label>
                           {editRoomImagePreview ? (
-                            <div style={{ position:"relative", marginBottom:"0.5rem" }}>
-                              <img src={editRoomImagePreview} alt="Room preview"
-                                style={{ width:"100%", aspectRatio:"16/9", objectFit:"cover",
-                                  borderRadius:"0.5rem", display:"block",
-                                  border:"2px solid #7c3aed" }} />
-                              <div style={{ position:"absolute", top:6, left:6, background:"rgba(0,0,0,0.55)",
-                                color:"#fff", fontSize:"0.62rem", fontWeight:700, borderRadius:4,
-                                padding:"2px 6px", letterSpacing:"0.3px" }}>
-                                {editRoomImage ? "NEW PHOTO" : "CURRENT PHOTO"}
-                              </div>
-                              <button onClick={() => { setEditRoomImage(null); setEditRoomImagePreview(null); }}
-                                style={{ position:"absolute", top:6, right:6, background:"rgba(239,68,68,0.85)",
-                                  border:"none", borderRadius:"50%", width:24, height:24, cursor:"pointer",
-                                  color:"#fff", fontSize:"0.85rem", display:"flex", alignItems:"center",
-                                  justifyContent:"center", lineHeight:1 }}>
-                                ×
-                              </button>
+                            <div className={styles.editPhotoPreview}>
+                              <img src={editRoomImagePreview} alt="Preview" className={styles.editPhotoImg} />
+                              <div className={styles.editPhotoTag}>{editRoomImage ? "NEW PHOTO" : "CURRENT PHOTO"}</div>
+                              <button className={styles.editPhotoRemove} onClick={() => { setEditRoomImage(null); setEditRoomImagePreview(null); }}>×</button>
                             </div>
                           ) : (
-                            <div style={{ width:"100%", aspectRatio:"16/9", background:"#f3f4f6",
-                              borderRadius:"0.5rem", display:"flex", alignItems:"center",
-                              justifyContent:"center", marginBottom:"0.5rem", border:"2px dashed #d1d5db" }}>
-                              <span style={{ fontSize:"0.78rem", color:"#9ca3af" }}>No photo uploaded</span>
-                            </div>
+                            <div className={styles.editPhotoEmpty}>No photo uploaded</div>
                           )}
-                          <label style={{ display:"inline-flex", alignItems:"center", gap:"0.4rem",
-                            padding:"0.35rem 0.875rem", background:"#ede9fe", color:"#7c3aed",
-                            borderRadius:"0.4rem", fontSize:"0.78rem", fontWeight:700, cursor:"pointer" }}>
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                            </svg>
+                          <label className={styles.uploadPhotoBtn}>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
                             {editRoomImagePreview ? "Replace Photo" : "Upload Photo"}
-                            <input type="file" accept="image/*" style={{ display:"none" }}
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) { setEditRoomImage(f); setEditRoomImagePreview(URL.createObjectURL(f)); }
-                              }} />
+                            <input type="file" accept="image/*" style={{ display:"none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) { setEditRoomImage(f); setEditRoomImagePreview(URL.createObjectURL(f)); } }} />
                           </label>
                         </div>
+
                         <div className={styles.editActions}>
-                          <button className={styles.saveBtn} onClick={() => saveRoomChanges(r.id)}>Save</button>
+                          <button className={styles.saveBtn} onClick={() => saveRoomChanges(r.id)}>Save Changes</button>
                           <button className={styles.cancelEditBtn} onClick={cancelEdit}>Cancel</button>
                         </div>
-                      </div>
-                    ) : (
-                      <div className={styles.roomActions}>
-                        <button disabled={!r.is_active} onClick={() => startEditRoom(r)}>Edit</button>
-                        <button className={styles.deleteRoomBtn} disabled={!r.is_active} onClick={() => confirmDeleteRoom(r)}>Delete</button>
                       </div>
                     )}
                   </div>

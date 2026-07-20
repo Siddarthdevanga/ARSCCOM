@@ -233,31 +233,121 @@
 .addRoomBtn { flex: 1; padding: 8px; background: #6200d6; color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif; transition: all 0.2s; }
 .addRoomBtn:hover { background: #4a00a8; }
 
-.roomList { display: flex; flex-direction: column; gap: 10px; }
-.roomItem { background: #fff; border: 1.5px solid #ede8f8; border-radius: 14px; padding: 14px 16px; transition: all 0.2s; }
-.roomItem:hover { border-color: #ddd2f0; box-shadow: 0 4px 16px rgba(98,0,214,0.06); }
-.roomLocked { opacity: 0.55; background: #f8f5ff; }
-.roomInfo { margin-bottom: 8px; }
-.roomNameRow { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
-.roomNameRow b { color: #1a0038; font-size: 14px; }
-.roomInfo small { color: #9980c8; font-weight: 600; font-size: 12px; }
-.activeBadge { background: rgba(0,184,148,0.1); color: #00a875; padding: 2px 8px; border-radius: 50px; font-size: 10px; font-weight: 800; }
-.lockBadge { background: rgba(240,165,0,0.1); color: #c08700; padding: 2px 8px; border-radius: 50px; font-size: 10px; font-weight: 800; }
+/* ── Room list ── */
+.roomList { display: flex; flex-direction: column; gap: 12px; }
 
-.roomActions { display: flex; gap: 8px; }
-.roomActions button { padding: 6px 14px; border-radius: 8px; border: 1.5px solid #ddd2f0; background: #fff; color: #6200d6; font-size: 11px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif; transition: all 0.2s; }
-.roomActions button:hover:not(:disabled) { background: #6200d6; color: #fff; border-color: #6200d6; }
-.roomActions button:disabled { opacity: 0.4; cursor: not-allowed; }
-.deleteRoomBtn { color: #cc1100 !important; border-color: #f0d0d0 !important; }
-.deleteRoomBtn:hover:not(:disabled) { background: #cc1100 !important; color: #fff !important; border-color: #cc1100 !important; }
+/* ── Room card ── */
+.roomCard {
+  background: #fff;
+  border: 1.5px solid #ede8f8;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+.roomCard:hover { border-color: #c9b8f0; box-shadow: 0 4px 20px rgba(98,0,214,0.08); }
+.roomCardEditing { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+.roomLocked { opacity: 0.6; background: #faf8ff; }
 
-.editForm { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-.editForm input { padding: 8px 12px; border: 1.5px solid #ddd2f0; border-radius: 10px; font-size: 13px; font-family: 'Nunito', sans-serif; font-weight: 600; background: #faf8ff; color: #1a0038; }
-.editForm input:focus { outline: none; border-color: #6200d6; }
+/* ── Card top row ── */
+.roomCardRow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
+
+/* ── Thumbnail ── */
+.roomThumb {
+  position: relative;
+  width: 68px;
+  height: 68px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+}
+.roomThumbImg { width: 100%; height: 100%; object-fit: cover; display: block; }
+.roomThumbFallback {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 900; color: #fff;
+  letter-spacing: -1px;
+}
+.roomThumbLock {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+
+/* ── Meta (name + chips) ── */
+.roomCardMeta { flex: 1; min-width: 0; }
+.roomCardNameRow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.roomCardName { font-size: 15px; font-weight: 800; color: #1a0038; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.activeBadge { background: rgba(0,184,148,0.12); color: #00916a; padding: 2px 9px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
+.lockBadge { background: rgba(240,165,0,0.12); color: #b87800; padding: 2px 9px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
+
+.roomCardSub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.roomNumChip {
+  background: #f0ecfa; color: #6200d6;
+  padding: 2px 10px; border-radius: 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: 0.2px;
+}
+.roomCapChip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: #f0f9f6; color: #00916a;
+  padding: 2px 9px; border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+}
+.roomBusyChip {
+  background: rgba(255,106,0,0.1); color: #d95a00;
+  padding: 2px 9px; border-radius: 6px;
+  font-size: 10px; font-weight: 700;
+}
+
+/* ── Card action buttons ── */
+.roomCardActions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+.roomEditBtn {
+  padding: 6px 16px; border-radius: 8px;
+  border: 1.5px solid #ddd2f0; background: #fff; color: #6200d6;
+  font-size: 11px; font-weight: 800; cursor: pointer;
+  font-family: inherit; transition: all 0.15s; white-space: nowrap;
+}
+.roomEditBtn:hover:not(:disabled) { background: #6200d6; color: #fff; border-color: #6200d6; }
+.roomEditBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+.roomDeleteBtn {
+  padding: 6px 16px; border-radius: 8px;
+  border: 1.5px solid #fad0d0; background: #fff; color: #cc1100;
+  font-size: 11px; font-weight: 800; cursor: pointer;
+  font-family: inherit; transition: all 0.15s; white-space: nowrap;
+}
+.roomDeleteBtn:hover:not(:disabled) { background: #cc1100; color: #fff; border-color: #cc1100; }
+.roomDeleteBtn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Edit form (expands below the card row) ── */
+.editForm {
+  border-top: 1.5px solid #ede8f8;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 14px;
+  background: #faf8ff;
+}
+.editFormFields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.editFieldGroup { display: flex; flex-direction: column; gap: 4px; }
+.editFieldLabel { font-size: 11px; font-weight: 700; color: #7c3aed; letter-spacing: 0.4px; text-transform: uppercase; }
+.editInput { padding: 9px 12px; border: 1.5px solid #ddd2f0; border-radius: 10px; font-size: 13px; font-family: inherit; font-weight: 600; background: #fff; color: #1a0038; transition: border-color 0.15s; }
+.editInput:focus { outline: none; border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.08); }
+
+.editPhotoSection { display: flex; flex-direction: column; gap: 8px; }
+.editPhotoPreview { position: relative; border-radius: 10px; overflow: hidden; }
+.editPhotoImg { width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; border: 2px solid #7c3aed; border-radius: 10px; }
+.editPhotoTag { position: absolute; top: 6px; left: 6px; background: rgba(0,0,0,0.55); color: #fff; font-size: 10px; font-weight: 700; border-radius: 4px; padding: 2px 7px; letter-spacing: 0.5px; }
+.editPhotoRemove { position: absolute; top: 6px; right: 6px; background: rgba(220,38,38,0.85); border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; color: #fff; font-size: 15px; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.editPhotoEmpty { width: 100%; aspect-ratio: 16/9; background: #f3f4f6; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px dashed #ddd2f0; font-size: 12px; color: #9ca3af; font-weight: 600; }
+.uploadPhotoBtn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 14px; background: #ede9fe; color: #7c3aed; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; width: fit-content; }
+.uploadPhotoBtn:hover { background: #ddd6fe; }
+
 .editActions { display: flex; gap: 8px; }
-.saveBtn { flex: 1; padding: 8px; background: #00b894; color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif; }
-.cancelEditBtn { flex: 1; padding: 8px; background: #f3f0fb; color: #6200d6; border: 1.5px solid #ddd2f0; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; font-family: 'Nunito', sans-serif; }
-.emptyRooms { text-align: center; padding: 30px 16px; color: #b8a8d8; font-weight: 600; font-size: 0.88rem; }
+.saveBtn { flex: 1; padding: 10px; background: linear-gradient(135deg,#7c3aed,#6200d6); color: #fff; border: none; border-radius: 10px; font-size: 12px; font-weight: 800; cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+.saveBtn:hover { opacity: 0.9; }
+.cancelEditBtn { flex: 1; padding: 10px; background: #fff; color: #6b7280; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; }
+.cancelEditBtn:hover { background: #f9fafb; }
+
+.emptyRooms { text-align: center; padding: 32px 16px; color: #b8a8d8; font-weight: 600; font-size: 0.88rem; }
 
 /* ================= HERO ================= */
 .hero {
