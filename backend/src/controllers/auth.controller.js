@@ -9,17 +9,29 @@ const IS_PROD     = process.env.NODE_ENV === "production";
 // who ended up on the bare apex domain (promeet.zodopt.com, no www — typed
 // directly, bookmarked, or shared without www) got a page that loaded fine
 // but could never carry an auth cookie there, since one was never set for
-// that host. Setting `domain` to the bare apex makes the cookie valid across
-// both www and the apex (RFC 6265: no leading dot needed — a Domain
-// attribute always covers subdomains). Left undefined outside production so
-// local dev against localhost is unaffected.
-const COOKIE_OPTS = {
+// that host.
+//
+// Derived from the actual request host rather than gated on NODE_ENV — a
+// static production flag is one more thing that can be misconfigured
+// (wrong value, not set, deploy-specific env drift) and silently disables
+// this fix with no visible error. Reading req.hostname means it's correct
+// regardless of how NODE_ENV is set on any given deploy.
+const cookieDomainFor = (req) => {
+  const host = (req.hostname || "").toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1") return undefined;
+  // Strip a leading "www." to get the registrable domain — RFC 6265: a
+  // Domain attribute always covers the domain itself and all subdomains,
+  // so this one value covers both www.promeet.zodopt.com and the bare apex.
+  return host.replace(/^www\./, "");
+};
+
+const cookieOptsFor = (req) => ({
   httpOnly: true,
   secure:   IS_PROD,
   sameSite: "strict",
   path:     "/",
-  domain:   IS_PROD ? "promeet.zodopt.com" : undefined,
-};
+  domain:   cookieDomainFor(req),
+});
 
 /* ======================================================
    REGISTER
@@ -159,7 +171,7 @@ export const login = async (req, res) => {
       console.warn("⚠ LOGIN WARNING: Company slug missing");
     }
 
-    res.cookie("token", result.token, { ...COOKIE_OPTS, maxAge: 12 * 60 * 60 * 1000 });
+    res.cookie("token", result.token, { ...cookieOptsFor(req), maxAge: 12 * 60 * 60 * 1000 });
 
     return res.status(200).json({
       success: true,
@@ -245,7 +257,7 @@ export const resetPassword = async (req, res) => {
    LOGOUT
    POST /api/auth/logout
 ====================================================== */
-export const logout = (_req, res) => {
-  res.clearCookie("token", COOKIE_OPTS);
+export const logout = (req, res) => {
+  res.clearCookie("token", cookieOptsFor(req));
   return res.status(200).json({ success: true, message: "Logged out successfully" });
 };
