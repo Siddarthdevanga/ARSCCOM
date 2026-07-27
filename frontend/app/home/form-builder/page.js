@@ -5,42 +5,38 @@ import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import styles from "./style.module.css";
 
-/* ── Field catalogue — keys must match backend TOGGLEABLE_VISITOR_FIELDS ── */
+/* ── Field catalogue — keys must match backend TOGGLEABLE_VISITOR_FIELDS ──
+   Subtext only where the field isn't self-explanatory or has a side effect
+   worth calling out (Person to Meet, ID Proof, Belongings). Everything else
+   is label + toggle, nothing more. */
 const FIELD_GROUPS = [
   {
     title: "Primary Details",
-    subtitle: "Step 1 of the registration form",
-    locked: [
-      { label: "Full Name",       sub: "Always collected — required to identify every visitor" },
-      { label: "WhatsApp Number", sub: "Always collected — used for OTP verification and pass delivery" },
-    ],
+    subtitle: "Step 1",
     fields: [
-      { key: "email", label: "Email Address", sub: "Visitor's email address" },
+      { key: "email", label: "Email Address" },
     ],
   },
   {
     title: "Secondary Details",
-    subtitle: "Step 2 of the registration form",
+    subtitle: "Step 2",
     fields: [
-      { key: "fromCompany",  label: "From Company",         sub: "Visitor's own company or organization" },
-      { key: "department",   label: "Department",            sub: "Visitor's department at their company" },
-      { key: "designation",  label: "Designation",           sub: "Visitor's job title" },
-      { key: "address",      label: "Organization Address",  sub: "Visitor's company address" },
+      { key: "fromCompany",  label: "From Company" },
+      { key: "department",   label: "Department" },
+      { key: "designation",  label: "Designation" },
+      { key: "address",      label: "Organization Address" },
       { key: "city",         label: "City" },
       { key: "state",        label: "State" },
       { key: "postalCode",   label: "Postal Code" },
       { key: "country",      label: "Country" },
-      { key: "personToMeet", label: "Person to Meet", sub: "Employee the visitor is here to see — disabling this also turns off the approval WhatsApp sent to that employee" },
+      { key: "personToMeet", label: "Person to Meet", sub: "Disabling this also turns off the approval WhatsApp sent to that employee" },
       { key: "purpose",      label: "Purpose of Visit" },
       { key: "belongings",   label: "Belongings Checklist", sub: "Laptop, bag, documents, mobile, camera, other" },
     ],
   },
   {
     title: "Identity Verification",
-    subtitle: "Step 3 of the registration form",
-    locked: [
-      { label: "Photo", sub: "Always captured — used to generate the visitor's pass/badge" },
-    ],
+    subtitle: "Step 3",
     fields: [
       { key: "idProof", label: "ID Proof", sub: "ID type and ID number together" },
     ],
@@ -142,48 +138,44 @@ export default function FormBuilderPage() {
             Choose which fields appear on your visitor registration form — for both the public
             check-in page and when your team registers a visitor manually.
           </p>
+          <div className={styles.lockedNote}>
+            <Lock size={12} />
+            Name, WhatsApp Number, and Photo are always collected and can&apos;t be turned off.
+          </div>
         </section>
 
-        <main className={styles.mainContent}>
-          {error && <div className={styles.errorBanner}>{error}</div>}
+        {error && <div className={styles.errorBanner}>{error}</div>}
 
-          {fields && FIELD_GROUPS.map((group) => (
-            <div key={group.title} className={styles.groupCard}>
-              <div className={styles.groupHeader}>
-                <h3 className={styles.groupTitle}>{group.title}</h3>
-                <span className={styles.groupSubtitle}>{group.subtitle}</span>
+        {fields && (
+          <main className={styles.groupGrid}>
+            {FIELD_GROUPS.map((group) => (
+              <div key={group.title} className={styles.groupCard}>
+                <div className={styles.groupHeader}>
+                  <h3 className={styles.groupTitle}>{group.title}</h3>
+                  <span className={styles.groupSubtitle}>{group.subtitle}</span>
+                </div>
+
+                {group.fields.map((item) => (
+                  <div key={item.key} className={styles.toggleRow}>
+                    <div>
+                      <span className={styles.toggleLabel}>{item.label}</span>
+                      {item.sub && <span className={styles.toggleSub}>{item.sub}</span>}
+                    </div>
+                    <label className={`${styles.toggle} ${savingKey === item.key ? styles.toggleBusy : ""}`}>
+                      <input
+                        type="checkbox"
+                        checked={!!fields[item.key]}
+                        disabled={savingKey === item.key}
+                        onChange={() => toggleField(item.key)}
+                      />
+                      <span className={styles.toggleSlider} />
+                    </label>
+                  </div>
+                ))}
               </div>
-
-              {group.locked?.map((item) => (
-                <div key={item.label} className={styles.lockedRow}>
-                  <div className={styles.lockIconWrap}><Lock size={13} /></div>
-                  <div>
-                    <span className={styles.toggleLabel}>{item.label}</span>
-                    <span className={styles.toggleSub}>{item.sub}</span>
-                  </div>
-                </div>
-              ))}
-
-              {group.fields.map((item) => (
-                <div key={item.key} className={styles.toggleRow}>
-                  <div>
-                    <span className={styles.toggleLabel}>{item.label}</span>
-                    {item.sub && <span className={styles.toggleSub}>{item.sub}</span>}
-                  </div>
-                  <label className={`${styles.toggle} ${savingKey === item.key ? styles.toggleBusy : ""}`}>
-                    <input
-                      type="checkbox"
-                      checked={!!fields[item.key]}
-                      disabled={savingKey === item.key}
-                      onChange={() => toggleField(item.key)}
-                    />
-                    <span className={styles.toggleSlider} />
-                  </label>
-                </div>
-              ))}
-            </div>
-          ))}
-        </main>
+            ))}
+          </main>
+        )}
       </div>
     </div>
   );
