@@ -3,6 +3,10 @@ import path from "path";
 import { db } from "../config/db.js";
 import { uploadToS3, deleteFromS3 } from "../services/s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
+import {
+  TOGGLEABLE_VISITOR_FIELDS,
+  normalizeVisitorFormFields,
+} from "../constants/visitorFormFields.js";
 
 const BCRYPT_ROUNDS = 10;
 const PASSWORD_MIN_LENGTH = 8;
@@ -402,4 +406,82 @@ const sendPasswordChangedEmail = async (email, companyName) => {
       ${emailFooter()}
     `,
   });
+};
+
+/* ======================================================
+   VISITOR FORM FIELDS — Form Builder
+   GET  /api/settings/visitor-fields
+   PUT  /api/settings/visitor-fields
+   Body (PUT): { fields: { <fieldKey>: boolean, ... } }
+   Name, WhatsApp Number, and Photo are always collected and
+   are not part of this toggle set at all.
+====================================================== */
+export const getVisitorFormFields = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const [[company]] = await db.execute(
+      `SELECT visitor_form_fields FROM companies WHERE id = ?`,
+      [companyId]
+    );
+
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+
+    return res.json({
+      success: true,
+      fields: normalizeVisitorFormFields(company.visitor_form_fields),
+    });
+  } catch (error) {
+    console.error("GET VISITOR FORM FIELDS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch form field settings" });
+  }
+};
+
+export const updateVisitorFormFields = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const incoming = req.body?.fields;
+    if (!incoming || typeof incoming !== "object") {
+      return res.status(400).json({ success: false, message: "fields object is required" });
+    }
+
+    // Merge against the current stored value so a partial update (e.g. one
+    // toggle flipped) never silently resets the other fields to defaults.
+    const [[company]] = await db.execute(
+      `SELECT visitor_form_fields FROM companies WHERE id = ?`,
+      [companyId]
+    );
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Company not found" });
+    }
+
+    const current = normalizeVisitorFormFields(company.visitor_form_fields);
+    const merged  = { ...current };
+    for (const key of TOGGLEABLE_VISITOR_FIELDS) {
+      if (typeof incoming[key] === "boolean") merged[key] = incoming[key];
+    }
+
+    await db.execute(
+      `UPDATE companies SET visitor_form_fields = ? WHERE id = ?`,
+      [JSON.stringify(merged), companyId]
+    );
+
+    return res.json({
+      success: true,
+      message: "Registration form fields updated successfully",
+      fields: merged,
+    });
+  } catch (error) {
+    console.error("UPDATE VISITOR FORM FIELDS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update form field settings" });
+  }
 };

@@ -19,6 +19,7 @@ import {
   LogOut,
   UserCog,
   Lock,
+  ListChecks,
 } from "lucide-react";
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
@@ -492,9 +493,10 @@ export default function Home() {
 
   /* ── View Handlers ────────────────────────────────────────────────── */
   const handleOpenMenu      = () => { setShowMenu(true); fetchSubscription(); };
-  const handleOpenReports   = () => { setShowMenu(false); router.push("/home/reports"); };
-  const handleOpenSettings  = () => { setShowMenu(false); router.push("/home/settings"); };
-  const handleOpenEmployees = () => { setShowMenu(false); router.push("/visitor/admin"); };
+  const handleOpenReports     = () => { setShowMenu(false); router.push("/home/reports"); };
+  const handleOpenSettings    = () => { setShowMenu(false); router.push("/home/settings"); };
+  const handleOpenEmployees   = () => { setShowMenu(false); router.push("/visitor/admin"); };
+  const handleOpenFormBuilder = () => { setShowMenu(false); router.push("/home/form-builder"); };
   const handleRenew         = () => { setShowMenu(false); router.push("/auth/subscription"); };
 
   // Clicking a locked module card should never navigate through — it
@@ -587,6 +589,25 @@ export default function Home() {
           <span className={styles.menuItemTitle}>Employee Directory</span>
           <span className={styles.menuItemSubtitle}>
             {needsRenewal ? "Renew to unlock" : "Manage staff visitors can meet"}
+          </span>
+        </div>
+        {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}
+      </button>
+
+      {/* Form Builder */}
+      <button
+        className={`${styles.menuItem} ${needsRenewal ? styles.menuItemLocked : ""}`}
+        onClick={needsRenewal ? undefined : handleOpenFormBuilder}
+        disabled={needsRenewal}
+        aria-disabled={needsRenewal}
+      >
+        <div className={styles.menuItemIcon}>
+          {needsRenewal ? <Lock size={16}/> : <ListChecks size={18}/>}
+        </div>
+        <div className={styles.menuItemContent}>
+          <span className={styles.menuItemTitle}>Form Builder</span>
+          <span className={styles.menuItemSubtitle}>
+            {needsRenewal ? "Renew to unlock" : "Customize visitor registration fields"}
           </span>
         </div>
         {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}

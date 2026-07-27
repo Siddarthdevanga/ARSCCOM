@@ -56,6 +56,7 @@ export default function VisitorPrimaryDetails() {
   const [error, setError] = useState("");
   const [prefillBanner, setPrefillBanner] = useState(false);
   const [touched, setTouched] = useState({});
+  const [emailEnabled, setEmailEnabled] = useState(true); // Form Builder toggle, default on until loaded
 
   useEffect(() => {
     const storedCompany = localStorage.getItem("company");
@@ -73,6 +74,12 @@ export default function VisitorPrimaryDetails() {
     }
     const newPhone = localStorage.getItem("visitor_new_phone");
     if (newPhone) { setPhone(newPhone); localStorage.removeItem("visitor_new_phone"); }
+
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/visitor-fields`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (d?.fields && typeof d.fields.email === "boolean") setEmailEnabled(d.fields.email); })
+      .catch(() => {});
+
     setLoading(false);
   }, [router]);
 
@@ -104,7 +111,7 @@ export default function VisitorPrimaryDetails() {
   const fe = {
     name:  nameError(name),
     phone: phoneError(phone),
-    email: emailError(email),
+    email: emailEnabled ? emailError(email) : "",
   };
 
   const borderFor = (field) =>
@@ -211,19 +218,21 @@ export default function VisitorPrimaryDetails() {
               </div>
 
               {/* Email */}
-              <div className={styles.col}>
-                <label className={styles.label}>Email <span className={styles.req}>*</span></label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("email") }}
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
-                  onBlur={() => handleBlur("email")}
-                  placeholder="Email address"
-                  autoComplete="off"
-                  inputMode="email"
-                />
-                <InlineErr msg={fe.email} show={touched.email} />
-              </div>
+              {emailEnabled && (
+                <div className={styles.col}>
+                  <label className={styles.label}>Email <span className={styles.req}>*</span></label>
+                  <input className={styles.input}
+                    style={{ borderColor: borderFor("email") }}
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
+                    onBlur={() => handleBlur("email")}
+                    placeholder="Email address"
+                    autoComplete="off"
+                    inputMode="email"
+                  />
+                  <InlineErr msg={fe.email} show={touched.email} />
+                </div>
+              )}
             </div>
 
             <button className={styles.nextBtn} onClick={handleNext}>Next →</button>

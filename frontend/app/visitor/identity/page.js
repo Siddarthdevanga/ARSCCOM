@@ -23,6 +23,7 @@ export default function VisitorIdentity() {
 
   /* ================= COMPANY ================= */
   const [company, setCompany] = useState(null);
+  const [idProofEnabled, setIdProofEnabled] = useState(true); // Form Builder toggle, default on until loaded
 
   useEffect(() => {
     const rawCompany = localStorage.getItem("company");
@@ -50,6 +51,11 @@ export default function VisitorIdentity() {
         if (r.photoKey) setReturningKey(r.photoKey);
       }
     } catch { /* ignore */ }
+
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/visitor-fields`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (d?.fields && typeof d.fields.idProof === "boolean") setIdProofEnabled(d.fields.idProof); })
+      .catch(() => {});
   }, [router]);
 
   /* ================= IDENTITY ================= */
@@ -336,37 +342,41 @@ export default function VisitorIdentity() {
 
               {/* ── RIGHT: ID Details ── */}
               <div className={styles.rightPane}>
-                <div className={styles.sectionHeader}>
-                  <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
-                  <h3 className={styles.cardTitle}>ID Proof (Optional)</h3>
-                </div>
+                {idProofEnabled && (
+                  <>
+                    <div className={styles.sectionHeader}>
+                      <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
+                      <h3 className={styles.cardTitle}>ID Proof (Optional)</h3>
+                    </div>
 
-                <div className={styles.field}>
-                  <label className={styles.label}>ID Type</label>
-                  <select
-                    className={styles.input}
-                    value={idType}
-                    onChange={(e) => setIdType(e.target.value)}
-                  >
-                    <option value="">Select ID Proof</option>
-                    <option value="aadhaar">Aadhaar</option>
-                    <option value="pan">PAN</option>
-                    <option value="passport">Passport</option>
-                  </select>
-                </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>ID Type</label>
+                      <select
+                        className={styles.input}
+                        value={idType}
+                        onChange={(e) => setIdType(e.target.value)}
+                      >
+                        <option value="">Select ID Proof</option>
+                        <option value="aadhaar">Aadhaar</option>
+                        <option value="pan">PAN</option>
+                        <option value="passport">Passport</option>
+                      </select>
+                    </div>
 
-                <div className={styles.field}>
-                  <label className={styles.label}>ID Number</label>
-                  <input
-                    className={styles.input}
-                    style={{ borderColor: idTouched && idNumberError(idType, idNumber) ? "#dc2626" : undefined }}
-                    placeholder="Enter ID number"
-                    value={idNumber}
-                    onChange={(e) => { setIdNumber(e.target.value); setIdTouched(false); }}
-                    onBlur={() => setIdTouched(true)}
-                  />
-                  <InlineErr msg={idNumberError(idType, idNumber)} show={idTouched} />
-                </div>
+                    <div className={styles.field}>
+                      <label className={styles.label}>ID Number</label>
+                      <input
+                        className={styles.input}
+                        style={{ borderColor: idTouched && idNumberError(idType, idNumber) ? "#dc2626" : undefined }}
+                        placeholder="Enter ID number"
+                        value={idNumber}
+                        onChange={(e) => { setIdNumber(e.target.value); setIdTouched(false); }}
+                        onBlur={() => setIdTouched(true)}
+                      />
+                      <InlineErr msg={idNumberError(idType, idNumber)} show={idTouched} />
+                    </div>
+                  </>
+                )}
 
                 <button className={styles.generateBtn} onClick={handleGeneratePass}>
                   Generate Pass →

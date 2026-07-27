@@ -277,11 +277,23 @@ export default function SecondaryDetails() {
     personToMeet:"", purpose:"", belongings:[],
   });
 
+  // Form Builder toggles — default everything on until the real config loads
+  const [formFields, setFormFields] = useState({
+    fromCompany: true, department: true, designation: true,
+    address: true, city: true, state: true, postalCode: true, country: true,
+    personToMeet: true, purpose: true, belongings: true,
+  });
+
   useEffect(() => {
     try {
       const storedCompany = localStorage.getItem("company");
       if (!storedCompany) { router.replace("/auth/login"); return; }
       setCompany(JSON.parse(storedCompany));
+
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/visitor-fields`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((d) => { if (d?.fields) setFormFields((prev) => ({ ...prev, ...d.fields })); })
+        .catch(() => {});
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -347,7 +359,7 @@ export default function SecondaryDetails() {
     touched[field] && fe[field] ? "1px solid #dc2626" : undefined;
 
   const goNext = () => {
-    if (!form.personToMeet.trim()) {
+    if (formFields.personToMeet && !form.personToMeet.trim()) {
       setError("Person to Meet is required");
       document.querySelector("[data-meet-field]")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
@@ -408,167 +420,205 @@ export default function SecondaryDetails() {
             )}
 
             {/* Organisation */}
-            <div className={styles.sectionHeader}>
-              <span className={styles.cardDot} />
-              <h3 className={styles.cardTitle}>Organization Info</h3>
-            </div>
-            <div className={styles.row3}>
-              <div className={styles.field}>
-                <label className={styles.label}>From Company</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("fromCompany") }}
-                  value={form.fromCompany}
-                  onChange={(e) => updateField("fromCompany", e.target.value)}
-                  onBlur={() => handleBlur("fromCompany")}
-                  placeholder="Company name" />
-                <InlineErr msg={fe.fromCompany} show={touched.fromCompany} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Department</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("department") }}
-                  value={form.department}
-                  onChange={(e) => updateField("department", e.target.value)}
-                  onBlur={() => handleBlur("department")}
-                  placeholder="Department" />
-                <InlineErr msg={fe.department} show={touched.department} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Designation</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("designation") }}
-                  value={form.designation}
-                  onChange={(e) => updateField("designation", e.target.value)}
-                  onBlur={() => handleBlur("designation")}
-                  placeholder="Designation" />
-                <InlineErr msg={fe.designation} show={touched.designation} />
-              </div>
-            </div>
+            {(formFields.fromCompany || formFields.department || formFields.designation) && (
+              <>
+                <div className={styles.sectionHeader}>
+                  <span className={styles.cardDot} />
+                  <h3 className={styles.cardTitle}>Organization Info</h3>
+                </div>
+                <div className={styles.row3}>
+                  {formFields.fromCompany && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>From Company</label>
+                      <input className={styles.input}
+                        style={{ borderColor: borderFor("fromCompany") }}
+                        value={form.fromCompany}
+                        onChange={(e) => updateField("fromCompany", e.target.value)}
+                        onBlur={() => handleBlur("fromCompany")}
+                        placeholder="Company name" />
+                      <InlineErr msg={fe.fromCompany} show={touched.fromCompany} />
+                    </div>
+                  )}
+                  {formFields.department && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>Department</label>
+                      <input className={styles.input}
+                        style={{ borderColor: borderFor("department") }}
+                        value={form.department}
+                        onChange={(e) => updateField("department", e.target.value)}
+                        onBlur={() => handleBlur("department")}
+                        placeholder="Department" />
+                      <InlineErr msg={fe.department} show={touched.department} />
+                    </div>
+                  )}
+                  {formFields.designation && (
+                    <div className={styles.field}>
+                      <label className={styles.label}>Designation</label>
+                      <input className={styles.input}
+                        style={{ borderColor: borderFor("designation") }}
+                        value={form.designation}
+                        onChange={(e) => updateField("designation", e.target.value)}
+                        onBlur={() => handleBlur("designation")}
+                        placeholder="Designation" />
+                      <InlineErr msg={fe.designation} show={touched.designation} />
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
 
             {/* Address */}
-            <div className={styles.sectionHeader}>
-              <span className={`${styles.cardDot} ${styles.cardDotBlue}`} />
-              <h3 className={styles.cardTitle}>Address</h3>
-            </div>
-            <div className={styles.fullRow}>
-              <label className={styles.label}>Organization Address</label>
-              <input className={styles.input}
-                style={{ borderColor: borderFor("address") }}
-                value={form.address}
-                onChange={(e) => updateField("address", e.target.value)}
-                onBlur={() => handleBlur("address")}
-                placeholder="Full address" />
-              <InlineErr msg={fe.address} show={touched.address} />
-            </div>
-            <div className={styles.row4}>
-              <div className={styles.field}>
-                <label className={styles.label}>City</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("city") }}
-                  value={form.city}
-                  onChange={(e) => updateField("city", e.target.value)}
-                  onBlur={() => handleBlur("city")}
-                  placeholder="City" />
-                <InlineErr msg={fe.city} show={touched.city} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>State</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("state") }}
-                  value={form.state}
-                  onChange={(e) => updateField("state", e.target.value)}
-                  onBlur={() => handleBlur("state")}
-                  placeholder="State" />
-                <InlineErr msg={fe.state} show={touched.state} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Postal Code</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("postalCode") }}
-                  value={form.postalCode}
-                  onChange={(e) => updateField("postalCode", e.target.value.replace(/\D/g,"").slice(0,6))}
-                  onBlur={() => handleBlur("postalCode")}
-                  placeholder="6-digit PIN code"
-                  inputMode="numeric"
-                  maxLength={6}
-                />
-                <InlineErr msg={fe.postalCode} show={touched.postalCode} />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Country</label>
-                <input className={styles.input}
-                  style={{ borderColor: borderFor("country") }}
-                  value={form.country}
-                  onChange={(e) => updateField("country", e.target.value)}
-                  onBlur={() => handleBlur("country")}
-                  placeholder="Country" />
-                <InlineErr msg={fe.country} show={touched.country} />
-              </div>
-            </div>
+            {(formFields.address || formFields.city || formFields.state || formFields.postalCode || formFields.country) && (
+              <>
+                <div className={styles.sectionHeader}>
+                  <span className={`${styles.cardDot} ${styles.cardDotBlue}`} />
+                  <h3 className={styles.cardTitle}>Address</h3>
+                </div>
+                {formFields.address && (
+                  <div className={styles.fullRow}>
+                    <label className={styles.label}>Organization Address</label>
+                    <input className={styles.input}
+                      style={{ borderColor: borderFor("address") }}
+                      value={form.address}
+                      onChange={(e) => updateField("address", e.target.value)}
+                      onBlur={() => handleBlur("address")}
+                      placeholder="Full address" />
+                    <InlineErr msg={fe.address} show={touched.address} />
+                  </div>
+                )}
+                {(formFields.city || formFields.state || formFields.postalCode || formFields.country) && (
+                  <div className={styles.row4}>
+                    {formFields.city && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>City</label>
+                        <input className={styles.input}
+                          style={{ borderColor: borderFor("city") }}
+                          value={form.city}
+                          onChange={(e) => updateField("city", e.target.value)}
+                          onBlur={() => handleBlur("city")}
+                          placeholder="City" />
+                        <InlineErr msg={fe.city} show={touched.city} />
+                      </div>
+                    )}
+                    {formFields.state && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>State</label>
+                        <input className={styles.input}
+                          style={{ borderColor: borderFor("state") }}
+                          value={form.state}
+                          onChange={(e) => updateField("state", e.target.value)}
+                          onBlur={() => handleBlur("state")}
+                          placeholder="State" />
+                        <InlineErr msg={fe.state} show={touched.state} />
+                      </div>
+                    )}
+                    {formFields.postalCode && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>Postal Code</label>
+                        <input className={styles.input}
+                          style={{ borderColor: borderFor("postalCode") }}
+                          value={form.postalCode}
+                          onChange={(e) => updateField("postalCode", e.target.value.replace(/\D/g,"").slice(0,6))}
+                          onBlur={() => handleBlur("postalCode")}
+                          placeholder="6-digit PIN code"
+                          inputMode="numeric"
+                          maxLength={6}
+                        />
+                        <InlineErr msg={fe.postalCode} show={touched.postalCode} />
+                      </div>
+                    )}
+                    {formFields.country && (
+                      <div className={styles.field}>
+                        <label className={styles.label}>Country</label>
+                        <input className={styles.input}
+                          style={{ borderColor: borderFor("country") }}
+                          value={form.country}
+                          onChange={(e) => updateField("country", e.target.value)}
+                          onBlur={() => handleBlur("country")}
+                          placeholder="Country" />
+                        <InlineErr msg={fe.country} show={touched.country} />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Visit Details */}
-            <div className={styles.sectionHeader}>
-              <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
-              <h3 className={styles.cardTitle}>Visit Details</h3>
-            </div>
+            {(formFields.personToMeet || formFields.purpose) && (
+              <>
+                <div className={styles.sectionHeader}>
+                  <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
+                  <h3 className={styles.cardTitle}>Visit Details</h3>
+                </div>
 
-            {/*
-              CRITICAL: EmployeeAutocomplete is in its OWN field div,
-              NOT inside row2/row3/row4 grid containers.
-              The position:absolute dropdown only works correctly relative
-              to a plain block element — grid items misplace it on mobile.
-            */}
-            <div className={styles.fullRow} data-meet-field>
-              <label className={styles.label}>
-                Person to Meet <span style={{ color: "#e53935" }}>*</span>
-              </label>
-              <EmployeeAutocomplete
-                value={form.personToMeet}
-                employeeId={selectedEmployeeId}
-                onChange={(val) => { updateField("personToMeet", val); if (val.trim()) setError(""); }}
-                onSelect={({ name, id }) => {
-                  updateField("personToMeet", name);
-                  setSelectedEmployeeId(id);
-                  if (name.trim()) setError("");
-                }}
-                disabled={false}
-              />
-              {!form.personToMeet.trim() && error && (
-                <p className={styles.fieldError}>Person to Meet is required</p>
-              )}
-              {selectedEmployeeId && (
-                <p className={styles.employeeLinkedHint}>✓ Linked to employee record</p>
-              )}
-            </div>
+                {/*
+                  CRITICAL: EmployeeAutocomplete is in its OWN field div,
+                  NOT inside row2/row3/row4 grid containers.
+                  The position:absolute dropdown only works correctly relative
+                  to a plain block element — grid items misplace it on mobile.
+                */}
+                {formFields.personToMeet && (
+                  <div className={styles.fullRow} data-meet-field>
+                    <label className={styles.label}>
+                      Person to Meet <span style={{ color: "#e53935" }}>*</span>
+                    </label>
+                    <EmployeeAutocomplete
+                      value={form.personToMeet}
+                      employeeId={selectedEmployeeId}
+                      onChange={(val) => { updateField("personToMeet", val); if (val.trim()) setError(""); }}
+                      onSelect={({ name, id }) => {
+                        updateField("personToMeet", name);
+                        setSelectedEmployeeId(id);
+                        if (name.trim()) setError("");
+                      }}
+                      disabled={false}
+                    />
+                    {!form.personToMeet.trim() && error && (
+                      <p className={styles.fieldError}>Person to Meet is required</p>
+                    )}
+                    {selectedEmployeeId && (
+                      <p className={styles.employeeLinkedHint}>✓ Linked to employee record</p>
+                    )}
+                  </div>
+                )}
 
-            <div className={styles.fullRow} style={{ marginTop:"0.75rem" }}>
-              <label className={styles.label}>Purpose of Visit</label>
-              <input className={styles.input}
-                style={{ borderColor: borderFor("purpose") }}
-                value={form.purpose}
-                onChange={(e) => updateField("purpose", e.target.value)}
-                onBlur={() => handleBlur("purpose")}
-                placeholder="Meeting / Delivery / Interview…" />
-              <InlineErr msg={fe.purpose} show={touched.purpose} />
-            </div>
+                {formFields.purpose && (
+                  <div className={styles.fullRow} style={{ marginTop:"0.75rem" }}>
+                    <label className={styles.label}>Purpose of Visit</label>
+                    <input className={styles.input}
+                      style={{ borderColor: borderFor("purpose") }}
+                      value={form.purpose}
+                      onChange={(e) => updateField("purpose", e.target.value)}
+                      onBlur={() => handleBlur("purpose")}
+                      placeholder="Meeting / Delivery / Interview…" />
+                    <InlineErr msg={fe.purpose} show={touched.purpose} />
+                  </div>
+                )}
+              </>
+            )}
 
             {/* Belongings */}
-            <div className={styles.sectionHeader} style={{ marginTop:"1rem" }}>
-              <span className={`${styles.cardDot} ${styles.cardDotGold}`} />
-              <h3 className={styles.cardTitle}>Belongings</h3>
-            </div>
-            <div className={styles.checkboxGroup}>
-              {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map((item) => (
-                <label key={item} className={styles.checkLabel}>
-                  <input type="checkbox" className={styles.checkbox}
-                    checked={form.belongings.includes(item)} onChange={() => toggleBelonging(item)} />
-                  <span className={styles.checkBox}>
-                    {form.belongings.includes(item) && <span className={styles.checkMark}>✓</span>}
-                  </span>
-                  <span className={styles.checkText}>{item}</span>
-                </label>
-              ))}
-            </div>
+            {formFields.belongings && (
+              <>
+                <div className={styles.sectionHeader} style={{ marginTop:"1rem" }}>
+                  <span className={`${styles.cardDot} ${styles.cardDotGold}`} />
+                  <h3 className={styles.cardTitle}>Belongings</h3>
+                </div>
+                <div className={styles.checkboxGroup}>
+                  {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map((item) => (
+                    <label key={item} className={styles.checkLabel}>
+                      <input type="checkbox" className={styles.checkbox}
+                        checked={form.belongings.includes(item)} onChange={() => toggleBelonging(item)} />
+                      <span className={styles.checkBox}>
+                        {form.belongings.includes(item) && <span className={styles.checkMark}>✓</span>}
+                      </span>
+                      <span className={styles.checkText}>{item}</span>
+                    </label>
+                  ))}
+                </div>
+              </>
+            )}
 
             <div className={styles.buttonRow}>
               <button className={styles.prevBtn} onClick={goBack}>← Previous</button>

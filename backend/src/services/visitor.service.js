@@ -2,6 +2,7 @@ import { db } from "../config/db.js";
 import { uploadToS3, getPresignedUrl } from "./s3.service.js";
 import { sendVisitorPassMail } from "../utils/visitorMail.service.js";
 import { sendVisitorPassWhatsApp, sendApprovalWhatsApp } from "../utils/whatsapp.js";
+import { normalizeVisitorFormFields } from "../constants/visitorFormFields.js";
 import crypto from "crypto";
 
 /* ======================================================
@@ -68,8 +69,12 @@ export const saveVisitor = async (companyId, data, file) => {
     personToMeet, purpose, belongings, idType, idNumber,
   } = data;
 
-  if (!name?.trim() || !phone?.trim() || !email?.trim())
-    throw new Error("Visitor name, phone, and email are required");
+  // Email's requirement depends on this company's Form Builder config —
+  // checked further below once the company row (and its field toggles)
+  // has been fetched. Name and Phone are always required, no company can
+  // disable them.
+  if (!name?.trim() || !phone?.trim())
+    throw new Error("Visitor name and phone are required");
 
   const employeeId   = sanitizeEmployeeId(data.employeeId);
   const checkInIST   = getISTDate();
@@ -86,12 +91,17 @@ export const saveVisitor = async (companyId, data, file) => {
     /* ── Lock company ── */
     const [[company]] = await conn.execute(
       `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at,
-              grace_period_ends_at, grace_period_day
+              grace_period_ends_at, grace_period_day, visitor_form_fields
        FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
 
     if (!company) throw new Error("Company not found");
+
+    const formFields = normalizeVisitorFormFields(company.visitor_form_fields);
+    if (formFields.email && !email?.trim()) {
+      throw new Error("Visitor email is required");
+    }
 
     const PLAN   = (company.plan                || "TRIAL").toUpperCase();
     const STATUS = (company.subscription_status || "PENDING").toUpperCase();

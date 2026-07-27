@@ -7,7 +7,9 @@ import {
   updateCompanySettings,
   updateCompanyLogo,
   updateUserProfile,
-  changePassword
+  changePassword,
+  getVisitorFormFields,
+  updateVisitorFormFields,
 } from "../controllers/settings.controller.js";
 
 const router = express.Router();
@@ -121,6 +123,29 @@ router.put(
   "/password",
   authenticate,
   asyncHandler(changePassword)
+);
+
+/* ======================================================
+   VISITOR FORM FIELDS — Form Builder
+   GET /api/settings/visitor-fields
+   PUT /api/settings/visitor-fields
+   --------------------------------------------------------
+   Per-company toggle state for optional visitor registration
+   fields. Name, WhatsApp Number, and Photo are always
+   collected and aren't part of this set.
+
+   Body (PUT): { fields: { <fieldKey>: boolean, ... } }
+====================================================== */
+router.get(
+  "/visitor-fields",
+  authenticate,
+  asyncHandler(getVisitorFormFields)
+);
+
+router.put(
+  "/visitor-fields",
+  authenticate,
+  asyncHandler(updateVisitorFormFields)
 );
 
 export default router;

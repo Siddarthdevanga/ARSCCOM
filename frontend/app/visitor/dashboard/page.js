@@ -66,6 +66,8 @@ export default function VisitorDashboard() {
   const [company,        setCompany]        = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [locked,         setLocked]         = useState(false);
+  // Form Builder toggles — default everything on until the real config loads
+  const [formFields,     setFormFields]     = useState({ personToMeet: true, fromCompany: true });
   const [navOpen,        setNavOpen]        = useState(false);
   const [qrUrl,          setQrUrl]          = useState(null);
   const [regUrl,         setRegUrl]         = useState("");
@@ -103,6 +105,12 @@ export default function VisitorDashboard() {
 
     fetchDashboard().then(() => setLoading(false));
     pollTimer.current = setInterval(fetchDashboard, 30_000);
+
+    fetch(`${API}/api/settings/visitor-fields`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (d?.fields) setFormFields((prev) => ({ ...prev, ...d.fields })); })
+      .catch(() => {});
+
     return () => { clearInterval(pollTimer.current); };
   }, [fetchDashboard]);
 
@@ -508,7 +516,7 @@ export default function VisitorDashboard() {
                       <tr>
                         <th>Code</th>
                         <th>Visitor</th>
-                        <th>Meeting</th>
+                        {formFields.personToMeet && <th>Meeting</th>}
                         <th>Visit Status</th>
                         <th>Pass</th>
                         <th>Check In</th>
@@ -528,13 +536,15 @@ export default function VisitorDashboard() {
                               <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
                                 {v.name}
                               </div>
-                              {v.from_company && (
+                              {formFields.fromCompany && v.from_company && (
                                 <div style={{ fontSize: 11, color: "#9980c8" }}>{v.from_company}</div>
                               )}
                             </td>
-                            <td style={{ fontSize: 12, color: "#2a0050" }}>
-                              {v.person_to_meet || "—"}
-                            </td>
+                            {formFields.personToMeet && (
+                              <td style={{ fontSize: 12, color: "#2a0050" }}>
+                                {v.person_to_meet || "—"}
+                              </td>
+                            )}
                             <td>
                               <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
                                 <VisitStatusBadge status={v.visit_status || "pending"} />
@@ -637,7 +647,7 @@ export default function VisitorDashboard() {
                             <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
                               {v.name}
                             </div>
-                            {v.person_to_meet && (
+                            {formFields.personToMeet && v.person_to_meet && (
                               <div style={{ fontSize: 11, color: "#9980c8" }}>
                                 &rarr; {v.person_to_meet}
                               </div>

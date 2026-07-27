@@ -216,6 +216,9 @@ export default function NewVisitorPage() {
   const [belongings,         setBelongings]         = useState([]);
   const [miniError,          setMiniError]          = useState("");
 
+  // Form Builder toggles — default everything on until the real config loads
+  const [formFields, setFormFields] = useState({ personToMeet: true, purpose: true, belongings: true });
+
   useEffect(() => {
     const stored  = localStorage.getItem("company");
     if (!stored) { router.replace("/auth/login"); return; }
@@ -226,6 +229,11 @@ export default function NewVisitorPage() {
     localStorage.removeItem("visitor_secondary");
     localStorage.removeItem("visitor_returning");
     localStorage.removeItem("visitor_new_phone");
+
+    fetch(`${API}/api/settings/visitor-fields`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (d?.fields) setFormFields((prev) => ({ ...prev, ...d.fields })); })
+      .catch(() => {});
 
     setLoading(false);
   }, [router]);
@@ -281,7 +289,7 @@ export default function NewVisitorPage() {
   };
 
   const handleIssuePass = async () => {
-    if (!personToMeet.trim()) { setMiniError("Person to Meet is required"); return; }
+    if (formFields.personToMeet && !personToMeet.trim()) { setMiniError("Person to Meet is required"); return; }
     setMiniError("");
     setSubmitting(true);
     try {
@@ -437,42 +445,48 @@ export default function NewVisitorPage() {
                     </div>
                   )}
 
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>
-                      Person to Meet <span className={styles.req}>*</span>
-                    </label>
-                    <EmployeeAutocomplete
-                      value={personToMeet}
-                      employeeId={selectedEmployeeId}
-                      onChange={(val) => { setPersonToMeet(val); setMiniError(""); }}
-                      onSelect={({ name, id }) => { setPersonToMeet(name); setSelectedEmployeeId(id); setMiniError(""); }}
-                      disabled={submitting}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label className={styles.label}>Purpose of Visit</label>
-                    <input className={styles.input} value={purpose}
-                      onChange={(e) => setPurpose(e.target.value)}
-                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
-                  </div>
-
-                  <div style={{ marginBottom:"1rem" }}>
-                    <label className={styles.label} style={{ display:"block", marginBottom:"0.4rem" }}>Belongings</label>
-                    <div style={{ display:"flex", flexWrap:"wrap", gap:"0.5rem" }}>
-                      {["Laptop","Bag","Documents","Mobile","Camera","Other"].map(item => (
-                        <button key={item} type="button"
-                          onClick={() => toggleBelonging(item)}
-                          style={{ padding:"0.35rem 0.75rem", borderRadius:"1rem", fontSize:"0.8rem",
-                            border: belongings.includes(item) ? "1.5px solid #7c3aed" : "1.5px solid #e5e7eb",
-                            background: belongings.includes(item) ? "#ede9fe" : "#fff",
-                            color: belongings.includes(item) ? "#7c3aed" : "#6b7280",
-                            cursor:"pointer", fontWeight: belongings.includes(item) ? 600 : 400 }}>
-                          {item}
-                        </button>
-                      ))}
+                  {formFields.personToMeet && (
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>
+                        Person to Meet <span className={styles.req}>*</span>
+                      </label>
+                      <EmployeeAutocomplete
+                        value={personToMeet}
+                        employeeId={selectedEmployeeId}
+                        onChange={(val) => { setPersonToMeet(val); setMiniError(""); }}
+                        onSelect={({ name, id }) => { setPersonToMeet(name); setSelectedEmployeeId(id); setMiniError(""); }}
+                        disabled={submitting}
+                      />
                     </div>
-                  </div>
+                  )}
+
+                  {formFields.purpose && (
+                    <div className={styles.formGroup}>
+                      <label className={styles.label}>Purpose of Visit</label>
+                      <input className={styles.input} value={purpose}
+                        onChange={(e) => setPurpose(e.target.value)}
+                        placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                    </div>
+                  )}
+
+                  {formFields.belongings && (
+                    <div style={{ marginBottom:"1rem" }}>
+                      <label className={styles.label} style={{ display:"block", marginBottom:"0.4rem" }}>Belongings</label>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"0.5rem" }}>
+                        {["Laptop","Bag","Documents","Mobile","Camera","Other"].map(item => (
+                          <button key={item} type="button"
+                            onClick={() => toggleBelonging(item)}
+                            style={{ padding:"0.35rem 0.75rem", borderRadius:"1rem", fontSize:"0.8rem",
+                              border: belongings.includes(item) ? "1.5px solid #7c3aed" : "1.5px solid #e5e7eb",
+                              background: belongings.includes(item) ? "#ede9fe" : "#fff",
+                              color: belongings.includes(item) ? "#7c3aed" : "#6b7280",
+                              cursor:"pointer", fontWeight: belongings.includes(item) ? 600 : 400 }}>
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ display:"flex", gap:"0.75rem" }}>
                     <button className={styles.prevBtn} style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}

@@ -8,6 +8,7 @@ import { getPresignedUrl } from "../services/s3.service.js";
 import multer from "multer";
 import QRCode from "qrcode";
 import crypto from "crypto";
+import { normalizeVisitorFormFields } from "../constants/visitorFormFields.js";
 
 const router = express.Router();
 
@@ -84,7 +85,7 @@ const sanitizeEmployeeId = (raw) => {
 ====================================================== */
 const getCompanyBySlug = async (slug) => {
   const [[company]] = await db.query(
-    `SELECT id, name, slug, logo_url, whatsapp_url
+    `SELECT id, name, slug, logo_url, whatsapp_url, visitor_form_fields
      FROM companies WHERE slug = ? LIMIT 1`,
     [slug]
   );
@@ -185,6 +186,7 @@ router.get("/visitor/:slug/info", async (req, res) => {
         whatsapp_url: company.whatsapp_url || null,
         serviceUnavailable,
       },
+      formFields: normalizeVisitorFormFields(company.visitor_form_fields),
       qrCode,
       publicUrl,
     });

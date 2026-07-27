@@ -357,6 +357,14 @@ export default function PublicVisitorRegistration() {
   const [error,       setError]       = useState("");
   const [visitorCode, setVisitorCode] = useState("");
 
+  // Per-company Form Builder toggles — default everything on so nothing
+  // flashes/hides before the real config loads.
+  const [formFields, setFormFields] = useState({
+    email: true, fromCompany: true, department: true, designation: true,
+    address: true, city: true, state: true, postalCode: true, country: true,
+    personToMeet: true, purpose: true, belongings: true, idProof: true,
+  });
+
   const [phone,       setPhone]       = useState("");
   const [otp,         setOtp]         = useState("");
   const [otpSent,     setOtpSent]     = useState(false);
@@ -399,6 +407,7 @@ export default function PublicVisitorRegistration() {
         setLoading(true);
         const data = await publicFetch(`/api/public/visitor/${slug}/info`);
         setCompany(data.company);
+        if (data.formFields) setFormFields((prev) => ({ ...prev, ...data.formFields }));
       } catch (err) {
         setError(err.message || "Failed to load page");
       } finally {
@@ -522,12 +531,12 @@ export default function PublicVisitorRegistration() {
     if (step === 1) {
       setTouched({ name: true, email: true });
       const nErr = nameError(formData.name);
-      const eErr = emailError(formData.email);
+      const eErr = formFields.email ? emailError(formData.email) : "";
       if (nErr) { setError(nErr); return false; }
       if (eErr) { setError(eErr); return false; }
     }
     if (step === 2) {
-      if (!formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
+      if (formFields.personToMeet && !formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
       const secFields = ["fromCompany","department","designation","address","city","state","postalCode","country","purpose"];
       const allTouched = {};
       secFields.forEach(f => { allTouched[f] = true; });
@@ -552,7 +561,7 @@ export default function PublicVisitorRegistration() {
       if (idErr) { setIdTouched(true); setError(idErr); return false; }
     }
     return true;
-  }, [step, formData, photo, returningPhotoKey]);
+  }, [step, formData, photo, returningPhotoKey, formFields]);
 
   const handleNext   = useCallback(() => { if (validateStep()) { setError(""); setStep((p) => p + 1); } }, [validateStep]);
 
@@ -594,7 +603,7 @@ export default function PublicVisitorRegistration() {
   };
 
   const handleReturningSubmit = async () => {
-    if (!returnPersonToMeet.trim()) { setReturnMiniError("Person to Meet is required"); return; }
+    if (formFields.personToMeet && !returnPersonToMeet.trim()) { setReturnMiniError("Person to Meet is required"); return; }
     setReturnMiniError(""); setSubmitting(true);
     try {
       const fd = new FormData();
@@ -862,40 +871,46 @@ export default function PublicVisitorRegistration() {
                     </div>
                   )}
 
-                  <div className={styles.formGroup}>
-                    <label>Person to Meet *</label>
-                    <EmployeeAutocomplete
-                      slug={slug}
-                      value={returnPersonToMeet}
-                      employeeId={returnEmployeeId}
-                      onChange={(val) => { setReturnPersonToMeet(val); setReturnMiniError(""); }}
-                      onSelect={({ name, id }) => { setReturnPersonToMeet(name); setReturnEmployeeId(id); setReturnMiniError(""); }}
-                      disabled={submitting}
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Purpose of Visit</label>
-                    <input className={styles.input} value={returnPurpose}
-                      onChange={(e) => setReturnPurpose(e.target.value)}
-                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Belongings</label>
-                    <div className={styles.checkboxGroup}>
-                      {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map(item => (
-                        <label key={item} className={styles.checkboxLabel}>
-                          <input type="checkbox"
-                            checked={returnBelongings.includes(item)}
-                            onChange={() => setReturnBelongings(prev =>
-                              prev.includes(item) ? prev.filter(b => b !== item) : [...prev, item]
-                            )} />
-                          {item}
-                        </label>
-                      ))}
+                  {formFields.personToMeet && (
+                    <div className={styles.formGroup}>
+                      <label>Person to Meet *</label>
+                      <EmployeeAutocomplete
+                        slug={slug}
+                        value={returnPersonToMeet}
+                        employeeId={returnEmployeeId}
+                        onChange={(val) => { setReturnPersonToMeet(val); setReturnMiniError(""); }}
+                        onSelect={({ name, id }) => { setReturnPersonToMeet(name); setReturnEmployeeId(id); setReturnMiniError(""); }}
+                        disabled={submitting}
+                      />
                     </div>
-                  </div>
+                  )}
+
+                  {formFields.purpose && (
+                    <div className={styles.formGroup}>
+                      <label>Purpose of Visit</label>
+                      <input className={styles.input} value={returnPurpose}
+                        onChange={(e) => setReturnPurpose(e.target.value)}
+                        placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                    </div>
+                  )}
+
+                  {formFields.belongings && (
+                    <div className={styles.formGroup}>
+                      <label>Belongings</label>
+                      <div className={styles.checkboxGroup}>
+                        {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map(item => (
+                          <label key={item} className={styles.checkboxLabel}>
+                            <input type="checkbox"
+                              checked={returnBelongings.includes(item)}
+                              onChange={() => setReturnBelongings(prev =>
+                                prev.includes(item) ? prev.filter(b => b !== item) : [...prev, item]
+                              )} />
+                            {item}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div style={{ display:"flex", gap:"0.75rem" }}>
                     <button className={styles.secondaryBtn} style={{ flex:1 }}
@@ -949,15 +964,17 @@ export default function PublicVisitorRegistration() {
                   <input className={styles.input} type="tel" value={phone} disabled readOnly style={{ flex:1, background:"#f9fafb" }} />
                 </div>
               </div>
-              <div className={styles.formGroup}>
-                <label htmlFor="email">Email Address *</label>
-                <input id="email" className={styles.input} type="email" name="email"
-                  value={formData.email} onChange={handleInputChange}
-                  onBlur={() => setTouched(p => ({ ...p, email: true }))}
-                  style={{ borderColor: touched.email && emailError(formData.email) ? "#dc2626" : undefined }}
-                  placeholder="your.email@example.com" autoComplete="email" autoCapitalize="none" />
-                <InlineErr msg={emailError(formData.email)} show={touched.email} />
-              </div>
+              {formFields.email && (
+                <div className={styles.formGroup}>
+                  <label htmlFor="email">Email Address *</label>
+                  <input id="email" className={styles.input} type="email" name="email"
+                    value={formData.email} onChange={handleInputChange}
+                    onBlur={() => setTouched(p => ({ ...p, email: true }))}
+                    style={{ borderColor: touched.email && emailError(formData.email) ? "#dc2626" : undefined }}
+                    placeholder="your.email@example.com" autoComplete="email" autoCapitalize="none" />
+                  <InlineErr msg={emailError(formData.email)} show={touched.email} />
+                </div>
+              )}
               <button className={styles.primaryBtn} onClick={handleNext}>Next →</button>
             </main>
           </div>
@@ -975,81 +992,101 @@ export default function PublicVisitorRegistration() {
               {error && <div className={styles.errorMsg}>{error}</div>}
 
               {/* Org fields — 3-col grid */}
-              <div className={styles.gridRow}>
-                <div>
-                  <input className={styles.input} name="fromCompany"
-                    value={formData.fromCompany} onChange={handleInputChange}
-                    onBlur={() => setSecTouched(p => ({ ...p, fromCompany: true }))}
-                    style={{ borderColor: secTouched.fromCompany && fromCompanyError(formData.fromCompany) ? "#dc2626" : undefined }}
-                    placeholder="From Company" autoComplete="organization" />
-                  <InlineErr msg={fromCompanyError(formData.fromCompany)} show={secTouched.fromCompany} />
+              {(formFields.fromCompany || formFields.department || formFields.designation) && (
+                <div className={styles.gridRow}>
+                  {formFields.fromCompany && (
+                    <div>
+                      <input className={styles.input} name="fromCompany"
+                        value={formData.fromCompany} onChange={handleInputChange}
+                        onBlur={() => setSecTouched(p => ({ ...p, fromCompany: true }))}
+                        style={{ borderColor: secTouched.fromCompany && fromCompanyError(formData.fromCompany) ? "#dc2626" : undefined }}
+                        placeholder="From Company" autoComplete="organization" />
+                      <InlineErr msg={fromCompanyError(formData.fromCompany)} show={secTouched.fromCompany} />
+                    </div>
+                  )}
+                  {formFields.department && (
+                    <div>
+                      <input className={styles.input} name="department"
+                        value={formData.department} onChange={handleInputChange}
+                        onBlur={() => setSecTouched(p => ({ ...p, department: true }))}
+                        style={{ borderColor: secTouched.department && deptDesigError(formData.department, "department") ? "#dc2626" : undefined }}
+                        placeholder="Department" />
+                      <InlineErr msg={deptDesigError(formData.department, "department")} show={secTouched.department} />
+                    </div>
+                  )}
+                  {formFields.designation && (
+                    <div>
+                      <input className={styles.input} name="designation"
+                        value={formData.designation} onChange={handleInputChange}
+                        onBlur={() => setSecTouched(p => ({ ...p, designation: true }))}
+                        style={{ borderColor: secTouched.designation && deptDesigError(formData.designation, "designation") ? "#dc2626" : undefined }}
+                        placeholder="Designation" />
+                      <InlineErr msg={deptDesigError(formData.designation, "designation")} show={secTouched.designation} />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <input className={styles.input} name="department"
-                    value={formData.department} onChange={handleInputChange}
-                    onBlur={() => setSecTouched(p => ({ ...p, department: true }))}
-                    style={{ borderColor: secTouched.department && deptDesigError(formData.department, "department") ? "#dc2626" : undefined }}
-                    placeholder="Department" />
-                  <InlineErr msg={deptDesigError(formData.department, "department")} show={secTouched.department} />
-                </div>
-                <div>
-                  <input className={styles.input} name="designation"
-                    value={formData.designation} onChange={handleInputChange}
-                    onBlur={() => setSecTouched(p => ({ ...p, designation: true }))}
-                    style={{ borderColor: secTouched.designation && deptDesigError(formData.designation, "designation") ? "#dc2626" : undefined }}
-                    placeholder="Designation" />
-                  <InlineErr msg={deptDesigError(formData.designation, "designation")} show={secTouched.designation} />
-                </div>
-              </div>
+              )}
 
               {/* Address */}
-              <div className={styles.formGroup}>
-                <input className={styles.input} name="address"
-                  value={formData.address} onChange={handleInputChange}
-                  onBlur={() => setSecTouched(p => ({ ...p, address: true }))}
-                  style={{ borderColor: secTouched.address && addressError(formData.address) ? "#dc2626" : undefined }}
-                  placeholder="Organization Address" autoComplete="street-address" />
-                <InlineErr msg={addressError(formData.address)} show={secTouched.address} />
-              </div>
+              {formFields.address && (
+                <div className={styles.formGroup}>
+                  <input className={styles.input} name="address"
+                    value={formData.address} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, address: true }))}
+                    style={{ borderColor: secTouched.address && addressError(formData.address) ? "#dc2626" : undefined }}
+                    placeholder="Organization Address" autoComplete="street-address" />
+                  <InlineErr msg={addressError(formData.address)} show={secTouched.address} />
+                </div>
+              )}
 
               {/* Address details — city/state inline, postal code standalone for inline error */}
-              <div className={styles.gridRow}>
-                <div>
-                  <input className={styles.input} name="city"
-                    value={formData.city} onChange={handleInputChange}
-                    onBlur={() => setSecTouched(p => ({ ...p, city: true }))}
-                    style={{ borderColor: secTouched.city && cityStateCountryError(formData.city, "city") ? "#dc2626" : undefined }}
-                    placeholder="City" autoComplete="address-level2" />
-                  <InlineErr msg={cityStateCountryError(formData.city, "city")} show={secTouched.city} />
+              {(formFields.city || formFields.state) && (
+                <div className={styles.gridRow}>
+                  {formFields.city && (
+                    <div>
+                      <input className={styles.input} name="city"
+                        value={formData.city} onChange={handleInputChange}
+                        onBlur={() => setSecTouched(p => ({ ...p, city: true }))}
+                        style={{ borderColor: secTouched.city && cityStateCountryError(formData.city, "city") ? "#dc2626" : undefined }}
+                        placeholder="City" autoComplete="address-level2" />
+                      <InlineErr msg={cityStateCountryError(formData.city, "city")} show={secTouched.city} />
+                    </div>
+                  )}
+                  {formFields.state && (
+                    <div>
+                      <input className={styles.input} name="state"
+                        value={formData.state} onChange={handleInputChange}
+                        onBlur={() => setSecTouched(p => ({ ...p, state: true }))}
+                        style={{ borderColor: secTouched.state && cityStateCountryError(formData.state, "state") ? "#dc2626" : undefined }}
+                        placeholder="State" autoComplete="address-level1" />
+                      <InlineErr msg={cityStateCountryError(formData.state, "state")} show={secTouched.state} />
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <input className={styles.input} name="state"
-                    value={formData.state} onChange={handleInputChange}
-                    onBlur={() => setSecTouched(p => ({ ...p, state: true }))}
-                    style={{ borderColor: secTouched.state && cityStateCountryError(formData.state, "state") ? "#dc2626" : undefined }}
-                    placeholder="State" autoComplete="address-level1" />
-                  <InlineErr msg={cityStateCountryError(formData.state, "state")} show={secTouched.state} />
+              )}
+              {formFields.postalCode && (
+                <div className={styles.formGroup}>
+                  <input className={styles.input} name="postalCode"
+                    value={formData.postalCode}
+                    onChange={(e) => setFormData(p => ({ ...p, postalCode: e.target.value.replace(/\D/g,"").slice(0,6) }))}
+                    onBlur={() => setSecTouched(p => ({ ...p, postalCode: true }))}
+                    style={{ borderColor: secTouched.postalCode && postalCodeError(formData.postalCode) ? "#dc2626" : undefined }}
+                    placeholder="6-digit PIN code" inputMode="numeric" maxLength={6} />
+                  <InlineErr msg={postalCodeError(formData.postalCode)} show={secTouched.postalCode} />
                 </div>
-              </div>
-              <div className={styles.formGroup}>
-                <input className={styles.input} name="postalCode"
-                  value={formData.postalCode}
-                  onChange={(e) => setFormData(p => ({ ...p, postalCode: e.target.value.replace(/\D/g,"").slice(0,6) }))}
-                  onBlur={() => setSecTouched(p => ({ ...p, postalCode: true }))}
-                  style={{ borderColor: secTouched.postalCode && postalCodeError(formData.postalCode) ? "#dc2626" : undefined }}
-                  placeholder="6-digit PIN code" inputMode="numeric" maxLength={6} />
-                <InlineErr msg={postalCodeError(formData.postalCode)} show={secTouched.postalCode} />
-              </div>
+              )}
 
               {/* Country — standalone */}
-              <div className={styles.formGroup}>
-                <input className={styles.input} name="country"
-                  value={formData.country} onChange={handleInputChange}
-                  onBlur={() => setSecTouched(p => ({ ...p, country: true }))}
-                  style={{ borderColor: secTouched.country && cityStateCountryError(formData.country, "country") ? "#dc2626" : undefined }}
-                  placeholder="Country" autoComplete="country-name" />
-                <InlineErr msg={cityStateCountryError(formData.country, "country")} show={secTouched.country} />
-              </div>
+              {formFields.country && (
+                <div className={styles.formGroup}>
+                  <input className={styles.input} name="country"
+                    value={formData.country} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, country: true }))}
+                    style={{ borderColor: secTouched.country && cityStateCountryError(formData.country, "country") ? "#dc2626" : undefined }}
+                    placeholder="Country" autoComplete="country-name" />
+                  <InlineErr msg={cityStateCountryError(formData.country, "country")} show={secTouched.country} />
+                </div>
+              )}
 
               {/*
                 CRITICAL: EmployeeAutocomplete is in its OWN formGroup,
@@ -1058,40 +1095,46 @@ export default function PublicVisitorRegistration() {
                 Placing it inside a CSS Grid item causes the dropdown to
                 appear in the wrong position (above the input on mobile).
               */}
-              <div className={styles.formGroup}>
-                <label>Person to Meet *</label>
-                <EmployeeAutocomplete
-                  slug={slug}
-                  value={formData.personToMeet}
-                  employeeId={selectedEmployeeId}
-                  onChange={(val) => setFormData((p) => ({ ...p, personToMeet: val }))}
-                  onSelect={({ name, id }) => {
-                    setFormData((p) => ({ ...p, personToMeet: name }));
-                    setSelectedEmployeeId(id);
-                  }}
-                  disabled={submitting}
-                />
-              </div>
+              {formFields.personToMeet && (
+                <div className={styles.formGroup}>
+                  <label>Person to Meet *</label>
+                  <EmployeeAutocomplete
+                    slug={slug}
+                    value={formData.personToMeet}
+                    employeeId={selectedEmployeeId}
+                    onChange={(val) => setFormData((p) => ({ ...p, personToMeet: val }))}
+                    onSelect={({ name, id }) => {
+                      setFormData((p) => ({ ...p, personToMeet: name }));
+                      setSelectedEmployeeId(id);
+                    }}
+                    disabled={submitting}
+                  />
+                </div>
+              )}
 
               {/* Purpose — standalone */}
-              <div className={styles.formGroup}>
-                <input className={styles.input} name="purpose"
-                  value={formData.purpose} onChange={handleInputChange}
-                  onBlur={() => setSecTouched(p => ({ ...p, purpose: true }))}
-                  style={{ borderColor: secTouched.purpose && purposeError(formData.purpose) ? "#dc2626" : undefined }}
-                  placeholder="Purpose of Visit" />
-                <InlineErr msg={purposeError(formData.purpose)} show={secTouched.purpose} />
-              </div>
+              {formFields.purpose && (
+                <div className={styles.formGroup}>
+                  <input className={styles.input} name="purpose"
+                    value={formData.purpose} onChange={handleInputChange}
+                    onBlur={() => setSecTouched(p => ({ ...p, purpose: true }))}
+                    style={{ borderColor: secTouched.purpose && purposeError(formData.purpose) ? "#dc2626" : undefined }}
+                    placeholder="Purpose of Visit" />
+                  <InlineErr msg={purposeError(formData.purpose)} show={secTouched.purpose} />
+                </div>
+              )}
 
               {/* Belongings */}
-              <div className={styles.checkboxGroup}>
-                {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map((item) => (
-                  <label key={item} className={styles.checkboxLabel}>
-                    <input type="checkbox" checked={formData.belongings.includes(item)} onChange={() => toggleBelonging(item)} />
-                    {item}
-                  </label>
-                ))}
-              </div>
+              {formFields.belongings && (
+                <div className={styles.checkboxGroup}>
+                  {["Laptop", "Bag", "Documents", "Mobile", "Camera", "Other"].map((item) => (
+                    <label key={item} className={styles.checkboxLabel}>
+                      <input type="checkbox" checked={formData.belongings.includes(item)} onChange={() => toggleBelonging(item)} />
+                      {item}
+                    </label>
+                  ))}
+                </div>
+              )}
 
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
                 <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }}>← Back</button>
@@ -1159,27 +1202,31 @@ export default function PublicVisitorRegistration() {
                   </>
                 )}
               </div>
-              <div className={styles.formGroup}>
-                <label htmlFor="idType">ID Proof Type</label>
-                <select id="idType" className={styles.select} name="idType" value={formData.idType} onChange={handleInputChange}>
-                  <option value="">Select ID Proof (Optional)</option>
-                  <option value="aadhaar">Aadhaar</option>
-                  <option value="pan">PAN Card</option>
-                  <option value="passport">Passport</option>
-                  <option value="driving_license">Driving License</option>
-                  <option value="voter_id">Voter ID</option>
-                </select>
-              </div>
-              <div className={styles.formGroup}>
-                <label htmlFor="idNumber">ID Number</label>
-                <input id="idNumber" className={styles.input} name="idNumber"
-                  value={formData.idNumber}
-                  onChange={(e) => { handleInputChange(e); setIdTouched(false); }}
-                  onBlur={() => setIdTouched(true)}
-                  style={{ borderColor: idTouched && idNumberError(formData.idType, formData.idNumber) ? "#dc2626" : undefined }}
-                  placeholder="ID Number (Optional)" />
-                <InlineErr msg={idNumberError(formData.idType, formData.idNumber)} show={idTouched} />
-              </div>
+              {formFields.idProof && (
+                <>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="idType">ID Proof Type</label>
+                    <select id="idType" className={styles.select} name="idType" value={formData.idType} onChange={handleInputChange}>
+                      <option value="">Select ID Proof (Optional)</option>
+                      <option value="aadhaar">Aadhaar</option>
+                      <option value="pan">PAN Card</option>
+                      <option value="passport">Passport</option>
+                      <option value="driving_license">Driving License</option>
+                      <option value="voter_id">Voter ID</option>
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label htmlFor="idNumber">ID Number</label>
+                    <input id="idNumber" className={styles.input} name="idNumber"
+                      value={formData.idNumber}
+                      onChange={(e) => { handleInputChange(e); setIdTouched(false); }}
+                      onBlur={() => setIdTouched(true)}
+                      style={{ borderColor: idTouched && idNumberError(formData.idType, formData.idNumber) ? "#dc2626" : undefined }}
+                      placeholder="ID Number (Optional)" />
+                    <InlineErr msg={idNumberError(formData.idType, formData.idNumber)} show={idTouched} />
+                  </div>
+                </>
+              )}
               <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
                 <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }} disabled={submitting}>← Back</button>
