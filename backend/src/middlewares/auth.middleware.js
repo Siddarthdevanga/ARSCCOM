@@ -27,33 +27,25 @@ export const authenticate = (req, res, next) => {
 
     /* ================= TOKEN SOURCES ================= */
     let token = null;
-    let tokenSource = "none";
 
     // Authorization Header
     const auth = req.headers?.authorization;
     if (auth && typeof auth === "string" && auth.startsWith("Bearer ")) {
       token = auth.substring(7).trim();
-      tokenSource = "header";
     }
 
     // Cookie Support
     if (!token && req.cookies?.token) {
       token = req.cookies.token;
-      tokenSource = "cookie";
     }
 
     // Fallback Support
     if (!token && req.headers["x-access-token"]) {
       token = req.headers["x-access-token"];
-      tokenSource = "x-access-token";
     }
 
     /* ================= TOKEN CHECK ================= */
     if (!token || token === "undefined" || token === "null") {
-      // TEMP DIAGNOSTIC — remove once the www/apex cookie issue is confirmed fixed.
-      console.warn(
-        `[AUTH-DEBUG] 401 no-token | host=${req.hostname} | path=${req.originalUrl} | cookieHeader="${req.headers?.cookie || ""}"`
-      );
       return res.status(401).json({
         success: false,
         message: "Authentication token missing"
@@ -65,10 +57,7 @@ export const authenticate = (req, res, next) => {
     try {
       decoded = jwt.verify(token, secret);
     } catch (err) {
-      // TEMP DIAGNOSTIC — remove once the www/apex cookie issue is confirmed fixed.
-      console.warn(
-        `[AUTH-DEBUG] 401 verify-failed | host=${req.hostname} | path=${req.originalUrl} | source=${tokenSource} | errName=${err?.name} | errMsg=${err?.message} | tokenPreview=${token.slice(0, 12)}...${token.slice(-6)}`
-      );
+      console.warn("⚠️ Invalid JWT:", err?.message);
 
       if (err.name === "TokenExpiredError") {
         return res.status(401).json({
@@ -82,11 +71,6 @@ export const authenticate = (req, res, next) => {
         message: "Invalid authentication token"
       });
     }
-
-    // TEMP DIAGNOSTIC — remove once the www/apex cookie issue is confirmed fixed.
-    console.log(
-      `[AUTH-DEBUG] OK | host=${req.hostname} | path=${req.originalUrl} | source=${tokenSource} | companyId=${decoded?.companyId}`
-    );
 
     /* ================= CLAIM VALIDATION ================= */
     if (!decoded?.userId || !decoded?.companyId) {

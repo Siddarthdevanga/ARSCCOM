@@ -109,9 +109,10 @@ export default function LoginPage() {
 
       /* ── 1. Try SuperAdmin login first ── */
       const saRes = await fetch(`${API_BASE}/api/superadmin/login`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email: normalizedEmail, password }),
+        method:      "POST",
+        headers:     { "Content-Type": "application/json" },
+        body:        JSON.stringify({ email: normalizedEmail, password }),
+        credentials: "include",
       });
 
       if (saRes.ok) {
@@ -129,9 +130,10 @@ export default function LoginPage() {
 
       /* ── 2. Regular company login ── */
       const res  = await fetch(`${API_BASE}/api/auth/login`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ email: normalizedEmail, password }),
+        method:      "POST",
+        headers:     { "Content-Type": "application/json" },
+        body:        JSON.stringify({ email: normalizedEmail, password }),
+        credentials: "include",
       });
 
       const data = await res.json();
