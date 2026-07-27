@@ -4,11 +4,21 @@ const EMAIL_RE    = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 const PHONE_RE    = /^[6-9]\d{9}$/;
 const IS_PROD     = process.env.NODE_ENV === "production";
 
+// No explicit `domain` meant this cookie was host-only — scoped to whichever
+// exact hostname served the login response (www.promeet.zodopt.com). Anyone
+// who ended up on the bare apex domain (promeet.zodopt.com, no www — typed
+// directly, bookmarked, or shared without www) got a page that loaded fine
+// but could never carry an auth cookie there, since one was never set for
+// that host. Setting `domain` to the bare apex makes the cookie valid across
+// both www and the apex (RFC 6265: no leading dot needed — a Domain
+// attribute always covers subdomains). Left undefined outside production so
+// local dev against localhost is unaffected.
 const COOKIE_OPTS = {
   httpOnly: true,
   secure:   IS_PROD,
   sameSite: "strict",
   path:     "/",
+  domain:   IS_PROD ? "promeet.zodopt.com" : undefined,
 };
 
 /* ======================================================

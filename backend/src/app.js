@@ -79,8 +79,6 @@ app.use(
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
-  "https://wheelbrand.in",
-  "https://www.wheelbrand.in",
   "https://promeet.zodopt.com",
   "https://www.promeet.zodopt.com",
 ];
