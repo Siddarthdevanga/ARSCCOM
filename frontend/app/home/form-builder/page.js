@@ -8,38 +8,33 @@ import styles from "./style.module.css";
 /* ── Field catalogue — keys must match backend TOGGLEABLE_VISITOR_FIELDS ──
    Subtext only where the field isn't self-explanatory or has a side effect
    worth calling out (Person to Meet, ID Proof, Belongings). Everything else
-   is label + toggle, nothing more. */
-const FIELD_GROUPS = [
-  {
-    title: "Primary Details",
-    subtitle: "Step 1",
-    fields: [
-      { key: "email", label: "Email Address" },
-    ],
-  },
-  {
-    title: "Secondary Details",
-    subtitle: "Step 2",
-    fields: [
-      { key: "fromCompany",  label: "From Company" },
-      { key: "department",   label: "Department" },
-      { key: "designation",  label: "Designation" },
-      { key: "address",      label: "Organization Address" },
-      { key: "city",         label: "City" },
-      { key: "state",        label: "State" },
-      { key: "postalCode",   label: "Postal Code" },
-      { key: "country",      label: "Country" },
-      { key: "personToMeet", label: "Person to Meet", sub: "Disabling this also turns off the approval WhatsApp sent to that employee" },
-      { key: "belongings",   label: "Belongings Checklist", sub: "Laptop, bag, documents, mobile, camera, other" },
-    ],
-  },
-  {
-    title: "Identity Verification",
-    subtitle: "Step 3",
-    fields: [
-      { key: "idProof", label: "ID Proof", sub: "ID type and ID number together" },
-    ],
-  },
+   is label + toggle, nothing more.
+
+   Flattened (not grouped into per-step cards): with only 1 field in Step 1
+   and 1 in Step 3 versus 10 in Step 2, per-step cards left two columns
+   mostly empty. Instead every field is its own compact tile carrying a
+   small step tag, and a CSS multi-column layout balances tile heights
+   across columns automatically regardless of screen size or how many
+   fields any given step has. */
+const STEP_TAGS = {
+  1: { label: "Step 1", color: "#6200d6" },
+  2: { label: "Step 2", color: "#0284c7" },
+  3: { label: "Step 3", color: "#b45309" },
+};
+
+const FIELDS = [
+  { key: "email",        label: "Email Address", step: 1 },
+  { key: "fromCompany",  label: "From Company", step: 2 },
+  { key: "department",   label: "Department", step: 2 },
+  { key: "designation",  label: "Designation", step: 2 },
+  { key: "address",      label: "Organization Address", step: 2 },
+  { key: "city",         label: "City", step: 2 },
+  { key: "state",        label: "State", step: 2 },
+  { key: "postalCode",   label: "Postal Code", step: 2 },
+  { key: "country",      label: "Country", step: 2 },
+  { key: "personToMeet", label: "Person to Meet", step: 2, sub: "Disabling this also turns off the approval WhatsApp sent to that employee" },
+  { key: "belongings",   label: "Belongings Checklist", step: 2, sub: "Laptop, bag, documents, mobile, camera, other" },
+  { key: "idProof",      label: "ID Proof", step: 3, sub: "ID type and ID number together" },
 ];
 
 export default function FormBuilderPage() {
@@ -146,16 +141,15 @@ export default function FormBuilderPage() {
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         {fields && (
-          <main className={styles.groupGrid}>
-            {FIELD_GROUPS.map((group) => (
-              <div key={group.title} className={styles.groupCard}>
-                <div className={styles.groupHeader}>
-                  <h3 className={styles.groupTitle}>{group.title}</h3>
-                  <span className={styles.groupSubtitle}>{group.subtitle}</span>
-                </div>
-
-                {group.fields.map((item) => (
-                  <div key={item.key} className={styles.toggleRow}>
+          <main className={styles.fieldColumns}>
+            {FIELDS.map((item) => {
+              const tag = STEP_TAGS[item.step];
+              return (
+                <div key={item.key} className={styles.toggleTile}>
+                  <span className={styles.stepTag} style={{ color: tag.color, borderColor: `${tag.color}33`, background: `${tag.color}14` }}>
+                    {tag.label}
+                  </span>
+                  <div className={styles.toggleRow}>
                     <div>
                       <span className={styles.toggleLabel}>{item.label}</span>
                       {item.sub && <span className={styles.toggleSub}>{item.sub}</span>}
@@ -170,9 +164,9 @@ export default function FormBuilderPage() {
                       <span className={styles.toggleSlider} />
                     </label>
                   </div>
-                ))}
-              </div>
-            ))}
+                </div>
+              );
+            })}
           </main>
         )}
       </div>
