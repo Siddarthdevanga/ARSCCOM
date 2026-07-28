@@ -537,6 +537,7 @@ export default function PublicVisitorRegistration() {
     }
     if (step === 2) {
       if (formFields.personToMeet && !formData.personToMeet.trim()) { setError("Person to meet is required"); return false; }
+      if (!formData.purpose.trim()) { setError("Purpose of visit is required"); return false; }
       const secFields = ["fromCompany","department","designation","address","city","state","postalCode","country","purpose"];
       const allTouched = {};
       secFields.forEach(f => { allTouched[f] = true; });
@@ -604,6 +605,7 @@ export default function PublicVisitorRegistration() {
 
   const handleReturningSubmit = async () => {
     if (formFields.personToMeet && !returnPersonToMeet.trim()) { setReturnMiniError("Person to Meet is required"); return; }
+    if (!returnPurpose.trim()) { setReturnMiniError("Purpose of visit is required"); return; }
     setReturnMiniError(""); setSubmitting(true);
     try {
       const fd = new FormData();
@@ -622,7 +624,7 @@ export default function PublicVisitorRegistration() {
       fd.append("idType",      r.idType      || "");
       fd.append("idNumber",    r.idNumber    || "");
       fd.append("personToMeet", returnPersonToMeet.trim());
-      if (returnPurpose.trim()) fd.append("purpose", returnPurpose.trim());
+      fd.append("purpose", returnPurpose.trim());
       if (returnBelongings.length) fd.append("belongings", returnBelongings.join(", "));
       if (returnEmployeeId) fd.append("employeeId", String(returnEmployeeId));
       if (r.photoKey) fd.append("existingPhotoKey", r.photoKey);
@@ -885,14 +887,12 @@ export default function PublicVisitorRegistration() {
                     </div>
                   )}
 
-                  {formFields.purpose && (
-                    <div className={styles.formGroup}>
-                      <label>Purpose of Visit</label>
-                      <input className={styles.input} value={returnPurpose}
-                        onChange={(e) => setReturnPurpose(e.target.value)}
-                        placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
-                    </div>
-                  )}
+                  <div className={styles.formGroup}>
+                    <label>Purpose of Visit *</label>
+                    <input className={styles.input} value={returnPurpose}
+                      onChange={(e) => { setReturnPurpose(e.target.value); setReturnMiniError(""); }}
+                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                  </div>
 
                   {formFields.belongings && (
                     <div className={styles.formGroup}>
@@ -1112,17 +1112,15 @@ export default function PublicVisitorRegistration() {
                 </div>
               )}
 
-              {/* Purpose — standalone */}
-              {formFields.purpose && (
-                <div className={styles.formGroup}>
-                  <input className={styles.input} name="purpose"
-                    value={formData.purpose} onChange={handleInputChange}
-                    onBlur={() => setSecTouched(p => ({ ...p, purpose: true }))}
-                    style={{ borderColor: secTouched.purpose && purposeError(formData.purpose) ? "#dc2626" : undefined }}
-                    placeholder="Purpose of Visit" />
-                  <InlineErr msg={purposeError(formData.purpose)} show={secTouched.purpose} />
-                </div>
-              )}
+              {/* Purpose — standalone, always required */}
+              <div className={styles.formGroup}>
+                <input className={styles.input} name="purpose"
+                  value={formData.purpose} onChange={handleInputChange}
+                  onBlur={() => setSecTouched(p => ({ ...p, purpose: true }))}
+                  style={{ borderColor: secTouched.purpose && (!formData.purpose.trim() || purposeError(formData.purpose)) ? "#dc2626" : undefined }}
+                  placeholder="Purpose of Visit *" />
+                <InlineErr msg={!formData.purpose.trim() ? "Purpose of visit is required" : purposeError(formData.purpose)} show={secTouched.purpose} />
+              </div>
 
               {/* Belongings */}
               {formFields.belongings && (

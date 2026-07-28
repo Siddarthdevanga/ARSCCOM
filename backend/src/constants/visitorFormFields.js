@@ -1,10 +1,10 @@
 /* ======================================================
    CUSTOMIZABLE VISITOR REGISTRATION FIELDS
    ------------------------------------------------------
-   Name, WhatsApp Number, and Photo are always collected —
-   they aren't in this list because they're never toggleable.
-   Everything below defaults to enabled and can be turned off
-   per company via Settings > Form Builder.
+   Name, WhatsApp Number, Photo, and Purpose of Visit are always
+   collected — they aren't in this list because they're never
+   toggleable. Everything below defaults to enabled and can be
+   turned off per company via Settings > Form Builder.
 ====================================================== */
 
 export const TOGGLEABLE_VISITOR_FIELDS = [
@@ -18,7 +18,6 @@ export const TOGGLEABLE_VISITOR_FIELDS = [
   "postalCode",
   "country",
   "personToMeet",
-  "purpose",
   "belongings",
   "idProof", // covers both ID Type and ID Number together
 ];

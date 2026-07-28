@@ -217,7 +217,7 @@ export default function NewVisitorPage() {
   const [miniError,          setMiniError]          = useState("");
 
   // Form Builder toggles — default everything on until the real config loads
-  const [formFields, setFormFields] = useState({ personToMeet: true, purpose: true, belongings: true });
+  const [formFields, setFormFields] = useState({ personToMeet: true, belongings: true });
 
   useEffect(() => {
     const stored  = localStorage.getItem("company");
@@ -290,6 +290,7 @@ export default function NewVisitorPage() {
 
   const handleIssuePass = async () => {
     if (formFields.personToMeet && !personToMeet.trim()) { setMiniError("Person to Meet is required"); return; }
+    if (!purpose.trim()) { setMiniError("Purpose of visit is required"); return; }
     setMiniError("");
     setSubmitting(true);
     try {
@@ -308,7 +309,7 @@ export default function NewVisitorPage() {
       fd.append("idType",      profile.idType      || "");
       fd.append("idNumber",    profile.idNumber    || "");
       fd.append("personToMeet", personToMeet.trim());
-      if (purpose.trim()) fd.append("purpose", purpose.trim());
+      fd.append("purpose", purpose.trim());
       if (belongings.length) fd.append("belongings", belongings.join(", "));
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
       if (profile.photoKey)  fd.append("existingPhotoKey", profile.photoKey);
@@ -460,14 +461,14 @@ export default function NewVisitorPage() {
                     </div>
                   )}
 
-                  {formFields.purpose && (
-                    <div className={styles.formGroup}>
-                      <label className={styles.label}>Purpose of Visit</label>
-                      <input className={styles.input} value={purpose}
-                        onChange={(e) => setPurpose(e.target.value)}
-                        placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
-                    </div>
-                  )}
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Purpose of Visit <span className={styles.req}>*</span>
+                    </label>
+                    <input className={styles.input} value={purpose}
+                      onChange={(e) => { setPurpose(e.target.value); setMiniError(""); }}
+                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                  </div>
 
                   {formFields.belongings && (
                     <div style={{ marginBottom:"1rem" }}>

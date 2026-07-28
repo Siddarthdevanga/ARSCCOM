@@ -2,6 +2,14 @@
    PROMEET — FORM BUILDER
    Matches Settings page theme: Nunito, purple gradient hero,
    lite purple cards, hidden scrollbar (scrolling works)
+
+   Sizing is fluid: every spacing/type value below is a clamp()
+   tied to vh so the whole screen scales continuously with the
+   window's actual height instead of jumping between fixed
+   breakpoints. Text bottoms out around an ~11px floor (labels)
+   / ~9px (captions) — past that, .scrollBody's overflow-y:auto
+   takes over as the intentional fallback rather than shrinking
+   text further into illegibility.
 ====================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -40,6 +48,7 @@
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
+  min-height: 0;
 }
 
 .loading {
@@ -53,12 +62,12 @@
 
 /* ================= HEADER ================= */
 .header {
-  height: 58px;
+  height: clamp(46px, 7vh, 58px);
   background: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 24px;
+  padding: 0 clamp(14px, 2.5vw, 24px);
   border-bottom: 1px solid #e8e0f5;
   position: sticky;
   top: 0;
@@ -67,7 +76,7 @@
 }
 .headerLeft { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .logoText {
-  font-size: 0.95rem;
+  font-size: clamp(12px, 1.6vh, 0.95rem);
   font-weight: 800;
   color: #1a0038;
   white-space: nowrap;
@@ -75,14 +84,14 @@
   text-overflow: ellipsis;
 }
 .rightHeader { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
-.companyLogo { width: 72px; height: 36px; object-fit: contain; }
+.companyLogo { width: 72px; height: clamp(26px, 4vh, 36px); object-fit: contain; }
 .backBtn {
   background: transparent;
   color: #6200d6;
   border: 2px solid #6200d6;
-  padding: 7px 16px;
+  padding: clamp(5px, 0.9vh, 7px) clamp(12px, 2vw, 16px);
   border-radius: 50px;
-  font-size: 12px;
+  font-size: clamp(11px, 1.4vh, 12px);
   font-weight: 700;
   cursor: pointer;
   font-family: 'Nunito', sans-serif;
@@ -95,22 +104,22 @@
 .hero {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 26px 28px 4px;
+  padding: clamp(10px, 2.2vh, 26px) clamp(16px, 3vw, 28px) clamp(2px, 0.5vh, 4px);
   text-align: center;
 }
 .heroTitle {
-  font-size: 1.6rem;
+  font-size: clamp(1.05rem, 3.4vh, 1.6rem);
   font-weight: 900;
   color: #1a0038;
-  margin: 0 0 8px;
+  margin: 0 0 clamp(3px, 0.8vh, 8px);
 }
 .heroTitle span { color: #6200d6; }
 .heroSub {
-  font-size: 0.85rem;
+  font-size: clamp(11px, 1.5vh, 0.85rem);
   color: #8a7aab;
   max-width: 560px;
-  margin: 0 auto 14px;
-  line-height: 1.6;
+  margin: 0 auto clamp(6px, 1.4vh, 14px);
+  line-height: 1.5;
 }
 .lockedNote {
   display: inline-flex;
@@ -120,8 +129,8 @@
   color: #7a6c96;
   border: 1px solid #e3dbf0;
   border-radius: 20px;
-  padding: 6px 16px;
-  font-size: 11.5px;
+  padding: clamp(4px, 0.8vh, 6px) clamp(10px, 2vw, 16px);
+  font-size: clamp(10px, 1.3vh, 11.5px);
   font-weight: 700;
 }
 .lockedNote svg { flex-shrink: 0; color: #8a7aab; }
@@ -130,10 +139,10 @@
 .groupGrid {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 18px 28px 48px;
+  padding: clamp(8px, 1.6vh, 18px) clamp(14px, 3vw, 28px) clamp(18px, 3.5vh, 48px);
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: clamp(10px, 1.8vh, 18px);
   align-items: start;
 }
 
@@ -153,22 +162,22 @@
 .groupCard {
   background: #fff;
   border-radius: 16px;
-  padding: 18px 16px;
+  padding: clamp(10px, 1.9vh, 18px) clamp(10px, 2vw, 16px);
   box-shadow: 0 4px 16px rgba(98, 0, 214, 0.06);
 }
 .groupHeader {
-  margin-bottom: 12px;
-  padding-bottom: 10px;
+  margin-bottom: clamp(6px, 1.2vh, 12px);
+  padding-bottom: clamp(6px, 1vh, 10px);
   border-bottom: 1.5px dashed #ede4fa;
 }
 .groupTitle {
-  font-size: 14px;
+  font-size: clamp(11px, 1.6vh, 14px);
   font-weight: 800;
   color: #6200d6;
   margin: 0 0 2px;
 }
 .groupSubtitle {
-  font-size: 10.5px;
+  font-size: clamp(9px, 1.1vh, 10.5px);
   font-weight: 700;
   color: #b8a8d8;
   text-transform: uppercase;
@@ -180,18 +189,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 11px;
+  padding: clamp(6px, 1.1vh, 9px) clamp(8px, 1.4vw, 11px);
   background: #faf8ff;
   border-radius: 10px;
   border: 1.5px solid #ede8f8;
-  margin-bottom: 8px;
+  margin-bottom: clamp(5px, 0.9vh, 8px);
   gap: 10px;
 }
 .toggleRow:last-child { margin-bottom: 0; }
-.toggleLabel { font-size: 12.5px; font-weight: 800; color: #1a0038; display: block; }
-.toggleSub   { font-size: 10.5px; font-weight: 600; color: #b8a8d8; display: block; margin-top: 2px; line-height: 1.4; }
+.toggleLabel { font-size: clamp(11px, 1.5vh, 12.5px); font-weight: 800; color: #1a0038; display: block; }
+.toggleSub   { font-size: clamp(9px, 1.1vh, 10.5px); font-weight: 600; color: #b8a8d8; display: block; margin-top: 2px; line-height: 1.35; }
 
-.toggle { position: relative; display: inline-block; width: 38px; height: 22px; flex-shrink: 0; }
+.toggle { position: relative; display: inline-block; width: clamp(33px, 4.2vh, 38px); height: clamp(19px, 2.4vh, 22px); flex-shrink: 0; }
 .toggle input { opacity: 0; width: 0; height: 0; }
 .toggleSlider {
   position: absolute; cursor: pointer; inset: 0;
@@ -199,12 +208,12 @@
 }
 .toggleSlider:before {
   position: absolute; content: "";
-  height: 16px; width: 16px; left: 3px; bottom: 3px;
+  height: 78%; width: auto; aspect-ratio: 1; left: 3px; bottom: 3px;
   background: #fff; border-radius: 50%; transition: 0.25s;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
 .toggle input:checked + .toggleSlider { background: #6200d6; }
-.toggle input:checked + .toggleSlider:before { transform: translateX(16px); }
+.toggle input:checked + .toggleSlider:before { transform: translateX(calc(100% - 3px)); }
 .toggleBusy { opacity: 0.6; pointer-events: none; }
 
 /* ================= TOAST ================= */
@@ -229,14 +238,11 @@
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
-/* ================= RESPONSIVE ================= */
+/* ================= RESPONSIVE (column count only — sizing above is fluid) ================= */
 @media (max-width: 900px) {
   .groupGrid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 640px) {
-  .header { padding: 0 16px; }
-  .hero { padding: 20px 16px 4px; }
-  .heroTitle { font-size: 1.35rem; }
-  .groupGrid { grid-template-columns: 1fr; padding: 16px 14px 40px; }
+  .groupGrid { grid-template-columns: 1fr; }
 }

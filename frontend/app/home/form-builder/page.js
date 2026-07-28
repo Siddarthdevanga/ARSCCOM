@@ -30,7 +30,6 @@ const FIELD_GROUPS = [
       { key: "postalCode",   label: "Postal Code" },
       { key: "country",      label: "Country" },
       { key: "personToMeet", label: "Person to Meet", sub: "Disabling this also turns off the approval WhatsApp sent to that employee" },
-      { key: "purpose",      label: "Purpose of Visit" },
       { key: "belongings",   label: "Belongings Checklist", sub: "Laptop, bag, documents, mobile, camera, other" },
     ],
   },
@@ -140,7 +139,7 @@ export default function FormBuilderPage() {
           </p>
           <div className={styles.lockedNote}>
             <Lock size={12} />
-            Name, WhatsApp Number, and Photo are always collected and can&apos;t be turned off.
+            Name, WhatsApp Number, Photo, and Purpose of Visit are always collected and can&apos;t be turned off.
           </div>
         </section>
 

@@ -71,10 +71,10 @@ export const saveVisitor = async (companyId, data, file) => {
 
   // Email's requirement depends on this company's Form Builder config —
   // checked further below once the company row (and its field toggles)
-  // has been fetched. Name and Phone are always required, no company can
-  // disable them.
-  if (!name?.trim() || !phone?.trim())
-    throw new Error("Visitor name and phone are required");
+  // has been fetched. Name, Phone, and Purpose are always required, no
+  // company can disable them.
+  if (!name?.trim() || !phone?.trim() || !purpose?.trim())
+    throw new Error("Visitor name, phone, and purpose of visit are required");
 
   const employeeId   = sanitizeEmployeeId(data.employeeId);
   const checkInIST   = getISTDate();

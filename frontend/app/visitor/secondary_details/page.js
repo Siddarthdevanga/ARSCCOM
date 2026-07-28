@@ -368,6 +368,7 @@ export default function SecondaryDetails() {
     const newTouched = {};
     allFields.forEach(f => { newTouched[f] = true; });
     setTouched(newTouched);
+    if (!form.purpose.trim()) { setError("Purpose of visit is required"); return; }
     const firstErr = allFields.map(f => fe[f]).find(Boolean);
     if (firstErr) { setError(firstErr); return; }
     setError("");
@@ -545,8 +546,7 @@ export default function SecondaryDetails() {
             )}
 
             {/* Visit Details */}
-            {(formFields.personToMeet || formFields.purpose) && (
-              <>
+            <>
                 <div className={styles.sectionHeader}>
                   <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
                   <h3 className={styles.cardTitle}>Visit Details</h3>
@@ -583,20 +583,20 @@ export default function SecondaryDetails() {
                   </div>
                 )}
 
-                {formFields.purpose && (
-                  <div className={styles.fullRow} style={{ marginTop:"0.75rem" }}>
-                    <label className={styles.label}>Purpose of Visit</label>
-                    <input className={styles.input}
-                      style={{ borderColor: borderFor("purpose") }}
-                      value={form.purpose}
-                      onChange={(e) => updateField("purpose", e.target.value)}
-                      onBlur={() => handleBlur("purpose")}
-                      placeholder="Meeting / Delivery / Interview…" />
-                    <InlineErr msg={fe.purpose} show={touched.purpose} />
-                  </div>
-                )}
-              </>
-            )}
+                <div className={styles.fullRow} style={{ marginTop:"0.75rem" }}>
+                  <label className={styles.label}>
+                    Purpose of Visit <span style={{ color: "#e53935" }}>*</span>
+                  </label>
+                  <input className={styles.input}
+                    style={{ borderColor: touched.purpose && (!form.purpose.trim() || fe.purpose) ? "#dc2626" : undefined }}
+                    value={form.purpose}
+                    onChange={(e) => updateField("purpose", e.target.value)}
+                    onBlur={() => handleBlur("purpose")}
+                    placeholder="Meeting / Delivery / Interview…" />
+                  <InlineErr msg={!form.purpose.trim() ? "Purpose of visit is required" : fe.purpose} show={touched.purpose} />
+                </div>
+            </>
+
 
             {/* Belongings */}
             {formFields.belongings && (
