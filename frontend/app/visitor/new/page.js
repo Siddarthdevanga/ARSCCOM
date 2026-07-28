@@ -134,11 +134,13 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
 /* ── Full profile preview with all fields (nulls greyed) ── */
 function ProfilePreview({ profile, phone }) {
   const r = profile;
+  // Optional fields left blank on a prior visit are hidden entirely rather
+  // than shown as "Not provided"; required fields (Name, Phone) always show.
   const sections = [
     { label: "Primary", fields: [
-      { k: "Name",        v: r.name },
+      { k: "Name",        v: r.name, required: true },
       { k: "Email",       v: r.email },
-      { k: "Phone",       v: phone ? `+91 ${phone}` : null },
+      { k: "Phone",       v: phone ? `+91 ${phone}` : null, required: true },
     ]},
     { label: "Organisation", fields: [
       { k: "Company",     v: r.fromCompany },
@@ -154,7 +156,9 @@ function ProfilePreview({ profile, phone }) {
       { k: "ID Type",     v: r.idType },
       { k: "ID Number",   v: r.idNumber },
     ]},
-  ];
+  ]
+    .map(sec => ({ ...sec, fields: sec.fields.filter(f => f.required || f.v) }))
+    .filter(sec => sec.fields.length > 0);
 
   return (
     <div>

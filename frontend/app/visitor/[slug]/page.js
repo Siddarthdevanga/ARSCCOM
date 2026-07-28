@@ -782,14 +782,15 @@ export default function PublicVisitorRegistration() {
                 }
               </div>
 
-              {/* All fields grid — nulls shown greyed */}
+              {/* All fields grid — optional fields left blank last visit are hidden entirely;
+                  required fields (Name, Phone) always show even if somehow empty. */}
               {(() => {
                 const r = returningData;
                 const sections = [
                   { label:"Primary", fields:[
-                    { k:"Name",        v: r.name },
+                    { k:"Name",        v: r.name, required: true },
                     { k:"Email",       v: r.email },
-                    { k:"Phone",       v: phone ? `+91 ${phone}` : null },
+                    { k:"Phone",       v: phone ? `+91 ${phone}` : null, required: true },
                   ]},
                   { label:"Organisation", fields:[
                     { k:"Company",     v: r.fromCompany },
@@ -805,7 +806,9 @@ export default function PublicVisitorRegistration() {
                     { k:"ID Type",     v: r.idType },
                     { k:"ID Number",   v: r.idNumber },
                   ]},
-                ];
+                ]
+                  .map(sec => ({ ...sec, fields: sec.fields.filter(f => f.required || f.v) }))
+                  .filter(sec => sec.fields.length > 0);
                 return sections.map(sec => (
                   <div key={sec.label} style={{ marginBottom:"1rem" }}>
                     <div style={{ fontSize:"0.7rem", fontWeight:700, textTransform:"uppercase",
