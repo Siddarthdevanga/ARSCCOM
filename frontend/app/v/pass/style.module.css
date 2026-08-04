@@ -82,7 +82,7 @@
   overflow: hidden;
   border: 3px solid #ddd6fe;
   background: #f5f3ff;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -193,26 +193,30 @@
   word-break: break-all;
 }
 
-/* ===== WHATSAPP ===== */
+/* ===== JOIN COMMUNITY — compact outlined pill, sits right under the photo ===== */
 .whatsappBtn {
-  width: 100%;
-  padding: 13px 16px;
-  background: #25d366;
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 7px 16px 7px 14px;
+  background: #fff;
+  color: #128c4a;
+  border: 1.5px solid #25d366;
+  border-radius: 20px;
+  font-size: 12.5px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
-  display: flex;
+  transition: background 0.15s, box-shadow 0.15s;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
+  margin-bottom: 18px;
+  white-space: nowrap;
 }
 
+.whatsappBtn svg { color: #25d366; }
+
 .whatsappBtn:hover {
-  background: #1ebe5b;
+  background: #f0fdf6;
+  box-shadow: 0 2px 8px rgba(37, 211, 102, 0.18);
 }
 
 /* ===== ERROR ===== */
