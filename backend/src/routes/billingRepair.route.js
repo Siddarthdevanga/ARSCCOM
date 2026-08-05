@@ -133,6 +133,12 @@ router.get("/run", async (req, res) => {
       /* ========================
          3️⃣ UPDATE DATABASE
       ========================= */
+      // If this repair brings the company back to 'active', also clear grace
+      // period state — otherwise a company repaired out of a stale grace
+      // period would keep a stuck grace_period_ends_at and gracePeriodCron
+      // would silently never pick it up again on its next expiry.
+      const clearingGracePeriod = status === "active";
+
       await db.query(
         `
         UPDATE companies SET
@@ -144,6 +150,9 @@ router.get("/run", async (req, res) => {
           last_payment_link = ?,
           last_payment_link_id = ?,
           last_payment_created_at = ?,
+          grace_period_ends_at = IF(?, NULL, grace_period_ends_at),
+          grace_period_day = IF(?, 0, grace_period_day),
+          expired_reminder_last_sent_at = IF(?, NULL, expired_reminder_last_sent_at),
           updated_at = NOW()
         WHERE zoho_customer_id = ?
       `,
@@ -156,6 +165,9 @@ router.get("/run", async (req, res) => {
           latestLink?.url || null,
           latestLink?.payment_link_id || null,
           latestLink?.created_time || null,
+          clearingGracePeriod,
+          clearingGracePeriod,
+          clearingGracePeriod,
           customerId
         ]
       );

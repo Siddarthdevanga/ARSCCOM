@@ -162,6 +162,11 @@ router.post("/push", async (req, res) => {
     console.log("💰 Payment Date:", nowSQL);
     console.log("📅 Expires On:", endSQL);
 
+    // Resetting grace_period_ends_at/grace_period_day/expired_reminder_last_sent_at
+    // here matters: if this company renewed mid-grace-period, those fields
+    // would otherwise stay stuck at their old values, and gracePeriodCron's
+    // "grace_period_ends_at IS NULL" check would silently skip this company
+    // forever the next time its (new) subscription expires.
     if (planToActivate.toLowerCase() === "trial") {
       await db.query(
         `
@@ -172,6 +177,9 @@ router.post("/push", async (req, res) => {
           pending_upgrade_plan = NULL,
           trial_ends_at = ?,
           last_payment_created_at = ?,
+          grace_period_ends_at = NULL,
+          grace_period_day = 0,
+          expired_reminder_last_sent_at = NULL,
           updated_at = NOW()
         WHERE id = ?
         `,
@@ -187,6 +195,9 @@ router.post("/push", async (req, res) => {
           pending_upgrade_plan = NULL,
           subscription_ends_at = ?,
           last_payment_created_at = ?,
+          grace_period_ends_at = NULL,
+          grace_period_day = 0,
+          expired_reminder_last_sent_at = NULL,
           updated_at = NOW()
         WHERE id = ?
         `,
@@ -202,6 +213,9 @@ router.post("/push", async (req, res) => {
           plan = ?,
           pending_upgrade_plan = NULL,
           last_payment_created_at = ?,
+          grace_period_ends_at = NULL,
+          grace_period_day = 0,
+          expired_reminder_last_sent_at = NULL,
           updated_at = NOW()
         WHERE id = ?
         `,

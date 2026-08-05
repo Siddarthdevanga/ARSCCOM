@@ -242,6 +242,35 @@ const getEmailContent = (day, companyName, gracePeriodEndsAt, planType) => {
         </p>
       `,
     },
+    12: {
+      subject: "❌ Reminder: Your PROMEET Account Is Still Suspended",
+      heading: "Your Account Remains Suspended",
+      message: `
+        <div style="background: #DC2626; color: white; padding: 24px; border-radius: 8px; margin: 20px 0; text-align: center;">
+          <p style="margin: 0; font-size: 20px; font-weight: bold;">
+            ❌ ACCOUNT STILL SUSPENDED
+          </p>
+        </div>
+        <div style="background: #FEE2E2; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 16px; color: #991B1B;">
+            <b>Your account has been suspended since your subscription expired.</b>
+            Visitor management, conference bookings, and dashboard access remain disabled.
+          </p>
+        </div>
+        <div style="background: #DBEAFE; border-left: 4px solid #3B82F6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0; font-size: 15px; color: #1E40AF;">
+            <b>Good News:</b> Your data is safe! All your visitor records, conference bookings,
+            and settings are preserved and will be restored immediately upon renewal.
+          </p>
+        </div>
+        <p style="font-size: 16px; color: #333; margin-top: 24px; text-align: center;">
+          <b>Renew your subscription to restore access.</b>
+        </p>
+        <p style="font-size: 14px; color: #666; margin-top: 16px; text-align: center;">
+          Need help? Contact our support team at support@promeet.com
+        </p>
+      `,
+    },
   };
 
   return content[day] || content[11];

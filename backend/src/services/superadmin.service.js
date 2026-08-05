@@ -265,6 +265,24 @@ export const updateSubscriptionStatus = async (companyId, status) => {
   const validStatuses = ["pending", "trial", "active", "cancelled", "expired"];
   if (!validStatuses.includes(status)) throw new Error("Invalid subscription status");
 
+  // Manually reactivating a company (e.g. superadmin fixing a stuck account)
+  // must also clear grace period state — otherwise a stale grace_period_ends_at
+  // left over from before makes gracePeriodCron silently skip this company
+  // forever the next time its subscription expires.
+  if (status === "active") {
+    await db.query(
+      `UPDATE companies
+       SET subscription_status = 'active',
+           grace_period_ends_at = NULL,
+           grace_period_day = 0,
+           expired_reminder_last_sent_at = NULL,
+           updated_at = NOW()
+       WHERE id = ?`,
+      [companyId]
+    );
+    return;
+  }
+
   await db.query(
     `UPDATE companies SET subscription_status = ?, updated_at = NOW() WHERE id = ?`,
     [status, companyId]

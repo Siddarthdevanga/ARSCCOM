@@ -45,7 +45,20 @@ mysql -u root -p'Root@123' -D arsccom < backend/src/migrations/add-visitor-otp-e
 ALTER TABLE visitor_otp ADD INDEX idx_email_company (email, company_id);
 ```
 
-### 3. Auto-Checkout Status
+### 3. Expired-Account Monthly Reminder Tracking
+
+#### `add-expired-reminder-tracking.sql`
+```bash
+mysql -u root -p'Root@123' -D arsccom < backend/src/migrations/add-expired-reminder-tracking.sql
+```
+
+**What it does:**
+- Adds `expired_reminder_last_sent_at` column (DATETIME) to `companies`
+- Used by `gracePeriodCron.js` to send one renewal reminder email per 30 days
+  to companies that are fully suspended (`subscription_status = 'expired'`),
+  instead of the daily-forever loop that ran before this was fixed.
+
+### 4. Auto-Checkout Status
 
 #### `add-auto-checkout-status.sql`
 ```bash
