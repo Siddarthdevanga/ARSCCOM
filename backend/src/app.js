@@ -75,13 +75,18 @@ app.use(
   })
 );
 
-/* ================= CORS ================= */
+/* ================= CORS =================
+   FRONTEND_URL is a required env var (comes from Secrets Manager) and is
+   already set correctly per-environment — including it here means each
+   environment (prod, staging, ...) trusts its own frontend origin without
+   needing that origin hardcoded into the codebase. */
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:3000",
   "https://promeet.zodopt.com",
   "https://www.promeet.zodopt.com",
-];
+  process.env.FRONTEND_URL,
+].filter(Boolean);
 
 const corsOptions = {
   origin: (origin, callback) => {
