@@ -53,7 +53,7 @@ export const getVisitorPass = async (req, res) => {
         DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
         DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
-        v.person_to_meet, v.purpose,
+        v.person_to_meet, v.purpose, v.purpose_category, v.purpose_subcategory,
         c.name AS company_name, c.logo_url AS company_logo
        FROM visitors v
        INNER JOIN companies c ON c.id = v.company_id
@@ -68,6 +68,9 @@ export const getVisitorPass = async (req, res) => {
 
     const v = rows[0];
     const photoUrl = v.photo_url ? await getPresignedUrl(v.photo_url) : null;
+    // Pass shows the leaf value only — sub-category if picked, else the
+    // category alone, else the plain free-text purpose.
+    const purposeDisplay = v.purpose_subcategory || v.purpose_category || v.purpose;
 
     return res.json({
       success: true,
@@ -86,7 +89,7 @@ export const getVisitorPass = async (req, res) => {
         visitStatus: v.visit_status,
         passIssued: v.pass_mail_sent > 0,
         personToMeet: v.person_to_meet,
-        purpose: v.purpose,
+        purpose: purposeDisplay,
       }
     });
 
@@ -110,7 +113,7 @@ export const getPublicVisitorPass = async (req, res) => {
     const [rows] = await db.execute(
       `SELECT
         v.visitor_code, v.name, v.phone, v.email,
-        v.photo_url, v.company_id, v.person_to_meet, v.purpose,
+        v.photo_url, v.company_id, v.person_to_meet, v.purpose, v.purpose_category, v.purpose_subcategory,
         DATE_FORMAT(CONVERT_TZ(v.check_in,  '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
         DATE_FORMAT(CONVERT_TZ(v.check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
         v.status, v.visit_status, v.pass_mail_sent,
@@ -137,6 +140,9 @@ export const getPublicVisitorPass = async (req, res) => {
     }
 
     const photoUrl = v.photo_url ? await getPresignedUrl(v.photo_url) : null;
+    // Pass shows the leaf value only — sub-category if picked, else the
+    // category alone, else the plain free-text purpose.
+    const purposeDisplay = v.purpose_subcategory || v.purpose_category || v.purpose;
 
     return res.json({
       success: true,
@@ -147,8 +153,8 @@ export const getPublicVisitorPass = async (req, res) => {
         phone:        v.phone,
         email:        v.email,
         photoUrl,
-        personToMeet: v.person_to_meet || null,
-        purpose:      v.purpose        || null,
+        personToMeet: v.person_to_meet   || null,
+        purpose:      purposeDisplay     || null,
         checkIn:      v.check_in,
         checkOut:     v.check_out,
         status:       v.status,
@@ -266,7 +272,9 @@ export const getVisitorDashboard = async (req, res) => {
          DATE_FORMAT(CONVERT_TZ(check_in, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_in,
          visit_status,
          pass_mail_sent AS pass_issued,
-         person_to_meet
+         person_to_meet,
+         purpose_category,
+         purpose_subcategory
        FROM visitors
        WHERE company_id = ? AND status = 'IN'
        ORDER BY check_in DESC`,
@@ -281,7 +289,9 @@ export const getVisitorDashboard = async (req, res) => {
          DATE_FORMAT(CONVERT_TZ(check_out, '+00:00', '+05:30'), '%Y-%m-%dT%H:%i:%s+05:30') AS check_out,
          visit_status,
          pass_mail_sent AS pass_issued,
-         person_to_meet
+         person_to_meet,
+         purpose_category,
+         purpose_subcategory
        FROM visitors
        WHERE company_id = ? AND status = 'OUT'
          AND DATE(CONVERT_TZ(check_out, '+00:00', '+05:30')) =

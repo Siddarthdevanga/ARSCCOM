@@ -485,3 +485,273 @@ export const updateVisitorFormFields = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to update form field settings" });
   }
 };
+
+/* ======================================================
+   PURPOSE OF VISIT — CATEGORIES & SUB-CATEGORIES
+   ------------------------------------------------------
+   Company-defined categories (max 10) each with their own
+   sub-purposes (max 10 per category). A company with zero
+   categories keeps the plain free-text Purpose field on the
+   registration form — the picker only appears once at least
+   one category exists.
+   GET    /api/settings/purpose-categories
+   POST   /api/settings/purpose-categories                body:{name}
+   PUT    /api/settings/purpose-categories/:id             body:{name}
+   DELETE /api/settings/purpose-categories/:id
+   PUT    /api/settings/purpose-categories/reorder         body:{order:[id,...]}
+   POST   /api/settings/purpose-categories/:categoryId/subcategories  body:{name}
+   PUT    /api/settings/purpose-subcategories/:id          body:{name}
+   DELETE /api/settings/purpose-subcategories/:id
+   PUT    /api/settings/purpose-categories/:categoryId/subcategories/reorder body:{order:[id,...]}
+====================================================== */
+const MAX_CATEGORIES = 10;
+const MAX_SUBCATEGORIES = 10;
+
+export const getPurposeCategories = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const [categories] = await db.execute(
+      `SELECT id, name, sort_order FROM company_purpose_categories
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [companyId]
+    );
+    const [subcategories] = await db.execute(
+      `SELECT id, category_id, name, sort_order FROM company_purpose_subcategories
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [companyId]
+    );
+
+    const categoriesOut = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      sortOrder: cat.sort_order,
+      subcategories: subcategories
+        .filter((sub) => sub.category_id === cat.id)
+        .map((sub) => ({ id: sub.id, name: sub.name, sortOrder: sub.sort_order })),
+    }));
+
+    return res.json({ success: true, categories: categoriesOut });
+  } catch (error) {
+    console.error("GET PURPOSE CATEGORIES ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch purpose categories" });
+  }
+};
+
+export const createPurposeCategory = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const name = req.body?.name?.trim();
+    if (!name) return res.status(400).json({ success: false, message: "Category name is required" });
+
+    const [[{ total }]] = await db.execute(
+      `SELECT COUNT(*) AS total FROM company_purpose_categories WHERE company_id = ?`,
+      [companyId]
+    );
+    if (total >= MAX_CATEGORIES) {
+      return res.status(400).json({ success: false, message: `Maximum ${MAX_CATEGORIES} categories allowed` });
+    }
+
+    const [[{ nextOrder }]] = await db.execute(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS nextOrder FROM company_purpose_categories WHERE company_id = ?`,
+      [companyId]
+    );
+
+    const [result] = await db.execute(
+      `INSERT INTO company_purpose_categories (company_id, name, sort_order) VALUES (?, ?, ?)`,
+      [companyId, name, nextOrder]
+    );
+
+    return res.status(201).json({
+      success: true,
+      category: { id: result.insertId, name, sortOrder: nextOrder, subcategories: [] },
+    });
+  } catch (error) {
+    console.error("CREATE PURPOSE CATEGORY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to create category" });
+  }
+};
+
+export const updatePurposeCategory = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    const name = req.body?.name?.trim();
+    if (!name) return res.status(400).json({ success: false, message: "Category name is required" });
+
+    const [result] = await db.execute(
+      `UPDATE company_purpose_categories SET name = ? WHERE id = ? AND company_id = ?`,
+      [name, id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Category not found" });
+
+    return res.json({ success: true, message: "Category updated" });
+  } catch (error) {
+    console.error("UPDATE PURPOSE CATEGORY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update category" });
+  }
+};
+
+export const deletePurposeCategory = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    // Sub-categories cascade-delete via FK — historical visitor records are
+    // unaffected since visitors.purpose_category/purpose_subcategory are
+    // plain-text snapshots, not live references to these rows.
+    const [result] = await db.execute(
+      `DELETE FROM company_purpose_categories WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Category not found" });
+
+    return res.json({ success: true, message: "Category deleted" });
+  } catch (error) {
+    console.error("DELETE PURPOSE CATEGORY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete category" });
+  }
+};
+
+export const reorderPurposeCategories = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const order = req.body?.order;
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ success: false, message: "order array is required" });
+    }
+
+    await Promise.all(
+      order.map((id, index) =>
+        db.execute(
+          `UPDATE company_purpose_categories SET sort_order = ? WHERE id = ? AND company_id = ?`,
+          [index, id, companyId]
+        )
+      )
+    );
+
+    return res.json({ success: true, message: "Order updated" });
+  } catch (error) {
+    console.error("REORDER PURPOSE CATEGORIES ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to reorder categories" });
+  }
+};
+
+export const createPurposeSubcategory = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { categoryId } = req.params;
+    const name = req.body?.name?.trim();
+    if (!name) return res.status(400).json({ success: false, message: "Sub-purpose name is required" });
+
+    const [[category]] = await db.execute(
+      `SELECT id FROM company_purpose_categories WHERE id = ? AND company_id = ?`,
+      [categoryId, companyId]
+    );
+    if (!category) return res.status(404).json({ success: false, message: "Category not found" });
+
+    const [[{ total }]] = await db.execute(
+      `SELECT COUNT(*) AS total FROM company_purpose_subcategories WHERE category_id = ?`,
+      [categoryId]
+    );
+    if (total >= MAX_SUBCATEGORIES) {
+      return res.status(400).json({ success: false, message: `Maximum ${MAX_SUBCATEGORIES} sub-purposes allowed per category` });
+    }
+
+    const [[{ nextOrder }]] = await db.execute(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS nextOrder FROM company_purpose_subcategories WHERE category_id = ?`,
+      [categoryId]
+    );
+
+    const [result] = await db.execute(
+      `INSERT INTO company_purpose_subcategories (category_id, company_id, name, sort_order) VALUES (?, ?, ?, ?)`,
+      [categoryId, companyId, name, nextOrder]
+    );
+
+    return res.status(201).json({
+      success: true,
+      subcategory: { id: result.insertId, name, sortOrder: nextOrder },
+    });
+  } catch (error) {
+    console.error("CREATE PURPOSE SUBCATEGORY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to create sub-purpose" });
+  }
+};
+
+export const updatePurposeSubcategory = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    const name = req.body?.name?.trim();
+    if (!name) return res.status(400).json({ success: false, message: "Sub-purpose name is required" });
+
+    const [result] = await db.execute(
+      `UPDATE company_purpose_subcategories SET name = ? WHERE id = ? AND company_id = ?`,
+      [name, id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Sub-purpose not found" });
+
+    return res.json({ success: true, message: "Sub-purpose updated" });
+  } catch (error) {
+    console.error("UPDATE PURPOSE SUBCATEGORY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update sub-purpose" });
+  }
+};
+
+export const deletePurposeSubcategory = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    const [result] = await db.execute(
+      `DELETE FROM company_purpose_subcategories WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Sub-purpose not found" });
+
+    return res.json({ success: true, message: "Sub-purpose deleted" });
+  } catch (error) {
+    console.error("DELETE PURPOSE SUBCATEGORY ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete sub-purpose" });
+  }
+};
+
+export const reorderPurposeSubcategories = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { categoryId } = req.params;
+    const order = req.body?.order;
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ success: false, message: "order array is required" });
+    }
+
+    await Promise.all(
+      order.map((id, index) =>
+        db.execute(
+          `UPDATE company_purpose_subcategories SET sort_order = ? WHERE id = ? AND category_id = ? AND company_id = ?`,
+          [index, id, categoryId, companyId]
+        )
+      )
+    );
+
+    return res.json({ success: true, message: "Order updated" });
+  } catch (error) {
+    console.error("REORDER PURPOSE SUBCATEGORIES ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to reorder sub-purposes" });
+  }
+};
