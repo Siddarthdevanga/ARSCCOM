@@ -62,8 +62,9 @@ const validateWhatsAppUrl = (input) => {
     return v;
   }
 
-  // Channel URL
-  if (/^https:\/\/whatsapp\.com\/channel\/.+/i.test(v)) {
+  // Channel URL — www. is how WhatsApp's own share button actually
+  // generates these links, so it must be optional here, not required.
+  if (/^https:\/\/(www\.)?whatsapp\.com\/channel\/.+/i.test(v)) {
     return v;
   }
 
@@ -72,7 +73,7 @@ const validateWhatsAppUrl = (input) => {
     "• Phone number: +918647878785\n" +
     "• Direct chat: https://wa.me/... or https://api.whatsapp.com/...\n" +
     "• Group invite: https://chat.whatsapp.com/...\n" +
-    "• Channel: https://whatsapp.com/channel/..."
+    "• Channel: https://whatsapp.com/channel/... or https://www.whatsapp.com/channel/..."
   );
 };
 
