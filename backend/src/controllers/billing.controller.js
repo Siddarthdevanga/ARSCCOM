@@ -74,15 +74,15 @@ export const createPayment = async (req, res) => {
     const pricing = {
       free: {
         amount: 1.0,
-        description: "PROMEET Trial Processing Fee"
+        description: "Hai Visitor Trial Processing Fee"
       },
       trial: {
         amount: 1.0,
-        description: "PROMEET Trial Processing Fee"
+        description: "Hai Visitor Trial Processing Fee"
       },
       business: {
         amount: 2.0,
-        description: "PROMEET Business Subscription"
+        description: "Hai Visitor Business Subscription"
       }
     };
 

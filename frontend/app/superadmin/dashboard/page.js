@@ -529,8 +529,8 @@ export default function SuperAdminDashboard() {
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
             <Image
-              src="/Brand Logo.png"
-              alt="Promeet Logo"
+              src="/Hai Visitor.png"
+              alt="Hai Visitor Logo"
               width={280}
               height={90}
               priority

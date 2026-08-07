@@ -73,7 +73,7 @@ export default function VideoBroadcast() {
       {/* Header */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <span style={{ fontWeight: 800, fontSize: 18, color: "#7c3aed" }}>Promeet</span>
+          <span style={{ fontWeight: 800, fontSize: 18, color: "#7c3aed" }}>Hai Visitor</span>
           <span className={styles.superBadge}>SUPERADMIN</span>
         </div>
         <div className={styles.headerRight}>

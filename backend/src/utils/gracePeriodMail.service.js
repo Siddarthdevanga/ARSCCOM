@@ -8,7 +8,7 @@ const emailFooter = (companyName) => `
 <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;" />
 <p style="font-size: 13px; color: #666; line-height: 1.6;">
   Regards,<br/>
-  <b>PROMEET Team</b>
+  <b>Hai Visitor Team</b>
 </p>
 <p style="font-size: 12px; color: #999; margin-top: 20px;">
   This is an automated notification regarding your subscription for <b>${companyName}</b>.
@@ -243,7 +243,7 @@ const getEmailContent = (day, companyName, gracePeriodEndsAt, planType) => {
       `,
     },
     12: {
-      subject: "❌ Reminder: Your PROMEET Account Is Still Suspended",
+      subject: "❌ Reminder: Your Hai Visitor Account Is Still Suspended",
       heading: "Your Account Remains Suspended",
       message: `
         <div style="background: #DC2626; color: white; padding: 24px; border-radius: 8px; margin: 20px 0; text-align: center;">
@@ -302,7 +302,7 @@ export const sendGracePeriodEmail = async ({
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #7a00ff; margin: 0; font-size: 28px;">PROMEET</h1>
+          <h1 style="color: #7a00ff; margin: 0; font-size: 28px;">Hai Visitor</h1>
           <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Visitor & Conference Management</p>
         </div>
 
@@ -328,7 +328,7 @@ export const sendGracePeriodEmail = async ({
         </div>
 
         <p style="text-align: center; color: #999; font-size: 12px; margin-top: 20px;">
-          © ${new Date().getFullYear()} PROMEET. All rights reserved.
+          © ${new Date().getFullYear()} Hai Visitor. All rights reserved.
         </p>
       </div>
     `;

@@ -176,7 +176,7 @@ export default function VisitorDashboard() {
        - URL line
        - QR code centered
        - Instructions section
-       - PROMEET footer
+       - Hai Visitor footer
   ───────────────────────────────────────────────────── */
   const downloadPdf = async () => {
     if (!qrUrl) return;
@@ -316,7 +316,7 @@ export default function VisitorDashboard() {
     ctx.fillStyle   = "#4a00b4";
     ctx.font        = "bold 22px Arial, sans-serif";
     ctx.textAlign   = "center";
-    ctx.fillText("PROMEET", W / 2, H - 44);
+    ctx.fillText("Hai Visitor", W / 2, H - 44);
 
     ctx.fillStyle = "#9980c8";
     ctx.font      = "14px Arial, sans-serif";

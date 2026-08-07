@@ -33,7 +33,7 @@ const formatIST = (value) => {
 };
 
 export const emailFooter = (company = {}) => {
-  const companyName = company?.name || "Promeet";
+  const companyName = company?.name || "Hai Visitor";
   const companyLogo = company?.logo_url || company?.logo || null;
   return `
 <br/>
@@ -43,7 +43,7 @@ export const emailFooter = (company = {}) => {
 ${companyLogo ? `<img src="${companyLogo}" alt="${companyName} Logo" style="margin-top:10px;height:60px;border-radius:8px;border:1px solid #eee;background:#fff;padding:6px;display:block;"/>` : ""}
 <hr style="border:0;border-top:1px solid #ddd;margin:20px 0 10px 0;" />
 <p style="font-size:13px;color:#666;margin:0;line-height:1.6;font-family:Arial,Helvetica,sans-serif;">
-  This email was automatically sent from the <b>PROMEET Visitor Management Platform</b>.
+  This email was automatically sent from the <b>Hai Visitor Visitor Management Platform</b>.
   If you did not expect this, please contact ${companyName} administrator.
 </p>`;
 };
@@ -54,7 +54,7 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
     return;
   }
 
-  const companyName  = company.name || "Promeet";
+  const companyName  = company.name || "Hai Visitor";
   const visitorName  = visitor.name || "Visitor";
   const visitorCode  = visitor.visitorCode || "-";
   const phone        = visitor.phone || "-";
@@ -182,7 +182,7 @@ export const sendEmployeeNotificationMail = async ({
   const acceptUrl  = `${baseUrl}/api/visit-response/${responseToken}/accept`;
   const declineUrl = `${baseUrl}/api/visit-response/${responseToken}/decline`;
 
-  const companyName  = company.name || "Promeet";
+  const companyName  = company.name || "Hai Visitor";
   const employeeName = employee.name || "there";
   const visitorName  = visitor.name || "A visitor";
   const checkInTime  = visitor.checkInDisplay || formatIST(visitor.checkIn);

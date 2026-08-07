@@ -223,7 +223,7 @@ export default function LoginPage() {
 
         <div className={styles.brandingContent}>
           <div className={styles.logoContainer}>
-            <Image src="/Brand Logo.png" alt="Promeet Logo" width={280} height={90} priority className={styles.brandLogo} />
+            <Image src="/Hai Visitor.png" alt="Hai Visitor Logo" width={280} height={90} priority className={styles.brandLogo} />
           </div>
           <h1 className={styles.platformTitle}>VISITOR MANAGEMENT PLATFORM</h1>
           <p className={styles.platformTagline}>Streamline check-ins • Enhance security • Optimize space utilization</p>
@@ -234,8 +234,8 @@ export default function LoginPage() {
             <div className={styles.dropdownContent} onClick={(e) => e.stopPropagation()}>
               {activeTab === "about" && (
                 <div className={styles.dropdownSection}>
-                  <h2>About Promeet</h2>
-                  <p>Promeet is a secure Visitor & Conference Management Platform designed to digitalize visitor flow, improve security, and enhance organizational efficiency.</p>
+                  <h2>About Hai Visitor</h2>
+                  <p>Hai Visitor is a secure Visitor & Conference Management Platform designed to digitalize visitor flow, improve security, and enhance organizational efficiency.</p>
                   <p>Transform your workplace with seamless visitor management, automated meeting coordination, and intelligent space utilization — all in one powerful platform.</p>
                 </div>
               )}

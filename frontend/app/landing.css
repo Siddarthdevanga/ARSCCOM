@@ -166,6 +166,12 @@ body::before {
   color: var(--orange);
 }
 
+.logoAccent {
+  display: inline;
+  color: #6200d6;
+  font-size: inherit;
+}
+
 .header nav {
   display: flex;
   gap: clamp(0.5rem, 2vw, 1rem);
@@ -253,7 +259,7 @@ body::before {
   z-index: 0;
 }
 
-/* ── Zodopt's / Promeet stacked heading block ── */
+/* ── Zodopt's / Hai Visitor stacked heading block ── */
 .heroBrandBlock {
   display: flex;
   flex-direction: column;
@@ -302,7 +308,7 @@ body::before {
   background: linear-gradient(90deg, rgba(255,180,100,0.7), transparent);
 }
 
-/* "Promeet" big heading */
+/* "Hai Visitor" big heading */
 .hero h1 {
   font-size: var(--fs-4xl);
   font-weight: 820;

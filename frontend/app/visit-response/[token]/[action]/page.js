@@ -124,7 +124,7 @@ export default function VisitResponsePage() {
           fontSize: "13px",
           fontWeight: "600",
         }}>
-          Promeet Visitor Management
+          Hai Visitor Management
         </div>
 
         <div style={{ marginTop: "28px", fontSize: "12px", color: "#bbb" }}>

@@ -228,7 +228,7 @@ async function handleButton(phone, title, name) {
 async function handleUnsubscribe(phone) {
   try {
     await db.query(`UPDATE whatsapp_leads SET unsubscribed = 1 WHERE phone = ?`, [phone]);
-    await sendTextMessage(phone, "You have been unsubscribed from Promeet communications. You can always reach out to us whenever you're ready. 🙏");
+    await sendTextMessage(phone, "You have been unsubscribed from Hai Visitor communications. You can always reach out to us whenever you're ready. 🙏");
     console.log(`[WA] Unsubscribed: ${phone}`);
   } catch (e) {
     console.error("[WA UNSUBSCRIBE ERROR]", e.message);

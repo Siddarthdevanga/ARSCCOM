@@ -5,13 +5,13 @@ const GA_ID = 'G-HRFN50WPZX';
 
 /* ── Site-wide constants (single source of truth) ───────── */
 export const SITE = {
-  name:        'Zodopts Promeet',
+  name:        "Zodopt's Hai Visitor",
   brand:       'Zodopt',
   tagline:     'Visitor Management Platform',
   domain:      'https://www.promeet.zodopt.com',
   phone:       '+91-8647878785',
   email:       'admin@promeet.zodopt.com',
-  logo:        'https://www.promeet.zodopt.com/Brand%20Logo.png',
+  logo:        'https://www.promeet.zodopt.com/Hai%20Visitor.png',
   ogImage:     'https://www.promeet.zodopt.com/og-image.png',
   trialPrice:  '49',
   trialCurrency:'INR',
@@ -49,13 +49,13 @@ export const metadata = {
     'digital visitor pass',
     'office visitor tracking',
     'visitor check-in system',
-    'Promeet',
+    'Hai Visitor',
     'Zodopt',
-    'Promeet visitor management',
+    'Hai Visitor visitor management',
     'Visitor management system for schools',
-    'Digital guest book for showrooms', 
-    'Promeet pricing',
-    'Zodopt Promeet',
+    'Digital guest book for showrooms',
+    'Hai Visitor pricing',
+    "Zodopt's Hai Visitor",
     'visitor check-in software',
     'workplace management system',
     'workplace management system',
@@ -208,7 +208,7 @@ const structuredData = [
     mainEntity: [
       {
         '@type': 'Question',
-        name:    'What is Promeet?',
+        name:    'What is Hai Visitor?',
         acceptedAnswer: {
           '@type': 'Answer',
           text:    `${SITE.name} by ${SITE.brand} is India's smartest Visitor Management Platform and Conference Management Platform. It provides digital visitor passes, a live dashboard, conference room booking, and WhatsApp/email alerts.`,
@@ -216,7 +216,7 @@ const structuredData = [
       },
       {
         '@type': 'Question',
-        name:    'How much does Promeet cost?',
+        name:    'How much does Hai Visitor cost?',
         acceptedAnswer: {
           '@type': 'Answer',
           text:    `${SITE.name} offers a 15-day trial for just ₹${SITE.trialPrice}. The Business plan is ₹500/month. Enterprise pricing is custom.`,
@@ -224,7 +224,7 @@ const structuredData = [
       },
       {
         '@type': 'Question',
-        name:    'How quickly can I go live with Promeet?',
+        name:    'How quickly can I go live with Hai Visitor?',
         acceptedAnswer: {
           '@type': 'Answer',
           text:    'Most organizations are up and running within 15 minutes. No hardware required — it\'s a fully cloud-based Visitor Management Platform.',

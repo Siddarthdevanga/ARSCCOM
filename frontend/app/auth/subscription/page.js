@@ -190,7 +190,7 @@ export default function SubscriptionPage() {
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logoText}>{company?.name || "PROMEET"}</div>
+          <div className={styles.logoText}>{company?.name || "Hai Visitor"}</div>
         </div>
         <div className={styles.rightHeader}>
           {company?.id && (

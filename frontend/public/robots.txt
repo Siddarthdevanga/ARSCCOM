@@ -1,4 +1,4 @@
-# robots.txt for Promeet (promeet.zodopt.com)
+# robots.txt for Hai Visitor (promeet.zodopt.com)
 # Allows all bots to crawl and index the site
 
 User-agent: *

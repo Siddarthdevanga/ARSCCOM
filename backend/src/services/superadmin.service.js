@@ -433,7 +433,7 @@ export const forgotPassword = async (email) => {
 
   await sendEmail({
     to: cleanEmail,
-    subject: "PROMEET SuperAdmin — Password Reset Code",
+    subject: "Hai Visitor SuperAdmin — Password Reset Code",
     html: `
       <p>Hello <b>SuperAdmin</b>,</p>
       <p>Your password reset code is:</p>

@@ -11,7 +11,7 @@ const gaEvent = (eventName, params = {}) => {
   }
 };
 
-const WA_URL = 'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Promeet+-+Visitor+Management+Platform';
+const WA_URL = 'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform';
 
 const WHY_CARDS = [
   { color: 'purple', title: 'Instant Digital Visitor Pass', desc: 'Visitors receive secure virtual passes via Email/WhatsApp eliminating manual paper slips.',
@@ -81,7 +81,7 @@ const renderStars = (r) => {
 };
 
 const TESTIMONIALS = [
-  { name: 'Priya Nair', review: "Promeet's dashboard makes it so easy to see check-ins and check-outs in real time. The digital visitor pass feature alone has cut down so much manual paperwork at our front desk.", stars: 5 },
+  { name: 'Priya Nair', review: "Hai Visitor's dashboard makes it so easy to see check-ins and check-outs in real time. The digital visitor pass feature alone has cut down so much manual paperwork at our front desk.", stars: 5 },
   { name: 'Rajesh Iyer', review: "The conference room booking with instant email alerts is genuinely useful — no more double bookings or confusion between teams. The platform feels well-built and reliable.", stars: 4.5 },
   { name: 'Ananya Deshmukh', review: "WhatsApp notifications for visitor passes are a nice touch — visitors get their pass instantly without any hassle. Setup was quick and the interface is clean and easy to use.", stars: 4 },
 ];
@@ -220,8 +220,8 @@ export default function HomePage() {
       {/* ── HEADER ── */}
       <header>
         <div className="logo">
-          <Image className="logoDot" src="/promeet-logo.png" alt="Promeet logo" width={40} height={40} />
-          <div>Zodopt&apos;s Promeet<span>Visitor Management Platform</span></div>
+          <Image className="logoDot" src="/Hai Visitor.png" alt="Hai Visitor logo" width={40} height={40} />
+          <div>Zodopt&apos;s H<span className="logoAccent">ai</span> Visitor<span>Visitor Management Platform</span></div>
         </div>
         <nav>
           <a href="#features-section">Features</a>
@@ -257,7 +257,7 @@ export default function HomePage() {
         <div className="heroGlow heroGlow1" /><div className="heroGlow heroGlow2" />
         <div className="heroBrandBlock">
           <p className="heroBrandLabel"><span className="heroBrandLine" />Zodopt&apos;s<span className="heroBrandLine" /></p>
-          <h1>Promeet</h1>
+          <h1>Hai Visitor</h1>
         </div>
         <div className="heroPill" role="status" aria-live="polite">
           <span className="pillIcon" aria-hidden="true">⚡</span>
@@ -338,7 +338,7 @@ export default function HomePage() {
                     <Image src="/whatsapp-icon.png" alt="WhatsApp" width={26} height={26} />
                   </span>
                   <div className="vpWaBannerText">
-                    <strong>Stay Connected with Promeet</strong>
+                    <strong>Stay Connected with Hai Visitor</strong>
                     <span>Join our WhatsApp group for updates and support</span>
                   </div>
                 </div>
@@ -401,17 +401,17 @@ export default function HomePage() {
               <div className="waHeader">
                 <span className="waBack">‹</span>
                 <div className="waAvatar" style={{ background: '#fff', overflow: 'hidden', padding: 0 }}>
-                  <Image src="/promeet-logo.png" alt="Promeet logo" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src="/Hai Visitor.png" alt="Hai Visitor logo" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div className="waHeaderText">
-                  <div className="name">Promeet</div>
-                  <div className="handle">Zodopts_Promeet</div>
+                  <div className="name">Hai Visitor</div>
+                  <div className="handle">Zodopts_HaiVisitor</div>
                 </div>
               </div>
               <div className="waBody">
                 <div className="waBubble">
                   <p className="title">Your Digital Visitor Pass</p>
-                  <p>Welcome to Promeet!</p>
+                  <p>Welcome to Hai Visitor!</p>
                   <p>Your visitor pass is ready. Please show this at reception.</p>
                   <p>View Pass:</p>
                   <span className="link" style={{ display:'block',color:'#25d366',wordBreak:'break-all',margin:'0 0 12px' }}>
@@ -436,7 +436,7 @@ export default function HomePage() {
       <section className="whySection gridBg" id="features-section">
         <div className="container">
           <span className="badge">Powerful Features</span>
-          <h2>Why Organizations Love <span>Promeet</span></h2>
+          <h2>Why Organizations Love <span>Hai Visitor</span></h2>
           <p className="subheading">Everything you need to manage visitors and conference rooms seamlessly</p>
           <div className="carousel3D">
             <button className="carouselArrow left" onClick={() => resetCarousel((activeCarousel - 1 + n) % n)} aria-label="Previous">
@@ -467,7 +467,7 @@ export default function HomePage() {
       {/* ── HOW IT WORKS ── */}
       <section className="howItWorks gridBg" id="how-it-works">
         <div className="container">
-          <h2 className="title">How <span>Promeet</span> Works</h2>
+          <h2 className="title">How <span>Hai Visitor</span> Works</h2>
           <p className="subtitle">A streamlined 4-step process to manage all your visitors and meetings</p>
           <div className="steps">
             {STEPS.map((s, i) => (
@@ -503,7 +503,7 @@ export default function HomePage() {
       <section className="industriesSection gridBg" id="industries-section">
         <div className="container">
           <h2 className="industryTitle">Designed for <span>Modern Organizations</span></h2>
-          <p className="industrySubtitle">Promeet adapts to your industry&apos;s unique needs with flexible configurations</p>
+          <p className="industrySubtitle">Hai Visitor adapts to your industry&apos;s unique needs with flexible configurations</p>
           <div className="industryGrid">
             {INDUSTRIES.map((ind, i) => (
               <div key={i} className="industryCard" onClick={() => window.open(WA_URL, '_blank')} tabIndex={0} role="link" style={{ cursor: 'pointer' }}>
@@ -554,7 +554,7 @@ export default function HomePage() {
         <div className="combinedInner">
           <div className="combinedCta">
             <h2>Ready to Make Your Organization Smarter?</h2>
-            <p>Join hundreds of organizations that have transformed their visitor and conference management with Promeet</p>
+            <p>Join hundreds of organizations that have transformed their visitor and conference management with Hai Visitor</p>
             <div className="ctaActions">
               <a className="btnPrimary" href={WA_URL} target="_blank" rel="noopener noreferrer"
                 onClick={() => gaEvent('cta_click', { section: 'cta_banner', label: 'demo' })}>Schedule a Demo →</a>
@@ -592,7 +592,7 @@ export default function HomePage() {
       {/* ── TESTIMONIALS ── */}
       <section className="testimonialsSection gridBg" id="testimonials-section">
         <h2 className="sectionTitle">Trusted by <span>Organizations</span></h2>
-        <p className="sectionSubtitle">See what our customers have to say about their experience with Promeet</p>
+        <p className="sectionSubtitle">See what our customers have to say about their experience with Hai Visitor</p>
         <div className="testimonialCards">
           {TESTIMONIALS.map((t, i) => (
             <div key={i} className={`testimonialCard${i === 0 ? ' featured' : ''}`}
@@ -611,7 +611,7 @@ export default function HomePage() {
       <section className="faqSection gridBg" id="faq">
         <div className="faqContainer">
           <h2 className="faqTitle">Frequently Asked <span>Questions</span></h2>
-          <p className="faqSubtitle">Everything you need to know about Promeet</p>
+          <p className="faqSubtitle">Everything you need to know about Hai Visitor</p>
           <div className="faqGrid">
             <div className="faqCol">
               {FAQS.slice(0, halfFaq).map((faq, i) => (
@@ -641,7 +641,7 @@ export default function HomePage() {
           </div>
           <div className="faqCta">
             <h3>Still have questions?</h3>
-            <p>Our team is here to help you get started with Promeet</p>
+            <p>Our team is here to help you get started with Hai Visitor</p>
             <a className="ctaBtn" href={WA_URL} target="_blank" rel="noopener noreferrer"
               onClick={() => gaEvent('cta_click', { section: 'faq' })}>Chat with Our Team →</a>
           </div>
@@ -653,7 +653,7 @@ export default function HomePage() {
         <div className="gsContainer">
           <div className="gsLeft">
             <span className="gsBadge">⚡ Start Your Free Trial</span>
-            <h2>Get Started with <br /><span>Zodopt&apos;s Promeet Today</span></h2>
+            <h2>Get Started with <br /><span>Zodopt&apos;s Hai Visitor Today</span></h2>
             <p>Transform your visitor management and conference room booking experience. Contact us for a personalized demo.</p>
             <div className="gsContact">
               <a className="contactItem" href={WA_URL} target="_blank" rel="noopener noreferrer"
@@ -684,7 +684,7 @@ export default function HomePage() {
             </div>
             <div className="gsCard demoCard">
               <h3>Request a Demo</h3>
-              <p>See Promeet in action with a personalized walkthrough</p>
+              <p>See Hai Visitor in action with a personalized walkthrough</p>
               <a className="btn secondary" href="mailto:admin@promeet.zodopt.com">Schedule Demo →</a>
             </div>
           </div>
@@ -696,8 +696,8 @@ export default function HomePage() {
         <div className="footerTop">
           <div className="footerBrand">
             <div className="logoWrap">
-              <Image className="logoDot" src="/promeet-logo.png" alt="Promeet logo" width={40} height={40} />
-              <div><h3>Zodopt&apos;s Promeet</h3><span>Visitor Management Platform</span></div>
+              <Image className="logoDot" src="/Hai Visitor.png" alt="Hai Visitor logo" width={40} height={40} />
+              <div><h3>Zodopt&apos;s H<span className="logoAccent">ai</span> Visitor</h3><span>Visitor Management Platform</span></div>
             </div>
             <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
             <div className="footerCta">
@@ -735,7 +735,7 @@ export default function HomePage() {
           ))}
         </div>
         <div className="footerBottom">
-          <span>© 2026 Zodopt&apos;s Promeet. All rights reserved.</span>
+          <span>© 2026 Zodopt&apos;s Hai Visitor. All rights reserved.</span>
           <a href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer">© Zodopt</a>
           <div className="footerLinksInline">
             <a href="https://zodopt.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>

@@ -154,7 +154,7 @@ export async function createPaymentLink(
   customerId,
   amount,
   customerName = "",
-  description = "PROMEET Subscription Payment"
+  description = "Hai Visitor Subscription Payment"
 ) {
   try {
     if (!customerId) throw new Error("Customer ID required");

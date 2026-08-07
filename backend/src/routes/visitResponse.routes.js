@@ -89,7 +89,7 @@ const renderPage = (title, message, color) => `
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${title} — Promeet</title>
+  <title>${title} — Hai Visitor</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -146,7 +146,7 @@ const renderPage = (title, message, color) => `
     <div class="icon">🏢</div>
     <h1>${title}</h1>
     <p>${message}</p>
-    <div class="badge">Promeet Visitor Management</div>
+    <div class="badge">Hai Visitor Visitor Management</div>
     <div class="footer">You can now close this window.</div>
   </div>
 </body>

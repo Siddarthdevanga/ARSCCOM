@@ -77,7 +77,7 @@ export const sendEmail = async ({
     console.log(`   Subject: ${subject}`);
 
     const mailOptions = {
-      from: `"PROMEET" <${process.env.SMTP_USER}>`,
+      from: `"Hai Visitor" <${process.env.SMTP_USER}>`,
       to,
       subject,
       html,

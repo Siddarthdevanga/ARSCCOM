@@ -141,7 +141,7 @@ export const sendOtpWhatsApp = async ({ phone, otp }) => {
      Purpose: {{5}}
      Check-in: {{6}}
 
-     Promeet - Visitor Management Platform
+     Hai Visitor - Visitor Management Platform
 
    {{1}} = Company name
    {{2}} = Full pass URL
@@ -190,7 +190,7 @@ export const sendVisitorPassWhatsApp = async ({
 
      Please take action below.
 
-     Promeet - Visitor Management Platform
+     Hai Visitor - Visitor Management Platform
 
    Buttons (CTA Dynamic URL):
      Button 1 — Approve Visit

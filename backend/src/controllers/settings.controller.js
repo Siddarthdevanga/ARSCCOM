@@ -18,13 +18,13 @@ const emailFooter = () => `
 <br/>
 Regards,<br/>
 <img 
-  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
-  alt="PROMEET Logo"
+  src="https://www.promeet.zodopt.com/Hai%20Visitor.png"
+  alt="Hai Visitor Logo"
   style="height:65px;margin:10px 0;display:block"
 />
 <hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
 <p style="font-size:13px;color:#666">
-This email was automatically sent from the PROMEET Platform.
+This email was automatically sent from the Hai Visitor Platform.
 </p>`;
 
 /* ======================================================
@@ -381,11 +381,11 @@ export const changePassword = async (req, res) => {
 const sendPasswordChangedEmail = async (email, companyName) => {
   await sendEmail({
     to:      email,
-    subject: "PROMEET — Password Successfully Changed",
+    subject: "Hai Visitor — Password Successfully Changed",
     html: `
       <p>Hello <b>${companyName}</b>,</p>
       <p>
-        This email confirms that your PROMEET account password has been
+        This email confirms that your Hai Visitor account password has been
         <b style="color:#00c853;">successfully changed</b>.
       </p>
       <div style="background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;">

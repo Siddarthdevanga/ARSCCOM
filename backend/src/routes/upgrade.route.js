@@ -27,8 +27,8 @@ const router = express.Router();
 const GST_RATE = 0.18;
 
 const PRICING = {
-  trial:    { base: 49,  label: "PROMEET Trial (15 Days)" },
-  business: { base: 500, label: "PROMEET Business Plan (30 Days)" },
+  trial:    { base: 49,  label: "Hai Visitor Trial (15 Days)" },
+  business: { base: 500, label: "Hai Visitor Business Plan (30 Days)" },
 };
 
 const calcPrice = (plan) => {
@@ -211,7 +211,7 @@ router.post("/", authenticate, async (req, res) => {
         customer_name:      companyName,
         currency_code:      "INR",
         payment_amount:     BUSINESS_TOTAL_STR,
-        description:        `PROMEET Business Plan — ₹${BUSINESS_BASE_PRICE} + 18% GST (₹${BUSINESS_GST_AMOUNT})`,
+        description:        `Hai Visitor Business Plan — ₹${BUSINESS_BASE_PRICE} + 18% GST (₹${BUSINESS_GST_AMOUNT})`,
         is_partial_payment: false,
         reference_id:       `BIZ-UPGRADE-${companyId}-${Date.now()}`,
       };

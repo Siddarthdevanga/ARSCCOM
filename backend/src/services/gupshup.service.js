@@ -1,6 +1,6 @@
 import axios from "axios";
 
-// Separate config for the Promeet bot app.
+// Separate config for the Hai Visitor bot app.
 // Existing OTP/pass secrets (GUPSHUP_API_KEY, GUPSHUP_APP_NAME, GUPSHUP_SOURCE_NUMBER)
 // are untouched — this service uses the BOT_ prefixed vars only.
 const getConfig = () => {
@@ -70,8 +70,8 @@ export const sendWhatsAppTemplate = async (destination, templateName, params = [
 };
 
 const INTRO_TEXT =
-  "*Welcome to Promeet!*\n\n" +
-  "Thank you for your interest in Promeet.\n" +
+  "*Welcome to Hai Visitor!*\n\n" +
+  "Thank you for your interest in Hai Visitor.\n" +
   "✨ Manage visitor check-ins, visitor records, and visitor history digitally.\n" +
   "✨ Track visitor details, photos, meeting hosts, and items carried.\n" +
   "✨ Get real-time visibility of checked-in/check-out visitors with detailed analytics.\n" +
@@ -115,7 +115,7 @@ export const sendIntroMessage = async (destination) => {
     content: { type: "text", text: INTRO_TEXT + "\n\nWhat would you like to do?" },
     options: [
       { type: "text", title: "Book A Demo" },
-      { type: "text", title: "Start With Promeet" },
+      { type: "text", title: "Start With Hai Visitor" },
     ],
   });
 
@@ -213,9 +213,9 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
    Session messages: work best within 24h of last bot interaction.
 -------------------------------------------------- */
 const PAYMENT_NURTURE_TEXTS = [
-  `Hi {name}! 👋 We noticed you started your Promeet journey but haven't completed your payment yet.\n\nYour workspace is almost ready! Complete your payment to unlock:\n✅ Smart Visitor Management\n✅ Conference Room Booking\n✅ Real-time Analytics\n\nLogin to complete: https://myappz.ai/auth/login`,
-  `Hi {name}! 😊 Still thinking about Promeet?\n\nBusinesses like yours save hours every week with smart visitor & conference management. Your team deserves better tools!\n\nDon't let your account sit idle — complete your payment today.\n\nLogin: https://myappz.ai/auth/login`,
-  `Hi {name}! 🙏 Final reminder from us.\n\nYour Promeet account is ready and waiting. Hundreds of businesses trust Promeet to manage visitors and conference rooms effortlessly.\n\nComplete your payment now — takes less than 2 minutes.\n\nLogin: https://myappz.ai/auth/login`,
+  `Hi {name}! 👋 We noticed you started your Hai Visitor journey but haven't completed your payment yet.\n\nYour workspace is almost ready! Complete your payment to unlock:\n✅ Smart Visitor Management\n✅ Conference Room Booking\n✅ Real-time Analytics\n\nLogin to complete: https://myappz.ai/auth/login`,
+  `Hi {name}! 😊 Still thinking about Hai Visitor?\n\nBusinesses like yours save hours every week with smart visitor & conference management. Your team deserves better tools!\n\nDon't let your account sit idle — complete your payment today.\n\nLogin: https://myappz.ai/auth/login`,
+  `Hi {name}! 🙏 Final reminder from us.\n\nYour Hai Visitor account is ready and waiting. Hundreds of businesses trust Hai Visitor to manage visitors and conference rooms effortlessly.\n\nComplete your payment now — takes less than 2 minutes.\n\nLogin: https://myappz.ai/auth/login`,
 ];
 
 export const sendPaymentNurtureMessage = async (destination, name, msgNum) => {

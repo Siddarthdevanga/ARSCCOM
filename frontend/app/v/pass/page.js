@@ -116,7 +116,7 @@ function PublicPassContent() {
             </p>
           )}
         </div>
-        <div className={styles.poweredBy}>Powered by Promeet · Visitor Management</div>
+        <div className={styles.poweredBy}>Powered by Hai Visitor</div>
       </div>
     );
   }
@@ -212,7 +212,7 @@ function PublicPassContent() {
         </div>
       </main>
 
-      <div className={styles.poweredBy}>Powered by Promeet · Visitor Management</div>
+      <div className={styles.poweredBy}>Powered by Hai Visitor</div>
     </div>
   );
 }

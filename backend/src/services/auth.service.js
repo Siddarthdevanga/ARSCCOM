@@ -34,15 +34,15 @@ const emailFooter = () => `
 Regards,<br/>
 
 <img 
-  src="https://arsccom-assets.s3.amazonaws.com/PROMEET/EMAILS%20LOGO.png" 
-  alt="PROMEET Logo"
+  src="https://www.promeet.zodopt.com/Hai%20Visitor.png"
+  alt="Hai Visitor Logo"
   style="height:65px;margin:10px 0;display:block"
 />
 
 <hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
 
 <p style="font-size:13px;color:#666">
-This email was automatically sent from the PROMEET
+This email was automatically sent from the Hai Visitor
 Conference & Visitor Management Platform.
 If this was not you, please contact your administrator immediately.
 </p>`;
@@ -213,13 +213,13 @@ export const registerCompany = async (data, file) => {
 const sendWelcomeEmail = async (email, companyName) => {
   await sendEmail({
     to: email,
-    subject: `Welcome ${companyName} — Activate Your PROMEET Subscription`,
+    subject: `Welcome ${companyName} — Activate Your Hai Visitor Subscription`,
     html: `
       <p>Hello <b>${companyName}</b>,</p>
 
       <p>
         Your organization has been successfully registered on 
-        <b>PROMEET – Visitor & Conference Room Management Platform.</b>
+        <b>Hai Visitor – Visitor & Conference Room Management Platform.</b>
       </p>
 
       <h3 style="color:#6c2bd9;margin-bottom:6px;">
@@ -227,17 +227,17 @@ const sendWelcomeEmail = async (email, companyName) => {
       </h3>
 
       <p>
-        To continue using PROMEET, please login and activate one of the subscription plans:
+        To continue using Hai Visitor, please login and activate one of the subscription plans:
       </p>
 
       <ul style="font-size:14px;margin-top:8px;margin-bottom:12px;">
-        <li><b>Trial</b> – Evaluate PROMEET and experience core features.</li>
+        <li><b>Trial</b> – Evaluate Hai Visitor and experience core features.</li>
         <li><b>Business</b> – Designed for growing organizations with advanced capabilities.</li>
         <li><b>Enterprise</b> – Tailored, scalable and secure for large enterprises.</li>
       </ul>
 
       <h3 style="color:#6c2bd9;margin-bottom:6px;">
-        What PROMEET Delivers to ${companyName}
+        What Hai Visitor Delivers to ${companyName}
       </h3>
 
       <ul style="font-size:14px;">
@@ -431,12 +431,12 @@ export const forgotPassword = async (email) => {
 const sendPasswordResetEmail = async (email, companyName, resetCode) => {
   await sendEmail({
     to: email,
-    subject: "PROMEET — Secure Password Reset Code",
+    subject: "Hai Visitor — Secure Password Reset Code",
     html: `
       <p>Hello <b>${companyName}</b>,</p>
 
       <p>
-        We received a request to reset your PROMEET account password. 
+        We received a request to reset your Hai Visitor account password. 
         To proceed, please use the secure verification code below:
       </p>
 
@@ -452,9 +452,9 @@ const sendPasswordResetEmail = async (email, companyName, resetCode) => {
 
       <ul style="font-size:14px;line-height:1.8;">
         <li>This code is valid for <b>${RESET_CODE_EXPIRY_MINUTES} minutes</b> only.</li>
-        <li>Enter this code in the PROMEET password reset page.</li>
+        <li>Enter this code in the Hai Visitor password reset page.</li>
         <li>If you did not request this reset, please ignore this email and contact your administrator immediately.</li>
-        <li>Never share this code with anyone, including PROMEET support staff.</li>
+        <li>Never share this code with anyone, including Hai Visitor support staff.</li>
       </ul>
 
       <p>
@@ -529,12 +529,12 @@ export const resetPassword = async ({ email, code, password }) => {
 const sendPasswordChangedEmail = async (email, companyName) => {
   await sendEmail({
     to: email,
-    subject: "PROMEET — Password Successfully Changed",
+    subject: "Hai Visitor — Password Successfully Changed",
     html: `
       <p>Hello <b>${companyName}</b>,</p>
 
       <p>
-        This email confirms that your PROMEET account password has been 
+        This email confirms that your Hai Visitor account password has been 
         <b style="color:#00c853;">successfully changed</b>.
       </p>
 
@@ -549,7 +549,7 @@ const sendPasswordChangedEmail = async (email, companyName) => {
       </h3>
 
       <ul style="font-size:14px;line-height:1.8;">
-        <li>You can now login to PROMEET using your new password.</li>
+        <li>You can now login to Hai Visitor using your new password.</li>
         <li>Your account security has been enhanced with password encryption.</li>
         <li>All active sessions remain valid — no need to re-login immediately.</li>
       </ul>
@@ -574,13 +574,13 @@ const sendPasswordChangedEmail = async (email, companyName) => {
 
       <div style="background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:20px 0;">
         <p style="margin:0;color:#e65100;font-weight:600;">
-          ⚠️ Security Tip: Use a strong, unique password for PROMEET. 
+          ⚠️ Security Tip: Use a strong, unique password for Hai Visitor. 
           Never share your password with anyone.
         </p>
       </div>
 
       <p>
-        Thank you for using PROMEET to manage your organization's visitor and 
+        Thank you for using Hai Visitor to manage your organization's visitor and 
         conference room operations securely.
       </p>
 

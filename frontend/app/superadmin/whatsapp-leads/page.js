@@ -394,7 +394,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
 /* ─────────────── TABLE HELPERS ─────────────── */
 
 const ACTION_LABEL = {
-  start_with_promeet: "Start With Promeet",
+  start_with_promeet: "Start With Hai Visitor",
   book_a_demo:        "Book A Demo",
 };
 const ACTION_COLOR = {
@@ -509,7 +509,7 @@ export default function WhatsAppLeadsPage() {
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
-            <Image src="/Brand Logo.png" alt="Promeet Logo" width={280} height={90} priority className={styles.brandLogo} />
+            <Image src="/Hai Visitor.png" alt="Hai Visitor Logo" width={280} height={90} priority className={styles.brandLogo} />
           </div>
           <span className={styles.superBadge}>SUPERADMIN</span>
         </div>
@@ -523,14 +523,14 @@ export default function WhatsAppLeadsPage() {
       <div className={styles.scrollBody}>
         <section className={styles.hero}>
           <h1 className={styles.heroTitle}>WhatsApp <span>Leads</span></h1>
-          <p className={styles.heroSub}>All contacts who messaged the Promeet WhatsApp bot</p>
+          <p className={styles.heroSub}>All contacts who messaged the Hai Visitor WhatsApp bot</p>
           <div className={styles.heroStats}>
             <div className={styles.heroStatCard}>
               <div className={styles.heroStatLabel}>Total Leads</div>
               <div className={styles.heroStatValue}>{leads.length}</div>
             </div>
             <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>Start With Promeet</div>
+              <div className={styles.heroStatLabel}>Start With Hai Visitor</div>
               <div className={`${styles.heroStatValue} ${styles.valActive}`}>
                 {leads.filter((l) => l.last_action === "start_with_promeet").length}
               </div>
@@ -555,7 +555,7 @@ export default function WhatsAppLeadsPage() {
             value={search} onChange={(e) => setSearch(e.target.value)} />
           <select className={styles.filterSelect} value={filter} onChange={(e) => setFilter(e.target.value)}>
             <option value="all">All Actions</option>
-            <option value="start_with_promeet">Start With Promeet</option>
+            <option value="start_with_promeet">Start With Hai Visitor</option>
             <option value="book_a_demo">Book A Demo</option>
           </select>
           <button className={styles.filterSelect} style={{ cursor: "pointer" }} onClick={() => fetchLeads(token)}>Refresh</button>

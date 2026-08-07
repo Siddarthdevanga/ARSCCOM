@@ -12,7 +12,7 @@ export default function ContactUs() {
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logoText}>PROMEET</div>
+          <div className={styles.logoText}>Hai Visitor</div>
         </div>
         <div className={styles.rightHeader}>
           <button className={styles.backBtn} onClick={() => router.push("/auth/login")}>
@@ -41,12 +41,12 @@ export default function ContactUs() {
             <div className={styles.infoCard}>
               <div className={styles.sectionHeader}>
                 <span className={styles.cardDot} />
-                <h3 className={styles.cardTitle}>About Promeet</h3>
+                <h3 className={styles.cardTitle}>About Hai Visitor</h3>
               </div>
 
               <h2 className={styles.infoHeading}>Smart Visitor &amp; Conference Management</h2>
               <p className={styles.infoPara}>
-                <strong>Promeet</strong> is a secure, intelligent and enterprise-grade
+                <strong>Hai Visitor</strong> is a secure, intelligent and enterprise-grade
                 Visitor &amp; Conference Management Platform designed to digitalize
                 organisation entry management, streamline conference bookings and
                 ensure a professional visitor experience.
@@ -54,7 +54,7 @@ export default function ContactUs() {
 
               <div className={styles.whyHeader}>
                 <span className={`${styles.cardDot} ${styles.dotGreen}`} />
-                <h3 className={styles.cardTitle}>Why Organisations Love Promeet</h3>
+                <h3 className={styles.cardTitle}>Why Organisations Love Hai Visitor</h3>
               </div>
 
               <div className={styles.featureList}>
@@ -145,7 +145,7 @@ export default function ContactUs() {
               </div>
 
               <p className={styles.infoPara}>
-                Promeet helps organisations save time, enhance security, improve visitor
+                Hai Visitor helps organisations save time, enhance security, improve visitor
                 experience and empower employees with effortless meeting room management.
                 Designed for Corporates, IT Parks, Co-working Spaces, Manufacturing Units
                 and Enterprises.
@@ -153,7 +153,7 @@ export default function ContactUs() {
 
               <div className={styles.ctaLine}>
                 <span className={`${styles.cardDot} ${styles.dotGold}`} />
-                <h3 className={styles.cardTitle}>Let's make your organisation smarter with Promeet.</h3>
+                <h3 className={styles.cardTitle}>Let's make your organisation smarter with Hai Visitor.</h3>
               </div>
             </div>
 

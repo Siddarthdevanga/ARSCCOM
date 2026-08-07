@@ -63,7 +63,7 @@ const emailTemplates = {
     const currentPlan = planDetails[plan.toLowerCase()] || planDetails.trial;
 
     return {
-      subject: `🎉 Your PROMEET ${plan.toUpperCase()} Subscription is Now Active!`,
+      subject: `🎉 Your Hai Visitor ${plan.toUpperCase()} Subscription is Now Active!`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -96,14 +96,14 @@ const emailTemplates = {
         <body>
           <div class="container">
             <div class="header">
-              <h1>🎉 Welcome to PROMEET!</h1>
+              <h1>🎉 Welcome to Hai Visitor!</h1>
               <p>Your subscription is now active and ready to use</p>
             </div>
             <div class="content">
               <div class="success-icon">✅</div>
               <h2 style="text-align: center; color: #6a00ff; margin-bottom: 10px;">Subscription Activated Successfully</h2>
               <p class="greeting">Dear <strong>${companyName}</strong> Team,</p>
-              <p>Congratulations! Your PROMEET subscription has been successfully activated. You now have full access to all features included in your plan.</p>
+              <p>Congratulations! Your Hai Visitor subscription has been successfully activated. You now have full access to all features included in your plan.</p>
               <div class="info-box">
                 <div class="info-row">
                   <span class="label">Plan</span>
@@ -133,8 +133,8 @@ const emailTemplates = {
               </p>
             </div>
             <div class="footer">
-              <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
-              <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+              <p><strong>Hai Visitor</strong> - Visitor & Conference Management Platform</p>
+              <p style="margin-top: 10px;">© ${new Date().getFullYear()} Hai Visitor. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -199,12 +199,12 @@ const emailTemplates = {
               </div>
             </div>
             <p style="margin-top: 30px; font-size: 15px; color: #666; text-align: center;">
-              Thank you for choosing PROMEET. We're excited to support your growth!
+              Thank you for choosing Hai Visitor. We're excited to support your growth!
             </p>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
-            <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+            <p><strong>Hai Visitor</strong> - Visitor & Conference Management Platform</p>
+            <p style="margin-top: 10px;">© ${new Date().getFullYear()} Hai Visitor. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -213,7 +213,7 @@ const emailTemplates = {
   }),
 
   subscriptionExpiring: (companyName, plan, expiresAt, daysLeft) => ({
-    subject: `⚠️ Your PROMEET Subscription Expires in ${daysLeft} Day${daysLeft === 1 ? "" : "s"}`,
+    subject: `⚠️ Your Hai Visitor Subscription Expires in ${daysLeft} Day${daysLeft === 1 ? "" : "s"}`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -242,7 +242,7 @@ const emailTemplates = {
             <div class="warning-icon">⚠️</div>
             <h2 style="text-align: center; color: #ff9800; margin-bottom: 20px;">Action Required</h2>
             <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
-            <p style="font-size: 16px;">This is a friendly reminder that your PROMEET <strong>${plan.toUpperCase()}</strong> subscription will expire soon.</p>
+            <p style="font-size: 16px;">This is a friendly reminder that your Hai Visitor <strong>${plan.toUpperCase()}</strong> subscription will expire soon.</p>
             <div class="countdown-box">
               <p style="margin: 0; font-size: 18px; color: #666;">Your subscription expires in:</p>
               <div class="days-remaining">${daysLeft}</div>
@@ -265,8 +265,8 @@ const emailTemplates = {
             </p>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
-            <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+            <p><strong>Hai Visitor</strong> - Visitor & Conference Management Platform</p>
+            <p style="margin-top: 10px;">© ${new Date().getFullYear()} Hai Visitor. All rights reserved.</p>
           </div>
         </div>
       </body>
@@ -275,7 +275,7 @@ const emailTemplates = {
   }),
 
   subscriptionExpired: (companyName, plan, expiredAt) => ({
-    subject: `🔴 Your PROMEET Subscription Has Expired`,
+    subject: `🔴 Your Hai Visitor Subscription Has Expired`,
     html: `
       <!DOCTYPE html>
       <html>
@@ -307,7 +307,7 @@ const emailTemplates = {
             <div class="alert-icon">🔴</div>
             <h2 style="text-align: center; color: #ff1744; margin-bottom: 20px;">Your Subscription Has Expired</h2>
             <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
-            <p style="font-size: 16px;">Your PROMEET <strong>${plan.toUpperCase()}</strong> subscription expired on <strong>${new Date(expiredAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</strong>.</p>
+            <p style="font-size: 16px;">Your Hai Visitor <strong>${plan.toUpperCase()}</strong> subscription expired on <strong>${new Date(expiredAt).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</strong>.</p>
             <div class="alert-box">
               <p style="margin: 0; text-align: center; font-size: 16px;"><strong>Current Status:</strong></p>
               <p style="text-align: center; margin: 15px 0;">
@@ -338,8 +338,8 @@ const emailTemplates = {
             </p>
           </div>
           <div class="footer">
-            <p><strong>PROMEET</strong> - Visitor & Conference Management Platform</p>
-            <p style="margin-top: 10px;">© ${new Date().getFullYear()} PROMEET. All rights reserved.</p>
+            <p><strong>Hai Visitor</strong> - Visitor & Conference Management Platform</p>
+            <p style="margin-top: 10px;">© ${new Date().getFullYear()} Hai Visitor. All rights reserved.</p>
           </div>
         </div>
       </body>

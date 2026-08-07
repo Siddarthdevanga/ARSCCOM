@@ -20,15 +20,15 @@ import { sendWhatsAppTemplate } from "../services/gupshup.service.js";
      GUPSHUP_PRE_NURTURE_3  — final nudge Day 8
 
    Suggested template body texts ({{1}} = lead name):
-   Msg 1: "Hi {{1}}! 👋 You recently explored Promeet — the smart visitor
+   Msg 1: "Hi {{1}}! 👋 You recently explored Hai Visitor — the smart visitor
            management platform. Ready to see it in action? Book a free
-           15-minute demo today and discover how Promeet can transform
+           15-minute demo today and discover how Hai Visitor can transform
            your business. Tap below to schedule!"
-   Msg 2: "Hi {{1}}, just following up! 😊 Promeet makes visitor management
+   Msg 2: "Hi {{1}}, just following up! 😊 Hai Visitor makes visitor management
            effortless — digital check-ins, photo capture, real-time tracking,
            and detailed reports. Book your demo now and see it live!"
    Msg 3: "Hi {{1}}, one last note from us 🙏 Hundreds of businesses trust
-           Promeet for smart visitor management. Book your demo this week —
+           Hai Visitor for smart visitor management. Book your demo this week —
            we'd love to show you what we can do. After this we'll stop
            sending reminders."
 ====================================================== */

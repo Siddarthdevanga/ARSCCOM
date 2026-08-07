@@ -274,7 +274,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     ctx.fillStyle = "#7a00ff";
     ctx.font = "bold 28px Arial, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("PROMEET", width / 2, height - 45);
+    ctx.fillText("Hai Visitor", width / 2, height - 45);
 
     ctx.fillStyle = "#666666";
     ctx.font = "16px Arial, sans-serif";

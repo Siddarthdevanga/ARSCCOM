@@ -140,8 +140,8 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     /* ================= PLAN PRICING (with GST) ================= */
     const planConfig = {
-      free:     { base: 49,  description: "PROMEET Trial Processing Fee" },
-      business: { base: 500, description: "PROMEET Business Subscription" },
+      free:     { base: 49,  description: "Hai Visitor Trial Processing Fee" },
+      business: { base: 500, description: "Hai Visitor Business Subscription" },
     };
 
     const selected = planConfig[plan];
