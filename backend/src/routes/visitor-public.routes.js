@@ -178,6 +178,27 @@ router.get("/visitor/:slug/info", async (req, res) => {
 
     const serviceUnavailable = await isServiceUnavailable(company.id);
 
+    // Purpose of Visit categories — empty array means this company hasn't
+    // configured any, so the frontend falls back to the plain free-text
+    // Purpose field.
+    const [categories] = await db.query(
+      `SELECT id, name, sort_order FROM company_purpose_categories
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [company.id]
+    );
+    const [subcategories] = await db.query(
+      `SELECT id, category_id, name, sort_order FROM company_purpose_subcategories
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [company.id]
+    );
+    const purposeCategories = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      subcategories: subcategories
+        .filter((sub) => sub.category_id === cat.id)
+        .map((sub) => ({ id: sub.id, name: sub.name })),
+    }));
+
     return res.json({
       success: true,
       company: {
@@ -187,6 +208,7 @@ router.get("/visitor/:slug/info", async (req, res) => {
         serviceUnavailable,
       },
       formFields: normalizeVisitorFormFields(company.visitor_form_fields),
+      purposeCategories,
       qrCode,
       publicUrl,
     });
@@ -524,7 +546,9 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       country:      req.body.country?.trim()       || null,
       personToMeet: req.body.personToMeet?.trim() || null,
       employeeId:   sanitizeEmployeeId(req.body.employeeId),
-      purpose:      req.body.purpose?.trim()       || null,
+      purpose:            req.body.purpose?.trim()            || null,
+      purposeCategory:    req.body.purposeCategory?.trim()    || null,
+      purposeSubcategory: req.body.purposeSubcategory?.trim() || null,
       belongings:   req.body.belongings            || null,
       idType:           req.body.idType?.trim()    || null,
       idNumber:         req.body.idNumber?.trim()  || null,

@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
+import PurposePicker from "../../components/PurposePicker";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -274,8 +275,12 @@ export default function SecondaryDetails() {
   const [form, setForm] = useState({
     fromCompany:"", department:"", designation:"",
     address:"", city:"", state:"", postalCode:"", country:"",
-    personToMeet:"", purpose:"", belongings:[],
+    personToMeet:"", purpose:"", purposeCategory:"", purposeSubcategory:"", belongings:[],
   });
+
+  // Company-defined Purpose of Visit categories — empty means this company
+  // hasn't set any up, so PurposePicker falls back to plain free text.
+  const [purposeCategories, setPurposeCategories] = useState([]);
 
   // Form Builder toggles — default everything on until the real config loads
   const [formFields, setFormFields] = useState({
@@ -293,6 +298,11 @@ export default function SecondaryDetails() {
       fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/visitor-fields`, { credentials: "include" })
         .then((r) => r.json())
         .then((d) => { if (d?.fields) setFormFields((prev) => ({ ...prev, ...d.fields })); })
+        .catch(() => {});
+
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/purpose-categories`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((d) => { if (Array.isArray(d?.categories)) setPurposeCategories(d.categories); })
         .catch(() => {});
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {
@@ -587,12 +597,16 @@ export default function SecondaryDetails() {
                   <label className={styles.label}>
                     Purpose of Visit <span style={{ color: "#e53935" }}>*</span>
                   </label>
-                  <input className={styles.input}
-                    style={{ borderColor: touched.purpose && (!form.purpose.trim() || fe.purpose) ? "#dc2626" : undefined }}
-                    value={form.purpose}
-                    onChange={(e) => updateField("purpose", e.target.value)}
-                    onBlur={() => handleBlur("purpose")}
-                    placeholder="Meeting / Delivery / Interview…" />
+                  <PurposePicker
+                    categories={purposeCategories}
+                    inputClassName={styles.input}
+                    selectClassName={styles.input}
+                    freeTextPlaceholder="Meeting / Delivery / Interview…"
+                    onChange={({ purpose, purposeCategory, purposeSubcategory }) => {
+                      setForm((p) => ({ ...p, purpose, purposeCategory: purposeCategory || "", purposeSubcategory: purposeSubcategory || "" }));
+                      handleBlur("purpose");
+                    }}
+                  />
                   <InlineErr msg={!form.purpose.trim() ? "Purpose of visit is required" : fe.purpose} show={touched.purpose} />
                 </div>
             </>

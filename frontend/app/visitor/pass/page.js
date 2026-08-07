@@ -281,6 +281,12 @@ function VisitorPassContent() {
                     <b>{visitor.email}</b>
                   </div>
                 )}
+                {visitor.purpose && (
+                  <div className={styles.passRow}>
+                    <span>Purpose</span>
+                    <b>{visitor.purpose}</b>
+                  </div>
+                )}
                 <div className={styles.passRow}>
                   <span>Check-in</span>
                   <b>{formatIST(visitor.checkIn)}</b>

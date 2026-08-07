@@ -97,7 +97,8 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
   const [visitors] = await db.query(
     `SELECT visitor_code, name, phone, email, from_company, department, designation,
         address, city, state, postal_code, country, person_to_meet, purpose,
-        belongings, id_type, id_number, check_in, check_out, status, visit_status
+        belongings, id_type, id_number, check_in, check_out, status, visit_status,
+        purpose_category, purpose_subcategory
        FROM visitors
        WHERE company_id = ? ${extraWhere}
        ORDER BY check_in DESC`,
@@ -108,26 +109,30 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
   const ws = wb.addWorksheet("Visitors");
   ws.properties.defaultRowHeight = 20;
 
-  // Step 1 — columns FIRST (21 columns A–U)
+  // Step 1 — columns FIRST (23 columns A–W — the last 2, Purpose Category
+  // and Purpose Sub-Category, are appended at the tail rather than inserted
+  // after "Purpose" so the hardcoded row.getCell(20) status-styling below
+  // doesn't need to shift)
   ws.columns = [
     { width:16 }, { width:26 }, { width:16 }, { width:30 }, { width:26 },
     { width:20 }, { width:20 }, { width:35 }, { width:15 }, { width:15 },
     { width:13 }, { width:15 }, { width:26 }, { width:35 }, { width:26 },
     { width:15 }, { width:20 }, { width:22 }, { width:22 }, { width:11 }, { width:15 },
+    { width:22 }, { width:22 },
   ];
 
-  // Step 2 — add row 1 (empty array creates 21 cells matching ws.columns)
-  ws.addRow(new Array(21).fill(null));
-  // Step 3 — merge all 21 columns
-  ws.mergeCells("A1:U1");
+  // Step 2 — add row 1 (empty array creates 23 cells matching ws.columns)
+  ws.addRow(new Array(23).fill(null));
+  // Step 3 — merge all 23 columns
+  ws.mergeCells("A1:W1");
   // Step 4 — set value on top-left cell ONLY
   ws.getCell("A1").value = `${companyName}  —  Visitor Records  (${periodLabel})`;
   // Step 5 — style the merged row
   styleTitle(ws, 1, "FF4c1d95");
 
   // Row 2 — meta
-  ws.addRow(new Array(21).fill(null));
-  ws.mergeCells("A2:U2");
+  ws.addRow(new Array(23).fill(null));
+  ws.mergeCells("A2:W2");
   ws.getCell("A2").value = `Generated: ${formatDateTime(new Date())}   |   Total Records: ${visitors.length}`;
   styleMeta(ws, 2);
 
@@ -140,6 +145,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     "Visitor Code","Name","Phone","Email","From Company","Department","Designation",
     "Address","City","State","Postal Code","Country","Person to Meet","Purpose",
     "Belongings","ID Type","ID Number","Check In","Check Out","Status","Visit Status",
+    "Purpose Category","Purpose Sub-Category",
   ]);
   applyColumnHeader(headerRow);
 
@@ -154,6 +160,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
       formatDateTime(v.check_in),
       v.check_out ? formatDateTime(v.check_out) : "Still In",
       v.status||"-", v.visit_status||"pending",
+      v.purpose_category||"-", v.purpose_subcategory||"-",
     ]);
     if (i % 2 === 0) row.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFF8F6FF" } };
     row.getCell(20).alignment = { horizontal:"center" };
@@ -408,6 +415,10 @@ router.get("/analytics", async (req, res) => {
     const [dowVisitors]        = await db.query(`SELECT DAYOFWEEK(CONVERT_TZ(check_in,'+00:00','+05:30')) AS dow, COUNT(*) AS count FROM visitors WHERE company_id = ? ${vWhere} GROUP BY dow ORDER BY dow ASC`, [companyId]);
     const [topEmployees]       = await db.query(`SELECT person_to_meet AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND person_to_meet IS NOT NULL AND person_to_meet != '' ${vWhere} GROUP BY person_to_meet ORDER BY count DESC LIMIT 8`, [companyId]);
     const [topPurposes]        = await db.query(`SELECT purpose AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND purpose IS NOT NULL AND purpose != '' ${vWhere} GROUP BY purpose ORDER BY count DESC LIMIT 6`, [companyId]);
+    // Category-level breakdown for companies using the Purpose of Visit
+    // picker — empty for companies still on plain free-text Purpose.
+    const [purposeCategoryBreakdown] = await db.query(`SELECT purpose_category AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND purpose_category IS NOT NULL AND purpose_category != '' ${vWhere} GROUP BY purpose_category ORDER BY count DESC`, [companyId]);
+    const [purposeSubcategoryBreakdown] = await db.query(`SELECT purpose_category AS category, purpose_subcategory AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND purpose_subcategory IS NOT NULL AND purpose_subcategory != '' ${vWhere} GROUP BY purpose_category, purpose_subcategory ORDER BY count DESC`, [companyId]);
     const [visitStatusBreakdown] = await db.query(`SELECT visit_status AS status, COUNT(*) AS count FROM visitors WHERE company_id = ? ${vWhere} GROUP BY visit_status`, [companyId]);
     const [[visitorTotals]]    = await db.query(`SELECT COUNT(*) AS total, SUM(status='IN') AS active, SUM(DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))=DATE(CONVERT_TZ(NOW(),'+00:00','+05:30'))) AS today, SUM(pass_mail_sent>0) AS passIssued FROM visitors WHERE company_id = ? ${vWhere}`, [companyId]);
     const [[visitorPrev]]      = await db.query(`SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? ${vWherePrev}`, [companyId]);
@@ -435,6 +446,8 @@ router.get("/analytics", async (req, res) => {
         dowDistribution:     dowVisitors,
         topEmployees,
         topPurposes,
+        purposeCategoryBreakdown,
+        purposeSubcategoryBreakdown,
         visitStatusBreakdown,
       },
       bookings: {

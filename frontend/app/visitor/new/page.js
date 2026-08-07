@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
+import PurposePicker from "../../components/PurposePicker";
 import styles from "../primary_details/style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -217,11 +218,17 @@ export default function NewVisitorPage() {
   const [personToMeet,       setPersonToMeet]       = useState("");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [purpose,            setPurpose]            = useState("");
+  const [purposeCategory,    setPurposeCategory]    = useState("");
+  const [purposeSubcategory, setPurposeSubcategory] = useState("");
   const [belongings,         setBelongings]         = useState([]);
   const [miniError,          setMiniError]          = useState("");
 
   // Form Builder toggles — default everything on until the real config loads
   const [formFields, setFormFields] = useState({ personToMeet: true, belongings: true });
+
+  // Company-defined Purpose of Visit categories — empty means this company
+  // hasn't set any up, so PurposePicker falls back to plain free text.
+  const [purposeCategories, setPurposeCategories] = useState([]);
 
   useEffect(() => {
     const stored  = localStorage.getItem("company");
@@ -237,6 +244,11 @@ export default function NewVisitorPage() {
     fetch(`${API}/api/settings/visitor-fields`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => { if (d?.fields) setFormFields((prev) => ({ ...prev, ...d.fields })); })
+      .catch(() => {});
+
+    fetch(`${API}/api/settings/purpose-categories`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d?.categories)) setPurposeCategories(d.categories); })
       .catch(() => {});
 
     setLoading(false);
@@ -314,6 +326,8 @@ export default function NewVisitorPage() {
       fd.append("idNumber",    profile.idNumber    || "");
       fd.append("personToMeet", personToMeet.trim());
       fd.append("purpose", purpose.trim());
+      if (purposeCategory)    fd.append("purposeCategory", purposeCategory);
+      if (purposeSubcategory) fd.append("purposeSubcategory", purposeSubcategory);
       if (belongings.length) fd.append("belongings", belongings.join(", "));
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
       if (profile.photoKey)  fd.append("existingPhotoKey", profile.photoKey);
@@ -469,9 +483,19 @@ export default function NewVisitorPage() {
                     <label className={styles.label}>
                       Purpose of Visit <span className={styles.req}>*</span>
                     </label>
-                    <input className={styles.input} value={purpose}
-                      onChange={(e) => { setPurpose(e.target.value); setMiniError(""); }}
-                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                    <PurposePicker
+                      categories={purposeCategories}
+                      inputClassName={styles.input}
+                      selectClassName={styles.input}
+                      disabled={submitting}
+                      freeTextPlaceholder="Meeting / Interview / Delivery…"
+                      onChange={({ purpose, purposeCategory, purposeSubcategory }) => {
+                        setPurpose(purpose);
+                        setPurposeCategory(purposeCategory || "");
+                        setPurposeSubcategory(purposeSubcategory || "");
+                        setMiniError("");
+                      }}
+                    />
                   </div>
 
                   {formFields.belongings && (

@@ -66,7 +66,8 @@ export const saveVisitor = async (companyId, data, file) => {
   const {
     name, phone, email, fromCompany, department, designation,
     address, city, state, postalCode, country,
-    personToMeet, purpose, belongings, idType, idNumber,
+    personToMeet, purpose, purposeCategory, purposeSubcategory,
+    belongings, idType, idNumber,
   } = data;
 
   // Email's requirement depends on this company's Form Builder config —
@@ -190,12 +191,12 @@ export const saveVisitor = async (companyId, data, file) => {
       `INSERT INTO visitors (
         company_id, name, phone, email, from_company, department, designation,
         address, city, state, postal_code, country,
-        person_to_meet, employee_id, purpose, belongings,
+        person_to_meet, employee_id, purpose, purpose_category, purpose_subcategory, belongings,
         id_type, id_number,
         status, visit_status, check_in, pass_mail_sent,
         response_token, response_token_expires_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', 'pending', NOW(), 0, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', 'pending', NOW(), 0, ?, ?)`,
       [
         companyId,
         name.trim(),
@@ -212,6 +213,8 @@ export const saveVisitor = async (companyId, data, file) => {
         resolvedEmployeeName,
         resolvedEmployeeId,
         purpose      || null,
+        purposeCategory    || null,
+        purposeSubcategory || null,
         Array.isArray(belongings) ? belongings.join(", ") : belongings || null,
         idType       || null,
         idNumber     || null,

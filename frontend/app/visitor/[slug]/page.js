@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import PublicUnavailable from "../../components/PublicUnavailable";
+import PurposePicker from "../../components/PurposePicker";
 import styles from "./style.module.css";
 
 const API               = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -374,8 +375,15 @@ export default function PublicVisitorRegistration() {
   const [formData, setFormData] = useState({
     name: "", email: "", fromCompany: "", department: "", designation: "",
     address: "", city: "", state: "", postalCode: "", country: "",
-    personToMeet: "", purpose: "", belongings: [], idType: "", idNumber: "",
+    personToMeet: "", purpose: "", purposeCategory: "", purposeSubcategory: "",
+    belongings: [], idType: "", idNumber: "",
   });
+
+  // Company-defined Purpose of Visit categories — empty means this company
+  // hasn't set any up, so PurposePicker falls back to plain free text.
+  const [purposeCategories, setPurposeCategories] = useState([]);
+  const [purposeResetKey,   setPurposeResetKey]   = useState(0);
+  const [returnPurposeResetKey, setReturnPurposeResetKey] = useState(0);
 
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [photo,        setPhoto]        = useState(null);
@@ -393,6 +401,8 @@ export default function PublicVisitorRegistration() {
   const [returnPersonToMeet,  setReturnPersonToMeet]  = useState("");
   const [returnEmployeeId,    setReturnEmployeeId]    = useState(null);
   const [returnPurpose,       setReturnPurpose]       = useState("");
+  const [returnPurposeCategory,    setReturnPurposeCategory]    = useState("");
+  const [returnPurposeSubcategory, setReturnPurposeSubcategory] = useState("");
   const [returnBelongings,    setReturnBelongings]    = useState([]);
   const [returnMiniError,     setReturnMiniError]     = useState("");
   const [stream,       setStream]       = useState(null);
@@ -408,6 +418,7 @@ export default function PublicVisitorRegistration() {
         const data = await publicFetch(`/api/public/visitor/${slug}/info`);
         setCompany(data.company);
         if (data.formFields) setFormFields((prev) => ({ ...prev, ...data.formFields }));
+        if (Array.isArray(data.purposeCategories)) setPurposeCategories(data.purposeCategories);
       } catch (err) {
         setError(err.message || "Failed to load page");
       } finally {
@@ -625,6 +636,8 @@ export default function PublicVisitorRegistration() {
       fd.append("idNumber",    r.idNumber    || "");
       fd.append("personToMeet", returnPersonToMeet.trim());
       fd.append("purpose", returnPurpose.trim());
+      if (returnPurposeCategory)    fd.append("purposeCategory", returnPurposeCategory);
+      if (returnPurposeSubcategory) fd.append("purposeSubcategory", returnPurposeSubcategory);
       if (returnBelongings.length) fd.append("belongings", returnBelongings.join(", "));
       if (returnEmployeeId) fd.append("employeeId", String(returnEmployeeId));
       if (r.photoKey) fd.append("existingPhotoKey", r.photoKey);
@@ -656,11 +669,14 @@ export default function PublicVisitorRegistration() {
     setStep(0); setPhone(""); setOtp(""); setOtpSent(false); setOtpToken(""); setResendTimer(0);
     setFormData({ name:"", email:"", fromCompany:"", department:"", designation:"",
       address:"", city:"", state:"", postalCode:"", country:"",
-      personToMeet:"", purpose:"", belongings:[], idType:"", idNumber:"" });
+      personToMeet:"", purpose:"", purposeCategory:"", purposeSubcategory:"",
+      belongings:[], idType:"", idNumber:"" });
     setSelectedEmployeeId(null); setPhoto(null); setPhotoBlob(null); setVisitorCode(""); setError("");
     setReturningData(null); setShowReturnPreview(false); setReturningPhotoKey(null);
     setShowReturnMiniForm(false); setReturnPersonToMeet(""); setReturnEmployeeId(null);
-    setReturnPurpose(""); setReturnBelongings([]); setReturnMiniError("");
+    setReturnPurpose(""); setReturnPurposeCategory(""); setReturnPurposeSubcategory("");
+    setReturnBelongings([]); setReturnMiniError("");
+    setPurposeResetKey((k) => k + 1); setReturnPurposeResetKey((k) => k + 1);
   }, [stream]);
 
   if (loading) return <div className={styles.loadingContainer}><div className={styles.spinner} /></div>;
@@ -892,9 +908,20 @@ export default function PublicVisitorRegistration() {
 
                   <div className={styles.formGroup}>
                     <label>Purpose of Visit *</label>
-                    <input className={styles.input} value={returnPurpose}
-                      onChange={(e) => { setReturnPurpose(e.target.value); setReturnMiniError(""); }}
-                      placeholder="Meeting / Interview / Delivery…" disabled={submitting} />
+                    <PurposePicker
+                      key={returnPurposeResetKey}
+                      categories={purposeCategories}
+                      inputClassName={styles.input}
+                      selectClassName={styles.input}
+                      disabled={submitting}
+                      freeTextPlaceholder="Meeting / Interview / Delivery…"
+                      onChange={({ purpose, purposeCategory, purposeSubcategory }) => {
+                        setReturnPurpose(purpose);
+                        setReturnPurposeCategory(purposeCategory || "");
+                        setReturnPurposeSubcategory(purposeSubcategory || "");
+                        setReturnMiniError("");
+                      }}
+                    />
                   </div>
 
                   {formFields.belongings && (
@@ -1117,11 +1144,16 @@ export default function PublicVisitorRegistration() {
 
               {/* Purpose — standalone, always required */}
               <div className={styles.formGroup}>
-                <input className={styles.input} name="purpose"
-                  value={formData.purpose} onChange={handleInputChange}
-                  onBlur={() => setSecTouched(p => ({ ...p, purpose: true }))}
-                  style={{ borderColor: secTouched.purpose && (!formData.purpose.trim() || purposeError(formData.purpose)) ? "#dc2626" : undefined }}
-                  placeholder="Purpose of Visit *" />
+                <PurposePicker
+                  key={purposeResetKey}
+                  categories={purposeCategories}
+                  inputClassName={styles.input}
+                  selectClassName={styles.input}
+                  onChange={({ purpose, purposeCategory, purposeSubcategory }) => {
+                    setFormData((p) => ({ ...p, purpose, purposeCategory: purposeCategory || "", purposeSubcategory: purposeSubcategory || "" }));
+                    setSecTouched((p) => ({ ...p, purpose: true }));
+                  }}
+                />
                 <InlineErr msg={!formData.purpose.trim() ? "Purpose of visit is required" : purposeError(formData.purpose)} show={secTouched.purpose} />
               </div>
 

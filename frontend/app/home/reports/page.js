@@ -628,6 +628,14 @@ export default function ReportsPage(){
               </ChartCard>
             </div>
 
+            {/* Purpose category breakdown — only shown once a company has
+                configured custom Purpose of Visit categories in Form Builder */}
+            {v.purposeCategoryBreakdown?.length > 0 && (
+              <ChartCard title="Purpose Categories" sub="Visits grouped by your custom categories">
+                <HBarList data={v.purposeCategoryBreakdown} color="linear-gradient(90deg,#0284c7,#7dd3fc)"/>
+              </ChartCard>
+            )}
+
           </section>
 
           {/* ══ 02 CONFERENCE ANALYTICS ══ */}

@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Lock } from "lucide-react";
+import { Lock, ChevronUp, ChevronDown, X, Plus } from "lucide-react";
 import styles from "./style.module.css";
+
+const MAX_CATEGORIES = 10;
+const MAX_SUBCATEGORIES = 10;
 
 /* ── Field catalogue — keys must match backend TOGGLEABLE_VISITOR_FIELDS ──
    Subtext only where the field isn't self-explanatory or has a side effect
@@ -47,12 +50,182 @@ export default function FormBuilderPage() {
   const [savingKey, setSavingKey] = useState("");
   const [toast, setToast]       = useState(null);
 
+  // Purpose of Visit custom categories
+  const [purposeCategories, setPurposeCategories] = useState([]);
+  const [purposeLoading, setPurposeLoading] = useState(true);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
+  const [newSubName, setNewSubName] = useState({});   // { [categoryId]: string }
+  const [showAddSubForm, setShowAddSubForm] = useState({}); // { [categoryId]: boolean }
+  const [busyId, setBusyId] = useState("");           // generic busy lock for any row action
+
   useEffect(() => {
     const stored = localStorage.getItem("company");
     if (!stored) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
     fetchFields();
+    fetchPurposeCategories();
   }, [router]);
+
+  const fetchPurposeCategories = async () => {
+    try {
+      setPurposeLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/purpose-categories`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.categories)) setPurposeCategories(data.categories);
+    } catch {
+      /* non-fatal — category manager just shows empty */
+    } finally {
+      setPurposeLoading(false);
+    }
+  };
+
+  const purposeApi = async (path, options = {}) => {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/purpose-categories${path}`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Request failed");
+    return data;
+  };
+
+  const addCategory = async () => {
+    const name = newCategoryName.trim();
+    if (!name || addingCategory) return;
+    setAddingCategory(true);
+    try {
+      await purposeApi("", { method: "POST", body: JSON.stringify({ name }) });
+      setNewCategoryName("");
+      setShowAddCategoryForm(false);
+      await fetchPurposeCategories();
+      showToast("Category added");
+    } catch (err) {
+      showToast(err.message || "Failed to add category", "error");
+    } finally {
+      setAddingCategory(false);
+    }
+  };
+
+  const renameCategory = async (id, name) => {
+    if (!name.trim()) return;
+    setBusyId(`cat-${id}`);
+    try {
+      await purposeApi(`/${id}`, { method: "PUT", body: JSON.stringify({ name: name.trim() }) });
+      await fetchPurposeCategories();
+    } catch (err) {
+      showToast(err.message || "Failed to rename category", "error");
+      await fetchPurposeCategories();
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const deleteCategory = async (id) => {
+    setBusyId(`cat-${id}`);
+    try {
+      await purposeApi(`/${id}`, { method: "DELETE" });
+      await fetchPurposeCategories();
+      showToast("Category deleted");
+    } catch (err) {
+      showToast(err.message || "Failed to delete category", "error");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const moveCategory = async (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= purposeCategories.length) return;
+    const reordered = [...purposeCategories];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setPurposeCategories(reordered);
+    setBusyId(`cat-${reordered[index].id}`);
+    try {
+      await purposeApi("/reorder", { method: "PUT", body: JSON.stringify({ order: reordered.map((c) => c.id) }) });
+    } catch (err) {
+      showToast(err.message || "Failed to reorder", "error");
+      await fetchPurposeCategories();
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const addSubcategory = async (categoryId) => {
+    const name = (newSubName[categoryId] || "").trim();
+    if (!name) return;
+    setBusyId(`sub-add-${categoryId}`);
+    try {
+      await purposeApi(`/${categoryId}/subcategories`, { method: "POST", body: JSON.stringify({ name }) });
+      setNewSubName((p) => ({ ...p, [categoryId]: "" }));
+      setShowAddSubForm((p) => ({ ...p, [categoryId]: false }));
+      await fetchPurposeCategories();
+    } catch (err) {
+      showToast(err.message || "Failed to add sub-purpose", "error");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const renameSubcategory = async (id, name) => {
+    if (!name.trim()) return;
+    setBusyId(`sub-${id}`);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/purpose-subcategories/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      await fetchPurposeCategories();
+    } catch {
+      await fetchPurposeCategories();
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const deleteSubcategory = async (id) => {
+    setBusyId(`sub-${id}`);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/purpose-subcategories/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      await fetchPurposeCategories();
+      showToast("Sub-purpose deleted");
+    } catch (err) {
+      showToast("Failed to delete sub-purpose", "error");
+    } finally {
+      setBusyId("");
+    }
+  };
+
+  const moveSubcategory = async (category, index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= category.subcategories.length) return;
+    const reordered = [...category.subcategories];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setPurposeCategories((prev) =>
+      prev.map((c) => (c.id === category.id ? { ...c, subcategories: reordered } : c))
+    );
+    setBusyId(`sub-${reordered[index].id}`);
+    try {
+      await purposeApi(`/${category.id}/subcategories/reorder`, {
+        method: "PUT",
+        body: JSON.stringify({ order: reordered.map((s) => s.id) }),
+      });
+    } catch (err) {
+      showToast(err.message || "Failed to reorder", "error");
+      await fetchPurposeCategories();
+    } finally {
+      setBusyId("");
+    }
+  };
 
   const fetchFields = async () => {
     try {
@@ -169,6 +342,145 @@ export default function FormBuilderPage() {
             })}
           </main>
         )}
+
+        {/* ── PURPOSE OF VISIT — CUSTOM CATEGORIES ── */}
+        <section className={styles.purposeSection}>
+          <div className={styles.purposeSectionHeader}>
+            <h2 className={styles.purposeSectionTitle}>Purpose of Visit — Custom Categories</h2>
+            <p className={styles.purposeSectionSub}>
+              Optional. Add your own categories (e.g. &ldquo;Classes &amp; Learning&rdquo;) and sub-purposes
+              under each — visitors then pick from a dropdown instead of typing. Leave empty to keep
+              the plain text field. An &ldquo;Others&rdquo; option with free text is always included automatically.
+            </p>
+          </div>
+
+          {!purposeLoading && (
+            <div className={styles.purposeCategoryList}>
+              {purposeCategories.map((cat, index) => (
+                <div key={cat.id} className={styles.purposeCategoryCard}>
+                  <div className={styles.purposeCategoryHeaderRow}>
+                    <div className={styles.reorderBtns}>
+                      <button type="button" className={styles.reorderBtn} disabled={index === 0 || busyId === `cat-${cat.id}`}
+                        onClick={() => moveCategory(index, -1)} aria-label="Move up">
+                        <ChevronUp size={13} />
+                      </button>
+                      <button type="button" className={styles.reorderBtn} disabled={index === purposeCategories.length - 1 || busyId === `cat-${cat.id}`}
+                        onClick={() => moveCategory(index, 1)} aria-label="Move down">
+                        <ChevronDown size={13} />
+                      </button>
+                    </div>
+                    <input
+                      className={styles.purposeCategoryNameInput}
+                      defaultValue={cat.name}
+                      disabled={busyId === `cat-${cat.id}`}
+                      onBlur={(e) => { if (e.target.value.trim() !== cat.name) renameCategory(cat.id, e.target.value); }}
+                    />
+                    <button type="button" className={styles.deleteBtn} disabled={busyId === `cat-${cat.id}`}
+                      onClick={() => deleteCategory(cat.id)} aria-label="Delete category">
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className={styles.purposeSubList}>
+                    {cat.subcategories.map((sub, subIndex) => (
+                      <div key={sub.id} className={styles.purposeSubRow}>
+                        <div className={styles.reorderBtns}>
+                          <button type="button" className={styles.reorderBtnSm} disabled={subIndex === 0 || busyId === `sub-${sub.id}`}
+                            onClick={() => moveSubcategory(cat, subIndex, -1)} aria-label="Move up">
+                            <ChevronUp size={11} />
+                          </button>
+                          <button type="button" className={styles.reorderBtnSm} disabled={subIndex === cat.subcategories.length - 1 || busyId === `sub-${sub.id}`}
+                            onClick={() => moveSubcategory(cat, subIndex, 1)} aria-label="Move down">
+                            <ChevronDown size={11} />
+                          </button>
+                        </div>
+                        <input
+                          className={styles.purposeSubNameInput}
+                          defaultValue={sub.name}
+                          disabled={busyId === `sub-${sub.id}`}
+                          onBlur={(e) => { if (e.target.value.trim() !== sub.name) renameSubcategory(sub.id, e.target.value); }}
+                        />
+                        <button type="button" className={styles.deleteBtnSm} disabled={busyId === `sub-${sub.id}`}
+                          onClick={() => deleteSubcategory(sub.id)} aria-label="Delete sub-purpose">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+
+                    {cat.subcategories.length < MAX_SUBCATEGORIES && (
+                      showAddSubForm[cat.id] ? (
+                        <div className={styles.purposeAddRow}>
+                          <input
+                            className={styles.purposeSubNameInput}
+                            placeholder="Sub-purpose name…"
+                            autoFocus
+                            value={newSubName[cat.id] || ""}
+                            disabled={busyId === `sub-add-${cat.id}`}
+                            onChange={(e) => setNewSubName((p) => ({ ...p, [cat.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") addSubcategory(cat.id);
+                              if (e.key === "Escape") setShowAddSubForm((p) => ({ ...p, [cat.id]: false }));
+                            }}
+                          />
+                          <button type="button" className={styles.addBtnSm} disabled={busyId === `sub-add-${cat.id}` || !(newSubName[cat.id] || "").trim()}
+                            onClick={() => addSubcategory(cat.id)} aria-label="Confirm add sub-purpose">
+                            <Plus size={13} />
+                          </button>
+                          <button type="button" className={styles.deleteBtnSm}
+                            onClick={() => { setShowAddSubForm((p) => ({ ...p, [cat.id]: false })); setNewSubName((p) => ({ ...p, [cat.id]: "" })); }}
+                            aria-label="Cancel">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" className={styles.addSubTriggerBtn}
+                          onClick={() => setShowAddSubForm((p) => ({ ...p, [cat.id]: true }))}>
+                          <Plus size={12} /> Add sub-purpose
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
+
+              {purposeCategories.length < MAX_CATEGORIES && (
+                showAddCategoryForm ? (
+                  <div className={styles.purposeAddCategoryRow}>
+                    <input
+                      className={styles.purposeCategoryNameInput}
+                      placeholder="Category name… (e.g. Classes & Learning)"
+                      autoFocus
+                      value={newCategoryName}
+                      disabled={addingCategory}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addCategory();
+                        if (e.key === "Escape") setShowAddCategoryForm(false);
+                      }}
+                    />
+                    <button type="button" className={styles.addBtn} disabled={addingCategory || !newCategoryName.trim()}
+                      onClick={addCategory}>
+                      <Plus size={14} /> Add
+                    </button>
+                    <button type="button" className={styles.cancelBtn}
+                      onClick={() => { setShowAddCategoryForm(false); setNewCategoryName(""); }}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" className={styles.addCategoryTriggerBtn}
+                    onClick={() => setShowAddCategoryForm(true)}>
+                    <Plus size={16} /> Add Category
+                  </button>
+                )
+              )}
+
+              {purposeCategories.length >= MAX_CATEGORIES && (
+                <p className={styles.purposeLimitNote}>Maximum {MAX_CATEGORIES} categories reached.</p>
+              )}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

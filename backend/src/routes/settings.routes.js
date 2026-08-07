@@ -10,6 +10,15 @@ import {
   changePassword,
   getVisitorFormFields,
   updateVisitorFormFields,
+  getPurposeCategories,
+  createPurposeCategory,
+  updatePurposeCategory,
+  deletePurposeCategory,
+  reorderPurposeCategories,
+  createPurposeSubcategory,
+  updatePurposeSubcategory,
+  deletePurposeSubcategory,
+  reorderPurposeSubcategories,
 } from "../controllers/settings.controller.js";
 
 const router = express.Router();
@@ -147,5 +156,22 @@ router.put(
   authenticate,
   asyncHandler(updateVisitorFormFields)
 );
+
+/* ======================================================
+   PURPOSE OF VISIT — CATEGORIES & SUB-CATEGORIES
+   --------------------------------------------------------
+   Company-defined Purpose of Visit picker. Empty list = the
+   registration form keeps the plain free-text Purpose field.
+====================================================== */
+router.get("/purpose-categories", authenticate, asyncHandler(getPurposeCategories));
+router.post("/purpose-categories", authenticate, asyncHandler(createPurposeCategory));
+router.put("/purpose-categories/reorder", authenticate, asyncHandler(reorderPurposeCategories));
+router.put("/purpose-categories/:id", authenticate, asyncHandler(updatePurposeCategory));
+router.delete("/purpose-categories/:id", authenticate, asyncHandler(deletePurposeCategory));
+
+router.post("/purpose-categories/:categoryId/subcategories", authenticate, asyncHandler(createPurposeSubcategory));
+router.put("/purpose-categories/:categoryId/subcategories/reorder", authenticate, asyncHandler(reorderPurposeSubcategories));
+router.put("/purpose-subcategories/:id", authenticate, asyncHandler(updatePurposeSubcategory));
+router.delete("/purpose-subcategories/:id", authenticate, asyncHandler(deletePurposeSubcategory));
 
 export default router;
