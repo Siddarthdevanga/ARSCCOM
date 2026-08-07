@@ -62,6 +62,20 @@
 }
 
 /* ================================================
+   HTML/BODY — .page is the one scrolling container.
+   Explicitly locking html/body here (rather than leaving them
+   unset and hoping document-level scroll behaves) matches the
+   pattern used elsewhere in this app and removes any dependency
+   on whatever overflow state a previous route might have left
+   behind.
+================================================ */
+:global(html),
+:global(body) {
+  height: 100%;
+  overflow: hidden;
+}
+
+/* ================================================
    SCROLLBAR — hidden, scroll still works
 ================================================ */
 .page,
@@ -82,9 +96,15 @@
 /* ================================================
    PAGE LAYOUT
 ================================================ */
+/* Fixed height + its own overflow-y, not min-height relying on document
+   scroll — this makes .page scroll independently of whatever state
+   html/body are in (matches the pattern used everywhere else in this
+   app, e.g. Form Builder's .container/.scrollBody). A page that instead
+   depends on document-level scroll can silently stop scrolling if any
+   ancestor ever ends up with overflow:hidden, for any reason. */
 .page {
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--bg-page);
