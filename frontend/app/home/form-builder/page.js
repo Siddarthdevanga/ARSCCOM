@@ -55,7 +55,9 @@ export default function FormBuilderPage() {
   const [purposeLoading, setPurposeLoading] = useState(true);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [addingCategory, setAddingCategory] = useState(false);
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
   const [newSubName, setNewSubName] = useState({});   // { [categoryId]: string }
+  const [showAddSubForm, setShowAddSubForm] = useState({}); // { [categoryId]: boolean }
   const [busyId, setBusyId] = useState("");           // generic busy lock for any row action
 
   useEffect(() => {
@@ -99,6 +101,7 @@ export default function FormBuilderPage() {
     try {
       await purposeApi("", { method: "POST", body: JSON.stringify({ name }) });
       setNewCategoryName("");
+      setShowAddCategoryForm(false);
       await fetchPurposeCategories();
       showToast("Category added");
     } catch (err) {
@@ -159,6 +162,7 @@ export default function FormBuilderPage() {
     try {
       await purposeApi(`/${categoryId}/subcategories`, { method: "POST", body: JSON.stringify({ name }) });
       setNewSubName((p) => ({ ...p, [categoryId]: "" }));
+      setShowAddSubForm((p) => ({ ...p, [categoryId]: false }));
       await fetchPurposeCategories();
     } catch (err) {
       showToast(err.message || "Failed to add sub-purpose", "error");
@@ -404,40 +408,71 @@ export default function FormBuilderPage() {
                     ))}
 
                     {cat.subcategories.length < MAX_SUBCATEGORIES && (
-                      <div className={styles.purposeAddRow}>
-                        <input
-                          className={styles.purposeSubNameInput}
-                          placeholder="Add sub-purpose…"
-                          value={newSubName[cat.id] || ""}
-                          disabled={busyId === `sub-add-${cat.id}`}
-                          onChange={(e) => setNewSubName((p) => ({ ...p, [cat.id]: e.target.value }))}
-                          onKeyDown={(e) => e.key === "Enter" && addSubcategory(cat.id)}
-                        />
-                        <button type="button" className={styles.addBtnSm} disabled={busyId === `sub-add-${cat.id}` || !(newSubName[cat.id] || "").trim()}
-                          onClick={() => addSubcategory(cat.id)} aria-label="Add sub-purpose">
-                          <Plus size={13} />
+                      showAddSubForm[cat.id] ? (
+                        <div className={styles.purposeAddRow}>
+                          <input
+                            className={styles.purposeSubNameInput}
+                            placeholder="Sub-purpose name…"
+                            autoFocus
+                            value={newSubName[cat.id] || ""}
+                            disabled={busyId === `sub-add-${cat.id}`}
+                            onChange={(e) => setNewSubName((p) => ({ ...p, [cat.id]: e.target.value }))}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") addSubcategory(cat.id);
+                              if (e.key === "Escape") setShowAddSubForm((p) => ({ ...p, [cat.id]: false }));
+                            }}
+                          />
+                          <button type="button" className={styles.addBtnSm} disabled={busyId === `sub-add-${cat.id}` || !(newSubName[cat.id] || "").trim()}
+                            onClick={() => addSubcategory(cat.id)} aria-label="Confirm add sub-purpose">
+                            <Plus size={13} />
+                          </button>
+                          <button type="button" className={styles.deleteBtnSm}
+                            onClick={() => { setShowAddSubForm((p) => ({ ...p, [cat.id]: false })); setNewSubName((p) => ({ ...p, [cat.id]: "" })); }}
+                            aria-label="Cancel">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <button type="button" className={styles.addSubTriggerBtn}
+                          onClick={() => setShowAddSubForm((p) => ({ ...p, [cat.id]: true }))}>
+                          <Plus size={12} /> Add sub-purpose
                         </button>
-                      </div>
+                      )
                     )}
                   </div>
                 </div>
               ))}
 
               {purposeCategories.length < MAX_CATEGORIES && (
-                <div className={styles.purposeAddCategoryRow}>
-                  <input
-                    className={styles.purposeCategoryNameInput}
-                    placeholder="Add category… (e.g. Classes & Learning)"
-                    value={newCategoryName}
-                    disabled={addingCategory}
-                    onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && addCategory()}
-                  />
-                  <button type="button" className={styles.addBtn} disabled={addingCategory || !newCategoryName.trim()}
-                    onClick={addCategory}>
-                    <Plus size={14} /> Add Category
+                showAddCategoryForm ? (
+                  <div className={styles.purposeAddCategoryRow}>
+                    <input
+                      className={styles.purposeCategoryNameInput}
+                      placeholder="Category name… (e.g. Classes & Learning)"
+                      autoFocus
+                      value={newCategoryName}
+                      disabled={addingCategory}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addCategory();
+                        if (e.key === "Escape") setShowAddCategoryForm(false);
+                      }}
+                    />
+                    <button type="button" className={styles.addBtn} disabled={addingCategory || !newCategoryName.trim()}
+                      onClick={addCategory}>
+                      <Plus size={14} /> Add
+                    </button>
+                    <button type="button" className={styles.cancelBtn}
+                      onClick={() => { setShowAddCategoryForm(false); setNewCategoryName(""); }}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" className={styles.addCategoryTriggerBtn}
+                    onClick={() => setShowAddCategoryForm(true)}>
+                    <Plus size={16} /> Add Category
                   </button>
-                </div>
+                )
               )}
 
               {purposeCategories.length >= MAX_CATEGORIES && (

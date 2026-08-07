@@ -348,6 +348,54 @@
   padding: 10px 12px;
 }
 
+.addCategoryTriggerBtn {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #faf8ff;
+  border: 1.5px dashed #ddd2f0;
+  color: #6200d6;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: background 0.15s, border-color 0.15s;
+}
+.addCategoryTriggerBtn:hover { background: #f4f2f8; border-color: #6200d6; }
+
+.addSubTriggerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  background: transparent;
+  border: none;
+  color: #6200d6;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 3px 4px;
+  font-family: 'Nunito', sans-serif;
+}
+.addSubTriggerBtn:hover { text-decoration: underline; }
+
+.cancelBtn {
+  background: transparent;
+  border: none;
+  color: #9980c8;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 8px 6px;
+  white-space: nowrap;
+  font-family: 'Nunito', sans-serif;
+}
+.cancelBtn:hover { color: #6200d6; }
+
 .addBtn {
   display: inline-flex;
   align-items: center;
