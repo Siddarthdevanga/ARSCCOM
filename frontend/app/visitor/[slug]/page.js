@@ -1335,7 +1335,12 @@ export default function PublicVisitorRegistration() {
           <div className={styles.container}>
             <div className={styles.authCard}>
               <div className={styles.textCenter}>
-                <div style={{ fontSize:"4rem", marginBottom:"1rem", color:"#16a34a" }}>✓</div>
+                <div style={{ marginBottom:"1rem", display:"flex", justifyContent:"center" }}>
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M8 12.5l2.5 2.5L16 9.5" />
+                  </svg>
+                </div>
                 <h2 style={{ color:"#16a34a", marginBottom:"1rem", fontSize:"clamp(1.5rem,3.5vw,2rem)", fontWeight:800 }}>
                   Registration Successful!
                 </h2>
@@ -1355,11 +1360,29 @@ export default function PublicVisitorRegistration() {
                 <button
                   className={styles.whatsappBtn}
                   type="button"
+                  style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
                   onClick={() => window.open(`/v/pass?code=${visitorCode}`, "_blank", "noopener,noreferrer")}
                 >
-                  <span style={{ fontSize:"1.25rem" }}>🪪</span> View Pass
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                    <circle cx="8.5" cy="11" r="2" />
+                    <path d="M5.5 15.7c.5-1.4 1.7-2.3 3-2.3s2.5.9 3 2.3" />
+                    <line x1="14.5" y1="9" x2="19" y2="9" />
+                    <line x1="14.5" y1="13" x2="19" y2="13" />
+                  </svg>
+                  View Pass
                 </button>
-                <button className={styles.primaryBtn} onClick={handleReset} type="button">✓ Done</button>
+                <button
+                  className={styles.primaryBtn}
+                  onClick={handleReset}
+                  type="button"
+                  style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6L9 17l-5-5" />
+                  </svg>
+                  Done
+                </button>
               </div>
             </div>
           </div>
