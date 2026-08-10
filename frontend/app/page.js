@@ -270,7 +270,7 @@ export default function HomePage() {
   ];
   const stepsFlowEl = document.getElementById('stepsFlow');
   if (stepsFlowEl) {
-    stepsFlowEl.innerHTML = '';
+    stepsFlowEl.querySelectorAll('.stepsFlowNode').forEach(n => n.remove());
     stepsFlowData.forEach((s, i) => {
       const node = document.createElement('div');
       node.className = 'stepsFlowNode';
