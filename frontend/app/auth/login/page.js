@@ -225,6 +225,10 @@ export default function LoginPage() {
           <div className={styles.logoContainer}>
             <Image src="/haivisitorlogo.png" alt="Hai Visitor Logo" width={400} height={400} priority className={styles.brandLogo} />
           </div>
+          <div className={styles.brandName}>
+            <span className={styles.brandNameLine}>Zodopt&apos;s</span>
+            <span className={styles.brandNameLine}>H<span className={styles.brandNameAccent}>ai</span> Visitor</span>
+          </div>
           <h1 className={styles.platformTitle}>VISITOR MANAGEMENT PLATFORM</h1>
           <p className={styles.platformTagline}>Streamline check-ins • Enhance security • Optimize space utilization</p>
         </div>
