@@ -19,6 +19,15 @@ import {
   updatePurposeSubcategory,
   deletePurposeSubcategory,
   reorderPurposeSubcategories,
+  getCustomFields,
+  createCustomField,
+  updateCustomField,
+  deleteCustomField,
+  reorderCustomFields,
+  createCustomFieldOption,
+  updateCustomFieldOption,
+  deleteCustomFieldOption,
+  reorderCustomFieldOptions,
 } from "../controllers/settings.controller.js";
 
 const router = express.Router();
@@ -173,5 +182,23 @@ router.post("/purpose-categories/:categoryId/subcategories", authenticate, async
 router.put("/purpose-categories/:categoryId/subcategories/reorder", authenticate, asyncHandler(reorderPurposeSubcategories));
 router.put("/purpose-subcategories/:id", authenticate, asyncHandler(updatePurposeSubcategory));
 router.delete("/purpose-subcategories/:id", authenticate, asyncHandler(deletePurposeSubcategory));
+
+/* ======================================================
+   CUSTOM FIELDS
+   --------------------------------------------------------
+   Company-defined custom fields (max 5): text, number, or
+   dropdown, optionally required. Dropdown fields have their
+   own company-scoped options list.
+====================================================== */
+router.get("/custom-fields", authenticate, asyncHandler(getCustomFields));
+router.post("/custom-fields", authenticate, asyncHandler(createCustomField));
+router.put("/custom-fields/reorder", authenticate, asyncHandler(reorderCustomFields));
+router.put("/custom-fields/:id", authenticate, asyncHandler(updateCustomField));
+router.delete("/custom-fields/:id", authenticate, asyncHandler(deleteCustomField));
+
+router.post("/custom-fields/:fieldId/options", authenticate, asyncHandler(createCustomFieldOption));
+router.put("/custom-fields/:fieldId/options/reorder", authenticate, asyncHandler(reorderCustomFieldOptions));
+router.put("/custom-field-options/:id", authenticate, asyncHandler(updateCustomFieldOption));
+router.delete("/custom-field-options/:id", authenticate, asyncHandler(deleteCustomFieldOption));
 
 export default router;

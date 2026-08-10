@@ -756,3 +756,288 @@ export const reorderPurposeSubcategories = async (req, res) => {
     return res.status(500).json({ success: false, message: "Failed to reorder sub-purposes" });
   }
 };
+
+/* ======================================================
+   CUSTOM FIELDS
+   ------------------------------------------------------
+   Company-defined custom fields (max 5) of type text, number,
+   or dropdown, optionally marked required. Dropdown fields have
+   their own company-scoped options (max 20 per field).
+   Submitted values are stored as plain-text snapshots on
+   visitor_custom_field_values (see visitor.service.js), so
+   editing/deleting a field here never changes historical
+   visitor records — it only affects future registrations.
+   GET    /api/settings/custom-fields
+   POST   /api/settings/custom-fields                 body:{label, fieldType, isRequired}
+   PUT    /api/settings/custom-fields/:id              body:{label, fieldType, isRequired}
+   DELETE /api/settings/custom-fields/:id
+   PUT    /api/settings/custom-fields/reorder          body:{order:[id,...]}
+   POST   /api/settings/custom-fields/:fieldId/options body:{label}
+   PUT    /api/settings/custom-field-options/:id       body:{label}
+   DELETE /api/settings/custom-field-options/:id
+   PUT    /api/settings/custom-fields/:fieldId/options/reorder body:{order:[id,...]}
+====================================================== */
+const MAX_CUSTOM_FIELDS = 5;
+const MAX_CUSTOM_FIELD_OPTIONS = 20;
+const CUSTOM_FIELD_TYPES = ["text", "number", "dropdown"];
+
+export const getCustomFields = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const [fields] = await db.execute(
+      `SELECT id, label, field_type, is_required, sort_order FROM company_custom_fields
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [companyId]
+    );
+    const [options] = await db.execute(
+      `SELECT id, field_id, label, sort_order FROM company_custom_field_options
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [companyId]
+    );
+
+    const fieldsOut = fields.map((f) => ({
+      id: f.id,
+      label: f.label,
+      fieldType: f.field_type,
+      isRequired: !!f.is_required,
+      sortOrder: f.sort_order,
+      options: f.field_type === "dropdown"
+        ? options.filter((o) => o.field_id === f.id).map((o) => ({ id: o.id, label: o.label, sortOrder: o.sort_order }))
+        : [],
+    }));
+
+    return res.json({ success: true, fields: fieldsOut });
+  } catch (error) {
+    console.error("GET CUSTOM FIELDS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch custom fields" });
+  }
+};
+
+export const createCustomField = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const label = req.body?.label?.trim();
+    const fieldType = req.body?.fieldType;
+    const isRequired = !!req.body?.isRequired;
+    if (!label) return res.status(400).json({ success: false, message: "Field label is required" });
+    if (!CUSTOM_FIELD_TYPES.includes(fieldType)) {
+      return res.status(400).json({ success: false, message: "fieldType must be text, number, or dropdown" });
+    }
+
+    const [[{ total }]] = await db.execute(
+      `SELECT COUNT(*) AS total FROM company_custom_fields WHERE company_id = ?`,
+      [companyId]
+    );
+    if (total >= MAX_CUSTOM_FIELDS) {
+      return res.status(400).json({ success: false, message: `Maximum ${MAX_CUSTOM_FIELDS} custom fields allowed` });
+    }
+
+    const [[{ nextOrder }]] = await db.execute(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS nextOrder FROM company_custom_fields WHERE company_id = ?`,
+      [companyId]
+    );
+
+    const [result] = await db.execute(
+      `INSERT INTO company_custom_fields (company_id, label, field_type, is_required, sort_order) VALUES (?, ?, ?, ?, ?)`,
+      [companyId, label, fieldType, isRequired ? 1 : 0, nextOrder]
+    );
+
+    return res.status(201).json({
+      success: true,
+      field: { id: result.insertId, label, fieldType, isRequired, sortOrder: nextOrder, options: [] },
+    });
+  } catch (error) {
+    console.error("CREATE CUSTOM FIELD ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to create custom field" });
+  }
+};
+
+export const updateCustomField = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    const label = req.body?.label?.trim();
+    const fieldType = req.body?.fieldType;
+    const isRequired = !!req.body?.isRequired;
+    if (!label) return res.status(400).json({ success: false, message: "Field label is required" });
+    if (!CUSTOM_FIELD_TYPES.includes(fieldType)) {
+      return res.status(400).json({ success: false, message: "fieldType must be text, number, or dropdown" });
+    }
+
+    const [result] = await db.execute(
+      `UPDATE company_custom_fields SET label = ?, field_type = ?, is_required = ? WHERE id = ? AND company_id = ?`,
+      [label, fieldType, isRequired ? 1 : 0, id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Custom field not found" });
+
+    return res.json({ success: true, message: "Custom field updated" });
+  } catch (error) {
+    console.error("UPDATE CUSTOM FIELD ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update custom field" });
+  }
+};
+
+export const deleteCustomField = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    // Options cascade-delete via FK — historical visitor records are
+    // unaffected since visitor_custom_field_values.field_label/field_value
+    // are plain-text snapshots, not live references to this row.
+    const [result] = await db.execute(
+      `DELETE FROM company_custom_fields WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Custom field not found" });
+
+    return res.json({ success: true, message: "Custom field deleted" });
+  } catch (error) {
+    console.error("DELETE CUSTOM FIELD ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete custom field" });
+  }
+};
+
+export const reorderCustomFields = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const order = req.body?.order;
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ success: false, message: "order array is required" });
+    }
+
+    await Promise.all(
+      order.map((id, index) =>
+        db.execute(
+          `UPDATE company_custom_fields SET sort_order = ? WHERE id = ? AND company_id = ?`,
+          [index, id, companyId]
+        )
+      )
+    );
+
+    return res.json({ success: true, message: "Order updated" });
+  } catch (error) {
+    console.error("REORDER CUSTOM FIELDS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to reorder custom fields" });
+  }
+};
+
+export const createCustomFieldOption = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { fieldId } = req.params;
+    const label = req.body?.label?.trim();
+    if (!label) return res.status(400).json({ success: false, message: "Option label is required" });
+
+    const [[field]] = await db.execute(
+      `SELECT id FROM company_custom_fields WHERE id = ? AND company_id = ?`,
+      [fieldId, companyId]
+    );
+    if (!field) return res.status(404).json({ success: false, message: "Custom field not found" });
+
+    const [[{ total }]] = await db.execute(
+      `SELECT COUNT(*) AS total FROM company_custom_field_options WHERE field_id = ?`,
+      [fieldId]
+    );
+    if (total >= MAX_CUSTOM_FIELD_OPTIONS) {
+      return res.status(400).json({ success: false, message: `Maximum ${MAX_CUSTOM_FIELD_OPTIONS} options allowed per field` });
+    }
+
+    const [[{ nextOrder }]] = await db.execute(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS nextOrder FROM company_custom_field_options WHERE field_id = ?`,
+      [fieldId]
+    );
+
+    const [result] = await db.execute(
+      `INSERT INTO company_custom_field_options (field_id, company_id, label, sort_order) VALUES (?, ?, ?, ?)`,
+      [fieldId, companyId, label, nextOrder]
+    );
+
+    return res.status(201).json({
+      success: true,
+      option: { id: result.insertId, label, sortOrder: nextOrder },
+    });
+  } catch (error) {
+    console.error("CREATE CUSTOM FIELD OPTION ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to create option" });
+  }
+};
+
+export const updateCustomFieldOption = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    const label = req.body?.label?.trim();
+    if (!label) return res.status(400).json({ success: false, message: "Option label is required" });
+
+    const [result] = await db.execute(
+      `UPDATE company_custom_field_options SET label = ? WHERE id = ? AND company_id = ?`,
+      [label, id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Option not found" });
+
+    return res.json({ success: true, message: "Option updated" });
+  } catch (error) {
+    console.error("UPDATE CUSTOM FIELD OPTION ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to update option" });
+  }
+};
+
+export const deleteCustomFieldOption = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { id } = req.params;
+    const [result] = await db.execute(
+      `DELETE FROM company_custom_field_options WHERE id = ? AND company_id = ?`,
+      [id, companyId]
+    );
+    if (!result.affectedRows) return res.status(404).json({ success: false, message: "Option not found" });
+
+    return res.json({ success: true, message: "Option deleted" });
+  } catch (error) {
+    console.error("DELETE CUSTOM FIELD OPTION ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to delete option" });
+  }
+};
+
+export const reorderCustomFieldOptions = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const { fieldId } = req.params;
+    const order = req.body?.order;
+    if (!Array.isArray(order) || !order.length) {
+      return res.status(400).json({ success: false, message: "order array is required" });
+    }
+
+    await Promise.all(
+      order.map((id, index) =>
+        db.execute(
+          `UPDATE company_custom_field_options SET sort_order = ? WHERE id = ? AND field_id = ? AND company_id = ?`,
+          [index, id, fieldId, companyId]
+        )
+      )
+    );
+
+    return res.json({ success: true, message: "Order updated" });
+  } catch (error) {
+    console.error("REORDER CUSTOM FIELD OPTIONS ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to reorder options" });
+  }
+};

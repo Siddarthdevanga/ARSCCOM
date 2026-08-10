@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import PublicUnavailable from "../../components/PublicUnavailable";
 import PurposePicker from "../../components/PurposePicker";
+import CustomFieldsRenderer from "../../components/CustomFieldsRenderer";
 import styles from "./style.module.css";
 
 const API               = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -385,6 +386,12 @@ export default function PublicVisitorRegistration() {
   const [purposeResetKey,   setPurposeResetKey]   = useState(0);
   const [returnPurposeResetKey, setReturnPurposeResetKey] = useState(0);
 
+  // Company-defined custom fields — empty means no extra fields for this
+  // company. Values keyed by field id, shared across the first-time and
+  // returning-visitor flows since both submit to the same /register route.
+  const [customFields, setCustomFields] = useState([]);
+  const [customFieldValues, setCustomFieldValues] = useState({});
+
   const [selectedEmployeeId, setSelectedEmployeeId] = useState(null);
   const [photo,        setPhoto]        = useState(null);
   const [photoBlob,    setPhotoBlob]    = useState(null);
@@ -419,6 +426,7 @@ export default function PublicVisitorRegistration() {
         setCompany(data.company);
         if (data.formFields) setFormFields((prev) => ({ ...prev, ...data.formFields }));
         if (Array.isArray(data.purposeCategories)) setPurposeCategories(data.purposeCategories);
+        if (Array.isArray(data.customFields)) setCustomFields(data.customFields);
       } catch (err) {
         setError(err.message || "Failed to load page");
       } finally {
@@ -586,6 +594,9 @@ export default function PublicVisitorRegistration() {
         fd.append(key, key === "belongings" ? (Array.isArray(value) ? value.join(", ") : "") : value || "");
       });
       fd.append("phone", `91${phone}`);  // Add phone from OTP verification (with 91 prefix)
+      fd.append("customFieldValues", JSON.stringify(
+        Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
+      ));
       if (photoBlob) {
         fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
       } else if (returningPhotoKey) {
@@ -641,6 +652,9 @@ export default function PublicVisitorRegistration() {
       if (returnBelongings.length) fd.append("belongings", returnBelongings.join(", "));
       if (returnEmployeeId) fd.append("employeeId", String(returnEmployeeId));
       if (r.photoKey) fd.append("existingPhotoKey", r.photoKey);
+      fd.append("customFieldValues", JSON.stringify(
+        Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
+      ));
 
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), UPLOAD_TIMEOUT_MS);
@@ -675,7 +689,7 @@ export default function PublicVisitorRegistration() {
     setReturningData(null); setShowReturnPreview(false); setReturningPhotoKey(null);
     setShowReturnMiniForm(false); setReturnPersonToMeet(""); setReturnEmployeeId(null);
     setReturnPurpose(""); setReturnPurposeCategory(""); setReturnPurposeSubcategory("");
-    setReturnBelongings([]); setReturnMiniError("");
+    setReturnBelongings([]); setReturnMiniError(""); setCustomFieldValues({});
     setPurposeResetKey((k) => k + 1); setReturnPurposeResetKey((k) => k + 1);
   }, [stream]);
 
@@ -924,6 +938,18 @@ export default function PublicVisitorRegistration() {
                     />
                   </div>
 
+                  {/* Company-defined custom fields */}
+                  <div className={styles.formGroup}>
+                    <CustomFieldsRenderer
+                      fields={customFields}
+                      values={customFieldValues}
+                      inputClassName={styles.input}
+                      selectClassName={styles.input}
+                      disabled={submitting}
+                      onChange={(fieldId, value) => setCustomFieldValues((p) => ({ ...p, [fieldId]: value }))}
+                    />
+                  </div>
+
                   {formFields.belongings && (
                     <div className={styles.formGroup}>
                       <label>Belongings</label>
@@ -1156,6 +1182,16 @@ export default function PublicVisitorRegistration() {
                 />
                 <InlineErr msg={!formData.purpose.trim() ? "Purpose of visit is required" : purposeError(formData.purpose)} show={secTouched.purpose} />
               </div>
+
+              {/* Company-defined custom fields */}
+              <CustomFieldsRenderer
+                fields={customFields}
+                values={customFieldValues}
+                inputClassName={styles.input}
+                selectClassName={styles.input}
+                disabled={submitting}
+                onChange={(fieldId, value) => setCustomFieldValues((p) => ({ ...p, [fieldId]: value }))}
+              />
 
               {/* Belongings */}
               {formFields.belongings && (

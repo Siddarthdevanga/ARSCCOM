@@ -67,7 +67,7 @@ export const saveVisitor = async (companyId, data, file) => {
     name, phone, email, fromCompany, department, designation,
     address, city, state, postalCode, country,
     personToMeet, purpose, purposeCategory, purposeSubcategory,
-    belongings, idType, idNumber,
+    belongings, idType, idNumber, customFieldValues,
   } = data;
 
   // Email's requirement depends on this company's Form Builder config —
@@ -102,6 +102,23 @@ export const saveVisitor = async (companyId, data, file) => {
     const formFields = normalizeVisitorFormFields(company.visitor_form_fields);
     if (formFields.email && !email?.trim()) {
       throw new Error("Visitor email is required");
+    }
+
+    /* ── Company-defined custom fields: validate required ones are present ── */
+    const [customFieldDefs] = await conn.execute(
+      `SELECT id, label, is_required FROM company_custom_fields WHERE company_id = ?`,
+      [companyId]
+    );
+    const submittedCustomValues = Array.isArray(customFieldValues) ? customFieldValues : [];
+    const submittedByFieldId = new Map(
+      submittedCustomValues.map((v) => [Number(v.fieldId), v.value])
+    );
+    for (const field of customFieldDefs) {
+      if (!field.is_required) continue;
+      const value = submittedByFieldId.get(field.id);
+      if (value === undefined || value === null || String(value).trim() === "") {
+        throw new Error(`"${field.label}" is required`);
+      }
     }
 
     const PLAN   = (company.plan                || "TRIAL").toUpperCase();
@@ -251,6 +268,18 @@ export const saveVisitor = async (companyId, data, file) => {
       [visitorId]
     );
     const storedCheckIn = inserted?.check_in;
+
+    /* ── Save custom field values as label/value snapshots — deleting or
+       editing the field definition later never changes what this visitor
+       record shows (same pattern as purpose_category/purpose_subcategory). ── */
+    for (const field of customFieldDefs) {
+      const value = submittedByFieldId.get(field.id);
+      if (value === undefined || value === null || String(value).trim() === "") continue;
+      await conn.execute(
+        `INSERT INTO visitor_custom_field_values (visitor_id, field_id, field_label, field_value) VALUES (?, ?, ?, ?)`,
+        [visitorId, field.id, field.label, String(value).trim()]
+      );
+    }
 
     await conn.commit();
     console.log("[VISITOR] Saved successfully, id:", visitorId);

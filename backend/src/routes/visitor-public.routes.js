@@ -199,6 +199,28 @@ router.get("/visitor/:slug/info", async (req, res) => {
         .map((sub) => ({ id: sub.id, name: sub.name })),
     }));
 
+    // Company-defined custom fields — empty array means no extra fields
+    // beyond the standard set for this company.
+    const [customFieldRows] = await db.query(
+      `SELECT id, label, field_type, is_required, sort_order FROM company_custom_fields
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [company.id]
+    );
+    const [customFieldOptionRows] = await db.query(
+      `SELECT id, field_id, label, sort_order FROM company_custom_field_options
+       WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+      [company.id]
+    );
+    const customFields = customFieldRows.map((f) => ({
+      id: f.id,
+      label: f.label,
+      fieldType: f.field_type,
+      isRequired: !!f.is_required,
+      options: f.field_type === "dropdown"
+        ? customFieldOptionRows.filter((o) => o.field_id === f.id).map((o) => ({ id: o.id, label: o.label }))
+        : [],
+    }));
+
     return res.json({
       success: true,
       company: {
@@ -209,6 +231,7 @@ router.get("/visitor/:slug/info", async (req, res) => {
       },
       formFields: normalizeVisitorFormFields(company.visitor_form_fields),
       purposeCategories,
+      customFields,
       qrCode,
       publicUrl,
     });
@@ -553,6 +576,16 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       idType:           req.body.idType?.trim()    || null,
       idNumber:         req.body.idNumber?.trim()  || null,
       existingPhotoKey: existingPhotoKey,
+      // Multipart form fields are always strings — the client JSON-encodes
+      // the [{fieldId, value}] array into a single field.
+      customFieldValues: (() => {
+        try {
+          const parsed = JSON.parse(req.body.customFieldValues || "[]");
+          return Array.isArray(parsed) ? parsed : [];
+        } catch {
+          return [];
+        }
+      })(),
     };
 
     /* ── 6. Persist visitor (Email pass is sent inside saveVisitor) ── */

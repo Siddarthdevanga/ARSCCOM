@@ -444,6 +444,38 @@
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
+/* ================= CUSTOM FIELDS ================= */
+.customFieldMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  flex-wrap: wrap;
+}
+
+.customFieldTypeSelect {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1a0038;
+  border: 1.5px solid #ede8f8;
+  background: #faf8ff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+}
+.customFieldTypeSelect:focus { outline: none; border-color: #6200d6; }
+
+.customFieldRequiredLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #5b4b7a;
+  cursor: pointer;
+}
+
 /* ================= RESPONSIVE (column count only — sizing above is fluid) ================= */
 @media (max-width: 900px) {
   .fieldColumns { column-count: 2; }

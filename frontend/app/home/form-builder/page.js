@@ -7,6 +7,13 @@ import styles from "./style.module.css";
 
 const MAX_CATEGORIES = 10;
 const MAX_SUBCATEGORIES = 10;
+const MAX_CUSTOM_FIELDS = 5;
+const MAX_CUSTOM_FIELD_OPTIONS = 20;
+const CUSTOM_FIELD_TYPES = [
+  { value: "text", label: "Text" },
+  { value: "number", label: "Number" },
+  { value: "dropdown", label: "Dropdown" },
+];
 
 /* ── Field catalogue — keys must match backend TOGGLEABLE_VISITOR_FIELDS ──
    Subtext only where the field isn't self-explanatory or has a side effect
@@ -60,12 +67,24 @@ export default function FormBuilderPage() {
   const [showAddSubForm, setShowAddSubForm] = useState({}); // { [categoryId]: boolean }
   const [busyId, setBusyId] = useState("");           // generic busy lock for any row action
 
+  // Custom fields
+  const [customFields, setCustomFields] = useState([]);
+  const [customFieldsLoading, setCustomFieldsLoading] = useState(true);
+  const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [newFieldType, setNewFieldType] = useState("text");
+  const [addingField, setAddingField] = useState(false);
+  const [showAddFieldForm, setShowAddFieldForm] = useState(false);
+  const [newOptionLabel, setNewOptionLabel] = useState({});   // { [fieldId]: string }
+  const [showAddOptionForm, setShowAddOptionForm] = useState({}); // { [fieldId]: boolean }
+  const [busyFieldId, setBusyFieldId] = useState("");
+
   useEffect(() => {
     const stored = localStorage.getItem("company");
     if (!stored) { router.replace("/auth/login"); return; }
     try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
     fetchFields();
     fetchPurposeCategories();
+    fetchCustomFields();
   }, [router]);
 
   const fetchPurposeCategories = async () => {
@@ -224,6 +243,176 @@ export default function FormBuilderPage() {
       await fetchPurposeCategories();
     } finally {
       setBusyId("");
+    }
+  };
+
+  const fetchCustomFields = async () => {
+    try {
+      setCustomFieldsLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/custom-fields`, {
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (res.ok && Array.isArray(data.fields)) setCustomFields(data.fields);
+    } catch {
+      /* non-fatal — custom fields manager just shows empty */
+    } finally {
+      setCustomFieldsLoading(false);
+    }
+  };
+
+  const customFieldApi = async (path, options = {}) => {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/custom-fields${path}`, {
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      ...options,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.message || "Request failed");
+    return data;
+  };
+
+  const addCustomField = async () => {
+    const label = newFieldLabel.trim();
+    if (!label || addingField) return;
+    setAddingField(true);
+    try {
+      await customFieldApi("", { method: "POST", body: JSON.stringify({ label, fieldType: newFieldType, isRequired: false }) });
+      setNewFieldLabel("");
+      setNewFieldType("text");
+      setShowAddFieldForm(false);
+      await fetchCustomFields();
+      showToast("Custom field added");
+    } catch (err) {
+      showToast(err.message || "Failed to add custom field", "error");
+    } finally {
+      setAddingField(false);
+    }
+  };
+
+  // label/fieldType/isRequired are always sent together — the backend
+  // update is a full replace, not a partial merge, so every change
+  // (rename, type switch, required toggle) carries the field's other
+  // current values along with it.
+  const updateCustomField = async (field, patch) => {
+    setBusyFieldId(`field-${field.id}`);
+    try {
+      await customFieldApi(`/${field.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          label: patch.label ?? field.label,
+          fieldType: patch.fieldType ?? field.fieldType,
+          isRequired: patch.isRequired ?? field.isRequired,
+        }),
+      });
+      await fetchCustomFields();
+    } catch (err) {
+      showToast(err.message || "Failed to update custom field", "error");
+      await fetchCustomFields();
+    } finally {
+      setBusyFieldId("");
+    }
+  };
+
+  const deleteCustomField = async (id) => {
+    setBusyFieldId(`field-${id}`);
+    try {
+      await customFieldApi(`/${id}`, { method: "DELETE" });
+      await fetchCustomFields();
+      showToast("Custom field deleted");
+    } catch (err) {
+      showToast(err.message || "Failed to delete custom field", "error");
+    } finally {
+      setBusyFieldId("");
+    }
+  };
+
+  const moveCustomField = async (index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= customFields.length) return;
+    const reordered = [...customFields];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setCustomFields(reordered);
+    setBusyFieldId(`field-${reordered[index].id}`);
+    try {
+      await customFieldApi("/reorder", { method: "PUT", body: JSON.stringify({ order: reordered.map((f) => f.id) }) });
+    } catch (err) {
+      showToast(err.message || "Failed to reorder", "error");
+      await fetchCustomFields();
+    } finally {
+      setBusyFieldId("");
+    }
+  };
+
+  const addCustomFieldOption = async (fieldId) => {
+    const label = (newOptionLabel[fieldId] || "").trim();
+    if (!label) return;
+    setBusyFieldId(`opt-add-${fieldId}`);
+    try {
+      await customFieldApi(`/${fieldId}/options`, { method: "POST", body: JSON.stringify({ label }) });
+      setNewOptionLabel((p) => ({ ...p, [fieldId]: "" }));
+      setShowAddOptionForm((p) => ({ ...p, [fieldId]: false }));
+      await fetchCustomFields();
+    } catch (err) {
+      showToast(err.message || "Failed to add option", "error");
+    } finally {
+      setBusyFieldId("");
+    }
+  };
+
+  const renameCustomFieldOption = async (id, label) => {
+    if (!label.trim()) return;
+    setBusyFieldId(`opt-${id}`);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/custom-field-options/${id}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: label.trim() }),
+      });
+      await fetchCustomFields();
+    } catch {
+      await fetchCustomFields();
+    } finally {
+      setBusyFieldId("");
+    }
+  };
+
+  const deleteCustomFieldOption = async (id) => {
+    setBusyFieldId(`opt-${id}`);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/custom-field-options/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      await fetchCustomFields();
+      showToast("Option deleted");
+    } catch {
+      showToast("Failed to delete option", "error");
+    } finally {
+      setBusyFieldId("");
+    }
+  };
+
+  const moveCustomFieldOption = async (field, index, direction) => {
+    const target = index + direction;
+    if (target < 0 || target >= field.options.length) return;
+    const reordered = [...field.options];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setCustomFields((prev) =>
+      prev.map((f) => (f.id === field.id ? { ...f, options: reordered } : f))
+    );
+    setBusyFieldId(`opt-${reordered[index].id}`);
+    try {
+      await customFieldApi(`/${field.id}/options/reorder`, {
+        method: "PUT",
+        body: JSON.stringify({ order: reordered.map((o) => o.id) }),
+      });
+    } catch (err) {
+      showToast(err.message || "Failed to reorder", "error");
+      await fetchCustomFields();
+    } finally {
+      setBusyFieldId("");
     }
   };
 
@@ -477,6 +666,183 @@ export default function FormBuilderPage() {
 
               {purposeCategories.length >= MAX_CATEGORIES && (
                 <p className={styles.purposeLimitNote}>Maximum {MAX_CATEGORIES} categories reached.</p>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* ── CUSTOM FIELDS ── */}
+        <section className={styles.purposeSection}>
+          <div className={styles.purposeSectionHeader}>
+            <h2 className={styles.purposeSectionTitle}>Custom Fields</h2>
+            <p className={styles.purposeSectionSub}>
+              Add up to {MAX_CUSTOM_FIELDS} fields specific to your business (e.g. &ldquo;Vehicle Number&rdquo;,
+              &ldquo;Vendor ID&rdquo;) — text, number, or a dropdown with your own options. Mark a field
+              required to block submission until it&apos;s filled in. Appears on both the public
+              registration page and when your team adds a visitor manually.
+            </p>
+          </div>
+
+          {!customFieldsLoading && (
+            <div className={styles.purposeCategoryList}>
+              {customFields.map((field, index) => (
+                <div key={field.id} className={styles.purposeCategoryCard}>
+                  <div className={styles.purposeCategoryHeaderRow}>
+                    <div className={styles.reorderBtns}>
+                      <button type="button" className={styles.reorderBtn} disabled={index === 0 || busyFieldId === `field-${field.id}`}
+                        onClick={() => moveCustomField(index, -1)} aria-label="Move up">
+                        <ChevronUp size={13} />
+                      </button>
+                      <button type="button" className={styles.reorderBtn} disabled={index === customFields.length - 1 || busyFieldId === `field-${field.id}`}
+                        onClick={() => moveCustomField(index, 1)} aria-label="Move down">
+                        <ChevronDown size={13} />
+                      </button>
+                    </div>
+                    <input
+                      className={styles.purposeCategoryNameInput}
+                      defaultValue={field.label}
+                      disabled={busyFieldId === `field-${field.id}`}
+                      onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== field.label) updateCustomField(field, { label: e.target.value.trim() }); }}
+                    />
+                    <button type="button" className={styles.deleteBtn} disabled={busyFieldId === `field-${field.id}`}
+                      onClick={() => deleteCustomField(field.id)} aria-label="Delete custom field">
+                      <X size={14} />
+                    </button>
+                  </div>
+
+                  <div className={styles.customFieldMetaRow}>
+                    <select
+                      className={styles.customFieldTypeSelect}
+                      value={field.fieldType}
+                      disabled={busyFieldId === `field-${field.id}`}
+                      onChange={(e) => updateCustomField(field, { fieldType: e.target.value })}
+                    >
+                      {CUSTOM_FIELD_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                    <label className={styles.customFieldRequiredLabel}>
+                      <span className={`${styles.toggle} ${busyFieldId === `field-${field.id}` ? styles.toggleBusy : ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={field.isRequired}
+                          disabled={busyFieldId === `field-${field.id}`}
+                          onChange={(e) => updateCustomField(field, { isRequired: e.target.checked })}
+                        />
+                        <span className={styles.toggleSlider} />
+                      </span>
+                      Required
+                    </label>
+                  </div>
+
+                  {field.fieldType === "dropdown" && (
+                    <div className={styles.purposeSubList}>
+                      {field.options.map((opt, optIndex) => (
+                        <div key={opt.id} className={styles.purposeSubRow}>
+                          <div className={styles.reorderBtns}>
+                            <button type="button" className={styles.reorderBtnSm} disabled={optIndex === 0 || busyFieldId === `opt-${opt.id}`}
+                              onClick={() => moveCustomFieldOption(field, optIndex, -1)} aria-label="Move up">
+                              <ChevronUp size={11} />
+                            </button>
+                            <button type="button" className={styles.reorderBtnSm} disabled={optIndex === field.options.length - 1 || busyFieldId === `opt-${opt.id}`}
+                              onClick={() => moveCustomFieldOption(field, optIndex, 1)} aria-label="Move down">
+                              <ChevronDown size={11} />
+                            </button>
+                          </div>
+                          <input
+                            className={styles.purposeSubNameInput}
+                            defaultValue={opt.label}
+                            disabled={busyFieldId === `opt-${opt.id}`}
+                            onBlur={(e) => { if (e.target.value.trim() && e.target.value.trim() !== opt.label) renameCustomFieldOption(opt.id, e.target.value); }}
+                          />
+                          <button type="button" className={styles.deleteBtnSm} disabled={busyFieldId === `opt-${opt.id}`}
+                            onClick={() => deleteCustomFieldOption(opt.id)} aria-label="Delete option">
+                            <X size={12} />
+                          </button>
+                        </div>
+                      ))}
+
+                      {field.options.length < MAX_CUSTOM_FIELD_OPTIONS && (
+                        showAddOptionForm[field.id] ? (
+                          <div className={styles.purposeAddRow}>
+                            <input
+                              className={styles.purposeSubNameInput}
+                              placeholder="Option label…"
+                              autoFocus
+                              value={newOptionLabel[field.id] || ""}
+                              disabled={busyFieldId === `opt-add-${field.id}`}
+                              onChange={(e) => setNewOptionLabel((p) => ({ ...p, [field.id]: e.target.value }))}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") addCustomFieldOption(field.id);
+                                if (e.key === "Escape") setShowAddOptionForm((p) => ({ ...p, [field.id]: false }));
+                              }}
+                            />
+                            <button type="button" className={styles.addBtnSm} disabled={busyFieldId === `opt-add-${field.id}` || !(newOptionLabel[field.id] || "").trim()}
+                              onClick={() => addCustomFieldOption(field.id)} aria-label="Confirm add option">
+                              <Plus size={13} />
+                            </button>
+                            <button type="button" className={styles.deleteBtnSm}
+                              onClick={() => { setShowAddOptionForm((p) => ({ ...p, [field.id]: false })); setNewOptionLabel((p) => ({ ...p, [field.id]: "" })); }}
+                              aria-label="Cancel">
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <button type="button" className={styles.addSubTriggerBtn}
+                            onClick={() => setShowAddOptionForm((p) => ({ ...p, [field.id]: true }))}>
+                            <Plus size={12} /> Add option
+                          </button>
+                        )
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {customFields.length < MAX_CUSTOM_FIELDS && (
+                showAddFieldForm ? (
+                  <div className={styles.purposeAddCategoryRow}>
+                    <input
+                      className={styles.purposeCategoryNameInput}
+                      placeholder="Field name… (e.g. Vehicle Number)"
+                      autoFocus
+                      value={newFieldLabel}
+                      disabled={addingField}
+                      onChange={(e) => setNewFieldLabel(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addCustomField();
+                        if (e.key === "Escape") setShowAddFieldForm(false);
+                      }}
+                    />
+                    <select
+                      className={styles.customFieldTypeSelect}
+                      value={newFieldType}
+                      disabled={addingField}
+                      onChange={(e) => setNewFieldType(e.target.value)}
+                    >
+                      {CUSTOM_FIELD_TYPES.map((t) => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                    <button type="button" className={styles.addBtn} disabled={addingField || !newFieldLabel.trim()}
+                      onClick={addCustomField}>
+                      <Plus size={14} /> Add
+                    </button>
+                    <button type="button" className={styles.cancelBtn}
+                      onClick={() => { setShowAddFieldForm(false); setNewFieldLabel(""); setNewFieldType("text"); }}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" className={styles.addCategoryTriggerBtn}
+                    onClick={() => setShowAddFieldForm(true)}>
+                    <Plus size={16} /> Add Custom Field
+                  </button>
+                )
+              )}
+
+              {customFields.length >= MAX_CUSTOM_FIELDS && (
+                <p className={styles.purposeLimitNote}>Maximum {MAX_CUSTOM_FIELDS} custom fields reached.</p>
               )}
             </div>
           )}

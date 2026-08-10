@@ -93,9 +93,20 @@ const applyBorders = (worksheet) => {
      4. ws.getCell("A1").value = ... (set value on top-left only)
      5. styleTitle  (apply fill/font to every cell in range)
 ═══════════════════════════════════════════════════════════════ */
+// Converts a 1-based column number to its Excel letter (1 -> A, 27 -> AA)
+const numberToColumnLetter = (num) => {
+  let letter = "";
+  while (num > 0) {
+    const rem = (num - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    num = Math.floor((num - 1) / 26);
+  }
+  return letter;
+};
+
 const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All Time", extraWhere = "", extraParams = []) => {
   const [visitors] = await db.query(
-    `SELECT visitor_code, name, phone, email, from_company, department, designation,
+    `SELECT id, visitor_code, name, phone, email, from_company, department, designation,
         address, city, state, postal_code, country, person_to_meet, purpose,
         belongings, id_type, id_number, check_in, check_out, status, visit_status,
         purpose_category, purpose_subcategory
@@ -105,34 +116,73 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     [companyId, ...extraParams]
   );
 
+  // Custom field values for the exported visitors. Column order follows the
+  // company's currently-configured field order first, then any other labels
+  // found in the data (covers fields deleted since a visitor submitted a
+  // value — the label is a text snapshot, see visitor.service.js) in order
+  // of first appearance, so historical exports stay stable over time.
+  const visitorIds = visitors.map((v) => v.id);
+  let customFieldValueRows = [];
+  if (visitorIds.length) {
+    const [rows] = await db.query(
+      `SELECT visitor_id, field_label, field_value FROM visitor_custom_field_values
+       WHERE visitor_id IN (${visitorIds.map(() => "?").join(",")})`,
+      visitorIds
+    );
+    customFieldValueRows = rows;
+  }
+  const [activeCustomFields] = await db.query(
+    `SELECT label FROM company_custom_fields WHERE company_id = ? ORDER BY sort_order ASC, id ASC`,
+    [companyId]
+  );
+  const customFieldLabels = [];
+  const seenLabels = new Set();
+  for (const f of activeCustomFields) {
+    if (!seenLabels.has(f.label)) { seenLabels.add(f.label); customFieldLabels.push(f.label); }
+  }
+  for (const row of customFieldValueRows) {
+    if (!seenLabels.has(row.field_label)) { seenLabels.add(row.field_label); customFieldLabels.push(row.field_label); }
+  }
+  const customValuesByVisitor = new Map();
+  for (const row of customFieldValueRows) {
+    if (!customValuesByVisitor.has(row.visitor_id)) customValuesByVisitor.set(row.visitor_id, {});
+    customValuesByVisitor.get(row.visitor_id)[row.field_label] = row.field_value;
+  }
+
+  const FIXED_COLUMN_COUNT = 23;
+  const totalColumns = FIXED_COLUMN_COUNT + customFieldLabels.length;
+  const lastColLetter = numberToColumnLetter(totalColumns);
+
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("Visitors");
   ws.properties.defaultRowHeight = 20;
 
-  // Step 1 — columns FIRST (23 columns A–W — the last 2, Purpose Category
-  // and Purpose Sub-Category, are appended at the tail rather than inserted
-  // after "Purpose" so the hardcoded row.getCell(20) status-styling below
-  // doesn't need to shift)
+  // Step 1 — columns FIRST (23 fixed columns A–W — the last 2, Purpose
+  // Category and Purpose Sub-Category, are appended at the tail rather than
+  // inserted after "Purpose" so the hardcoded row.getCell(20) status-styling
+  // below doesn't need to shift — then one column per custom field, also
+  // appended at the tail for the same reason)
   ws.columns = [
     { width:16 }, { width:26 }, { width:16 }, { width:30 }, { width:26 },
     { width:20 }, { width:20 }, { width:35 }, { width:15 }, { width:15 },
     { width:13 }, { width:15 }, { width:26 }, { width:35 }, { width:26 },
     { width:15 }, { width:20 }, { width:22 }, { width:22 }, { width:11 }, { width:15 },
     { width:22 }, { width:22 },
+    ...customFieldLabels.map(() => ({ width: 22 })),
   ];
 
-  // Step 2 — add row 1 (empty array creates 23 cells matching ws.columns)
-  ws.addRow(new Array(23).fill(null));
-  // Step 3 — merge all 23 columns
-  ws.mergeCells("A1:W1");
+  // Step 2 — add row 1 (empty array creates one cell per ws.columns entry)
+  ws.addRow(new Array(totalColumns).fill(null));
+  // Step 3 — merge all columns
+  ws.mergeCells(`A1:${lastColLetter}1`);
   // Step 4 — set value on top-left cell ONLY
   ws.getCell("A1").value = `${companyName}  —  Visitor Records  (${periodLabel})`;
   // Step 5 — style the merged row
   styleTitle(ws, 1, "FF4c1d95");
 
   // Row 2 — meta
-  ws.addRow(new Array(23).fill(null));
-  ws.mergeCells("A2:W2");
+  ws.addRow(new Array(totalColumns).fill(null));
+  ws.mergeCells(`A2:${lastColLetter}2`);
   ws.getCell("A2").value = `Generated: ${formatDateTime(new Date())}   |   Total Records: ${visitors.length}`;
   styleMeta(ws, 2);
 
@@ -146,11 +196,13 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     "Address","City","State","Postal Code","Country","Person to Meet","Purpose",
     "Belongings","ID Type","ID Number","Check In","Check Out","Status","Visit Status",
     "Purpose Category","Purpose Sub-Category",
+    ...customFieldLabels,
   ]);
   applyColumnHeader(headerRow);
 
   // Data rows
   visitors.forEach((v, i) => {
+    const customValues = customValuesByVisitor.get(v.id) || {};
     const row = ws.addRow([
       v.visitor_code||"-", v.name||"-", v.phone||"-", v.email||"-",
       v.from_company||"-", v.department||"-", v.designation||"-",
@@ -161,6 +213,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
       v.check_out ? formatDateTime(v.check_out) : "Still In",
       v.status||"-", v.visit_status||"pending",
       v.purpose_category||"-", v.purpose_subcategory||"-",
+      ...customFieldLabels.map((label) => customValues[label] || "-"),
     ]);
     if (i % 2 === 0) row.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFF8F6FF" } };
     row.getCell(20).alignment = { horizontal:"center" };

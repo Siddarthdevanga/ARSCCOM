@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef, useCallback } from "react";
 import PurposePicker from "../../components/PurposePicker";
+import CustomFieldsRenderer from "../../components/CustomFieldsRenderer";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -282,6 +283,10 @@ export default function SecondaryDetails() {
   // hasn't set any up, so PurposePicker falls back to plain free text.
   const [purposeCategories, setPurposeCategories] = useState([]);
 
+  // Company-defined custom fields
+  const [customFields, setCustomFields] = useState([]);
+  const [customFieldValues, setCustomFieldValues] = useState({});
+
   // Form Builder toggles — default everything on until the real config loads
   const [formFields, setFormFields] = useState({
     fromCompany: true, department: true, designation: true,
@@ -304,6 +309,12 @@ export default function SecondaryDetails() {
         .then((r) => r.json())
         .then((d) => { if (Array.isArray(d?.categories)) setPurposeCategories(d.categories); })
         .catch(() => {});
+
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/custom-fields`, { credentials: "include" })
+        .then((r) => r.json())
+        .then((d) => { if (Array.isArray(d?.fields)) setCustomFields(d.fields); })
+        .catch(() => {});
+
       const saved = localStorage.getItem("visitor_secondary");
       if (saved) {
         const parsed = JSON.parse(saved);
@@ -382,7 +393,13 @@ export default function SecondaryDetails() {
     const firstErr = allFields.map(f => fe[f]).find(Boolean);
     if (firstErr) { setError(firstErr); return; }
     setError("");
-    localStorage.setItem("visitor_secondary", JSON.stringify({ ...form, _employeeId: selectedEmployeeId }));
+    localStorage.setItem("visitor_secondary", JSON.stringify({
+      ...form,
+      _employeeId: selectedEmployeeId,
+      customFieldValues: JSON.stringify(
+        Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
+      ),
+    }));
     router.push("/visitor/identity");
   };
 
@@ -608,6 +625,17 @@ export default function SecondaryDetails() {
                     }}
                   />
                   <InlineErr msg={!form.purpose.trim() ? "Purpose of visit is required" : fe.purpose} show={touched.purpose} />
+                </div>
+
+                {/* Company-defined custom fields */}
+                <div className={styles.fullRow}>
+                  <CustomFieldsRenderer
+                    fields={customFields}
+                    values={customFieldValues}
+                    inputClassName={styles.input}
+                    selectClassName={styles.input}
+                    onChange={(fieldId, value) => setCustomFieldValues((p) => ({ ...p, [fieldId]: value }))}
+                  />
                 </div>
             </>
 

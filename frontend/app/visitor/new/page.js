@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useCallback } from "react";
 import PurposePicker from "../../components/PurposePicker";
+import CustomFieldsRenderer from "../../components/CustomFieldsRenderer";
 import styles from "../primary_details/style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -230,6 +231,10 @@ export default function NewVisitorPage() {
   // hasn't set any up, so PurposePicker falls back to plain free text.
   const [purposeCategories, setPurposeCategories] = useState([]);
 
+  // Company-defined custom fields
+  const [customFields, setCustomFields] = useState([]);
+  const [customFieldValues, setCustomFieldValues] = useState({});
+
   useEffect(() => {
     const stored  = localStorage.getItem("company");
     if (!stored) { router.replace("/auth/login"); return; }
@@ -249,6 +254,11 @@ export default function NewVisitorPage() {
     fetch(`${API}/api/settings/purpose-categories`, { credentials: "include" })
       .then((r) => r.json())
       .then((d) => { if (Array.isArray(d?.categories)) setPurposeCategories(d.categories); })
+      .catch(() => {});
+
+    fetch(`${API}/api/settings/custom-fields`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => { if (Array.isArray(d?.fields)) setCustomFields(d.fields); })
       .catch(() => {});
 
     setLoading(false);
@@ -331,6 +341,9 @@ export default function NewVisitorPage() {
       if (belongings.length) fd.append("belongings", belongings.join(", "));
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
       if (profile.photoKey)  fd.append("existingPhotoKey", profile.photoKey);
+      fd.append("customFieldValues", JSON.stringify(
+        Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
+      ));
 
       const res = await fetch(`${API}/api/visitors`, {
         method: "POST",
@@ -495,6 +508,17 @@ export default function NewVisitorPage() {
                         setPurposeSubcategory(purposeSubcategory || "");
                         setMiniError("");
                       }}
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <CustomFieldsRenderer
+                      fields={customFields}
+                      values={customFieldValues}
+                      inputClassName={styles.input}
+                      selectClassName={styles.input}
+                      disabled={submitting}
+                      onChange={(fieldId, value) => setCustomFieldValues((p) => ({ ...p, [fieldId]: value }))}
                     />
                   </div>
 
