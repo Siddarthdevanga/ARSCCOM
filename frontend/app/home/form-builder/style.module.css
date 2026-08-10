@@ -444,6 +444,37 @@
   to   { opacity: 1; transform: translate(-50%, 0); }
 }
 
+/* ================= TABS ================= */
+.tabBar {
+  display: flex;
+  gap: 8px;
+  padding: 0 clamp(14px, 2.5vw, 24px) clamp(10px, 1.6vh, 16px);
+  flex-wrap: wrap;
+}
+
+.tabBtn {
+  background: #fff;
+  color: #6200d6;
+  border: 1.5px solid #ede8f8;
+  padding: clamp(7px, 1.1vh, 10px) clamp(14px, 2vw, 20px);
+  border-radius: 999px;
+  font-size: clamp(12px, 1.5vh, 13.5px);
+  font-weight: 800;
+  cursor: pointer;
+  font-family: 'Nunito', sans-serif;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.tabBtn:hover { border-color: #d8c9f5; background: #faf8ff; }
+
+.tabBtnActive,
+.tabBtnActive:hover {
+  background: #6200d6;
+  color: #fff;
+  border-color: #6200d6;
+  box-shadow: 0 6px 16px rgba(98, 0, 214, 0.25);
+}
+
 /* ================= CUSTOM FIELDS ================= */
 .customFieldMetaRow {
   display: flex;

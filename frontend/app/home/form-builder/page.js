@@ -78,6 +78,8 @@ export default function FormBuilderPage() {
   const [showAddOptionForm, setShowAddOptionForm] = useState({}); // { [fieldId]: boolean }
   const [busyFieldId, setBusyFieldId] = useState("");
 
+  const [activeTab, setActiveTab] = useState("toggles"); // "toggles" | "purpose" | "custom"
+
   useEffect(() => {
     const stored = localStorage.getItem("company");
     if (!stored) { router.replace("/auth/login"); return; }
@@ -502,7 +504,31 @@ export default function FormBuilderPage() {
 
         {error && <div className={styles.errorBanner}>{error}</div>}
 
-        {fields && (
+        <nav className={styles.tabBar}>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === "toggles" ? styles.tabBtnActive : ""}`}
+            onClick={() => setActiveTab("toggles")}
+          >
+            Field Toggles
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === "purpose" ? styles.tabBtnActive : ""}`}
+            onClick={() => setActiveTab("purpose")}
+          >
+            Purpose of Visit
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === "custom" ? styles.tabBtnActive : ""}`}
+            onClick={() => setActiveTab("custom")}
+          >
+            Custom Fields
+          </button>
+        </nav>
+
+        {activeTab === "toggles" && fields && (
           <main className={styles.fieldColumns}>
             {FIELDS.map((item) => {
               const tag = STEP_TAGS[item.step];
@@ -533,6 +559,7 @@ export default function FormBuilderPage() {
         )}
 
         {/* ── PURPOSE OF VISIT — CUSTOM CATEGORIES ── */}
+        {activeTab === "purpose" && (
         <section className={styles.purposeSection}>
           <div className={styles.purposeSectionHeader}>
             <h2 className={styles.purposeSectionTitle}>Purpose of Visit — Custom Categories</h2>
@@ -670,8 +697,10 @@ export default function FormBuilderPage() {
             </div>
           )}
         </section>
+        )}
 
         {/* ── CUSTOM FIELDS ── */}
+        {activeTab === "custom" && (
         <section className={styles.purposeSection}>
           <div className={styles.purposeSectionHeader}>
             <h2 className={styles.purposeSectionTitle}>Custom Fields</h2>
@@ -847,6 +876,7 @@ export default function FormBuilderPage() {
             </div>
           )}
         </section>
+        )}
       </div>
     </div>
   );
