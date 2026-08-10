@@ -15,6 +15,12 @@ const CUSTOM_FIELD_TYPES = [
   { value: "dropdown", label: "Dropdown" },
 ];
 
+const TABS = [
+  { key: "toggles", label: "Field Toggles" },
+  { key: "purpose", label: "Purpose of Visit" },
+  { key: "custom", label: "Custom Fields" },
+];
+
 /* ── Field catalogue — keys must match backend TOGGLEABLE_VISITOR_FIELDS ──
    Subtext only where the field isn't self-explanatory or has a side effect
    worth calling out (Person to Meet, ID Proof, Belongings). Everything else
@@ -505,27 +511,16 @@ export default function FormBuilderPage() {
         {error && <div className={styles.errorBanner}>{error}</div>}
 
         <nav className={styles.tabBar}>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${activeTab === "toggles" ? styles.tabBtnActive : ""}`}
-            onClick={() => setActiveTab("toggles")}
-          >
-            Field Toggles
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${activeTab === "purpose" ? styles.tabBtnActive : ""}`}
-            onClick={() => setActiveTab("purpose")}
-          >
-            Purpose of Visit
-          </button>
-          <button
-            type="button"
-            className={`${styles.tabBtn} ${activeTab === "custom" ? styles.tabBtnActive : ""}`}
-            onClick={() => setActiveTab("custom")}
-          >
-            Custom Fields
-          </button>
+          {TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              className={`${styles.tabBtn} ${activeTab === tab.key ? styles.tabBtnActive : ""}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
         </nav>
 
         {activeTab === "toggles" && fields && (

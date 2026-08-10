@@ -447,6 +447,7 @@
 /* ================= TABS ================= */
 .tabBar {
   display: flex;
+  justify-content: center;
   gap: 8px;
   padding: 0 clamp(14px, 2.5vw, 24px) clamp(10px, 1.6vh, 16px);
   flex-wrap: wrap;
