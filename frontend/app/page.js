@@ -220,7 +220,7 @@ export default function HomePage() {
       {/* ── HEADER ── */}
       <header>
         <div className="logo">
-          <Image className="logoDot" src="/Hai Visitor.png" alt="Hai Visitor logo" width={40} height={40} />
+          <Image className="logoDot" src="/haivisitor.png" alt="Hai Visitor logo" width={40} height={40} />
           <div>Zodopt&apos;s H<span className="logoAccent">ai</span> Visitor<span>Visitor Management Platform</span></div>
         </div>
         <nav>
@@ -401,7 +401,7 @@ export default function HomePage() {
               <div className="waHeader">
                 <span className="waBack">‹</span>
                 <div className="waAvatar" style={{ background: '#fff', overflow: 'hidden', padding: 0 }}>
-                  <Image src="/Hai Visitor.png" alt="Hai Visitor logo" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src="/haivisitor.png" alt="Hai Visitor logo" width={36} height={36} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div className="waHeaderText">
                   <div className="name">Hai Visitor</div>
@@ -696,7 +696,7 @@ export default function HomePage() {
         <div className="footerTop">
           <div className="footerBrand">
             <div className="logoWrap">
-              <Image className="logoDot" src="/Hai Visitor.png" alt="Hai Visitor logo" width={40} height={40} />
+              <Image className="logoDot" src="/haivisitor.png" alt="Hai Visitor logo" width={40} height={40} />
               <div><h3>Zodopt&apos;s H<span className="logoAccent">ai</span> Visitor</h3><span>Visitor Management Platform</span></div>
             </div>
             <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>

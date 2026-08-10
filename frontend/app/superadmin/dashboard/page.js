@@ -529,7 +529,7 @@ export default function SuperAdminDashboard() {
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
             <Image
-              src="/Hai Visitor.png"
+              src="/haivisitor.png"
               alt="Hai Visitor Logo"
               width={280}
               height={90}

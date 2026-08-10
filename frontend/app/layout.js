@@ -11,7 +11,7 @@ export const SITE = {
   domain:      'https://www.promeet.zodopt.com',
   phone:       '+91-8647878785',
   email:       'admin@promeet.zodopt.com',
-  logo:        'https://www.promeet.zodopt.com/Hai%20Visitor.png',
+  logo:        'https://www.promeet.zodopt.com/haivisitor.png',
   ogImage:     'https://www.promeet.zodopt.com/og-image.png',
   trialPrice:  '49',
   trialCurrency:'INR',

@@ -124,7 +124,7 @@
 }
 
 .logoContainer {
-  margin-bottom: clamp(20px, 3vh, 30px);
+  margin-bottom: clamp(6px, 1vh, 12px);
   animation: fadeInScale 1.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -134,7 +134,7 @@
 }
 
 .brandLogo {
-  width: clamp(220px, 30vw, 280px);
+  width: clamp(300px, 40vw, 400px);
   height: auto;
   max-width: 100%;
   filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.35));

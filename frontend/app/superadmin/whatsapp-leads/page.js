@@ -509,7 +509,7 @@ export default function WhatsAppLeadsPage() {
       <header className={styles.header}>
         <div className={styles.headerLeft}>
           <div className={styles.logoContainer}>
-            <Image src="/Hai Visitor.png" alt="Hai Visitor Logo" width={280} height={90} priority className={styles.brandLogo} />
+            <Image src="/haivisitor.png" alt="Hai Visitor Logo" width={280} height={90} priority className={styles.brandLogo} />
           </div>
           <span className={styles.superBadge}>SUPERADMIN</span>
         </div>
