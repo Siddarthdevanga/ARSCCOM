@@ -20,8 +20,8 @@ const BODY_HTML = `
     <a href="#features-section">Features</a><a href="#Plans">Pricing</a><a href="#how-it-works">How It Works</a><a href="#industries-section">Industries</a><a href="#faq">FAQ</a>
   </nav>
   <div class="headerAuth">
-    <a class="btnSignin" href="https://www.promeet.zodopt.com/auth/login" target="_blank" rel="noopener noreferrer">Sign In</a>
-    <a class="btnSignup" href="https://www.promeet.zodopt.com/auth/register" target="_blank" rel="noopener noreferrer">Sign Up</a>
+    <a class="btnSignin" href="/auth/login">Sign In</a>
+    <a class="btnSignup" href="/auth/register">Sign Up</a>
   </div>
   <button class="hamburger" id="hamburger" aria-label="Toggle navigation">
     <span></span><span></span><span></span>
@@ -34,8 +34,8 @@ const BODY_HTML = `
   <a href="#industries-section">Industries</a>
   <a href="#faq">FAQ</a>
   <div class="headerAuth" style="display:flex;">
-    <a class="btnSignin" href="https://www.promeet.zodopt.com/auth/login" target="_blank" rel="noopener noreferrer">Sign In</a>
-    <a class="btnSignup" href="https://www.promeet.zodopt.com/auth/register" target="_blank" rel="noopener noreferrer">Sign Up</a>
+    <a class="btnSignin" href="/auth/login">Sign In</a>
+    <a class="btnSignup" href="/auth/register">Sign Up</a>
   </div>
 </nav>
 
@@ -57,7 +57,7 @@ const BODY_HTML = `
     <li>Digital visitor records, history, dashboard visibility and reports</li>
   </ul>
   <div class="heroButtons">
-    <a class="btnPrimary" href="https://promeet.zodopt.com/auth/register" target="_blank" rel="noopener noreferrer">Start 15-Day Trial for ₹49 →</a>
+    <a class="btnPrimary" href="/auth/register">Start 15-Day Trial for ₹49 →</a>
   </div>
 </section>
 <section class="trustStrip">
@@ -84,7 +84,7 @@ const BODY_HTML = `
         </svg>
       </div>
     </div>
-    <div class="vpImages" onclick="window.open('https://www.promeet.zodopt.com/auth/login','_blank')">
+    <div class="vpImages" onclick="window.location.href='/auth/login'">
       <img class="vpImgLeft" src="/2secimage.png" alt="Front desk visitor check-in">
     </div>
   </div>
@@ -136,7 +136,7 @@ const BODY_HTML = `
     <div class="segmentsTrack" id="segments"></div>
   </div>
   <div class="container">
-    <a class="ctaBtn" href="https://www.promeet.zodopt.com/auth/login" target="_blank" rel="noopener noreferrer">Get Started Today ↗</a>
+    <a class="ctaBtn" href="/auth/login">Get Started Today ↗</a>
   </div>
 
 
@@ -181,7 +181,7 @@ const BODY_HTML = `
       <h3>Your marketing has already brought the customer in.<br><span class="accent">Make the visit count beyond today.</span></h3>
       <p>Replace fragmented walk-in records with a simple digital visitor-management foundation that your team can retrieve, review and responsibly use.</p>
       <div class="faqCtaButtons">
-        <a class="finalBtn primary" href="https://promeet.zodopt.com/auth/register" target="_blank" rel="noopener noreferrer">Start 15-Day Trial for ₹49 →</a>
+        <a class="finalBtn primary" href="/auth/register">Start 15-Day Trial for ₹49 →</a>
         <a class="finalBtn wa" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">Chat with the Hai Visitor Team</a>
       </div>
     </div>
@@ -421,7 +421,7 @@ export default function HomePage() {
       <h3 class="planName">${p.name}</h3>
       <div class="planPrice">${p.price}${p.period ? `<span> / ${p.period}</span>` : ''}</div>
       <ul class="planFeatures">${p.features.map((f,i) => `<li><span class="checkIcon" style="--icon-bg:${featureAccents[i % featureAccents.length]}">${checkIconSvg('#fff')}</span>${f}</li>`).join('')}</ul>
-      <a class="planCta" href="https://www.promeet.zodopt.com/auth/register" target="_blank" rel="noopener noreferrer">${p.cta}</a>
+      <a class="planCta" href="/auth/register">${p.cta}</a>
       <div class="planMicro">${p.price === '₹49' ? 'Paid trial · No refund · Product terms apply' : 'Terms apply'}</div>`;
     pricingEl.appendChild(el);
   });
