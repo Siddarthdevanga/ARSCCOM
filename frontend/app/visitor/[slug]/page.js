@@ -587,6 +587,11 @@ export default function PublicVisitorRegistration() {
 
   const handleSubmit = async () => {
     if (!validateStep()) return;
+    // Open a blank tab synchronously, before any await, so browsers treat it
+    // as a trusted user-triggered popup rather than blocking it — redirected
+    // to the WhatsApp community link once registration succeeds, or closed
+    // if it fails or the company has no community link configured.
+    const waTab = company?.whatsapp_url?.trim() ? window.open("", "_blank") : null;
     try {
       setSubmitting(true); setError("");
       const fd = new FormData();
@@ -621,7 +626,14 @@ export default function PublicVisitorRegistration() {
         throw err;
       }
       setVisitorCode(data.visitorCode); setStep(4);
-    } catch (err) { setError(err.message || "Failed to register. Please try again."); }
+      if (waTab) {
+        if (company?.whatsapp_url?.trim()) waTab.location.href = company.whatsapp_url;
+        else waTab.close();
+      }
+    } catch (err) {
+      if (waTab) waTab.close();
+      setError(err.message || "Failed to register. Please try again.");
+    }
     finally { setSubmitting(false); }
   };
 
@@ -629,6 +641,7 @@ export default function PublicVisitorRegistration() {
     if (formFields.personToMeet && !returnPersonToMeet.trim()) { setReturnMiniError("Person to Meet is required"); return; }
     if (!returnPurpose.trim()) { setReturnMiniError("Purpose of visit is required"); return; }
     setReturnMiniError(""); setSubmitting(true);
+    const waTab = company?.whatsapp_url?.trim() ? window.open("", "_blank") : null;
     try {
       const fd = new FormData();
       const r  = returningData;
@@ -673,7 +686,14 @@ export default function PublicVisitorRegistration() {
         throw err;
       }
       setVisitorCode(data.visitorCode); setStep(4);
-    } catch (err) { setReturnMiniError(err.message || "Failed to register. Please try again."); }
+      if (waTab) {
+        if (company?.whatsapp_url?.trim()) waTab.location.href = company.whatsapp_url;
+        else waTab.close();
+      }
+    } catch (err) {
+      if (waTab) waTab.close();
+      setReturnMiniError(err.message || "Failed to register. Please try again.");
+    }
     finally { setSubmitting(false); }
   };
 
@@ -1332,21 +1352,13 @@ export default function PublicVisitorRegistration() {
                   Please show this ID at the reception.<br />
                   Check your WhatsApp <strong style={{ color:"#4b5563" }}>(+91 {phone})</strong> for the digital pass.
                 </p>
-                {company?.whatsapp_url?.trim() && (
-                  <div className={styles.whatsappSection}>
-                    <div className={styles.whatsappHeader}>
-                      <div className={styles.whatsappIcon}>📱</div>
-                      <div>
-                        <h3 className={styles.whatsappTitle}>Stay Connected</h3>
-                        <p className={styles.whatsappSubtitle}>Contact on WhatsApp</p>
-                      </div>
-                    </div>
-                    <button onClick={() => window.open(company.whatsapp_url, "_blank", "noopener,noreferrer")}
-                      className={styles.whatsappBtn} type="button">
-                      <span style={{ fontSize:"1.25rem" }}>💬</span> Contact on WhatsApp
-                    </button>
-                  </div>
-                )}
+                <button
+                  className={styles.whatsappBtn}
+                  type="button"
+                  onClick={() => window.open(`/v/pass?code=${visitorCode}`, "_blank", "noopener,noreferrer")}
+                >
+                  <span style={{ fontSize:"1.25rem" }}>🪪</span> View Pass
+                </button>
                 <button className={styles.primaryBtn} onClick={handleReset} type="button">✓ Done</button>
               </div>
             </div>
