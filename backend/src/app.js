@@ -85,7 +85,6 @@ const allowedOrigins = [
   "http://127.0.0.1:3000",
   "https://promeet.zodopt.com",
   "https://www.promeet.zodopt.com",
-  "https://staging.promeet.zodopt.com",
   "https://haivisitor.zodopt.com",
   "https://www.haivisitor.zodopt.com",
   "https://staging.haivisitor.zodopt.com",
