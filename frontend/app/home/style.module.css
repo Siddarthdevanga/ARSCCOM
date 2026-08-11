@@ -807,6 +807,13 @@
 .sectionHeader h5 { font-size: clamp(0.78rem,1.8vw,0.875rem); font-weight: 800; color: var(--purple-900); margin: 0; letter-spacing: -0.01em; }
 .sectionDescription { font-size: clamp(0.65rem,1.5vw,0.75rem); color: var(--purple-700); margin: 0; line-height: 1.5; opacity: 0.8; }
 
+.customBuildNote {
+  font-size: clamp(0.65rem,1.5vw,0.75rem); color: var(--purple-700);
+  margin: 0.25rem 0 0; line-height: 1.5; opacity: 0.85; text-align: center;
+}
+.customBuildNote a { color: var(--purple-600); font-weight: 700; text-decoration: underline; }
+.customBuildNote a:hover { color: var(--purple-800); }
+
 .upgradePlanCard {
   background: linear-gradient(145deg, #f5f3ff 0%, #ede9fe 100%);
   border: 1.5px solid var(--border-med); border-radius: var(--r-lg);
@@ -902,6 +909,63 @@
     transition-duration: 0.1ms !important;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SINGLE-MODULE FEATURED CARD
+   — used when a plan only unlocks one module (e.g. Business = Visitor
+   Management only), so the page doesn't read as a near-empty grid
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cardGrid.cardGridSingle {
+  grid-template-columns: 1fr;
+  max-width: 620px;
+}
+
+.moduleCard.moduleCardFeatured {
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  min-height: auto;
+  padding: clamp(2rem,5vw,2.75rem);
+  gap: clamp(1.1rem,2.5vw,1.5rem);
+}
+.moduleCard.moduleCardFeatured .cardIcon {
+  width: clamp(68px,11vw,84px); height: clamp(68px,11vw,84px);
+}
+.moduleCard.moduleCardFeatured .cardContent { width: 100%; }
+.moduleCard.moduleCardFeatured .cardTitle { font-size: clamp(1.25rem,3.2vw,1.6rem); }
+.moduleCard.moduleCardFeatured .cardDescription { font-size: clamp(0.85rem,2.1vw,0.98rem); }
+
+.cardFeatureChips {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  margin-top: clamp(0.75rem,2vh,1.1rem);
+}
+.featureChip {
+  background: rgba(255,255,255,0.75);
+  border: 1px solid var(--border-med);
+  color: var(--purple-700);
+  font-size: 0.72rem; font-weight: 700;
+  padding: 0.32rem 0.75rem;
+  border-radius: var(--r-full);
+  letter-spacing: 0.01em;
+  transition: border-color var(--t);
+}
+.moduleCard.moduleCardFeatured:hover .featureChip { border-color: var(--purple-500); }
+
+.cardCtaBtn {
+  display: inline-flex; align-items: center; gap: 0.45rem;
+  background: var(--grad-brand); color: var(--white);
+  font-size: 0.85rem; font-weight: 700;
+  padding: 0.65rem 1.35rem;
+  border-radius: var(--r-full);
+  box-shadow: var(--shadow-purple);
+  transition: transform var(--t), box-shadow var(--t);
+  margin-top: 0.2rem;
+}
+.moduleCard.moduleCardFeatured:hover .cardCtaBtn {
+  box-shadow: 0 6px 28px rgba(139,43,226,0.5);
+}
+.cardCtaArrow { display: inline-block; transition: transform var(--t); }
+.moduleCard.moduleCardFeatured:hover .cardCtaArrow { transform: translateX(4px); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INSIGHT NOTIFICATION PANEL — left side, rotating single card

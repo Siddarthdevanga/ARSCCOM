@@ -693,6 +693,13 @@ export default function Home() {
     );
   };
 
+  const CustomBuildNote = () => (
+    <p className={styles.customBuildNote}>
+      Need something beyond these plans? We build custom Visitor Management as per your needs —{" "}
+      <a href="/auth/contact-us" onClick={() => setShowMenu(false)}>Contact Support</a>
+    </p>
+  );
+
   /* ── Renew current plan (active/trial/grace_period, not trial-renewal) ── */
   const renewCurrentPlanBlock = (!needsRenewal && currentPlan && currentPlan !== "trial") ? (
     <div className={styles.upgradeSection}>
@@ -726,6 +733,8 @@ export default function Home() {
       {canUpgradeBusiness && <PlanCard plan="business" ctaLabel="Upgrade to Business" />}
 
       {canUpgradeEnterprise && <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />}
+
+      <CustomBuildNote />
     </div>
   ) : null;
 
@@ -764,6 +773,7 @@ export default function Home() {
         <>
           <PlanCard plan="business" ctaLabel="Upgrade to Business" />
           <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
+          <CustomBuildNote />
         </>
       )}
 
@@ -865,55 +875,63 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className={styles.cardGrid}>
-                {/* ── Visitor Management ── */}
-                <div
-                  className={`${styles.moduleCard} ${needsRenewal ? styles.moduleCardLocked : ""}`}
-                  onClick={() => handleModuleClick("/visitor/dashboard")}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={needsRenewal ? "Visitor Management — locked, renew to unlock" : "Visitor Management"}
-                  onKeyDown={(e) => e.key === "Enter" && handleModuleClick("/visitor/dashboard")}
-                >
-                  <div className={styles.cardIcon}><Users size={32}/></div>
-                  <div className={styles.cardContent}>
-                    <h3 className={styles.cardTitle}>Visitor Management</h3>
-                    <p className={styles.cardDescription}>
-                      {needsRenewal ? "Renew your plan to unlock this module" : "Check-ins, ID verification & digital passes"}
-                    </p>
-                  </div>
-                  {needsRenewal ? (
-                    <span className={styles.cardLockBadge}><Lock size={16}/></span>
-                  ) : (
-                    <span className={styles.cardArrow}>→</span>
-                  )}
-                </div>
+              {(() => {
+                const modules = [
+                  {
+                    key: "visitor",
+                    title: "Visitor Management",
+                    description: "Check-ins, ID verification & digital passes",
+                    features: ["Check-ins", "ID Verification", "Digital Passes"],
+                    icon: <Users size={32}/>,
+                    path: "/visitor/dashboard",
+                  },
+                  ...(currentPlan === "enterprise" ? [{
+                    key: "conference",
+                    title: "Conference Booking",
+                    description: "Schedule meetings & manage rooms",
+                    features: ["Room Booking", "Scheduling", "Availability"],
+                    icon: <DoorOpen size={32}/>,
+                    path: "/conference/dashboard",
+                  }] : []),
+                ];
+                const isSingle = modules.length === 1;
 
-                {/* ── Conference Booking — Enterprise plan only ── */}
-                {currentPlan === "enterprise" && (
-                  <div
-                    className={`${styles.moduleCard} ${needsRenewal ? styles.moduleCardLocked : ""}`}
-                    onClick={() => handleModuleClick("/conference/dashboard")}
-                    role="button"
-                    tabIndex={0}
-                    aria-label={needsRenewal ? "Conference Booking — locked, renew to unlock" : "Conference Booking"}
-                    onKeyDown={(e) => e.key === "Enter" && handleModuleClick("/conference/dashboard")}
-                  >
-                    <div className={styles.cardIcon}><DoorOpen size={32}/></div>
-                    <div className={styles.cardContent}>
-                      <h3 className={styles.cardTitle}>Conference Booking</h3>
-                      <p className={styles.cardDescription}>
-                        {needsRenewal ? "Renew your plan to unlock this module" : "Schedule meetings & manage rooms"}
-                      </p>
-                    </div>
-                    {needsRenewal ? (
-                      <span className={styles.cardLockBadge}><Lock size={16}/></span>
-                    ) : (
-                      <span className={styles.cardArrow}>→</span>
-                    )}
+                return (
+                  <div className={`${styles.cardGrid} ${isSingle ? styles.cardGridSingle : ""}`}>
+                    {modules.map((m) => (
+                      <div
+                        key={m.key}
+                        className={`${styles.moduleCard} ${isSingle ? styles.moduleCardFeatured : ""} ${needsRenewal ? styles.moduleCardLocked : ""}`}
+                        onClick={() => handleModuleClick(m.path)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={needsRenewal ? `${m.title} — locked, renew to unlock` : m.title}
+                        onKeyDown={(e) => e.key === "Enter" && handleModuleClick(m.path)}
+                      >
+                        <div className={styles.cardIcon}>{m.icon}</div>
+                        <div className={styles.cardContent}>
+                          <h3 className={styles.cardTitle}>{m.title}</h3>
+                          <p className={styles.cardDescription}>
+                            {needsRenewal ? "Renew your plan to unlock this module" : m.description}
+                          </p>
+                          {isSingle && !needsRenewal && (
+                            <div className={styles.cardFeatureChips}>
+                              {m.features.map((f) => <span key={f} className={styles.featureChip}>{f}</span>)}
+                            </div>
+                          )}
+                        </div>
+                        {needsRenewal ? (
+                          <span className={styles.cardLockBadge}><Lock size={16}/></span>
+                        ) : isSingle ? (
+                          <span className={styles.cardCtaBtn}>Open <span className={styles.cardCtaArrow}>→</span></span>
+                        ) : (
+                          <span className={styles.cardArrow}>→</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
+                );
+              })()}
             </>
 
         </main>
