@@ -163,14 +163,16 @@ const BODY_HTML = `
     <div class="trialLeft">
       <h2 class="trialHeading">Try <span>Hai Visitor</span> in your organization for 15 days at ₹49.</h2>
       <p class="trialSub">Set up the QR check-in workflow, register live visitors, and see how organised digital visitor management fits into your day-to-day operations.</p>
-      <div class="trialFeatureRow">
-        <span class="trialFeatureIcon">15</span>
-        <span>Create your account, add users, hosts and the QR check-in workflow.</span>
-      </div>
-      <div class="trialFeatureRow">
-        <span class="trialFeatureIcon">&#8734;</span>
-        <span>Continues on the Business plan after the paid trial; terms apply.</span>
-      </div>
+      <ul class="trialLeftFeatureList">
+        <li class="trialFeatureRow">
+          <span class="trialFeatureIcon">15</span>
+          <span>Create your account, add users, hosts and the QR check-in workflow.</span>
+        </li>
+        <li class="trialFeatureRow">
+          <span class="trialFeatureIcon">&#8734;</span>
+          <span>Continues on the Business plan after the paid trial; terms apply.</span>
+        </li>
+      </ul>
     </div>
     <div class="trialCard">
       <span class="trialBurst">JUST ₹49</span>
@@ -366,7 +368,7 @@ export default function HomePage() {
 
   const segments = [
     { img:'/bridal-jewellery.jpg', title:'Bridal & Jewellery', desc:'Bridal couture, gold and diamond jewellery showrooms with high-value, appointment-led purchase journeys.' },
-    { img:'/automobile.jpg', title:'Premium Automobile', desc:'Car and bike dealerships with enquiry-led, assisted purchase journeys.' },
+    { img:'/automobile.png', title:'Premium Automobile', desc:'Car and bike dealerships with enquiry-led, assisted purchase journeys.' },
     { img:'/home-interiors.jpg', title:'Home & Interiors', desc:'Furniture, modular kitchen, tiles, lighting and interior showrooms.' },
     { img:'/offices.jpg', title:'Offices', desc:'Corporate offices, co-working spaces, professional firms and enterprise setups.' },
   ];
