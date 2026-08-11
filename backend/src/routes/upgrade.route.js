@@ -2,6 +2,7 @@ import express from "express";
 import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { calcPrice } from "../constants/pricing.js";
 
 const router = express.Router();
 
@@ -12,37 +13,17 @@ const router = express.Router();
  * SOLUTION: Never touch subscription_status when creating upgrade payment link
  *
  * RULES:
- * 1. Clicking "Upgrade" → Only set pending_upgrade_plan
- * 2. subscription_status stays "active" or "trial" (unchanged)
+ * 1. Clicking "Upgrade" → Only set pending_upgrade_plan (+ pending_billing_interval)
+ * 2. subscription_status / billing_interval stay unchanged
  * 3. User continues with current plan until:
- *    - Payment succeeds (webhook activates new plan)
+ *    - Payment succeeds (webhook activates new plan/interval)
  *    - Current plan expires naturally
  * 4. Abandoned upgrades don't affect access
  *
- * PRICING:
- * Business Plan: ₹500 base + 18% GST = ₹590 total
+ * PRICING (see constants/pricing.js):
+ * Business monthly: ₹500  base + 18% GST = ₹590  total
+ * Business annual:  ₹6000 base + 18% GST = ₹7080 total
  */
-
-/* ── Pricing constants ───────────────────────────────── */
-const GST_RATE = 0.18;
-
-const PRICING = {
-  trial:    { base: 49,  label: "Hai Visitor Trial (15 Days)" },
-  business: { base: 500, label: "Hai Visitor Business Plan (30 Days)" },
-};
-
-const calcPrice = (plan) => {
-  const base  = PRICING[plan]?.base || 0;
-  const gst   = parseFloat((base * GST_RATE).toFixed(2));
-  const total = parseFloat((base + gst).toFixed(2));
-  return { base, gst, total, totalStr: total.toFixed(2) };
-};
-
-// Keep legacy constants used in business block below
-const BUSINESS_TOTAL_PRICE = calcPrice("business").total;
-const BUSINESS_TOTAL_STR   = calcPrice("business").totalStr;
-const BUSINESS_BASE_PRICE  = calcPrice("business").base;
-const BUSINESS_GST_AMOUNT  = calcPrice("business").gst;
 
 /* ======================================================
    POST /api/upgrade
@@ -50,6 +31,8 @@ const BUSINESS_GST_AMOUNT  = calcPrice("business").gst;
 router.post("/", authenticate, async (req, res) => {
   try {
     const { plan }    = req.body;
+    // Interval only applies to the business plan.
+    const interval    = req.body.interval === "annual" ? "annual" : "monthly";
     const email       = req.user?.email;
     const companyId   = req.user?.companyId;
 
@@ -66,9 +49,10 @@ router.post("/", authenticate, async (req, res) => {
     /* ── Fetch company ──────────────────────────────── */
     const [[company]] = await db.query(
       `SELECT
-         id, name, subscription_status, plan,
+         id, name, subscription_status, plan, billing_interval,
          zoho_customer_id, last_payment_link,
          last_payment_link_id, pending_upgrade_plan,
+         pending_billing_interval,
          trial_ends_at, subscription_ends_at
        FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
@@ -135,19 +119,24 @@ router.post("/", authenticate, async (req, res) => {
     }
 
     /* ======================================================
-       BUSINESS — generate payment link (₹500 + 18% GST = ₹590)
+       BUSINESS — generate payment link (monthly ₹590 or annual ₹7080, incl. 18% GST)
     ====================================================== */
     if (plan === "business") {
-      // Block only if currently active on business (not in grace period)
-      if (currentPlan === "business" && status === "active")
-        return res.status(403).json({ success: false, message: "Already on Business plan" });
+      const pricing = calcPrice("business", interval);
+
+      // Block only if currently active on business at this SAME interval
+      // (not in grace period) — switching interval while active is still
+      // allowed to go through as a fresh upgrade request.
+      if (currentPlan === "business" && status === "active" && company.billing_interval === interval)
+        return res.status(403).json({ success: false, message: `Already on the Business ${interval} plan` });
 
       if (currentPlan === "enterprise" && status !== "grace_period")
         return res.status(403).json({ success: false, message: "Cannot downgrade from Enterprise to Business. Please contact support." });
 
-      /* ── Reuse existing pending payment link if still valid ── */
+      /* ── Reuse existing pending payment link if still valid FOR THIS INTERVAL ── */
       if (
         company.pending_upgrade_plan === "business" &&
+        company.pending_billing_interval === interval &&
         company.last_payment_link &&
         company.last_payment_link_id
       ) {
@@ -159,7 +148,7 @@ router.post("/", authenticate, async (req, res) => {
 
           console.log("🔍 Existing payment link status:", linkStatus, "| amount:", linkAmount);
 
-          if (["created", "sent"].includes(linkStatus) && linkAmount === BUSINESS_TOTAL_PRICE) {
+          if (["created", "sent"].includes(linkStatus) && linkAmount === pricing.total) {
             console.log("♻️ Reusing existing Business payment link");
             return res.json({
               success: true,
@@ -168,9 +157,10 @@ router.post("/", authenticate, async (req, res) => {
               message: "Existing Business upgrade payment link still valid. Your current plan remains active until payment.",
               data: {
                 plan: "business",
-                baseAmount:  `₹${BUSINESS_BASE_PRICE.toFixed(2)}`,
-                gst:         `₹${BUSINESS_GST_AMOUNT.toFixed(2)} (18%)`,
-                totalAmount: `₹${BUSINESS_TOTAL_STR}`,
+                interval,
+                baseAmount:  `₹${pricing.base.toFixed(2)}`,
+                gst:         `₹${pricing.gst.toFixed(2)} (18%)`,
+                totalAmount: `₹${pricing.totalStr}`,
                 currency: "INR",
                 currentPlanContinues: true,
               },
@@ -206,17 +196,18 @@ router.post("/", authenticate, async (req, res) => {
       }
 
       /* ── Create payment link ────────────────────────── */
+      const intervalLabel = interval === "annual" ? "Annual" : "Monthly";
       const payload = {
         customer_id:        customerId,
         customer_name:      companyName,
         currency_code:      "INR",
-        payment_amount:     BUSINESS_TOTAL_STR,
-        description:        `Hai Visitor Business Plan — ₹${BUSINESS_BASE_PRICE} + 18% GST (₹${BUSINESS_GST_AMOUNT})`,
+        payment_amount:     pricing.totalStr,
+        description:        `Hai Visitor Business Plan (${intervalLabel}) — ₹${pricing.base} + 18% GST (₹${pricing.gst})`,
         is_partial_payment: false,
-        reference_id:       `BIZ-UPGRADE-${companyId}-${Date.now()}`,
+        reference_id:       `BIZ-UPGRADE-${interval.toUpperCase()}-${companyId}-${Date.now()}`,
       };
 
-      console.log(`💳 Creating Business Upgrade Payment Link → ₹${BUSINESS_TOTAL_STR} (incl. 18% GST) for Company ${companyId}`);
+      console.log(`💳 Creating Business ${intervalLabel} Upgrade Payment Link → ₹${pricing.totalStr} (incl. 18% GST) for Company ${companyId}`);
 
       let client = await zohoClient();
       let data;
@@ -240,19 +231,20 @@ router.post("/", authenticate, async (req, res) => {
 
       console.log(`✅ Payment link created: ${link.payment_link_id}`);
 
-      /* ── Update DB — ONLY pending fields, never subscription_status ── */
+      /* ── Update DB — ONLY pending fields, never subscription_status/billing_interval ── */
       await db.query(
         `UPDATE companies
-         SET pending_upgrade_plan    = 'business',
-             last_payment_link       = ?,
-             last_payment_link_id    = ?,
-             last_payment_created_at = NOW(),
-             updated_at              = NOW()
+         SET pending_upgrade_plan     = 'business',
+             pending_billing_interval = ?,
+             last_payment_link        = ?,
+             last_payment_link_id     = ?,
+             last_payment_created_at  = NOW(),
+             updated_at               = NOW()
          WHERE id = ?`,
-        [link.url, link.payment_link_id, companyId]
+        [interval, link.url, link.payment_link_id, companyId]
       );
 
-      console.log(`✅ DB updated: Company ${companyId} → Pending Business upgrade`);
+      console.log(`✅ DB updated: Company ${companyId} → Pending Business ${interval} upgrade`);
       console.log(`✅ IMPORTANT: subscription_status unchanged (${status}) — user keeps access`);
 
       return res.json({
@@ -261,9 +253,10 @@ router.post("/", authenticate, async (req, res) => {
         message: "Business upgrade payment link generated. Your current plan remains active until you complete payment.",
         data: {
           plan:        "business",
-          baseAmount:  `₹${BUSINESS_BASE_PRICE.toFixed(2)}`,
-          gst:         `₹${BUSINESS_GST_AMOUNT.toFixed(2)} (18%)`,
-          totalAmount: `₹${BUSINESS_TOTAL_STR}`,
+          interval,
+          baseAmount:  `₹${pricing.base.toFixed(2)}`,
+          gst:         `₹${pricing.gst.toFixed(2)} (18%)`,
+          totalAmount: `₹${pricing.totalStr}`,
           currency:    "INR",
           currentPlanContinues: true,
           currentStatus: status,
@@ -290,6 +283,10 @@ router.get("/options", authenticate, async (req, res) => {
     if (!companyId)
       return res.status(401).json({ success: false, message: "Authentication failed" });
 
+    // Only meaningful for the business plan — trial/enterprise pricing is
+    // interval-independent.
+    const interval = req.query.interval === "annual" ? "annual" : "monthly";
+
     const [[company]] = await db.query(
       `SELECT plan, subscription_status, pending_upgrade_plan FROM companies WHERE id = ? LIMIT 1`,
       [companyId]
@@ -302,8 +299,8 @@ router.get("/options", authenticate, async (req, res) => {
     const status        = (company.subscription_status || "").toLowerCase();
     const pendingUpgrade = company.pending_upgrade_plan;
 
-    const trialP    = calcPrice("trial");
-    const businessP = calcPrice("business");
+    const businessP = calcPrice("business", interval);
+    const businessPeriodLabel = interval === "annual" ? "/ year" : "/ month";
 
     // Renewal card for current plan (always shown)
     const renewalOptions = [];
@@ -311,9 +308,9 @@ router.get("/options", authenticate, async (req, res) => {
     // Trial users cannot renew trial — they must upgrade to Business
     if (currentPlan === "business") {
       renewalOptions.push({
-        plan: "business", name: "Renew Business Plan", isRenewal: true,
+        plan: "business", interval, name: "Renew Business Plan", isRenewal: true,
         basePrice: `₹${businessP.base}`, gst: `₹${businessP.gst} (18%)`,
-        totalPrice: `₹${businessP.totalStr} / month`,
+        totalPrice: `₹${businessP.totalStr} ${businessPeriodLabel}`,
         requiresPayment: true, isPending: pendingUpgrade === "business",
         features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
       });
@@ -332,9 +329,9 @@ router.get("/options", authenticate, async (req, res) => {
     if (currentPlan === "trial") {
       availableUpgrades.push(
         {
-          plan: "business", name: "Upgrade to Business",
+          plan: "business", interval, name: "Upgrade to Business",
           basePrice: `₹${businessP.base}`, gst: `₹${businessP.gst} (18%)`,
-          totalPrice: `₹${businessP.totalStr} / month`,
+          totalPrice: `₹${businessP.totalStr} ${businessPeriodLabel}`,
           requiresPayment: true, isPending: pendingUpgrade === "business",
           features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
         },

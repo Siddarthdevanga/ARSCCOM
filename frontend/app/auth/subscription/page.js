@@ -10,6 +10,7 @@ export default function SubscriptionPage() {
   const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
   const [company, setCompany] = useState(null);
+  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — only affects the Business plan
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -52,7 +53,10 @@ export default function SubscriptionPage() {
   /* ======================================================
         HANDLE PLAN SELECTION
   ====================================================== */
-  const PLAN_VALUES = { free: 49, business: 500 };
+  const PLAN_VALUES = {
+    free: 49,
+    business: billingInterval === "annual" ? 6000 : 500,
+  };
 
   const gaLead = (planKey) => {
     if (typeof window !== "undefined" && typeof window.gtag === "function") {
@@ -60,6 +64,7 @@ export default function SubscriptionPage() {
         value:    PLAN_VALUES[planKey] || 0,
         currency: "INR",
         plan:     planKey,
+        interval: planKey === "business" ? billingInterval : undefined,
       });
     }
   };
@@ -83,7 +88,7 @@ export default function SubscriptionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, interval: plan === "business" ? billingInterval : "monthly" }),
       });
 
       let data = {};
@@ -150,9 +155,9 @@ export default function SubscriptionPage() {
     {
       key: "business",
       name: "BUSINESS",
-      price: "₹500",
-      period: "/ month",
-      sub: "Best for growing teams",
+      price: billingInterval === "annual" ? "₹6,000" : "₹500",
+      period: billingInterval === "annual" ? "/ year" : "/ month",
+      sub: billingInterval === "annual" ? "Best for growing teams — billed once a year" : "Best for growing teams",
       color: "green",
       features: [
         "Unlimited Visitors",
@@ -206,6 +211,27 @@ export default function SubscriptionPage() {
         <section className={styles.hero}>
           <h1 className={styles.heroTitle}>Choose Your <span>Plan</span></h1>
           <p className={styles.heroSub}>Select the subscription that fits your team</p>
+
+          <div className={styles.intervalToggle} role="tablist" aria-label="Billing interval">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={billingInterval === "monthly"}
+              className={`${styles.intervalBtn} ${billingInterval === "monthly" ? styles.intervalBtnActive : ""}`}
+              onClick={() => setBillingInterval("monthly")}
+            >
+              Monthly
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={billingInterval === "annual"}
+              className={`${styles.intervalBtn} ${billingInterval === "annual" ? styles.intervalBtnActive : ""}`}
+              onClick={() => setBillingInterval("annual")}
+            >
+              Annual
+            </button>
+          </div>
         </section>
 
         {/* ===== ERROR ===== */}

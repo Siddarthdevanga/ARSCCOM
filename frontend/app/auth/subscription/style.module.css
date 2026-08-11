@@ -134,6 +134,35 @@
   position: relative;
 }
 
+/* ================= BILLING INTERVAL TOGGLE ================= */
+.intervalToggle {
+  position: relative;
+  display: inline-flex;
+  gap: 4px;
+  margin-top: 22px;
+  padding: 4px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 999px;
+}
+.intervalBtn {
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.8);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 8px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.intervalBtn:hover { color: #fff; }
+.intervalBtnActive,
+.intervalBtnActive:hover {
+  background: #fff;
+  color: #7a00ff;
+}
+
 /* ================= ERROR ================= */
 .errorBox {
   margin: 16px 36px 0;

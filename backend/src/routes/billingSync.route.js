@@ -96,11 +96,13 @@ router.post("/push", async (req, res) => {
     ================================= */
     const [[company]] = await db.query(
       `
-      SELECT 
+      SELECT
         id,
         plan,
+        billing_interval,
         subscription_status,
-        pending_upgrade_plan
+        pending_upgrade_plan,
+        pending_billing_interval
       FROM companies
       WHERE zoho_customer_id = ?
       LIMIT 1
@@ -154,7 +156,15 @@ router.post("/push", async (req, res) => {
     const now = new Date();
     const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
 
-    const durationDays = planToActivate.toLowerCase() === "business" ? 30 : 15;
+    // Interval only matters for business — trial/enterprise keep their
+    // existing fixed duration regardless of what's pending.
+    const intervalToActivate = company.pending_billing_interval || company.billing_interval || "monthly";
+    const isBusinessPlan = planToActivate.toLowerCase() === "business";
+    const durationDays = isBusinessPlan
+      ? (intervalToActivate === "annual" ? 365 : 30)
+      : 15;
+
+    console.log("⏱️ Interval to Activate:", isBusinessPlan ? intervalToActivate : "n/a", "| Duration Days:", durationDays);
 
     const end = new Date(now.getTime() + durationDays * 86400000);
     const endSQL = end.toISOString().slice(0, 19).replace("T", " ");
@@ -174,7 +184,9 @@ router.post("/push", async (req, res) => {
         SET
           subscription_status = 'active',
           plan = 'trial',
+          billing_interval = 'monthly',
           pending_upgrade_plan = NULL,
+          pending_billing_interval = NULL,
           trial_ends_at = ?,
           last_payment_created_at = ?,
           grace_period_ends_at = NULL,
@@ -192,7 +204,9 @@ router.post("/push", async (req, res) => {
         SET
           subscription_status = 'active',
           plan = 'business',
+          billing_interval = ?,
           pending_upgrade_plan = NULL,
+          pending_billing_interval = NULL,
           subscription_ends_at = ?,
           last_payment_created_at = ?,
           grace_period_ends_at = NULL,
@@ -201,7 +215,7 @@ router.post("/push", async (req, res) => {
           updated_at = NOW()
         WHERE id = ?
         `,
-        [endSQL, nowSQL, company.id]
+        [intervalToActivate, endSQL, nowSQL, company.id]
       );
     } else {
       // Enterprise or other plans
@@ -212,6 +226,7 @@ router.post("/push", async (req, res) => {
           subscription_status = 'active',
           plan = ?,
           pending_upgrade_plan = NULL,
+          pending_billing_interval = NULL,
           last_payment_created_at = ?,
           grace_period_ends_at = NULL,
           grace_period_day = 0,

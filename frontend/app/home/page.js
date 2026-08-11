@@ -415,6 +415,7 @@ export default function Home() {
 
   const [upgradingPlan, setUpgradingPlan] = useState("");
   const [renewalModalDismissed, setRenewalModalDismissed] = useState(false);
+  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — only affects the Business plan
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -465,7 +466,7 @@ export default function Home() {
   };
 
   /* ── Upgrade / Renew ─────────────────────────────────────────────── */
-  const handleSelectPlan = async (plan) => {
+  const handleSelectPlan = async (plan, selectedInterval) => {
     if (upgradingPlan) return;
     try {
       setUpgradingPlan(plan);
@@ -473,7 +474,7 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan, interval: plan === "business" ? (selectedInterval || "monthly") : "monthly" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
@@ -625,6 +626,50 @@ export default function Home() {
     </div>
   );
 
+  /* ── Billing interval — shared by every "Business Plan" card in this
+     menu, so switching it in one place updates all of them consistently ── */
+  const businessPricing = billingInterval === "annual"
+    ? { price: "₹6,000", period: "+ GST / yr" }
+    : { price: "₹500",   period: "+ GST / mo" };
+
+  const IntervalToggleSmall = () => (
+    <div className={styles.intervalToggleSmall} role="tablist" aria-label="Billing interval">
+      <button
+        type="button" role="tab" aria-selected={billingInterval === "monthly"}
+        className={`${styles.intervalBtnSmall} ${billingInterval === "monthly" ? styles.intervalBtnSmallActive : ""}`}
+        onClick={() => setBillingInterval("monthly")}
+      >Monthly</button>
+      <button
+        type="button" role="tab" aria-selected={billingInterval === "annual"}
+        className={`${styles.intervalBtnSmall} ${billingInterval === "annual" ? styles.intervalBtnSmallActive : ""}`}
+        onClick={() => setBillingInterval("annual")}
+      >Annual</button>
+    </div>
+  );
+
+  const BusinessPlanCard = ({ ctaLabel }) => (
+    <div className={styles.upgradePlanCard}>
+      <div className={styles.planIconWrapper}><Zap size={20}/></div>
+      <div className={styles.planInfo}>
+        <h6>Business Plan</h6>
+        <div className={styles.planPricing}>
+          <span className={styles.price}>{businessPricing.price}</span>
+          <span className={styles.period}> {businessPricing.period}</span>
+        </div>
+      </div>
+      <IntervalToggleSmall />
+      <ul className={styles.featureList}>
+        <li><CheckCircle size={13}/> Unlimited visitors</li>
+        <li><CheckCircle size={13}/> 1,000 conference bookings</li>
+        <li><CheckCircle size={13}/> 6 conference rooms</li>
+        <li><CheckCircle size={13}/> Priority support</li>
+      </ul>
+      <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business", billingInterval)} disabled={!!upgradingPlan}>
+        {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : ctaLabel}
+      </button>
+    </div>
+  );
+
   /* ── Renew current plan (active/trial/grace_period, not trial-renewal) ── */
   const renewCurrentPlanBlock = (!needsRenewal && currentPlan && currentPlan !== "trial") ? (
     <div className={styles.upgradeSection}>
@@ -640,27 +685,7 @@ export default function Home() {
         </p>
       )}
 
-      {currentPlan === "business" && (
-        <div className={styles.upgradePlanCard}>
-          <div className={styles.planIconWrapper}><Zap size={20}/></div>
-          <div className={styles.planInfo}>
-            <h6>Business Plan</h6>
-            <div className={styles.planPricing}>
-              <span className={styles.price}>₹500</span>
-              <span className={styles.period}> + GST / mo</span>
-            </div>
-          </div>
-          <ul className={styles.featureList}>
-            <li><CheckCircle size={13}/> Unlimited visitors</li>
-            <li><CheckCircle size={13}/> 1,000 conference bookings</li>
-            <li><CheckCircle size={13}/> 6 conference rooms</li>
-            <li><CheckCircle size={13}/> Priority support</li>
-          </ul>
-          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
-            {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Renew Business"}
-          </button>
-        </div>
-      )}
+      {currentPlan === "business" && <BusinessPlanCard ctaLabel="Renew Business" />}
 
       {currentPlan === "enterprise" && (
         <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
@@ -692,27 +717,7 @@ export default function Home() {
       </div>
       <p className={styles.sectionDescription}>Unlock more features and scale with your business.</p>
 
-      {canUpgradeBusiness && (
-        <div className={styles.upgradePlanCard}>
-          <div className={styles.planIconWrapper}><Zap size={20}/></div>
-          <div className={styles.planInfo}>
-            <h6>Business Plan</h6>
-            <div className={styles.planPricing}>
-              <span className={styles.price}>₹500</span>
-              <span className={styles.period}> + GST / mo</span>
-            </div>
-          </div>
-          <ul className={styles.featureList}>
-            <li><CheckCircle size={13}/> Unlimited visitors</li>
-            <li><CheckCircle size={13}/> 1,000 conference bookings</li>
-            <li><CheckCircle size={13}/> 6 conference rooms</li>
-            <li><CheckCircle size={13}/> Priority support</li>
-          </ul>
-          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
-            {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Upgrade to Business"}
-          </button>
-        </div>
-      )}
+      {canUpgradeBusiness && <BusinessPlanCard ctaLabel="Upgrade to Business" />}
 
       {canUpgradeEnterprise && (
         <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
@@ -756,25 +761,7 @@ export default function Home() {
       {/* Trial expired → only Business + Enterprise (no trial re-select) */}
       {currentPlan === "trial" && (
         <>
-          <div className={styles.upgradePlanCard}>
-            <div className={styles.planIconWrapper}><Zap size={20}/></div>
-            <div className={styles.planInfo}>
-              <h6>Business Plan</h6>
-              <div className={styles.planPricing}>
-                <span className={styles.price}>₹500</span>
-                <span className={styles.period}> + GST / mo</span>
-              </div>
-            </div>
-            <ul className={styles.featureList}>
-              <li><CheckCircle size={13}/> Unlimited visitors</li>
-              <li><CheckCircle size={13}/> 1,000 conference bookings</li>
-              <li><CheckCircle size={13}/> 6 conference rooms</li>
-              <li><CheckCircle size={13}/> Priority support</li>
-            </ul>
-            <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
-              {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Upgrade to Business"}
-            </button>
-          </div>
+          <BusinessPlanCard ctaLabel="Upgrade to Business" />
           <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
             <div className={styles.planIconWrapper}><Crown size={20}/></div>
             <div className={styles.planInfo}>
@@ -796,27 +783,7 @@ export default function Home() {
       )}
 
       {/* Business expired → only Business renewal */}
-      {currentPlan === "business" && (
-        <div className={styles.upgradePlanCard}>
-          <div className={styles.planIconWrapper}><Zap size={20}/></div>
-          <div className={styles.planInfo}>
-            <h6>Business Plan</h6>
-            <div className={styles.planPricing}>
-              <span className={styles.price}>₹500</span>
-              <span className={styles.period}> + GST / mo</span>
-            </div>
-          </div>
-          <ul className={styles.featureList}>
-            <li><CheckCircle size={13}/> Unlimited visitors</li>
-            <li><CheckCircle size={13}/> 1,000 conference bookings</li>
-            <li><CheckCircle size={13}/> 6 conference rooms</li>
-            <li><CheckCircle size={13}/> Priority support</li>
-          </ul>
-          <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business")} disabled={!!upgradingPlan}>
-            {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : "Renew Business"}
-          </button>
-        </div>
-      )}
+      {currentPlan === "business" && <BusinessPlanCard ctaLabel="Renew Business" />}
 
       {/* Enterprise expired → Enterprise renewal */}
       {currentPlan === "enterprise" && (

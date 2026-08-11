@@ -2,35 +2,26 @@ import express from "express";
 import { db } from "../config/db.js";
 import { zohoClient } from "../services/zohoAuth.service.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { calcPrice } from "../constants/pricing.js";
 
 const router = express.Router();
 
 /**
  * SUBSCRIPTION PAYMENT FLOW
  *
- * TRIAL     → ₹49  base + 18% GST = ₹57.82
- * BUSINESS  → ₹500 base + 18% GST = ₹590.00
+ * TRIAL              → ₹49   base + 18% GST = ₹57.82  (one-time, 15 days)
+ * BUSINESS / monthly → ₹500  base + 18% GST = ₹590.00
+ * BUSINESS / annual  → ₹6000 base + 18% GST = ₹7080.00
  *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
 
-const GST_RATE = 0.18; // 18%
-
-/** Returns { base, gst, total } all as 2-dp strings */
-const calcGST = (baseAmount) => {
-  const base  = Number(baseAmount);
-  const gst   = +(base * GST_RATE).toFixed(2);
-  const total = +(base + gst).toFixed(2);
-  return {
-    base:  base.toFixed(2),
-    gst:   gst.toFixed(2),
-    total: total.toFixed(2),
-  };
-};
-
 router.post("/subscribe", authenticate, async (req, res) => {
   try {
     const { plan } = req.body;
+    // Interval only applies to the business plan — trial is always a fixed
+    // one-time charge regardless of what's sent here.
+    const interval = req.body.interval === "annual" ? "annual" : "monthly";
     const email = req.user?.email;
     const companyId = req.user?.companyId;
 
@@ -98,20 +89,23 @@ router.post("/subscribe", authenticate, async (req, res) => {
         const linkStatus = data?.payment_link?.status?.toLowerCase();
         console.log("🔍 Zoho payment link status:", linkStatus);
 
-        if (["created", "sent"].includes(linkStatus)) {
-          // ── Return pricing breakdown so frontend can display it ──
-          const planBase = plan === "business" ? 500 : 49;
-          const pricing  = calcGST(planBase);
+        const linkAmount = parseFloat(data?.payment_link?.payment_amount || "0");
+        const expectedPricing = calcPrice(plan === "business" ? "business" : "trial", interval);
+
+        // Only reuse the old link if its amount matches what THIS request
+        // would generate — otherwise a pending monthly link would get
+        // silently reused for an annual request (or vice versa).
+        if (["created", "sent"].includes(linkStatus) && expectedPricing && linkAmount === expectedPricing.total) {
           return res.json({
             success: true,
             reused:  true,
             message: "Existing payment link still valid",
             url:     data.payment_link.url,
-            pricing,
+            pricing: expectedPricing,
           });
         }
 
-        console.log("⚠ Old payment link expired/closed → will generate new");
+        console.log("⚠ Old payment link expired/closed or amount mismatch → generating new");
       } catch {
         console.log("⚠ Could not verify old link → generating new");
       }
@@ -139,20 +133,18 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     /* ================= PLAN PRICING (with GST) ================= */
-    const planConfig = {
-      free:     { base: 49,  description: "Hai Visitor Trial Processing Fee" },
-      business: { base: 500, description: "Hai Visitor Business Subscription" },
+    const planDescriptions = {
+      free:     "Hai Visitor Trial Processing Fee",
+      business: interval === "annual" ? "Hai Visitor Business Subscription (Annual)" : "Hai Visitor Business Subscription (Monthly)",
     };
 
-    const selected = planConfig[plan];
-    if (!selected) {
+    const pricing = calcPrice(plan === "business" ? "business" : "trial", interval);
+    if (!pricing) {
       return res.status(400).json({ success: false, message: "Invalid plan pricing" });
     }
 
-    const pricing = calcGST(selected.base);
-
     // Zoho requires amount as string "590.00"
-    const payment_amount = pricing.total;
+    const payment_amount = pricing.totalStr;
 
     if (!payment_amount || Number(payment_amount) <= 0) {
       return res.status(400).json({
@@ -162,7 +154,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     console.log(
-      `💳 Creating Zoho Payment Link → Base ₹${pricing.base} + GST ₹${pricing.gst} = ₹${pricing.total} (${plan}) for Company ${companyId}`
+      `💳 Creating Zoho Payment Link → Base ₹${pricing.base} + GST ₹${pricing.gst} = ₹${pricing.total} (${plan}/${interval}) for Company ${companyId}`
     );
 
     const payload = {
@@ -170,7 +162,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       customer_name:     companyName,
       currency_code:     "INR",
       payment_amount,                    // total including 18% GST
-      description:       `${selected.description} (incl. 18% GST)`,
+      description:       `${planDescriptions[plan]} (incl. 18% GST)`,
       is_partial_payment: false,
       reference_id:      `COMP-${companyId}-${Date.now()}`
     };
@@ -199,9 +191,10 @@ router.post("/subscribe", authenticate, async (req, res) => {
     await db.query(
       `
       UPDATE companies
-      SET 
+      SET
         subscription_status='pending',
         plan = ?,
+        billing_interval = ?,
         last_payment_link = ?,
         last_payment_link_id = ?,
         last_payment_created_at = NOW()
@@ -209,6 +202,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       `,
       [
         plan === "business" ? "business" : "trial",
+        plan === "business" ? interval : "monthly",
         link.url,
         link.payment_link_id,
         companyId

@@ -35,11 +35,12 @@ function normalizeStatus(status) {
 }
 
 /* ================= PLAN DURATION (DAYS) ================= */
-function getPlanDuration(plan) {
+function getPlanDuration(plan, interval) {
   if (!plan) return 30;
   const p = plan.toLowerCase();
   if (p === "trial") return 15;
-  return 30; // business & enterprise both get 30 days
+  if (p === "business") return interval === "annual" ? 365 : 30;
+  return 30; // enterprise
 }
 
 /* ================= EMAIL TEMPLATES ================= */
@@ -358,9 +359,11 @@ async function repairBilling() {
         c.id,
         c.name,
         c.plan,
+        c.billing_interval,
         c.zoho_customer_id,
         c.last_payment_link_id,
         c.pending_upgrade_plan,
+        c.pending_billing_interval,
         c.subscription_status,
         c.subscription_ends_at,
         c.trial_ends_at,
@@ -395,7 +398,7 @@ async function repairBilling() {
   }
 
   for (const company of companies) {
-    const { id, name, plan, last_payment_link_id, pending_upgrade_plan, subscription_status, company_email } = company;
+    const { id, name, plan, billing_interval, last_payment_link_id, pending_upgrade_plan, pending_billing_interval, subscription_status, company_email } = company;
 
     console.log(`\n🏢 Checking Company → ${name} (${id})`);
     console.log(`   Current: plan=${plan}, status=${subscription_status}`);
@@ -430,9 +433,10 @@ async function repairBilling() {
 
         // Determine active plan — preserve existing plan for enterprise
         const activePlan = pending_upgrade_plan || plan;
+        const activeInterval = pending_billing_interval || billing_interval || "monthly";
 
-        // FIX: trial = 15 days, business & enterprise = 30 days
-        const durationDays = getPlanDuration(activePlan);
+        // trial = 15 days, business = 30 (monthly) or 365 (annual), enterprise = 30
+        const durationDays = getPlanDuration(activePlan, activeInterval);
         const endsAtDate = new Date(paidDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
         const mysqlEnds = endsAtDate.toISOString().slice(0, 19).replace("T", " ");
 
@@ -446,7 +450,9 @@ async function repairBilling() {
             `UPDATE companies SET
                subscription_status = 'active',
                plan = 'trial',
+               billing_interval = 'monthly',
                pending_upgrade_plan = NULL,
+               pending_billing_interval = NULL,
                last_payment_created_at = ?,
                trial_ends_at = ?,
                grace_period_ends_at = NULL,
@@ -480,7 +486,9 @@ async function repairBilling() {
             `UPDATE companies SET
                subscription_status = 'active',
                plan = ?,
+               billing_interval = ?,
                pending_upgrade_plan = NULL,
+               pending_billing_interval = NULL,
                last_payment_created_at = ?,
                subscription_ends_at = ?,
                grace_period_ends_at = NULL,
@@ -488,7 +496,7 @@ async function repairBilling() {
                wa_reminders_sent = '',
                updated_at = NOW()
              WHERE id = ?`,
-            [activePlan, mysqlPaid, mysqlEnds, id]
+            [activePlan, activePlan === "business" ? activeInterval : "monthly", mysqlPaid, mysqlEnds, id]
           );
 
           // WhatsApp — business activated or renewal thanks
