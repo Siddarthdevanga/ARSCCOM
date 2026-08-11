@@ -10,7 +10,7 @@ export default function SubscriptionPage() {
   const [loadingPlan, setLoadingPlan] = useState("");
   const [error, setError] = useState("");
   const [company, setCompany] = useState(null);
-  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — only affects the Business plan
+  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — affects Business and Enterprise
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -56,6 +56,7 @@ export default function SubscriptionPage() {
   const PLAN_VALUES = {
     free: 49,
     business: billingInterval === "annual" ? 6000 : 500,
+    enterprise: billingInterval === "annual" ? 7000 : 700,
   };
 
   const gaLead = (planKey) => {
@@ -64,7 +65,7 @@ export default function SubscriptionPage() {
         value:    PLAN_VALUES[planKey] || 0,
         currency: "INR",
         plan:     planKey,
-        interval: planKey === "business" ? billingInterval : undefined,
+        interval: planKey === "free" ? undefined : billingInterval,
       });
     }
   };
@@ -75,12 +76,6 @@ export default function SubscriptionPage() {
     setError("");
     setLoadingPlan(plan);
 
-    if (plan === "enterprise") {
-      router.push("/auth/contact-us");
-      setLoadingPlan("");
-      return;
-    }
-
     gaLead(plan);
 
     try {
@@ -88,7 +83,7 @@ export default function SubscriptionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan, interval: plan === "business" ? billingInterval : "monthly" }),
+        body: JSON.stringify({ plan, interval: plan === "free" ? "monthly" : billingInterval }),
       });
 
       let data = {};
@@ -157,12 +152,11 @@ export default function SubscriptionPage() {
       name: "BUSINESS",
       price: billingInterval === "annual" ? "₹6,000" : "₹500",
       period: billingInterval === "annual" ? "/ year" : "/ month",
-      sub: billingInterval === "annual" ? "Best for growing teams — billed once a year" : "Best for growing teams",
+      sub: billingInterval === "annual" ? "Visitor management — billed once a year" : "Visitor management for growing teams",
       color: "green",
       features: [
         "Unlimited Visitors",
-        "1000 Conference Bookings",
-        "6 Conference Rooms",
+        "Custom Registration Fields",
         "Priority Support",
       ],
       btnText: "Proceed to Payment",
@@ -171,9 +165,9 @@ export default function SubscriptionPage() {
     {
       key: "enterprise",
       name: "ENTERPRISE",
-      price: "Custom",
-      period: "Pricing",
-      sub: "Tailored for large organizations",
+      price: billingInterval === "annual" ? "₹7,000" : "₹700",
+      period: billingInterval === "annual" ? "/ year" : "/ month",
+      sub: billingInterval === "annual" ? "Visitor management + conference booking — billed once a year" : "Visitor management + conference booking",
       color: "gold",
       features: [
         "Unlimited Visitors",
@@ -181,7 +175,7 @@ export default function SubscriptionPage() {
         "Unlimited Conference Rooms",
         "Dedicated Support",
       ],
-      btnText: "Contact Us",
+      btnText: "Proceed to Payment",
       highlight: false,
     },
   ];

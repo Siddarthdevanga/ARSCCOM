@@ -289,24 +289,24 @@ const PLAN_RENEWAL_COPY = {
   business: {
     label: "Business",
     expiredTitle: "Your Business plan has expired",
-    expiredSubtitle: "Renew now to restore unlimited visitors and conference bookings for your whole team.",
-    expiringSubtitle: (dateLabel) => `Renew before ${dateLabel} to keep unlimited visitors and conference bookings running without interruption.`,
+    expiredSubtitle: "Renew now to restore unlimited visitor management for your whole team.",
+    expiringSubtitle: (dateLabel) => `Renew before ${dateLabel} to keep unlimited visitor management running without interruption.`,
     ctaLabel: "Renew Business",
     priceLabel: "₹590",
     priceNote: "incl. GST",
     pricePeriod: "/ month",
-    features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
+    features: ["Unlimited visitors", "Custom registration fields", "Priority support"],
   },
   enterprise: {
     label: "Enterprise",
     expiredTitle: "Your Enterprise plan has expired",
-    expiredSubtitle: "Reach out to our sales team to reactivate your custom Enterprise plan.",
-    expiringSubtitle: (dateLabel) => `Your Enterprise plan expires ${dateLabel}. Contact sales to renew your custom terms.`,
-    ctaLabel: "Contact Sales",
-    priceLabel: "Custom",
-    priceNote: "",
-    pricePeriod: "pricing",
-    features: ["Unlimited everything", "Dedicated support"],
+    expiredSubtitle: "Renew now to restore unlimited visitor management and conference booking for your whole team.",
+    expiringSubtitle: (dateLabel) => `Renew before ${dateLabel} to keep visitor management and conference booking running without interruption.`,
+    ctaLabel: "Renew Enterprise",
+    priceLabel: "₹826",
+    priceNote: "incl. GST",
+    pricePeriod: "/ month",
+    features: ["Unlimited visitors", "Unlimited conference bookings", "Unlimited conference rooms", "Dedicated support"],
   },
 };
 
@@ -415,7 +415,7 @@ export default function Home() {
 
   const [upgradingPlan, setUpgradingPlan] = useState("");
   const [renewalModalDismissed, setRenewalModalDismissed] = useState(false);
-  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — only affects the Business plan
+  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — affects Business and Enterprise
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -474,14 +474,13 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan, interval: plan === "business" ? (selectedInterval || "monthly") : "monthly" }),
+        body: JSON.stringify({ plan, interval: (plan === "business" || plan === "enterprise") ? (selectedInterval || "monthly") : "monthly" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
       if (data.success && data.redirectTo) {
         setShowMenu(false);
-        if (plan === "enterprise") router.push(data.redirectTo);
-        else window.location.href = data.redirectTo;
+        window.location.href = data.redirectTo;
       } else {
         throw new Error(data.message || "No redirect URL provided");
       }
@@ -532,6 +531,7 @@ export default function Home() {
 
   const canUpgradeBusiness   = currentPlan === "trial"                        && ["active", "trial", "grace_period"].includes(currentStatus);
   const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan)    && ["active", "trial", "grace_period"].includes(currentStatus);
+  const canDowngradeToBusiness = currentPlan === "enterprise"                 && ["active", "trial", "grace_period"].includes(currentStatus);
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
   const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
 
@@ -626,11 +626,28 @@ export default function Home() {
     </div>
   );
 
-  /* ── Billing interval — shared by every "Business Plan" card in this
-     menu, so switching it in one place updates all of them consistently ── */
-  const businessPricing = billingInterval === "annual"
-    ? { price: "₹6,000", period: "+ GST / yr" }
-    : { price: "₹500",   period: "+ GST / mo" };
+  /* ── Billing interval — shared by every plan card in this menu, so
+     switching it in one place updates all of them consistently ── */
+  const PLAN_CARD_META = {
+    business: {
+      name: "Business Plan",
+      Icon: Zap,
+      pricing: {
+        monthly: { price: "₹500",   period: "+ GST / mo" },
+        annual:  { price: "₹6,000", period: "+ GST / yr" },
+      },
+      features: ["Unlimited visitors", "Custom registration fields", "Priority support"],
+    },
+    enterprise: {
+      name: "Enterprise Plan",
+      Icon: Crown,
+      pricing: {
+        monthly: { price: "₹700",   period: "+ GST / mo" },
+        annual:  { price: "₹7,000", period: "+ GST / yr" },
+      },
+      features: ["Unlimited visitors", "Unlimited conference bookings", "Unlimited conference rooms", "Dedicated support"],
+    },
+  };
 
   const IntervalToggleSmall = () => (
     <div className={styles.intervalToggleSmall} role="tablist" aria-label="Billing interval">
@@ -647,28 +664,34 @@ export default function Home() {
     </div>
   );
 
-  const BusinessPlanCard = ({ ctaLabel }) => (
-    <div className={styles.upgradePlanCard}>
-      <div className={styles.planIconWrapper}><Zap size={20}/></div>
-      <div className={styles.planInfo}>
-        <h6>Business Plan</h6>
-        <div className={styles.planPricing}>
-          <span className={styles.price}>{businessPricing.price}</span>
-          <span className={styles.period}> {businessPricing.period}</span>
+  const PlanCard = ({ plan, ctaLabel }) => {
+    const meta = PLAN_CARD_META[plan];
+    const pricing = meta.pricing[billingInterval];
+    const { Icon } = meta;
+    return (
+      <div className={`${styles.upgradePlanCard} ${plan === "enterprise" ? styles.enterprisePlan : ""}`}>
+        <div className={styles.planIconWrapper}><Icon size={20}/></div>
+        <div className={styles.planInfo}>
+          <h6>{meta.name}</h6>
+          <div className={styles.planPricing}>
+            <span className={styles.price}>{pricing.price}</span>
+            <span className={styles.period}> {pricing.period}</span>
+          </div>
         </div>
+        <IntervalToggleSmall />
+        <ul className={styles.featureList}>
+          {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
+        </ul>
+        <button
+          className={`${styles.upgradeBtn} ${plan === "enterprise" ? styles.enterpriseBtn : ""}`}
+          onClick={() => handleSelectPlan(plan, billingInterval)}
+          disabled={!!upgradingPlan}
+        >
+          {upgradingPlan === plan ? <><div className={styles.btnSpinner}/> Processing...</> : ctaLabel}
+        </button>
       </div>
-      <IntervalToggleSmall />
-      <ul className={styles.featureList}>
-        <li><CheckCircle size={13}/> Unlimited visitors</li>
-        <li><CheckCircle size={13}/> 1,000 conference bookings</li>
-        <li><CheckCircle size={13}/> 6 conference rooms</li>
-        <li><CheckCircle size={13}/> Priority support</li>
-      </ul>
-      <button className={styles.upgradeBtn} onClick={() => handleSelectPlan("business", billingInterval)} disabled={!!upgradingPlan}>
-        {upgradingPlan === "business" ? <><div className={styles.btnSpinner}/> Processing...</> : ctaLabel}
-      </button>
-    </div>
-  );
+    );
+  };
 
   /* ── Renew current plan (active/trial/grace_period, not trial-renewal) ── */
   const renewCurrentPlanBlock = (!needsRenewal && currentPlan && currentPlan !== "trial") ? (
@@ -685,26 +708,9 @@ export default function Home() {
         </p>
       )}
 
-      {currentPlan === "business" && <BusinessPlanCard ctaLabel="Renew Business" />}
+      {currentPlan === "business" && <PlanCard plan="business" ctaLabel="Renew Business" />}
 
-      {currentPlan === "enterprise" && (
-        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
-          <div className={styles.planIconWrapper}><Crown size={20}/></div>
-          <div className={styles.planInfo}>
-            <h6>Enterprise Plan</h6>
-            <div className={styles.planPricing}>
-              <span className={styles.customPrice}>Custom Pricing</span>
-            </div>
-          </div>
-          <ul className={styles.featureList}>
-            <li><CheckCircle size={13}/> Unlimited everything</li>
-            <li><CheckCircle size={13}/> Dedicated support</li>
-          </ul>
-          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
-            {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
-          </button>
-        </div>
-      )}
+      {currentPlan === "enterprise" && <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />}
     </div>
   ) : null;
 
@@ -717,27 +723,22 @@ export default function Home() {
       </div>
       <p className={styles.sectionDescription}>Unlock more features and scale with your business.</p>
 
-      {canUpgradeBusiness && <BusinessPlanCard ctaLabel="Upgrade to Business" />}
+      {canUpgradeBusiness && <PlanCard plan="business" ctaLabel="Upgrade to Business" />}
 
-      {canUpgradeEnterprise && (
-        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
-          <div className={styles.planIconWrapper}><Crown size={20}/></div>
-          <div className={styles.planInfo}>
-            <h6>Enterprise Plan</h6>
-            <div className={styles.planPricing}>
-              <span className={styles.customPrice}>Custom Pricing</span>
-            </div>
-          </div>
-          <ul className={styles.featureList}>
-            <li><CheckCircle size={13}/> Everything in Business</li>
-            <li><CheckCircle size={13}/> Custom integrations</li>
-            <li><CheckCircle size={13}/> Dedicated account manager</li>
-          </ul>
-          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
-            {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
-          </button>
-        </div>
-      )}
+      {canUpgradeEnterprise && <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />}
+    </div>
+  ) : null;
+
+  /* ── Downgrade Enterprise → Business (active/trial/grace_period) ── */
+  const downgradeBlock = (!needsRenewal && canDowngradeToBusiness) ? (
+    <div className={styles.upgradeSection}>
+      <div className={styles.sectionHeader}>
+        <TrendingUp size={18}/>
+        <h5>Switch Plan</h5>
+      </div>
+      <p className={styles.sectionDescription}>Only need visitor management? Switch down to Business.</p>
+
+      <PlanCard plan="business" ctaLabel="Downgrade to Business" />
     </div>
   ) : null;
 
@@ -758,52 +759,19 @@ export default function Home() {
         <h5>{currentPlan === "trial" ? "Upgrade Your Plan" : "Renew Your Plan"}</h5>
       </div>
 
-      {/* Trial expired → only Business + Enterprise (no trial re-select) */}
+      {/* Trial expired → Business + Enterprise (no trial re-select) */}
       {currentPlan === "trial" && (
         <>
-          <BusinessPlanCard ctaLabel="Upgrade to Business" />
-          <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
-            <div className={styles.planIconWrapper}><Crown size={20}/></div>
-            <div className={styles.planInfo}>
-              <h6>Enterprise Plan</h6>
-              <div className={styles.planPricing}>
-                <span className={styles.customPrice}>Custom Pricing</span>
-              </div>
-            </div>
-            <ul className={styles.featureList}>
-              <li><CheckCircle size={13}/> Unlimited everything</li>
-              <li><CheckCircle size={13}/> Custom integrations</li>
-              <li><CheckCircle size={13}/> Dedicated account manager</li>
-            </ul>
-            <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
-              {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
-            </button>
-          </div>
+          <PlanCard plan="business" ctaLabel="Upgrade to Business" />
+          <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
         </>
       )}
 
-      {/* Business expired → only Business renewal */}
-      {currentPlan === "business" && <BusinessPlanCard ctaLabel="Renew Business" />}
+      {/* Business expired → Business renewal */}
+      {currentPlan === "business" && <PlanCard plan="business" ctaLabel="Renew Business" />}
 
       {/* Enterprise expired → Enterprise renewal */}
-      {currentPlan === "enterprise" && (
-        <div className={`${styles.upgradePlanCard} ${styles.enterprisePlan}`}>
-          <div className={styles.planIconWrapper}><Crown size={20}/></div>
-          <div className={styles.planInfo}>
-            <h6>Enterprise Plan</h6>
-            <div className={styles.planPricing}>
-              <span className={styles.customPrice}>Custom Pricing</span>
-            </div>
-          </div>
-          <ul className={styles.featureList}>
-            <li><CheckCircle size={13}/> Unlimited everything</li>
-            <li><CheckCircle size={13}/> Dedicated support</li>
-          </ul>
-          <button className={`${styles.upgradeBtn} ${styles.enterpriseBtn}`} onClick={() => handleSelectPlan("enterprise")} disabled={!!upgradingPlan}>
-            {upgradingPlan === "enterprise" ? <><div className={styles.btnSpinner}/> Processing...</> : "Contact Sales"}
-          </button>
-        </div>
-      )}
+      {currentPlan === "enterprise" && <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />}
     </div>
   ) : null;
 
@@ -921,28 +889,30 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* ── Conference Booking ── */}
-                <div
-                  className={`${styles.moduleCard} ${needsRenewal ? styles.moduleCardLocked : ""}`}
-                  onClick={() => handleModuleClick("/conference/dashboard")}
-                  role="button"
-                  tabIndex={0}
-                  aria-label={needsRenewal ? "Conference Booking — locked, renew to unlock" : "Conference Booking"}
-                  onKeyDown={(e) => e.key === "Enter" && handleModuleClick("/conference/dashboard")}
-                >
-                  <div className={styles.cardIcon}><DoorOpen size={32}/></div>
-                  <div className={styles.cardContent}>
-                    <h3 className={styles.cardTitle}>Conference Booking</h3>
-                    <p className={styles.cardDescription}>
-                      {needsRenewal ? "Renew your plan to unlock this module" : "Schedule meetings & manage rooms"}
-                    </p>
+                {/* ── Conference Booking — Enterprise plan only ── */}
+                {currentPlan === "enterprise" && (
+                  <div
+                    className={`${styles.moduleCard} ${needsRenewal ? styles.moduleCardLocked : ""}`}
+                    onClick={() => handleModuleClick("/conference/dashboard")}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={needsRenewal ? "Conference Booking — locked, renew to unlock" : "Conference Booking"}
+                    onKeyDown={(e) => e.key === "Enter" && handleModuleClick("/conference/dashboard")}
+                  >
+                    <div className={styles.cardIcon}><DoorOpen size={32}/></div>
+                    <div className={styles.cardContent}>
+                      <h3 className={styles.cardTitle}>Conference Booking</h3>
+                      <p className={styles.cardDescription}>
+                        {needsRenewal ? "Renew your plan to unlock this module" : "Schedule meetings & manage rooms"}
+                      </p>
+                    </div>
+                    {needsRenewal ? (
+                      <span className={styles.cardLockBadge}><Lock size={16}/></span>
+                    ) : (
+                      <span className={styles.cardArrow}>→</span>
+                    )}
                   </div>
-                  {needsRenewal ? (
-                    <span className={styles.cardLockBadge}><Lock size={16}/></span>
-                  ) : (
-                    <span className={styles.cardArrow}>→</span>
-                  )}
-                </div>
+                )}
               </div>
             </>
 
@@ -1029,6 +999,7 @@ export default function Home() {
                       {menuItemsBlock}
                       {renewCurrentPlanBlock}
                       {upgradeHigherBlock}
+                      {downgradeBlock}
                     </>
                   )}
                 </>

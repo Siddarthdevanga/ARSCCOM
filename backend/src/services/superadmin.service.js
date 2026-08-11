@@ -1,12 +1,11 @@
 import { db } from "../config/db.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/mailer.js";
+import { PLAN_FEATURES } from "../constants/pricing.js";
 
 /* ======================================================
    CONSTANTS & HELPERS
 ====================================================== */
-const PLAN_ROOM_LIMITS = { trial: 2, business: 6, enterprise: Infinity };
-
 const toSlug = (str) =>
   str
     .trim()
@@ -22,8 +21,8 @@ const toSlug = (str) =>
    — LIMIT must be inlined as integer literal;
      MySQL rejects bound ? params for LIMIT in subqueries
 ====================================================== */
-const syncRoomActivationByPlan = async (companyId, plan) => {
-  const limit = PLAN_ROOM_LIMITS[(plan || "trial").toLowerCase()] ?? 2;
+export const syncRoomActivationByPlan = async (companyId, plan) => {
+  const limit = PLAN_FEATURES[(plan || "trial").toLowerCase()]?.rooms ?? 0;
 
   await db.query(
     `UPDATE conference_rooms SET is_active = 0 WHERE company_id = ?`,

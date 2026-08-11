@@ -4,6 +4,7 @@ import { db } from "../config/db.js";
 import { authMiddleware } from "../middleware/auth.js";
 import { uploadToS3, getPresignedUrl } from "../services/s3.service.js";
 import QRCode from "qrcode";
+import { PLAN_FEATURES } from "../constants/pricing.js";
 
 const roomImageUpload = multer({
   storage: multer.memoryStorage(),
@@ -20,9 +21,9 @@ const router = express.Router();
    PLAN CONFIGURATION (matches database enum)
 ====================================================== */
 const PLANS = {
-  trial:      2,
-  business:   6,
-  enterprise: Infinity,
+  trial:      PLAN_FEATURES.trial.rooms,
+  business:   PLAN_FEATURES.business.rooms,
+  enterprise: PLAN_FEATURES.enterprise.rooms,
 };
 
 const ACTIVE_STATUSES = ["active", "trial"];

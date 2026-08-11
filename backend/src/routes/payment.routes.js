@@ -9,9 +9,11 @@ const router = express.Router();
 /**
  * SUBSCRIPTION PAYMENT FLOW
  *
- * TRIAL              → ₹49   base + 18% GST = ₹57.82  (one-time, 15 days)
- * BUSINESS / monthly → ₹500  base + 18% GST = ₹590.00
- * BUSINESS / annual  → ₹6000 base + 18% GST = ₹7080.00
+ * TRIAL                → ₹49   base + 18% GST = ₹57.82  (one-time, 15 days)
+ * BUSINESS / monthly    → ₹500  base + 18% GST = ₹590.00
+ * BUSINESS / annual     → ₹6000 base + 18% GST = ₹7080.00
+ * ENTERPRISE / monthly  → ₹700  base + 18% GST = ₹826.00
+ * ENTERPRISE / annual   → ₹7000 base + 18% GST = ₹8260.00
  *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
@@ -19,9 +21,10 @@ const router = express.Router();
 router.post("/subscribe", authenticate, async (req, res) => {
   try {
     const { plan } = req.body;
-    // Interval only applies to the business plan — trial is always a fixed
+    // Interval only applies to business/enterprise — trial is always a fixed
     // one-time charge regardless of what's sent here.
     const interval = req.body.interval === "annual" ? "annual" : "monthly";
+    const planKey = plan === "business" || plan === "enterprise" ? plan : "trial";
     const email = req.user?.email;
     const companyId = req.user?.companyId;
 
@@ -30,7 +33,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: "Plan is required" });
     }
 
-    if (!["free", "business"].includes(plan)) {
+    if (!["free", "business", "enterprise"].includes(plan)) {
       return res.status(400).json({ success: false, message: "Invalid plan selected" });
     }
 
@@ -90,7 +93,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
         console.log("🔍 Zoho payment link status:", linkStatus);
 
         const linkAmount = parseFloat(data?.payment_link?.payment_amount || "0");
-        const expectedPricing = calcPrice(plan === "business" ? "business" : "trial", interval);
+        const expectedPricing = calcPrice(planKey, interval);
 
         // Only reuse the old link if its amount matches what THIS request
         // would generate — otherwise a pending monthly link would get
@@ -134,11 +137,12 @@ router.post("/subscribe", authenticate, async (req, res) => {
 
     /* ================= PLAN PRICING (with GST) ================= */
     const planDescriptions = {
-      free:     "Hai Visitor Trial Processing Fee",
-      business: interval === "annual" ? "Hai Visitor Business Subscription (Annual)" : "Hai Visitor Business Subscription (Monthly)",
+      free:       "Hai Visitor Trial Processing Fee",
+      business:   interval === "annual" ? "Hai Visitor Business Subscription (Annual)" : "Hai Visitor Business Subscription (Monthly)",
+      enterprise: interval === "annual" ? "Hai Visitor Enterprise Subscription (Annual)" : "Hai Visitor Enterprise Subscription (Monthly)",
     };
 
-    const pricing = calcPrice(plan === "business" ? "business" : "trial", interval);
+    const pricing = calcPrice(planKey, interval);
     if (!pricing) {
       return res.status(400).json({ success: false, message: "Invalid plan pricing" });
     }
@@ -201,8 +205,8 @@ router.post("/subscribe", authenticate, async (req, res) => {
       WHERE id=?
       `,
       [
-        plan === "business" ? "business" : "trial",
-        plan === "business" ? interval : "monthly",
+        planKey,
+        planKey === "trial" ? "monthly" : interval,
         link.url,
         link.payment_link_id,
         companyId

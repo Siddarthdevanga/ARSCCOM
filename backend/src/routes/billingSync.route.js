@@ -1,5 +1,6 @@
 import express from "express";
 import { db } from "../config/db.js";
+import { syncRoomActivationByPlan } from "../services/superadmin.service.js";
 
 const router = express.Router();
 
@@ -156,15 +157,15 @@ router.post("/push", async (req, res) => {
     const now = new Date();
     const nowSQL = now.toISOString().slice(0, 19).replace("T", " ");
 
-    // Interval only matters for business — trial/enterprise keep their
-    // existing fixed duration regardless of what's pending.
+    // Interval only matters for business/enterprise — trial keeps its
+    // existing fixed 15-day duration regardless of what's pending.
     const intervalToActivate = company.pending_billing_interval || company.billing_interval || "monthly";
-    const isBusinessPlan = planToActivate.toLowerCase() === "business";
-    const durationDays = isBusinessPlan
+    const isTimedPlan = ["business", "enterprise"].includes(planToActivate.toLowerCase());
+    const durationDays = isTimedPlan
       ? (intervalToActivate === "annual" ? 365 : 30)
       : 15;
 
-    console.log("⏱️ Interval to Activate:", isBusinessPlan ? intervalToActivate : "n/a", "| Duration Days:", durationDays);
+    console.log("⏱️ Interval to Activate:", isTimedPlan ? intervalToActivate : "n/a", "| Duration Days:", durationDays);
 
     const end = new Date(now.getTime() + durationDays * 86400000);
     const endSQL = end.toISOString().slice(0, 19).replace("T", " ");
@@ -197,13 +198,13 @@ router.post("/push", async (req, res) => {
         `,
         [endSQL, nowSQL, company.id]
       );
-    } else if (planToActivate.toLowerCase() === "business") {
+    } else if (isTimedPlan) {
       await db.query(
         `
         UPDATE companies
         SET
           subscription_status = 'active',
-          plan = 'business',
+          plan = ?,
           billing_interval = ?,
           pending_upgrade_plan = NULL,
           pending_billing_interval = NULL,
@@ -215,10 +216,10 @@ router.post("/push", async (req, res) => {
           updated_at = NOW()
         WHERE id = ?
         `,
-        [intervalToActivate, endSQL, nowSQL, company.id]
+        [planToActivate.toLowerCase(), intervalToActivate, endSQL, nowSQL, company.id]
       );
     } else {
-      // Enterprise or other plans
+      // Other/unknown plans
       await db.query(
         `
         UPDATE companies
@@ -237,6 +238,11 @@ router.post("/push", async (req, res) => {
         [planToActivate, nowSQL, company.id]
       );
     }
+
+    // Room activation limits are plan-dependent (Business has none, Enterprise
+    // unlimited) — sync after every activation so upgrades/downgrades via
+    // self-serve payment (not just superadmin) correctly (de)activate rooms.
+    await syncRoomActivationByPlan(company.id, planToActivate.toLowerCase());
 
     if (company.pending_upgrade_plan) {
       console.log(`🎉 UPGRADE COMPLETED: ${company.plan} → ${planToActivate}`);

@@ -7,6 +7,7 @@ import { sendEmail } from "../utils/mailer.js";
 import { getPresignedUrl, uploadToS3, deleteFromS3 } from "../services/s3.service.js";
 import QRCode from "qrcode";
 import { createCanvas, loadImage, registerFont } from "canvas";
+import { PLAN_FEATURES } from "../constants/pricing.js";
 
 const roomImageUpload = multer({
   storage: multer.memoryStorage(),
@@ -20,11 +21,12 @@ const router = express.Router();
 
 /* ======================================================
    PLAN CONFIGURATION (matches database enum: lowercase)
+   Source of truth: constants/pricing.js
 ====================================================== */
 const PLANS = {
-  trial: { rooms: 2, bookings: 100 },
-  business: { rooms: 6, bookings: 1000 },
-  enterprise: { rooms: Infinity, bookings: Infinity },
+  trial: { rooms: PLAN_FEATURES.trial.rooms, bookings: PLAN_FEATURES.trial.bookings },
+  business: { rooms: PLAN_FEATURES.business.rooms, bookings: PLAN_FEATURES.business.bookings },
+  enterprise: { rooms: PLAN_FEATURES.enterprise.rooms, bookings: PLAN_FEATURES.enterprise.bookings },
 };
 
 const ACTIVE_STATUSES = ["active", "trial", "grace_period"];
@@ -472,6 +474,12 @@ const validateCompanySubscription = async (companyId) => {
       throw new Error("Subscription inactive. Please renew your subscription to continue.");
     }
 
+    // Business (and trial, which previews the Business tier) don't include
+    // conference room booking at all — only Enterprise does.
+    if (!PLAN_FEATURES[plan]?.conference) {
+      throw new Error("Conference room booking is not available on your current plan. Upgrade to Enterprise to access this feature.");
+    }
+
     const limits = PLANS[plan] || PLANS.trial;
 
     return {
@@ -733,7 +741,7 @@ router.get("/plan-usage", async (req, res) => {
     console.error("[GET /plan-usage]", err.message);
 
     const statusCode =
-      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+      err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({ message: err.message });
   }
@@ -769,7 +777,7 @@ router.get("/dashboard", async (req, res) => {
     console.error("[GET /dashboard]", err.message);
 
     const statusCode =
-      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+      err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({
       message: err.message || "Failed to load dashboard statistics",
@@ -793,7 +801,7 @@ router.get("/rooms", async (req, res) => {
   } catch (err) {
     console.error("[GET /rooms]", err.message);
     const statusCode = err.message.includes("not found") ? 404
-      : err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+      : err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan") ? 403 : 500;
     res.status(statusCode).json({ message: err.message });
   }
 });
@@ -880,7 +888,7 @@ router.post("/rooms", roomImageUpload.single("image"), async (req, res) => {
     console.error("[POST /rooms]", err.message);
 
     const statusCode =
-      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+      err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({ message: err.message });
   }
@@ -917,7 +925,8 @@ router.patch("/rooms/:id", async (req, res) => {
       ? 404
       : err.message.includes("locked") ||
         err.message.includes("inactive") ||
-        err.message.includes("renew")
+        err.message.includes("renew") ||
+        err.message.includes("not available on your current plan")
       ? 403
       : 500;
 
@@ -959,7 +968,8 @@ router.patch("/rooms/:id/image", roomImageUpload.single("image"), async (req, re
       ? 404
       : err.message.includes("locked") ||
         err.message.includes("inactive") ||
-        err.message.includes("renew")
+        err.message.includes("renew") ||
+        err.message.includes("not available on your current plan")
       ? 403
       : 500;
 
@@ -1008,7 +1018,7 @@ router.delete("/rooms/:id", async (req, res) => {
 
     const statusCode = err.message.includes("not found")
       ? 404
-      : err.message.includes("inactive") || err.message.includes("renew")
+      : err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan")
       ? 403
       : 500;
 
@@ -1214,7 +1224,7 @@ router.post("/bookings", async (req, res) => {
     console.error("[POST /bookings]", err.message);
 
     const statusCode =
-      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+      err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({ message: err.message || "Unable to create booking" });
   } finally {
@@ -1708,7 +1718,7 @@ router.post("/sync-rooms", async (req, res) => {
     console.error("[POST /sync-rooms]", err.message);
 
     const statusCode =
-      err.message.includes("inactive") || err.message.includes("renew") ? 403 : 500;
+      err.message.includes("inactive") || err.message.includes("renew") || err.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({
       message: err.message || "Failed to sync room activation",
@@ -1768,7 +1778,7 @@ router.get("/public-booking-info", async (req, res) => {
     console.error("[GET /public-booking-info]", error.message);
 
     const statusCode =
-      error.message.includes("inactive") || error.message.includes("renew") ? 403 : 500;
+      error.message.includes("inactive") || error.message.includes("renew") || error.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({
       message: error.message || "Failed to generate public booking information",
@@ -1833,7 +1843,7 @@ router.get("/qr-code/download", async (req, res) => {
     console.error("[GET /qr-code/download]", error.message);
 
     const statusCode =
-      error.message.includes("inactive") || error.message.includes("renew") ? 403 : 500;
+      error.message.includes("inactive") || error.message.includes("renew") || error.message.includes("not available on your current plan") ? 403 : 500;
 
     res.status(statusCode).json({
       message: error.message || "Failed to download QR code",

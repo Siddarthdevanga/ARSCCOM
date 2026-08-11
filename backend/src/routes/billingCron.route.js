@@ -5,6 +5,7 @@ import { db } from "../config/db.js";
 import { getZohoAccessToken } from "../services/zohoToken.service.js";
 import { sendEmail } from "../utils/mailer.js";
 import { sendWhatsAppTemplate } from "../services/gupshup.service.js";
+import { syncRoomActivationByPlan } from "../services/superadmin.service.js";
 
 const normalizePhone = (p) => {
   const d = String(p || "").replace(/\D/g, "");
@@ -39,8 +40,8 @@ function getPlanDuration(plan, interval) {
   if (!plan) return 30;
   const p = plan.toLowerCase();
   if (p === "trial") return 15;
-  if (p === "business") return interval === "annual" ? 365 : 30;
-  return 30; // enterprise
+  if (p === "business" || p === "enterprise") return interval === "annual" ? 365 : 30;
+  return 30;
 }
 
 /* ================= EMAIL TEMPLATES ================= */
@@ -463,6 +464,8 @@ async function repairBilling() {
             [mysqlPaid, mysqlEnds, id]
           );
 
+          await syncRoomActivationByPlan(id, "trial");
+
           // WhatsApp — trial activated
           const activatedTemplate = process.env.GUPSHUP_TRIAL_ACTIVATED_TEMPLATE || "";
           if (activatedTemplate) {
@@ -496,8 +499,10 @@ async function repairBilling() {
                wa_reminders_sent = '',
                updated_at = NOW()
              WHERE id = ?`,
-            [activePlan, activePlan === "business" ? activeInterval : "monthly", mysqlPaid, mysqlEnds, id]
+            [activePlan, activeInterval, mysqlPaid, mysqlEnds, id]
           );
+
+          await syncRoomActivationByPlan(id, activePlan);
 
           // WhatsApp — business activated or renewal thanks
           if (activePlan === "business") {
