@@ -522,6 +522,49 @@ export const getYesterdaySummary = async (req, res) => {
 };
 
 /* =========================================================
+   MONTHLY BRIEF — lightweight home-dashboard summary
+   (trailing 30 days: total visitors, most-visited host, top purposes)
+========================================================= */
+export const getMonthlyBrief = async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+
+    const [[{ total }]] = await db.execute(
+      `SELECT COUNT(*) AS total FROM visitors
+       WHERE company_id = ? AND check_in >= NOW() - INTERVAL 30 DAY`,
+      [companyId]
+    );
+
+    const [topHosts] = await db.execute(
+      `SELECT person_to_meet AS name, COUNT(*) AS count FROM visitors
+       WHERE company_id = ? AND check_in >= NOW() - INTERVAL 30 DAY
+         AND person_to_meet IS NOT NULL AND person_to_meet != ''
+       GROUP BY person_to_meet ORDER BY count DESC LIMIT 1`,
+      [companyId]
+    );
+
+    const [topPurposes] = await db.execute(
+      `SELECT purpose AS name, COUNT(*) AS count FROM visitors
+       WHERE company_id = ? AND check_in >= NOW() - INTERVAL 30 DAY
+         AND purpose IS NOT NULL AND purpose != ''
+       GROUP BY purpose ORDER BY count DESC LIMIT 3`,
+      [companyId]
+    );
+
+    return res.json({
+      success: true,
+      totalVisitors: Number(total),
+      topHost: topHosts[0] || null,
+      topPurposes,
+    });
+  } catch (error) {
+    console.error("MONTHLY BRIEF ERROR:", error);
+    return res.status(500).json({ success: false, message: "Failed to fetch monthly brief" });
+  }
+};
+
+/* =========================================================
    GET RETURNING VISITOR PROFILE
    GET /api/visitors/returning?phone=91XXXXXXXXXX
    Auth: JWT (company-scoped)

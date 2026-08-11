@@ -271,6 +271,72 @@ function InsightPanel({ items }) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   MONTHLY BRIEF — Business plan's home screen analytics panel
+   (trailing 30 days: total visitors, most-visited host, top purposes)
+   ═══════════════════════════════════════════════════════════════════════════ */
+function MonthlyBriefPanel({ brief }) {
+  const hasData = brief && (brief.totalVisitors > 0 || brief.topHost || (brief.topPurposes?.length > 0));
+  const maxPurposeCount = brief?.topPurposes?.[0]?.count || 1;
+
+  return (
+    <div className={styles.briefPanel}>
+      <div className={styles.briefPanelHeader}>
+        <TrendingUp size={16}/>
+        <h5>This Month at a Glance</h5>
+      </div>
+
+      {!brief ? (
+        <div className={styles.briefSkeleton}>
+          <div className={styles.briefSkeletonBar}/>
+          <div className={styles.briefSkeletonBar}/>
+          <div className={styles.briefSkeletonBar}/>
+        </div>
+      ) : !hasData ? (
+        <p className={styles.briefEmpty}>No visitor activity in the last 30 days yet.</p>
+      ) : (
+        <>
+          <div className={styles.briefStatRow}>
+            <div className={styles.briefStatCard}>
+              <span className={styles.briefStatValue}>{brief.totalVisitors}</span>
+              <span className={styles.briefStatLabel}>Total Visitors</span>
+            </div>
+            {brief.topHost && (
+              <div className={styles.briefStatCard}>
+                <span className={styles.briefStatValue}>{brief.topHost.count}</span>
+                <span className={styles.briefStatLabel}>Most Visited — {brief.topHost.name}</span>
+              </div>
+            )}
+          </div>
+
+          {brief.topPurposes?.length > 0 && (
+            <div className={styles.briefPurposes}>
+              <p className={styles.briefPurposesLabel}>Top Purposes</p>
+              <ul className={styles.briefPurposeList}>
+                {brief.topPurposes.map((p) => (
+                  <li key={p.name} className={styles.briefPurposeItem}>
+                    <div className={styles.briefPurposeTop}>
+                      <span>{p.name}</span>
+                      <span>{p.count}</span>
+                    </div>
+                    <div className={styles.briefPurposeBarTrack}>
+                      <div
+                        className={styles.briefPurposeBarFill}
+                        style={{ width: `${Math.round((p.count / maxPurposeCount) * 100)}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </>
+      )}
+      <p className={styles.briefFootnote}>Last 30 days</p>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    EXPIRY / RENEWAL MODAL — plan-specific copy, features & pricing
    ═══════════════════════════════════════════════════════════════════════════ */
 const PLAN_RENEWAL_COPY = {
@@ -284,7 +350,7 @@ const PLAN_RENEWAL_COPY = {
     priceLabel: "₹500",
     priceNote: "+ GST",
     pricePeriod: "/ month",
-    features: ["Unlimited visitors", "1,000 conference bookings", "6 conference rooms", "Priority support"],
+    features: ["Unlimited visitors", "Custom registration fields", "Priority support"],
   },
   business: {
     label: "Business",
@@ -412,6 +478,7 @@ export default function Home() {
   const [loadingSub,  setLoadingSub]  = useState(false);
   const [subError,    setSubError]    = useState("");
   const [insightItems, setInsightItems] = useState([]);
+  const [monthlyBrief, setMonthlyBrief] = useState(null);
 
   const [upgradingPlan, setUpgradingPlan] = useState("");
   const [renewalModalDismissed, setRenewalModalDismissed] = useState(false);
@@ -441,6 +508,17 @@ export default function Home() {
         if (data.bookings > 0) items.push({ type: "booking", message: BOOKING_MSGS[day](data.bookings) });
         if (items.length > 0) setInsightItems(items);
       })
+      .catch(() => {});
+
+    // Business plan's home screen shows a "this month" brief next to the
+    // single Visitor Management card — fetched unconditionally here since
+    // the current plan isn't known until subscription details load, and
+    // it's simply hidden for other plans.
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/monthly-brief`, {
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => { if (data.success) setMonthlyBrief(data); })
       .catch(() => {});
   }, [router]);
 
@@ -885,50 +963,66 @@ export default function Home() {
                     icon: <Users size={32}/>,
                     path: "/visitor/dashboard",
                   },
-                  ...(currentPlan === "enterprise" ? [{
+                  ...(["trial", "enterprise"].includes(currentPlan) ? [{
                     key: "conference",
                     title: "Conference Booking",
-                    description: "Schedule meetings & manage rooms",
+                    description: currentPlan === "trial"
+                      ? "Schedule meetings & manage rooms — up to 2 rooms, 100 bookings"
+                      : "Schedule meetings & manage rooms",
                     features: ["Room Booking", "Scheduling", "Availability"],
                     icon: <DoorOpen size={32}/>,
                     path: "/conference/dashboard",
                   }] : []),
                 ];
                 const isSingle = modules.length === 1;
+                const showBrief = isSingle && currentPlan === "business" && !needsRenewal;
+
+                const renderCard = (m) => (
+                  <div
+                    key={m.key}
+                    className={`${styles.moduleCard} ${isSingle ? styles.moduleCardFeatured : ""} ${needsRenewal ? styles.moduleCardLocked : ""}`}
+                    onClick={() => handleModuleClick(m.path)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={needsRenewal ? `${m.title} — locked, renew to unlock` : m.title}
+                    onKeyDown={(e) => e.key === "Enter" && handleModuleClick(m.path)}
+                  >
+                    <div className={styles.cardIcon}>{m.icon}</div>
+                    <div className={styles.cardContent}>
+                      <h3 className={styles.cardTitle}>{m.title}</h3>
+                      <p className={styles.cardDescription}>
+                        {needsRenewal ? "Renew your plan to unlock this module" : m.description}
+                      </p>
+                      {isSingle && !needsRenewal && (
+                        <div className={styles.cardFeatureChips}>
+                          {m.features.map((f) => <span key={f} className={styles.featureChip}>{f}</span>)}
+                        </div>
+                      )}
+                    </div>
+                    {needsRenewal ? (
+                      <span className={styles.cardLockBadge}><Lock size={16}/></span>
+                    ) : isSingle ? (
+                      <span className={styles.cardCtaBtn}>Open <span className={styles.cardCtaArrow}>→</span></span>
+                    ) : (
+                      <span className={styles.cardArrow}>→</span>
+                    )}
+                  </div>
+                );
+
+                if (showBrief) {
+                  return (
+                    <div className={styles.businessHomeLayout}>
+                      <div className={styles.businessModuleCol}>{renderCard(modules[0])}</div>
+                      <div className={styles.businessBriefCol}>
+                        <MonthlyBriefPanel brief={monthlyBrief} />
+                      </div>
+                    </div>
+                  );
+                }
 
                 return (
                   <div className={`${styles.cardGrid} ${isSingle ? styles.cardGridSingle : ""}`}>
-                    {modules.map((m) => (
-                      <div
-                        key={m.key}
-                        className={`${styles.moduleCard} ${isSingle ? styles.moduleCardFeatured : ""} ${needsRenewal ? styles.moduleCardLocked : ""}`}
-                        onClick={() => handleModuleClick(m.path)}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={needsRenewal ? `${m.title} — locked, renew to unlock` : m.title}
-                        onKeyDown={(e) => e.key === "Enter" && handleModuleClick(m.path)}
-                      >
-                        <div className={styles.cardIcon}>{m.icon}</div>
-                        <div className={styles.cardContent}>
-                          <h3 className={styles.cardTitle}>{m.title}</h3>
-                          <p className={styles.cardDescription}>
-                            {needsRenewal ? "Renew your plan to unlock this module" : m.description}
-                          </p>
-                          {isSingle && !needsRenewal && (
-                            <div className={styles.cardFeatureChips}>
-                              {m.features.map((f) => <span key={f} className={styles.featureChip}>{f}</span>)}
-                            </div>
-                          )}
-                        </div>
-                        {needsRenewal ? (
-                          <span className={styles.cardLockBadge}><Lock size={16}/></span>
-                        ) : isSingle ? (
-                          <span className={styles.cardCtaBtn}>Open <span className={styles.cardCtaArrow}>→</span></span>
-                        ) : (
-                          <span className={styles.cardArrow}>→</span>
-                        )}
-                      </div>
-                    ))}
+                    {modules.map(renderCard)}
                   </div>
                 );
               })()}

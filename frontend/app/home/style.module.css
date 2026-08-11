@@ -968,6 +968,85 @@
 .moduleCard.moduleCardFeatured:hover .cardCtaArrow { transform: translateX(4px); }
 
 /* ═══════════════════════════════════════════════════════════════════════════
+   BUSINESS PLAN HOME LAYOUT — module card (left) + monthly brief (right)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.businessHomeLayout {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  gap: clamp(1.25rem,3vw,2rem);
+  padding: clamp(1.75rem,5vw,3.5rem) clamp(1.25rem,5vw,3.5rem);
+  max-width: 1100px; margin: 0 auto; width: 100%;
+  align-items: stretch;
+}
+.businessModuleCol, .businessBriefCol { display: flex; min-width: 0; }
+.businessModuleCol .moduleCardFeatured { flex: 1; }
+
+.briefPanel {
+  flex: 1;
+  background: linear-gradient(145deg, #ffffff 0%, #f8f5ff 100%);
+  border: 1.5px solid var(--border-med); border-radius: var(--r-2xl);
+  padding: clamp(1.5rem,4vw,2rem);
+  display: flex; flex-direction: column; gap: clamp(1rem,2.5vh,1.4rem);
+  box-shadow: var(--shadow-sm);
+  animation: slideUp 0.4s ease 0.1s both;
+}
+
+.briefPanelHeader { display: flex; align-items: center; gap: 0.5rem; }
+.briefPanelHeader svg { color: var(--purple-600); flex-shrink: 0; }
+.briefPanelHeader h5 {
+  font-size: clamp(0.85rem,2vw,0.95rem); font-weight: 800; color: var(--purple-900);
+  margin: 0; letter-spacing: -0.01em;
+}
+
+.briefStatRow { display: flex; gap: clamp(0.75rem,2vw,1rem); flex-wrap: wrap; }
+.briefStatCard {
+  flex: 1; min-width: 110px;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid var(--border-light); border-radius: var(--r-lg);
+  padding: clamp(0.75rem,2vh,1rem);
+  display: flex; flex-direction: column; gap: 0.25rem;
+}
+.briefStatValue {
+  font-size: clamp(1.4rem,3.5vw,1.75rem); font-weight: 900; color: var(--purple-900);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+}
+.briefStatLabel { font-size: clamp(0.68rem,1.6vw,0.76rem); color: var(--purple-700); font-weight: 600; opacity: 0.85; }
+
+.briefPurposesLabel {
+  font-size: clamp(0.68rem,1.6vw,0.76rem); font-weight: 800; color: var(--purple-700);
+  text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.6rem;
+}
+.briefPurposeList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.briefPurposeItem { display: flex; flex-direction: column; gap: 0.3rem; }
+.briefPurposeTop {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-size: clamp(0.75rem,1.8vw,0.85rem); color: var(--purple-900); font-weight: 600;
+}
+.briefPurposeTop span:last-child { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--purple-600); }
+.briefPurposeBarTrack {
+  height: 6px; border-radius: var(--r-full); background: var(--purple-100); overflow: hidden;
+}
+.briefPurposeBarFill {
+  height: 100%; border-radius: var(--r-full); background: var(--grad-brand);
+  transition: width var(--t-slow);
+}
+
+.briefEmpty { font-size: 0.82rem; color: var(--purple-700); opacity: 0.75; margin: 0; text-align: center; padding: 1rem 0; }
+.briefFootnote { font-size: 0.68rem; color: var(--purple-400); margin: 0; text-align: right; opacity: 0.8; }
+
+.briefSkeleton { display: flex; flex-direction: column; gap: 0.6rem; }
+.briefSkeletonBar {
+  height: 44px; border-radius: var(--r-lg);
+  background: linear-gradient(90deg, var(--purple-100) 25%, #f3effc 50%, var(--purple-100) 75%);
+  background-size: 200% 100%; animation: briefShimmer 1.4s ease-in-out infinite;
+}
+@keyframes briefShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (max-width: 860px) {
+  .businessHomeLayout { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
    INSIGHT NOTIFICATION PANEL — left side, rotating single card
    ═══════════════════════════════════════════════════════════════════════════ */
 @keyframes insightFadeIn {

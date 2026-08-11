@@ -17,13 +17,15 @@ export const PLAN_PRICING = {
   enterprise: { monthly: 700, annual: 7000 },
 };
 
-// Business is visitor-management only — no conference booking at all. Trial
-// previews the Business tier, so it gets the same restriction. Enterprise is
-// the only plan that bundles conference room booking.
+// Business is visitor-management only — no conference booking at all.
+// Trial gets a capped taste of conference booking (2 rooms / 100 bookings,
+// lifetime total for the 15-day trial window — see getBookingUsage() in
+// conference.routes.js) as an incentive to upgrade to Enterprise for
+// unlimited access. Enterprise is the only plan with unlimited booking.
 export const PLAN_FEATURES = {
-  trial:      { rooms: 0,        bookings: 0,        conference: false },
-  business:   { rooms: 0,        bookings: 0,        conference: false },
-  enterprise: { rooms: Infinity, bookings: Infinity,  conference: true },
+  trial:      { rooms: 2,        bookings: 100,       conference: true  },
+  business:   { rooms: 0,        bookings: 0,         conference: false },
+  enterprise: { rooms: Infinity, bookings: Infinity,  conference: true  },
 };
 
 /**

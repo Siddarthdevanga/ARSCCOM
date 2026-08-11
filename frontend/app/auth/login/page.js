@@ -245,7 +245,7 @@ export default function LoginPage() {
                   <div className={styles.plansGrid}>
                     <div className={styles.planCard}>
                       <div className={styles.planHeader}><h3>TRIAL</h3><div className={styles.planPrice}>₹49<span>/15 days</span></div></div>
-                      <ul className={styles.planFeatures}><li>100 Visitor Bookings</li><li>Digital Visitor Passes</li><li>Email Support</li></ul>
+                      <ul className={styles.planFeatures}><li>100 Visitor Bookings</li><li>100 Conference Bookings</li><li>2 Conference Rooms</li><li>Email Support</li></ul>
                       <Link href="/auth/register"><button className={styles.planBtn}>Start Trial</button></Link>
                     </div>
                     <div className={`${styles.planCard} ${styles.popularPlan}`}>

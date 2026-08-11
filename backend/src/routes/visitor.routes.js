@@ -11,6 +11,7 @@ import {
   updateVisitStatus,
   getYesterdaySummary,
   getReturningVisitor,
+  getMonthlyBrief,
 } from "../controllers/visitor.controller.js";
 
 const router = express.Router();
@@ -33,6 +34,9 @@ router.get("/dashboard", authenticate, getVisitorDashboard);
 
 /* ── YESTERDAY SUMMARY ── */
 router.get("/yesterday-summary", authenticate, getYesterdaySummary);
+
+/* ── MONTHLY BRIEF (home dashboard analytics panel) ── */
+router.get("/monthly-brief", authenticate, getMonthlyBrief);
 
 /* ── RETURNING VISITOR PROFILE LOOKUP ── */
 router.get("/returning", authenticate, getReturningVisitor);
