@@ -158,12 +158,32 @@ const BODY_HTML = `
 
 
 </section>
-<section class="pricingSection gridBg" id="Plans">
-  <span class="pricingGlow g1"></span>
-  <span class="pricingGlow g2"></span>
-  <h2 class="pricingTitle">Find the <span>Right Plan</span>.</h2>
-  <p class="pricingSubtitle">Choose the perfect plan for your organization. All plans include core features with scalable options.</p>
-  <div class="pricingCards" id="pricing"></div>
+<section class="trialSection gridBg" id="Plans">
+  <div class="trialSplit">
+    <div class="trialLeft">
+      <h2 class="trialHeading">Try <span>Hai Visitor</span> in your organization for 15 days at ₹49.</h2>
+      <p class="trialSub">Set up the QR check-in workflow, register live visitors, and see how organised digital visitor management fits into your day-to-day operations.</p>
+      <div class="trialFeatureRow">
+        <span class="trialFeatureIcon">15</span>
+        <span>Create your account, add users, hosts and the QR check-in workflow.</span>
+      </div>
+      <div class="trialFeatureRow">
+        <span class="trialFeatureIcon">&#8734;</span>
+        <span>Continues on the Business plan after the paid trial; terms apply.</span>
+      </div>
+    </div>
+    <div class="trialCard">
+      <span class="trialBurst">JUST ₹49</span>
+      <span class="trialLabel">15-DAY HAI VISITOR TRIAL</span>
+      <div class="trialPrice">₹49</div>
+      <span class="trialPriceSuffix">one time</span>
+      <ul class="trialFeatureList">
+        <li><span class="checkIcon" style="--icon-bg:#7c3aed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>100 Visitor Bookings (15-day trial period)</li>
+      </ul>
+      <a class="trialCta" href="/auth/register">START YOUR 15-DAY TRIAL &rarr;</a>
+      <div class="trialMicro">Paid trial &middot; No refund &middot; Product terms apply</div>
+    </div>
+  </div>
 </section>
 <section class="testimonialsSection gridBg" id="testimonials-section">
   <div class="testimonialsCard">
@@ -396,37 +416,8 @@ export default function HomePage() {
     footerIndustriesEl.appendChild(li);
   });
 
-  const rocketSvg = (color) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5c2.8 1.4 4.8 4.2 4.8 8.5 0 2.5-.8 4.8-1.8 6.5H9c-1-1.7-1.8-4-1.8-6.5 0-4.3 2-7.1 4.8-8.5z"/><circle cx="12" cy="10" r="1.8"/><path d="M9 17.5l-2.5 3.5"/><path d="M15 17.5l2.5 3.5"/><path d="M7.2 13c-1.5.3-2.7 1.3-3.2 3 1.7.4 3.2 0 4.3-1"/><path d="M16.8 13c1.5.3 2.7 1.3 3.2 3-1.7.4-3.2 0-4.3-1"/></svg>`;
-  const clockPlanSvg = (color) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>`;
-  const buildingPlanSvg = (color) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="18"/><rect x="13" y="8" width="8" height="13"/><line x1="7" y1="8" x2="7" y2="8.01"/><line x1="7" y1="12" x2="7" y2="12.01"/><line x1="17" y1="12" x2="17" y2="12.01"/><line x1="17" y1="16" x2="17" y2="16.01"/></svg>`;
-  const checkIconSvg = (color) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
-  const plans = [
-    { name:'Trial', tag:'15-Day Trial', price:'₹49', period:'15 days', duration:'Perfect for testing the platform', popular:false, icon:clockPlanSvg, accent:'#ff6a00',
-      features:['Valid for 15 days','100 Visitor Bookings','100 Conference Bookings','2 Conference Rooms'], cta:'Get Started' },
-    { name:'Business', tag:'Most Popular', price:'₹500', period:'month', duration:'Ideal for growing organizations', popular:true, icon:rocketSvg, accent:'#7c3aed',
-      features:['Unlimited Visitors','1000 Conference Bookings/month','Up to 6 Conference Rooms','Advanced Analytics & Reports'], cta:'Get Started' },
-    { name:'Enterprise', tag:'For Large Teams', price:'Custom', period:'', duration:'For large organizations', popular:false, icon:buildingPlanSvg, accent:'#ec4899',
-      features:['Unlimited Visitors','Unlimited Conference Bookings','Unlimited Conference Rooms','Customised Support'], cta:'Start 15-Day Trial' },
-  ];
-  const featureAccents = ['#7c3aed','#ff6a00','#ec4899','#7c3aed'];
-  const pricingEl = document.getElementById('pricing');
-  pricingEl.innerHTML = '';
-  plans.forEach(p => {
-    const el = document.createElement('div');
-    el.className = `pricingCard${p.popular ? ' featured' : ''}`;
-    el.style.setProperty('--plan-accent', p.accent);
-    el.innerHTML = `
-      ${p.price === '₹49' ? '<span class="burst">JUST ₹49</span>' : ''}
-      <div class="planTag"><span class="planTagIcon" style="color:${p.accent}">${p.icon('currentColor')}</span>${p.tag}</div>
-      <h3 class="planName">${p.name}</h3>
-      <div class="planPrice">${p.price}${p.period ? `<span> / ${p.period}</span>` : ''}</div>
-      <ul class="planFeatures">${p.features.map((f,i) => `<li><span class="checkIcon" style="--icon-bg:${featureAccents[i % featureAccents.length]}">${checkIconSvg('#fff')}</span>${f}</li>`).join('')}</ul>
-      <a class="planCta" href="/auth/register">${p.cta}</a>
-      <div class="planMicro">${p.price === '₹49' ? 'Paid trial · No refund · Product terms apply' : 'Terms apply'}</div>`;
-    pricingEl.appendChild(el);
-  });
-
-
+  // Pricing section is now static markup (single trial card) — no
+  // dynamic generation needed.
 
 
   const faqs = [
