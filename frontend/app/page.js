@@ -149,7 +149,7 @@ const BODY_HTML = `
       <div class="flipCard">
         <div class="flipInner">
           <div class="flipFace"><img src="/pic (1).jpeg" alt="Hai Visitor feature screenshot 1" loading="lazy"></div>
-          <div class="flipFace flipBack"><img src="/pic (2).jpeg" alt="Hai Visitor feature screenshot 2" loading="lazy"></div>
+          <div class="flipFace flipBack"><img src="/pic (2).png" alt="Hai Visitor feature screenshot 2" loading="lazy"></div>
         </div>
       </div>
       <img src="/pic (3).jpeg" alt="Hai Visitor feature screenshot 3" loading="lazy">
