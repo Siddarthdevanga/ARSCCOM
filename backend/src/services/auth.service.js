@@ -6,6 +6,7 @@ import { db } from "../config/db.js";
 import { uploadToS3 } from "./s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
 import { autoCheckoutStaleVisitors } from "./visitor.service.js";
+import { PLAN_FEATURES } from "../constants/pricing.js";
 
 /* ======================================================
    CONSTANTS & CONFIGURATION
@@ -117,7 +118,11 @@ export const registerCompany = async (data, file) => {
   const companyName = data.companyName?.trim();
   const email = normalizeEmail(data.email);
   const phone = data.phone || null;
-  const conferenceRooms = Number(data.conferenceRooms || 0);
+  // Every new signup starts on the trial plan — conference room count is
+  // no longer user-chosen at registration, it's provisioned to match the
+  // trial plan's own room cap (same number PLAN_FEATURES/syncRoomActivationByPlan
+  // would grant a trial company anywhere else in the app).
+  const conferenceRooms = PLAN_FEATURES.trial.rooms;
   const password = data.password;
   const whatsappUrl = validateWhatsAppUrl(data.whatsappUrl); // Optional field
 

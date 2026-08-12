@@ -59,14 +59,6 @@ function confirmPasswordError(pw, cpw) {
   return "";
 }
 
-function conferenceRoomsError(v) {
-  if (v === "" || v === null || v === undefined) return "Number of rooms is required";
-  const n = Number(v);
-  if (!Number.isFinite(n) || !Number.isInteger(n)) return "Must be a whole number";
-  if (n < 1 || n > 100) return "Must be between 1 and 100";
-  return "";
-}
-
 function passwordStrength(v) {
   if (!v) return 0;
   let score = 0;
@@ -97,7 +89,6 @@ export default function RegisterPage() {
     companyName: "",
     email: "",
     phone: "",
-    conferenceRooms: "",
     whatsappUrl: "",
     password: "",
     confirmPassword: "",
@@ -119,7 +110,6 @@ export default function RegisterPage() {
     phone:           phoneError(formData.phone),
     password:        passwordError(formData.password),
     confirmPassword: confirmPasswordError(formData.password, formData.confirmPassword),
-    conferenceRooms: conferenceRoomsError(formData.conferenceRooms),
   };
 
   const pwStrength = passwordStrength(formData.password);
@@ -148,7 +138,7 @@ export default function RegisterPage() {
   };
 
   const validateForm = () => {
-    const allTouched = { companyName: true, email: true, phone: true, conferenceRooms: true, password: true, confirmPassword: true };
+    const allTouched = { companyName: true, email: true, phone: true, password: true, confirmPassword: true };
     setTouched(allTouched);
 
     const firstErr = Object.values(fe).find(Boolean);
@@ -169,12 +159,11 @@ export default function RegisterPage() {
   const handleRegister = async () => {
     setError(""); setSuccess("");
     if (!validateForm()) return;
-    const { companyName, email, phone, conferenceRooms, whatsappUrl, password } = formData;
+    const { companyName, email, phone, whatsappUrl, password } = formData;
     const payload = new FormData();
     payload.append("companyName", companyName.trim());
     payload.append("email", email.trim().toLowerCase());
     payload.append("phone", "91" + phone.trim());
-    payload.append("conferenceRooms", Number(conferenceRooms));
     payload.append("password", password);
     payload.append("logo", logo);
     if (whatsappUrl?.trim()) payload.append("whatsappUrl", whatsappUrl.trim());
@@ -340,29 +329,6 @@ export default function RegisterPage() {
                     disabled={loading}
                     autoComplete="url"
                   />
-                </div>
-
-                {/* Conference Rooms */}
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel} htmlFor="conferenceRooms">Conference Rooms *</label>
-                  <input
-                    id="conferenceRooms"
-                    type="number"
-                    className={styles.input}
-                    style={{ borderColor: touched.conferenceRooms && fe.conferenceRooms ? "#dc2626" : undefined }}
-                    placeholder="Number of rooms"
-                    value={formData.conferenceRooms}
-                    min="1"
-                    max="100"
-                    step="1"
-                    onChange={(e) => {
-                      const v = e.target.value.replace(/[^0-9]/g, "");
-                      handleInputChange("conferenceRooms", v);
-                    }}
-                    onBlur={() => handleBlur("conferenceRooms")}
-                    disabled={loading}
-                  />
-                  <InlineErr msg={fe.conferenceRooms} show={touched.conferenceRooms} />
                 </div>
 
               </div>
