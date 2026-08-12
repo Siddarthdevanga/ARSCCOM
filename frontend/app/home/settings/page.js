@@ -52,6 +52,8 @@ export default function SettingsPage() {
   const [savingCompanyName, setSavingCompanyName] = useState(false);
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
   const [savingCodePrefix, setSavingCodePrefix] = useState(false);
+  const [showCodePrefixConfirm, setShowCodePrefixConfirm] = useState(false);
+  const [pendingCodePrefix, setPendingCodePrefix] = useState("");
   const [savingLogo, setSavingLogo] = useState(false);
   const [savingUserName, setSavingUserName] = useState(false);
   const [savingUserPhone, setSavingUserPhone] = useState(false);
@@ -148,13 +150,22 @@ export default function SettingsPage() {
   /* ── Visitor Code Prefix ── */
   const startEditCodePrefix = () => { setTempCodePrefix(codePrefix); setEditingCodePrefix(true); };
   const cancelEditCodePrefix = () => { setEditingCodePrefix(false); setTempCodePrefix(""); };
-  const saveCodePrefix = async () => {
+
+  // Validates and stages the change, then opens the in-app confirm modal —
+  // deliberately not window.confirm(), which renders as a browser-native
+  // dialog prefixed with the page's hostname rather than something styled
+  // as part of the app itself.
+  const requestSaveCodePrefix = () => {
     const cleaned = tempCodePrefix.trim().toUpperCase();
     if (!/^[A-Z]{3}$/.test(cleaned)) { showError("Visitor code prefix must be exactly 3 letters (A-Z)"); return; }
-    if (!window.confirm(
-      `Change visitor code prefix from "${codePrefix || "CMP"}" to "${cleaned}"?\n\n` +
-      "This only affects new visitor check-ins going forward — passes already issued keep their old prefix."
-    )) return;
+    setPendingCodePrefix(cleaned);
+    setShowCodePrefixConfirm(true);
+  };
+
+  const cancelSaveCodePrefix = () => { setShowCodePrefixConfirm(false); setPendingCodePrefix(""); };
+
+  const confirmSaveCodePrefix = async () => {
+    const cleaned = pendingCodePrefix;
     try {
       setSavingCodePrefix(true);
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
@@ -172,7 +183,7 @@ export default function SettingsPage() {
       setCompany(sc);
       showSuccess("Visitor code prefix updated successfully");
     } catch (err) { showError(err?.message || "Failed to update visitor code prefix"); }
-    finally { setSavingCodePrefix(false); }
+    finally { setSavingCodePrefix(false); setShowCodePrefixConfirm(false); setPendingCodePrefix(""); }
   };
 
   /* ── User Name ── */
@@ -410,7 +421,7 @@ export default function SettingsPage() {
                 setTemp={(v) => setTempCodePrefix(v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))}
                 startEdit={startEditCodePrefix}
                 cancelEditFn={cancelEditCodePrefix}
-                saveFn={saveCodePrefix}
+                saveFn={requestSaveCodePrefix}
                 saving={savingCodePrefix}
                 placeholder="e.g. ZOD"
               />
@@ -564,6 +575,27 @@ export default function SettingsPage() {
           </div>
         </main>
       </div>
+
+      {/* ===== VISITOR CODE PREFIX CONFIRM MODAL ===== */}
+      {showCodePrefixConfirm && (
+        <div className={styles.confirmOverlay} onClick={cancelSaveCodePrefix} role="presentation">
+          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <h3 className={styles.confirmTitle}>Change visitor code prefix?</h3>
+            <p className={styles.confirmText}>
+              Change from <strong>{codePrefix || "CMP"}</strong> to <strong>{pendingCodePrefix}</strong>.
+              This only affects new visitor check-ins going forward — passes already issued keep their old prefix.
+            </p>
+            <div className={styles.confirmActions}>
+              <button className={styles.confirmCancelBtn} onClick={cancelSaveCodePrefix} disabled={savingCodePrefix}>
+                Cancel
+              </button>
+              <button className={styles.confirmSaveBtn} onClick={confirmSaveCodePrefix} disabled={savingCodePrefix}>
+                {savingCodePrefix ? <><Loader2 size={13} className={styles.spinning} /> Saving…</> : "Confirm Change"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
