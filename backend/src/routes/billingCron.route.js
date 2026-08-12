@@ -128,7 +128,7 @@ const emailTemplates = {
               </div>
               <div style="text-align: center;">
                 <p style="margin-bottom: 20px; font-size: 16px;">Ready to get started?</p>
-                <a href="https://www.promeet.zodopt.com" class="cta-button">Access Dashboard →</a>
+                <a href="${process.env.FRONTEND_URL || "https://www.promeet.zodopt.com"}" class="cta-button">Access Dashboard →</a>
               </div>
               <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
                 If you have any questions, our support team is here to help!
@@ -260,7 +260,7 @@ const emailTemplates = {
             </div>
             <div style="text-align: center;">
               <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600;">Renew your subscription today:</p>
-              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
+              <a href="${process.env.FRONTEND_URL || "https://www.promeet.zodopt.com"}" class="cta-button">Renew Subscription →</a>
             </div>
             <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
               Questions? Contact our support team at <a href="mailto:admin@haivisitor.zodopt.com" style="color: #ff9800;">admin@haivisitor.zodopt.com</a>
@@ -331,7 +331,7 @@ const emailTemplates = {
               <p style="margin-bottom: 20px; font-size: 16px; font-weight: 600; color: #ff1744;">
                 🔄 Renew now to restore full access!
               </p>
-              <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
+              <a href="${process.env.FRONTEND_URL || "https://www.promeet.zodopt.com"}" class="cta-button">Renew Subscription →</a>
             </div>
             <p style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #666; text-align: center;">
               <strong>Need help?</strong><br/>

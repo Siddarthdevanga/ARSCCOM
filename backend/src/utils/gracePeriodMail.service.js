@@ -316,7 +316,7 @@ export const sendGracePeriodEmail = async ({
           ${message}
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.NEXT_PUBLIC_FRONTEND_URL || "https://www.promeet.zodopt.com"}/auth/subscription"
+            <a href="${process.env.FRONTEND_URL || "https://www.promeet.zodopt.com"}/auth/subscription"
                style="display: inline-block; background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
                       color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px;
                       font-weight: bold; font-size: 16px; box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);">

@@ -1752,8 +1752,7 @@ router.get("/public-booking-info", async (req, res) => {
     const slug = await getOrCreatePublicSlug(companyId);
 
     const baseUrl =
-      process.env.PUBLIC_BASE_URL ||
-      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      process.env.FRONTEND_URL ||
       "https://www.promeet.zodopt.com";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
@@ -1823,8 +1822,7 @@ router.get("/qr-code/download", async (req, res) => {
     }
 
     const baseUrl =
-      process.env.PUBLIC_BASE_URL ||
-      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      process.env.FRONTEND_URL ||
       "https://www.promeet.zodopt.com";
     const publicUrl = `${baseUrl}/book/${slug}`;
 

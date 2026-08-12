@@ -599,7 +599,7 @@ router.get("/public-booking-info", async (req, res) => {
     await validateCompanySubscription(companyId);
 
     const slug      = await getOrCreatePublicSlug(companyId);
-    const baseUrl   = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+    const baseUrl   = process.env.FRONTEND_URL || "http://localhost:3000";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
     const qrCodeDataUrl = await QRCode.toDataURL(publicUrl, {
@@ -633,7 +633,7 @@ router.get("/qr-code/download", async (req, res) => {
       [companyId]
     );
 
-    const baseUrl   = process.env.PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3000";
+    const baseUrl   = process.env.FRONTEND_URL || "http://localhost:3000";
     const publicUrl = `${baseUrl}/book/${slug}`;
 
     const qrCodeBuffer = await QRCode.toBuffer(publicUrl, {
