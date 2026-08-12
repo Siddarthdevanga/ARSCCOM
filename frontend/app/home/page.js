@@ -1090,12 +1090,6 @@ export default function Home() {
                         <span className={styles.detailValue}>{formatDate(subData.EXPIRES_ON)}</span>
                       </div>
                     )}
-                    {subData.LAST_PAID_ON && (
-                      <div className={styles.detailRow}>
-                        <span className={styles.detailLabel}>Last Payment</span>
-                        <span className={styles.detailValue}>{formatDate(subData.LAST_PAID_ON)}</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Expired → upgrade/renew section comes first (priority action),
