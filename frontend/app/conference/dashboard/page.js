@@ -107,7 +107,7 @@ export default function ConferenceDashboard() {
   };
 
   const handleShareURL = async () => {
-    const url = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company.slug}`;
+    const url = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/book/${company.slug}`;
     try {
       const result = await shareURL(url, `${company?.name} - Conference Room Booking`);
       if (result.success) {
@@ -138,6 +138,10 @@ export default function ConferenceDashboard() {
         remaining: bookingsRemaining,
         period: planRes?.bookingPeriod || "lifetime",
       });
+      // Loaded proactively (not just when the QR nav tab opens) so the
+      // always-visible Public URL bar shows the authoritative,
+      // backend-confirmed URL from the start instead of a client-side guess.
+      loadPublicBookingInfo();
     } catch (err) {
       const msg = err?.message || "";
       if (err?.code === 403 || /expired|inactive/i.test(msg)) {
@@ -315,7 +319,7 @@ export default function ConferenceDashboard() {
   const bookingPercentage = bookingPlan?.limit === Infinity ? 100 : Math.min(100, Math.round((bookingPlan?.used / bookingPlan?.limit) * 100));
   const roomPercentage = plan?.limit === "Unlimited" ? 100 : Math.min(100, Math.round((plan?.activeRooms / parseInt(plan?.limit)) * 100));
 
-  const publicURL = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_FRONTEND_URL}/book/${company?.slug}`;
+  const publicURL = publicBookingInfo?.publicUrl || `${process.env.NEXT_PUBLIC_SITE_URL}/book/${company?.slug}`;
 
   /* ================= NAV HELPERS ================= */
   const openNav = (tab) => {
@@ -640,8 +644,12 @@ export default function ConferenceDashboard() {
         {/* ===== PUBLIC URL ===== */}
         <div className={styles.publicUrlBar}>
           <span className={styles.publicLabel}>Public URL</span>
-          <a href={publicURL} target="_blank" className={styles.publicLink}>{publicURL}</a>
-          <button className={styles.shareUrlBtn} onClick={handleShareURL}>Share</button>
+          {loadingQR && !publicBookingInfo ? (
+            <span className={styles.publicLink}>Loading…</span>
+          ) : (
+            <a href={publicURL} target="_blank" rel="noopener noreferrer" className={styles.publicLink}>{publicURL}</a>
+          )}
+          <button className={styles.shareUrlBtn} onClick={handleShareURL} disabled={loadingQR && !publicBookingInfo}>Share</button>
         </div>
 
         {/* ===== ROOM SCHEDULE ===== */}
