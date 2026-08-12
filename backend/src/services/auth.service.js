@@ -196,12 +196,9 @@ export const registerCompany = async (data, file) => {
     // Send welcome email (non-blocking)
     sendWelcomeEmail(email, companyName).catch(console.error);
 
-    return { 
-      companyId, 
-      companyName, 
-      slug, 
-      logoUrl,
-      whatsappUrl 
+    return {
+      company: { id: companyId, name: companyName, slug, logoUrl, whatsappUrl },
+      user: { email },
     };
 
   } catch (err) {

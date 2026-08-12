@@ -314,23 +314,19 @@ export default function RegisterPage() {
 
               </div>
 
-              <div className={styles.row2}>
-
-                {/* WhatsApp URL */}
-                <div className={styles.field}>
-                  <label className={styles.fieldLabel} htmlFor="whatsappUrl">WhatsApp URL (Optional)</label>
-                  <input
-                    id="whatsappUrl"
-                    type="url"
-                    className={styles.input}
-                    placeholder="https://wa.me/1234567890"
-                    value={formData.whatsappUrl}
-                    onChange={(e) => handleInputChange("whatsappUrl", e.target.value)}
-                    disabled={loading}
-                    autoComplete="url"
-                  />
-                </div>
-
+              {/* WhatsApp URL */}
+              <div className={styles.field}>
+                <label className={styles.fieldLabel} htmlFor="whatsappUrl">WhatsApp URL (Optional)</label>
+                <input
+                  id="whatsappUrl"
+                  type="url"
+                  className={styles.input}
+                  placeholder="https://wa.me/1234567890"
+                  value={formData.whatsappUrl}
+                  onChange={(e) => handleInputChange("whatsappUrl", e.target.value)}
+                  disabled={loading}
+                  autoComplete="url"
+                />
               </div>
 
               {/* ── Logo Upload ── */}
