@@ -13,3 +13,5 @@ backend/dist/
 .env*
 **/.ipynb_checkpoints/
 .DS_Store
+.keys/
+*.pem
