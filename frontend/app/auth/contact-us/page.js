@@ -174,7 +174,7 @@ export default function ContactUs() {
                 </div>
                 <div>
                   <span className={styles.contactLabel}>Email</span>
-                  <strong className={styles.contactValue}>admin@promeet.zodopt.com</strong>
+                  <strong className={styles.contactValue}>admin@haivisitor.zodopt.com</strong>
                 </div>
               </div>
 

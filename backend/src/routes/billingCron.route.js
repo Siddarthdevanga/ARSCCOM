@@ -263,7 +263,7 @@ const emailTemplates = {
               <a href="https://www.promeet.zodopt.com" class="cta-button">Renew Subscription →</a>
             </div>
             <p style="margin-top: 30px; font-size: 14px; color: #666; text-align: center;">
-              Questions? Contact our support team at <a href="mailto:admin@promeet.zodopt.com" style="color: #ff9800;">admin@promeet.zodopt.com</a>
+              Questions? Contact our support team at <a href="mailto:admin@haivisitor.zodopt.com" style="color: #ff9800;">admin@haivisitor.zodopt.com</a>
             </p>
           </div>
           <div class="footer">
@@ -335,7 +335,7 @@ const emailTemplates = {
             </div>
             <p style="margin-top: 30px; padding: 20px; background: #f9f9f9; border-radius: 8px; font-size: 14px; color: #666; text-align: center;">
               <strong>Need help?</strong><br/>
-              Contact our support team at <a href="mailto:admin@promeet.zodopt.com" style="color: #ff1744; text-decoration: none;">admin@promeet.zodopt.com</a><br/>
+              Contact our support team at <a href="mailto:admin@haivisitor.zodopt.com" style="color: #ff1744; text-decoration: none;">admin@haivisitor.zodopt.com</a><br/>
               or call us at <strong>+91-8647878785</strong>
             </p>
           </div>

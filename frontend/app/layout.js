@@ -10,7 +10,7 @@ export const SITE = {
   tagline:     'Visitor Management Platform',
   domain:      process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com',
   phone:       '+91-8647878785',
-  email:       'admin@promeet.zodopt.com',
+  email:       'admin@haivisitor.zodopt.com',
   logo:        `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com'}/haivisitor.png`,
   ogImage:     `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com'}/og-image.png`,
   trialPrice:  '49',

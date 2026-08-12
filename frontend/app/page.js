@@ -236,7 +236,7 @@ const BODY_HTML = `
       <p>A platform designed to digitalize organization entry management, streamline conference bookings and ensure a professional visitor experience.</p>
       <div class="footerCta">
         <a class="btnPrimary" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">WhatsApp →</a>
-        <a class="btnSecondary" href="mailto:admin@promeet.zodopt.com">Email →</a>
+        <a class="btnSecondary" href="mailto:admin@haivisitor.zodopt.com">Email →</a>
       </div>
     </div>
     <div class="footerLinks">
@@ -330,7 +330,7 @@ export default function HomePage() {
   const emailSvg = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>';
   const whatsappSvg = '<svg viewBox="0 0 24 24" fill="#fff"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2m0 1.67c2.2 0 4.27.86 5.82 2.42a8.19 8.19 0 0 1 2.42 5.82c0 4.54-3.7 8.24-8.25 8.24a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 0 1-1.26-4.38c0-4.55 3.7-8.24 8.25-8.24m-4.53 4.7c-.15 0-.4.06-.61.29-.21.24-.8.78-.8 1.9 0 1.13.82 2.22.93 2.37.11.16 1.6 2.55 3.97 3.51 1.97.79 2.37.63 2.8.6.43-.04 1.38-.57 1.58-1.11.19-.55.19-1.02.13-1.11-.06-.1-.21-.15-.43-.27-.23-.11-1.38-.68-1.6-.76-.21-.08-.37-.11-.53.11-.15.23-.6.76-.74.92-.14.15-.27.17-.5.06-.23-.12-.97-.36-1.86-1.15-.68-.61-1.15-1.36-1.28-1.59-.14-.23-.02-.35.1-.47.1-.1.23-.27.34-.4.11-.14.15-.24.23-.4.08-.15.04-.29-.02-.4-.06-.12-.53-1.29-.74-1.76-.19-.46-.39-.4-.53-.4z"/></svg>';
   const gsCards = [
-    { cls:'emailCard', href:'mailto:admin@promeet.zodopt.com', icon:emailSvg, title:'Send us an email', desc:"We'll get back to you shortly." },
+    { cls:'emailCard', href:'mailto:admin@haivisitor.zodopt.com', icon:emailSvg, title:'Send us an email', desc:"We'll get back to you shortly." },
     { cls:'whatsappCard', href:'https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai Visitor+-+Visitor+Management+Platform', target:true, icon:whatsappSvg, title:'Chat on WhatsApp', desc:'Get instant answers from our team' },
   ];
   const gsRightEl = document.getElementById('gsRight');

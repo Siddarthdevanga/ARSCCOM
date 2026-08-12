@@ -271,7 +271,7 @@ export default function LoginPage() {
                 <div className={styles.dropdownSection}>
                   <h2>Get in Touch</h2>
                   <div className={styles.contactGrid}>
-                    <div className={styles.contactItem}><div className={styles.contactIcon}>📧</div><div><strong>Email</strong><p>admin@promeet.zodopt.com</p></div></div>
+                    <div className={styles.contactItem}><div className={styles.contactIcon}>📧</div><div><strong>Email</strong><p>admin@haivisitor.zodopt.com</p></div></div>
                     <div className={styles.contactItem}><div className={styles.contactIcon}>📞</div><div><strong>Phone</strong><p>+91 8647878785</p></div></div>
                     <div className={styles.contactItem}><div className={styles.contactIcon}>⏰</div><div><strong>Support Hours</strong><p>Mon-Fri, 9AM-6PM IST</p></div></div>
                   </div>
