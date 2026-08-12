@@ -7,11 +7,22 @@
  *
  * Run once after the add-company-code-prefix.sql migration:
  *   node backend/src/scripts/backfillCodePrefix.js
+ *
+ * db.js creates its MySQL pool at import time using process.env.DB_*, and
+ * those values come from AWS Secrets Manager via loadSecrets() (not from
+ * .env) — same as server.js's own startup sequence. So loadSecrets() must
+ * run, and env vars must be populated, BEFORE db.js is ever imported;
+ * dynamic import() (not a static import at the top of this file) is what
+ * makes that ordering possible.
  */
-import { db } from "../config/db.js";
+import "dotenv/config";
+import { loadSecrets } from "../config/secrets.js";
 import { deriveCodePrefix } from "../utils/codePrefix.js";
 
 const run = async () => {
+  await loadSecrets();
+  const { db } = await import("../config/db.js");
+
   const [companies] = await db.query(
     `SELECT id, name FROM companies WHERE code_prefix IS NULL OR code_prefix = ''`
   );
