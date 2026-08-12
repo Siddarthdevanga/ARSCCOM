@@ -427,6 +427,7 @@ export default function ReportsPage(){
   const [fetching, setFetching] =useState(false);
   const [toast,    setToast]    =useState(null);
   const [exporting,setExporting]=useState(null);
+  const [currentPlan,setCurrentPlan]=useState(null);
   const timerRef=useRef(null);
 
   const showToast=useCallback((msg,type="success")=>{
@@ -453,8 +454,14 @@ export default function ReportsPage(){
     const s=localStorage.getItem("company");
     if(s){try{setCompany(JSON.parse(s));}catch{}}
     loadAnalytics(period);
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/details`,{credentials:"include"})
+      .then(r=>r.json())
+      .then(d=>{if(d?.PLAN)setCurrentPlan(d.PLAN.toLowerCase());})
+      .catch(()=>{});
     return()=>{if(timerRef.current)clearTimeout(timerRef.current);};
   },[]);// eslint-disable-line
+
+  const isBusinessPlan = currentPlan==="business";
 
   const handlePeriodChange=p=>{setPeriod(p);loadAnalytics(p,true);};
 
@@ -639,6 +646,25 @@ export default function ReportsPage(){
           </section>
 
           {/* ══ 02 CONFERENCE ANALYTICS ══ */}
+          {isBusinessPlan ? (
+          <section className={styles.section}>
+            <SectionHeading icon={CalendarDays} title="Conference Analytics"
+              subtitle="Room utilisation & booking patterns" accent="#0ea5e9" index={2}/>
+            <div className={styles.upgradeCard}>
+              <div className={styles.upgradeCardIcon}><CalendarDays size={26}/></div>
+              <h3 className={styles.upgradeCardTitle}>Conference Analytics is an Enterprise feature</h3>
+              <p className={styles.upgradeCardText}>
+                Your Business plan covers visitor management only. Enterprise adds
+                unlimited conference room booking — room scheduling, booking trends,
+                most-booked rooms, department usage, and completion &amp; cancellation
+                rates — plus the ability to export conference booking reports.
+              </p>
+              <button className={styles.upgradeCardBtn} onClick={()=>router.push("/auth/subscription")}>
+                Upgrade to Enterprise
+              </button>
+            </div>
+          </section>
+          ) : (
           <section className={styles.section}>
             <SectionHeading icon={CalendarDays} title="Conference Analytics"
               subtitle={`Room utilisation & booking patterns — ${pl}`} accent="#0ea5e9" index={2}/>
@@ -705,6 +731,7 @@ export default function ReportsPage(){
               </ChartCard>
             </div>
           </section>
+          )}
 
           {/* ══ EXPORT ══ */}
           <section className={styles.exportSection}>
@@ -718,7 +745,7 @@ export default function ReportsPage(){
             <div className={styles.exportCards}>
               {[
                 {type:"visitors",icon:<Users size={20}/>,    color:"#7c3aed",label:"Visitor Records",    desc:"Check-in/out, pass status and visitor details"},
-                {type:"bookings",icon:<Calendar size={20}/>,color:"#0ea5e9",label:"Conference Bookings",desc:"Room schedules, departments, hosts and status"},
+                ...(isBusinessPlan?[]:[{type:"bookings",icon:<Calendar size={20}/>,color:"#0ea5e9",label:"Conference Bookings",desc:"Room schedules, departments, hosts and status"}]),
               ].map(e=>(
                 <div key={e.type} className={styles.exportCard}>
                   <div className={styles.exportCardTop}>
@@ -735,6 +762,19 @@ export default function ReportsPage(){
                   </button>
                 </div>
               ))}
+              {isBusinessPlan && (
+                <div className={styles.exportCard}>
+                  <div className={styles.exportCardTop}>
+                    <div className={styles.exportCardIcon} style={{background:"#0ea5e912",color:"#0ea5e9"}}><Calendar size={20}/></div>
+                    <span className={styles.exportCardBadge} style={{background:"#0ea5e910",color:"#0ea5e9"}}>Enterprise</span>
+                  </div>
+                  <p className={styles.exportCardTitle}>Conference Bookings</p>
+                  <p className={styles.exportCardSub}>Room schedules, departments, hosts and status — available on Enterprise</p>
+                  <button className={styles.exportBtn} style={{"--eb":"#0ea5e9"}} onClick={()=>router.push("/auth/subscription")}>
+                    Upgrade to Enterprise
+                  </button>
+                </div>
+              )}
               <div className={`${styles.exportCard} ${styles.exportCardFull}`}>
                 <div className={styles.exportCardTop}>
                   <div className={styles.exportCardIcon} style={{background:"rgba(255,255,255,0.12)",color:"#fbbf24"}}><Layers size={20}/></div>

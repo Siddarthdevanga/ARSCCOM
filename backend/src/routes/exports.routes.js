@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
 import ExcelJS from "exceljs";
+import { PLAN_FEATURES } from "../constants/pricing.js";
 
 const router = express.Router();
 router.use(express.json());
@@ -11,6 +12,14 @@ router.use(authenticate);
    UTILITY
 ═══════════════════════════════════════════════════════════════ */
 const getCompanyId = (user) => user?.company_id || user?.companyId;
+
+// Business plan has no conference booking at all — used to hide conference
+// analytics/exports from companies whose plan doesn't include it.
+const companyHasConference = async (companyId) => {
+  const [[row]] = await db.query(`SELECT plan FROM companies WHERE id = ? LIMIT 1`, [companyId]);
+  const plan = (row?.plan || "trial").toLowerCase();
+  return PLAN_FEATURES[plan]?.conference ?? false;
+};
 
 /* ═══════════════════════════════════════════════════════════════
    FORMAT HELPERS
@@ -366,6 +375,9 @@ router.get("/visitors", async (req, res) => {
 router.get("/conference-bookings", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
+    if (!(await companyHasConference(companyId))) {
+      return res.status(403).json({ message: "Conference booking reports are not available on your current plan. Upgrade to Enterprise to access this feature." });
+    }
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message:"Company not found" });
     const { where, params, label } = bookingPeriodWhere(req.query.period);
@@ -476,15 +488,35 @@ router.get("/analytics", async (req, res) => {
     const [[visitorTotals]]    = await db.query(`SELECT COUNT(*) AS total, SUM(status='IN') AS active, SUM(DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))=DATE(CONVERT_TZ(NOW(),'+00:00','+05:30'))) AS today, SUM(pass_mail_sent>0) AS passIssued FROM visitors WHERE company_id = ? ${vWhere}`, [companyId]);
     const [[visitorPrev]]      = await db.query(`SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? ${vWherePrev}`, [companyId]);
 
-    // ── Conference queries ──
-    const [dailyBookings]        = await db.query(`SELECT ${bLabel} AS date, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY ${bGroup} ORDER BY MIN(booking_date) ASC`, [companyId]);
-    const [bookingStatusBreakdown] = await db.query(`SELECT status, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY status`, [companyId]);
-    const [topRooms]             = await db.query(`SELECT r.room_name AS name, COUNT(*) AS count FROM conference_bookings b JOIN conference_rooms r ON b.room_id = r.id WHERE b.company_id = ? ${bWhere} GROUP BY r.room_name ORDER BY count DESC LIMIT 6`, [companyId]);
-    const [bookingsByDept]       = await db.query(`SELECT department AS name, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? AND department IS NOT NULL AND department != '' ${bWhere} GROUP BY department ORDER BY count DESC LIMIT 6`, [companyId]);
-    const [dowBookings]          = await db.query(`SELECT DAYOFWEEK(booking_date) AS dow, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY dow ORDER BY dow ASC`, [companyId]);
-    const [[avgDuration]]        = await db.query(`SELECT ROUND(AVG(TIME_TO_SEC(TIMEDIFF(end_time,start_time))/60)) AS avgMinutes FROM conference_bookings WHERE company_id = ? AND end_time > start_time ${bWhere}`, [companyId]);
-    const [[bookingTotals]]      = await db.query(`SELECT COUNT(*) AS total, SUM(status='BOOKED' AND booking_date>=CURDATE()) AS upcoming, SUM(status='CANCELLED') AS cancelled, SUM(status='COMPLETED') AS completed FROM conference_bookings WHERE company_id = ? ${bWhere}`, [companyId]);
-    const [[bookingPrev]]        = await db.query(`SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? ${bWherePrev}`, [companyId]);
+    // ── Conference queries — skipped entirely for plans without conference
+    // booking (Business), so no booking data is ever computed or returned ──
+    const hasConference = await companyHasConference(companyId);
+
+    let bookingsPayload = null;
+    if (hasConference) {
+      const [dailyBookings]        = await db.query(`SELECT ${bLabel} AS date, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY ${bGroup} ORDER BY MIN(booking_date) ASC`, [companyId]);
+      const [bookingStatusBreakdown] = await db.query(`SELECT status, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY status`, [companyId]);
+      const [topRooms]             = await db.query(`SELECT r.room_name AS name, COUNT(*) AS count FROM conference_bookings b JOIN conference_rooms r ON b.room_id = r.id WHERE b.company_id = ? ${bWhere} GROUP BY r.room_name ORDER BY count DESC LIMIT 6`, [companyId]);
+      const [bookingsByDept]       = await db.query(`SELECT department AS name, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? AND department IS NOT NULL AND department != '' ${bWhere} GROUP BY department ORDER BY count DESC LIMIT 6`, [companyId]);
+      const [dowBookings]          = await db.query(`SELECT DAYOFWEEK(booking_date) AS dow, COUNT(*) AS count FROM conference_bookings WHERE company_id = ? ${bWhere} GROUP BY dow ORDER BY dow ASC`, [companyId]);
+      const [[avgDuration]]        = await db.query(`SELECT ROUND(AVG(TIME_TO_SEC(TIMEDIFF(end_time,start_time))/60)) AS avgMinutes FROM conference_bookings WHERE company_id = ? AND end_time > start_time ${bWhere}`, [companyId]);
+      const [[bookingTotals]]      = await db.query(`SELECT COUNT(*) AS total, SUM(status='BOOKED' AND booking_date>=CURDATE()) AS upcoming, SUM(status='CANCELLED') AS cancelled, SUM(status='COMPLETED') AS completed FROM conference_bookings WHERE company_id = ? ${bWhere}`, [companyId]);
+      const [[bookingPrev]]        = await db.query(`SELECT COUNT(*) AS total FROM conference_bookings WHERE company_id = ? ${bWherePrev}`, [companyId]);
+
+      bookingsPayload = {
+        total:              bookingTotals.total     || 0,
+        upcoming:           bookingTotals.upcoming  || 0,
+        cancelled:          bookingTotals.cancelled || 0,
+        completed:          bookingTotals.completed || 0,
+        prevTotal:          bookingPrev.total       || 0,
+        avgDurationMinutes: avgDuration.avgMinutes  || 0,
+        dailyTrend:         dailyBookings,
+        statusBreakdown:    bookingStatusBreakdown,
+        topRooms,
+        byDepartment:       bookingsByDept,
+        dowDistribution:    dowBookings,
+      };
+    }
 
     res.json({
       period,
@@ -503,19 +535,7 @@ router.get("/analytics", async (req, res) => {
         purposeSubcategoryBreakdown,
         visitStatusBreakdown,
       },
-      bookings: {
-        total:              bookingTotals.total     || 0,
-        upcoming:           bookingTotals.upcoming  || 0,
-        cancelled:          bookingTotals.cancelled || 0,
-        completed:          bookingTotals.completed || 0,
-        prevTotal:          bookingPrev.total       || 0,
-        avgDurationMinutes: avgDuration.avgMinutes  || 0,
-        dailyTrend:         dailyBookings,
-        statusBreakdown:    bookingStatusBreakdown,
-        topRooms,
-        byDepartment:       bookingsByDept,
-        dowDistribution:    dowBookings,
-      },
+      bookings: bookingsPayload,
     });
   } catch (err) {
     console.error("[GET /exports/analytics]", err.message);

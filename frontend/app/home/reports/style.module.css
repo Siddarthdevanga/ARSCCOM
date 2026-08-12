@@ -388,6 +388,30 @@
 .emptyChart p { margin:0; }
 
 /* ═══════════════════════════════════════════════════
+   UPGRADE CARD — locked-feature placeholder (Business plan)
+═══════════════════════════════════════════════════ */
+.upgradeCard {
+  background:linear-gradient(135deg,#0c2436 0%,#0e3a56 55%,#0ea5e9 140%);
+  border:1.5px solid rgba(14,165,233,.35); border-radius:var(--r-2xl);
+  padding:clamp(1.5rem,3vw,2.25rem);
+  display:flex; flex-direction:column; align-items:center; text-align:center; gap:.75rem;
+  box-shadow:var(--shadow-md);
+}
+.upgradeCardIcon {
+  width:52px; height:52px; border-radius:var(--r-lg);
+  background:rgba(255,255,255,.12); color:#7dd3fc;
+  display:flex; align-items:center; justify-content:center;
+}
+.upgradeCardTitle { font-size:1rem; font-weight:800; color:var(--white); margin:0; letter-spacing:-.01em; }
+.upgradeCardText { font-size:.78rem; line-height:1.6; color:rgba(255,255,255,.75); margin:0; max-width:520px; font-weight:500; }
+.upgradeCardBtn {
+  margin-top:.25rem; padding:.6rem 1.5rem; border-radius:9999px; border:none;
+  background:#fbbf24; color:#1c0042; font-family:var(--font); font-size:.78rem; font-weight:800;
+  cursor:pointer; transition:all var(--t);
+}
+.upgradeCardBtn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(251,191,36,.35); }
+
+/* ═══════════════════════════════════════════════════
    EXPORT SECTION
 ═══════════════════════════════════════════════════ */
 .exportSection {
