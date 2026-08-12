@@ -57,7 +57,6 @@ const checkSubscriptionStatus = (req, res, next) => {
    - companyName (required)
    - email (required)
    - phone (required)
-   - conferenceRooms (required)
    - password (required)
    - whatsappUrl (optional) - Format: https://wa.me/... or https://api.whatsapp.com/...
    - logo (file, required)

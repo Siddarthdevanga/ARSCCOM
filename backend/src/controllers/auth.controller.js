@@ -52,12 +52,11 @@ export const register = async (req, res) => {
       companyName,
       email,
       phone,
-      conferenceRooms,
       password,
       whatsappUrl, // Optional field
     } = req.body;
 
-    if (!companyName || !email || !phone || !conferenceRooms || !password) {
+    if (!companyName || !email || !phone || !password) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
 
@@ -72,11 +71,6 @@ export const register = async (req, res) => {
       : phoneDigits;
     if (!PHONE_RE.test(cleanPhone)) {
       return res.status(400).json({ success: false, message: "Enter a valid 10-digit Indian mobile number starting with 6-9" });
-    }
-
-    const rooms = Number(conferenceRooms);
-    if (!Number.isInteger(rooms) || rooms < 1 || rooms > 100) {
-      return res.status(400).json({ success: false, message: "Conference rooms must be a number between 1 and 100" });
     }
 
     const pwdStr = String(password);
