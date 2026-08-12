@@ -17,6 +17,7 @@ export default function SettingsPage() {
 
   const [companyName, setCompanyName] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
+  const [codePrefix, setCodePrefix] = useState("");
   const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
   // Cache-busting token appended to /api/logo/{id} URLs. The endpoint itself
@@ -38,16 +39,19 @@ export default function SettingsPage() {
 
   const [editingCompanyName, setEditingCompanyName] = useState(false);
   const [editingWhatsapp, setEditingWhatsapp] = useState(false);
+  const [editingCodePrefix, setEditingCodePrefix] = useState(false);
   const [editingUserName, setEditingUserName] = useState(false);
   const [editingUserPhone, setEditingUserPhone] = useState(false);
 
   const [tempCompanyName, setTempCompanyName] = useState("");
   const [tempWhatsapp, setTempWhatsapp] = useState("");
+  const [tempCodePrefix, setTempCodePrefix] = useState("");
   const [tempUserName, setTempUserName] = useState("");
   const [tempUserPhone, setTempUserPhone] = useState("");
 
   const [savingCompanyName, setSavingCompanyName] = useState(false);
   const [savingWhatsapp, setSavingWhatsapp] = useState(false);
+  const [savingCodePrefix, setSavingCodePrefix] = useState(false);
   const [savingLogo, setSavingLogo] = useState(false);
   const [savingUserName, setSavingUserName] = useState(false);
   const [savingUserPhone, setSavingUserPhone] = useState(false);
@@ -77,6 +81,7 @@ export default function SettingsPage() {
       if (!res.ok) throw new Error(data?.message || "Failed to load settings");
       setCompanyName(data.company?.name || "");
       setWhatsappUrl(data.company?.whatsapp_url || "");
+      setCodePrefix(data.company?.code_prefix || "");
       setLogoPreview(data.company?.logo_url || null);
       setUserName(data.user?.name || "");
       setUserPhone(data.user?.phone || "");
@@ -138,6 +143,36 @@ export default function SettingsPage() {
       showSuccess("WhatsApp URL updated successfully");
     } catch (err) { showError(err?.message || "Failed to update WhatsApp URL"); }
     finally { setSavingWhatsapp(false); }
+  };
+
+  /* ── Visitor Code Prefix ── */
+  const startEditCodePrefix = () => { setTempCodePrefix(codePrefix); setEditingCodePrefix(true); };
+  const cancelEditCodePrefix = () => { setEditingCodePrefix(false); setTempCodePrefix(""); };
+  const saveCodePrefix = async () => {
+    const cleaned = tempCodePrefix.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(cleaned)) { showError("Visitor code prefix must be exactly 3 letters (A-Z)"); return; }
+    if (!window.confirm(
+      `Change visitor code prefix from "${codePrefix || "CMP"}" to "${cleaned}"?\n\n` +
+      "This only affects new visitor check-ins going forward — passes already issued keep their old prefix."
+    )) return;
+    try {
+      setSavingCodePrefix(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/company`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" }, credentials: "include",
+        body: JSON.stringify({ name: companyName, whatsappUrl: whatsappUrl || null, codePrefix: cleaned }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Failed to update");
+      setCodePrefix(cleaned);
+      setEditingCodePrefix(false);
+      const sc = JSON.parse(localStorage.getItem("company"));
+      sc.code_prefix = cleaned;
+      localStorage.setItem("company", JSON.stringify(sc));
+      setCompany(sc);
+      showSuccess("Visitor code prefix updated successfully");
+    } catch (err) { showError(err?.message || "Failed to update visitor code prefix"); }
+    finally { setSavingCodePrefix(false); }
   };
 
   /* ── User Name ── */
@@ -366,6 +401,20 @@ export default function SettingsPage() {
                 type="url"
               />
               <p className={styles.fieldHelp}>Used in visitor pass emails</p>
+
+              <EditableField
+                label="Visitor Code Prefix"
+                value={codePrefix || "CMP (default)"}
+                editing={editingCodePrefix}
+                temp={tempCodePrefix}
+                setTemp={(v) => setTempCodePrefix(v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))}
+                startEdit={startEditCodePrefix}
+                cancelEditFn={cancelEditCodePrefix}
+                saveFn={saveCodePrefix}
+                saving={savingCodePrefix}
+                placeholder="e.g. ZOD"
+              />
+              <p className={styles.fieldHelp}>3 letters, shown at the start of every new visitor's pass code — e.g. "{codePrefix || "ZOD"}12-20260812-00001"</p>
 
               {/* Logo */}
               <div className={styles.fieldGroup}>

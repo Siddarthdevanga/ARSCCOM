@@ -84,8 +84,9 @@ router.get(
    Updates:
    - Company name
    - WhatsApp URL (optional, validated)
-   
-   Body: { name, whatsappUrl }
+   - Visitor code prefix (optional, exactly 3 letters A-Z)
+
+   Body: { name, whatsappUrl, codePrefix }
 ====================================================== */
 router.put(
   "/company",

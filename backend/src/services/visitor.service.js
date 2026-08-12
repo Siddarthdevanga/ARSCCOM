@@ -92,7 +92,7 @@ export const saveVisitor = async (companyId, data, file) => {
     /* ── Lock company ── */
     const [[company]] = await conn.execute(
       `SELECT plan, subscription_status, trial_ends_at, subscription_ends_at,
-              grace_period_ends_at, grace_period_day, visitor_form_fields
+              grace_period_ends_at, grace_period_day, visitor_form_fields, code_prefix
        FROM companies WHERE id = ? FOR UPDATE`,
       [companyId]
     );
@@ -249,7 +249,8 @@ export const saveVisitor = async (companyId, data, file) => {
        WHERE company_id = ? AND DATE(check_in) = CURDATE()`,
       [companyId]
     );
-    const visitorCode = `CMP${companyId}-${dateKey}-${String(count).padStart(5, "0")}`;
+    const codePrefix = company.code_prefix || "CMP";
+    const visitorCode = `${codePrefix}${companyId}-${dateKey}-${String(count).padStart(5, "0")}`;
     console.log("[VISITOR] Generated code:", visitorCode);
 
     /* ── Upload visitor selfie photo to S3 (or reuse existing key) ── */

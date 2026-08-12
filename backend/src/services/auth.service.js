@@ -7,6 +7,7 @@ import { uploadToS3 } from "./s3.service.js";
 import { sendEmail } from "../utils/mailer.js";
 import { autoCheckoutStaleVisitors } from "./visitor.service.js";
 import { PLAN_FEATURES } from "../constants/pricing.js";
+import { deriveCodePrefix } from "../utils/codePrefix.js";
 
 /* ======================================================
    CONSTANTS & CONFIGURATION
@@ -158,11 +159,12 @@ export const registerCompany = async (data, file) => {
     await conn.beginTransaction();
 
     // Insert company with optional WhatsApp URL
+    const codePrefix = deriveCodePrefix(companyName);
     const [companyResult] = await conn.execute(
-      `INSERT INTO companies 
-       (name, slug, logo_url, rooms, whatsapp_url, subscription_status, plan)
-       VALUES (?, ?, ?, ?, ?, 'pending', 'trial')`,
-      [companyName, slug, logoUrl, conferenceRooms, whatsappUrl]
+      `INSERT INTO companies
+       (name, slug, code_prefix, logo_url, rooms, whatsapp_url, subscription_status, plan)
+       VALUES (?, ?, ?, ?, ?, ?, 'pending', 'trial')`,
+      [companyName, slug, codePrefix, logoUrl, conferenceRooms, whatsappUrl]
     );
 
     const companyId = companyResult.insertId;

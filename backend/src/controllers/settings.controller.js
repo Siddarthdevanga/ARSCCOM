@@ -92,7 +92,7 @@ export const getSettings = async (req, res) => {
 
     const [[company]] = await db.execute(
       `SELECT
-         id, name, slug, logo_url, rooms,
+         id, name, slug, code_prefix, logo_url, rooms,
          whatsapp_url,
          plan, subscription_status
        FROM companies
@@ -121,6 +121,7 @@ export const getSettings = async (req, res) => {
         id:                  company.id,
         name:                company.name,
         slug:                company.slug,
+        code_prefix:         company.code_prefix || null,
         logo_url:            company.logo_url ? `/api/logo/${company.id}` : null,
         rooms:               company.rooms,
         whatsapp_url:        company.whatsapp_url || null,
@@ -154,7 +155,7 @@ export const updateCompanySettings = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { name, whatsappUrl } = req.body;
+    const { name, whatsappUrl, codePrefix } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ success: false, message: "Company name is required" });
@@ -163,15 +164,31 @@ export const updateCompanySettings = async (req, res) => {
     // Single validator handles direct chat, group invites, and phone numbers
     const validatedWhatsAppUrl = validateWhatsAppUrl(whatsappUrl);
 
-    await db.execute(
-      `UPDATE companies
-       SET name = ?, whatsapp_url = ?
-       WHERE id = ?`,
-      [name.trim(), validatedWhatsAppUrl, companyId]
-    );
+    // codePrefix is optional in the request — only touched when provided,
+    // so name/whatsapp-only updates don't require re-sending it.
+    let updatedCodePrefix;
+    if (codePrefix !== undefined) {
+      const cleaned = String(codePrefix || "").trim().toUpperCase();
+      if (!/^[A-Z]{3}$/.test(cleaned)) {
+        return res.status(400).json({ success: false, message: "Visitor code prefix must be exactly 3 letters (A-Z)" });
+      }
+      updatedCodePrefix = cleaned;
+    }
+
+    if (updatedCodePrefix !== undefined) {
+      await db.execute(
+        `UPDATE companies SET name = ?, whatsapp_url = ?, code_prefix = ? WHERE id = ?`,
+        [name.trim(), validatedWhatsAppUrl, updatedCodePrefix, companyId]
+      );
+    } else {
+      await db.execute(
+        `UPDATE companies SET name = ?, whatsapp_url = ? WHERE id = ?`,
+        [name.trim(), validatedWhatsAppUrl, companyId]
+      );
+    }
 
     const [[updated]] = await db.execute(
-      `SELECT name, whatsapp_url, logo_url, slug
+      `SELECT name, whatsapp_url, logo_url, slug, code_prefix
        FROM companies WHERE id = ?`,
       [companyId]
     );
@@ -183,6 +200,7 @@ export const updateCompanySettings = async (req, res) => {
         id:           companyId,
         name:         updated.name,
         slug:         updated.slug,
+        code_prefix:  updated.code_prefix || null,
         logo_url:     updated.logo_url ? `/api/logo/${companyId}` : null,
         whatsapp_url: updated.whatsapp_url || null,
       },
