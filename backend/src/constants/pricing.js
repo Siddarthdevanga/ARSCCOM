@@ -13,8 +13,8 @@ export const GST_RATE = 0.18;
 
 export const PLAN_PRICING = {
   trial:      { monthly: 49 },
-  business:   { monthly: 500, annual: 6000 },
-  enterprise: { monthly: 700, annual: 7000 },
+  business:   { monthly: 500,  annual: 6000 },
+  enterprise: { monthly: 1000, annual: 10000 },
 };
 
 // Business is visitor-management only — no conference booking at all.

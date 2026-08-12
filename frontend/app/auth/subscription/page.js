@@ -56,7 +56,7 @@ export default function SubscriptionPage() {
   const PLAN_VALUES = {
     free: 49,
     business: billingInterval === "annual" ? 6000 : 500,
-    enterprise: billingInterval === "annual" ? 7000 : 700,
+    enterprise: billingInterval === "annual" ? 10000 : 1000,
   };
 
   const gaLead = (planKey) => {
@@ -165,7 +165,7 @@ export default function SubscriptionPage() {
     {
       key: "enterprise",
       name: "ENTERPRISE",
-      price: billingInterval === "annual" ? "₹7,000" : "₹700",
+      price: billingInterval === "annual" ? "₹10,000" : "₹1,000",
       period: billingInterval === "annual" ? "/ year" : "/ month",
       sub: billingInterval === "annual" ? "Visitor management + conference booking — billed once a year" : "Visitor management + conference booking",
       color: "gold",

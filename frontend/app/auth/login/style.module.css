@@ -253,22 +253,30 @@
 }
 
 /* ================= PLANS GRID ================= */
+/* Always 4 equal columns on one row down to tablet width, so all plans
+   (including Custom Build) stay visually equivalent instead of one
+   card wrapping onto its own line. */
 .plansGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(clamp(240px, 100%, 300px), 1fr));
-  gap: clamp(20px, 3.2vw, 32px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 22px);
   margin-top: clamp(28px, 4vh, 36px);
+  align-items: stretch;
 }
 
 .planCard {
   background: linear-gradient(135deg, #fafbff 0%, #ffffff 100%);
-  border-radius: clamp(16px, 2.6vw, 20px);
-  padding: clamp(28px, 4vh, 36px) clamp(24px, 3.5vw, 32px);
+  border-radius: clamp(14px, 2vw, 20px);
+  padding: clamp(18px, 2.4vh, 32px) clamp(14px, 1.8vw, 28px);
   border: 2px solid #e8e8e8;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: visible;
+  display: flex;
+  flex-direction: column;
 }
+
+.planCard > a { margin-top: auto; }
 
 .planCard:hover {
   transform: translateY(-8px);
@@ -288,42 +296,42 @@
 
 .popularBadge {
   position: absolute;
-  top: clamp(-14px, -2vh, -16px);
+  top: clamp(-13px, -1.8vh, -15px);
   left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(135deg, #7a19d6, #5d00b8);
   color: white;
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(11px, 1.8vw, 13px);
+  font-size: clamp(8.5px, 1.3vw, 10.5px);
   font-weight: 800;
-  padding: clamp(7px, 1.2vh, 9px) clamp(16px, 2.5vw, 20px);
-  border-radius: clamp(16px, 2.4vw, 20px);
-  letter-spacing: 1.2px;
+  padding: clamp(5px, 1vh, 7px) clamp(10px, 1.8vw, 14px);
+  border-radius: clamp(14px, 2vw, 18px);
+  letter-spacing: 0.8px;
   box-shadow: 0 4px 14px rgba(122, 25, 214, 0.45);
   white-space: nowrap;
 }
 
 .planHeader h3 {
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(18px, 2.8vw, 21px);
+  font-size: clamp(13px, 1.9vw, 16.5px);
   font-weight: 800;
   color: #5d00b8;
-  margin: 0 0 clamp(12px, 2vh, 16px) 0;
-  letter-spacing: 1.4px;
+  margin: 0 0 clamp(10px, 1.6vh, 14px) 0;
+  letter-spacing: 0.8px;
 }
 
 .planPrice {
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(32px, 5vw, 40px);
+  font-size: clamp(21px, 3.4vw, 28px);
   font-weight: 900;
   color: #1a1a1a;
-  margin-bottom: clamp(20px, 3.2vh, 28px);
+  margin-bottom: clamp(16px, 2.6vh, 22px);
   line-height: 1;
 }
 
 .planPrice span {
   font-family: 'Poppins', sans-serif;
-  font-size: clamp(15px, 2.4vw, 17px);
+  font-size: clamp(11px, 1.6vw, 13px);
   font-weight: 600;
   color: #777;
 }
@@ -331,17 +339,18 @@
 .planFeatures {
   list-style: none;
   padding: 0;
-  margin: 0 0 clamp(22px, 3.5vh, 30px) 0;
+  margin: 0 0 clamp(18px, 3vh, 24px) 0;
+  flex: 1;
 }
 
 .planFeatures li {
   font-family: 'Poppins', sans-serif;
-  font-size: clamp(14px, 2.3vw, 16px);
+  font-size: clamp(11.5px, 1.6vw, 13px);
   color: #555;
-  margin-bottom: clamp(12px, 1.8vh, 14px);
-  padding-left: clamp(26px, 3.6vw, 32px);
+  margin-bottom: clamp(10px, 1.6vh, 12px);
+  padding-left: clamp(18px, 2.2vw, 22px);
   position: relative;
-  line-height: 1.7;
+  line-height: 1.5;
 }
 
 .planFeatures li::before {
@@ -350,23 +359,24 @@
   left: 0;
   color: #7a19d6;
   font-weight: 900;
-  font-size: clamp(16px, 2.4vw, 18px);
+  font-size: clamp(13px, 1.8vw, 15px);
 }
 
 .planBtn {
   width: 100%;
-  padding: clamp(14px, 2.4vh, 18px);
+  padding: clamp(11px, 1.9vh, 15px) clamp(6px, 1vw, 10px);
   background: linear-gradient(135deg, #7a19d6, #5d00b8);
   color: white;
   border: none;
-  border-radius: clamp(12px, 1.8vw, 14px);
+  border-radius: clamp(10px, 1.5vw, 13px);
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(15px, 2.4vw, 17px);
+  font-size: clamp(11px, 1.6vw, 13px);
   font-weight: 800;
   cursor: pointer;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  letter-spacing: 1px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .planBtn:hover {
@@ -695,11 +705,24 @@
   }
 
   .plansGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 600px) {
+  .plansGrid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Full-width single-column cards have plenty of room — restore comfortable
+     reading sizes instead of the tight 4-across clamps. */
+  .planHeader h3 { font-size: 19px; letter-spacing: 1.2px; }
+  .planPrice { font-size: 34px; }
+  .planPrice span { font-size: 15px; }
+  .planFeatures li { font-size: 15px; padding-left: 28px; }
+  .planFeatures li::before { font-size: 17px; }
+  .planBtn { font-size: 15px; padding: 15px; letter-spacing: 0.8px; }
+
   .topNav {
     gap: 20px;
     padding: 28px 24px;

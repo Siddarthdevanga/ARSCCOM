@@ -23,8 +23,8 @@ const router = express.Router();
  * PRICING (see constants/pricing.js):
  * Business   monthly: ₹500  base + 18% GST = ₹590  total
  * Business   annual:  ₹6000 base + 18% GST = ₹7080 total
- * Enterprise monthly: ₹700  base + 18% GST = ₹826  total
- * Enterprise annual:  ₹7000 base + 18% GST = ₹8260 total
+ * Enterprise monthly: ₹1000  base + 18% GST = ₹1180  total
+ * Enterprise annual:  ₹10000 base + 18% GST = ₹11800 total
  *
  * Business and Enterprise both use the exact same payment-link machinery
  * (reuse-pending-link check → ensure Zoho customer → create link → store

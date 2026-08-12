@@ -12,8 +12,8 @@ const router = express.Router();
  * TRIAL                → ₹49   base + 18% GST = ₹57.82  (one-time, 15 days)
  * BUSINESS / monthly    → ₹500  base + 18% GST = ₹590.00
  * BUSINESS / annual     → ₹6000 base + 18% GST = ₹7080.00
- * ENTERPRISE / monthly  → ₹700  base + 18% GST = ₹826.00
- * ENTERPRISE / annual   → ₹7000 base + 18% GST = ₹8260.00
+ * ENTERPRISE / monthly  → ₹1000  base + 18% GST = ₹1180.00
+ * ENTERPRISE / annual   → ₹10000 base + 18% GST = ₹11800.00
  *
  * Activation happens ONLY via Zoho Webhook after payment success
  */
