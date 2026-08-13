@@ -214,7 +214,7 @@ const BODY_HTML = `
       <div class="layer reveal"><span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg></span><h3>Team-led WhatsApp use</h3><p>External outreach based on consent and policy</p><span class="tag">Activate</span></div>
       <div class="layer reveal"><span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span><h3>Eligible advertising audiences</h3><p>Customer-list use subject to platform requirements</p><span class="tag">Retarget</span></div>
     </div>
-    <div class="highlight" style="max-width:640px; margin-inline:auto; text-align:left;">Capture first. Organise consistently. Activate through approved external marketing workflows.</div>
+    <div class="highlight highlight-nowrap" style="margin-inline:auto; text-align:left;">Capture first. Organise consistently. Activate through approved external marketing workflows.</div>
   </div>
 </section>
 
