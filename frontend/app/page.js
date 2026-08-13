@@ -40,7 +40,7 @@ const BODY_HTML = `
       </div>
       <div class="hero-figure reveal">
         <div class="photo-card">
-          <img src="/2secimage.png" alt="Front desk visitor check-in" loading="lazy" />
+          <img src="/hero-checkin-error.jpg" alt="Showroom visitor check-in without a digital record" loading="lazy" />
         </div>
       </div>
     </div>
@@ -71,7 +71,7 @@ const BODY_HTML = `
       <div class="highlight">The real leakage is not only a missed sale today. It is a customer relationship your future marketing may never be able to use.</div>
     </div>
     <div class="reveal">
-      <div class="photo-card"><img src="/img.png" alt="Promotions bring customers in, but they leave with no record captured" loading="lazy" /></div>
+      <div class="photo-card"><img src="/marketing-data-gap.jpg" alt="Promotions bring customers in, but they leave with no record captured" loading="lazy" /></div>
       <div class="media-label">Marketing → Walk-In → Data Gap</div>
     </div>
   </div>
@@ -81,7 +81,7 @@ const BODY_HTML = `
 <section>
   <div class="wrap split">
     <div class="reveal">
-      <div class="photo-card"><img src="/section4.jpeg" alt="Manual register records" loading="lazy" /></div>
+      <div class="photo-card"><img src="/manual-records.jpg" alt="Manual register records" loading="lazy" /></div>
       <div class="media-label">Manual records → Organised database</div>
     </div>
     <div>
