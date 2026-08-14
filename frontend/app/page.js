@@ -4,6 +4,9 @@ import './landing-page.css';
 
 const BODY_HTML = `
 
+<!-- OFFER TICKER (fixed top) -->
+<div class="offer-ticker"><div class="ot-track"><span>₹49 ONLY — 15-DAY TRIAL</span><span>★</span><span>NO HARDWARE NEEDED</span><span>★</span><span>GO LIVE IN 15 MINUTES</span><span>★</span><span>INSTANT WHATSAPP ALERTS</span><span>★</span><span>BUILD YOUR CUSTOMER DATABASE</span><span>★</span><span>₹49 ONLY — 15-DAY TRIAL</span><span>★</span><span>NO HARDWARE NEEDED</span><span>★</span><span>GO LIVE IN 15 MINUTES</span><span>★</span><span>INSTANT WHATSAPP ALERTS</span><span>★</span><span>BUILD YOUR CUSTOMER DATABASE</span><span>★</span></div></div>
+
 <!-- NAV -->
 <nav>
   <div class="wrap nav-inner">
@@ -13,10 +16,6 @@ const BODY_HTML = `
       <a href="#features">Features</a>
       <a href="#trial">Pricing</a>
       <a href="#faq">FAQ</a>
-    </div>
-    <div class="nav-cta">
-      <a class="btn btn-primary" href="/auth/register">Start 15-Day Trial for ₹49</a>
-      <a class="btn btn-primary btn-oval" href="/auth/login">Sign In</a>
     </div>
   </div>
 </nav>
@@ -370,42 +369,8 @@ const BODY_HTML = `
   </div>
 </section>
 
-<div class="offer-ticker"><div class="ot-track"><span>₹49 ONLY — 15-DAY TRIAL</span><span>★</span><span>NO HARDWARE NEEDED</span><span>★</span><span>GO LIVE IN 15 MINUTES</span><span>★</span><span>INSTANT WHATSAPP ALERTS</span><span>★</span><span>BUILD YOUR CUSTOMER DATABASE</span><span>★</span><span>₹49 ONLY — 15-DAY TRIAL</span><span>★</span><span>NO HARDWARE NEEDED</span><span>★</span><span>GO LIVE IN 15 MINUTES</span><span>★</span><span>INSTANT WHATSAPP ALERTS</span><span>★</span><span>BUILD YOUR CUSTOMER DATABASE</span><span>★</span></div></div>
-
 <!-- FOOTER -->
 <footer>
-  <div class="wrap foot-top">
-    <div class="foot-brand">
-      <a href="#" class="logo"><img src="/haivisitor.png" alt="Hai Visitor" class="logo-img" /><span>H<span class="ai-accent">ai</span> VISITOR<small>A visitor management platform by Zodopt</small></span></a>
-      <p>A platform designed to digitalize organisation entry management, streamline conference bookings and ensure a professional visitor experience.</p>
-      <div class="foot-cta">
-        <a class="btn btn-wa" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">WhatsApp →</a>
-        <a class="btn btn-ghost" href="mailto:admin@haivisitor.zodopt.com">Email →</a>
-      </div>
-    </div>
-    <div class="foot-col">
-      <h4>Key Features</h4>
-      <ul>
-        <li><a href="#features">Digital Visitor Passes</a></li>
-        <li><a href="#features">Live Dashboard</a></li>
-        <li><a href="#features">Conference Booking</a></li>
-        <li><a href="#features">Email &amp; WhatsApp Alerts</a></li>
-        <li><a href="#features">Multi-location Support</a></li>
-        <li><a href="#features">Analytics &amp; Reports</a></li>
-      </ul>
-    </div>
-    <div class="foot-col">
-      <h4>Industries</h4>
-      <ul>
-        <li><a href="#about">Corporates</a></li>
-        <li><a href="#about">IT Parks</a></li>
-        <li><a href="#about">Co-working Spaces</a></li>
-        <li><a href="#about">Manufacturing Units</a></li>
-        <li><a href="#about">Enterprises</a></li>
-        <li><a href="#about">Educational Institutions</a></li>
-      </ul>
-    </div>
-  </div>
   <div class="wrap foot-bottom">
     <span>© 2026 Zodopt's Hai Visitor. All rights reserved.</span>
     <a href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer">© Zodopt</a>
@@ -416,7 +381,7 @@ const BODY_HTML = `
   </div>
 </footer>
 
-<!-- STICKY CTA (mobile) -->
+<!-- STICKY CTA (all screen sizes) -->
 <div class="sticky-cta">
   <div class="info">15-Day Hai Visitor Trial — ₹49<span>100 visitors · 100 conference bookings · 2 rooms</span></div>
   <a class="btn btn-primary" href="/auth/register">Start Now →</a>
