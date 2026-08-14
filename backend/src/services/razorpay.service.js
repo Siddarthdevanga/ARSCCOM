@@ -70,40 +70,6 @@ const sendRazorpayWelcomeEmail = async (email, name, tempPassword) => {
 };
 
 /* ======================================================
-   PENDING SIGNUP (landing-page popup, before payment)
-   --------------------------------------------------------
-   Razorpay's checkout only ever reliably returns a phone number in
-   the webhook — never email or name. This stores what the visitor
-   entered in our own popup so the webhook can look it back up by
-   phone once the payment actually lands.
-====================================================== */
-const COMPANY_NAME_RE = /^[a-zA-Z0-9\s\-'.&,]+$/;
-const PHONE_RE = /^[6-9]\d{9}$/;
-
-export const createPendingSignup = async ({ name, email, phone }) => {
-  const cleanName = name?.trim();
-  const cleanEmail = normalizeEmail(email);
-  const cleanPhone = (phone || "").replace(/\D/g, "");
-
-  if (!cleanName || cleanName.length < 2 || !COMPANY_NAME_RE.test(cleanName)) {
-    throw new Error("Enter a valid name");
-  }
-  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
-    throw new Error("Enter a valid email address");
-  }
-  if (!PHONE_RE.test(cleanPhone)) {
-    throw new Error("Enter a valid 10-digit phone number");
-  }
-
-  await db.execute(
-    `INSERT INTO razorpay_pending_signups (name, email, phone) VALUES (?, ?, ?)`,
-    [cleanName, cleanEmail, cleanPhone]
-  );
-
-  return { name: cleanName, email: cleanEmail, phone: cleanPhone };
-};
-
-/* ======================================================
    RESEND TEMP PASSWORD (duplicate payment / already exists)
 ====================================================== */
 const resendTempPassword = async (userRow) => {
@@ -117,8 +83,10 @@ const resendTempPassword = async (userRow) => {
 
   const greetName = userRow.companyName || "there";
 
+  // WhatsApp never carries the password itself (Meta rejects templates that
+  // transmit credentials) — it just points them to the email, which does.
   await Promise.allSettled([
-    sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [greetName, tempPassword]),
+    sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [greetName]),
     sendRazorpayWelcomeEmail(userRow.email, greetName, tempPassword),
   ]).then((results) => {
     results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] resend notification failed:", r.reason); });
@@ -126,17 +94,44 @@ const resendTempPassword = async (userRow) => {
 };
 
 /* ======================================================
-   HANDLE payment_link.paid
+   EXTRACT NAME/EMAIL/PHONE FROM A payment.captured PAYLOAD
+   --------------------------------------------------------
+   Razorpay Payment Pages collect Name/Email/Phone as native checkout
+   fields, but — unlike Payment Links — there's no `customer` object
+   on the payment entity. Email/contact are native Payment fields;
+   Name isn't, so Payment Pages surface it through `notes` using the
+   field's label as the key. Tries a few casings defensively since
+   the exact key isn't nailed down without a live payload to check
+   against — logs the raw notes object so this can be tightened once
+   real webhook deliveries are visible in the Razorpay dashboard.
 ====================================================== */
-export const handlePaymentLinkPaid = async (payload) => {
-  const paymentLinkEntity = payload?.payment_link?.entity || {};
+const extractPayerDetails = (paymentEntity) => {
+  const notes = paymentEntity?.notes || {};
+  const name =
+    notes.name || notes.Name || notes["Name"] || notes["name"] ||
+    paymentEntity?.customer?.name ||
+    "New Customer";
+
+  const email = normalizeEmail(paymentEntity?.email || notes.email || notes.Email);
+  const phone = (paymentEntity?.contact || notes.phone || notes.Phone || "").replace(/\D/g, "").slice(-10);
+
+  return { name, email, phone };
+};
+
+/* ======================================================
+   HANDLE payment.captured
+====================================================== */
+export const handlePaymentCaptured = async (payload) => {
   const paymentEntity = payload?.payment?.entity || {};
-
   const paymentId = paymentEntity?.id || null;
-  const phone = (paymentLinkEntity?.customer?.contact || paymentEntity?.contact || "").replace(/\D/g, "").slice(-10);
 
-  if (!paymentId || !phone) {
-    console.error("[RAZORPAY] payment_link.paid payload missing required fields:", { paymentId: !!paymentId, phone: !!phone });
+  const { name, email, phone } = extractPayerDetails(paymentEntity);
+
+  if (!paymentId || !email || !phone) {
+    console.error(
+      "[RAZORPAY] payment.captured payload missing required fields:",
+      { paymentId: !!paymentId, email: !!email, phone: !!phone, notes: paymentEntity?.notes }
+    );
     return { status: "ignored", reason: "missing_fields" };
   }
 
@@ -144,33 +139,14 @@ export const handlePaymentLinkPaid = async (payload) => {
   const [[existingUser]] = await db.query(
     `SELECT u.id, u.email, u.phone, c.name AS companyName
      FROM users u JOIN companies c ON c.id = u.company_id
-     WHERE u.phone = ? LIMIT 1`,
-    [phone]
+     WHERE u.email = ? OR u.phone = ? LIMIT 1`,
+    [email, phone]
   );
 
   if (existingUser) {
     await resendTempPassword(existingUser);
     return { status: "resent", companyExisted: true };
   }
-
-  /* ---------- Find the popup submission this payment belongs to ---------- */
-  const [[pending]] = await db.query(
-    `SELECT id, name, email FROM razorpay_pending_signups
-     WHERE phone = ? AND consumed_at IS NULL
-     ORDER BY created_at DESC LIMIT 1`,
-    [phone]
-  );
-
-  if (!pending) {
-    // Payment succeeded but we have no name/email for this phone — most
-    // likely they typed a different number at Razorpay's checkout than the
-    // one they entered in our popup. Logged loudly for manual reconciliation
-    // rather than guessing at a placeholder email (users.email is required).
-    console.error("[RAZORPAY] payment succeeded but no matching pending signup for phone:", phone, "paymentId:", paymentId);
-    return { status: "unmatched", phone, paymentId };
-  }
-
-  const { name, email } = pending;
 
   /* ---------- Create company + user ---------- */
   const baseSlug = generateSlug(name);
@@ -212,11 +188,6 @@ export const handlePaymentLinkPaid = async (payload) => {
       [companyId, email, phone, passwordHash]
     );
 
-    await conn.execute(
-      `UPDATE razorpay_pending_signups SET consumed_at = NOW() WHERE id = ?`,
-      [pending.id]
-    );
-
     if (conferenceRooms > 0) {
       const roomValues = Array.from({ length: conferenceRooms }, (_, i) => [
         companyId,
@@ -231,8 +202,10 @@ export const handlePaymentLinkPaid = async (payload) => {
 
     await conn.commit();
 
+    // WhatsApp never carries the password itself — it just tells them to
+    // check their email, which does.
     Promise.allSettled([
-      sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [name, tempPassword]),
+      sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [name]),
       sendRazorpayWelcomeEmail(email, name, tempPassword),
     ]).then((results) => {
       results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] welcome notification failed:", r.reason); });

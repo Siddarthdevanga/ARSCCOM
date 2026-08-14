@@ -33,7 +33,7 @@ const BODY_HTML = `
         <li>Digital visitor records, history, dashboard visibility and reports</li>
       </ul>
       <div class="hero-ctas">
-        <a class="btn btn-primary trial-cta" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start 15-Day Trial for ₹49 →</a>
+        <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start 15-Day Trial for ₹49 →</a>
       </div>
       <p class="cta-note">Set up in approximately 15 minutes</p>
       </div>
@@ -315,7 +315,7 @@ const BODY_HTML = `
           <li>2 conference rooms</li>
           <li>No dedicated hardware required</li>
         </ul>
-        <a class="btn btn-primary trial-cta" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start Your 15-Day Trial →</a>
+        <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start Your 15-Day Trial →</a>
         <div class="micro">Paid trial · No refund · Product terms apply</div>
       </div>
     </div>
@@ -362,7 +362,7 @@ const BODY_HTML = `
       <h2>Your marketing has already brought the customer in. <span class="accent">Make the visit count beyond today.</span></h2>
       <p class="lede">Replace fragmented walk-in records with a simple digital visitor-management foundation that your team can retrieve, review and responsibly use.</p>
       <div class="hero-ctas">
-        <a class="btn btn-primary trial-cta" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start 15-Day Trial for ₹49 →</a>
+        <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start 15-Day Trial for ₹49 →</a>
         <a class="btn btn-wa" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">Chat with the Hai Visitor Team</a>
       </div>
     </div>
@@ -383,39 +383,11 @@ const BODY_HTML = `
 
 <!-- STICKY CTA (all screen sizes) -->
 <div class="sticky-cta">
-  <a class="btn btn-primary trial-cta" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start 15-Day Trial for ₹49 →</a>
+  <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start 15-Day Trial for ₹49 →</a>
 </div>
 
 <!-- WhatsApp float (desktop) -->
 <a class="wa-float" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"><img src="/whatsapp-icon.png" alt="WhatsApp" /></a>
-
-<!-- TRIAL SIGNUP POPUP -->
-<div class="trial-modal-backdrop" id="trialModalBackdrop">
-  <div class="trial-modal" role="dialog" aria-modal="true" aria-labelledby="trialModalTitle">
-    <button type="button" class="trial-modal-close" id="trialModalClose" aria-label="Close">&times;</button>
-    <h3 id="trialModalTitle">Start Your 15-Day Trial</h3>
-    <p class="trial-modal-sub">Enter your details — you'll be taken to secure payment next.</p>
-    <form id="trialForm" novalidate>
-      <div class="trial-field">
-        <label for="trialName">Full Name</label>
-        <input type="text" id="trialName" name="name" placeholder="Your name" autocomplete="name" />
-        <span class="trial-field-err" id="trialNameErr"></span>
-      </div>
-      <div class="trial-field">
-        <label for="trialEmail">Email</label>
-        <input type="email" id="trialEmail" name="email" placeholder="you@company.com" autocomplete="email" />
-        <span class="trial-field-err" id="trialEmailErr"></span>
-      </div>
-      <div class="trial-field">
-        <label for="trialPhone">Phone Number</label>
-        <input type="tel" id="trialPhone" name="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel" />
-        <span class="trial-field-err" id="trialPhoneErr"></span>
-      </div>
-      <div class="trial-modal-err" id="trialFormErr"></div>
-      <button type="submit" class="btn btn-primary trial-modal-submit" id="trialSubmitBtn">Continue to Payment →</button>
-    </form>
-  </div>
-</div>
 
 `;
 
@@ -445,123 +417,10 @@ export default function HomePage() {
       }, 5000);
     }
 
-    /* ── Trial signup popup ──────────────────────────── */
-    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'https://www.promeet.zodopt.in';
-    const backdrop  = document.getElementById('trialModalBackdrop');
-    const closeBtn  = document.getElementById('trialModalClose');
-    const form      = document.getElementById('trialForm');
-    const nameInput = document.getElementById('trialName');
-    const emailInput = document.getElementById('trialEmail');
-    const phoneInput = document.getElementById('trialPhone');
-    const nameErr   = document.getElementById('trialNameErr');
-    const emailErr  = document.getElementById('trialEmailErr');
-    const phoneErr  = document.getElementById('trialPhoneErr');
-    const formErr   = document.getElementById('trialFormErr');
-    const submitBtn = document.getElementById('trialSubmitBtn');
-
-    let ctaTargetUrl = '';
-
-    const clearErrors = () => {
-      [nameErr, emailErr, phoneErr, formErr].forEach(el => { if (el) el.textContent = ''; });
-      [nameInput, emailInput, phoneInput].forEach(el => el?.classList.remove('err'));
-    };
-
-    const openModal = (url) => {
-      ctaTargetUrl = url;
-      clearErrors();
-      if (form) form.reset();
-      backdrop?.classList.add('open');
-      document.body.style.overflow = 'hidden';
-      nameInput?.focus();
-    };
-
-    const closeModal = () => {
-      backdrop?.classList.remove('open');
-      document.body.style.overflow = '';
-    };
-
-    const ctaLinks = document.querySelectorAll('.trial-cta');
-    const onCtaClick = (e) => {
-      e.preventDefault();
-      openModal(e.currentTarget.getAttribute('href'));
-    };
-    ctaLinks.forEach(a => a.addEventListener('click', onCtaClick));
-
-    closeBtn?.addEventListener('click', closeModal);
-    const onBackdropClick = (e) => { if (e.target === backdrop) closeModal(); };
-    backdrop?.addEventListener('click', onBackdropClick);
-
-    const validate = () => {
-      let ok = true;
-      clearErrors();
-
-      const name = nameInput.value.trim();
-      if (!name || name.length < 2) {
-        nameErr.textContent = 'Enter your name'; nameInput.classList.add('err'); ok = false;
-      }
-
-      const email = emailInput.value.trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        emailErr.textContent = 'Enter a valid email address'; emailInput.classList.add('err'); ok = false;
-      }
-
-      const phone = phoneInput.value.trim();
-      if (!/^[6-9]\d{9}$/.test(phone)) {
-        phoneErr.textContent = 'Enter a valid 10-digit phone number'; phoneInput.classList.add('err'); ok = false;
-      }
-
-      return ok;
-    };
-
-    const onSubmit = async (e) => {
-      e.preventDefault();
-      if (!validate()) return;
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Please wait...';
-
-      try {
-        const res = await fetch(`${API_BASE}/api/razorpay/pending-signup`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: nameInput.value.trim(),
-            email: emailInput.value.trim(),
-            phone: phoneInput.value.trim(),
-          }),
-        });
-        const data = await res.json();
-
-        if (!res.ok) {
-          formErr.textContent = data?.message || 'Something went wrong. Please try again.';
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Continue to Payment →';
-          return;
-        }
-
-        const params = new URLSearchParams({
-          'prefill[name]': nameInput.value.trim(),
-          'prefill[email]': emailInput.value.trim(),
-          'prefill[contact]': phoneInput.value.trim(),
-        });
-        window.location.href = `${ctaTargetUrl}?${params.toString()}`;
-      } catch (err) {
-        console.error('TRIAL SIGNUP ERROR:', err);
-        formErr.textContent = 'Unable to connect to server. Please try again.';
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Continue to Payment →';
-      }
-    };
-    form?.addEventListener('submit', onSubmit);
-
     return () => {
       clearTimeout(revealTimer);
       if (flipTimer) clearInterval(flipTimer);
       if (io) io.disconnect();
-      ctaLinks.forEach(a => a.removeEventListener('click', onCtaClick));
-      closeBtn?.removeEventListener('click', closeModal);
-      backdrop?.removeEventListener('click', onBackdropClick);
-      form?.removeEventListener('submit', onSubmit);
     };
   }, []);
 
