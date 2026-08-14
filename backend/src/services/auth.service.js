@@ -198,10 +198,11 @@ export const registerCompany = async (data, file) => {
     // Send welcome email (non-blocking)
     sendWelcomeEmail(email, companyName).catch(console.error);
 
-    return {
-      company: { id: companyId, name: companyName, slug, logoUrl, whatsappUrl },
-      user: { email },
-    };
+    // Log the new company straight in so the frontend can skip a manual
+    // login step and land directly on /auth/subscription — same token +
+    // company shape a normal login would produce, so every page that reads
+    // `company` from storage behaves identically either way.
+    return await login({ email, password });
 
   } catch (err) {
     await conn.rollback();

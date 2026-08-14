@@ -104,9 +104,12 @@ export const register = async (req, res) => {
     /* ---------- REGISTER SERVICE ---------- */
     const result = await service.registerCompany(req.body, req.file);
 
+    res.cookie("token", result.token, { ...cookieOptsFor(req), maxAge: 12 * 60 * 60 * 1000 });
+
     return res.status(201).json({
       success: true,
       message: "Company registered successfully. Proceed to subscription.",
+      token: result.token,
       company: result.company,
       user: result.user,
     });

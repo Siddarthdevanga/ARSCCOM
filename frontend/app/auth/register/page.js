@@ -175,8 +175,17 @@ export default function RegisterPage() {
       if (!res.ok) { setError(data?.message || "Registration failed"); return; }
       const normalizedEmail = email.trim().toLowerCase();
       if (normalizedEmail) localStorage.setItem("regEmail", normalizedEmail);
-      setSuccess("Registration successful! Redirecting to login page...");
-      setTimeout(() => router.push("/auth/login"), 2500);
+      if (data?.company) {
+        localStorage.setItem("company", JSON.stringify(data.company));
+        localStorage.removeItem("regEmail");
+        setTimeout(() => router.push("/auth/subscription"), 1500);
+      } else {
+        // Fallback: registration succeeded but no session came back — fall
+        // back to the manual login step rather than sending the user to a
+        // subscription page with no company in storage.
+        setSuccess("Registration successful! Redirecting to login page...");
+        setTimeout(() => router.push("/auth/login"), 1500);
+      }
     } catch (err) {
       console.error("REGISTRATION ERROR:", err);
       setError("Unable to connect to server. Please try again.");
