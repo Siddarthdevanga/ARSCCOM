@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import bcrypt from "bcrypt";
+import axios from "axios";
 import { db } from "../config/db.js";
 import { sendEmail } from "../utils/mailer.js";
 import { sendWhatsAppTemplate } from "./gupshup.service.js";
@@ -13,6 +14,71 @@ import {
   normalizeEmail,
   BCRYPT_ROUNDS,
 } from "./auth.service.js";
+
+const RAZORPAY_API = "https://api.razorpay.com/v1";
+const TRIAL_AMOUNT_PAISE = 4900; // ₹49
+
+const razorpayAuth = () => {
+  const keyId = process.env.RAZORPAY_KEY_ID;
+  const keySecret = process.env.RAZORPAY_KEY_SECRET;
+  if (!keyId || !keySecret) {
+    throw new Error("Razorpay API keys are not configured");
+  }
+  return { username: keyId, password: keySecret };
+};
+
+/* ======================================================
+   ORDERS API — embedded checkout (landing-page popup)
+====================================================== */
+const PHONE_RE = /^[6-9]\d{9}$/;
+
+export const createTrialOrder = async ({ email, phone }) => {
+  const cleanEmail = normalizeEmail(email);
+  const cleanPhone = (phone || "").replace(/\D/g, "");
+
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    throw new Error("Enter a valid email address");
+  }
+  if (!PHONE_RE.test(cleanPhone)) {
+    throw new Error("Enter a valid 10-digit phone number");
+  }
+
+  // Catch an already-registered email/phone before charging them again —
+  // the webhook's own dedup (resend temp password) is a safety net, not
+  // meant to be the first line of defense against a real repeat payment.
+  const [[existingUser]] = await db.query(
+    `SELECT id FROM users WHERE email = ? OR phone = ? LIMIT 1`,
+    [cleanEmail, cleanPhone]
+  );
+  if (existingUser) {
+    const err = new Error("This email or phone number is already registered. Please log in instead.");
+    err.code = "ALREADY_REGISTERED";
+    throw err;
+  }
+
+  const { data } = await axios.post(
+    `${RAZORPAY_API}/orders`,
+    {
+      amount: TRIAL_AMOUNT_PAISE,
+      currency: "INR",
+      receipt: `trial_${Date.now()}`,
+      notes: { email: cleanEmail, phone: cleanPhone, product: "hai_visitor_trial" },
+    },
+    { auth: razorpayAuth() }
+  );
+
+  return {
+    orderId: data.id,
+    amount: data.amount,
+    currency: data.currency,
+    keyId: process.env.RAZORPAY_KEY_ID,
+  };
+};
+
+const fetchRazorpayOrder = async (orderId) => {
+  const { data } = await axios.get(`${RAZORPAY_API}/orders/${orderId}`, { auth: razorpayAuth() });
+  return data;
+};
 
 /* ======================================================
    SIGNATURE VERIFICATION
@@ -33,12 +99,12 @@ export const verifyRazorpaySignature = (rawBody, signature) => {
 /* ======================================================
    WELCOME EMAIL (temp password)
 ====================================================== */
-const sendRazorpayWelcomeEmail = async (email, name, tempPassword) => {
+const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
   await sendEmail({
     to: email,
     subject: "Welcome to Hai Visitor — Your Trial Account & Login Details",
     html: `
-      <p>Hello <b>${name}</b>,</p>
+      <p>Hello,</p>
 
       <p>
         Thank you for your payment. Your <b>15-day Hai Visitor trial</b> is active
@@ -87,35 +153,40 @@ const resendTempPassword = async (userRow) => {
   // transmit credentials) — it just points them to the email, which does.
   await Promise.allSettled([
     sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [greetName]),
-    sendRazorpayWelcomeEmail(userRow.email, greetName, tempPassword),
+    sendRazorpayWelcomeEmail(userRow.email, tempPassword),
   ]).then((results) => {
     results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] resend notification failed:", r.reason); });
   });
 };
 
 /* ======================================================
-   EXTRACT NAME/EMAIL/PHONE FROM A payment.captured PAYLOAD
+   EXTRACT EMAIL/PHONE FROM A payment.captured PAYLOAD
    --------------------------------------------------------
-   Razorpay Payment Pages collect Name/Email/Phone as native checkout
-   fields, but — unlike Payment Links — there's no `customer` object
-   on the payment entity. Email/contact are native Payment fields;
-   Name isn't, so Payment Pages surface it through `notes` using the
-   field's label as the key. Tries a few casings defensively since
-   the exact key isn't nailed down without a live payload to check
-   against — logs the raw notes object so this can be tightened once
-   real webhook deliveries are visible in the Razorpay dashboard.
+   The landing-page popup only collects Email + Phone (no name) and
+   sends them to Razorpay as `notes` when the Order is created via
+   createTrialOrder(). The payment webhook only carries an `order_id`
+   — not the order's own notes — so this fetches the order back from
+   Razorpay's API to read them. Name always falls back to a
+   placeholder; the real company name gets filled in later on
+   /auth/complete-registration.
 ====================================================== */
-const extractPayerDetails = (paymentEntity) => {
-  const notes = paymentEntity?.notes || {};
-  const name =
-    notes.name || notes.Name || notes["Name"] || notes["name"] ||
-    paymentEntity?.customer?.name ||
-    "New Customer";
+const extractPayerDetails = async (paymentEntity) => {
+  const orderId = paymentEntity?.order_id;
+  let notes = {};
 
-  const email = normalizeEmail(paymentEntity?.email || notes.email || notes.Email);
-  const phone = (paymentEntity?.contact || notes.phone || notes.Phone || "").replace(/\D/g, "").slice(-10);
+  if (orderId) {
+    try {
+      const order = await fetchRazorpayOrder(orderId);
+      notes = order?.notes || {};
+    } catch (err) {
+      console.error("[RAZORPAY] failed to fetch order for notes:", orderId, err.response?.data || err.message);
+    }
+  }
 
-  return { name, email, phone };
+  const email = normalizeEmail(notes.email || paymentEntity?.email);
+  const phone = (notes.phone || paymentEntity?.contact || "").replace(/\D/g, "").slice(-10);
+
+  return { name: "New Customer", email, phone };
 };
 
 /* ======================================================
@@ -144,13 +215,13 @@ export const handlePaymentCaptured = async (payload) => {
   const paymentEntity = payload?.payment?.entity || {};
   const paymentId = paymentEntity?.id || null;
 
-  const { name, email, phone } = extractPayerDetails(paymentEntity);
+  const { name, email, phone } = await extractPayerDetails(paymentEntity);
   const log = (status, companyId) => logWebhookEvent({ paymentId, name, email, phone, status, companyId, rawPayload: payload });
 
   if (!paymentId || !email || !phone) {
     console.error(
       "[RAZORPAY] payment.captured payload missing required fields:",
-      { paymentId: !!paymentId, email: !!email, phone: !!phone, notes: paymentEntity?.notes }
+      { paymentId: !!paymentId, email: !!email, phone: !!phone, orderId: paymentEntity?.order_id }
     );
     await log("missing_fields");
     return { status: "ignored", reason: "missing_fields" };
@@ -226,10 +297,11 @@ export const handlePaymentCaptured = async (payload) => {
     await conn.commit();
 
     // WhatsApp never carries the password itself — it just tells them to
-    // check their email, which does.
+    // check their email, which does. No real name is collected by the
+    // popup, so the template's {{1}} just gets a generic greeting.
     Promise.allSettled([
-      sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [name]),
-      sendRazorpayWelcomeEmail(email, name, tempPassword),
+      sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, ["there"]),
+      sendRazorpayWelcomeEmail(email, tempPassword),
     ]).then((results) => {
       results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] welcome notification failed:", r.reason); });
     });

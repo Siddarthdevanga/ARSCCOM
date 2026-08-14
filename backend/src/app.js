@@ -14,6 +14,7 @@ import conferencePublicRoutes from "./routes/conference.public.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
 import razorpayWebhookRoutes from "./routes/razorpayWebhook.route.js";
+import razorpayOrderRoutes from "./routes/razorpayOrder.route.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
 import upgradeRoutes from "./routes/upgrade.route.js";
 import billingRepair from "./routes/billingRepair.route.js";
@@ -204,6 +205,9 @@ app.use("/api/public/conference/company/:slug/verify-otp", otpVerifyLimiter);
 // Booking / registration write endpoints
 app.use("/api/public/register",              publicVisitorLimiter);
 app.use("/api/public/conference/company/:slug/book", publicBookingLimiter);
+
+// Razorpay landing-page popup — creates the Order behind the embedded checkout
+app.use("/api/razorpay", publicVisitorLimiter, razorpayOrderRoutes);
 
 // General public access (viewing rooms, bookings, company info)
 app.use("/api/public", visitorPublicRouter);

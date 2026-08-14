@@ -33,7 +33,7 @@ const BODY_HTML = `
         <li>Digital visitor records, history, dashboard visibility and reports</li>
       </ul>
       <div class="hero-ctas">
-        <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start 15-Day Trial for ₹49 →</a>
+        <a class="btn btn-primary trial-cta" href="#trial">Start 15-Day Trial for ₹49 →</a>
       </div>
       <p class="cta-note">Set up in approximately 15 minutes</p>
       </div>
@@ -315,7 +315,7 @@ const BODY_HTML = `
           <li>2 conference rooms</li>
           <li>No dedicated hardware required</li>
         </ul>
-        <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start Your 15-Day Trial →</a>
+        <a class="btn btn-primary trial-cta" href="#trial">Start Your 15-Day Trial →</a>
         <div class="micro">Paid trial · No refund · Product terms apply</div>
       </div>
     </div>
@@ -362,7 +362,7 @@ const BODY_HTML = `
       <h2>Your marketing has already brought the customer in. <span class="accent">Make the visit count beyond today.</span></h2>
       <p class="lede">Replace fragmented walk-in records with a simple digital visitor-management foundation that your team can retrieve, review and responsibly use.</p>
       <div class="hero-ctas">
-        <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start 15-Day Trial for ₹49 →</a>
+        <a class="btn btn-primary trial-cta" href="#trial">Start 15-Day Trial for ₹49 →</a>
         <a class="btn btn-wa" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">Chat with the Hai Visitor Team</a>
       </div>
     </div>
@@ -383,11 +383,46 @@ const BODY_HTML = `
 
 <!-- STICKY CTA (all screen sizes) -->
 <div class="sticky-cta">
-  <a class="btn btn-primary" href="https://rzp.io/rzp/yAdtOdt">Start 15-Day Trial for ₹49 →</a>
+  <a class="btn btn-primary trial-cta" href="#trial">Start 15-Day Trial for ₹49 →</a>
 </div>
 
 <!-- WhatsApp float (desktop) -->
 <a class="wa-float" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"><img src="/whatsapp-icon.png" alt="WhatsApp" /></a>
+
+<!-- TRIAL SIGNUP POPUP -->
+<div class="trial-modal-backdrop" id="trialModalBackdrop">
+  <div class="trial-modal" role="dialog" aria-modal="true" aria-labelledby="trialModalTitle">
+    <button type="button" class="trial-modal-close" id="trialModalClose" aria-label="Close">&times;</button>
+    <div id="trialFormView">
+      <h3 id="trialModalTitle">Start Your 15-Day Trial</h3>
+      <p class="trial-modal-sub">Enter your email and phone number — payment happens right here, next step.</p>
+      <form id="trialForm" novalidate>
+        <div class="trial-field">
+          <label for="trialEmail">Email</label>
+          <input type="email" id="trialEmail" name="email" placeholder="you@company.com" autocomplete="email" />
+          <span class="trial-field-err" id="trialEmailErr"></span>
+        </div>
+        <div class="trial-field">
+          <label for="trialPhone">Phone Number</label>
+          <input type="tel" id="trialPhone" name="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel" />
+          <span class="trial-field-err" id="trialPhoneErr"></span>
+        </div>
+        <div class="trial-modal-err" id="trialFormErr"></div>
+        <button type="submit" class="btn btn-primary trial-modal-submit" id="trialSubmitBtn">Pay ₹49 & Start Trial →</button>
+      </form>
+    </div>
+    <div id="trialSuccessView" class="trial-success" style="display:none;">
+      <div class="trial-success-icon">✓</div>
+      <h3>Account Created</h3>
+      <p>Check your email for your login details.</p>
+    </div>
+    <div id="trialExistingView" class="trial-success" style="display:none;">
+      <h3>Already Registered</h3>
+      <p>This email or phone number already has a Hai Visitor account.</p>
+      <a class="btn btn-primary trial-modal-submit" href="/auth/login">Login →</a>
+    </div>
+  </div>
+</div>
 
 `;
 
@@ -417,10 +452,156 @@ export default function HomePage() {
       }, 5000);
     }
 
+    /* ── Trial signup popup (embedded Razorpay Checkout) ────── */
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || 'https://www.promeet.zodopt.in';
+
+    // Razorpay's checkout.js can't run if injected via innerHTML, so it's
+    // loaded once here instead of as a <script> tag in the markup.
+    let razorpayScript = document.getElementById('razorpay-checkout-js');
+    if (!razorpayScript) {
+      razorpayScript = document.createElement('script');
+      razorpayScript.id = 'razorpay-checkout-js';
+      razorpayScript.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      document.head.appendChild(razorpayScript);
+    }
+
+    const backdrop    = document.getElementById('trialModalBackdrop');
+    const closeBtn     = document.getElementById('trialModalClose');
+    const formView      = document.getElementById('trialFormView');
+    const successView   = document.getElementById('trialSuccessView');
+    const existingView  = document.getElementById('trialExistingView');
+    const form          = document.getElementById('trialForm');
+    const emailInput    = document.getElementById('trialEmail');
+    const phoneInput    = document.getElementById('trialPhone');
+    const emailErr       = document.getElementById('trialEmailErr');
+    const phoneErr       = document.getElementById('trialPhoneErr');
+    const formErr        = document.getElementById('trialFormErr');
+    const submitBtn      = document.getElementById('trialSubmitBtn');
+
+    const clearErrors = () => {
+      [emailErr, phoneErr, formErr].forEach(el => { if (el) el.textContent = ''; });
+      [emailInput, phoneInput].forEach(el => el?.classList.remove('err'));
+    };
+
+    const resetToForm = () => {
+      clearErrors();
+      form?.reset();
+      if (formView) formView.style.display = '';
+      if (successView) successView.style.display = 'none';
+      if (existingView) existingView.style.display = 'none';
+    };
+
+    const openModal = () => {
+      resetToForm();
+      backdrop?.classList.add('open');
+      document.body.style.overflow = 'hidden';
+      emailInput?.focus();
+    };
+
+    const closeModal = () => {
+      backdrop?.classList.remove('open');
+      document.body.style.overflow = '';
+    };
+
+    const ctaLinks = document.querySelectorAll('.trial-cta');
+    const onCtaClick = (e) => { e.preventDefault(); openModal(); };
+    ctaLinks.forEach(a => a.addEventListener('click', onCtaClick));
+
+    closeBtn?.addEventListener('click', closeModal);
+    const onBackdropClick = (e) => { if (e.target === backdrop) closeModal(); };
+    backdrop?.addEventListener('click', onBackdropClick);
+
+    const validate = () => {
+      let ok = true;
+      clearErrors();
+
+      const email = emailInput.value.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        emailErr.textContent = 'Enter a valid email address'; emailInput.classList.add('err'); ok = false;
+      }
+
+      const phone = phoneInput.value.trim();
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        phoneErr.textContent = 'Enter a valid 10-digit phone number'; phoneInput.classList.add('err'); ok = false;
+      }
+
+      return ok;
+    };
+
+    const resetSubmitBtn = () => {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Pay ₹49 & Start Trial →';
+    };
+
+    const onSubmit = async (e) => {
+      e.preventDefault();
+      if (!validate()) return;
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Please wait...';
+
+      try {
+        const res = await fetch(`${API_BASE}/api/razorpay/create-order`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: emailInput.value.trim(),
+            phone: phoneInput.value.trim(),
+          }),
+        });
+        const data = await res.json();
+
+        if (data?.code === 'already_registered') {
+          if (formView) formView.style.display = 'none';
+          if (existingView) existingView.style.display = '';
+          resetSubmitBtn();
+          return;
+        }
+
+        if (!res.ok || !window.Razorpay) {
+          formErr.textContent = data?.message || 'Something went wrong. Please try again.';
+          resetSubmitBtn();
+          return;
+        }
+
+        const rzp = new window.Razorpay({
+          key: data.keyId,
+          amount: data.amount,
+          currency: data.currency,
+          order_id: data.orderId,
+          name: 'Hai Visitor',
+          description: '15-Day Trial',
+          prefill: { email: emailInput.value.trim(), contact: phoneInput.value.trim() },
+          handler: () => {
+            if (formView) formView.style.display = 'none';
+            if (successView) successView.style.display = '';
+          },
+          modal: {
+            ondismiss: () => { resetSubmitBtn(); },
+          },
+        });
+        rzp.on('payment.failed', () => {
+          formErr.textContent = 'Payment failed. Please try again.';
+          resetSubmitBtn();
+        });
+        rzp.open();
+        resetSubmitBtn();
+      } catch (err) {
+        console.error('TRIAL SIGNUP ERROR:', err);
+        formErr.textContent = 'Unable to connect to server. Please try again.';
+        resetSubmitBtn();
+      }
+    };
+    form?.addEventListener('submit', onSubmit);
+
     return () => {
       clearTimeout(revealTimer);
       if (flipTimer) clearInterval(flipTimer);
       if (io) io.disconnect();
+      ctaLinks.forEach(a => a.removeEventListener('click', onCtaClick));
+      closeBtn?.removeEventListener('click', closeModal);
+      backdrop?.removeEventListener('click', onBackdropClick);
+      form?.removeEventListener('submit', onSubmit);
     };
   }, []);
 
