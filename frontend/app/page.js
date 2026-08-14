@@ -383,8 +383,7 @@ const BODY_HTML = `
 
 <!-- STICKY CTA (all screen sizes) -->
 <div class="sticky-cta">
-  <div class="info">15-Day Hai Visitor Trial — ₹49<span>100 visitors · 100 conference bookings · 2 rooms</span></div>
-  <a class="btn btn-primary" href="/auth/register">Start Now →</a>
+  <a class="btn btn-primary" href="/auth/register">Start 15-Day Trial for ₹49 →</a>
 </div>
 
 <!-- WhatsApp float (desktop) -->
