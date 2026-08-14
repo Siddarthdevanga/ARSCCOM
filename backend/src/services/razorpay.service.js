@@ -119,6 +119,25 @@ const extractPayerDetails = (paymentEntity) => {
 };
 
 /* ======================================================
+   WEBHOOK LOG
+   --------------------------------------------------------
+   One row per payment.captured delivery, regardless of outcome —
+   lets you check what was received without SSHing in to grep logs.
+====================================================== */
+const logWebhookEvent = async ({ paymentId, name, email, phone, status, companyId, rawPayload }) => {
+  try {
+    await db.execute(
+      `INSERT INTO razorpay_webhook_log (event, payment_id, name, email, phone, status, company_id, raw_payload)
+       VALUES ('payment.captured', ?, ?, ?, ?, ?, ?, ?)`,
+      [paymentId || null, name || null, email || null, phone || null, status, companyId || null, JSON.stringify(rawPayload)]
+    );
+  } catch (err) {
+    // Logging must never break the actual webhook flow.
+    console.error("[RAZORPAY] failed to write webhook log:", err.message);
+  }
+};
+
+/* ======================================================
    HANDLE payment.captured
 ====================================================== */
 export const handlePaymentCaptured = async (payload) => {
@@ -126,12 +145,14 @@ export const handlePaymentCaptured = async (payload) => {
   const paymentId = paymentEntity?.id || null;
 
   const { name, email, phone } = extractPayerDetails(paymentEntity);
+  const log = (status, companyId) => logWebhookEvent({ paymentId, name, email, phone, status, companyId, rawPayload: payload });
 
   if (!paymentId || !email || !phone) {
     console.error(
       "[RAZORPAY] payment.captured payload missing required fields:",
       { paymentId: !!paymentId, email: !!email, phone: !!phone, notes: paymentEntity?.notes }
     );
+    await log("missing_fields");
     return { status: "ignored", reason: "missing_fields" };
   }
 
@@ -145,6 +166,7 @@ export const handlePaymentCaptured = async (payload) => {
 
   if (existingUser) {
     await resendTempPassword(existingUser);
+    await log("resent");
     return { status: "resent", companyExisted: true };
   }
 
@@ -177,6 +199,7 @@ export const handlePaymentCaptured = async (payload) => {
       if (err.code === "ER_DUP_ENTRY" && err.sqlMessage?.includes("razorpay_payment_id")) {
         await conn.rollback();
         console.log("[RAZORPAY] duplicate webhook delivery for payment", paymentId, "— already processed");
+        await log("duplicate_delivery");
         return { status: "duplicate_delivery" };
       }
       throw err;
@@ -211,6 +234,7 @@ export const handlePaymentCaptured = async (payload) => {
       results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] welcome notification failed:", r.reason); });
     });
 
+    await log("created", companyId);
     return { status: "created", companyId };
   } catch (err) {
     await conn.rollback();
