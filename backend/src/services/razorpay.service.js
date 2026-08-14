@@ -70,6 +70,40 @@ const sendRazorpayWelcomeEmail = async (email, name, tempPassword) => {
 };
 
 /* ======================================================
+   PENDING SIGNUP (landing-page popup, before payment)
+   --------------------------------------------------------
+   Razorpay's checkout only ever reliably returns a phone number in
+   the webhook — never email or name. This stores what the visitor
+   entered in our own popup so the webhook can look it back up by
+   phone once the payment actually lands.
+====================================================== */
+const COMPANY_NAME_RE = /^[a-zA-Z0-9\s\-'.&,]+$/;
+const PHONE_RE = /^[6-9]\d{9}$/;
+
+export const createPendingSignup = async ({ name, email, phone }) => {
+  const cleanName = name?.trim();
+  const cleanEmail = normalizeEmail(email);
+  const cleanPhone = (phone || "").replace(/\D/g, "");
+
+  if (!cleanName || cleanName.length < 2 || !COMPANY_NAME_RE.test(cleanName)) {
+    throw new Error("Enter a valid name");
+  }
+  if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    throw new Error("Enter a valid email address");
+  }
+  if (!PHONE_RE.test(cleanPhone)) {
+    throw new Error("Enter a valid 10-digit phone number");
+  }
+
+  await db.execute(
+    `INSERT INTO razorpay_pending_signups (name, email, phone) VALUES (?, ?, ?)`,
+    [cleanName, cleanEmail, cleanPhone]
+  );
+
+  return { name: cleanName, email: cleanEmail, phone: cleanPhone };
+};
+
+/* ======================================================
    RESEND TEMP PASSWORD (duplicate payment / already exists)
 ====================================================== */
 const resendTempPassword = async (userRow) => {
@@ -81,9 +115,11 @@ const resendTempPassword = async (userRow) => {
     [passwordHash, userRow.id]
   );
 
+  const greetName = userRow.companyName || "there";
+
   await Promise.allSettled([
-    sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [userRow.name || "there", tempPassword]),
-    sendRazorpayWelcomeEmail(userRow.email, userRow.name || "there", tempPassword),
+    sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [greetName, tempPassword]),
+    sendRazorpayWelcomeEmail(userRow.email, greetName, tempPassword),
   ]).then((results) => {
     results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] resend notification failed:", r.reason); });
   });
@@ -97,25 +133,44 @@ export const handlePaymentLinkPaid = async (payload) => {
   const paymentEntity = payload?.payment?.entity || {};
 
   const paymentId = paymentEntity?.id || null;
-  const name = paymentLinkEntity?.customer?.name || paymentEntity?.notes?.name || "New Customer";
-  const email = normalizeEmail(paymentLinkEntity?.customer?.email || paymentEntity?.email);
   const phone = (paymentLinkEntity?.customer?.contact || paymentEntity?.contact || "").replace(/\D/g, "").slice(-10);
 
-  if (!paymentId || !email || !phone) {
-    console.error("[RAZORPAY] payment_link.paid payload missing required fields:", { paymentId, email: !!email, phone: !!phone });
+  if (!paymentId || !phone) {
+    console.error("[RAZORPAY] payment_link.paid payload missing required fields:", { paymentId: !!paymentId, phone: !!phone });
     return { status: "ignored", reason: "missing_fields" };
   }
 
   /* ---------- Existing account? Treat as a duplicate payment ---------- */
   const [[existingUser]] = await db.query(
-    `SELECT id, email, phone, name FROM users WHERE email = ? OR phone = ? LIMIT 1`,
-    [email, phone]
+    `SELECT u.id, u.email, u.phone, c.name AS companyName
+     FROM users u JOIN companies c ON c.id = u.company_id
+     WHERE u.phone = ? LIMIT 1`,
+    [phone]
   );
 
   if (existingUser) {
     await resendTempPassword(existingUser);
     return { status: "resent", companyExisted: true };
   }
+
+  /* ---------- Find the popup submission this payment belongs to ---------- */
+  const [[pending]] = await db.query(
+    `SELECT id, name, email FROM razorpay_pending_signups
+     WHERE phone = ? AND consumed_at IS NULL
+     ORDER BY created_at DESC LIMIT 1`,
+    [phone]
+  );
+
+  if (!pending) {
+    // Payment succeeded but we have no name/email for this phone — most
+    // likely they typed a different number at Razorpay's checkout than the
+    // one they entered in our popup. Logged loudly for manual reconciliation
+    // rather than guessing at a placeholder email (users.email is required).
+    console.error("[RAZORPAY] payment succeeded but no matching pending signup for phone:", phone, "paymentId:", paymentId);
+    return { status: "unmatched", phone, paymentId };
+  }
+
+  const { name, email } = pending;
 
   /* ---------- Create company + user ---------- */
   const baseSlug = generateSlug(name);
@@ -155,6 +210,11 @@ export const handlePaymentLinkPaid = async (payload) => {
       `INSERT INTO users (company_id, email, phone, password_hash, must_change_password)
        VALUES (?, ?, ?, ?, 1)`,
       [companyId, email, phone, passwordHash]
+    );
+
+    await conn.execute(
+      `UPDATE razorpay_pending_signups SET consumed_at = NOW() WHERE id = ?`,
+      [pending.id]
     );
 
     if (conferenceRooms > 0) {
