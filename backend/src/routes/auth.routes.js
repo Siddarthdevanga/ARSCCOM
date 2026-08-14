@@ -1,8 +1,10 @@
 import express from "express";
 import { upload } from "../middlewares/upload.middleware.js";
+import { authenticate } from "../middlewares/auth.middleware.js";
 import {
   register,
   login,
+  completeRegistration,
   forgotPassword,
   resetPassword,
   logout,
@@ -93,6 +95,20 @@ router.post(
   "/login",
   checkSubscriptionStatus,
   asyncHandler(login)
+);
+
+/* ======================================================
+   COMPLETE REGISTRATION
+   --------------------------------------------------------
+   For companies created via the Razorpay payment-link flow —
+   sets a real password, company name, logo and WhatsApp URL.
+   Protected: requires the auth cookie set by /login.
+====================================================== */
+router.post(
+  "/complete-registration",
+  authenticate,
+  upload.single("logo"),
+  asyncHandler(completeRegistration)
 );
 
 /* ======================================================

@@ -11,8 +11,10 @@ const MAX_ATTEMPTS  = 5;
 
 function emailError(v) {
   const s = v.trim().toLowerCase();
-  if (!s) return "Email is required";
-  if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(s)) return "Enter a valid email address";
+  if (!s) return "Email or phone number is required";
+  const isEmail = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(s);
+  const isPhone = /^\d{10}$/.test(s);
+  if (!isEmail && !isPhone) return "Enter a valid email address or 10-digit phone number";
   return "";
 }
 
@@ -132,7 +134,7 @@ export default function LoginPage() {
       const res  = await fetch(`${API_BASE}/api/auth/login`, {
         method:      "POST",
         headers:     { "Content-Type": "application/json" },
-        body:        JSON.stringify({ email: normalizedEmail, password }),
+        body:        JSON.stringify({ identifier: normalizedEmail, password }),
         credentials: "include",
       });
 
@@ -140,11 +142,11 @@ export default function LoginPage() {
 
       if (!res.ok) {
         recordFailure();
-        setError(data?.message || "Invalid email or password");
+        setError(data?.message || "Invalid email/phone or password");
         return;
       }
 
-      const { token, company } = data;
+      const { token, company, user } = data;
 
       if (!token) {
         setError("Authentication failed. Please try again.");
@@ -163,6 +165,15 @@ export default function LoginPage() {
       }
 
       localStorage.setItem("company", JSON.stringify(company));
+
+      // Razorpay payment-link signups skip /auth/subscription (already paid)
+      // but still need a real password + company profile before /home.
+      if (company?.registration_source === "razorpay" && (!company?.registration_complete || user?.must_change_password)) {
+        setError("Account setup required. Redirecting to complete your registration...");
+        setIsRedirecting(true);
+        setTimeout(() => router.replace("/auth/complete-registration"), 1000);
+        return;
+      }
 
       const status = company?.subscription_status?.toLowerCase() || "pending";
 
@@ -291,19 +302,19 @@ export default function LoginPage() {
 
           <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} noValidate>
 
-          {/* Email */}
+          {/* Email or Phone */}
           <div className={styles.inputGroup}>
-            <label htmlFor="email">Email</label>
+            <label htmlFor="email">Email or Phone Number</label>
             <input
               id="email"
-              type="email"
+              type="text"
               disabled={isDisabled}
               value={email}
               onChange={(e) => { setEmail(e.target.value); if (error) setError(""); }}
               onBlur={() => handleBlur("email")}
               onKeyDown={handleKeyDown}
-              autoComplete="email"
-              placeholder="Enter your email"
+              autoComplete="username"
+              placeholder="Enter your email or phone number"
               style={{ borderColor: borderFor("email") }}
             />
             <InlineErr msg={fe.email} show={touched.email} />

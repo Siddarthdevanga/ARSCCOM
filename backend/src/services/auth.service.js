@@ -16,7 +16,7 @@ const PASSWORD_MIN_LENGTH = 8;
 const RESET_CODE_EXPIRY_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 30;
 const JWT_EXPIRY = "12h";
-const BCRYPT_ROUNDS = 10;
+export const BCRYPT_ROUNDS = 10;
 
 // Only block cancelled subscriptions, allow expired to login for renewal
 const SUBSCRIPTION_BLOCKED_STATES = ["cancelled", "canceled"];
@@ -31,7 +31,7 @@ if (!process.env.JWT_SECRET) {
 /* ======================================================
    EMAIL TEMPLATES
 ====================================================== */
-const emailFooter = () => `
+export const emailFooter = () => `
 <br/>
 Regards,<br/>
 
@@ -52,7 +52,7 @@ If this was not you, please contact your administrator immediately.
 /* ======================================================
    HELPER FUNCTIONS
 ====================================================== */
-const generateSlug = (name) =>
+export const generateSlug = (name) =>
   name
     .toLowerCase()
     .trim()
@@ -92,12 +92,12 @@ const validateWhatsAppUrl = (url) => {
   return trimmedUrl;
 };
 
-const normalizeEmail = (email) => email?.trim().toLowerCase();
+export const normalizeEmail = (email) => email?.trim().toLowerCase();
 
 /* ======================================================
    SLUG GENERATION WITH UNIQUENESS CHECK
 ====================================================== */
-const generateUniqueSlug = async (baseSlug) => {
+export const generateUniqueSlug = async (baseSlug) => {
   let slug = baseSlug;
   let suffix = 1;
 
@@ -271,20 +271,32 @@ const sendWelcomeEmail = async (email, companyName) => {
    so they can navigate to /auth/subscription to renew.
    Frontend handles the redirect based on subscription_status.
 ====================================================== */
-export const login = async ({ email, password }) => {
-  const cleanEmail = normalizeEmail(email);
-  
-  if (!cleanEmail || !password) {
-    throw new Error("Email and password are required");
+export const login = async ({ identifier, email, password }) => {
+  // `identifier` is the new email-or-phone field; `email` kept as a fallback
+  // so registerCompany()'s internal call (and any other existing caller)
+  // doesn't need to change.
+  const rawIdentifier = (identifier ?? email ?? "").trim();
+
+  if (!rawIdentifier || !password) {
+    throw new Error("Email or phone number, and password, are required");
   }
 
-  validateEmail(cleanEmail);
+  // A phone identifier is all-digits (10-digit Indian mobile); anything else
+  // is treated as an email and normalized the same way registration does.
+  const isPhone = /^\d{10}$/.test(rawIdentifier);
+  const cleanEmail = isPhone ? null : normalizeEmail(rawIdentifier);
+  const cleanPhone = isPhone ? rawIdentifier : null;
+
+  if (!isPhone) validateEmail(cleanEmail);
 
   // Fetch user and company data (including grace period info)
   const [rows] = await db.execute(
     `SELECT
        u.id,
+       u.email,
+       u.phone,
        u.password_hash,
+       u.must_change_password,
        c.id       AS companyId,
        c.name     AS companyName,
        c.slug     AS companySlug,
@@ -292,13 +304,15 @@ export const login = async ({ email, password }) => {
        c.whatsapp_url AS whatsappUrl,
        c.subscription_status,
        c.plan,
+       c.registration_source,
+       c.registration_complete,
        c.grace_period_ends_at,
        c.grace_period_day
      FROM users u
      JOIN companies c ON c.id = u.company_id
-     WHERE u.email = ?
+     WHERE u.email = ? OR u.phone = ?
      LIMIT 1`,
-    [cleanEmail]
+    [cleanEmail, cleanPhone]
   );
 
   if (!rows.length) {
@@ -323,7 +337,7 @@ export const login = async ({ email, password }) => {
     {
       userId: user.id,
       companyId: user.companyId,
-      email: cleanEmail,
+      email: user.email,
       companyName: user.companyName
     },
     process.env.JWT_SECRET,
@@ -348,7 +362,9 @@ export const login = async ({ email, password }) => {
     token,
     user: {
       id: user.id,
-      email: cleanEmail
+      email: user.email,
+      phone: user.phone,
+      must_change_password: !!user.must_change_password,
     },
     company: {
       id: user.companyId,
@@ -358,9 +374,97 @@ export const login = async ({ email, password }) => {
       whatsapp_url: user.whatsappUrl || null,
       subscription_status: user.subscription_status || "pending",
       plan: user.plan || "trial",
+      registration_source: user.registration_source || "web",
+      registration_complete: !!user.registration_complete,
       grace_period_days_remaining: gracePeriodDaysRemaining,
       in_grace_period: inGracePeriod,
     }
+  };
+};
+
+/* ======================================================
+   COMPLETE REGISTRATION
+   --------------------------------------------------------
+   For companies created via the Razorpay payment-link flow
+   (registration_source='razorpay'), which only had a Name/Email/
+   Phone at signup. Sets the real company name, logo and WhatsApp
+   URL, replaces the temp password, and flips registration_complete.
+   Regenerates slug/code_prefix from the real name — safe since
+   registration_complete=0 means nothing has used the placeholder
+   values yet.
+====================================================== */
+export const completeRegistration = async ({ companyId, userId, companyName, password, whatsappUrl }, file) => {
+  const cleanCompanyName = companyName?.trim();
+  if (!cleanCompanyName || cleanCompanyName.length < 3) {
+    throw new Error("Company name must be at least 3 characters");
+  }
+  if (/^\d+$/.test(cleanCompanyName)) {
+    throw new Error("Company name cannot be numeric only");
+  }
+
+  validatePassword(password);
+
+  const cleanWhatsappUrl = validateWhatsAppUrl(whatsappUrl);
+
+  const baseSlug = generateSlug(cleanCompanyName);
+  const slug = await generateUniqueSlug(baseSlug);
+  const codePrefix = deriveCodePrefix(cleanCompanyName);
+
+  let logoKey = null;
+  if (file) {
+    const ext = path.extname(file.originalname || "").toLowerCase() || ".png";
+    logoKey = `companies/${slug}/logo${ext}`;
+    logoKey = await uploadToS3(file, logoKey);
+  }
+
+  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.execute(
+      `UPDATE companies SET
+         name = ?, slug = ?, code_prefix = ?,
+         logo_url = COALESCE(?, logo_url),
+         whatsapp_url = ?,
+         registration_complete = 1
+       WHERE id = ?`,
+      [cleanCompanyName, slug, codePrefix, logoKey, cleanWhatsappUrl, companyId]
+    );
+
+    await conn.execute(
+      `UPDATE users SET password_hash = ?, must_change_password = 0 WHERE id = ? AND company_id = ?`,
+      [passwordHash, userId, companyId]
+    );
+
+    await conn.commit();
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+
+  const [[updated]] = await db.execute(
+    `SELECT c.id, c.name, c.slug, c.logo_url, c.whatsapp_url, c.subscription_status, c.plan,
+            c.registration_source, c.registration_complete
+     FROM companies c WHERE c.id = ?`,
+    [companyId]
+  );
+
+  return {
+    company: {
+      id: updated.id,
+      name: updated.name,
+      slug: updated.slug,
+      logo_url: updated.logo_url ? `/api/logo/${updated.id}` : null,
+      whatsapp_url: updated.whatsapp_url || null,
+      subscription_status: updated.subscription_status,
+      plan: updated.plan,
+      registration_source: updated.registration_source,
+      registration_complete: !!updated.registration_complete,
+    },
   };
 };
 

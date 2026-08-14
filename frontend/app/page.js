@@ -33,7 +33,7 @@ const BODY_HTML = `
         <li>Digital visitor records, history, dashboard visibility and reports</li>
       </ul>
       <div class="hero-ctas">
-        <a class="btn btn-primary" href="/auth/register">Start 15-Day Trial for ₹49 →</a>
+        <a class="btn btn-primary" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start 15-Day Trial for ₹49 →</a>
       </div>
       <p class="cta-note">Set up in approximately 15 minutes</p>
       </div>
@@ -315,7 +315,7 @@ const BODY_HTML = `
           <li>2 conference rooms</li>
           <li>No dedicated hardware required</li>
         </ul>
-        <a class="btn btn-primary" href="/auth/register">Start Your 15-Day Trial →</a>
+        <a class="btn btn-primary" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start Your 15-Day Trial →</a>
         <div class="micro">Paid trial · No refund · Product terms apply</div>
       </div>
     </div>
@@ -362,7 +362,7 @@ const BODY_HTML = `
       <h2>Your marketing has already brought the customer in. <span class="accent">Make the visit count beyond today.</span></h2>
       <p class="lede">Replace fragmented walk-in records with a simple digital visitor-management foundation that your team can retrieve, review and responsibly use.</p>
       <div class="hero-ctas">
-        <a class="btn btn-primary" href="/auth/register">Start 15-Day Trial for ₹49 →</a>
+        <a class="btn btn-primary" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start 15-Day Trial for ₹49 →</a>
         <a class="btn btn-wa" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">Chat with the Hai Visitor Team</a>
       </div>
     </div>
@@ -383,7 +383,7 @@ const BODY_HTML = `
 
 <!-- STICKY CTA (all screen sizes) -->
 <div class="sticky-cta">
-  <a class="btn btn-primary" href="/auth/register">Start 15-Day Trial for ₹49 →</a>
+  <a class="btn btn-primary" href="https://razorpay.com/payment-link/plink_TPbQMiNjs2puev">Start 15-Day Trial for ₹49 →</a>
 </div>
 
 <!-- WhatsApp float (desktop) -->

@@ -128,20 +128,23 @@ export const register = async (req, res) => {
 ====================================================== */
 export const login = async (req, res) => {
   try {
-    const email    = req.body?.email?.trim().toLowerCase();
-    const password = req.body?.password;
+    // identifier can be an email or a 10-digit phone number — the Razorpay
+    // payment-link flow issues temp passwords a person may check via either
+    // channel, so login needs to accept whichever they have on hand.
+    const identifier = (req.body?.identifier ?? req.body?.email ?? "").trim().toLowerCase();
+    const password    = req.body?.password;
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: "Email and password are required" });
+    if (!identifier || !password) {
+      return res.status(400).json({ success: false, message: "Email or phone number, and password, are required" });
     }
-    if (!EMAIL_RE.test(email)) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
+    if (!EMAIL_RE.test(identifier) && !PHONE_RE.test(identifier)) {
+      return res.status(400).json({ success: false, message: "Enter a valid email address or 10-digit phone number" });
     }
     if (typeof password !== "string" || password.length < 8) {
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
-    const result = await service.login({ email, password });
+    const result = await service.login({ identifier, password });
 
     /**
      * result MUST contain:
@@ -156,11 +159,13 @@ export const login = async (req, res) => {
      *  subscription_status   ---> MUST BE one of:
      *     active | trial | pending | expired | cancelled | none
      *  plan
+     *  registration_source (web | razorpay)
+     *  registration_complete (bool)
      * }
      */
 
     if (!result?.company) {
-      console.warn("⚠ LOGIN WARNING: No company attached to user:", email);
+      console.warn("⚠ LOGIN WARNING: No company attached to user:", identifier);
     }
 
     if (!result?.company?.slug) {
@@ -180,6 +185,54 @@ export const login = async (req, res) => {
     return res.status(401).json({
       success: false,
       message: err?.message || "Invalid email or password",
+    });
+  }
+};
+
+/* ======================================================
+   COMPLETE REGISTRATION
+   POST /api/auth/complete-registration
+   --------------------------------------------------------
+   Protected route (authenticate middleware) — for companies that
+   started via the Razorpay payment-link flow and still need to set
+   a real password, company name, logo and WhatsApp URL.
+====================================================== */
+export const completeRegistration = async (req, res) => {
+  try {
+    const { companyName, password, whatsappUrl } = req.body || {};
+
+    if (whatsappUrl && whatsappUrl.trim()) {
+      const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|whatsapp\.com\/channel)\/.+/i;
+      if (!whatsappPattern.test(whatsappUrl.trim())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid WhatsApp URL. Accepted: https://wa.me/..., https://chat.whatsapp.com/... or https://whatsapp.com/channel/...",
+        });
+      }
+    }
+
+    const result = await service.completeRegistration(
+      {
+        companyId: req.user.companyId,
+        userId: req.user.userId,
+        companyName,
+        password,
+        whatsappUrl,
+      },
+      req.file
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Registration completed",
+      company: result.company,
+    });
+  } catch (err) {
+    console.error("COMPLETE REGISTRATION ERROR:", err);
+
+    return res.status(err?.statusCode || 400).json({
+      success: false,
+      message: err?.message || "Failed to complete registration",
     });
   }
 };

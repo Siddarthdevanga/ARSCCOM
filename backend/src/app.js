@@ -13,6 +13,7 @@ import conferenceRoutes from "./routes/conference.routes.js";
 import conferencePublicRoutes from "./routes/conference.public.routes.js";
 import paymentRoutes from "./routes/payment.routes.js";
 import webhookRoutes from "./routes/webhook.routes.js";
+import razorpayWebhookRoutes from "./routes/razorpayWebhook.route.js";
 import subscriptionRoutes from "./routes/subscription.route.js";
 import upgradeRoutes from "./routes/upgrade.route.js";
 import billingRepair from "./routes/billingRepair.route.js";
@@ -145,7 +146,14 @@ app.use(cookieParser());
 app.use(hpp());
 
 /* ================= BODY PARSER ================= */
-app.use(express.json({ limit: "1mb", strict: false }));
+// `verify` stashes the raw request bytes on req.rawBody — needed by the
+// Razorpay webhook route to check the x-razorpay-signature HMAC, since
+// Express only exposes the parsed object downstream otherwise.
+app.use(express.json({
+  limit: "1mb",
+  strict: false,
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 /* ================= LOGGING ================= */
@@ -240,6 +248,9 @@ app.use("/api/billing/repair", generalLimiter, billingRepair);
 app.use("/api/billing/cron",   generalLimiter, billingCron);
 
 // Webhooks — rate limited to prevent flooding
+// (razorpay mounted before the more general /api/webhook prefix to avoid
+// any path-matching ambiguity between the two routers)
+app.use("/api/webhook/razorpay", webhookLimiter, razorpayWebhookRoutes);
 app.use("/api/webhook", webhookLimiter, webhookRoutes);
 
 // WhatsApp bot (Gupshup inbound) — rate limited
