@@ -109,7 +109,6 @@ export const register = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Company registered successfully. Proceed to subscription.",
-      token: result.token,
       company: result.company,
       user: result.user,
     });
