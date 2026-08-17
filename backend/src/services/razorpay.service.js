@@ -184,8 +184,12 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
    superadmin-triggered manual password resend (no payment involved
    there).
 ====================================================== */
-const sendPaymentReceiptEmail = async ({ email, phone, paymentId, amountPaise }) => {
-  const amount = ((amountPaise ?? 4900) / 100).toFixed(2);
+const sendPaymentReceiptEmail = async ({ email, phone, paymentId }) => {
+  // Always the fixed trial price, not the actual captured amount — Razorpay's
+  // "customer pays the transaction fee" account setting inflates what's
+  // actually captured (e.g. ₹50.16 instead of ₹49.00), and the receipt should
+  // reflect the trial price, not a gateway fee pass-through.
+  const amount = (TRIAL_AMOUNT_PAISE / 100).toFixed(2);
   const paidOn = new Date().toLocaleString("en-IN", {
     day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
