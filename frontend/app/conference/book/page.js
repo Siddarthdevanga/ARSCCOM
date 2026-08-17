@@ -366,8 +366,8 @@ export default function ConferenceBookPage() {
 
   useEffect(() => {
     const stored = localStorage.getItem("company");
-    if (!stored) { router.replace("/auth/login"); return; }
-    try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
+    if (!stored) { router.replace("/login"); return; }
+    try { setCompany(JSON.parse(stored)); } catch { router.replace("/login"); return; }
     setBookingDate(today);
 
     apiFetch("/api/conference/rooms")

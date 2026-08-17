@@ -446,14 +446,14 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
     const a = localStorage.getItem("sa_admin");
-    if (!t || !a) { router.replace("/auth/login"); return; }
+    if (!t || !a) { router.replace("/login"); return; }
     try {
       setToken(t);
       setAdmin(JSON.parse(a));
     } catch {
       localStorage.removeItem("sa_token");
       localStorage.removeItem("sa_admin");
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 
@@ -468,7 +468,7 @@ export default function SuperAdminDashboard() {
       if (res.status === 401 || res.status === 403) {
         localStorage.removeItem("sa_token");
         localStorage.removeItem("sa_admin");
-        router.replace("/auth/login");
+        router.replace("/login");
         return;
       }
       const data = await res.json();
@@ -493,7 +493,7 @@ export default function SuperAdminDashboard() {
       if (res.status === 401 || res.status === 403) {
         localStorage.removeItem("sa_token");
         localStorage.removeItem("sa_admin");
-        router.replace("/auth/login");
+        router.replace("/login");
         return;
       }
       const data = await res.json();
@@ -529,7 +529,7 @@ export default function SuperAdminDashboard() {
   const logout = () => {
     localStorage.removeItem("sa_token");
     localStorage.removeItem("sa_admin");
-    router.replace("/auth/login");
+    router.replace("/login");
   };
 
   /* ── STATS ── */

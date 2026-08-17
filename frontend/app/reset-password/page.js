@@ -79,7 +79,7 @@ function ResetPasswordForm() {
       if (!res.ok) throw new Error(data.message || "Failed to reset password");
 
       setSuccess("Password reset successful! Redirecting to login…");
-      setTimeout(() => router.replace("/auth/login"), 2000);
+      setTimeout(() => router.replace("/login"), 2000);
     } catch (err) {
       setError(err.message || "Something went wrong");
     } finally {
@@ -96,7 +96,7 @@ function ResetPasswordForm() {
           <div className={styles.logoText}>Hai Visitor</div>
         </div>
         <div className={styles.rightHeader}>
-          <button className={styles.backBtn} onClick={() => router.replace("/auth/login")}>
+          <button className={styles.backBtn} onClick={() => router.replace("/login")}>
             ← Back
           </button>
         </div>
@@ -177,7 +177,7 @@ function ResetPasswordForm() {
               Resend Reset Code
             </button>
 
-            <div className={styles.backLink} onClick={() => router.replace("/auth/login")}>
+            <div className={styles.backLink} onClick={() => router.replace("/login")}>
               ← Back to Login
             </div>
           </div>

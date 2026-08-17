@@ -419,7 +419,7 @@ const BODY_HTML = `
     <div id="trialExistingView" class="trial-success" style="display:none;">
       <h3>Already Registered</h3>
       <p>This email or phone number already has a Hai Visitor account.</p>
-      <a class="btn btn-primary trial-modal-submit" href="/auth/login">Login →</a>
+      <a class="btn btn-primary trial-modal-submit" href="/login">Login →</a>
     </div>
   </div>
 </div>

@@ -213,9 +213,9 @@ export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
    Session messages: work best within 24h of last bot interaction.
 -------------------------------------------------- */
 const PAYMENT_NURTURE_TEXTS = [
-  `Hi {name}! 👋 We noticed you started your Hai Visitor journey but haven't completed your payment yet.\n\nYour workspace is almost ready! Complete your payment to unlock:\n✅ Smart Visitor Management\n✅ Conference Room Booking\n✅ Real-time Analytics\n\nLogin to complete: https://myappz.ai/auth/login`,
-  `Hi {name}! 😊 Still thinking about Hai Visitor?\n\nBusinesses like yours save hours every week with smart visitor & conference management. Your team deserves better tools!\n\nDon't let your account sit idle — complete your payment today.\n\nLogin: https://myappz.ai/auth/login`,
-  `Hi {name}! 🙏 Final reminder from us.\n\nYour Hai Visitor account is ready and waiting. Hundreds of businesses trust Hai Visitor to manage visitors and conference rooms effortlessly.\n\nComplete your payment now — takes less than 2 minutes.\n\nLogin: https://myappz.ai/auth/login`,
+  `Hi {name}! 👋 We noticed you started your Hai Visitor journey but haven't completed your payment yet.\n\nYour workspace is almost ready! Complete your payment to unlock:\n✅ Smart Visitor Management\n✅ Conference Room Booking\n✅ Real-time Analytics\n\nLogin to complete: https://www.haivisitor.zodopt.com/login`,
+  `Hi {name}! 😊 Still thinking about Hai Visitor?\n\nBusinesses like yours save hours every week with smart visitor & conference management. Your team deserves better tools!\n\nDon't let your account sit idle — complete your payment today.\n\nLogin: https://www.haivisitor.zodopt.com/login`,
+  `Hi {name}! 🙏 Final reminder from us.\n\nYour Hai Visitor account is ready and waiting. Hundreds of businesses trust Hai Visitor to manage visitors and conference rooms effortlessly.\n\nComplete your payment now — takes less than 2 minutes.\n\nLogin: https://www.haivisitor.zodopt.com/login`,
 ];
 
 export const sendPaymentNurtureMessage = async (destination, name, msgNum) => {

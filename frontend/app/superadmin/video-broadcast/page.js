@@ -19,7 +19,7 @@ export default function VideoBroadcast() {
 
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
-    if (!t) { router.replace("/auth/login"); return; }
+    if (!t) { router.replace("/login"); return; }
     setToken(t);
   }, [router]);
 

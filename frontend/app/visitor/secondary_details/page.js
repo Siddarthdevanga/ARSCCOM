@@ -297,7 +297,7 @@ export default function SecondaryDetails() {
   useEffect(() => {
     try {
       const storedCompany = localStorage.getItem("company");
-      if (!storedCompany) { router.replace("/auth/login"); return; }
+      if (!storedCompany) { router.replace("/login"); return; }
       setCompany(JSON.parse(storedCompany));
 
       fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/visitor-fields`, { credentials: "include" })
@@ -339,7 +339,7 @@ export default function SecondaryDetails() {
         }
       }
     } catch {
-      localStorage.clear(); router.replace("/auth/login");
+      localStorage.clear(); router.replace("/login");
     } finally {
       setIsLoading(false);
     }

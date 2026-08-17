@@ -199,7 +199,7 @@ export const registerCompany = async (data, file) => {
     sendWelcomeEmail(email, companyName).catch(console.error);
 
     // Log the new company straight in so the frontend can skip a manual
-    // login step and land directly on /auth/subscription — same token +
+    // login step and land directly on /subscription — same token +
     // company shape a normal login would produce, so every page that reads
     // `company` from storage behaves identically either way.
     return await login({ email, password });
@@ -330,7 +330,7 @@ const sendAccountReadyEmail = async (email, companyName) => {
    LOGIN
    --------------------------------------------------------
    IMPORTANT: Users with "expired" subscriptions CAN login
-   so they can navigate to /auth/subscription to renew.
+   so they can navigate to /subscription to renew.
    Frontend handles the redirect based on subscription_status.
 ====================================================== */
 export const login = async ({ identifier, email, password }) => {

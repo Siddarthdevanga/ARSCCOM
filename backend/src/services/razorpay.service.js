@@ -142,7 +142,7 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
       </p>
 
       <p>
-        <a href="https://www.haivisitor.zodopt.com/auth/login" style="color:#6c2bd9;font-weight:600;">
+        <a href="https://www.haivisitor.zodopt.com/login" style="color:#6c2bd9;font-weight:600;">
           Login to Hai Visitor →
         </a>
       </p>
@@ -209,7 +209,7 @@ export const resendTrialPassword = async (companyId) => {
    — not the order's own notes — so this fetches the order back from
    Razorpay's API to read them. Name always falls back to a
    placeholder; the real company name gets filled in later on
-   /auth/complete-registration.
+   /complete-registration.
 ====================================================== */
 const extractPayerDetails = async (paymentEntity) => {
   const orderId = paymentEntity?.order_id;

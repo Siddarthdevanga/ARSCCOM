@@ -23,7 +23,7 @@ export default function SubscriptionPage() {
     try {
       const stored = localStorage.getItem("company");
       if (!stored) {
-        router.replace("/auth/login");
+        router.replace("/login");
         return;
       }
 
@@ -46,7 +46,7 @@ export default function SubscriptionPage() {
         return;
       }
     } catch {
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 
@@ -92,7 +92,7 @@ export default function SubscriptionPage() {
       } catch {}
 
       if (res.status === 401) {
-        router.replace("/auth/login");
+        router.replace("/login");
         return;
       }
 

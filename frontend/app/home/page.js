@@ -488,9 +488,9 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedCompany  = localStorage.getItem("company");
-    if (!storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/login"); return; }
     try { setCompany(JSON.parse(storedCompany)); }
-    catch { localStorage.clear(); router.replace("/auth/login"); return; }
+    catch { localStorage.clear(); router.replace("/login"); return; }
 
     // Fetch subscription details up front so the home-screen renewal
     // banner can render without the user having to open the menu.
@@ -575,7 +575,7 @@ export default function Home() {
   const handleOpenSettings    = () => { setShowMenu(false); router.push("/home/settings"); };
   const handleOpenEmployees   = () => { setShowMenu(false); router.push("/visitor/admin"); };
   const handleOpenFormBuilder = () => { setShowMenu(false); router.push("/home/form-builder"); };
-  const handleRenew         = () => { setShowMenu(false); router.push("/auth/subscription"); };
+  const handleRenew         = () => { setShowMenu(false); router.push("/subscription"); };
 
   // Clicking a locked module card should never navigate through — it
   // re-surfaces the renewal popup instead (in case it was dismissed).
@@ -597,7 +597,7 @@ export default function Home() {
           });
         } catch { /* ignore — always clear local state */ }
         localStorage.clear();
-        router.replace("/auth/login");
+        router.replace("/login");
       },
       () => {}
     );
@@ -774,7 +774,7 @@ export default function Home() {
   const CustomBuildNote = () => (
     <p className={styles.customBuildNote}>
       Need something beyond these plans? We build custom Visitor Management as per your needs —{" "}
-      <a href="/auth/contact-us" onClick={() => setShowMenu(false)}>Contact Support</a>
+      <a href="/contact-us" onClick={() => setShowMenu(false)}>Contact Support</a>
     </p>
   );
 

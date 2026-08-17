@@ -147,7 +147,7 @@ export const saveVisitor = async (companyId, data, file) => {
     if (!["ACTIVE", "TRIAL", "GRACE_PERIOD"].includes(STATUS)) {
       const error = new Error("Subscription inactive. Please activate your subscription.");
       error.code = "SUBSCRIPTION_INACTIVE";
-      error.redirectTo = "/auth/subscription";
+      error.redirectTo = "/subscription";
       throw error;
     }
 
@@ -155,7 +155,7 @@ export const saveVisitor = async (companyId, data, file) => {
     if (STATUS === "GRACE_PERIOD" && !inGracePeriod) {
       const error = new Error("Your grace period has ended. Please renew to continue.");
       error.code = "GRACE_PERIOD_EXPIRED";
-      error.redirectTo = "/auth/subscription";
+      error.redirectTo = "/subscription";
       throw error;
     }
 
@@ -168,7 +168,7 @@ export const saveVisitor = async (companyId, data, file) => {
       if (total >= 100) {
         const error = new Error("Trial limit reached (100 visitors). Please upgrade.");
         error.code = "TRIAL_LIMIT_REACHED";
-        error.redirectTo = "/auth/subscription";
+        error.redirectTo = "/subscription";
         throw error;
       }
     }

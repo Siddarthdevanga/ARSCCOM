@@ -178,13 +178,13 @@ export default function RegisterPage() {
       if (data?.company) {
         localStorage.setItem("company", JSON.stringify(data.company));
         localStorage.removeItem("regEmail");
-        setTimeout(() => router.push("/auth/subscription"), 1500);
+        setTimeout(() => router.push("/subscription"), 1500);
       } else {
         // Fallback: registration succeeded but no session came back — fall
         // back to the manual login step rather than sending the user to a
         // subscription page with no company in storage.
         setSuccess("Registration successful! Redirecting to login page...");
-        setTimeout(() => router.push("/auth/login"), 1500);
+        setTimeout(() => router.push("/login"), 1500);
       }
     } catch (err) {
       console.error("REGISTRATION ERROR:", err);
@@ -201,7 +201,7 @@ export default function RegisterPage() {
           <div className={styles.logoText}>Hai Visitor</div>
         </div>
         <div className={styles.rightHeader}>
-          <button className={styles.backBtn} onClick={() => router.push("/auth/login")}>← Back</button>
+          <button className={styles.backBtn} onClick={() => router.push("/login")}>← Back</button>
         </div>
       </header>
 
@@ -442,7 +442,7 @@ export default function RegisterPage() {
               {/* ── Footer ── */}
               <div className={styles.formFooter}>
                 Already have an account?{" "}
-                <button type="button" className={styles.linkBtn} onClick={() => router.push("/auth/login")} disabled={loading}>
+                <button type="button" className={styles.linkBtn} onClick={() => router.push("/login")} disabled={loading}>
                   Login here
                 </button>
               </div>

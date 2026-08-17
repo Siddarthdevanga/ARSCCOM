@@ -437,7 +437,7 @@ export default function ReportsPage(){
   },[]);
 
   const loadAnalytics=useCallback(async(p=period,silent=false)=>{
-    if(!localStorage.getItem("company")){router.replace("/auth/login");return;}
+    if(!localStorage.getItem("company")){router.replace("/login");return;}
     if(!silent)setLoading(true);else setFetching(true);
     try{
       const res=await fetch(
@@ -659,7 +659,7 @@ export default function ReportsPage(){
                 most-booked rooms, department usage, and completion &amp; cancellation
                 rates — plus the ability to export conference booking reports.
               </p>
-              <button className={styles.upgradeCardBtn} onClick={()=>router.push("/auth/subscription")}>
+              <button className={styles.upgradeCardBtn} onClick={()=>router.push("/subscription")}>
                 Upgrade to Enterprise
               </button>
             </div>
@@ -770,7 +770,7 @@ export default function ReportsPage(){
                   </div>
                   <p className={styles.exportCardTitle}>Conference Bookings</p>
                   <p className={styles.exportCardSub}>Room schedules, departments, hosts and status — available on Enterprise</p>
-                  <button className={styles.exportBtn} style={{"--eb":"#0ea5e9"}} onClick={()=>router.push("/auth/subscription")}>
+                  <button className={styles.exportBtn} style={{"--eb":"#0ea5e9"}} onClick={()=>router.push("/subscription")}>
                     Upgrade to Enterprise
                   </button>
                 </div>

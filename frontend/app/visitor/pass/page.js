@@ -335,7 +335,7 @@ function VisitorPassContent() {
                 onClick={async () => {
                   try { await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, { method: "POST", credentials: "include" }); } catch {}
                   localStorage.removeItem("company");
-                  router.push("/auth/login");
+                  router.push("/login");
                 }}
               >
                 Logout

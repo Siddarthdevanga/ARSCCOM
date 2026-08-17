@@ -37,7 +37,7 @@ const checkSubscriptionStatus = (req, res, next) => {
     if (data?.company?.subscription_status === "expired") {
       return originalJson({
         ...data,
-        redirect: "/auth/subscription",
+        redirect: "/subscription",
         message: "Your subscription has expired. Please renew to continue."
       });
     }

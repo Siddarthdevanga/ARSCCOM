@@ -74,7 +74,7 @@ export default function CompleteRegistrationPage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem("company");
-      if (!stored) { router.replace("/auth/login"); return; }
+      if (!stored) { router.replace("/login"); return; }
 
       const company = JSON.parse(stored);
       if (company?.registration_complete) { router.replace("/home"); return; }
@@ -82,7 +82,7 @@ export default function CompleteRegistrationPage() {
       setFormData((p) => ({ ...p, companyName: company?.name || "" }));
       setChecking(false);
     } catch {
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 

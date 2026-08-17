@@ -237,8 +237,8 @@ export default function NewVisitorPage() {
 
   useEffect(() => {
     const stored  = localStorage.getItem("company");
-    if (!stored) { router.replace("/auth/login"); return; }
-    try { setCompany(JSON.parse(stored)); } catch { router.replace("/auth/login"); return; }
+    if (!stored) { router.replace("/login"); return; }
+    try { setCompany(JSON.parse(stored)); } catch { router.replace("/login"); return; }
 
     // Clear all stale registration data from any previous abandoned session
     localStorage.removeItem("visitor_primary");

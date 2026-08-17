@@ -21,6 +21,25 @@ const nextConfig = {
       },
     ];
   },
+  // The auth pages moved from /auth/<page> to top-level /<page> routes.
+  // Old links already sent out (emails, WhatsApp messages, bookmarks) still
+  // point at /auth/<page> — these keep them working instead of 404ing.
+  async redirects() {
+    const movedPages = [
+      "login",
+      "register",
+      "forgot-password",
+      "reset-password",
+      "subscription",
+      "complete-registration",
+      "contact-us",
+    ];
+    return movedPages.map((page) => ({
+      source: `/auth/${page}`,
+      destination: `/${page}`,
+      permanent: true,
+    }));
+  },
 };
 
 module.exports = nextConfig;

@@ -75,7 +75,7 @@ function ForgotPasswordForm() {
       setSuccess("If the email exists, a reset code has been sent.");
       const typeParam = isSuperAdmin ? "&type=superadmin" : "";
       setTimeout(() => {
-        router.push(`/auth/reset-password?email=${encodeURIComponent(normalizedEmail)}${typeParam}`);
+        router.push(`/reset-password?email=${encodeURIComponent(normalizedEmail)}${typeParam}`);
       }, 1500);
 
     } catch (err) {
@@ -94,7 +94,7 @@ function ForgotPasswordForm() {
           <div className={styles.logoText}>Hai Visitor</div>
         </div>
         <div className={styles.rightHeader}>
-          <button className={styles.backBtn} onClick={() => router.push("/auth/login")}>
+          <button className={styles.backBtn} onClick={() => router.push("/login")}>
             <ArrowLeftIcon /> Back
           </button>
         </div>
@@ -152,7 +152,7 @@ function ForgotPasswordForm() {
               )}
             </button>
 
-            <div className={styles.backLink} onClick={() => router.push("/auth/login")}>
+            <div className={styles.backLink} onClick={() => router.push("/login")}>
               <ArrowLeftIcon /> Back to Login
             </div>
           </div>

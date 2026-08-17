@@ -60,9 +60,9 @@ export default function VisitorPrimaryDetails() {
 
   useEffect(() => {
     const storedCompany = localStorage.getItem("company");
-    if (!storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/login"); return; }
     try { setCompany(JSON.parse(storedCompany)); } catch {
-      localStorage.clear(); router.replace("/auth/login"); return;
+      localStorage.clear(); router.replace("/login"); return;
     }
     const storedPrimary = localStorage.getItem("visitor_primary");
     if (storedPrimary) {

@@ -62,13 +62,13 @@ export default function SettingsPage() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedCompany = localStorage.getItem("company");
-    if (!storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/login"); return; }
     try {
       setCompany(JSON.parse(storedCompany));
       fetchSettings();
     } catch {
       localStorage.clear();
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 
@@ -294,7 +294,7 @@ export default function SettingsPage() {
         });
       } catch { /* ignore — always clear local state */ }
       localStorage.clear();
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   };
 

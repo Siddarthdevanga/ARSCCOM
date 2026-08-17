@@ -147,7 +147,7 @@ export default function ConferenceDashboard() {
       if (err?.code === 403 || /expired|inactive/i.test(msg)) {
         setLocked(true);
       } else {
-        router.replace("/auth/login");
+        router.replace("/login");
       }
     } finally { setLoading(false); }
   };
@@ -155,7 +155,7 @@ export default function ConferenceDashboard() {
   /* ================= LIFECYCLE ================= */
   useEffect(() => {
     const storedCompany = localStorage.getItem("company");
-    if (!storedCompany) { router.replace("/auth/login"); return; }
+    if (!storedCompany) { router.replace("/login"); return; }
     setCompany(JSON.parse(storedCompany));
     loadDashboard();
   }, []);

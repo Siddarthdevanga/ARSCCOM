@@ -29,7 +29,7 @@ export default function VisitorIdentity() {
     const rawCompany = localStorage.getItem("company");
 
     if (!rawCompany) {
-      router.replace("/auth/login");
+      router.replace("/login");
       return;
     }
 
@@ -37,7 +37,7 @@ export default function VisitorIdentity() {
       setCompany(JSON.parse(rawCompany));
     } catch {
       localStorage.clear();
-      router.replace("/auth/login");
+      router.replace("/login");
     }
 
     // Pre-fill ID fields and returning photo from previous visit

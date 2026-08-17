@@ -456,11 +456,11 @@ export default function WhatsAppLeadsPage() {
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
     const a = localStorage.getItem("sa_admin");
-    if (!t || !a) { router.replace("/auth/login"); return; }
+    if (!t || !a) { router.replace("/login"); return; }
     try { setToken(t); setAdmin(JSON.parse(a)); }
     catch {
       localStorage.removeItem("sa_token"); localStorage.removeItem("sa_admin");
-      router.replace("/auth/login");
+      router.replace("/login");
     }
   }, [router]);
 
@@ -469,7 +469,7 @@ export default function WhatsAppLeadsPage() {
     setLoading(true);
     try {
       const res  = await fetch(`${apiBase}/api/superadmin/whatsapp-leads`, { headers: { Authorization: `Bearer ${t}` } });
-      if (res.status === 401 || res.status === 403) { router.replace("/auth/login"); return; }
+      if (res.status === 401 || res.status === 403) { router.replace("/login"); return; }
       const data = await res.json();
       setLeads(data.leads || []);
     } catch { /* silent */ }
@@ -480,7 +480,7 @@ export default function WhatsAppLeadsPage() {
 
   const logout = () => {
     localStorage.removeItem("sa_token"); localStorage.removeItem("sa_admin");
-    router.replace("/auth/login");
+    router.replace("/login");
   };
 
   const markAttended = async (demoId) => {

@@ -160,18 +160,18 @@ export default function LoginPage() {
       if (!company) {
         setError("Company not found. Redirecting to registration...");
         setIsRedirecting(true);
-        setTimeout(() => router.replace("/auth/register"), 1500);
+        setTimeout(() => router.replace("/register"), 1500);
         return;
       }
 
       localStorage.setItem("company", JSON.stringify(company));
 
-      // Razorpay payment-link signups skip /auth/subscription (already paid)
+      // Razorpay payment-link signups skip /subscription (already paid)
       // but still need a real password + company profile before /home.
       if (company?.registration_source === "razorpay" && (!company?.registration_complete || user?.must_change_password)) {
         setError("Account setup required. Redirecting to complete your registration...");
         setIsRedirecting(true);
-        setTimeout(() => router.replace("/auth/complete-registration"), 1000);
+        setTimeout(() => router.replace("/complete-registration"), 1000);
         return;
       }
 
@@ -201,7 +201,7 @@ export default function LoginPage() {
       // First-time login (pending / no plan) — show subscription selection once
       setError("Account setup required. Redirecting to subscription page...");
       setIsRedirecting(true);
-      setTimeout(() => router.replace("/auth/subscription"), 1500);
+      setTimeout(() => router.replace("/subscription"), 1500);
 
     } catch (err) {
       console.error("LOGIN ERROR:", err);
@@ -257,23 +257,23 @@ export default function LoginPage() {
                     <div className={styles.planCard}>
                       <div className={styles.planHeader}><h3>TRIAL</h3><div className={styles.planPrice}>₹49<span>/15 days</span></div></div>
                       <ul className={styles.planFeatures}><li>100 Visitor Bookings</li><li>2 Conference Rooms · 100 Bookings</li><li>Email Support</li></ul>
-                      <Link href="/auth/register"><button className={styles.planBtn}>Start Trial</button></Link>
+                      <Link href="/register"><button className={styles.planBtn}>Start Trial</button></Link>
                     </div>
                     <div className={`${styles.planCard} ${styles.popularPlan}`}>
                       <div className={styles.popularBadge}>MOST POPULAR</div>
                       <div className={styles.planHeader}><h3>BUSINESS</h3><div className={styles.planPrice}>₹500<span>/month</span></div></div>
                       <ul className={styles.planFeatures}><li>Unlimited Visitors</li><li>Custom Registration Fields</li><li>Priority Support</li></ul>
-                      <Link href="/auth/register"><button className={styles.planBtn}>Get Started</button></Link>
+                      <Link href="/register"><button className={styles.planBtn}>Get Started</button></Link>
                     </div>
                     <div className={styles.planCard}>
                       <div className={styles.planHeader}><h3>ENTERPRISE</h3><div className={styles.planPrice}>₹1000<span>/month</span></div></div>
                       <ul className={styles.planFeatures}><li>Unlimited Visitors</li><li>Unlimited Conference Booking &amp; Rooms</li><li>Dedicated Support</li></ul>
-                      <Link href="/auth/register"><button className={styles.planBtn}>Get Started</button></Link>
+                      <Link href="/register"><button className={styles.planBtn}>Get Started</button></Link>
                     </div>
                     <div className={styles.planCard}>
                       <div className={styles.planHeader}><h3>CUSTOM BUILD</h3><div className={styles.planPrice}>Contact Us</div></div>
                       <ul className={styles.planFeatures}><li>Custom Build of Visitor Management</li><li>Tailored to Your Needs</li><li>Dedicated Support</li></ul>
-                      <Link href="/auth/contact-us"><button className={styles.planBtn}>Contact Support</button></Link>
+                      <Link href="/contact-us"><button className={styles.planBtn}>Contact Support</button></Link>
                     </div>
                   </div>
                 </div>
@@ -400,9 +400,9 @@ export default function LoginPage() {
           </form>
 
           <div className={styles.loginLinks}>
-            <Link href="/auth/register" className={styles.link}>New Registration?</Link>
+            <Link href="/register" className={styles.link}>New Registration?</Link>
             <span className={styles.linkDivider}>|</span>
-            <Link href="/auth/forgot-password" className={styles.link}>Forgot Password?</Link>
+            <Link href="/forgot-password" className={styles.link}>Forgot Password?</Link>
           </div>
 
         </div>

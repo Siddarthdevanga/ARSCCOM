@@ -408,7 +408,7 @@ export default function VisitorDashboard() {
         {data?.gracePeriodWarning?.inGracePeriod && (
           <div className={graceStyles.graceBanner}>
             ⚠️ Grace Period: {data.gracePeriodWarning.daysRemaining} days left.
-            <a href="/auth/subscription">Renew Now</a>
+            <a href="/subscription">Renew Now</a>
           </div>
         )}
 
