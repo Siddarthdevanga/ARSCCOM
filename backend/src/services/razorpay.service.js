@@ -251,12 +251,11 @@ const resendTempPassword = async (userRow) => {
     [passwordHash, userRow.id]
   );
 
-  const greetName = userRow.companyName || "there";
-
   // WhatsApp never carries the password itself (Meta rejects templates that
   // transmit credentials) — it just points them to the email, which does.
+  // Template has no {{1}} — no real name is ever collected at this stage.
   await Promise.allSettled([
-    sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, [greetName]),
+    sendWhatsAppTemplate(userRow.phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, []),
     sendRazorpayWelcomeEmail(userRow.email, tempPassword),
   ]).then((results) => {
     results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] resend notification failed:", r.reason); });
@@ -431,10 +430,10 @@ export const handlePaymentCaptured = async (payload) => {
     await conn.commit();
 
     // WhatsApp never carries the password itself — it just tells them to
-    // check their email, which does. No real name is collected by the
-    // popup, so the template's {{1}} just gets a generic greeting.
+    // check their email, which does. Template has no {{1}} — no real name
+    // is ever collected by the popup.
     Promise.allSettled([
-      sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, ["there"]),
+      sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, []),
       sendRazorpayWelcomeEmail(email, tempPassword),
       sendPaymentReceiptEmail({ email, phone, paymentId, amountPaise }),
     ]).then((results) => {
