@@ -393,6 +393,7 @@ const BODY_HTML = `
 <div class="trial-modal-backdrop" id="trialModalBackdrop">
   <div class="trial-modal" role="dialog" aria-modal="true" aria-labelledby="trialModalTitle">
     <button type="button" class="trial-modal-close" id="trialModalClose" aria-label="Close">&times;</button>
+    <div class="trial-modal-brand">H<span>ai</span> Visitor</div>
     <div id="trialFormView">
       <h3 id="trialModalTitle">Start Your 15-Day Trial</h3>
       <p class="trial-modal-sub">Enter your email and phone number — payment happens right here, next step.</p>
@@ -415,11 +416,12 @@ const BODY_HTML = `
       <div class="trial-success-icon">✓</div>
       <h3>Account Created</h3>
       <p>Check your email for your login details.</p>
+      <a class="btn btn-primary trial-modal-submit" href="/login">Sign in now →</a>
     </div>
     <div id="trialExistingView" class="trial-success" style="display:none;">
       <h3>Already Registered</h3>
       <p>This email or phone number already has a Hai Visitor account.</p>
-      <a class="btn btn-primary trial-modal-submit" href="/login">Login →</a>
+      <a class="btn btn-primary trial-modal-submit" href="/login">Sign in now →</a>
     </div>
   </div>
 </div>
@@ -511,21 +513,66 @@ export default function HomePage() {
     const onBackdropClick = (e) => { if (e.target === backdrop) closeModal(); };
     backdrop?.addEventListener('click', onBackdropClick);
 
-    const validate = () => {
-      let ok = true;
-      clearErrors();
+    // Disposable/throwaway domains and obviously-fake local@domain patterns
+    // (test@test.com, asdf@asdf.com) rejected up front — a strict format
+    // check alone lets those through.
+    const DISPOSABLE_DOMAINS = new Set([
+      'mailinator.com', 'tempmail.com', 'temp-mail.org', 'yopmail.com',
+      'guerrillamail.com', '10minutemail.com', 'fakeinbox.com', 'trashmail.com',
+      'throwaway.email', 'getnada.com', 'dispostable.com', 'sharklasers.com',
+      'test.com', 'example.com', 'sample.com', 'fake.com', 'none.com',
+    ]);
+    const FAKE_LOCAL_PARTS = new Set(['test', 'asdf', 'abc', 'xyz', 'admin', 'user', 'sample', 'fake', 'demo']);
 
+    const validateEmailField = (showError) => {
       const email = emailInput.value.trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        emailErr.textContent = 'Enter a valid email address'; emailInput.classList.add('err'); ok = false;
+      // RFC-5322-ish practical check: no consecutive dots, valid TLD length.
+      const shapeOk = /^[a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/.test(email)
+        && !email.includes('..');
+
+      let reason = '';
+      if (!email) reason = '';
+      else if (!shapeOk) reason = 'Enter a valid email address';
+      else {
+        const [local, domain] = email.toLowerCase().split('@');
+        if (DISPOSABLE_DOMAINS.has(domain)) reason = 'Please use a permanent, work or personal email address';
+        else if (FAKE_LOCAL_PARTS.has(local) && local === domain.split('.')[0]) reason = 'Enter a valid email address';
       }
 
+      if (showError) {
+        emailErr.textContent = reason;
+        emailInput.classList.toggle('err', !!reason);
+      }
+      return !reason && !!email;
+    };
+
+    const validatePhoneField = (showError) => {
       const phone = phoneInput.value.trim();
-      if (!/^[6-9]\d{9}$/.test(phone)) {
-        phoneErr.textContent = 'Enter a valid 10-digit phone number'; phoneInput.classList.add('err'); ok = false;
-      }
+      let reason = '';
+      if (phone && phone.length < 10) reason = ''; // still typing — no error yet
+      else if (!/^[6-9]\d{9}$/.test(phone)) reason = 'Enter a valid 10-digit phone number';
 
-      return ok;
+      if (showError) {
+        phoneErr.textContent = reason;
+        phoneInput.classList.toggle('err', !!reason);
+      }
+      return !reason && phone.length === 10;
+    };
+
+    // Live validation: phone as-you-type (digits only, error once 10 typed),
+    // email on blur (checking every keystroke on an email is just noise).
+    phoneInput?.addEventListener('input', () => {
+      phoneInput.value = phoneInput.value.replace(/\D/g, '').slice(0, 10);
+      validatePhoneField(phoneInput.value.length === 10);
+      if (phoneInput.value.length < 10) { phoneErr.textContent = ''; phoneInput.classList.remove('err'); }
+    });
+    emailInput?.addEventListener('blur', () => validateEmailField(true));
+
+    const validate = () => {
+      clearErrors();
+      const emailOk = validateEmailField(true);
+      const phoneOk = validatePhoneField(true);
+      return emailOk && phoneOk;
     };
 
     const resetSubmitBtn = () => {
