@@ -432,9 +432,37 @@ const BODY_HTML = `
 
 `;
 
+const META_PIXEL_ID = '1981723482403279';
+
+// Meta Pixel — landing page only (not loaded on any other route). Standard
+// client-side pixel, firing on the browser's own confirmation of events —
+// same trust model as the snippet Meta's Events Manager hands out. Loaded
+// once per mount; guarded against being injected twice (e.g. React 18
+// strict-mode double-invoking effects in dev).
+const loadMetaPixel = () => {
+  if (window.fbq) return;
+  const n = window.fbq = function () {
+    n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+  };
+  window._fbq = n;
+  n.push = n;
+  n.loaded = true;
+  n.version = '2.0';
+  n.queue = [];
+  const script = document.createElement('script');
+  script.async = true;
+  script.src = 'https://connect.facebook.net/en_US/fbevents.js';
+  document.head.appendChild(script);
+
+  n('init', META_PIXEL_ID);
+  n('track', 'PageView');
+};
+
 export default function HomePage() {
   useEffect(() => {
     document.documentElement.classList.add('js');
+
+    loadMetaPixel();
 
     /* ── Reveal-on-scroll ─────────────────────────────── */
     let io;
@@ -615,6 +643,11 @@ export default function HomePage() {
           return;
         }
 
+        // Order created — real purchase intent (email/phone validated, about
+        // to see the Razorpay checkout), distinct from the Purchase event
+        // fired only once payment actually completes below.
+        window.fbq?.('track', 'Lead');
+
         const rzp = new window.Razorpay({
           key: data.keyId,
           amount: data.amount,
@@ -626,6 +659,10 @@ export default function HomePage() {
           handler: () => {
             if (formView) formView.style.display = 'none';
             if (successView) successView.style.display = '';
+            window.fbq?.('track', 'Purchase', {
+              value: (data.amount || 4900) / 100,
+              currency: data.currency || 'INR',
+            });
           },
           modal: {
             ondismiss: () => { resetSubmitBtn(); },
