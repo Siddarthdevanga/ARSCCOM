@@ -104,10 +104,15 @@ export const getVisitorPass = async (req, res) => {
 ========================================================= */
 export const getPublicVisitorPass = async (req, res) => {
   try {
-    const visitorCode = decodeURIComponent(req.params.visitorCode || "");
+    // Route param is still named :visitorCode for backward compatibility with
+    // already-sent links, but its value is now the unguessable pass_token —
+    // visitor_code itself is a plain sequential counter (COMP12-...-00001,
+    // -00002, ...) and was previously usable to enumerate every other
+    // visitor's name/phone/email/photo for a company just by incrementing it.
+    const passToken = decodeURIComponent(req.params.visitorCode || "");
 
-    if (!visitorCode) {
-      return res.status(400).json({ success: false, message: "Visitor code is required" });
+    if (!passToken) {
+      return res.status(400).json({ success: false, message: "Pass code is required" });
     }
 
     const [rows] = await db.execute(
@@ -120,9 +125,9 @@ export const getPublicVisitorPass = async (req, res) => {
         c.name AS company_name, c.logo_url AS company_logo, c.whatsapp_url
        FROM visitors v
        INNER JOIN companies c ON c.id = v.company_id
-       WHERE v.visitor_code = ?
+       WHERE v.pass_token = ?
        LIMIT 1`,
-      [visitorCode]
+      [passToken]
     );
 
     if (!rows.length) {

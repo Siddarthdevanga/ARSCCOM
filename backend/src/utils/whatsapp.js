@@ -10,7 +10,7 @@
  *   GUPSHUP_OTP_TEMPLATE_ID     UUID — OTP template
  *   GUPSHUP_PASS_TEMPLATE_ID    UUID — visitor pass link template
  *   GUPSHUP_APPROVAL_TEMPLATE_ID UUID — employee approval template
- *   FRONTEND_URL                e.g. "https://promeet.zodopt.com"
+ *   FRONTEND_URL                e.g. "https://www.haivisitor.zodopt.com"
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -159,16 +159,19 @@ export const sendVisitorPassWhatsApp = async ({
 }) => {
   const destination  = normalizePhone(phone);
   const templateId   = process.env.GUPSHUP_PASS_TEMPLATE_ID;
-  const frontendUrl  = process.env.FRONTEND_URL || "https://www.promeet.zodopt.com";
+  const frontendUrl  = process.env.FRONTEND_URL || "https://www.haivisitor.zodopt.com";
 
-  const companyName  = company.name           || "ProMeet";
+  const companyName  = company.name           || "Hai Visitor";
   const visitorCode  = visitor.visitorCode    || "-";
   const visitorName  = visitor.name           || "Visitor";
   const purpose      = visitor.purpose        || "Visit";
   const checkIn      = visitor.checkInDisplay || visitor.checkIn || "-";
   const personToMeet = visitor.personToMeet   || "-";
 
-  const passUrl = `${frontendUrl}/v/pass?code=${visitorCode}`;
+  // Public pass lookup uses the unguessable pass_token, not the sequential
+  // visitor_code — falls back to visitor_code only if a token wasn't
+  // generated (shouldn't happen for new visitors, kept as a safety net).
+  const passUrl = `${frontendUrl}/v/pass?code=${visitor.passToken || visitorCode}`;
 
   console.log(`[WHATSAPP][PASS] → ${destination} | passUrl: ${passUrl}`);
 
@@ -183,26 +186,24 @@ export const sendVisitorPassWhatsApp = async ({
 
 /* ======================================================
    SEND APPROVAL REQUEST VIA WHATSAPP (to employee)
+   Approved template: visitor_arrival_alert
    Template body:
-     Hello! {{1}} has arrived to meet you.
-
-     🪪 View Pass: {{2}}
-
-     Please take action below.
-
-     Hai Visitor - Visitor Management Platform
+     Hi, {{1}} has arrived at reception to meet you.
+     View Pass: https://www.haivisitor.zodopt.com/v/pass?code={{2}}
+     Please respond using the buttons below.
 
    Buttons (CTA Dynamic URL):
      Button 1 — Approve Visit
-       Base URL: https://www.promeet.zodopt.com/visit-response/
+       Base URL: https://www.haivisitor.zodopt.com/visit-response/
        Suffix param: TOKEN/accept
      Button 2 — Decline Visit
-       Base URL: https://www.promeet.zodopt.com/visit-response/
+       Base URL: https://www.haivisitor.zodopt.com/visit-response/
        Suffix param: TOKEN/decline
 
    Params order (Gupshup):
      [0] = {{1}} body — visitor name
-     [1] = {{2}} body — pass URL
+     [1] = {{2}} body — pass_token (View Pass URL's code= value — NOT
+           visitor_code, which is a guessable sequential counter)
      [2] = button 1 suffix — TOKEN/accept
      [3] = button 2 suffix — TOKEN/decline
 
@@ -217,7 +218,9 @@ export const sendApprovalWhatsApp = async ({
   const templateId   = process.env.GUPSHUP_APPROVAL_TEMPLATE_ID;
 
   const visitorName  = visitor.name        || "A visitor";
-  const visitorCode  = visitor.visitorCode || "";
+  // Public pass lookup uses the unguessable pass_token, not the sequential
+  // visitor_code — see sendVisitorPassWhatsApp for why.
+  const passLookup   = visitor.passToken   || visitor.visitorCode || "";
 
   // Button suffixes — appended to base URL set in Gupshup template
   const approveSuffix = `${responseToken}/accept`;
@@ -225,13 +228,13 @@ export const sendApprovalWhatsApp = async ({
 
   console.log(`[WHATSAPP][APPROVAL] → ${destination} | visitor: ${visitorName} | token: ${responseToken.substring(0, 8)}***`);
 
-  // Template body: {{1}} = visitor name, {{2}} = visitor code only
-  // (base URL is hardcoded in template: https://www.promeet.zodopt.com/visitor/pass?code={{2}})
+  // Template body: {{1}} = visitor name, {{2}} = pass_token (View Pass URL's
+  // code= value — base URL is hardcoded in the approved template)
   // Button {{1}} for each button = dynamic URL suffix
   await postTemplate({
     destination,
     templateId,
-    params: [visitorName, visitorCode, approveSuffix, declineSuffix],
+    params: [visitorName, passLookup, approveSuffix, declineSuffix],
   });
 
   console.log(`[WHATSAPP][APPROVAL] Sent to ${destination}`);

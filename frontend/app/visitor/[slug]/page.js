@@ -358,6 +358,7 @@ export default function PublicVisitorRegistration() {
   const [company,     setCompany]     = useState(null);
   const [error,       setError]       = useState("");
   const [visitorCode, setVisitorCode] = useState("");
+  const [passToken,   setPassToken]   = useState("");
 
   // Per-company Form Builder toggles — default everything on so nothing
   // flashes/hides before the real config loads.
@@ -625,7 +626,7 @@ export default function PublicVisitorRegistration() {
         if (err.name === "AbortError") throw new Error("Upload timed out — please retry");
         throw err;
       }
-      setVisitorCode(data.visitorCode); setStep(4);
+      setVisitorCode(data.visitorCode); setPassToken(data.passToken); setStep(4);
       if (waTab) {
         if (company?.whatsapp_url?.trim()) waTab.location.href = company.whatsapp_url;
         else waTab.close();
@@ -685,7 +686,7 @@ export default function PublicVisitorRegistration() {
         if (err.name === "AbortError") throw new Error("Request timed out — please retry");
         throw err;
       }
-      setVisitorCode(data.visitorCode); setStep(4);
+      setVisitorCode(data.visitorCode); setPassToken(data.passToken); setStep(4);
       if (waTab) {
         if (company?.whatsapp_url?.trim()) waTab.location.href = company.whatsapp_url;
         else waTab.close();
@@ -1361,7 +1362,7 @@ export default function PublicVisitorRegistration() {
                   className={styles.whatsappBtn}
                   type="button"
                   style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}
-                  onClick={() => window.open(`/v/pass?code=${visitorCode}`, "_blank", "noopener,noreferrer")}
+                  onClick={() => window.open(`/v/pass?code=${passToken || visitorCode}`, "_blank", "noopener,noreferrer")}
                 >
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="5" width="20" height="14" rx="2" />

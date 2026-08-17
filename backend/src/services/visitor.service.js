@@ -203,6 +203,10 @@ export const saveVisitor = async (companyId, data, file) => {
     const tokenExpiresAt    = new Date(checkInIST.getTime() + 48 * 60 * 60 * 1000);
     const tokenExpiresMySQL = formatISTForMySQL(tokenExpiresAt);
 
+    // Public pass-page lookup key — deliberately separate from visitor_code,
+    // which is a plain sequential counter and therefore guessable/enumerable.
+    const passToken = crypto.randomBytes(24).toString("hex");
+
     /* ── Insert visitor ── */
     const [insertResult] = await conn.execute(
       `INSERT INTO visitors (
@@ -211,9 +215,9 @@ export const saveVisitor = async (companyId, data, file) => {
         person_to_meet, employee_id, purpose, purpose_category, purpose_subcategory, belongings,
         id_type, id_number,
         status, visit_status, check_in, pass_mail_sent,
-        response_token, response_token_expires_at
+        response_token, response_token_expires_at, pass_token
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', 'pending', NOW(), 0, ?, ?)`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'IN', 'pending', NOW(), 0, ?, ?, ?)`,
       [
         companyId,
         name.trim(),
@@ -237,6 +241,7 @@ export const saveVisitor = async (companyId, data, file) => {
         idNumber     || null,
         responseToken,
         tokenExpiresMySQL,
+        passToken,
       ]
     );
 
@@ -333,6 +338,7 @@ export const saveVisitor = async (companyId, data, file) => {
           company: { name: companyInfo.name },
           visitor: {
             visitorCode,
+            passToken,
             name,
             purpose:       purpose || "Visit",
             personToMeet:  resolvedEmployeeName || null,
@@ -359,7 +365,7 @@ export const saveVisitor = async (companyId, data, file) => {
         console.log("[VISITOR] Sending approval WhatsApp to employee:", resolvedEmployeePhone);
         await sendApprovalWhatsApp({
           phone: resolvedEmployeePhone,
-          visitor: { visitorCode, name },
+          visitor: { visitorCode, passToken, name },
           responseToken,
         });
         console.log("[VISITOR] Approval WhatsApp sent to:", resolvedEmployeePhone);
@@ -373,6 +379,7 @@ export const saveVisitor = async (companyId, data, file) => {
     return {
       id:             visitorId,
       visitorCode,
+      passToken,
       name,
       phone,
       email,

@@ -601,6 +601,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
       success:     true,
       message:     "Visitor registered successfully. Pass sent to your email.",
       visitorCode: visitor.visitorCode,
+      passToken:   visitor.passToken,
     });
   } catch (err) {
     console.error("[VISITOR][REGISTER]", err);
