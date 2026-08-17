@@ -260,7 +260,7 @@ export const handlePaymentCaptured = async (payload) => {
         `INSERT INTO companies
          (name, slug, code_prefix, logo_url, rooms, subscription_status, plan,
           registration_source, registration_complete, razorpay_payment_id)
-         VALUES (?, ?, ?, NULL, ?, 'trial', 'trial', 'razorpay', 0, ?)`,
+         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?)`,
         [name, slug, codePrefix, conferenceRooms, paymentId]
       );
       companyId = companyResult.insertId;
