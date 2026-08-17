@@ -393,7 +393,11 @@ const BODY_HTML = `
 <div class="trial-modal-backdrop" id="trialModalBackdrop">
   <div class="trial-modal" role="dialog" aria-modal="true" aria-labelledby="trialModalTitle">
     <button type="button" class="trial-modal-close" id="trialModalClose" aria-label="Close">&times;</button>
-    <div class="trial-modal-brand">H<span>ai</span> Visitor</div>
+    <div class="trial-modal-top">
+      <img src="/haivisitor.png" alt="Hai Visitor" class="trial-modal-logo" />
+      <div class="trial-modal-wordmark">H<span>ai</span> Visitor</div>
+      <div class="trial-modal-pill">15-Day Trial &middot; &#8377;49</div>
+    </div>
     <div id="trialFormView">
       <h3 id="trialModalTitle">Start Your 15-Day Trial</h3>
       <p class="trial-modal-sub">Enter your email and phone number — payment happens right here, next step.</p>
