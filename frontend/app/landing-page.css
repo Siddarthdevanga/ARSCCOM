@@ -339,8 +339,14 @@ body { padding-top:var(--ticker-h); padding-bottom:var(--sticky-h); }
   to   { opacity:1; transform:scale(1) translateY(0); }
 }
 .trial-modal-brand {
+  /* Sits on a scrollable ancestor (.trial-modal now uses overflow-y:auto
+     for short viewports, not overflow:hidden), so it can't rely on the
+     parent clipping its square top corners to match the modal's rounded
+     ones — round them explicitly instead, or they show as sharp corners
+     poking out past the modal's rounded frame. */
   margin:0 clamp(-1.1rem,-5vw,-1.9rem) clamp(.9rem,3.5vw,1.5rem);
   padding:clamp(.95rem,4vw,1.3rem) clamp(1.1rem,5vw,1.9rem) clamp(1.1rem,4vw,1.6rem);
+  border-radius:clamp(16px,4vw,22px) clamp(16px,4vw,22px) 0 0;
   background:#221C53; background-image:linear-gradient(95deg,#221C53,#3d2a7a);
   color:#fff; font-size:clamp(.94rem,4vw,1.05rem); font-weight:800; letter-spacing:.02em;
 }
