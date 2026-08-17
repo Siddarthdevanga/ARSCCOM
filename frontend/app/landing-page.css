@@ -373,6 +373,7 @@ body { padding-top:var(--ticker-h); padding-bottom:var(--sticky-h); }
 
 .trial-field { margin-bottom:clamp(.7rem,3vw,.95rem); text-align:left; }
 .trial-field label { display:block; font-size:.78rem; font-weight:700; color:var(--navy); margin-bottom:.32rem; }
+.trial-field-req { color:#dc2626; }
 .trial-field input {
   width:100%; padding:clamp(.65rem,3vw,.78rem) clamp(.8rem,3.5vw,.95rem); border-radius:12px; border:1.5px solid var(--stroke);
   font-size:.92rem; font-family:var(--font); color:var(--text); outline:none;

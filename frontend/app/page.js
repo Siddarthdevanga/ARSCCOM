@@ -403,12 +403,12 @@ const BODY_HTML = `
       <p class="trial-modal-sub">Enter your email and phone number — payment happens right here, next step.</p>
       <form id="trialForm" novalidate>
         <div class="trial-field">
-          <label for="trialEmail">Email</label>
+          <label for="trialEmail">Email <span class="trial-field-req">*</span></label>
           <input type="email" id="trialEmail" name="email" placeholder="you@company.com" autocomplete="email" />
           <span class="trial-field-err" id="trialEmailErr"></span>
         </div>
         <div class="trial-field">
-          <label for="trialPhone">Phone Number</label>
+          <label for="trialPhone">Phone Number <span class="trial-field-req">*</span></label>
           <input type="tel" id="trialPhone" name="phone" inputmode="numeric" maxlength="10" placeholder="10-digit mobile number" autocomplete="tel" />
           <span class="trial-field-err" id="trialPhoneErr"></span>
         </div>
