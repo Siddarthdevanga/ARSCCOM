@@ -153,6 +153,66 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
 };
 
 /* ======================================================
+   PAYMENT RECEIPT
+   --------------------------------------------------------
+   Always a separate email from the welcome/temp-password one —
+   fired for every real payment.captured event (both a brand-new
+   account and a repeat payment on an existing one), never for the
+   superadmin-triggered manual password resend (no payment involved
+   there).
+====================================================== */
+const sendPaymentReceiptEmail = async ({ email, phone, paymentId, amountPaise }) => {
+  const amount = ((amountPaise ?? 4900) / 100).toFixed(2);
+  const paidOn = new Date().toLocaleString("en-IN", {
+    day: "2-digit", month: "short", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+
+  await sendEmail({
+    to: email,
+    subject: "Payment Receipt — Hai Visitor 15-Day Trial",
+    html: `
+      <div style="border:1px solid #e0d9f0;border-radius:12px;padding:24px;max-width:480px;margin:0 auto;">
+        <h2 style="color:#221a35;margin:0 0 16px;">Payment Receipt</h2>
+
+        <p style="font-size:14px;">
+          Thank you for your payment. Here are your payment details:
+        </p>
+
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
+          <tr>
+            <td style="padding:8px 0;color:#6E6890;">Amount Paid</td>
+            <td style="padding:8px 0;text-align:right;font-weight:700;">₹${amount}</td>
+          </tr>
+          <tr style="border-top:1px solid #eee;">
+            <td style="padding:8px 0;color:#6E6890;">Payment ID</td>
+            <td style="padding:8px 0;text-align:right;">${paymentId}</td>
+          </tr>
+          <tr style="border-top:1px solid #eee;">
+            <td style="padding:8px 0;color:#6E6890;">Date</td>
+            <td style="padding:8px 0;text-align:right;">${paidOn}</td>
+          </tr>
+          <tr style="border-top:1px solid #eee;">
+            <td style="padding:8px 0;color:#6E6890;">Email</td>
+            <td style="padding:8px 0;text-align:right;">${email}</td>
+          </tr>
+          <tr style="border-top:1px solid #eee;">
+            <td style="padding:8px 0;color:#6E6890;">Phone</td>
+            <td style="padding:8px 0;text-align:right;">${phone}</td>
+          </tr>
+        </table>
+
+        <p style="font-size:14px;">
+          This receipt confirms your payment for the Hai Visitor 15-Day Trial.
+        </p>
+
+        ${emailFooter()}
+      </div>
+    `,
+  });
+};
+
+/* ======================================================
    RESEND TEMP PASSWORD (duplicate payment / already exists)
 ====================================================== */
 const resendTempPassword = async (userRow) => {
@@ -279,6 +339,9 @@ export const handlePaymentCaptured = async (payload) => {
 
   if (existingUser) {
     await resendTempPassword(existingUser);
+    sendPaymentReceiptEmail({ email, phone, paymentId, amountPaise }).catch((err) =>
+      console.error("[RAZORPAY] receipt email failed:", err.message)
+    );
     await log("resent");
     return { status: "resent", companyExisted: true };
   }
@@ -344,6 +407,7 @@ export const handlePaymentCaptured = async (payload) => {
     Promise.allSettled([
       sendWhatsAppTemplate(phone, process.env.GUPSHUP_BOT_WELCOME_TEMPLATE, ["there"]),
       sendRazorpayWelcomeEmail(email, tempPassword),
+      sendPaymentReceiptEmail({ email, phone, paymentId, amountPaise }),
     ]).then((results) => {
       results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] welcome notification failed:", r.reason); });
     });
