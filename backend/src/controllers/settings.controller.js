@@ -54,28 +54,18 @@ const validateWhatsAppUrl = (input) => {
     return `https://wa.me/${v.replace(/^\+/, "")}`;
   }
 
-  // Direct chat URLs
-  if (/^https:\/\/(wa\.me|api\.whatsapp\.com)\/.+/i.test(v)) {
-    return v;
-  }
-
-  // Group invite URL
-  if (/^https:\/\/chat\.whatsapp\.com\/.+/i.test(v)) {
-    return v;
-  }
-
-  // Channel URL — www. is how WhatsApp's own share button actually
-  // generates these links, so it must be optional here, not required.
-  if (/^https:\/\/(www\.)?whatsapp\.com\/channel\/.+/i.test(v)) {
+  // Any WhatsApp URL — direct chat, group/community invite, channel,
+  // business, etc. — with www. optional throughout, since WhatsApp's own
+  // share buttons generate slightly different link shapes depending on
+  // which one you use.
+  if (/^https:\/\/(www\.)?(([a-z0-9-]+\.)?whatsapp\.com|wa\.me)\/.+/i.test(v)) {
     return v;
   }
 
   throw new Error(
     "Invalid WhatsApp value. Accepted formats:\n" +
     "• Phone number: +918647878785\n" +
-    "• Direct chat: https://wa.me/... or https://api.whatsapp.com/...\n" +
-    "• Group invite: https://chat.whatsapp.com/...\n" +
-    "• Channel: https://whatsapp.com/channel/... or https://www.whatsapp.com/channel/..."
+    "• Any wa.me or whatsapp.com link — direct chat, group/community invite, channel, etc."
   );
 };
 

@@ -499,7 +499,7 @@ export default function SuperAdminDashboard() {
       const data = await res.json();
       setRazorpaySignups(data.signups || []);
     } catch {
-      showToast("Failed to load Razorpay signups", "error");
+      showToast("Failed to load landing page conversions", "error");
     } finally {
       setRazorpayLoading(false);
     }
@@ -637,7 +637,7 @@ export default function SuperAdminDashboard() {
             className={`${styles.tab} ${activeTab === "razorpay" ? styles.tabActive : ""}`}
             onClick={() => setActiveTab("razorpay")}
           >
-            Razorpay Payment Source
+            Landing Page Conversions
           </button>
         </div>
 
@@ -739,7 +739,7 @@ export default function SuperAdminDashboard() {
               {razorpayLoading ? (
                 <div className={styles.loadingState}>
                   <div className={styles.spinner} />
-                  <p>Loading Razorpay signups…</p>
+                  <p>Loading landing page conversions…</p>
                 </div>
               ) : razorpaySignups.length === 0 ? (
                 <div className={styles.emptyState}>No landing-page trial signups yet</div>

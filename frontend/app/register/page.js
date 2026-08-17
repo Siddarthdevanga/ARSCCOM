@@ -145,9 +145,11 @@ export default function RegisterPage() {
     if (firstErr) { setError(firstErr); return false; }
 
     if (formData.whatsappUrl?.trim()) {
-      const waRe = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|whatsapp\.com\/channel)\/.+/i;
+      // Any WhatsApp URL — direct chat, group/community invite, channel,
+      // business, etc. — with www. optional, matching the backend's check.
+      const waRe = /^https:\/\/(www\.)?(([a-z0-9-]+\.)?whatsapp\.com|wa\.me)\/.+/i;
       if (!waRe.test(formData.whatsappUrl.trim())) {
-        setError("Invalid WhatsApp URL. Accepted: https://wa.me/..., https://chat.whatsapp.com/... or https://whatsapp.com/channel/...");
+        setError("Invalid WhatsApp URL. Accepted: any wa.me or whatsapp.com link (chat, group/community invite, channel, etc.)");
         return false;
       }
     }

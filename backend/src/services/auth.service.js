@@ -83,12 +83,13 @@ const validateWhatsAppUrl = (url) => {
   const trimmedUrl = url.trim();
   if (!trimmedUrl) return null;
   
-  // www. is optional on whatsapp.com/channel — that's how WhatsApp's own
-  // share button actually generates these links, so requiring the bare
-  // domain rejected every real-world channel link.
-  const whatsappPattern = /^https:\/\/(wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|(www\.)?whatsapp\.com\/channel)\/.+/i;
+  // Accept any WhatsApp URL — direct chat (wa.me/api.whatsapp.com), group
+  // or community invite (chat.whatsapp.com), channel, business, etc. — with
+  // www. optional throughout, since WhatsApp's own share buttons generate
+  // slightly different link shapes depending on which one you use.
+  const whatsappPattern = /^https:\/\/(www\.)?(([a-z0-9-]+\.)?whatsapp\.com|wa\.me)\/.+/i;
   if (!whatsappPattern.test(trimmedUrl)) {
-    throw new Error("Invalid WhatsApp URL. Accepted: https://wa.me/..., https://chat.whatsapp.com/... or https://whatsapp.com/channel/... (www. optional)");
+    throw new Error("Invalid WhatsApp URL. Accepted: any wa.me or whatsapp.com link (chat, group/community invite, channel, etc.)");
   }
   
   return trimmedUrl;
