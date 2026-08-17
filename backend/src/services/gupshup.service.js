@@ -75,47 +75,25 @@ const INTRO_TEXT =
   "✨ Manage visitor check-ins, visitor records, and visitor history digitally.\n" +
   "✨ Track visitor details, photos, meeting hosts, and items carried.\n" +
   "✨ Get real-time visibility of checked-in/check-out visitors with detailed analytics.\n" +
-  "✨ Book and manage meeting & conference rooms efficiently from a single platform.";
+  "✨ Book and manage meeting & conference rooms efficiently from a single platform.\n\n" +
+  "*15-Day Trial — ₹49*";
 
 /* --------------------------------------------------
-   Send intro — uses approved CTA-URL template if
-   GUPSHUP_BOT_INTRO_TEMPLATE is set, otherwise falls
-   back to quick_reply buttons (useful during testing
-   before the template is approved).
+   Send intro — always a self-composed session message
+   (quick_reply), never a Gupshup-approved template. This
+   is a reply to an inbound message, so it's always within
+   the 24h session window and doesn't need template approval.
+   Single CTA: Start Trial (no demo option).
 -------------------------------------------------- */
 export const sendIntroMessage = async (destination) => {
-  const { apiKey, appName, srcNum, introTemplate } = getConfig();
+  const { apiKey, appName, srcNum } = getConfig();
 
-  if (introTemplate) {
-    // Template with CTA URL buttons — direct URL redirect on click, no bot reply needed
-    const template = JSON.stringify({ id: introTemplate, params: [] });
-    const params = new URLSearchParams({
-      channel: "whatsapp",
-      source: srcNum,
-      destination,
-      "src.name": appName,
-      template,
-    });
-    try {
-      const { data } = await axios.post(TEMPLATE_URL, params.toString(), {
-        headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
-      });
-      console.log("[WA] sendIntroTemplate response:", JSON.stringify(data));
-      return data;
-    } catch (err) {
-      console.error("[WA] sendIntroTemplate failed:", err.response?.status, JSON.stringify(err.response?.data));
-      throw err;
-    }
-  }
-
-  // Fallback: quick_reply buttons (no URL redirect, used before template is approved)
   const message = JSON.stringify({
     type: "quick_reply",
     msgid: `intro_${Date.now()}`,
-    content: { type: "text", text: INTRO_TEXT + "\n\nWhat would you like to do?" },
+    content: { type: "text", text: INTRO_TEXT },
     options: [
-      { type: "text", title: "Book A Demo" },
-      { type: "text", title: "Start With Hai Visitor" },
+      { type: "text", title: "Start Trial" },
     ],
   });
 

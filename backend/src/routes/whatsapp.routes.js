@@ -203,15 +203,14 @@ async function handleButton(phone, title, name) {
   ensureOptIn(phone).catch(() => {});
   const normalised = (title || "").trim().toLowerCase();
 
-  if (normalised === "start with promeet") {
-    // CTA template: URL opens directly, no bot reply needed
-    await upsertLead(phone, name, "start_with_promeet");
-    return;
-  }
-
-  if (normalised === "book a demo") {
-    // CTA template: URL opens directly, no bot reply needed
-    await upsertLead(phone, name, "book_a_demo");
+  if (normalised === "start trial") {
+    await upsertLead(phone, name, "start_trial");
+    await sendTextMessage(
+      phone,
+      "Great! Start your 15-day trial here:\n" +
+      "https://www.haivisitor.zodopt.com/#trial\n\n" +
+      "Just tap Start Trial on the page — payment takes less than a minute."
+    );
     return;
   }
 
