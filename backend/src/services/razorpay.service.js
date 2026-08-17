@@ -391,8 +391,10 @@ export const handlePaymentCaptured = async (payload) => {
       const [companyResult] = await conn.execute(
         `INSERT INTO companies
          (name, slug, code_prefix, logo_url, rooms, subscription_status, plan,
-          registration_source, registration_complete, razorpay_payment_id, amount_paid)
-         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?, ?)`,
+          registration_source, registration_complete, razorpay_payment_id, amount_paid,
+          trial_ends_at)
+         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?, ?,
+          DATE_ADD(NOW(), INTERVAL 15 DAY))`,
         [name, slug, codePrefix, conferenceRooms, paymentId, amountPaise]
       );
       companyId = companyResult.insertId;
