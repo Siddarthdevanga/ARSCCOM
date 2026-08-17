@@ -275,13 +275,49 @@ const sendAccountReadyEmail = async (email, companyName) => {
       <p>Hello <b>${companyName}</b>,</p>
 
       <p>
-        Your account has been created. Start using <b>Hai Visitor</b> to manage
-        visitors and conference rooms for your organization.
+        Your account is ready. Here's a quick look at what you can do with
+        <b>Hai Visitor</b>.
       </p>
 
-      <p>
+      <h3 style="color:#6c2bd9;margin-top:24px;margin-bottom:6px;">Registering Visitors</h3>
+      <p style="font-size:14px;line-height:1.6;">
+        Visitors can register themselves in seconds by scanning your company's
+        QR code — no app download, no dedicated hardware. Once submitted, the
+        relevant host gets notified instantly and the visitor receives a
+        digital pass. Every check-in is logged automatically, so your front
+        desk never depends on a paper register again.
+      </p>
+
+      <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Reports &amp; Analytics</h3>
+      <p style="font-size:14px;line-height:1.6;">
+        Your dashboard gives you a live view of who's checked in, visit
+        history, and trends over time — searchable and exportable, so you
+        always have a record to fall back on.
+      </p>
+
+      <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Employee Directory</h3>
+      <p style="font-size:14px;line-height:1.6;">
+        Add your team as hosts so visitors can select exactly who they're
+        there to meet — notifications route straight to the right person,
+        automatically.
+      </p>
+
+      <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Form Builder</h3>
+      <p style="font-size:14px;line-height:1.6;">
+        The visitor registration form is yours to customize — add, remove or
+        reorder fields to capture exactly the information your organization
+        needs at check-in.
+      </p>
+
+      <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Account Settings</h3>
+      <p style="font-size:14px;line-height:1.6;">
+        Update your company logo, WhatsApp number, visitor code prefix and
+        other preferences any time from Settings.
+      </p>
+
+      <p style="margin-top:24px;">
         <a href="https://www.haivisitor.zodopt.com/home" style="color:#6c2bd9;font-weight:600;">
-          Go to Dashboard →
+          Login to Hai Visitor →
         </a>
       </p>
 
