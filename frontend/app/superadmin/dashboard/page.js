@@ -432,6 +432,11 @@ export default function SuperAdminDashboard() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [toast,        setToast]        = useState({ show: false, message: "", type: "success" });
 
+  const [activeTab,       setActiveTab]       = useState("companies");
+  const [razorpaySignups, setRazorpaySignups] = useState([]);
+  const [razorpayLoading, setRazorpayLoading] = useState(false);
+  const [resendingId,     setResendingId]     = useState(null);
+
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3000);
@@ -476,6 +481,49 @@ export default function SuperAdminDashboard() {
   }, [apiBase, router]);
 
   useEffect(() => { if (token) fetchDashboard(token); }, [token, fetchDashboard]);
+
+  /* ── RAZORPAY SIGNUPS ── */
+  const fetchRazorpaySignups = useCallback(async (t) => {
+    if (!t) return;
+    setRazorpayLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/razorpay-signups`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.removeItem("sa_token");
+        localStorage.removeItem("sa_admin");
+        router.replace("/auth/login");
+        return;
+      }
+      const data = await res.json();
+      setRazorpaySignups(data.signups || []);
+    } catch {
+      showToast("Failed to load Razorpay signups", "error");
+    } finally {
+      setRazorpayLoading(false);
+    }
+  }, [apiBase, router]);
+
+  useEffect(() => {
+    if (token && activeTab === "razorpay") fetchRazorpaySignups(token);
+  }, [token, activeTab, fetchRazorpaySignups]);
+
+  const resendRazorpayPassword = async (companyId) => {
+    setResendingId(companyId);
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/razorpay-signups/${companyId}/resend-password`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      showToast(data.message || (res.ok ? "Temp password resent" : "Failed to resend"), res.ok ? "success" : "error");
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setResendingId(null);
+    }
+  };
 
   /* ── LOGOUT ── */
   const logout = () => {
@@ -577,89 +625,179 @@ export default function SuperAdminDashboard() {
           </div>
         </section>
 
-        {/* ── FILTERS ── */}
-        <div className={styles.filterBar}>
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="🔍  Search company name or slug…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <select className={styles.filterSelect} value={filterPlan} onChange={(e) => setFilterPlan(e.target.value)}>
-            <option value="all">All Plans</option>
-            <option value="trial">Trial</option>
-            <option value="business">Business</option>
-            <option value="enterprise">Enterprise</option>
-          </select>
-          <select className={styles.filterSelect} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="trial">Trial</option>
-            <option value="active">Active</option>
-            <option value="grace_period">Grace Period</option>
-            <option value="expired">Expired</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
-          <button className={styles.refreshBtn} onClick={() => fetchDashboard(token)}>↻ Refresh</button>
+        {/* ── PAGE TABS ── */}
+        <div className={styles.tabs}>
+          <button
+            className={`${styles.tab} ${activeTab === "companies" ? styles.tabActive : ""}`}
+            onClick={() => setActiveTab("companies")}
+          >
+            All Companies
+          </button>
+          <button
+            className={`${styles.tab} ${activeTab === "razorpay" ? styles.tabActive : ""}`}
+            onClick={() => setActiveTab("razorpay")}
+          >
+            Razorpay Payment Source
+          </button>
         </div>
 
-        {/* ── TABLE ── */}
-        <div className={styles.tableWrapper}>
-          {loading ? (
-            <div className={styles.loadingState}>
-              <div className={styles.spinner} />
-              <p>Loading companies…</p>
+        {activeTab === "companies" && (
+          <>
+            {/* ── FILTERS ── */}
+            <div className={styles.filterBar}>
+              <input
+                className={styles.searchInput}
+                type="text"
+                placeholder="🔍  Search company name or slug…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select className={styles.filterSelect} value={filterPlan} onChange={(e) => setFilterPlan(e.target.value)}>
+                <option value="all">All Plans</option>
+                <option value="trial">Trial</option>
+                <option value="business">Business</option>
+                <option value="enterprise">Enterprise</option>
+              </select>
+              <select className={styles.filterSelect} value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+                <option value="all">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="trial">Trial</option>
+                <option value="active">Active</option>
+                <option value="grace_period">Grace Period</option>
+                <option value="expired">Expired</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <button className={styles.refreshBtn} onClick={() => fetchDashboard(token)}>↻ Refresh</button>
             </div>
-          ) : filtered.length === 0 ? (
-            <div className={styles.emptyState}>No companies found</div>
-          ) : (
-            <div className={styles.tableScroll}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Company</th>
-                    <th>Plan</th>
-                    <th>Status</th>
-                    <th>Trial Ends</th>
-                    <th>Sub Ends</th>
-                    <th>Rooms</th>
-                    <th>Bookings</th>
-                    <th>Visitors</th>
-                    <th>Users</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map((c) => (
-                    <tr key={c.id} className={c.is_suspended ? styles.rowSuspended : ""}>
-                      <td>
-                        <div className={styles.companyCell}>
-                          <span className={styles.companyName}>{c.name}</span>
-                          <span className={styles.companySlug}>{c.slug}</span>
-                          {c.is_suspended && <span className={styles.suspendedTag}>SUSPENDED</span>}
-                        </div>
-                      </td>
-                      <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
-                      <td><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status || "-"}</span></td>
-                      <td className={styles.dateCell}>{c.trial_ends_at?.slice(0, 10) || "-"}</td>
-                      <td className={styles.dateCell}>{c.subscription_ends_at?.slice(0, 10) || "-"}</td>
-                      <td className={styles.numCell}>{c.total_rooms}</td>
-                      <td className={styles.numCell}>{c.total_bookings}</td>
-                      <td className={styles.numCell}>{c.total_visitors}</td>
-                      <td className={styles.numCell}>{c.total_users}</td>
-                      <td>
-                        <button className={styles.manageBtn} onClick={() => setSelected(c)}>
-                          Manage
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+            {/* ── TABLE ── */}
+            <div className={styles.tableWrapper}>
+              {loading ? (
+                <div className={styles.loadingState}>
+                  <div className={styles.spinner} />
+                  <p>Loading companies…</p>
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className={styles.emptyState}>No companies found</div>
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Company</th>
+                        <th>Plan</th>
+                        <th>Status</th>
+                        <th>Trial Ends</th>
+                        <th>Sub Ends</th>
+                        <th>Rooms</th>
+                        <th>Bookings</th>
+                        <th>Visitors</th>
+                        <th>Users</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered.map((c) => (
+                        <tr key={c.id} className={c.is_suspended ? styles.rowSuspended : ""}>
+                          <td>
+                            <div className={styles.companyCell}>
+                              <span className={styles.companyName}>{c.name}</span>
+                              <span className={styles.companySlug}>{c.slug}</span>
+                              {c.is_suspended && <span className={styles.suspendedTag}>SUSPENDED</span>}
+                            </div>
+                          </td>
+                          <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
+                          <td><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status || "-"}</span></td>
+                          <td className={styles.dateCell}>{c.trial_ends_at?.slice(0, 10) || "-"}</td>
+                          <td className={styles.dateCell}>{c.subscription_ends_at?.slice(0, 10) || "-"}</td>
+                          <td className={styles.numCell}>{c.total_rooms}</td>
+                          <td className={styles.numCell}>{c.total_bookings}</td>
+                          <td className={styles.numCell}>{c.total_visitors}</td>
+                          <td className={styles.numCell}>{c.total_users}</td>
+                          <td>
+                            <button className={styles.manageBtn} onClick={() => setSelected(c)}>
+                              Manage
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </>
+        )}
+
+        {activeTab === "razorpay" && (
+          <>
+            <div className={styles.filterBar}>
+              <button className={styles.refreshBtn} onClick={() => fetchRazorpaySignups(token)}>↻ Refresh</button>
+            </div>
+
+            <div className={styles.tableWrapper}>
+              {razorpayLoading ? (
+                <div className={styles.loadingState}>
+                  <div className={styles.spinner} />
+                  <p>Loading Razorpay signups…</p>
+                </div>
+              ) : razorpaySignups.length === 0 ? (
+                <div className={styles.emptyState}>No landing-page trial signups yet</div>
+              ) : (
+                <div className={styles.tableScroll}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Company</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Amount Paid</th>
+                        <th>Payment ID</th>
+                        <th>Paid On</th>
+                        <th>Setup Status</th>
+                        <th>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {razorpaySignups.map((s) => (
+                        <tr key={s.id}>
+                          <td>
+                            <div className={styles.companyCell}>
+                              <span className={styles.companyName}>{s.name}</span>
+                            </div>
+                          </td>
+                          <td>{s.email}</td>
+                          <td>{s.phone}</td>
+                          <td className={styles.numCell}>
+                            {s.amount_paid != null ? `₹${(s.amount_paid / 100).toFixed(2)}` : "-"}
+                          </td>
+                          <td>{s.razorpay_payment_id || "-"}</td>
+                          <td className={styles.dateCell}>{s.created_at?.slice(0, 10) || "-"}</td>
+                          <td>
+                            {s.registration_complete ? (
+                              <span className={`${styles.badge} ${styles.badgeActive}`}>COMPLETE</span>
+                            ) : (
+                              <span className={`${styles.badge} ${styles.badgePending}`}>SETUP INCOMPLETE</span>
+                            )}
+                          </td>
+                          <td>
+                            <button
+                              className={styles.manageBtn}
+                              disabled={resendingId === s.id}
+                              onClick={() => resendRazorpayPassword(s.id)}
+                            >
+                              {resendingId === s.id ? "Sending…" : "Resend Temp Password"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
       </div>
     </div>

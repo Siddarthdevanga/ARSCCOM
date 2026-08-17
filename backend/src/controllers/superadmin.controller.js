@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import * as service from "../services/superadmin.service.js";
 import { db } from "../config/db.js";
 import { sendImageWhatsApp, sendVideoWhatsApp, registerOptIn } from "../services/gupshup.service.js";
+import * as razorpayService from "../services/razorpay.service.js";
 
 const JWT_EXPIRY = "12h";
 
@@ -85,6 +86,37 @@ export const dashboard = async (req, res) => {
   } catch (err) {
     console.error("SUPERADMIN DASHBOARD ERROR:", err.message);
     return res.status(500).json({ success: false, message: "Failed to load dashboard" });
+  }
+};
+
+/* ======================================================
+   RAZORPAY PAYMENT SOURCE
+   GET /api/superadmin/razorpay-signups
+====================================================== */
+export const razorpaySignups = async (req, res) => {
+  try {
+    const signups = await service.getRazorpaySignups();
+    return res.status(200).json({ success: true, signups });
+  } catch (err) {
+    console.error("SUPERADMIN RAZORPAY SIGNUPS ERROR:", err.message);
+    return res.status(500).json({ success: false, message: "Failed to load Razorpay signups" });
+  }
+};
+
+/* ======================================================
+   RESEND RAZORPAY TEMP PASSWORD
+   POST /api/superadmin/razorpay-signups/:id/resend-password
+====================================================== */
+export const resendRazorpayPassword = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+
+    await razorpayService.resendTrialPassword(companyId);
+    return res.status(200).json({ success: true, message: "Temp password resent" });
+  } catch (err) {
+    console.error("SUPERADMIN RESEND RAZORPAY PASSWORD ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
   }
 };
 

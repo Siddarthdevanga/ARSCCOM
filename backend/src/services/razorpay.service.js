@@ -107,9 +107,17 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
       <p>Hello,</p>
 
       <p>
-        Thank you for your payment. Your <b>15-day Hai Visitor trial</b> is active
-        and your account has been created.
+        Thank you for your payment. Your <b>Hai Visitor 15-Day Trial</b> is now active.
       </p>
+
+      <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Trial Plan Includes</h3>
+      <ul style="font-size:14px;line-height:1.8;">
+        <li>100 Visitor Registrations</li>
+        <li>100 Conference Room Bookings</li>
+        <li>2 Conference Rooms</li>
+        <li>Live Dashboard &amp; Visitor History</li>
+        <li>No dedicated hardware required — just a displayed QR code</li>
+      </ul>
 
       <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Login Details</h3>
       <p style="font-size:14px;">
@@ -119,9 +127,18 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
         ${tempPassword}
       </p>
 
+      <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Before You Start — Complete Your Registration</h3>
       <p style="font-size:14px;">
-        You'll be asked to set your own password and finish setting up your
-        company profile (name, logo) the first time you log in.
+        The first time you log in, you'll be asked to:
+      </p>
+      <ul style="font-size:14px;line-height:1.8;">
+        <li>Set your own password (replacing this temporary one)</li>
+        <li>Enter your <b>Company Name</b></li>
+        <li>Upload your <b>Company Logo</b></li>
+        <li>Add your <b>WhatsApp Number/URL</b> (optional — used for visitor notifications)</li>
+      </ul>
+      <p style="font-size:14px;">
+        Having these details ready before you log in will make setup quicker.
       </p>
 
       <p>
@@ -157,6 +174,30 @@ const resendTempPassword = async (userRow) => {
   ]).then((results) => {
     results.forEach((r) => { if (r.status === "rejected") console.error("[RAZORPAY] resend notification failed:", r.reason); });
   });
+};
+
+/* ======================================================
+   RESEND TEMP PASSWORD — superadmin-triggered
+   --------------------------------------------------------
+   Same regenerate-and-notify logic as the webhook's own duplicate-
+   payment path, but callable on demand from the Superadmin dashboard's
+   "Razorpay Payment Source" tab for a company that never completed
+   registration.
+====================================================== */
+export const resendTrialPassword = async (companyId) => {
+  const [[userRow]] = await db.query(
+    `SELECT u.id, u.email, u.phone, c.name AS companyName
+     FROM users u JOIN companies c ON c.id = u.company_id
+     WHERE u.company_id = ? AND c.registration_source = 'razorpay'
+     LIMIT 1`,
+    [companyId]
+  );
+
+  if (!userRow) {
+    throw new Error("No Razorpay-sourced user found for this company");
+  }
+
+  await resendTempPassword(userRow);
 };
 
 /* ======================================================
@@ -214,6 +255,7 @@ const logWebhookEvent = async ({ paymentId, name, email, phone, status, companyI
 export const handlePaymentCaptured = async (payload) => {
   const paymentEntity = payload?.payment?.entity || {};
   const paymentId = paymentEntity?.id || null;
+  const amountPaise = Number.isFinite(paymentEntity?.amount) ? paymentEntity.amount : null;
 
   const { name, email, phone } = await extractPayerDetails(paymentEntity);
   const log = (status, companyId) => logWebhookEvent({ paymentId, name, email, phone, status, companyId, rawPayload: payload });
@@ -259,9 +301,9 @@ export const handlePaymentCaptured = async (payload) => {
       const [companyResult] = await conn.execute(
         `INSERT INTO companies
          (name, slug, code_prefix, logo_url, rooms, subscription_status, plan,
-          registration_source, registration_complete, razorpay_payment_id)
-         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?)`,
-        [name, slug, codePrefix, conferenceRooms, paymentId]
+          registration_source, registration_complete, razorpay_payment_id, amount_paid)
+         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?, ?)`,
+        [name, slug, codePrefix, conferenceRooms, paymentId, amountPaise]
       );
       companyId = companyResult.insertId;
     } catch (err) {

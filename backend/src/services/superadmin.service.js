@@ -108,6 +108,30 @@ export const getDashboard = async () => {
 };
 
 /* ======================================================
+   RAZORPAY LANDING-PAGE SIGNUPS
+   — companies that paid via the landing-page trial popup,
+     for the Superadmin dashboard's "Razorpay Payment Source" tab
+====================================================== */
+export const getRazorpaySignups = async () => {
+  const [rows] = await db.query(
+    `SELECT
+       c.id,
+       c.name,
+       c.amount_paid,
+       c.razorpay_payment_id,
+       c.registration_complete,
+       c.created_at,
+       u.email,
+       u.phone
+     FROM companies c
+     JOIN users u ON u.company_id = c.id
+     WHERE c.registration_source = 'razorpay'
+     ORDER BY c.created_at DESC`
+  );
+  return rows;
+};
+
+/* ======================================================
    SINGLE COMPANY DETAIL
 ====================================================== */
 export const getCompanyDetail = async (companyId) => {

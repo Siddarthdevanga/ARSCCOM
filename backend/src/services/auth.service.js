@@ -36,7 +36,7 @@ export const emailFooter = () => `
 Regards,<br/>
 
 <img 
-  src="https://www.promeet.zodopt.com/haivisitor.png"
+  src="https://www.haivisitor.zodopt.com/haivisitor.png"
   alt="Hai Visitor Logo"
   style="height:65px;margin:10px 0;display:block"
 />
@@ -265,6 +265,32 @@ const sendWelcomeEmail = async (email, companyName) => {
 };
 
 /* ======================================================
+   ACCOUNT READY (Razorpay flow — after complete-registration)
+====================================================== */
+const sendAccountReadyEmail = async (email, companyName) => {
+  await sendEmail({
+    to: email,
+    subject: `You're All Set, ${companyName} — Start Using Hai Visitor`,
+    html: `
+      <p>Hello <b>${companyName}</b>,</p>
+
+      <p>
+        Your account has been created. Start using <b>Hai Visitor</b> to manage
+        visitors and conference rooms for your organization.
+      </p>
+
+      <p>
+        <a href="https://www.haivisitor.zodopt.com/home" style="color:#6c2bd9;font-weight:600;">
+          Go to Dashboard →
+        </a>
+      </p>
+
+      ${emailFooter()}
+    `
+  });
+};
+
+/* ======================================================
    LOGIN
    --------------------------------------------------------
    IMPORTANT: Users with "expired" subscriptions CAN login
@@ -448,10 +474,20 @@ export const completeRegistration = async ({ companyId, userId, companyName, pas
 
   const [[updated]] = await db.execute(
     `SELECT c.id, c.name, c.slug, c.logo_url, c.whatsapp_url, c.subscription_status, c.plan,
-            c.registration_source, c.registration_complete
-     FROM companies c WHERE c.id = ?`,
-    [companyId]
+            c.registration_source, c.registration_complete, u.email AS userEmail
+     FROM companies c JOIN users u ON u.company_id = c.id AND u.id = ?
+     WHERE c.id = ?`,
+    [userId, companyId]
   );
+
+  if (updated?.userEmail) {
+    Promise.allSettled([
+      sendPasswordChangedEmail(updated.userEmail, cleanCompanyName),
+      sendAccountReadyEmail(updated.userEmail, cleanCompanyName),
+    ]).then((results) => {
+      results.forEach((r) => { if (r.status === "rejected") console.error("[COMPLETE REGISTRATION] notification failed:", r.reason); });
+    });
+  }
 
   return {
     company: {

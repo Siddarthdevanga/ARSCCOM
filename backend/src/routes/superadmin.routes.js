@@ -19,6 +19,10 @@ router.use(authenticateSuperAdmin);
 // ── Dashboard ──────────────────────────────────────────
 router.get("/dashboard", ctrl.dashboard);
 
+// ── Razorpay Payment Source ─────────────────────────────
+router.get ("/razorpay-signups",                     ctrl.razorpaySignups);
+router.post("/razorpay-signups/:id/resend-password", ctrl.resendRazorpayPassword);
+
 // ── WhatsApp Leads ─────────────────────────────────────
 router.get ("/whatsapp-leads",                              ctrl.whatsappLeads);
 router.post("/demo-appointments/:id/mark-attended",         ctrl.markDemoAttended);

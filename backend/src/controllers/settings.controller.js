@@ -18,7 +18,7 @@ const emailFooter = () => `
 <br/>
 Regards,<br/>
 <img 
-  src="https://www.promeet.zodopt.com/haivisitor.png"
+  src="https://www.haivisitor.zodopt.com/haivisitor.png"
   alt="Hai Visitor Logo"
   style="height:65px;margin:10px 0;display:block"
 />
