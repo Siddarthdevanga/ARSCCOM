@@ -79,7 +79,8 @@ export default function CompleteRegistrationPage() {
       const company = JSON.parse(stored);
       if (company?.registration_complete) { router.replace("/home"); return; }
 
-      setFormData((p) => ({ ...p, companyName: company?.name || "" }));
+      // Don't pre-fill with the "New Customer" placeholder name assigned at
+      // payment time — leave the field empty so they type their real one.
       setChecking(false);
     } catch {
       router.replace("/login");
@@ -175,7 +176,7 @@ export default function CompleteRegistrationPage() {
                   type="text"
                   className={styles.input}
                   style={{ borderColor: touched.companyName && fe.companyName ? "#dc2626" : undefined }}
-                  placeholder="Enter your company name"
+                  placeholder="Your Organisation / Company Name"
                   value={formData.companyName}
                   onChange={(e) => handleInputChange("companyName", e.target.value)}
                   onBlur={() => handleBlur("companyName")}
