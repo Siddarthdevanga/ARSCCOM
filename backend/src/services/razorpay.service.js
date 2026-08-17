@@ -104,51 +104,72 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
     to: email,
     subject: "Welcome to Hai Visitor — Your Trial Account & Login Details",
     html: `
-      <div style="border:1px solid #e0d9f0;border-radius:12px;padding:24px;max-width:480px;margin:0 auto;">
-        <p>Hello,</p>
+      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
 
-        <p>
-          Thank you for your payment. Your <b>Hai Visitor 15-Day Trial</b> is now active.
-        </p>
+        <!-- BRAND HEADER -->
+        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+          <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
+            H<span style="color:#FDBA74;">ai</span> Visitor
+          </div>
+          <div style="margin-top:6px;display:inline-block;background:rgba(255,255,255,.12);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 14px;border-radius:999px;">
+            15-Day Trial Activated
+          </div>
+        </div>
 
-        <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Trial Plan Includes</h3>
-        <ul style="font-size:14px;line-height:1.8;">
-          <li>100 Visitor Registrations</li>
-          <li>100 Conference Room Bookings</li>
-          <li>2 Conference Rooms</li>
-          <li>Live Dashboard &amp; Visitor History</li>
-          <li>No dedicated hardware required — just a displayed QR code</li>
-        </ul>
+        <div style="padding:28px;">
+          <p style="font-size:15px;color:#262046;">Hello,</p>
 
-        <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Login Details</h3>
-        <p style="font-size:14px;">
-          Login with your email or phone number, using this temporary password:
-        </p>
-        <p style="font-size:18px;font-weight:700;letter-spacing:1px;background:#f4f0fb;padding:10px 14px;border-radius:8px;display:inline-block;">
-          ${tempPassword}
-        </p>
+          <p style="font-size:15px;color:#262046;">
+            Thank you for your payment. Your <b>Hai Visitor 15-Day Trial</b> is now active.
+          </p>
 
-        <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Before You Start — Complete Your Registration</h3>
-        <p style="font-size:14px;">
-          The first time you log in, you'll be asked to:
-        </p>
-        <ul style="font-size:14px;line-height:1.8;">
-          <li>Set your own password (replacing this temporary one)</li>
-          <li>Enter your <b>Company Name</b></li>
-          <li>Upload your <b>Company Logo</b></li>
-          <li>Add your <b>WhatsApp Number/URL</b> (optional — used for visitor notifications)</li>
-        </ul>
-        <p style="font-size:14px;">
-          Having these details ready before you log in will make setup quicker.
-        </p>
+          <!-- TRIAL PLAN -->
+          <div style="background:#F1ECFB;border-left:4px solid #7C3AED;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#7C3AED;margin:0 0 10px;font-size:15px;">Your Trial Plan Includes</h3>
+            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+              <tr><td style="padding:4px 0;">✅&nbsp; 100 Visitor Registrations</td></tr>
+              <tr><td style="padding:4px 0;">✅&nbsp; 100 Conference Room Bookings</td></tr>
+              <tr><td style="padding:4px 0;">✅&nbsp; 2 Conference Rooms</td></tr>
+              <tr><td style="padding:4px 0;">✅&nbsp; Live Dashboard &amp; Visitor History</td></tr>
+              <tr><td style="padding:4px 0;">✅&nbsp; No dedicated hardware — just a displayed QR code</td></tr>
+            </table>
+          </div>
 
-        <p style="margin-top:20px;">
-          <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#6c2bd9;color:#fff;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:8px;">
-            Login to Hai Visitor →
-          </a>
-        </p>
+          <!-- LOGIN DETAILS -->
+          <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#EA580C;margin:0 0 8px;font-size:15px;">Your Login Details</h3>
+            <p style="font-size:13px;color:#6E6890;margin:0 0 10px;">
+              Login with your email or phone number, using this temporary password:
+            </p>
+            <div style="font-size:20px;font-weight:800;letter-spacing:2px;background:#ffffff;border:1px dashed #F97316;color:#221C53;padding:12px 16px;border-radius:8px;text-align:center;">
+              ${tempPassword}
+            </div>
+          </div>
 
-        ${emailFooter()}
+          <!-- COMPLETE REGISTRATION -->
+          <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#16A34A;margin:0 0 8px;font-size:15px;">Before You Start — Complete Your Registration</h3>
+            <p style="font-size:13px;color:#6E6890;margin:0 0 8px;">The first time you log in, you'll be asked to:</p>
+            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+              <tr><td style="padding:4px 0;">🔑&nbsp; Set your own password (replacing this temporary one)</td></tr>
+              <tr><td style="padding:4px 0;">🏢&nbsp; Enter your <b>Company Name</b></td></tr>
+              <tr><td style="padding:4px 0;">🖼️&nbsp; Upload your <b>Company Logo</b></td></tr>
+              <tr><td style="padding:4px 0;">💬&nbsp; Add your <b>WhatsApp Number/URL</b> (optional)</td></tr>
+            </table>
+            <p style="font-size:13px;color:#6E6890;margin:10px 0 0;">
+              Having these details ready before you log in will make setup quicker.
+            </p>
+          </div>
+
+          <!-- CTA -->
+          <div style="text-align:center;margin-top:28px;">
+            <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#F97316;background-image:linear-gradient(95deg,#F97316,#EF3E66);color:#fff;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
+              Login to Hai Visitor →
+            </a>
+          </div>
+
+          ${emailFooter()}
+        </div>
       </div>
     `,
   });
