@@ -35,11 +35,13 @@ export const emailFooter = () => `
 <br/>
 Regards,<br/>
 
-<img 
-  src="https://www.haivisitor.zodopt.com/haivisitor.png"
-  alt="Hai Visitor Logo"
-  style="height:65px;margin:10px 0;display:block"
-/>
+<div style="background:#6c2bd9;border-radius:10px;padding:14px 18px;margin:10px 0;display:inline-block;">
+  <img
+    src="https://www.haivisitor.zodopt.com/haivisitor.png"
+    alt="Hai Visitor Logo"
+    style="height:65px;display:block"
+  />
+</div>
 
 <hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
 

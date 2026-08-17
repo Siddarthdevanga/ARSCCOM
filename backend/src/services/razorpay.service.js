@@ -104,50 +104,52 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
     to: email,
     subject: "Welcome to Hai Visitor — Your Trial Account & Login Details",
     html: `
-      <p>Hello,</p>
+      <div style="border:1px solid #e0d9f0;border-radius:12px;padding:24px;max-width:480px;margin:0 auto;">
+        <p>Hello,</p>
 
-      <p>
-        Thank you for your payment. Your <b>Hai Visitor 15-Day Trial</b> is now active.
-      </p>
+        <p>
+          Thank you for your payment. Your <b>Hai Visitor 15-Day Trial</b> is now active.
+        </p>
 
-      <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Trial Plan Includes</h3>
-      <ul style="font-size:14px;line-height:1.8;">
-        <li>100 Visitor Registrations</li>
-        <li>100 Conference Room Bookings</li>
-        <li>2 Conference Rooms</li>
-        <li>Live Dashboard &amp; Visitor History</li>
-        <li>No dedicated hardware required — just a displayed QR code</li>
-      </ul>
+        <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Trial Plan Includes</h3>
+        <ul style="font-size:14px;line-height:1.8;">
+          <li>100 Visitor Registrations</li>
+          <li>100 Conference Room Bookings</li>
+          <li>2 Conference Rooms</li>
+          <li>Live Dashboard &amp; Visitor History</li>
+          <li>No dedicated hardware required — just a displayed QR code</li>
+        </ul>
 
-      <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Login Details</h3>
-      <p style="font-size:14px;">
-        Login with your email or phone number, using this temporary password:
-      </p>
-      <p style="font-size:18px;font-weight:700;letter-spacing:1px;background:#f4f0fb;padding:10px 14px;border-radius:8px;display:inline-block;">
-        ${tempPassword}
-      </p>
+        <h3 style="color:#6c2bd9;margin-bottom:6px;">Your Login Details</h3>
+        <p style="font-size:14px;">
+          Login with your email or phone number, using this temporary password:
+        </p>
+        <p style="font-size:18px;font-weight:700;letter-spacing:1px;background:#f4f0fb;padding:10px 14px;border-radius:8px;display:inline-block;">
+          ${tempPassword}
+        </p>
 
-      <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Before You Start — Complete Your Registration</h3>
-      <p style="font-size:14px;">
-        The first time you log in, you'll be asked to:
-      </p>
-      <ul style="font-size:14px;line-height:1.8;">
-        <li>Set your own password (replacing this temporary one)</li>
-        <li>Enter your <b>Company Name</b></li>
-        <li>Upload your <b>Company Logo</b></li>
-        <li>Add your <b>WhatsApp Number/URL</b> (optional — used for visitor notifications)</li>
-      </ul>
-      <p style="font-size:14px;">
-        Having these details ready before you log in will make setup quicker.
-      </p>
+        <h3 style="color:#6c2bd9;margin-top:20px;margin-bottom:6px;">Before You Start — Complete Your Registration</h3>
+        <p style="font-size:14px;">
+          The first time you log in, you'll be asked to:
+        </p>
+        <ul style="font-size:14px;line-height:1.8;">
+          <li>Set your own password (replacing this temporary one)</li>
+          <li>Enter your <b>Company Name</b></li>
+          <li>Upload your <b>Company Logo</b></li>
+          <li>Add your <b>WhatsApp Number/URL</b> (optional — used for visitor notifications)</li>
+        </ul>
+        <p style="font-size:14px;">
+          Having these details ready before you log in will make setup quicker.
+        </p>
 
-      <p style="margin-top:20px;">
-        <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#6c2bd9;color:#fff;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:8px;">
-          Login to Hai Visitor →
-        </a>
-      </p>
+        <p style="margin-top:20px;">
+          <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#6c2bd9;color:#fff;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:8px;">
+            Login to Hai Visitor →
+          </a>
+        </p>
 
-      ${emailFooter()}
+        ${emailFooter()}
+      </div>
     `,
   });
 };
