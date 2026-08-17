@@ -141,8 +141,8 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
         Having these details ready before you log in will make setup quicker.
       </p>
 
-      <p>
-        <a href="https://www.haivisitor.zodopt.com/login" style="color:#6c2bd9;font-weight:600;">
+      <p style="margin-top:20px;">
+        <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#6c2bd9;color:#fff;font-weight:700;text-decoration:none;padding:12px 24px;border-radius:8px;">
           Login to Hai Visitor →
         </a>
       </p>
