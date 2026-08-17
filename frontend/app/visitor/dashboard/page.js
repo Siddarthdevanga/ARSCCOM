@@ -93,6 +93,13 @@ export default function VisitorDashboard() {
       if (res.status === 403) { setLocked(true); return; }
       const json = await res.json();
       setData(json);
+
+      // Registration QR/link must reflect the company's current slug, not
+      // whatever was cached in localStorage at login — merge in the fresh
+      // value from the server rather than trusting the stale snapshot.
+      if (json?.company?.slug) {
+        setCompany((prev) => ({ ...prev, slug: json.company.slug, name: json.company.name }));
+      }
     } catch {
       /* silent on poll */
     }

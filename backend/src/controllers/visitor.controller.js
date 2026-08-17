@@ -314,9 +314,20 @@ export const getVisitorDashboard = async (req, res) => {
     const planLimit        = typeof plan?.limit === "number" ? plan.limit : 0;
     const planVisitorsUsed = plan?.used ?? 0;
 
+    // Fetch the company's *current* slug fresh — the QR/registration link is
+    // built from this. The alternative (trusting the `company` object cached
+    // in localStorage at login) goes stale the moment the slug changes for
+    // any reason, silently showing a dead link until the user logs out and
+    // back in.
+    const [[companyRow]] = await db.execute(
+      `SELECT slug, name FROM companies WHERE id = ?`,
+      [companyId]
+    );
+
     // FIX 1: Use key names that match what the frontend reads
     return res.json({
       success: true,
+      company: companyRow ? { slug: companyRow.slug, name: companyRow.name } : null,
       stats: {
         totalVisitors:    today.count,
         activeVisitors:   inside.count,
