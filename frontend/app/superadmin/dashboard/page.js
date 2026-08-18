@@ -437,6 +437,17 @@ export default function SuperAdminDashboard() {
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [resendingId,     setResendingId]     = useState(null);
 
+  // Restricted sub-admins (role: superadmin_readonly) can only ever see
+  // Landing Page Conversions — every other route/tab/action is hidden for
+  // them, not just visually but enforced server-side too.
+  const isFullAdmin = admin?.role === "superadmin";
+
+  const [showAddAdmin,  setShowAddAdmin]  = useState(false);
+  const [newAdminName,  setNewAdminName]  = useState("");
+  const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminPass,  setNewAdminPass]  = useState("");
+  const [addingAdmin,   setAddingAdmin]   = useState(false);
+
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
     setTimeout(() => setToast({ show: false, message: "", type: "success" }), 3000);
@@ -448,8 +459,12 @@ export default function SuperAdminDashboard() {
     const a = localStorage.getItem("sa_admin");
     if (!t || !a) { router.replace("/login"); return; }
     try {
+      const parsedAdmin = JSON.parse(a);
       setToken(t);
-      setAdmin(JSON.parse(a));
+      setAdmin(parsedAdmin);
+      // Restricted role has exactly one view — skip the "All Companies"
+      // default and land straight on Landing Page Conversions.
+      if (parsedAdmin?.role !== "superadmin") setActiveTab("razorpay");
     } catch {
       localStorage.removeItem("sa_token");
       localStorage.removeItem("sa_admin");
@@ -480,7 +495,11 @@ export default function SuperAdminDashboard() {
     }
   }, [apiBase, router]);
 
-  useEffect(() => { if (token) fetchDashboard(token); }, [token, fetchDashboard]);
+  useEffect(() => {
+    // /dashboard is full-superadmin-only server-side — never call it for the
+    // restricted role, or the 403 would incorrectly log them out.
+    if (token && isFullAdmin) fetchDashboard(token);
+  }, [token, isFullAdmin, fetchDashboard]);
 
   /* ── RAZORPAY SIGNUPS ── */
   const fetchRazorpaySignups = useCallback(async (t) => {
@@ -522,6 +541,28 @@ export default function SuperAdminDashboard() {
       showToast("Network error", "error");
     } finally {
       setResendingId(null);
+    }
+  };
+
+  const createSubAdmin = async (e) => {
+    e.preventDefault();
+    setAddingAdmin(true);
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/sub-admins`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newAdminName, email: newAdminEmail, password: newAdminPass }),
+      });
+      const data = await res.json();
+      showToast(data.message || (res.ok ? "Sub-admin created" : "Failed to create sub-admin"), res.ok ? "success" : "error");
+      if (res.ok) {
+        setNewAdminName(""); setNewAdminEmail(""); setNewAdminPass("");
+        setShowAddAdmin(false);
+      }
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setAddingAdmin(false);
     }
   };
 
@@ -589,59 +630,112 @@ export default function SuperAdminDashboard() {
         </div>
         <div className={styles.headerRight}>
           <span className={styles.adminEmail}>{admin?.email}</span>
-          <a href="/superadmin/whatsapp-leads" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Leads</a>
-          <a href="/superadmin/video-broadcast" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>Image Broadcast</a>
+          {isFullAdmin && (
+            <>
+              <a href="/superadmin/whatsapp-leads" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Leads</a>
+              <a href="/superadmin/video-broadcast" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>Image Broadcast</a>
+              <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
+                + Add Sub-Admin
+              </button>
+            </>
+          )}
           <button className={styles.logoutBtn} onClick={logout}>Logout</button>
         </div>
       </header>
+
+      {isFullAdmin && showAddAdmin && (
+        <div className={styles.filterBar} style={{ gap: "8px", flexWrap: "wrap" }}>
+          <form onSubmit={createSubAdmin} style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            <input
+              className={styles.searchInput}
+              placeholder="Name"
+              value={newAdminName}
+              onChange={(e) => setNewAdminName(e.target.value)}
+              required
+            />
+            <input
+              className={styles.searchInput}
+              type="email"
+              placeholder="Email"
+              value={newAdminEmail}
+              onChange={(e) => setNewAdminEmail(e.target.value)}
+              required
+            />
+            <input
+              className={styles.searchInput}
+              type="password"
+              placeholder="Password (min 8 chars)"
+              value={newAdminPass}
+              onChange={(e) => setNewAdminPass(e.target.value)}
+              minLength={8}
+              required
+            />
+            <button className={styles.refreshBtn} type="submit" disabled={addingAdmin}>
+              {addingAdmin ? "Creating…" : "Create Read-Only Sub-Admin"}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* ── SCROLL BODY ── */}
       <div className={styles.scrollBody}>
 
         {/* ── HERO ── */}
-        <section className={styles.hero}>
-          <h1 className={styles.heroTitle}>
-            Super<span>Admin</span> Dashboard
-          </h1>
-          <p className={styles.heroSub}>Full control over all companies, plans and subscriptions</p>
+        {isFullAdmin ? (
+          <section className={styles.hero}>
+            <h1 className={styles.heroTitle}>
+              Super<span>Admin</span> Dashboard
+            </h1>
+            <p className={styles.heroSub}>Full control over all companies, plans and subscriptions</p>
 
-          <div className={styles.heroStats}>
-            <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>Total Companies</div>
-              <div className={styles.heroStatValue}>{totalCompanies}</div>
+            <div className={styles.heroStats}>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Total Companies</div>
+                <div className={styles.heroStatValue}>{totalCompanies}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Active</div>
+                <div className={`${styles.heroStatValue} ${styles.valActive}`}>{activeCount}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>On Trial</div>
+                <div className={`${styles.heroStatValue} ${styles.valTrial}`}>{trialCount}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Suspended</div>
+                <div className={`${styles.heroStatValue} ${styles.valSuspended}`}>{suspendedCount}</div>
+              </div>
             </div>
-            <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>Active</div>
-              <div className={`${styles.heroStatValue} ${styles.valActive}`}>{activeCount}</div>
-            </div>
-            <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>On Trial</div>
-              <div className={`${styles.heroStatValue} ${styles.valTrial}`}>{trialCount}</div>
-            </div>
-            <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>Suspended</div>
-              <div className={`${styles.heroStatValue} ${styles.valSuspended}`}>{suspendedCount}</div>
-            </div>
+          </section>
+        ) : (
+          <section className={styles.hero}>
+            <h1 className={styles.heroTitle}>
+              Landing Page <span>Conversions</span>
+            </h1>
+            <p className={styles.heroSub}>Read-only view of trial signups from the landing page</p>
+          </section>
+        )}
+
+        {/* ── PAGE TABS — full superadmin only; the restricted role has
+             exactly one view, so no tab switcher is shown at all ── */}
+        {isFullAdmin && (
+          <div className={styles.tabs}>
+            <button
+              className={`${styles.tab} ${activeTab === "companies" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("companies")}
+            >
+              All Companies
+            </button>
+            <button
+              className={`${styles.tab} ${activeTab === "razorpay" ? styles.tabActive : ""}`}
+              onClick={() => setActiveTab("razorpay")}
+            >
+              Landing Page Conversions
+            </button>
           </div>
-        </section>
+        )}
 
-        {/* ── PAGE TABS ── */}
-        <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${activeTab === "companies" ? styles.tabActive : ""}`}
-            onClick={() => setActiveTab("companies")}
-          >
-            All Companies
-          </button>
-          <button
-            className={`${styles.tab} ${activeTab === "razorpay" ? styles.tabActive : ""}`}
-            onClick={() => setActiveTab("razorpay")}
-          >
-            Landing Page Conversions
-          </button>
-        </div>
-
-        {activeTab === "companies" && (
+        {isFullAdmin && activeTab === "companies" && (
           <>
             {/* ── FILTERS ── */}
             <div className={styles.filterBar}>
@@ -755,7 +849,7 @@ export default function SuperAdminDashboard() {
                         <th>Payment ID</th>
                         <th>Paid On</th>
                         <th>Setup Status</th>
-                        <th>Action</th>
+                        {isFullAdmin && <th>Action</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -780,15 +874,17 @@ export default function SuperAdminDashboard() {
                               <span className={`${styles.badge} ${styles.badgePending}`}>SETUP INCOMPLETE</span>
                             )}
                           </td>
-                          <td>
-                            <button
-                              className={styles.manageBtn}
-                              disabled={resendingId === s.id}
-                              onClick={() => resendRazorpayPassword(s.id)}
-                            >
-                              {resendingId === s.id ? "Sending…" : "Resend Temp Password"}
-                            </button>
-                          </td>
+                          {isFullAdmin && (
+                            <td>
+                              <button
+                                className={styles.manageBtn}
+                                disabled={resendingId === s.id}
+                                onClick={() => resendRazorpayPassword(s.id)}
+                              >
+                                {resendingId === s.id ? "Sending…" : "Resend Temp Password"}
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

@@ -61,10 +61,14 @@ export const superAdminLogin = async ({ email, password }) => {
   const cleanEmail = email?.trim().toLowerCase();
   if (!cleanEmail || !password) throw new Error("Email and password are required");
 
+  // 'superadmin_readonly' is a restricted sub-role — same login page/flow,
+  // but scoped down to Landing Page Conversions only (enforced by
+  // requireFullSuperAdmin on every other route + the frontend hiding
+  // everything else once it sees this role).
   const [rows] = await db.query(
     `SELECT id, email, name, password_hash, role, is_active
      FROM users
-     WHERE email = ? AND role = 'superadmin'
+     WHERE email = ? AND role IN ('superadmin', 'superadmin_readonly')
      LIMIT 1`,
     [cleanEmail]
   );
@@ -77,7 +81,35 @@ export const superAdminLogin = async ({ email, password }) => {
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) throw new Error("Invalid credentials");
 
-  return { id: user.id, email: user.email, name: user.name, role: "superadmin" };
+  return { id: user.id, email: user.email, name: user.name, role: user.role };
+};
+
+/* ======================================================
+   CREATE SUB-ADMIN (read-only, Landing Page Conversions only)
+   — callable only by a full superadmin (enforced at the route level)
+====================================================== */
+export const createSubAdmin = async ({ email, password, name }) => {
+  const cleanEmail = email?.trim().toLowerCase();
+  const cleanName  = name?.trim();
+  if (!cleanEmail || !password || !cleanName) {
+    throw new Error("Name, email and password are required");
+  }
+  if (password.length < 8) {
+    throw new Error("Password must be at least 8 characters long");
+  }
+
+  const [[existing]] = await db.query(`SELECT id FROM users WHERE email = ? LIMIT 1`, [cleanEmail]);
+  if (existing) throw new Error("A user with this email already exists");
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const [result] = await db.query(
+    `INSERT INTO users (company_id, email, phone, password_hash, name, role, is_active)
+     VALUES (NULL, ?, NULL, ?, ?, 'superadmin_readonly', 1)`,
+    [cleanEmail, passwordHash, cleanName]
+  );
+
+  return { id: result.insertId, email: cleanEmail, name: cleanName, role: "superadmin_readonly" };
 };
 
 /* ======================================================

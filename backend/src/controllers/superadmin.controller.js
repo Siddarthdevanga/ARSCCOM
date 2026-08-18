@@ -59,7 +59,7 @@ export const login = async (req, res) => {
     const user = await service.superAdminLogin({ email, password });
 
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: "superadmin" },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: JWT_EXPIRY }
     );
@@ -68,10 +68,32 @@ export const login = async (req, res) => {
       success: true,
       message: "Login successful",
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: "superadmin" },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role },
     });
   } catch (err) {
     return res.status(200).json({ success: false, message: "Invalid credentials" });
+  }
+};
+
+/* ======================================================
+   CREATE SUB-ADMIN (read-only, Landing Page Conversions only)
+   POST /api/superadmin/sub-admins — full superadmin only
+====================================================== */
+export const createSubAdmin = async (req, res) => {
+  try {
+    const name     = req.body?.name?.trim();
+    const email    = req.body?.email?.trim().toLowerCase();
+    const password = req.body?.password;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: "Name, email and password are required" });
+    }
+
+    const subAdmin = await service.createSubAdmin({ name, email, password });
+    return res.status(201).json({ success: true, message: "Sub-admin created", subAdmin });
+  } catch (err) {
+    console.error("SUPERADMIN CREATE SUB-ADMIN ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
   }
 };
 

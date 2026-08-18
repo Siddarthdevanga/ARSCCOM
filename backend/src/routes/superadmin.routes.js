@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticateSuperAdmin } from "../middlewares/superadmin.middleware.js";
+import { authenticateSuperAdmin, requireFullSuperAdmin } from "../middlewares/superadmin.middleware.js";
 import * as ctrl from "../controllers/superadmin.controller.js";
 
 const router = express.Router();
@@ -13,14 +13,26 @@ router.post("/reset-password",  ctrl.resetPassword);
 
 /* ======================================================
    PROTECTED — superadmin JWT required
+   (either full 'superadmin' or the restricted 'superadmin_readonly' role)
 ====================================================== */
 router.use(authenticateSuperAdmin);
+
+// ── Landing Page Conversions — the ONLY route the read-only sub-role
+//    can reach; every route below this requires full superadmin ────
+router.get("/razorpay-signups", ctrl.razorpaySignups);
+
+/* ======================================================
+   FULL SUPERADMIN ONLY — everything past this point
+====================================================== */
+router.use(requireFullSuperAdmin);
 
 // ── Dashboard ──────────────────────────────────────────
 router.get("/dashboard", ctrl.dashboard);
 
-// ── Razorpay Payment Source ─────────────────────────────
-router.get ("/razorpay-signups",                     ctrl.razorpaySignups);
+// ── Sub-Admins ─────────────────────────────────────────
+router.post("/sub-admins", ctrl.createSubAdmin);
+
+// ── Razorpay Payment Source (write action) ──────────────
 router.post("/razorpay-signups/:id/resend-password", ctrl.resendRazorpayPassword);
 
 // ── WhatsApp Leads ─────────────────────────────────────

@@ -38,15 +38,18 @@ export const authenticateSuperAdmin = (req, res, next) => {
       return res.status(401).json({ success: false, message: "Invalid authentication token" });
     }
 
-    /* ── SUPERADMIN ROLE CHECK ── */
-    if (!decoded?.userId || decoded?.role !== "superadmin") {
+    /* ── SUPERADMIN ROLE CHECK ──
+       'superadmin_readonly' is a restricted sub-role (Landing Page
+       Conversions view only) — allowed past this gate, but blocked from
+       every other route by requireFullSuperAdmin below. */
+    if (!decoded?.userId || !["superadmin", "superadmin_readonly"].includes(decoded?.role)) {
       return res.status(403).json({ success: false, message: "Access denied" });
     }
 
     req.user = {
       userId: decoded.userId,
       email: decoded.email ?? null,
-      role: "superadmin",
+      role: decoded.role,
       companyId: null,
     };
 
@@ -55,4 +58,15 @@ export const authenticateSuperAdmin = (req, res, next) => {
     console.error("❌ SUPERADMIN MIDDLEWARE ERROR:", error);
     return res.status(401).json({ success: false, message: "Authentication failed" });
   }
+};
+
+/**
+ * Gate for full-superadmin-only routes — everything except the read-only
+ * Landing Page Conversions view. Must run after authenticateSuperAdmin.
+ */
+export const requireFullSuperAdmin = (req, res, next) => {
+  if (req.user?.role !== "superadmin") {
+    return res.status(403).json({ success: false, message: "Access denied" });
+  }
+  return next();
 };
