@@ -416,6 +416,82 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
 }
 
 /* ======================================================
+   ADD SUB-ADMIN MODAL
+====================================================== */
+function SubAdminModal({ onClose, onCreated, token, apiBase, showToast }) {
+  const [name, setName]         = useState("");
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading]   = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/sub-admins`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      showToast(data.message || (res.ok ? "Sub-admin created" : "Failed to create sub-admin"), res.ok ? "success" : "error");
+      if (res.ok) onCreated();
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <div>
+            <h2 className={styles.modalTitle}>Add Sub-Admin</h2>
+            <p className={styles.modalSub}>Read-only access — Landing Page Conversions only</p>
+          </div>
+          <button className={styles.modalClose} onClick={onClose}>✕</button>
+        </div>
+
+        <div className={styles.modalBody}>
+          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <input
+              className={styles.searchInput}
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              required
+            />
+            <input
+              className={styles.searchInput}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <input
+              className={styles.searchInput}
+              type="password"
+              placeholder="Password (min 8 characters)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              required
+            />
+            <button className={styles.refreshBtn} type="submit" disabled={loading}>
+              {loading ? "Creating…" : "Create Read-Only Sub-Admin"}
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================
    MAIN PAGE
 ====================================================== */
 export default function SuperAdminDashboard() {
@@ -443,10 +519,6 @@ export default function SuperAdminDashboard() {
   const isFullAdmin = admin?.role === "superadmin";
 
   const [showAddAdmin,  setShowAddAdmin]  = useState(false);
-  const [newAdminName,  setNewAdminName]  = useState("");
-  const [newAdminEmail, setNewAdminEmail] = useState("");
-  const [newAdminPass,  setNewAdminPass]  = useState("");
-  const [addingAdmin,   setAddingAdmin]   = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
@@ -544,28 +616,6 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const createSubAdmin = async (e) => {
-    e.preventDefault();
-    setAddingAdmin(true);
-    try {
-      const res = await fetch(`${apiBase}/api/superadmin/sub-admins`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newAdminName, email: newAdminEmail, password: newAdminPass }),
-      });
-      const data = await res.json();
-      showToast(data.message || (res.ok ? "Sub-admin created" : "Failed to create sub-admin"), res.ok ? "success" : "error");
-      if (res.ok) {
-        setNewAdminName(""); setNewAdminEmail(""); setNewAdminPass("");
-        setShowAddAdmin(false);
-      }
-    } catch {
-      showToast("Network error", "error");
-    } finally {
-      setAddingAdmin(false);
-    }
-  };
-
   /* ── LOGOUT ── */
   const logout = () => {
     localStorage.removeItem("sa_token");
@@ -644,37 +694,13 @@ export default function SuperAdminDashboard() {
       </header>
 
       {isFullAdmin && showAddAdmin && (
-        <div className={styles.filterBar} style={{ gap: "8px", flexWrap: "wrap" }}>
-          <form onSubmit={createSubAdmin} style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-            <input
-              className={styles.searchInput}
-              placeholder="Name"
-              value={newAdminName}
-              onChange={(e) => setNewAdminName(e.target.value)}
-              required
-            />
-            <input
-              className={styles.searchInput}
-              type="email"
-              placeholder="Email"
-              value={newAdminEmail}
-              onChange={(e) => setNewAdminEmail(e.target.value)}
-              required
-            />
-            <input
-              className={styles.searchInput}
-              type="password"
-              placeholder="Password (min 8 chars)"
-              value={newAdminPass}
-              onChange={(e) => setNewAdminPass(e.target.value)}
-              minLength={8}
-              required
-            />
-            <button className={styles.refreshBtn} type="submit" disabled={addingAdmin}>
-              {addingAdmin ? "Creating…" : "Create Read-Only Sub-Admin"}
-            </button>
-          </form>
-        </div>
+        <SubAdminModal
+          token={token}
+          apiBase={apiBase}
+          showToast={showToast}
+          onClose={() => setShowAddAdmin(false)}
+          onCreated={() => setShowAddAdmin(false)}
+        />
       )}
 
       {/* ── SCROLL BODY ── */}

@@ -119,7 +119,7 @@ export default function LoginPage() {
 
       if (saRes.ok) {
         const saData = await saRes.json();
-        if (saData?.success && saData?.user?.role === "superadmin") {
+        if (saData?.success && ["superadmin", "superadmin_readonly"].includes(saData?.user?.role)) {
           localStorage.setItem("sa_token", saData.token);
           localStorage.setItem("sa_admin", JSON.stringify(saData.user));
           localStorage.removeItem("regEmail");
