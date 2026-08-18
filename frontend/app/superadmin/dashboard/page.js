@@ -874,7 +874,7 @@ export default function SuperAdminDashboard() {
                         <th>Amount Paid</th>
                         <th>Payment ID</th>
                         <th>Paid On</th>
-                        <th>Setup Status</th>
+                        {isFullAdmin && <th>Setup Status</th>}
                         {isFullAdmin && <th>Action</th>}
                       </tr>
                     </thead>
@@ -893,13 +893,15 @@ export default function SuperAdminDashboard() {
                           </td>
                           <td>{s.razorpay_payment_id || "-"}</td>
                           <td className={styles.dateCell}>{s.created_at?.slice(0, 10) || "-"}</td>
-                          <td>
-                            {s.registration_complete ? (
-                              <span className={`${styles.badge} ${styles.badgeActive}`}>COMPLETE</span>
-                            ) : (
-                              <span className={`${styles.badge} ${styles.badgePending}`}>SETUP INCOMPLETE</span>
-                            )}
-                          </td>
+                          {isFullAdmin && (
+                            <td>
+                              {s.registration_complete ? (
+                                <span className={`${styles.badge} ${styles.badgeActive}`}>COMPLETE</span>
+                              ) : (
+                                <span className={`${styles.badge} ${styles.badgePending}`}>SETUP INCOMPLETE</span>
+                              )}
+                            </td>
+                          )}
                           {isFullAdmin && (
                             <td>
                               <button
