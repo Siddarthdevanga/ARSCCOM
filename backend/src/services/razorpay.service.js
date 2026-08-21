@@ -313,7 +313,14 @@ const extractPayerDetails = async (paymentEntity) => {
   const email = normalizeEmail(notes.email || paymentEntity?.email);
   const phone = (notes.phone || paymentEntity?.contact || "").replace(/\D/g, "").slice(-10);
 
-  return { name: "New Customer", email, phone };
+  // Only an order created by our own createTrialOrder() carries this tag.
+  // The Razorpay account also takes other, unrelated payments — without
+  // this check, any payment.captured event anywhere on the account (a
+  // different product, a manual payment link, anything else) would be
+  // mistaken for a genuine trial signup and create a real account.
+  const isOurOrder = notes.product === "hai_visitor_trial";
+
+  return { name: "New Customer", email, phone, isOurOrder };
 };
 
 /* ======================================================
@@ -343,8 +350,20 @@ export const handlePaymentCaptured = async (payload) => {
   const paymentId = paymentEntity?.id || null;
   const amountPaise = Number.isFinite(paymentEntity?.amount) ? paymentEntity.amount : null;
 
-  const { name, email, phone } = await extractPayerDetails(paymentEntity);
+  const { name, email, phone, isOurOrder } = await extractPayerDetails(paymentEntity);
   const log = (status, companyId) => logWebhookEvent({ paymentId, name, email, phone, status, companyId, rawPayload: payload });
+
+  // Not one of our trial orders — some other payment on the same Razorpay
+  // account (it also takes unrelated payments). Never create an account
+  // for this, no matter what email/phone/amount happens to be on it.
+  if (!isOurOrder) {
+    console.warn(
+      "[RAZORPAY] payment.captured for a non-trial order, ignoring:",
+      { paymentId, orderId: paymentEntity?.order_id, amount: amountPaise }
+    );
+    await log("unrecognized_payment");
+    return { status: "ignored", reason: "unrecognized_payment" };
+  }
 
   if (!paymentId || !email || !phone) {
     console.error(
