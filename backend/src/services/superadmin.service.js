@@ -2,6 +2,7 @@ import { db } from "../config/db.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/mailer.js";
 import { PLAN_FEATURES } from "../constants/pricing.js";
+import { sendOnboardingDay, ONBOARDING_DAYS } from "../cron/onboardingNurtureCron.js";
 
 /* ======================================================
    CONSTANTS & HELPERS
@@ -153,6 +154,7 @@ export const getRazorpaySignups = async () => {
        c.razorpay_payment_id,
        c.registration_complete,
        c.created_at,
+       c.onboarding_nurture_sent,
        u.email,
        u.phone
      FROM companies c
@@ -161,6 +163,30 @@ export const getRazorpaySignups = async () => {
      ORDER BY c.created_at DESC`
   );
   return rows;
+};
+
+/* ======================================================
+   MANUAL SEND — ONBOARDING NURTURE MESSAGE
+   Lets a superadmin trigger a specific onboarding-drip day (e.g. the
+   day-1 video walkthrough) on demand, out of the cron's normal
+   schedule — same send-and-mark-sent logic either way.
+====================================================== */
+export const sendOnboardingNurtureManual = async (companyId, day) => {
+  if (!ONBOARDING_DAYS.includes(day)) {
+    throw new Error(`Invalid onboarding day — must be one of ${ONBOARDING_DAYS.join(", ")}`);
+  }
+
+  const [[company]] = await db.query(
+    `SELECT c.id, c.name, c.onboarding_nurture_sent, u.phone
+     FROM companies c
+     JOIN users u ON u.company_id = c.id
+     WHERE c.id = ?
+     LIMIT 1`,
+    [companyId]
+  );
+  if (!company) throw new Error("Company not found");
+
+  await sendOnboardingDay(company, day);
 };
 
 /* ======================================================

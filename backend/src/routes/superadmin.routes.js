@@ -32,8 +32,9 @@ router.get("/dashboard", ctrl.dashboard);
 // ── Sub-Admins ─────────────────────────────────────────
 router.post("/sub-admins", ctrl.createSubAdmin);
 
-// ── Razorpay Payment Source (write action) ──────────────
-router.post("/razorpay-signups/:id/resend-password", ctrl.resendRazorpayPassword);
+// ── Razorpay Payment Source (write actions) ──────────────
+router.post("/razorpay-signups/:id/resend-password",          ctrl.resendRazorpayPassword);
+router.post("/razorpay-signups/:id/send-onboarding-message",  ctrl.sendOnboardingNurtureManual);
 
 // ── WhatsApp Leads ─────────────────────────────────────
 router.get ("/whatsapp-leads",                              ctrl.whatsappLeads);

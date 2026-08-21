@@ -512,6 +512,7 @@ export default function SuperAdminDashboard() {
   const [razorpaySignups, setRazorpaySignups] = useState([]);
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [resendingId,     setResendingId]     = useState(null);
+  const [sendingVideoId,  setSendingVideoId]  = useState(null);
 
   // Restricted sub-admins (role: superadmin_readonly) can only ever see
   // Landing Page Conversions — every other route/tab/action is hidden for
@@ -613,6 +614,24 @@ export default function SuperAdminDashboard() {
       showToast("Network error", "error");
     } finally {
       setResendingId(null);
+    }
+  };
+
+  const sendOnboardingVideo = async (companyId) => {
+    setSendingVideoId(companyId);
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/razorpay-signups/${companyId}/send-onboarding-message`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ day: 1 }),
+      });
+      const data = await res.json();
+      showToast(data.message || (res.ok ? "Video message sent" : "Failed to send"), res.ok ? "success" : "error");
+      if (res.ok) fetchRazorpaySignups(token);
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setSendingVideoId(null);
     }
   };
 
@@ -875,6 +894,7 @@ export default function SuperAdminDashboard() {
                         <th>Payment ID</th>
                         <th>Paid On</th>
                         {isFullAdmin && <th>Setup Status</th>}
+                        {isFullAdmin && <th>Onboarding Messages</th>}
                         {isFullAdmin && <th>Action</th>}
                       </tr>
                     </thead>
@@ -904,13 +924,41 @@ export default function SuperAdminDashboard() {
                           )}
                           {isFullAdmin && (
                             <td>
-                              <button
-                                className={styles.manageBtn}
-                                disabled={resendingId === s.id}
-                                onClick={() => resendRazorpayPassword(s.id)}
-                              >
-                                {resendingId === s.id ? "Sending…" : "Resend Temp Password"}
-                              </button>
+                              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                {[1, 5, 7, 10, 12].map((day) => {
+                                  const sentDays = (s.onboarding_nurture_sent || "").split(",").filter(Boolean);
+                                  const sent = sentDays.includes(String(day));
+                                  return (
+                                    <span
+                                      key={day}
+                                      title={`Day ${day}${sent ? " — sent" : " — not sent"}`}
+                                      className={`${styles.badge} ${sent ? styles.badgeActive : styles.badgePending}`}
+                                    >
+                                      {day}{sent ? " ✓" : ""}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </td>
+                          )}
+                          {isFullAdmin && (
+                            <td>
+                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                <button
+                                  className={styles.manageBtn}
+                                  disabled={resendingId === s.id}
+                                  onClick={() => resendRazorpayPassword(s.id)}
+                                >
+                                  {resendingId === s.id ? "Sending…" : "Resend Temp Password"}
+                                </button>
+                                <button
+                                  className={styles.manageBtn}
+                                  disabled={sendingVideoId === s.id}
+                                  onClick={() => sendOnboardingVideo(s.id)}
+                                >
+                                  {sendingVideoId === s.id ? "Sending…" : "Send Video Message"}
+                                </button>
+                              </div>
                             </td>
                           )}
                         </tr>

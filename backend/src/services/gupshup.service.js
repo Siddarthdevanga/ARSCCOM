@@ -69,6 +69,7 @@ export const sendWhatsAppTemplate = async (destination, templateName, params = [
   }
 };
 
+
 const INTRO_TEXT =
   "*Welcome to Hai Visitor!*\n\n" +
   "Thank you for your interest in Hai Visitor.\n" +

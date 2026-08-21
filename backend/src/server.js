@@ -184,6 +184,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Plan Reminder Cron Scheduled (Daily 9:00 AM IST)");
 
+    const { sendOnboardingNurtureMessages } = await import("./cron/onboardingNurtureCron.js");
+    cron.default.schedule('0 10 * * *', async () => {
+      try { await sendOnboardingNurtureMessages(); } catch (e) { console.error("❌ Onboarding nurture cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Onboarding Nurture Cron Scheduled (Daily 10:00 AM IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;

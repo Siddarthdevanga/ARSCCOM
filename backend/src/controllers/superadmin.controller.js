@@ -143,6 +143,26 @@ export const resendRazorpayPassword = async (req, res) => {
 };
 
 /* ======================================================
+   MANUAL SEND — ONBOARDING NURTURE MESSAGE
+   POST /api/superadmin/razorpay-signups/:id/send-onboarding-message
+   body: { day: 1 | 5 | 7 | 10 | 12 }
+====================================================== */
+export const sendOnboardingNurtureManual = async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    const day = parseInt(req.body?.day);
+    if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
+    if (isNaN(day))        return res.status(400).json({ success: false, message: "day is required" });
+
+    await service.sendOnboardingNurtureManual(companyId, day);
+    return res.status(200).json({ success: true, message: `Day ${day} message sent` });
+  } catch (err) {
+    console.error("SUPERADMIN SEND ONBOARDING MESSAGE ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
+/* ======================================================
    COMPANY DETAIL
    GET /api/superadmin/companies/:id
 ====================================================== */
