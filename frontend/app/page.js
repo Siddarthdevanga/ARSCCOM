@@ -363,7 +363,6 @@ const BODY_HTML = `
       <p class="lede">Replace fragmented walk-in records with a simple digital visitor-management foundation that your team can retrieve, review and responsibly use.</p>
       <div class="hero-ctas">
         <a class="btn btn-primary trial-cta" href="#trial">Start 15-Day Trial for ₹49 →</a>
-        <a class="btn btn-wa" href="https://wa.me/916366834745?text=Hi%2C+Can+i+know+more+about+Hai+Visitor+-+Visitor+Management+Platform" target="_blank" rel="noopener noreferrer">Chat with the Hai Visitor Team</a>
       </div>
     </div>
   </div>
