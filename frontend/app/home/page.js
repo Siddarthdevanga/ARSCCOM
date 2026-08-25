@@ -484,6 +484,16 @@ export default function Home() {
   const [renewalModalDismissed, setRenewalModalDismissed] = useState(false);
   const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — affects Business and Enterprise
 
+  /* ── Razorpay Checkout.js — needed for the upgrade/renew subscription
+     modal below; loaded once, reused across the session. ── */
+  useEffect(() => {
+    if (document.getElementById("razorpay-checkout-js")) return;
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    document.head.appendChild(script);
+  }, []);
+
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -556,12 +566,35 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
-      if (data.success && data.redirectTo) {
+
+      // Already had an active mandate — plan change was scheduled directly
+      // with Razorpay, no checkout needed.
+      if (data.mode === "scheduled") {
         setShowMenu(false);
-        window.location.href = data.redirectTo;
-      } else {
-        throw new Error(data.message || "No redirect URL provided");
+        toast.success("Plan Change Scheduled", data.message);
+        return;
       }
+
+      // No active mandate yet — needs checkout to authorize auto-debit.
+      if (data.mode === "subscription" && data.subscriptionId && window.Razorpay) {
+        const rzp = new window.Razorpay({
+          key: data.keyId,
+          subscription_id: data.subscriptionId,
+          name: "Hai Visitor",
+          description: `${plan[0].toUpperCase()}${plan.slice(1)} Plan (${selectedInterval || "monthly"})`,
+          handler: () => {
+            setShowMenu(false);
+            toast.success("Activating…", "Your subscription is being activated — this can take a few seconds.");
+            setTimeout(() => fetchSubscription(), 3000);
+          },
+          modal: { ondismiss: () => setUpgradingPlan("") },
+        });
+        rzp.on("payment.failed", () => toast.error("Payment Failed", "Please try again."));
+        rzp.open();
+        return;
+      }
+
+      throw new Error(data.message || "Unexpected server response");
     } catch (err) {
       toast.error("Failed", err.message || "Please try again.");
     } finally {
@@ -712,7 +745,7 @@ export default function Home() {
       Icon: Zap,
       pricing: {
         monthly: { price: "₹500",   period: "+ GST / mo" },
-        annual:  { price: "₹6,000", period: "+ GST / yr" },
+        annual:  { price: "₹5,500", period: "+ GST / yr" },
       },
       features: ["Unlimited visitors", "Custom registration fields", "Priority support"],
     },

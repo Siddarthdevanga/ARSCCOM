@@ -75,6 +75,45 @@ export const createTrialOrder = async ({ email, phone }) => {
   };
 };
 
+/* ======================================================
+   TRIAL ACTIVATION FOR AN EXISTING (already-registered) COMPANY
+   --------------------------------------------------------
+   Used by the in-app /subscription page for web-registered companies
+   choosing Trial post-login — distinct from createTrialOrder() above,
+   which creates a brand-new company/user from the public landing-page
+   popup. Same ₹49 one-time charge, but activates an EXISTING company
+   instead of creating one. Tagged with a different notes.product so
+   the webhook can tell the two flows apart.
+====================================================== */
+export const createTrialOrderForExistingCompany = async (companyId) => {
+  const [[company]] = await db.query(
+    `SELECT id, subscription_status FROM companies WHERE id = ? LIMIT 1`,
+    [companyId]
+  );
+  if (!company) throw new Error("Company not found");
+  if (["trial", "active"].includes(company.subscription_status)) {
+    throw new Error("Subscription already active");
+  }
+
+  const { data } = await axios.post(
+    `${RAZORPAY_API}/orders`,
+    {
+      amount: TRIAL_AMOUNT_PAISE,
+      currency: "INR",
+      receipt: `trial_upgrade_${companyId}_${Date.now()}`,
+      notes: { companyId: String(companyId), product: "hai_visitor_trial_upgrade" },
+    },
+    { auth: razorpayAuth() }
+  );
+
+  return {
+    orderId: data.id,
+    amount: data.amount,
+    currency: data.currency,
+    keyId: process.env.RAZORPAY_KEY_ID,
+  };
+};
+
 const fetchRazorpayOrder = async (orderId) => {
   const { data } = await axios.get(`${RAZORPAY_API}/orders/${orderId}`, { auth: razorpayAuth() });
   return data;
@@ -313,14 +352,17 @@ const extractPayerDetails = async (paymentEntity) => {
   const email = normalizeEmail(notes.email || paymentEntity?.email);
   const phone = (notes.phone || paymentEntity?.contact || "").replace(/\D/g, "").slice(-10);
 
-  // Only an order created by our own createTrialOrder() carries this tag.
-  // The Razorpay account also takes other, unrelated payments — without
-  // this check, any payment.captured event anywhere on the account (a
-  // different product, a manual payment link, anything else) would be
-  // mistaken for a genuine trial signup and create a real account.
+  // Two distinct flows share this same webhook — a brand-new landing-page
+  // signup (creates a company from scratch) vs an existing web-registered
+  // company activating Trial post-login (createTrialOrderForExistingCompany
+  // above). The Razorpay account also takes other, unrelated payments —
+  // without this tag check, any payment.captured event anywhere on the
+  // account would be mistaken for one of these.
   const isOurOrder = notes.product === "hai_visitor_trial";
+  const isExistingCompanyUpgrade = notes.product === "hai_visitor_trial_upgrade";
+  const existingCompanyId = isExistingCompanyUpgrade && notes.companyId ? parseInt(notes.companyId) : null;
 
-  return { name: "New Customer", email, phone, isOurOrder };
+  return { name: "New Customer", email, phone, isOurOrder, isExistingCompanyUpgrade, existingCompanyId };
 };
 
 /* ======================================================
@@ -343,6 +385,57 @@ const logWebhookEvent = async ({ paymentId, name, email, phone, status, companyI
 };
 
 /* ======================================================
+   TRIAL ACTIVATION — EXISTING COMPANY (web-registered, activating
+   Trial post-login via the in-app /subscription page)
+====================================================== */
+const handleTrialActivationForExistingCompany = async ({ existingCompanyId, paymentId, amountPaise, log }) => {
+  if (!existingCompanyId || !paymentId) {
+    await log("missing_fields");
+    return { status: "ignored", reason: "missing_fields" };
+  }
+
+  try {
+    await db.execute(
+      `UPDATE companies SET
+         subscription_status = 'trial',
+         plan = 'trial',
+         billing_interval = 'monthly',
+         trial_ends_at = DATE_ADD(NOW(), INTERVAL 15 DAY),
+         razorpay_payment_id = ?,
+         amount_paid = ?,
+         pending_upgrade_plan = NULL,
+         pending_billing_interval = NULL,
+         updated_at = NOW()
+       WHERE id = ?`,
+      [paymentId, amountPaise, existingCompanyId]
+    );
+  } catch (err) {
+    if (err.code === "ER_DUP_ENTRY" && err.sqlMessage?.includes("razorpay_payment_id")) {
+      await log("duplicate_delivery", existingCompanyId);
+      return { status: "duplicate_delivery" };
+    }
+    throw err;
+  }
+
+  const [[row]] = await db.query(
+    `SELECT c.name, u.email, u.phone FROM companies c
+     JOIN users u ON u.company_id = c.id AND u.role = 'user'
+     WHERE c.id = ? LIMIT 1`,
+    [existingCompanyId]
+  );
+
+  if (row?.email) {
+    sendPaymentReceiptEmail({ email: row.email, phone: row.phone, paymentId, amountPaise }).catch((err) =>
+      console.error("[RAZORPAY] trial-upgrade receipt email failed:", err.message)
+    );
+  }
+
+  await log("activated", existingCompanyId);
+  console.log(`[RAZORPAY] Trial activated for existing company ${existingCompanyId}`);
+  return { status: "activated", companyId: existingCompanyId };
+};
+
+/* ======================================================
    HANDLE payment.captured
 ====================================================== */
 export const handlePaymentCaptured = async (payload) => {
@@ -350,8 +443,12 @@ export const handlePaymentCaptured = async (payload) => {
   const paymentId = paymentEntity?.id || null;
   const amountPaise = Number.isFinite(paymentEntity?.amount) ? paymentEntity.amount : null;
 
-  const { name, email, phone, isOurOrder } = await extractPayerDetails(paymentEntity);
+  const { name, email, phone, isOurOrder, isExistingCompanyUpgrade, existingCompanyId } = await extractPayerDetails(paymentEntity);
   const log = (status, companyId) => logWebhookEvent({ paymentId, name, email, phone, status, companyId, rawPayload: payload });
+
+  if (isExistingCompanyUpgrade) {
+    return handleTrialActivationForExistingCompany({ existingCompanyId, paymentId, amountPaise, log });
+  }
 
   // Not one of our trial orders — some other payment on the same Razorpay
   // account (it also takes unrelated payments). Never create an account

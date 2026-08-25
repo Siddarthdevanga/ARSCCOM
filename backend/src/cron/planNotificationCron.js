@@ -62,6 +62,7 @@ export const sendPlanReminders = async () => {
          INNER JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
          WHERE c.subscription_status = 'active' AND c.plan = 'business'
            AND c.subscription_ends_at IS NOT NULL AND c.subscription_ends_at > NOW()
+           AND c.razorpay_subscription_id IS NULL
          GROUP BY c.id, u.phone`
       );
       for (const company of companies) {

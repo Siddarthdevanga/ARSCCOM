@@ -184,6 +184,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Plan Reminder Cron Scheduled (Daily 9:00 AM IST)");
 
+    const { sendChargeReminders } = await import("./cron/razorpayChargeReminderCron.js");
+    cron.default.schedule('30 9 * * *', async () => {
+      try { await sendChargeReminders(); } catch (e) { console.error("❌ Razorpay charge reminder cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Razorpay Charge Reminder Cron Scheduled (Daily 9:30 AM IST)");
+
     const { sendOnboardingNurtureMessages } = await import("./cron/onboardingNurtureCron.js");
     cron.default.schedule('0 10 * * *', async () => {
       try { await sendOnboardingNurtureMessages(); } catch (e) { console.error("❌ Onboarding nurture cron failed:", e); }

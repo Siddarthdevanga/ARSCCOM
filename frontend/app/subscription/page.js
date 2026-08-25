@@ -11,6 +11,15 @@ export default function SubscriptionPage() {
   const [error, setError] = useState("");
   const [company, setCompany] = useState(null);
   const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — affects Business and Enterprise
+  const [activating, setActivating] = useState(false);
+
+  useEffect(() => {
+    if (document.getElementById("razorpay-checkout-js")) return;
+    const script = document.createElement("script");
+    script.id = "razorpay-checkout-js";
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    document.head.appendChild(script);
+  }, []);
 
   const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
@@ -55,7 +64,7 @@ export default function SubscriptionPage() {
   ====================================================== */
   const PLAN_VALUES = {
     free: 49,
-    business: billingInterval === "annual" ? 6000 : 500,
+    business: billingInterval === "annual" ? 5500 : 500,
     enterprise: billingInterval === "annual" ? 10000 : 1000,
   };
 
@@ -110,11 +119,30 @@ export default function SubscriptionPage() {
         return;
       }
 
-      if (data?.url) {
-        if (typeof window !== "undefined" && typeof window.gtag === "function") {
-          window.gtag("event", "begin_checkout", { value: PLAN_VALUES[plan] || 0, currency: "INR", plan });
-        }
-        window.location.href = data.url;
+      if (typeof window !== "undefined" && typeof window.gtag === "function") {
+        window.gtag("event", "begin_checkout", { value: PLAN_VALUES[plan] || 0, currency: "INR", plan });
+      }
+
+      if ((data?.mode === "order" || data?.mode === "subscription") && window.Razorpay) {
+        const rzp = new window.Razorpay({
+          key: data.keyId,
+          ...(data.mode === "order"
+            ? { order_id: data.orderId, amount: data.amount, currency: data.currency }
+            : { subscription_id: data.subscriptionId }),
+          name: "Hai Visitor",
+          description: plan === "free" ? "15-Day Trial" : `${plan[0].toUpperCase()}${plan.slice(1)} Plan (${billingInterval})`,
+          prefill: { email: company?.email || "", contact: company?.phone || "" },
+          handler: () => {
+            setActivating(true);
+            setTimeout(() => router.push("/home"), 2500);
+          },
+          modal: { ondismiss: () => setLoadingPlan("") },
+        });
+        rzp.on("payment.failed", () => {
+          setError("Payment failed. Please try again.");
+          setLoadingPlan("");
+        });
+        rzp.open();
         return;
       }
 
@@ -150,7 +178,7 @@ export default function SubscriptionPage() {
     {
       key: "business",
       name: "BUSINESS",
-      price: billingInterval === "annual" ? "₹6,000" : "₹500",
+      price: billingInterval === "annual" ? "₹5,500" : "₹500",
       period: billingInterval === "annual" ? "/ year" : "/ month",
       sub: billingInterval === "annual" ? "Visitor management — billed once a year" : "Visitor management for growing teams",
       color: "green",
@@ -185,6 +213,17 @@ export default function SubscriptionPage() {
   ====================================================== */
   return (
     <div className={styles.container}>
+
+      {activating && (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 999, background: "rgba(34,28,83,.85)",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", gap: "1rem",
+        }}>
+          <div style={{ width: 40, height: 40, border: "3px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+          <p style={{ fontSize: "1rem", fontWeight: 600 }}>Activating your subscription…</p>
+          <style>{"@keyframes spin { to { transform: rotate(360deg); } }"}</style>
+        </div>
+      )}
 
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
