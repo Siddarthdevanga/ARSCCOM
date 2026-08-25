@@ -118,7 +118,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     `SELECT id, visitor_code, name, phone, email, from_company, department, designation,
         address, city, state, postal_code, country, person_to_meet, purpose,
         belongings, id_type, id_number, check_in, check_out, status, visit_status,
-        purpose_category, purpose_subcategory
+        purpose_category, purpose_subcategory, feedback_rating
        FROM visitors
        WHERE company_id = ? ${extraWhere}
        ORDER BY check_in DESC`,
@@ -158,7 +158,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     customValuesByVisitor.get(row.visitor_id)[row.field_label] = row.field_value;
   }
 
-  const FIXED_COLUMN_COUNT = 23;
+  const FIXED_COLUMN_COUNT = 24;
   const totalColumns = FIXED_COLUMN_COUNT + customFieldLabels.length;
   const lastColLetter = numberToColumnLetter(totalColumns);
 
@@ -166,17 +166,17 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
   const ws = wb.addWorksheet("Visitors");
   ws.properties.defaultRowHeight = 20;
 
-  // Step 1 — columns FIRST (23 fixed columns A–W — the last 2, Purpose
-  // Category and Purpose Sub-Category, are appended at the tail rather than
-  // inserted after "Purpose" so the hardcoded row.getCell(20) status-styling
-  // below doesn't need to shift — then one column per custom field, also
-  // appended at the tail for the same reason)
+  // Step 1 — columns FIRST (24 fixed columns A–X — the last 3, Purpose
+  // Category, Purpose Sub-Category and Feedback, are appended at the tail
+  // rather than inserted after "Purpose" so the hardcoded row.getCell(20)
+  // status-styling below doesn't need to shift — then one column per
+  // custom field, also appended at the tail for the same reason)
   ws.columns = [
     { width:16 }, { width:26 }, { width:16 }, { width:30 }, { width:26 },
     { width:20 }, { width:20 }, { width:35 }, { width:15 }, { width:15 },
     { width:13 }, { width:15 }, { width:26 }, { width:35 }, { width:26 },
     { width:15 }, { width:20 }, { width:22 }, { width:22 }, { width:11 }, { width:15 },
-    { width:22 }, { width:22 },
+    { width:22 }, { width:22 }, { width:18 },
     ...customFieldLabels.map(() => ({ width: 22 })),
   ];
 
@@ -204,7 +204,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
     "Visitor Code","Name","Phone","Email","From Company","Department","Designation",
     "Address","City","State","Postal Code","Country","Person to Meet","Purpose",
     "Belongings","ID Type","ID Number","Check In","Check Out","Status","Visit Status",
-    "Purpose Category","Purpose Sub-Category",
+    "Purpose Category","Purpose Sub-Category","Feedback",
     ...customFieldLabels,
   ]);
   applyColumnHeader(headerRow);
@@ -221,7 +221,7 @@ const generateVisitorsExcel = async (companyId, companyName, periodLabel = "All 
       formatDateTime(v.check_in),
       v.check_out ? formatDateTime(v.check_out) : "Still In",
       v.status||"-", v.visit_status||"pending",
-      v.purpose_category||"-", v.purpose_subcategory||"-",
+      v.purpose_category||"-", v.purpose_subcategory||"-", v.feedback_rating||"-",
       ...customFieldLabels.map((label) => customValues[label] || "-"),
     ]);
     if (i % 2 === 0) row.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFF8F6FF" } };
@@ -485,6 +485,11 @@ router.get("/analytics", async (req, res) => {
     const [purposeCategoryBreakdown] = await db.query(`SELECT purpose_category AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND purpose_category IS NOT NULL AND purpose_category != '' ${vWhere} GROUP BY purpose_category ORDER BY count DESC`, [companyId]);
     const [purposeSubcategoryBreakdown] = await db.query(`SELECT purpose_category AS category, purpose_subcategory AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND purpose_subcategory IS NOT NULL AND purpose_subcategory != '' ${vWhere} GROUP BY purpose_category, purpose_subcategory ORDER BY count DESC`, [companyId]);
     const [visitStatusBreakdown] = await db.query(`SELECT visit_status AS status, COUNT(*) AS count FROM visitors WHERE company_id = ? ${vWhere} GROUP BY visit_status`, [companyId]);
+    // Feedback (checkout+feedback WhatsApp flow) — breakdown of ratings
+    // given, plus response rate among visitors the message was actually
+    // sent to (checkout_feedback_sent=1), not all visitors in the period.
+    const [feedbackBreakdown]  = await db.query(`SELECT feedback_rating AS name, COUNT(*) AS count FROM visitors WHERE company_id = ? AND feedback_rating IS NOT NULL ${vWhere} GROUP BY feedback_rating ORDER BY count DESC`, [companyId]);
+    const [[feedbackTotals]]   = await db.query(`SELECT SUM(checkout_feedback_sent = 1) AS eligible, SUM(feedback_rating IS NOT NULL) AS responded FROM visitors WHERE company_id = ? ${vWhere}`, [companyId]);
     const [[visitorTotals]]    = await db.query(`SELECT COUNT(*) AS total, SUM(status='IN') AS active, SUM(DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))=DATE(CONVERT_TZ(NOW(),'+00:00','+05:30'))) AS today, SUM(pass_mail_sent>0) AS passIssued FROM visitors WHERE company_id = ? ${vWhere}`, [companyId]);
     const [[visitorPrev]]      = await db.query(`SELECT COUNT(*) AS total FROM visitors WHERE company_id = ? ${vWherePrev}`, [companyId]);
 
@@ -534,6 +539,12 @@ router.get("/analytics", async (req, res) => {
         purposeCategoryBreakdown,
         purposeSubcategoryBreakdown,
         visitStatusBreakdown,
+        feedbackBreakdown,
+        feedbackEligible:    feedbackTotals.eligible  || 0,
+        feedbackResponded:   feedbackTotals.responded || 0,
+        feedbackResponseRate: feedbackTotals.eligible
+          ? Math.round((feedbackTotals.responded / feedbackTotals.eligible) * 100)
+          : 0,
       },
       bookings: bookingsPayload,
     });

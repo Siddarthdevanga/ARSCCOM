@@ -10,6 +10,7 @@
  *   GUPSHUP_OTP_TEMPLATE_ID     UUID — OTP template
  *   GUPSHUP_PASS_TEMPLATE_ID    UUID — visitor pass link template
  *   GUPSHUP_APPROVAL_TEMPLATE_ID UUID — employee approval template
+ *   GUPSHUP_CHECKOUT_FEEDBACK_TEMPLATE UUID — 60-min checkout+feedback template
  *   FRONTEND_URL                e.g. "https://www.haivisitor.zodopt.com"
  * ─────────────────────────────────────────────────────────────────────────────
  */
@@ -26,6 +27,7 @@ const REQUIRED = [
   "GUPSHUP_OTP_TEMPLATE_ID",
   "GUPSHUP_PASS_TEMPLATE_ID",
   "GUPSHUP_APPROVAL_TEMPLATE_ID",
+  "GUPSHUP_CHECKOUT_FEEDBACK_TEMPLATE",
   "FRONTEND_URL",
 ];
 
@@ -238,4 +240,77 @@ export const sendApprovalWhatsApp = async ({
   });
 
   console.log(`[WHATSAPP][APPROVAL] Sent to ${destination}`);
+};
+
+/* ======================================================
+   SEND CHECKOUT + FEEDBACK REQUEST (60 minutes after check-in)
+   Combines checkout and feedback into one message — tapping any of the
+   3 buttons both records that as feedback and checks the visitor out.
+   Fired regardless of current status (even if already manually checked
+   out) so the visitor still has a chance to leave feedback.
+
+   Template body: {{1}} = visitor name
+     "Hi {{1}}, thanks for visiting! Please share your feedback below —
+      this will also check you out."
+
+   Buttons (Quick Reply, static — no dynamic suffixes needed):
+     🌟 Excellent | 👍 Good | 👎 Could Be Better
+
+   UUID: GUPSHUP_CHECKOUT_FEEDBACK_TEMPLATE (set once created/approved)
+====================================================== */
+export const sendCheckoutFeedbackWhatsApp = async ({ phone, visitorName }) => {
+  const destination = normalizePhone(phone);
+  const templateId  = process.env.GUPSHUP_CHECKOUT_FEEDBACK_TEMPLATE;
+  if (!templateId) {
+    throw new Error("GUPSHUP_CHECKOUT_FEEDBACK_TEMPLATE is not configured");
+  }
+
+  await postTemplate({
+    destination,
+    templateId,
+    params: [visitorName || "there"],
+  });
+
+  console.log(`[WHATSAPP][CHECKOUT-FEEDBACK] Sent to ${destination}`);
+};
+
+/* ======================================================
+   PLAIN TEXT SEND — main app (not the bot app)
+   Used for the post-feedback confirmation reply. This is a reply within
+   the 24h session window (the visitor just messaged us by tapping a
+   button), so a self-composed session message is fine — no template
+   needed, unlike the proactive checkout-feedback request above.
+====================================================== */
+const GUPSHUP_MSG_API = "https://api.gupshup.io/wa/api/v1/msg";
+
+export const sendPlainTextWhatsApp = async (phone, text) => {
+  const apiKey    = process.env.GUPSHUP_API_KEY;
+  const appName   = process.env.GUPSHUP_APP_NAME;
+  const sourceNum = process.env.GUPSHUP_SOURCE_NUMBER;
+  if (!apiKey || !appName || !sourceNum) {
+    throw new Error("Gupshup env vars not configured");
+  }
+
+  const destination = normalizePhone(phone);
+  const body = new URLSearchParams({
+    channel:     "whatsapp",
+    source:      String(sourceNum).replace(/\D/g, ""),
+    destination,
+    "src.name":  appName,
+    message:     JSON.stringify({ type: "text", text }),
+  });
+
+  const response = await fetch(GUPSHUP_MSG_API, {
+    method:  "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded", apikey: apiKey },
+    body:    body.toString(),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    console.error("[WHATSAPP] plain text send failed:", response.status, responseText);
+    throw new Error(`Gupshup API error ${response.status}: ${responseText}`);
+  }
+
+  console.log(`[WHATSAPP] Plain text sent to ${destination}`);
 };

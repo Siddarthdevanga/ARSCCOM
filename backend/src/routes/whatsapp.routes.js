@@ -1,6 +1,70 @@
 import { Router } from "express";
 import { db } from "../config/db.js";
 import { sendIntroMessage, sendTextMessage, sendWhatsAppTemplate } from "../services/gupshup.service.js";
+import { sendPlainTextWhatsApp } from "../utils/whatsapp.js";
+
+// Matches against the button title's lowercased text (not exact-equals,
+// since Gupshup sends the emoji-prefixed label as configured in the
+// approved template — e.g. "🌟 Excellent").
+const CHECKOUT_FEEDBACK_RATINGS = {
+  "excellent":         "Excellent",
+  "good":              "Good",
+  "could be better":   "Could Be Better",
+};
+
+/**
+ * Handles a tap on the checkout+feedback template's buttons. Returns true
+ * if the title matched one of the 3 feedback buttons (and was handled),
+ * false otherwise so the caller can fall through to other button logic.
+ */
+async function handleCheckoutFeedbackButton(phone, title) {
+  const normalised = (title || "").trim().toLowerCase();
+  const matchKey = Object.keys(CHECKOUT_FEEDBACK_RATINGS).find((k) => normalised.includes(k));
+  if (!matchKey) return false;
+
+  const rating = CHECKOUT_FEEDBACK_RATINGS[matchKey];
+
+  try {
+    const [[visitor]] = await db.query(
+      `SELECT id, status FROM visitors
+       WHERE phone = ? AND checkout_feedback_sent = 1 AND feedback_rating IS NULL
+       ORDER BY check_in DESC LIMIT 1`,
+      [phone]
+    );
+
+    if (!visitor) {
+      console.warn(`[WA][CHECKOUT-FEEDBACK] No pending visit found for ${phone}, ignoring button tap`);
+      return true; // matched a feedback button, just nothing to apply it to
+    }
+
+    // Only flips status/check_out if still IN — never overwrites an
+    // already-checked-out visit's real check_out time.
+    await db.query(
+      `UPDATE visitors
+       SET feedback_rating = ?,
+           feedback_sent = 1,
+           status = CASE WHEN status = 'IN' THEN 'OUT' ELSE status END,
+           check_out = CASE WHEN status = 'IN' THEN NOW() ELSE check_out END,
+           visit_status = CASE WHEN visit_status NOT IN ('checked_out','auto_checked_out') THEN 'checked_out' ELSE visit_status END
+       WHERE id = ?`,
+      [rating, visitor.id]
+    );
+
+    console.log(`[WA][CHECKOUT-FEEDBACK] Recorded "${rating}" for visitor id ${visitor.id} (${phone})`);
+
+    // Confirmation reply — a session message (they just messaged us),
+    // never a template, sent via the main app (same one the request went
+    // out on), not the bot app.
+    await sendPlainTextWhatsApp(
+      phone,
+      "Thanks for your feedback! You've been checked out. Have a great day! 👋"
+    );
+  } catch (e) {
+    console.error(`[WA][CHECKOUT-FEEDBACK] Failed for ${phone}:`, e.message);
+  }
+
+  return true;
+}
 
 async function ensureOptIn(phone) {
   // Mark opted_in permanently in DB — one-time, based on their message to the bot
@@ -202,6 +266,10 @@ async function handleInbound(body) {
 async function handleButton(phone, title, name) {
   ensureOptIn(phone).catch(() => {});
   const normalised = (title || "").trim().toLowerCase();
+
+  if (await handleCheckoutFeedbackButton(phone, title)) {
+    return;
+  }
 
   if (normalised === "start trial") {
     await upsertLead(phone, name, "start_trial");

@@ -601,6 +601,25 @@ export default function ReportsPage(){
               </ChartCard>
             </div>
 
+            {/* Feedback (checkout+feedback WhatsApp flow) */}
+            <div className={styles.chartRow}>
+              <ChartCard title="Visitor Feedback" sub="Ratings received for this period">
+                {(v.feedbackBreakdown||[]).length>0 ? (
+                  <>
+                    <SvgDonut data={(v.feedbackBreakdown||[]).map(d=>({status:d.name,count:d.count}))}/>
+                    <HBarList data={(v.feedbackBreakdown||[]).map(d=>({name:d.name,count:d.count}))} color="linear-gradient(90deg,#f59e0b,#fbbf24)"/>
+                  </>
+                ) : (
+                  <p style={{color:"#9ca3af",fontSize:"0.85rem",textAlign:"center",padding:"2rem 0"}}>No feedback received yet for this period</p>
+                )}
+              </ChartCard>
+              <ChartCard title="Feedback Response Rate" sub={`${v.feedbackResponded||0} of ${v.feedbackEligible||0} replied`}>
+                <div className={styles.ringGrid}>
+                  <ProgressRing value={v.feedbackResponseRate||0} max={100} color="#f59e0b" label="RESPONSE RATE" sub="Replied to request"/>
+                </div>
+              </ChartCard>
+            </div>
+
             {/* Line + Heatmap */}
             <div className={styles.chartRow}>
               <ChartCard title="Visitor Trend — Area View" sub="Smooth arrivals curve" accent="#6366f1">

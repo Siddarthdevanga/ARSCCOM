@@ -190,6 +190,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Onboarding Nurture Cron Scheduled (Daily 10:00 AM IST)");
 
+    const { sendCheckoutFeedbackMessages } = await import("./cron/checkoutFeedbackCron.js");
+    cron.default.schedule('*/5 * * * *', async () => {
+      try { await sendCheckoutFeedbackMessages(); } catch (e) { console.error("❌ Checkout feedback cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Checkout Feedback Cron Scheduled (Every 5 Minutes IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;
