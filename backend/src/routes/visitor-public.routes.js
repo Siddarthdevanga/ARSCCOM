@@ -510,36 +510,55 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
   try {
     const slug = normalizeSlug(req.params.slug);
 
-    /* ── 1. Auth header check ── */
-    const otpToken = (req.headers["otp-token"] || "").trim();
-    if (!otpToken) {
-      return res.status(401).json({ success: false, message: "OTP verification required" });
-    }
-
-    /* ── 2. Session lookup with expiry window ── */
-    const [[otpSession]] = await db.query(
-      `SELECT id, company_id, phone, email FROM visitor_otp
-       WHERE otp_session_token = ?
-         AND verified = 1
-         AND verified_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
-       LIMIT 1`,
-      [otpToken, OTP_SESSION_EXPIRY_MINUTES]
-    );
-
-    if (!otpSession) {
-      return res.status(401).json({
-        success: false,
-        message: "Session expired or invalid. Please verify your mobile number again.",
-      });
-    }
-
-    /* ── 3. Company validation ── */
     const company = await getCompanyBySlug(slug);
-    if (!company || company.id !== otpSession.company_id) {
+    if (!company) {
       return res.status(404).json({ success: false, message: "Invalid company" });
     }
 
-    /* ── 4. Field validation ──
+    /* ── 1. Auth check — two paths ──
+       First-time visitors: OTP-verified session token, as before.
+       Returning visitors: no OTP at all — authorized purely by this phone
+       already having a visitors row for this company. This is a deliberate
+       trade-off (no phone-ownership proof for repeat check-ins) accepted in
+       exchange for a faster returning-visitor flow. Server-side check only
+       — never trusts a client-side "this is a returning visitor" claim. ── */
+    const otpToken = (req.headers["otp-token"] || "").trim();
+    let sessionEmail = null;
+    let otpSessionId = null;
+
+    if (otpToken) {
+      const [[otpSession]] = await db.query(
+        `SELECT id, company_id, phone, email FROM visitor_otp
+         WHERE otp_session_token = ?
+           AND verified = 1
+           AND verified_at >= DATE_SUB(NOW(), INTERVAL ? MINUTE)
+         LIMIT 1`,
+        [otpToken, OTP_SESSION_EXPIRY_MINUTES]
+      );
+
+      if (!otpSession || otpSession.company_id !== company.id) {
+        return res.status(401).json({
+          success: false,
+          message: "Session expired or invalid. Please verify your mobile number again.",
+        });
+      }
+      sessionEmail = otpSession.email;
+      otpSessionId = otpSession.id;
+    } else {
+      const phone = normalizePhone(req.body.phone);
+      const [[existingVisit]] = phone
+        ? await db.query(
+            `SELECT id FROM visitors WHERE phone = ? AND company_id = ? LIMIT 1`,
+            [phone, company.id]
+          )
+        : [[null]];
+
+      if (!existingVisit) {
+        return res.status(401).json({ success: false, message: "OTP verification required" });
+      }
+    }
+
+    /* ── 2. Field validation ──
        Email is intentionally left out here — its requirement depends on
        this company's Form Builder toggle, and saveVisitor() (via
        normalizeVisitorFormFields) is the single source of truth for that.
@@ -558,7 +577,7 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     const visitorData = {
       name:         req.body.name.trim(),
       phone:        req.body.phone.trim(),
-      email:        req.body.email?.trim() || otpSession.email || null,  // Use email from OTP session or request
+      email:        req.body.email?.trim() || sessionEmail || null,  // Use email from OTP session (if any) or request
       fromCompany:  req.body.fromCompany?.trim()  || null,
       department:   req.body.department?.trim()   || null,
       designation:  req.body.designation?.trim()  || null,
@@ -589,13 +608,15 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     };
 
     /* ── 6. Persist visitor (Email pass is sent inside saveVisitor) ── */
-    const visitor = await saveVisitor(otpSession.company_id, visitorData, req.file);
+    const visitor = await saveVisitor(company.id, visitorData, req.file);
 
-    /* ── 7. Invalidate session ── */
-    await db.query(
-      `UPDATE visitor_otp SET otp_session_token = NULL WHERE id = ?`,
-      [otpSession.id]
-    );
+    /* ── 7. Invalidate session (only exists for the OTP-verified path) ── */
+    if (otpSessionId) {
+      await db.query(
+        `UPDATE visitor_otp SET otp_session_token = NULL WHERE id = ?`,
+        [otpSessionId]
+      );
+    }
 
     return res.json({
       success:     true,

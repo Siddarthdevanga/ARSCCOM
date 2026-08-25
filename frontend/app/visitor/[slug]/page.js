@@ -474,18 +474,51 @@ export default function PublicVisitorRegistration() {
 
   const goBack = useCallback(() => { setError(""); setStep((p) => Math.max(p - 1, 1)); }, []);
 
+  // Raw OTP send — used for both the first attempt (first-time visitors,
+  // via handleContinueFromPhone below) and the "Resend OTP" button.
+  const sendOtp = async (trimmed) => {
+    const data = await publicFetch(`/api/public/visitor/${slug}/otp/send`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: `91${trimmed}` }),
+    });
+    setPhone(trimmed); setOtpSent(true); setResendTimer(data.resendAfter || 30);
+  };
+
   const handleSendOTP = async () => {
     const trimmed = phone.trim().replace(/\D/g, "");
     if (!trimmed || trimmed.length !== 10) { setError("Valid 10-digit WhatsApp number required"); return; }
     if (!/^[6-9]/.test(trimmed)) { setError("Number must start with 6, 7, 8 or 9"); return; }
     try {
       setError(""); setSubmitting(true);
-      const data = await publicFetch(`/api/public/visitor/${slug}/otp/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: `91${trimmed}` }),
-      });
-      setPhone(trimmed); setOtpSent(true); setResendTimer(data.resendAfter || 30);
+      await sendOtp(trimmed);
+    } catch (err) { setError(err.message); }
+    finally { setSubmitting(false); }
+  };
+
+  // Entry point from the phone-number screen. Checks whether this phone has
+  // already checked in for this company before — if so, skips OTP entirely
+  // (no phone-ownership verification for returning visitors, a deliberate
+  // trade-off for speed) and goes straight to the pre-filled return-visitor
+  // screen. Otherwise falls back to the normal OTP-send flow.
+  const handleContinueFromPhone = async () => {
+    const trimmed = phone.trim().replace(/\D/g, "");
+    if (!trimmed || trimmed.length !== 10) { setError("Valid 10-digit WhatsApp number required"); return; }
+    if (!/^[6-9]/.test(trimmed)) { setError("Number must start with 6, 7, 8 or 9"); return; }
+    try {
+      setError(""); setSubmitting(true);
+
+      const returning = await publicFetch(`/api/public/visitor/${slug}/returning?phone=${trimmed}`);
+      if (returning.found && returning.profile) {
+        setPhone(trimmed);
+        setOtpToken(""); // no OTP session — /register authorizes via phone match instead
+        setReturningData(returning.profile);
+        setShowReturnPreview(true);
+        setStep(1);
+        return;
+      }
+
+      await sendOtp(trimmed);
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
   };
@@ -500,16 +533,6 @@ export default function PublicVisitorRegistration() {
         body: JSON.stringify({ phone: `91${phone}`, otp }),
       });
       setOtpToken(data.otpToken);
-
-      // Check for returning visitor profile (same company, same phone)
-      try {
-        const returning = await publicFetch(`/api/public/visitor/${slug}/returning?phone=${phone}`);
-        if (returning.found && returning.profile) {
-          setReturningData(returning.profile);
-          setShowReturnPreview(true);
-        }
-      } catch { /* first-time visitor — proceed normally */ }
-
       setStep(1);
     } catch (err) { setError(err.message); }
     finally { setSubmitting(false); }
@@ -764,7 +787,7 @@ export default function PublicVisitorRegistration() {
                       </div>
                       <input id="phone" className={styles.input} type="tel" inputMode="tel" value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/\D/g,"").slice(0,10))}
-                        onKeyDown={(e) => e.key === "Enter" && !submitting && handleSendOTP()}
+                        onKeyDown={(e) => e.key === "Enter" && !submitting && handleContinueFromPhone()}
                         placeholder="WhatsApp Number" maxLength={10} disabled={submitting}
                         autoComplete="tel" style={{ flex:1 }} />
                     </div>
@@ -772,8 +795,8 @@ export default function PublicVisitorRegistration() {
                       Enter 10-digit mobile number
                     </p>
                   </div>
-                  <button className={styles.primaryBtn} onClick={handleSendOTP} disabled={submitting || phone.replace(/\D/g,"").length !== 10}>
-                    {submitting ? "Sending…" : "Send Verification Code"}
+                  <button className={styles.primaryBtn} onClick={handleContinueFromPhone} disabled={submitting || phone.replace(/\D/g,"").length !== 10}>
+                    {submitting ? "Please wait…" : "Continue"}
                   </button>
                 </>
               ) : (
