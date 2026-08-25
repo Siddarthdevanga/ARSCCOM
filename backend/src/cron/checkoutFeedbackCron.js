@@ -15,22 +15,36 @@ import { sendCheckoutFeedbackWhatsApp } from "../utils/whatsapp.js";
    No follow-up/reminder if they never reply — the existing end-of-day
    auto-checkout cron remains the fallback for anyone who doesn't
    respond.
+
+   Window is 60 min–3 hr after check-in. The upper bound matters: without
+   it, any downtime (a deploy, a cron outage, or just this feature going
+   live for the first time) causes every already-old, never-flagged
+   check-in to fire all at once on the next run — a confusing "why am I
+   getting feedback requests for a visit from days ago" burst. Anything
+   past 3 hours is marked handled without sending — a feedback request for
+   a visit that old isn't useful anymore.
 ====================================================== */
+
+const MAX_AGE_HOURS = 3;
 
 export const sendCheckoutFeedbackMessages = async () => {
   try {
     const [visitors] = await db.query(
-      `SELECT id, name, phone, company_id
+      `SELECT id, name, phone, company_id,
+              check_in <= DATE_SUB(NOW(), INTERVAL ${MAX_AGE_HOURS} HOUR) AS tooOld
        FROM visitors
        WHERE checkout_feedback_sent = 0
          AND check_in <= DATE_SUB(NOW(), INTERVAL 60 MINUTE)`
     );
 
     for (const visitor of visitors) {
-      if (!visitor.phone) {
-        // No phone on file — nothing to send to; mark handled so it's
-        // never retried.
+      if (!visitor.phone || visitor.tooOld) {
+        // No phone on file, or past the useful window — mark handled
+        // without sending so it's never retried or blasted as a backlog.
         await db.query(`UPDATE visitors SET checkout_feedback_sent = 1 WHERE id = ?`, [visitor.id]);
+        if (visitor.tooOld) {
+          console.warn(`[CHECKOUT-FEEDBACK] Visitor id ${visitor.id} check-in too old, skipping send`);
+        }
         continue;
       }
 
