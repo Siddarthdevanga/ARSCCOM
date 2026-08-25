@@ -30,6 +30,33 @@ const razorpayAuth = () => {
 
 const PLAN_LABELS = { business: "Business", enterprise: "Enterprise" };
 
+// Only these Razorpay-side states allow a plan-change PATCH. Any other
+// state (created, pending, halted, cancelled, completed, expired) means
+// the mandate was never authorized (or no longer is) — a fresh checkout
+// via createSubscription is required instead.
+const UPDATABLE_STATES = new Set(["authenticated", "active"]);
+
+/* ======================================================
+   LIVE STATUS CHECK — the DB's razorpay_subscription_id + our own
+   subscription_status columns are not proof the subscription is
+   actually usable on Razorpay's side (e.g. a subscription created but
+   never authorized because checkout was abandoned/failed). Callers
+   must verify this before attempting an update.
+====================================================== */
+export const isSubscriptionUpdatable = async (subscriptionId) => {
+  if (!subscriptionId) return false;
+  try {
+    const { data } = await axios.get(
+      `${RAZORPAY_API}/subscriptions/${subscriptionId}`,
+      { auth: razorpayAuth() }
+    );
+    return UPDATABLE_STATES.has(data.status);
+  } catch (err) {
+    console.error(`[RAZORPAY-SUB] status check failed for ${subscriptionId}:`, err.response?.data?.error?.description || err.message);
+    return false;
+  }
+};
+
 /* ======================================================
    CREATE SUBSCRIPTION — first-time signup, or upgrade from a plan
    that never had an active Razorpay subscription (e.g. Trial).
@@ -119,6 +146,9 @@ export const updateSubscriptionPlan = async ({ companyId, plan, interval }) => {
   );
   if (!company?.razorpay_subscription_id) {
     throw new Error("No active Razorpay subscription for this company — use createSubscription instead");
+  }
+  if (!(await isSubscriptionUpdatable(company.razorpay_subscription_id))) {
+    throw new Error("STALE_SUBSCRIPTION");
   }
 
   await axios.patch(

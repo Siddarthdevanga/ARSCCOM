@@ -2,7 +2,7 @@ import express from "express";
 import { db } from "../config/db.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { calcPrice } from "../constants/pricing.js";
-import { createSubscription, updateSubscriptionPlan, cancelSubscription } from "../services/razorpaySubscription.service.js";
+import { createSubscription, updateSubscriptionPlan, cancelSubscription, isSubscriptionUpdatable } from "../services/razorpaySubscription.service.js";
 
 const router = express.Router();
 
@@ -68,16 +68,23 @@ router.post("/", authenticate, async (req, res) => {
       currentStatus: status,
     };
 
-    // Already has an active mandate — change plan on it, effective next
-    // billing cycle. No checkout needed at all for this path.
+    // Has a stored subscription id — but that alone isn't proof it's
+    // actually usable (it may have been created and then abandoned before
+    // checkout completed). Verify the live Razorpay-side status before
+    // trying to update it; a stale id is cleared so it stops being tried.
     if (company.razorpay_subscription_id && status === "active") {
-      const result = await updateSubscriptionPlan({ companyId, plan, interval });
-      return res.json({
-        success: true,
-        mode: "scheduled",
-        message: `${PLAN_LABELS[plan]} plan scheduled — takes effect on your next billing date. Your current plan remains active until then.`,
-        data: { ...responseData, scheduled: result.scheduled },
-      });
+      const updatable = await isSubscriptionUpdatable(company.razorpay_subscription_id);
+      if (updatable) {
+        const result = await updateSubscriptionPlan({ companyId, plan, interval });
+        return res.json({
+          success: true,
+          mode: "scheduled",
+          message: `${PLAN_LABELS[plan]} plan scheduled — takes effect on your next billing date. Your current plan remains active until then.`,
+          data: { ...responseData, scheduled: result.scheduled },
+        });
+      }
+      console.warn(`[UPGRADE] company ${companyId} has stale razorpay_subscription_id ${company.razorpay_subscription_id} (not authenticated/active) — clearing and starting a fresh checkout instead`);
+      await db.query(`UPDATE companies SET razorpay_subscription_id = NULL WHERE id = ?`, [companyId]);
     }
 
     // No active mandate yet (still on Trial, or previously cancelled/
