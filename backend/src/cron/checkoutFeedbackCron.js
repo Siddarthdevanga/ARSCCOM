@@ -41,6 +41,8 @@ export const sendCheckoutFeedbackMessages = async () => {
       if (!visitor.phone || visitor.tooOld) {
         // No phone on file, or past the useful window — mark handled
         // without sending so it's never retried or blasted as a backlog.
+        // No checkout_feedback_sent_at stamp here — no message was actually
+        // sent, so this row should never be reply-matchable at all.
         await db.query(`UPDATE visitors SET checkout_feedback_sent = 1 WHERE id = ?`, [visitor.id]);
         if (visitor.tooOld) {
           console.warn(`[CHECKOUT-FEEDBACK] Visitor id ${visitor.id} check-in too old, skipping send`);
@@ -50,7 +52,7 @@ export const sendCheckoutFeedbackMessages = async () => {
 
       try {
         await sendCheckoutFeedbackWhatsApp({ phone: visitor.phone, visitorName: visitor.name });
-        await db.query(`UPDATE visitors SET checkout_feedback_sent = 1 WHERE id = ?`, [visitor.id]);
+        await db.query(`UPDATE visitors SET checkout_feedback_sent = 1, checkout_feedback_sent_at = NOW() WHERE id = ?`, [visitor.id]);
         console.log(`[CHECKOUT-FEEDBACK] Sent to ${visitor.phone} (visitor id ${visitor.id})`);
       } catch (e) {
         console.error(`[CHECKOUT-FEEDBACK] Failed for visitor id ${visitor.id}:`, e.message);

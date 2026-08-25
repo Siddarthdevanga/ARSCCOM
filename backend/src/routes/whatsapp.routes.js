@@ -12,6 +12,14 @@ const CHECKOUT_FEEDBACK_RATINGS = {
   "could be better":   "Could Be Better",
 };
 
+// A reply only ever applies to a message sent within this window. Without
+// it, a reply gets matched against the most recent *unanswered* message for
+// that phone regardless of age — if someone has several old unanswered
+// messages sitting in their chat (e.g. from a bug, or just never replying
+// for days), a reply meant for today's visit could get misattributed to a
+// stale one instead. This is exactly what happened once already.
+const REPLY_MATCH_WINDOW_HOURS = 6;
+
 /**
  * Handles a tap on the checkout+feedback template's buttons. Returns true
  * if the title matched one of the 3 feedback buttons (and was handled),
@@ -28,7 +36,8 @@ async function handleCheckoutFeedbackButton(phone, title) {
     const [[visitor]] = await db.query(
       `SELECT id, status FROM visitors
        WHERE phone = ? AND checkout_feedback_sent = 1 AND feedback_rating IS NULL
-       ORDER BY check_in DESC LIMIT 1`,
+         AND checkout_feedback_sent_at >= DATE_SUB(NOW(), INTERVAL ${REPLY_MATCH_WINDOW_HOURS} HOUR)
+       ORDER BY checkout_feedback_sent_at DESC LIMIT 1`,
       [phone]
     );
 
