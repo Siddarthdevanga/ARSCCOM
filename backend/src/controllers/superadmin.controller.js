@@ -272,7 +272,8 @@ export const updatePlan = async (req, res) => {
     return res.status(200).json({ success: true, message: `Plan updated to ${plan}` });
   } catch (err) {
     console.error("SUPERADMIN UPDATE PLAN ERROR:", err.message);
-    return res.status(400).json({ success: false, message: err.message });
+    const status = err.message === "Company not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message });
   }
 };
 
@@ -293,7 +294,8 @@ export const updateStatus = async (req, res) => {
     return res.status(200).json({ success: true, message: `Status updated to ${status}` });
   } catch (err) {
     console.error("SUPERADMIN UPDATE STATUS ERROR:", err.message);
-    return res.status(400).json({ success: false, message: err.message });
+    const httpStatus = err.message === "Company not found" ? 404 : 400;
+    return res.status(httpStatus).json({ success: false, message: err.message });
   }
 };
 
@@ -322,7 +324,7 @@ export const extendTrial = async (req, res) => {
         return res.status(400).json({ success: false, message: "Invalid date format. Use YYYY-MM-DD" });
     }
 
-    await service.extendTrial(companyId, trial_ends_at);
+    const { warnings } = await service.extendTrial(companyId, trial_ends_at);
 
     // WhatsApp — trial activated (only when setting a date, not clearing)
     if (trial_ends_at) {
@@ -352,10 +354,12 @@ export const extendTrial = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: trial_ends_at === null ? "Trial end date removed" : `Trial extended to ${trial_ends_at}`,
+      warnings: warnings?.length ? warnings : undefined,
     });
   } catch (err) {
     console.error("SUPERADMIN EXTEND TRIAL ERROR:", err.message);
-    return res.status(400).json({ success: false, message: err.message });
+    const status = err.message === "Company not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message });
   }
 };
 
@@ -372,11 +376,16 @@ export const updateSubscriptionDates = async (req, res) => {
     if (isNaN(companyId))      return res.status(400).json({ success: false, message: "Invalid company ID" });
     if (!subscription_ends_at) return res.status(400).json({ success: false, message: "subscription_ends_at is required" });
 
-    await service.updateSubscriptionDates(companyId, { subscription_ends_at, subscription_start });
-    return res.status(200).json({ success: true, message: "Subscription dates updated" });
+    const { warnings } = await service.updateSubscriptionDates(companyId, { subscription_ends_at, subscription_start });
+    return res.status(200).json({
+      success: true,
+      message: "Subscription dates updated",
+      warnings: warnings?.length ? warnings : undefined,
+    });
   } catch (err) {
     console.error("SUPERADMIN UPDATE DATES ERROR:", err.message);
-    return res.status(400).json({ success: false, message: err.message });
+    const status = err.message === "Company not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message });
   }
 };
 
@@ -403,7 +412,8 @@ export const setGracePeriod = async (req, res) => {
     return res.status(200).json({ success: true, message });
   } catch (err) {
     console.error("SUPERADMIN SET GRACE PERIOD ERROR:", err.message);
-    return res.status(400).json({ success: false, message: err.message });
+    const status = err.message === "Company not found" ? 404 : 400;
+    return res.status(status).json({ success: false, message: err.message });
   }
 };
 

@@ -16,6 +16,29 @@ const toSlug = (str) =>
     .replace(/-+/g, "-")
     .replace(/^-+|-+$/g, "");
 
+// Every manual company-mutation below needs this — a typo'd/stale id must
+// error clearly instead of the UPDATE silently affecting 0 rows.
+const assertCompanyExists = async (companyId) => {
+  const [[company]] = await db.query(
+    `SELECT id, plan FROM companies WHERE id = ? LIMIT 1`,
+    [companyId]
+  );
+  if (!company) throw new Error("Company not found");
+  return company;
+};
+
+// Catches fat-finger date typos (wrong century, decimal-shifted year, etc.)
+// — hard-rejected rather than warned, since no legitimate manual edit needs
+// a date this far out.
+const MAX_YEARS_OUT = 10;
+const assertDateWithinSaneRange = (date, label) => {
+  const maxDate = new Date();
+  maxDate.setFullYear(maxDate.getFullYear() + MAX_YEARS_OUT);
+  if (date > maxDate) {
+    throw new Error(`${label} is more than ${MAX_YEARS_OUT} years in the future — check for a typo`);
+  }
+};
+
 /* ======================================================
    SYNC ROOM ACTIVATION BY PLAN
    — called after every plan change
@@ -330,6 +353,7 @@ export const updateCompany = async (companyId, { newCompanyId, name, userEmail, 
 export const updatePlan = async (companyId, plan) => {
   const validPlans = ["trial", "business", "enterprise"];
   if (!validPlans.includes(plan)) throw new Error("Invalid plan");
+  await assertCompanyExists(companyId);
 
   await db.query(
     `UPDATE companies SET plan = ?, updated_at = NOW() WHERE id = ?`,
@@ -343,8 +367,9 @@ export const updatePlan = async (companyId, plan) => {
    UPDATE SUBSCRIPTION STATUS
 ====================================================== */
 export const updateSubscriptionStatus = async (companyId, status) => {
-  const validStatuses = ["pending", "trial", "active", "cancelled", "expired"];
+  const validStatuses = ["pending", "trial", "active", "grace_period", "cancelled", "expired"];
   if (!validStatuses.includes(status)) throw new Error("Invalid subscription status");
+  await assertCompanyExists(companyId);
 
   // Manually reactivating a company (e.g. superadmin fixing a stuck account)
   // must also clear grace period state — otherwise a stale grace_period_ends_at
@@ -364,6 +389,13 @@ export const updateSubscriptionStatus = async (companyId, status) => {
     return;
   }
 
+  // Selected directly from the plain status dropdown (rather than the
+  // dedicated Grace Period tab) — apply the same 10-day default so the
+  // company ends up in a fully consistent state either way.
+  if (status === "grace_period") {
+    return setGracePeriod(companyId, true, 10);
+  }
+
   await db.query(
     `UPDATE companies SET subscription_status = ?, updated_at = NOW() WHERE id = ?`,
     [status, companyId]
@@ -376,6 +408,8 @@ export const updateSubscriptionStatus = async (companyId, status) => {
    trialEndsAt = null          → clears trial_ends_at (sets DB column to NULL)
 ====================================================== */
 export const extendTrial = async (companyId, trialEndsAt) => {
+  const company = await assertCompanyExists(companyId);
+
   if (trialEndsAt === null) {
     // Clear the trial end date — leave subscription_status unchanged
     await db.query(
@@ -384,11 +418,18 @@ export const extendTrial = async (companyId, trialEndsAt) => {
        WHERE id = ?`,
       [companyId]
     );
-    return;
+    return {};
   }
 
   const date = new Date(trialEndsAt);
   if (isNaN(date.getTime())) throw new Error("Invalid date format. Use YYYY-MM-DD");
+  assertDateWithinSaneRange(date, "trial_ends_at");
+
+  const warnings = [];
+  if (date < new Date()) warnings.push("The new trial end date is in the past.");
+  if (company.plan && company.plan !== "trial") {
+    warnings.push(`This company's current plan is "${company.plan}", not trial — extending trial_ends_at may not have the intended effect.`);
+  }
 
   await db.query(
     `UPDATE companies
@@ -396,6 +437,7 @@ export const extendTrial = async (companyId, trialEndsAt) => {
      WHERE id = ?`,
     [trialEndsAt, companyId]
   );
+  return { warnings };
 };
 
 /* ======================================================
@@ -403,19 +445,30 @@ export const extendTrial = async (companyId, trialEndsAt) => {
 ====================================================== */
 export const updateSubscriptionDates = async (companyId, { subscription_start, subscription_ends_at }) => {
   if (!subscription_ends_at) throw new Error("subscription_ends_at is required");
+  const company = await assertCompanyExists(companyId);
 
   const endDate = new Date(subscription_ends_at);
   if (isNaN(endDate.getTime())) throw new Error("Invalid subscription_ends_at date");
+  assertDateWithinSaneRange(endDate, "subscription_ends_at");
 
+  let startDate = null;
   if (subscription_start) {
-    const startDate = new Date(subscription_start);
+    startDate = new Date(subscription_start);
     if (isNaN(startDate.getTime())) throw new Error("Invalid subscription_start date");
+  }
+
+  const warnings = [];
+  if (endDate < new Date()) warnings.push("The new subscription end date is in the past.");
+  if (startDate && startDate > endDate) warnings.push("subscription_start is after subscription_ends_at.");
+  if (company.plan === "trial") {
+    warnings.push(`This company's current plan is "trial" — subscription_ends_at applies to business/enterprise plans (use Extend Trial instead for trial dates).`);
   }
 
   await db.query(
     `UPDATE companies SET subscription_ends_at = ?, updated_at = NOW() WHERE id = ?`,
     [subscription_ends_at, companyId]
   );
+  return { warnings };
 };
 
 /* ======================================================
@@ -424,10 +477,17 @@ export const updateSubscriptionDates = async (companyId, { subscription_start, s
    • enable = false: Clear grace period
 ====================================================== */
 export const setGracePeriod = async (companyId, enable, days = 10) => {
+  await assertCompanyExists(companyId);
+
   if (enable) {
+    const cleanDays = Number(days);
+    if (!Number.isInteger(cleanDays) || cleanDays < 1 || cleanDays > 30) {
+      throw new Error("Grace period days must be an integer between 1 and 30");
+    }
+
     // Start grace period
     const gracePeriodEnds = new Date();
-    gracePeriodEnds.setDate(gracePeriodEnds.getDate() + days);
+    gracePeriodEnds.setDate(gracePeriodEnds.getDate() + cleanDays);
 
     await db.query(
       `UPDATE companies

@@ -87,7 +87,10 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
         }
       );
       const data = await res.json();
-      setMsg({ type: res.ok ? "success" : "error", text: data.message });
+      const text = (res.ok && data.warnings?.length)
+        ? `${data.message} — ⚠️ ${data.warnings.join(" ")}`
+        : data.message;
+      setMsg({ type: res.ok ? "success" : "error", text });
       if (res.ok) onRefresh();
     } catch {
       setMsg({ type: "error", text: "Network error" });
@@ -270,6 +273,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
                 <option value="pending">Pending</option>
                 <option value="trial">Trial</option>
                 <option value="active">Active</option>
+                <option value="grace_period">Grace Period (10-day default)</option>
                 <option value="expired">Expired</option>
                 <option value="cancelled">Cancelled</option>
               </select>
