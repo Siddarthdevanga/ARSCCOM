@@ -190,6 +190,11 @@ export const cancelSubscription = async (companyId) => {
     { auth: razorpayAuth() }
   );
 
+  // Auto-debit is genuinely off from this point, even though plan access
+  // continues until subscription_ends_at — so "Renew" should reappear for
+  // the customer right away rather than waiting for the date to lapse.
+  await db.query(`UPDATE companies SET razorpay_auto_debit_active = 0 WHERE id = ?`, [companyId]);
+
   return { cancelled: true };
 };
 
@@ -257,14 +262,19 @@ const logSubscriptionEvent = async ({ event, subscriptionId, companyId, status, 
    subscription.activated / subscription.charged — mandate authorized
      and/or a cycle successfully charged. Activates/renews the plan.
    subscription.halted — Razorpay exhausted its own retry attempts on a
-     failed charge. Deliberately does nothing extra here: subscription_
-     ends_at simply stops being extended, and the EXISTING gracePeriodCron
-     already treats any company whose ends_at has passed as expired,
-     starting the same 10-day grace flow regardless of which gateway
-     originally billed it. Only logged for visibility.
-   subscription.cancelled — same reasoning: access continues until
-     subscription_ends_at (already set), then grace period takes over
-     naturally. Only logged.
+     failed charge. subscription_ends_at simply stops being extended, and
+     the EXISTING gracePeriodCron already treats any company whose ends_at
+     has passed as expired, starting the same 10-day grace flow regardless
+     of which gateway originally billed it — so plan/access timing is
+     untouched here. But razorpay_auto_debit_active IS cleared immediately:
+     the mandate is genuinely dead at this point (Razorpay already gave up
+     retrying), so the customer should see "Renew" and be able to fix their
+     payment method right away rather than being stuck until their already-
+     paid-for period actually runs out with no way to intervene.
+   subscription.cancelled — same immediate flag-clear, for the same reason
+     (though self-serve cancellation already clears it synchronously in
+     cancelSubscription() — this covers cancellation via Razorpay's
+     dashboard/API directly, not just our own Settings button).
 ====================================================== */
 export const handleSubscriptionWebhookEvent = async (event, payload) => {
   const entity = payload?.subscription?.entity || {};
@@ -279,7 +289,11 @@ export const handleSubscriptionWebhookEvent = async (event, payload) => {
   }
 
   if (event === "subscription.halted" || event === "subscription.cancelled") {
-    console.log(`[RAZORPAY-SUB] ${event} for ${subscriptionId} — no action needed, grace period cron handles expiry naturally`);
+    await db.query(
+      `UPDATE companies SET razorpay_auto_debit_active = 0 WHERE razorpay_subscription_id = ?`,
+      [subscriptionId]
+    );
+    console.log(`[RAZORPAY-SUB] ${event} for ${subscriptionId} — auto-debit flag cleared, grace period cron handles expiry timing naturally`);
     await log(event === "subscription.halted" ? "halted" : "cancelled");
     return { status: "logged", event };
   }
@@ -332,6 +346,7 @@ export const handleSubscriptionWebhookEvent = async (event, payload) => {
        billing_interval = ?,
        subscription_ends_at = COALESCE(?, subscription_ends_at),
        razorpay_subscription_id = ?,
+       razorpay_auto_debit_active = 1,
        razorpay_charge_reminder_sent = 0,
        pending_upgrade_plan = NULL,
        pending_billing_interval = NULL,

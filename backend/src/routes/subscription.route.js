@@ -28,7 +28,8 @@ router.get("/details", authenticate, async (req, res) => {
         subscription_ends_at,
         last_payment_created_at,
         grace_period_ends_at,
-        grace_period_day
+        grace_period_day,
+        razorpay_auto_debit_active
       FROM companies
       WHERE id = ?
       LIMIT 1
@@ -78,6 +79,11 @@ router.get("/details", authenticate, async (req, res) => {
       IN_GRACE_PERIOD:              inGracePeriod,
       GRACE_PERIOD_ENDS_ON:         inGracePeriod ? company.grace_period_ends_at : null,
       GRACE_PERIOD_DAYS_REMAINING:  gracePeriodDaysRemaining,
+
+      // Verified live Razorpay auto-debit mandate (webhook-confirmed, not
+      // just "an id happens to be stored") — drives whether the "Renew"
+      // action is shown at all on the home dashboard.
+      HAS_AUTO_DEBIT: !!company.razorpay_auto_debit_active,
     });
 
   } catch (err) {

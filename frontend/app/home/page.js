@@ -649,6 +649,10 @@ export default function Home() {
   const canSwitchToBusiness  = currentPlan === "enterprise"                  && planHasLapsed;
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
   const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
+  // Verified live Razorpay auto-debit mandate (webhook-confirmed, not just
+  // "an id happens to be stored") — when true, renewal is fully automatic
+  // and there's nothing for the customer to click.
+  const hasAutoDebit         = subData?.HAS_AUTO_DEBIT === true;
 
   // Days remaining until the active plan expires (trial or paid), used to
   // surface a "renew soon" nudge on the main dashboard before it lapses.
@@ -815,8 +819,10 @@ export default function Home() {
     </p>
   );
 
-  /* ── Renew current plan (active/trial/grace_period, not trial-renewal) ── */
-  const renewCurrentPlanBlock = (!needsRenewal && currentPlan && currentPlan !== "trial") ? (
+  /* ── Renew current plan (active/trial/grace_period, not trial-renewal) —
+     hidden entirely when auto-debit is verified live, since renewal is
+     fully automatic and there's nothing to click. ── */
+  const renewCurrentPlanBlock = (!needsRenewal && !hasAutoDebit && currentPlan && currentPlan !== "trial") ? (
     <div className={styles.upgradeSection}>
       <div className={styles.sectionHeader}>
         <TrendingUp size={18}/>
