@@ -76,6 +76,21 @@ router.post("/", authenticate, async (req, res) => {
       const updatable = await isSubscriptionUpdatable(company.razorpay_subscription_id);
       if (updatable) {
         const result = await updateSubscriptionPlan({ companyId, plan, interval });
+
+        // UPI mandates can't be updated in-place at all — updateSubscriptionPlan
+        // already cancelled the old one and created a fresh one pinned to the
+        // same next-billing-date; the customer just needs to re-authorize it.
+        if (result.requiresCheckout) {
+          return res.json({
+            success: true,
+            mode: "subscription",
+            message: `Your payment method doesn't support in-place plan changes — please confirm to activate ${PLAN_LABELS[plan]}. Takes effect on your next billing date; your current plan remains active until then.`,
+            subscriptionId: result.subscriptionId,
+            keyId: result.keyId,
+            data: responseData,
+          });
+        }
+
         return res.json({
           success: true,
           mode: "scheduled",

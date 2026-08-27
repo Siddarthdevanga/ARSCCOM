@@ -151,11 +151,26 @@ export const updateSubscriptionPlan = async ({ companyId, plan, interval }) => {
     throw new Error("STALE_SUBSCRIPTION");
   }
 
-  await axios.patch(
-    `${RAZORPAY_API}/subscriptions/${company.razorpay_subscription_id}`,
-    { plan_id: planId, schedule_change_at: "cycle_end" },
-    { auth: razorpayAuth() }
-  );
+  try {
+    await axios.patch(
+      `${RAZORPAY_API}/subscriptions/${company.razorpay_subscription_id}`,
+      { plan_id: planId, schedule_change_at: "cycle_end" },
+      { auth: razorpayAuth() }
+    );
+  } catch (err) {
+    const description = err.response?.data?.error?.description || "";
+    // UPI Autopay mandates can NEVER be updated in-place — this is a fixed
+    // Razorpay platform restriction, not something retrying fixes. Only
+    // path left: cancel the old mandate at cycle-end and create a fresh
+    // one, but pin its start_at to that same cycle-end date so it still
+    // behaves as "takes effect on next billing date" rather than charging
+    // immediately — same no-proration promise as the card-based path,
+    // just with one extra re-authorization step the customer can't avoid.
+    if (/payment mode is upi/i.test(description)) {
+      return upgradeViaCancelAndRecreate({ companyId, plan, cleanInterval, planId, oldSubscriptionId: company.razorpay_subscription_id });
+    }
+    throw err;
+  }
 
   // Purely informational — lets the UI say "changing to Enterprise on your
   // next billing date." The actual switch happens via the subscription.
@@ -166,6 +181,51 @@ export const updateSubscriptionPlan = async ({ companyId, plan, interval }) => {
   );
 
   return { scheduled: true, plan, interval: cleanInterval, pricing: calcPrice(plan, cleanInterval) };
+};
+
+/* ======================================================
+   UPI FALLBACK — cancel the old mandate at cycle-end, create a new one
+   with start_at pinned to that same date so billing timing is unchanged;
+   the customer must re-authorize (unavoidable for UPI), but sees exactly
+   one clean checkout, not a confusing two-step cancel-then-resubscribe.
+====================================================== */
+const upgradeViaCancelAndRecreate = async ({ companyId, plan, cleanInterval, planId, oldSubscriptionId }) => {
+  const { data: oldSub } = await axios.get(
+    `${RAZORPAY_API}/subscriptions/${oldSubscriptionId}`,
+    { auth: razorpayAuth() }
+  );
+  const startAt = oldSub.current_end; // Unix seconds — old cycle's end date
+
+  await axios.post(
+    `${RAZORPAY_API}/subscriptions/${oldSubscriptionId}/cancel`,
+    { cancel_at_cycle_end: 1 },
+    { auth: razorpayAuth() }
+  );
+
+  const { data: newSub } = await axios.post(
+    `${RAZORPAY_API}/subscriptions`,
+    {
+      plan_id: planId,
+      customer_notify: 1,
+      total_count: TOTAL_COUNT[cleanInterval],
+      start_at: startAt,
+      notes: { companyId: String(companyId), plan, interval: cleanInterval },
+    },
+    { auth: razorpayAuth() }
+  );
+
+  await db.query(
+    `UPDATE companies SET razorpay_subscription_id = ?, pending_upgrade_plan = ?, pending_billing_interval = ? WHERE id = ?`,
+    [newSub.id, plan, cleanInterval, companyId]
+  );
+
+  return {
+    requiresCheckout: true,
+    subscriptionId: newSub.id,
+    keyId: process.env.RAZORPAY_KEY_ID,
+    plan, interval: cleanInterval,
+    pricing: calcPrice(plan, cleanInterval),
+  };
 };
 
 /* ======================================================
