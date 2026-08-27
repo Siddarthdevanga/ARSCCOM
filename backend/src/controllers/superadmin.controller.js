@@ -280,17 +280,19 @@ export const updatePlan = async (req, res) => {
 /* ======================================================
    UPDATE SUBSCRIPTION STATUS
    PATCH /api/superadmin/companies/:id/status
-   body: { status: "pending" | "trial" | "active" | "cancelled" | "expired" }
+   body: { status: "pending" | "trial" | "active" | "grace_period" | "cancelled" | "expired", endsAt?: "2026-12-31" }
+   endsAt is required when activating a company whose trial_ends_at /
+   subscription_ends_at has already lapsed (or was never set).
 ====================================================== */
 export const updateStatus = async (req, res) => {
   try {
     const companyId  = parseInt(req.params.id);
-    const { status } = req.body;
+    const { status, endsAt } = req.body;
 
     if (isNaN(companyId)) return res.status(400).json({ success: false, message: "Invalid company ID" });
     if (!status)           return res.status(400).json({ success: false, message: "status is required" });
 
-    await service.updateSubscriptionStatus(companyId, status.toLowerCase());
+    await service.updateSubscriptionStatus(companyId, status.toLowerCase(), endsAt || null);
     return res.status(200).json({ success: true, message: `Status updated to ${status}` });
   } catch (err) {
     console.error("SUPERADMIN UPDATE STATUS ERROR:", err.message);

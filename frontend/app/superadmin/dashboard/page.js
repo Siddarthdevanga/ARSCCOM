@@ -277,7 +277,19 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
                 <option value="expired">Expired</option>
                 <option value="cancelled">Cancelled</option>
               </select>
-              <button className={styles.btnPrimary} disabled={loading} onClick={() => call("status", "PATCH", { status })}>
+              {status === "active" && (
+                <p className={styles.hintText}>
+                  If this company's trial/subscription end date has already passed, activating requires a new future date — set it in the <b>Dates</b> tab first (or below).
+                </p>
+              )}
+              <button
+                className={styles.btnPrimary}
+                disabled={loading}
+                onClick={() => call("status", "PATCH", {
+                  status,
+                  endsAt: company.plan === "trial" ? trialEndsAt : subEndsAt,
+                })}
+              >
                 {loading ? "Saving…" : "Update Status"}
               </button>
             </div>

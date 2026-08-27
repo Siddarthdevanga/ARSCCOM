@@ -20,7 +20,7 @@ const toSlug = (str) =>
 // error clearly instead of the UPDATE silently affecting 0 rows.
 const assertCompanyExists = async (companyId) => {
   const [[company]] = await db.query(
-    `SELECT id, plan FROM companies WHERE id = ? LIMIT 1`,
+    `SELECT id, plan, trial_ends_at, subscription_ends_at FROM companies WHERE id = ? LIMIT 1`,
     [companyId]
   );
   if (!company) throw new Error("Company not found");
@@ -366,16 +366,51 @@ export const updatePlan = async (companyId, plan) => {
 /* ======================================================
    UPDATE SUBSCRIPTION STATUS
 ====================================================== */
-export const updateSubscriptionStatus = async (companyId, status) => {
+export const updateSubscriptionStatus = async (companyId, status, endsAt = null) => {
   const validStatuses = ["pending", "trial", "active", "grace_period", "cancelled", "expired"];
   if (!validStatuses.includes(status)) throw new Error("Invalid subscription status");
-  await assertCompanyExists(companyId);
+  const company = await assertCompanyExists(companyId);
 
   // Manually reactivating a company (e.g. superadmin fixing a stuck account)
   // must also clear grace period state — otherwise a stale grace_period_ends_at
   // left over from before makes gracePeriodCron silently skip this company
   // forever the next time its subscription expires.
   if (status === "active") {
+    // gracePeriodCron only looks at trial_ends_at/subscription_ends_at to
+    // decide who's expired — if that date is already in the past (or was
+    // never set) and we flip status to 'active' without touching it, the
+    // very next midnight run immediately drops this company right back
+    // into grace_period. Force a fresh future date in the same call
+    // instead of letting that silently happen.
+    const dateField = company.plan === "trial" ? "trial_ends_at" : "subscription_ends_at";
+    const currentEndsAt = company[dateField];
+    const isLapsed = !currentEndsAt || new Date(currentEndsAt) < new Date();
+
+    if (isLapsed) {
+      if (!endsAt) {
+        throw new Error(
+          `Cannot activate — this company's ${dateField} is missing or already in the past. Provide a new future end date along with 'active'.`
+        );
+      }
+      const newDate = new Date(endsAt);
+      if (isNaN(newDate.getTime())) throw new Error(`Invalid date format for ${dateField}. Use YYYY-MM-DD`);
+      if (newDate < new Date()) throw new Error(`The new ${dateField} must be in the future to activate.`);
+      assertDateWithinSaneRange(newDate, dateField);
+
+      await db.query(
+        `UPDATE companies
+         SET subscription_status = 'active',
+             ${dateField} = ?,
+             grace_period_ends_at = NULL,
+             grace_period_day = 0,
+             expired_reminder_last_sent_at = NULL,
+             updated_at = NOW()
+         WHERE id = ?`,
+        [endsAt, companyId]
+      );
+      return;
+    }
+
     await db.query(
       `UPDATE companies
        SET subscription_status = 'active',
