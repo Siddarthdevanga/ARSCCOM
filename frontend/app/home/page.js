@@ -642,7 +642,11 @@ export default function Home() {
 
   const canUpgradeBusiness   = currentPlan === "trial"                        && ["active", "trial", "grace_period"].includes(currentStatus);
   const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan)    && ["active", "trial", "grace_period"].includes(currentStatus);
-  const canDowngradeToBusiness = currentPlan === "enterprise"                 && ["active", "trial", "grace_period"].includes(currentStatus);
+  // Downgrade (Enterprise → Business) is never offered while the current
+  // plan is genuinely active — only once it's lapsed (grace period counts
+  // as already lapsed for this purpose, same as expired/cancelled).
+  const planHasLapsed        = ["grace_period", "expired", "cancelled"].includes(currentStatus);
+  const canSwitchToBusiness  = currentPlan === "enterprise"                  && planHasLapsed;
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
   const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
 
@@ -849,8 +853,10 @@ export default function Home() {
     </div>
   ) : null;
 
-  /* ── Downgrade Enterprise → Business (active/trial/grace_period) ── */
-  const downgradeBlock = (!needsRenewal && canDowngradeToBusiness) ? (
+  /* ── Switch Enterprise → Business — only once the plan has lapsed
+     (grace period or, separately, fully expired/cancelled below). Never
+     offered while genuinely active. ── */
+  const downgradeBlock = (!needsRenewal && canSwitchToBusiness) ? (
     <div className={styles.upgradeSection}>
       <div className={styles.sectionHeader}>
         <TrendingUp size={18}/>
@@ -858,7 +864,7 @@ export default function Home() {
       </div>
       <p className={styles.sectionDescription}>Only need visitor management? Switch down to Business.</p>
 
-      <PlanCard plan="business" ctaLabel="Downgrade to Business" />
+      <PlanCard plan="business" ctaLabel="Switch to Business" />
     </div>
   ) : null;
 
@@ -888,11 +894,21 @@ export default function Home() {
         </>
       )}
 
-      {/* Business expired → Business renewal */}
-      {currentPlan === "business" && <PlanCard plan="business" ctaLabel="Renew Business" />}
+      {/* Business expired → free choice: renew Business, or upgrade to Enterprise */}
+      {currentPlan === "business" && (
+        <>
+          <PlanCard plan="business" ctaLabel="Renew Business" />
+          <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
+        </>
+      )}
 
-      {/* Enterprise expired → Enterprise renewal */}
-      {currentPlan === "enterprise" && <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />}
+      {/* Enterprise expired → free choice: switch down to Business, or renew Enterprise */}
+      {currentPlan === "enterprise" && (
+        <>
+          <PlanCard plan="business" ctaLabel="Switch to Business" />
+          <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />
+        </>
+      )}
     </div>
   ) : null;
 

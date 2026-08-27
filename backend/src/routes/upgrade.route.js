@@ -154,6 +154,10 @@ router.get("/options", authenticate, async (req, res) => {
     const status = (company.subscription_status || "").toLowerCase();
     const pendingUpgrade = company.pending_upgrade_plan;
     const hasActiveSubscription = !!company.razorpay_subscription_id && status === "active";
+    // Downgrade (Enterprise → Business) is only offered once the current
+    // plan has lapsed — grace period counts as already lapsed for this
+    // purpose, same as expired/cancelled. Never offered while genuinely active.
+    const planHasLapsed = ["grace_period", "expired", "cancelled"].includes(status);
 
     const businessP = calcPrice("business", interval);
     const enterpriseP = calcPrice("enterprise", interval);
@@ -189,8 +193,8 @@ router.get("/options", authenticate, async (req, res) => {
       availableUpgrades.push(businessCard({ name: "Upgrade to Business" }), enterpriseCard({ name: "Upgrade to Enterprise" }));
     } else if (currentPlan === "business") {
       availableUpgrades.push(enterpriseCard({ name: "Upgrade to Enterprise" }));
-    } else if (currentPlan === "enterprise") {
-      availableUpgrades.push(businessCard({ name: "Downgrade to Business", isDowngrade: true }));
+    } else if (currentPlan === "enterprise" && planHasLapsed) {
+      availableUpgrades.push(businessCard({ name: "Switch to Business", isDowngrade: true }));
     }
 
     return res.json({
