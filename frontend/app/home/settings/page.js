@@ -59,9 +59,6 @@ export default function SettingsPage() {
   const [savingUserPhone, setSavingUserPhone] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
-  const [showCancelSubConfirm, setShowCancelSubConfirm] = useState(false);
-  const [cancellingSub, setCancellingSub] = useState(false);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
     const storedCompany = localStorage.getItem("company");
@@ -187,28 +184,6 @@ export default function SettingsPage() {
       showSuccess("Visitor code prefix updated successfully");
     } catch (err) { showError(err?.message || "Failed to update visitor code prefix"); }
     finally { setSavingCodePrefix(false); setShowCodePrefixConfirm(false); setPendingCodePrefix(""); }
-  };
-
-  /* ── Cancel Subscription (self-serve, stops future auto-debits) ── */
-  const requestCancelSubscription = () => setShowCancelSubConfirm(true);
-  const cancelCancelSubscription = () => setShowCancelSubConfirm(false);
-
-  const confirmCancelSubscription = async () => {
-    try {
-      setCancellingSub(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upgrade/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" }, credentials: "include",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Failed to cancel subscription");
-      showSuccess(data.message || "Subscription cancelled — access continues until your current billing period ends.");
-    } catch (err) {
-      showError(err?.message || "Failed to cancel subscription");
-    } finally {
-      setCancellingSub(false);
-      setShowCancelSubConfirm(false);
-    }
   };
 
   /* ── User Name ── */
@@ -479,28 +454,8 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* ── BILLING ── */}
-            {(company?.plan === "business" || company?.plan === "enterprise") && company?.subscription_status === "active" && (
-              <div className={styles.settingsCard}>
-                <div className={styles.sectionHeader}>
-                  <span className={`${styles.cardDot} ${styles.dotGold}`} />
-                  <h3 className={styles.cardTitle}>Billing</h3>
-                </div>
-                <p className={styles.fieldHelp} style={{ marginBottom: "12px" }}>
-                  Your {company.plan === "business" ? "Business" : "Enterprise"} plan renews automatically. Cancelling stops future charges — you'll keep access until your current billing period ends.
-                </p>
-                <button
-                  onClick={requestCancelSubscription}
-                  style={{
-                    background: "#fff", color: "#dc2626", border: "1.5px solid #dc2626",
-                    borderRadius: "8px", padding: "10px 16px", fontSize: "0.85rem", fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel Subscription
-                </button>
-              </div>
-            )}
+            {/* Billing/Cancel Subscription now lives on the dedicated
+                /home/plans page, alongside upgrade/renew/switch actions. */}
 
             {/* ── USER PROFILE ── */}
             <div className={styles.settingsCard}>
@@ -645,25 +600,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* ===== CANCEL SUBSCRIPTION CONFIRM MODAL ===== */}
-      {showCancelSubConfirm && (
-        <div className={styles.confirmOverlay} onClick={cancelCancelSubscription} role="presentation">
-          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <h3 className={styles.confirmTitle}>Cancel your subscription?</h3>
-            <p className={styles.confirmText}>
-              Future auto-debit charges will stop. You'll keep full access until the end of your current billing period — after that your account moves into the standard grace period, same as any other expiry.
-            </p>
-            <div className={styles.confirmActions}>
-              <button className={styles.confirmCancelBtn} onClick={cancelCancelSubscription} disabled={cancellingSub}>
-                Keep Subscription
-              </button>
-              <button className={styles.confirmSaveBtn} onClick={confirmCancelSubscription} disabled={cancellingSub}>
-                {cancellingSub ? <><Loader2 size={13} className={styles.spinning} /> Cancelling…</> : "Yes, Cancel"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

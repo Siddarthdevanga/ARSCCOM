@@ -9,7 +9,6 @@ import {
   CheckCircle,
   X,
   Zap,
-  Crown,
   Clock,
   TrendingUp,
   AlertCircle,
@@ -480,19 +479,7 @@ export default function Home() {
   const [insightItems, setInsightItems] = useState([]);
   const [monthlyBrief, setMonthlyBrief] = useState(null);
 
-  const [upgradingPlan, setUpgradingPlan] = useState("");
   const [renewalModalDismissed, setRenewalModalDismissed] = useState(false);
-  const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — affects Business and Enterprise
-
-  /* ── Razorpay Checkout.js — needed for the upgrade/renew subscription
-     modal below; loaded once, reused across the session. ── */
-  useEffect(() => {
-    if (document.getElementById("razorpay-checkout-js")) return;
-    const script = document.createElement("script");
-    script.id = "razorpay-checkout-js";
-    script.src = "https://checkout.razorpay.com/v1/checkout.js";
-    document.head.appendChild(script);
-  }, []);
 
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -553,62 +540,13 @@ export default function Home() {
     }
   };
 
-  /* ── Upgrade / Renew ─────────────────────────────────────────────── */
-  const handleSelectPlan = async (plan, selectedInterval) => {
-    if (upgradingPlan) return;
-    try {
-      setUpgradingPlan(plan);
-      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upgrade`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ plan, interval: (plan === "business" || plan === "enterprise") ? (selectedInterval || "monthly") : "monthly" }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.message || "Request failed");
-
-      // Already had an active mandate — plan change was scheduled directly
-      // with Razorpay, no checkout needed.
-      if (data.mode === "scheduled") {
-        setShowMenu(false);
-        toast.success("Plan Change Scheduled", data.message);
-        return;
-      }
-
-      // No active mandate yet — needs checkout to authorize auto-debit.
-      if (data.mode === "subscription" && data.subscriptionId && window.Razorpay) {
-        const rzp = new window.Razorpay({
-          key: data.keyId,
-          subscription_id: data.subscriptionId,
-          name: "Hai Visitor",
-          description: `${plan[0].toUpperCase()}${plan.slice(1)} Plan (${selectedInterval || "monthly"})`,
-          handler: () => {
-            setShowMenu(false);
-            toast.success("Activating…", "Your subscription is being activated — this can take a few seconds.");
-            setTimeout(() => fetchSubscription(), 3000);
-          },
-          modal: { ondismiss: () => setUpgradingPlan("") },
-        });
-        rzp.on("payment.failed", () => toast.error("Payment Failed", "Please try again."));
-        rzp.open();
-        return;
-      }
-
-      throw new Error(data.message || "Unexpected server response");
-    } catch (err) {
-      toast.error("Failed", err.message || "Please try again.");
-    } finally {
-      setUpgradingPlan("");
-    }
-  };
-
   /* ── View Handlers ────────────────────────────────────────────────── */
   const handleOpenMenu      = () => { setShowMenu(true); fetchSubscription(); };
   const handleOpenReports     = () => { setShowMenu(false); router.push("/home/reports"); };
   const handleOpenSettings    = () => { setShowMenu(false); router.push("/home/settings"); };
   const handleOpenEmployees   = () => { setShowMenu(false); router.push("/visitor/admin"); };
   const handleOpenFormBuilder = () => { setShowMenu(false); router.push("/home/form-builder"); };
-  const handleRenew         = () => { setShowMenu(false); router.push("/subscription"); };
+  const handleOpenPlans      = () => { setShowMenu(false); router.push("/home/plans"); };
 
   // Clicking a locked module card should never navigate through — it
   // re-surfaces the renewal popup instead (in case it was dismissed).
@@ -640,19 +578,8 @@ export default function Home() {
   const currentPlan   = subData?.PLAN?.toLowerCase()   || "";
   const currentStatus = subData?.STATUS?.toLowerCase() || "";
 
-  const canUpgradeBusiness   = currentPlan === "trial"                        && ["active", "trial", "grace_period"].includes(currentStatus);
-  const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan)    && ["active", "trial", "grace_period"].includes(currentStatus);
-  // Downgrade (Enterprise → Business) is never offered while the current
-  // plan is genuinely active — only once it's lapsed (grace period counts
-  // as already lapsed for this purpose, same as expired/cancelled).
-  const planHasLapsed        = ["grace_period", "expired", "cancelled"].includes(currentStatus);
-  const canSwitchToBusiness  = currentPlan === "enterprise"                  && planHasLapsed;
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
   const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
-  // Verified live Razorpay auto-debit mandate (webhook-confirmed, not just
-  // "an id happens to be stored") — when true, renewal is fully automatic
-  // and there's nothing for the customer to click.
-  const hasAutoDebit         = subData?.HAS_AUTO_DEBIT === true;
 
   // Days remaining until the active plan expires (trial or paid), used to
   // surface a "renew soon" nudge on the main dashboard before it lapses.
@@ -676,6 +603,19 @@ export default function Home() {
      company can always get to settings/support) ─────────────────── */
   const menuItemsBlock = (
     <div className={styles.menuSection}>
+      {/* Plans & Billing — always reachable, even when expired, since it's
+         exactly where a lapsed company goes to restore access */}
+      <button className={styles.menuItem} onClick={handleOpenPlans}>
+        <div className={styles.menuItemIcon}><TrendingUp size={18}/></div>
+        <div className={styles.menuItemContent}>
+          <span className={styles.menuItemTitle}>Plans & Billing</span>
+          <span className={styles.menuItemSubtitle}>
+            {needsRenewal ? "Renew or choose a new plan" : "Upgrade, switch, or manage your subscription"}
+          </span>
+        </div>
+        <ChevronRight size={16} className={styles.menuItemArrow}/>
+      </button>
+
       {/* Reports & Analytics */}
       <button
         className={`${styles.menuItem} ${needsRenewal ? styles.menuItemLocked : ""}`}
@@ -745,179 +685,6 @@ export default function Home() {
     </div>
   );
 
-  /* ── Billing interval — shared by every plan card in this menu, so
-     switching it in one place updates all of them consistently ── */
-  const PLAN_CARD_META = {
-    business: {
-      name: "Business Plan",
-      Icon: Zap,
-      pricing: {
-        monthly: { price: "₹500",   period: "+ GST / mo" },
-        annual:  { price: "₹5,500", period: "+ GST / yr" },
-      },
-      features: ["Unlimited visitors", "Custom registration fields", "Priority support"],
-    },
-    enterprise: {
-      name: "Enterprise Plan",
-      Icon: Crown,
-      pricing: {
-        monthly: { price: "₹1,000",  period: "+ GST / mo" },
-        annual:  { price: "₹10,000", period: "+ GST / yr" },
-      },
-      features: ["Unlimited visitors", "Unlimited conference bookings", "Unlimited conference rooms", "Dedicated support"],
-    },
-  };
-
-  const IntervalToggleSmall = () => (
-    <div className={styles.intervalToggleSmall} role="tablist" aria-label="Billing interval">
-      <button
-        type="button" role="tab" aria-selected={billingInterval === "monthly"}
-        className={`${styles.intervalBtnSmall} ${billingInterval === "monthly" ? styles.intervalBtnSmallActive : ""}`}
-        onClick={() => setBillingInterval("monthly")}
-      >Monthly</button>
-      <button
-        type="button" role="tab" aria-selected={billingInterval === "annual"}
-        className={`${styles.intervalBtnSmall} ${billingInterval === "annual" ? styles.intervalBtnSmallActive : ""}`}
-        onClick={() => setBillingInterval("annual")}
-      >Annual</button>
-    </div>
-  );
-
-  const PlanCard = ({ plan, ctaLabel }) => {
-    const meta = PLAN_CARD_META[plan];
-    const pricing = meta.pricing[billingInterval];
-    const { Icon } = meta;
-    return (
-      <div className={`${styles.upgradePlanCard} ${plan === "enterprise" ? styles.enterprisePlan : ""}`}>
-        <div className={styles.planIconWrapper}><Icon size={20}/></div>
-        <div className={styles.planInfo}>
-          <h6>{meta.name}</h6>
-          <div className={styles.planPricing}>
-            <span className={styles.price}>{pricing.price}</span>
-            <span className={styles.period}> {pricing.period}</span>
-          </div>
-        </div>
-        <IntervalToggleSmall />
-        <ul className={styles.featureList}>
-          {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
-        </ul>
-        <button
-          className={`${styles.upgradeBtn} ${plan === "enterprise" ? styles.enterpriseBtn : ""}`}
-          onClick={() => handleSelectPlan(plan, billingInterval)}
-          disabled={!!upgradingPlan}
-        >
-          {upgradingPlan === plan ? <><div className={styles.btnSpinner}/> Processing...</> : ctaLabel}
-        </button>
-      </div>
-    );
-  };
-
-  const CustomBuildNote = () => (
-    <p className={styles.customBuildNote}>
-      Need something beyond these plans? We build custom Visitor Management as per your needs —{" "}
-      <a href="/contact-us" onClick={() => setShowMenu(false)}>Contact Support</a>
-    </p>
-  );
-
-  /* ── Renew current plan (active/trial/grace_period, not trial-renewal) —
-     hidden entirely when auto-debit is verified live, since renewal is
-     fully automatic and there's nothing to click. ── */
-  const renewCurrentPlanBlock = (!needsRenewal && !hasAutoDebit && currentPlan && currentPlan !== "trial") ? (
-    <div className={styles.upgradeSection}>
-      <div className={styles.sectionHeader}>
-        <TrendingUp size={18}/>
-        <h5>
-          {inGracePeriod ? "⚠️ Renew Before Access Ends" : "Renew Current Plan"}
-        </h5>
-      </div>
-      {inGracePeriod && (
-        <p className={styles.sectionDescription} style={{ color: "#DC2626", fontWeight: 600 }}>
-          Grace period active — renew now to avoid suspension.
-        </p>
-      )}
-
-      {currentPlan === "business" && <PlanCard plan="business" ctaLabel="Renew Business" />}
-
-      {currentPlan === "enterprise" && <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />}
-    </div>
-  ) : null;
-
-  /* ── Upgrade to a higher plan (active/trial/grace_period) ── */
-  const upgradeHigherBlock = (!needsRenewal && (canUpgradeBusiness || canUpgradeEnterprise)) ? (
-    <div className={styles.upgradeSection}>
-      <div className={styles.sectionHeader}>
-        <TrendingUp size={18}/>
-        <h5>Upgrade Your Plan</h5>
-      </div>
-      <p className={styles.sectionDescription}>Unlock more features and scale with your business.</p>
-
-      {canUpgradeBusiness && <PlanCard plan="business" ctaLabel="Upgrade to Business" />}
-
-      {canUpgradeEnterprise && <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />}
-
-      <CustomBuildNote />
-    </div>
-  ) : null;
-
-  /* ── Switch Enterprise → Business — only once the plan has lapsed
-     (grace period or, separately, fully expired/cancelled below). Never
-     offered while genuinely active. ── */
-  const downgradeBlock = (!needsRenewal && canSwitchToBusiness) ? (
-    <div className={styles.upgradeSection}>
-      <div className={styles.sectionHeader}>
-        <TrendingUp size={18}/>
-        <h5>Switch Plan</h5>
-      </div>
-      <p className={styles.sectionDescription}>Only need visitor management? Switch down to Business.</p>
-
-      <PlanCard plan="business" ctaLabel="Switch to Business" />
-    </div>
-  ) : null;
-
-  /* ── Expired: plan cards filtered by previous plan — shown ABOVE the
-     (now-locked) menu items, since renewing is the priority action ── */
-  const expiredUpgradeBlock = needsRenewal ? (
-    <div className={styles.upgradeSection}>
-      <div className={styles.alertBox} style={{ marginBottom: "12px" }}>
-        <AlertCircle size={18}/>
-        <div>
-          <p className={styles.alertTitle}>Subscription Expired</p>
-          <p className={styles.alertText}>Choose a plan below to restore access.</p>
-        </div>
-      </div>
-
-      <div className={styles.sectionHeader}>
-        <TrendingUp size={18}/>
-        <h5>{currentPlan === "trial" ? "Upgrade Your Plan" : "Renew Your Plan"}</h5>
-      </div>
-
-      {/* Trial expired → Business + Enterprise (no trial re-select) */}
-      {currentPlan === "trial" && (
-        <>
-          <PlanCard plan="business" ctaLabel="Upgrade to Business" />
-          <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
-          <CustomBuildNote />
-        </>
-      )}
-
-      {/* Business expired → free choice: renew Business, or upgrade to Enterprise */}
-      {currentPlan === "business" && (
-        <>
-          <PlanCard plan="business" ctaLabel="Renew Business" />
-          <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
-        </>
-      )}
-
-      {/* Enterprise expired → free choice: switch down to Business, or renew Enterprise */}
-      {currentPlan === "enterprise" && (
-        <>
-          <PlanCard plan="business" ctaLabel="Switch to Business" />
-          <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />
-        </>
-      )}
-    </div>
-  ) : null;
-
   return (
     <div className={styles.container}>
 
@@ -931,7 +698,7 @@ export default function Home() {
           plan={["trial", "business", "enterprise"].includes(currentPlan) ? currentPlan : "business"}
           daysLeft={daysUntilExpiry}
           expiryDateLabel={formatDate(expiryDateRaw)}
-          onRenew={() => { setRenewalModalDismissed(true); handleOpenMenu(); }}
+          onRenew={() => { setRenewalModalDismissed(true); handleOpenPlans(); }}
           onDismiss={() => setRenewalModalDismissed(true)}
         />
       )}
@@ -987,7 +754,7 @@ export default function Home() {
                 </p>
                 <p>Grace period ends: {formatDate(subData.GRACE_PERIOD_ENDS_ON)}</p>
               </div>
-              <button onClick={handleOpenMenu}>Renew Now</button>
+              <button onClick={handleOpenPlans}>Renew Now</button>
             </div>
           )}
 
@@ -1147,22 +914,7 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Expired → upgrade/renew section comes first (priority action),
-                      then the now-locked menu items. Otherwise, menu items first,
-                      followed by the usual renew/upgrade sections. */}
-                  {needsRenewal ? (
-                    <>
-                      {expiredUpgradeBlock}
-                      {menuItemsBlock}
-                    </>
-                  ) : (
-                    <>
-                      {menuItemsBlock}
-                      {renewCurrentPlanBlock}
-                      {upgradeHigherBlock}
-                      {downgradeBlock}
-                    </>
-                  )}
+                  {menuItemsBlock}
                 </>
               )}
             </div>

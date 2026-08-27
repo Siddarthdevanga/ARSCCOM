@@ -29,7 +29,10 @@ router.get("/details", authenticate, async (req, res) => {
         last_payment_created_at,
         grace_period_ends_at,
         grace_period_day,
-        razorpay_auto_debit_active
+        razorpay_auto_debit_active,
+        billing_interval,
+        pending_upgrade_plan,
+        pending_billing_interval
       FROM companies
       WHERE id = ?
       LIMIT 1
@@ -84,6 +87,15 @@ router.get("/details", authenticate, async (req, res) => {
       // just "an id happens to be stored") — drives whether the "Renew"
       // action is shown at all on the home dashboard.
       HAS_AUTO_DEBIT: !!company.razorpay_auto_debit_active,
+
+      // Actual current billing cycle — needed to know whether a Monthly →
+      // Annual switch is still a real available option for this company.
+      BILLING_INTERVAL: company.billing_interval || "monthly",
+
+      // Set by updateSubscriptionPlan() when a plan/interval change has
+      // been scheduled on an existing mandate (takes effect next cycle).
+      PENDING_UPGRADE_PLAN:     company.pending_upgrade_plan || null,
+      PENDING_BILLING_INTERVAL: company.pending_billing_interval || null,
     });
 
   } catch (err) {
