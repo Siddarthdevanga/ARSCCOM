@@ -674,22 +674,23 @@ export default function Home() {
         {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}
       </button>
 
-      {/* User Guide — always reachable, public page, opens in the same tab */}
-      <button className={styles.menuItem} onClick={() => { setShowMenu(false); router.push("/guide"); }}>
-        <div className={styles.menuItemIcon}><BookOpen size={18}/></div>
-        <div className={styles.menuItemContent}>
-          <span className={styles.menuItemTitle}>User Guide</span>
-          <span className={styles.menuItemSubtitle}>How every feature works, step by step</span>
-        </div>
-        <ChevronRight size={16} className={styles.menuItemArrow}/>
-      </button>
-
       {/* My Account — always reachable, even when expired */}
       <button className={styles.menuItem} onClick={handleOpenSettings}>
         <div className={styles.menuItemIcon}><Settings size={18}/></div>
         <div className={styles.menuItemContent}>
           <span className={styles.menuItemTitle}>My Account</span>
           <span className={styles.menuItemSubtitle}>Company & profile settings</span>
+        </div>
+        <ChevronRight size={16} className={styles.menuItemArrow}/>
+      </button>
+
+      {/* User Guide — always reachable, public page, opens in the same tab.
+         Last item in the list, by design — a reference doc, not a primary action. */}
+      <button className={styles.menuItem} onClick={() => { setShowMenu(false); router.push("/guide"); }}>
+        <div className={styles.menuItemIcon}><BookOpen size={18}/></div>
+        <div className={styles.menuItemContent}>
+          <span className={styles.menuItemTitle}>User Guide</span>
+          <span className={styles.menuItemSubtitle}>How every feature works, step by step</span>
         </div>
         <ChevronRight size={16} className={styles.menuItemArrow}/>
       </button>

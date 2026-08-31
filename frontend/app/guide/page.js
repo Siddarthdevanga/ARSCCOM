@@ -14,7 +14,7 @@ const BODY_HTML = `
   <!-- ============ SIDEBAR ============ -->
   <nav class="guide-sidebar" aria-label="Guide sections">
     <div class="sb-brand">
-      <div class="mark">H</div>
+      <div class="mark"><img src="/haivisitor.png" alt="Hai Visitor"/></div>
       <div class="name">Hai Visitor<small>Field Guide</small></div>
     </div>
 
@@ -65,22 +65,22 @@ const BODY_HTML = `
     <section class="mod" id="getting-started">
       <div class="mod-eyebrow"><span class="dot"></span>01 · Getting Started</div>
       <h2>Signing up and paying for your trial</h2>
-      <p class="mod-sub">There are two doors into Hai Visitor. Most people arrive through the public marketing site; some go straight to the registration form if they already have the link. Both end up in the same place.</p>
-      <div class="mod-routes"><span class="route">/</span><span class="route">/register</span><span class="route">/subscription</span></div>
+      <p class="mod-sub">There are genuinely <b>two different</b> ways to sign up, not one form with two doors — the landing page's "Start Trial" button pays first and asks for your company details after; going straight to <span class="field">/register</span> instead asks for everything up front and pays last. Pick whichever matches how you arrived.</p>
+      <div class="mod-routes"><span class="route">/</span><span class="route">/register</span><span class="route">/complete-registration</span><span class="route">/subscription</span></div>
 
+      <h3 style="font-size:15px; font-weight:900; margin-top:30px; margin-bottom:6px;">Path A — via the landing page (pay first, details after)</h3>
       <div class="panel">
         <ol class="steps">
-          <li><b>Arrive at the public site</b> — either by visiting the landing page at <span class="field">/</span> and reading through the site, or by navigating <b>directly</b> to <span class="field">/register</span> if you already have that link (e.g. from a sales conversation). Both paths land on the same registration form.</li>
-          <li>On the landing page, click <b>"Start 15-Day Trial for ₹49 →"</b> in the hero section (or the matching button in the pricing section). This takes you to <span class="field">/register</span>.</li>
-          <li>Fill in <b>Company Information</b>: Company Name, Admin Email, Admin Phone (a fixed <span class="field">+91</span> prefix — enter the 10-digit number only), and optionally a WhatsApp URL (any <span class="field">wa.me</span> or <span class="field">whatsapp.com</span> link) if you already run a WhatsApp Business number for the team.</li>
-          <li>Upload your <b>Company Logo</b> (JPG, PNG or WEBP, under 3MB) — required, since it appears on every visitor pass and registration page your visitors see.</li>
-          <li>Set a <b>Password</b> (min. 8 characters, one uppercase letter, one number, one symbol — a live strength bar confirms it) and re-enter it to confirm.</li>
-          <li>Click <b>"Register &amp; Continue."</b> Your account and company are created immediately, and you're logged in automatically.</li>
-          <li>You land on <span class="field">/subscription</span> — a one-time plan-selection screen shown only while your account has no active plan yet. Toggle between <b>Monthly</b> and <b>Annual</b> pricing, then pick a card.</li>
-          <li>Click <b>"Proceed to Payment"</b> on the Trial card (₹49, 15 days). A Razorpay checkout window opens in place — pay by card, UPI, or netbanking.</li>
-          <li>On successful payment, the window closes and you're redirected to <span class="field">/home</span> — your dashboard, fully unlocked for the next 15 days.</li>
+          <li>On the landing page at <span class="field">/</span>, click any <b>"Start 15-Day Trial for ₹49"</b> button. This opens an <b>in-page popup</b> — you never leave the landing page.</li>
+          <li>The popup asks for just two things: <b>Email</b> and <b>Phone Number</b>.</li>
+          <li>Click <b>"Pay ₹49 &amp; Start Trial →."</b> A Razorpay checkout opens right inside the popup — pay by card, UPI, or netbanking.</li>
+          <li>On success, the popup shows <b>"Account Created — Check your email for your login details."</b> A temporary password has been emailed to you; your company account already exists and is already paid for.</li>
+          <li>If that email or phone already has an account, you'll see <b>"Already Registered"</b> instead, with a straight link to sign in.</li>
+          <li>Go to <span class="field">/login</span> and sign in with your email/phone and the temporary password.</li>
+          <li>Because your profile isn't filled in yet, you're redirected to <span class="field">/complete-registration</span> instead of the dashboard.</li>
+          <li>Set your real <b>Company Name</b>, upload a <b>Logo</b>, optionally add a <b>WhatsApp URL</b>, and choose a proper <b>Password</b> to replace the temporary one.</li>
+          <li>Submit — you're taken straight to <span class="field">/home</span>. No plan-selection step; you already paid.</li>
         </ol>
-
         <div>
           <div class="frame">
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/</span></div>
@@ -88,23 +88,52 @@ const BODY_HTML = `
               <div class="mk mk-hero">
                 <div class="mk-ticker">₹49 ONLY — 15-DAY TRIAL &nbsp;★&nbsp; NO HARDWARE NEEDED &nbsp;★&nbsp; GO LIVE IN 15 MINUTES</div>
                 <div class="mk-nav">
-                  <div class="mk-logo">H<em>ai</em> VISITOR</div>
+                  <div class="mk-logo"><img src="/haivisitor.png" alt="Hai Visitor"/>H<em>ai</em> VISITOR</div>
                   <div class="mk-navlinks"><span>About</span><span>Features</span><span>Pricing</span><span>FAQ</span></div>
                 </div>
                 <div class="mk-h1">You spend money bringing customers in. <span>Don't let their data walk out.</span></div>
                 <div class="mk-p">Hai Visitor connects the walk-ins generated by your marketing to an organised digital visitor database.</div>
+                <ul class="mk-checks">
+                  <li>QR-based customer registration with no dedicated hardware</li>
+                  <li>Instant WhatsApp notification to the relevant team member</li>
+                </ul>
                 <div class="mk-btn mk-btn-primary">Start 15-Day Trial for ₹49 →</div>
-              </div>
-              <div class="mk-trust">
-                <div><b>₹49</b><span>15-DAY TRIAL</span></div>
-                <div><b>15 Min</b><span>SETUP TIME</span></div>
-                <div><b>No Hardware</b><span>JUST A QR CODE</span></div>
-                <div><b>AWS</b><span>CLOUD-HOSTED</span></div>
               </div>
             </div>
           </div>
+          <div class="frame" style="margin-top:18px; max-width:300px;">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url" style="text-align:center;">Popup</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card">
+                <div style="text-align:center; margin-bottom:8px;">
+                  <img src="/haivisitor.png" alt="Hai Visitor" style="width:28px; height:28px; object-fit:contain; margin:0 auto 4px;"/>
+                  <div style="font-size:11px; font-weight:900; color:#221C53;">H<span style="color:#F97316;">ai</span> Visitor</div>
+                  <span class="mk-pill on" style="margin-top:4px; display:inline-block;">15-Day Trial · ₹49</span>
+                </div>
+                <div class="mk-field"><span class="mk-label">Email *</span><div class="mk-input">you@company.com</div></div>
+                <div class="mk-field"><span class="mk-label">Phone Number *</span><div class="mk-input filled">98XXXXXXXX</div></div>
+                <div class="mk-submit">Pay ₹49 &amp; Start Trial →</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-          <div class="frame" style="margin-top:18px;">
+      <div class="note warn">This is deliberately lightweight — only email and phone, nothing else — because the goal is to remove friction between "interested" and "paid." Everything else about the company is filled in afterward, once they're already a customer.</div>
+
+      <h3 style="font-size:15px; font-weight:900; margin-top:36px; margin-bottom:6px;">Path B — via /register directly (details first, pay last)</h3>
+      <div class="panel">
+        <ol class="steps">
+          <li>Navigate <b>directly</b> to <span class="field">/register</span> — e.g. from a link shared in a sales conversation, not through the landing page's popup.</li>
+          <li>Fill in <b>Company Information</b>: Company Name, Admin Email, Admin Phone (fixed <span class="field">+91</span> prefix), and optionally a WhatsApp URL.</li>
+          <li>Upload your <b>Company Logo</b> (JPG, PNG or WEBP, under 3MB) — required here, since the full company profile is being created in one go.</li>
+          <li>Set a <b>Password</b> (min. 8 characters, one uppercase letter, one number, one symbol) and confirm it.</li>
+          <li>Click <b>"Register &amp; Continue."</b> Your account and company are created immediately and you're logged in automatically.</li>
+          <li>You land on <span class="field">/subscription</span> — a one-time plan-selection screen, since nothing has been paid yet. Toggle <b>Monthly / Annual</b>, then pick a card and pay.</li>
+          <li>On successful payment you're redirected to <span class="field">/home</span>.</li>
+        </ol>
+        <div>
+          <div class="frame">
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/register</span></div>
             <div class="frame-body mk-page">
               <div class="mk mk-card">
@@ -127,41 +156,36 @@ const BODY_HTML = `
               </div>
             </div>
           </div>
-        </div>
-      </div>
-
-      <div class="note tip">The Company Logo and a WhatsApp URL both feed real features later — the logo appears on visitor passes, and the WhatsApp URL becomes the "Chat with us" link shown to visitors.</div>
-
-      <div style="margin-top:36px;">
-        <div class="mod-eyebrow" style="margin-top:0;"><span class="dot"></span>Choosing a plan</div>
-        <p class="mod-sub" style="max-width:60ch;">The <span class="route">/subscription</span> screen only ever appears once — the first time your account has no plan. After that, plan changes happen from <b>Plans &amp; Billing</b> inside the dashboard (see section 09).</p>
-        <div class="frame" style="margin-top:20px; max-width:640px;">
-          <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/subscription</span></div>
-          <div class="frame-body mk-page">
-            <div class="mk-plans">
-              <div class="mk-plan mk">
-                <h4>TRIAL</h4>
-                <div class="p">₹49<span>/15 days</span></div>
-                <ul><li>100 Visitor Bookings</li><li>2 Conference Rooms</li><li>Email Support</li></ul>
-                <div class="btn">Proceed to Payment</div>
-              </div>
-              <div class="mk-plan pop mk">
-                <div class="mk-plan-badge">MOST POPULAR</div>
-                <h4>BUSINESS</h4>
-                <div class="p">₹500<span>/mo</span></div>
-                <ul><li>Unlimited Visitors</li><li>Custom Fields</li><li>Priority Support</li></ul>
-                <div class="btn">Proceed to Payment</div>
-              </div>
-              <div class="mk-plan gold mk">
-                <h4>ENTERPRISE</h4>
-                <div class="p">₹1,000<span>/mo</span></div>
-                <ul><li>Unlimited Visitors</li><li>Unlimited Bookings</li><li>Dedicated Support</li></ul>
-                <div class="btn">Proceed to Payment</div>
+          <div class="frame" style="margin-top:18px; max-width:640px;">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/subscription</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-plans">
+                <div class="mk-plan mk">
+                  <h4>TRIAL</h4>
+                  <div class="p">₹49<span>/15 days</span></div>
+                  <ul><li>100 Visitor Bookings</li><li>2 Conference Rooms</li><li>Email Support</li></ul>
+                  <div class="btn">Proceed to Payment</div>
+                </div>
+                <div class="mk-plan pop mk">
+                  <div class="mk-plan-badge">MOST POPULAR</div>
+                  <h4>BUSINESS</h4>
+                  <div class="p">₹500<span>/mo</span></div>
+                  <ul><li>Unlimited Visitors</li><li>Custom Fields</li><li>Priority Support</li></ul>
+                  <div class="btn">Proceed to Payment</div>
+                </div>
+                <div class="mk-plan gold mk">
+                  <h4>ENTERPRISE</h4>
+                  <div class="p">₹1,000<span>/mo</span></div>
+                  <ul><li>Unlimited Visitors</li><li>Unlimited Bookings</li><li>Dedicated Support</li></ul>
+                  <div class="btn">Proceed to Payment</div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <div class="note tip">Both paths end up as a fully paid, fully profiled company — they just ask for the same information in a different order. Path A optimises for the fastest possible "yes"; Path B suits someone who already knows they're committing and would rather set everything up in one sitting.</div>
     </section>
 
     <!-- ============ 02 LOGIN ============ -->
@@ -188,7 +212,7 @@ const BODY_HTML = `
                 <div class="mk-split-left">
                   <div class="navtabs"><span>ABOUT</span><span>PLANS</span><span>CONTACT</span></div>
                   <div class="center">
-                    <div class="mk-mark">H</div>
+                    <div class="mk-mark"><img src="/haivisitor.png" alt="Hai Visitor"/></div>
                     <b>VISITOR MANAGEMENT PLATFORM</b>
                     <span>Streamline check-ins · Enhance security</span>
                   </div>
@@ -206,10 +230,11 @@ const BODY_HTML = `
         </div>
       </div>
 
-      <p class="mod-sub" style="margin-top:30px;">What happens next depends entirely on your subscription's status — the login page silently routes you to the right place:</p>
+      <p class="mod-sub" style="margin-top:30px;">What happens next depends on how you signed up and your subscription's status — the login page silently routes you to the right place:</p>
       <table class="rtable">
-        <tr><th>Account status</th><th>Where you land</th><th>Why</th></tr>
-        <tr><td>pending</td><td>/subscription</td><td>No plan chosen yet — first login only</td></tr>
+        <tr><th>Account state</th><th>Where you land</th><th>Why</th></tr>
+        <tr><td>Path A, profile incomplete</td><td>/complete-registration</td><td>Paid already, but company name/logo/password still pending</td></tr>
+        <tr><td>pending</td><td>/subscription</td><td>No plan chosen yet — Path B, first login only</td></tr>
         <tr><td>trial / active</td><td>/home</td><td>Normal, unlocked dashboard</td></tr>
         <tr><td>grace_period</td><td>/home</td><td>Access continues; a renewal banner is shown</td></tr>
         <tr><td>expired</td><td>/home</td><td>Dashboard loads, but most modules show "Renew to unlock"</td></tr>
