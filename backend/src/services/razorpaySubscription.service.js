@@ -72,13 +72,33 @@ export const createSubscription = async ({ companyId, plan, interval }) => {
   }
 
   const [[company]] = await db.query(
-    `SELECT c.id, c.name, c.razorpay_customer_id, u.email, u.phone
+    `SELECT c.id, c.name, c.razorpay_customer_id, c.razorpay_subscription_id, u.email, u.phone
      FROM companies c
      JOIN users u ON u.company_id = c.id AND u.role = 'user'
      WHERE c.id = ? LIMIT 1`,
     [companyId]
   );
   if (!company) throw new Error("Company not found");
+
+  /* ── Tidy up a previous abandoned/declined attempt, if any. Only ever
+     cancels a subscription confirmed NOT live (never leaves a genuinely
+     active mandate cancelled by accident) — otherwise every retry after a
+     declined checkout leaves a dead subscription sitting on Razorpay's
+     side forever. Best-effort: never blocks the new subscription. ── */
+  if (company.razorpay_subscription_id) {
+    try {
+      const stillLive = await isSubscriptionUpdatable(company.razorpay_subscription_id);
+      if (!stillLive) {
+        await axios.post(
+          `${RAZORPAY_API}/subscriptions/${company.razorpay_subscription_id}/cancel`,
+          {},
+          { auth: razorpayAuth() }
+        );
+      }
+    } catch (err) {
+      console.error(`[RAZORPAY-SUB] cleanup of stale subscription ${company.razorpay_subscription_id} failed (non-fatal):`, err.response?.data?.error?.description || err.message);
+    }
+  }
 
   /* ── Ensure a Razorpay Customer exists ── */
   let customerId = company.razorpay_customer_id;
