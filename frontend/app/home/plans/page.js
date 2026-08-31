@@ -176,6 +176,12 @@ export default function PlansPage() {
   const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan) && !needsRenewal;
   const canSwitchToBusiness  = currentPlan === "enterprise" && planHasLapsed;
   const canSwitchToAnnual    = ["business", "enterprise"].includes(currentPlan) && !needsRenewal && currentInterval === "monthly";
+  // The shared toggle only matters when at least one section below actually
+  // reads billingInterval — "Switch to Annual" uses a fixed interval and
+  // doesn't count.
+  const usesSharedToggle = needsRenewal
+    || (currentPlan !== "trial" && !hasAutoDebit)
+    || canUpgradeBusiness || canUpgradeEnterprise || canSwitchToBusiness;
 
   const { bg: statusBg, color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
@@ -195,16 +201,6 @@ export default function PlansPage() {
             <span className={styles.period}> {pricing.period}</span>
           </div>
         </div>
-        {!interval && (
-          <div className={styles.intervalToggleSmall} role="tablist" aria-label="Billing interval">
-            <button type="button" role="tab" aria-selected={billingInterval === "monthly"}
-              className={`${styles.intervalBtnSmall} ${billingInterval === "monthly" ? styles.intervalBtnSmallActive : ""}`}
-              onClick={() => setBillingInterval("monthly")}>Monthly</button>
-            <button type="button" role="tab" aria-selected={billingInterval === "annual"}
-              className={`${styles.intervalBtnSmall} ${billingInterval === "annual" ? styles.intervalBtnSmallActive : ""}`}
-              onClick={() => setBillingInterval("annual")}>Annual</button>
-          </div>
-        )}
         <ul className={styles.featureList}>
           {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
         </ul>
@@ -310,6 +306,24 @@ export default function PlansPage() {
                   )}
                 </div>
               </div>
+
+              {/* ===== SHARED BILLING INTERVAL TOGGLE — governs every plan
+                  card below except the fixed-interval "Switch to Annual"
+                  card, which only ever offers annual. Hidden when nothing
+                  on the page actually reads it. ===== */}
+              {usesSharedToggle && (
+                <div className={styles.sharedIntervalRow}>
+                  <span className={styles.sharedIntervalLabel}>Billing cycle for plan options below</span>
+                  <div className={styles.intervalToggle} role="tablist" aria-label="Billing interval">
+                    <button type="button" role="tab" aria-selected={billingInterval === "monthly"}
+                      className={`${styles.intervalBtn} ${billingInterval === "monthly" ? styles.intervalBtnActive : ""}`}
+                      onClick={() => setBillingInterval("monthly")}>Monthly</button>
+                    <button type="button" role="tab" aria-selected={billingInterval === "annual"}
+                      className={`${styles.intervalBtn} ${billingInterval === "annual" ? styles.intervalBtnActive : ""}`}
+                      onClick={() => setBillingInterval("annual")}>Annual</button>
+                  </div>
+                </div>
+              )}
 
               {/* ===== EXPIRED/CANCELLED — free choice of any plan ===== */}
               {needsRenewal && (

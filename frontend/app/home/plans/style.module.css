@@ -139,7 +139,26 @@
 .toastError { background: #fff0f0; color: #cc1100; border-left: 4px solid #cc1100; }
 
 /* ================= MAIN CONTENT ================= */
-.mainContent { padding: 24px 36px 48px; max-width: 1100px; margin: 0 auto; width: 100%; }
+.mainContent { padding: 24px 36px 48px; width: 100%; }
+
+/* ================= SHARED INTERVAL TOGGLE ================= */
+.sharedIntervalRow {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 12px; margin-bottom: 24px;
+}
+.sharedIntervalLabel { font-size: 13px; font-weight: 700; color: #4a2a7a; }
+.intervalToggle {
+  display: flex; background: #f0e9fc; border-radius: 999px; padding: 4px; gap: 4px; width: fit-content;
+}
+.intervalBtn {
+  border: none; background: transparent; padding: 8px 20px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; color: #6A0DAD; cursor: pointer;
+  font-family: 'Nunito', sans-serif; transition: all 0.2s;
+}
+.intervalBtn:hover { color: #4A00A0; }
+.intervalBtnActive, .intervalBtnActive:hover {
+  background: #fff; color: #4A00A0; box-shadow: 0 2px 8px rgba(74,0,160,0.15);
+}
 
 /* ================= DETAILS CARD ================= */
 .detailsCard {
@@ -171,7 +190,7 @@
 }
 
 .planGrid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px;
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 340px)); gap: 20px;
 }
 
 .customBuildNote { font-size: 12px; color: #6a4a9a; margin: 8px 0 0; grid-column: 1 / -1; }
@@ -200,19 +219,6 @@
 .planPricing { display: flex; align-items: baseline; gap: 3px; }
 .price { font-size: 1.25rem; font-weight: 900; color: #4A00A0; letter-spacing: -0.02em; }
 .period { font-size: 0.68rem; color: #8B2BE2; }
-
-.intervalToggleSmall {
-  display: flex; background: #f0e9fc; border-radius: 999px; padding: 3px; gap: 3px; width: fit-content;
-}
-.intervalBtnSmall {
-  border: none; background: transparent; padding: 5px 12px; border-radius: 999px;
-  font-size: 11px; font-weight: 700; color: #6A0DAD; cursor: pointer;
-  font-family: 'Nunito', sans-serif; transition: all 0.2s;
-}
-.intervalBtnSmall:hover { color: #4A00A0; }
-.intervalBtnSmallActive, .intervalBtnSmallActive:hover {
-  background: #fff; color: #4A00A0; box-shadow: 0 2px 8px rgba(74,0,160,0.15);
-}
 
 .featureList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; flex: 1; }
 .featureList li { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #4A00A0; }
