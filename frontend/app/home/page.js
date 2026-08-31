@@ -906,10 +906,10 @@ export default function Home() {
 
                   <div className={styles.detailsSection}>
                     <h5 className={styles.sectionTitle}>Subscription Details</h5>
-                    {subData.ZOHO_CUSTOMER_ID && (
+                    {subData.CUSTOMER_ID && (
                       <div className={styles.detailRow}>
                         <span className={styles.detailLabel}>Customer ID</span>
-                        <span className={styles.detailValue}>{subData.ZOHO_CUSTOMER_ID}</span>
+                        <span className={styles.detailValue}>{subData.CUSTOMER_ID}</span>
                       </div>
                     )}
                     {subData.TRIAL_ENDS_ON && (

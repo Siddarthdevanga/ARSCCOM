@@ -30,6 +30,7 @@ router.get("/details", authenticate, async (req, res) => {
         grace_period_ends_at,
         grace_period_day,
         razorpay_auto_debit_active,
+        razorpay_customer_id,
         billing_interval,
         pending_upgrade_plan,
         pending_billing_interval
@@ -51,7 +52,10 @@ router.get("/details", authenticate, async (req, res) => {
     const STATUS = company.subscription_status
       ? company.subscription_status.toUpperCase()
       : "PENDING";
-    const ZOHO_ID = company.zoho_customer_id || null;
+    // Once a company has a Razorpay customer id, that's the one relevant to
+    // whoever's actually billing them now — show it in place of any old
+    // Zoho id rather than alongside it.
+    const CUSTOMER_ID = company.razorpay_customer_id || company.zoho_customer_id || null;
 
     // Compute grace period info
     const now = new Date();
@@ -73,7 +77,7 @@ router.get("/details", authenticate, async (req, res) => {
       PLAN,
       STATUS,
 
-      ZOHO_CUSTOMER_ID: ZOHO_ID,
+      CUSTOMER_ID,
 
       TRIAL_ENDS_ON:  company.trial_ends_at           || null,
       EXPIRES_ON:     company.subscription_ends_at     || null,

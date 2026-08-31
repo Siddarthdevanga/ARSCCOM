@@ -270,10 +270,10 @@ export default function PlansPage() {
               {/* ===== SUBSCRIPTION DETAILS ===== */}
               <div className={styles.detailsCard}>
                 <div className={styles.detailsGrid}>
-                  {subData.ZOHO_CUSTOMER_ID && (
+                  {subData.CUSTOMER_ID && (
                     <div className={styles.detailItem}>
                       <span className={styles.detailLabel}>Customer ID</span>
-                      <span className={styles.detailValue}>{subData.ZOHO_CUSTOMER_ID}</span>
+                      <span className={styles.detailValue}>{subData.CUSTOMER_ID}</span>
                     </div>
                   )}
                   {subData.TRIAL_ENDS_ON && (
