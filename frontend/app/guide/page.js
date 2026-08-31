@@ -51,8 +51,12 @@ const BODY_HTML = `
 
     <!-- ============ COVER ============ -->
     <header class="cover">
+      <div class="cover-brand">
+        <img src="/haivisitor.png" alt="Hai Visitor"/>
+        <span>H<em style="font-style:normal; color:#FDBA74;">ai</em> Visitor</span>
+      </div>
       <div class="cover-eyebrow">● Complete Walkthrough</div>
-      <h1>Everything Hai Visitor does, <em>click by click.</em></h1>
+      <h1>Everything Hai&nbsp;Visitor does — <em>click by click.</em></h1>
       <p>From the very first "Start Trial" button on the public website through to running reports on a Tuesday afternoon — this guide follows the exact screens, buttons and page redirects you'll encounter, in order.</p>
       <div class="cover-meta">
         <div><b>11</b><span>Sections</span></div>

@@ -44,6 +44,15 @@
   background:var(--bg); color:var(--ink);
   font-family:var(--font-body); line-height:1.6;
   -webkit-font-smoothing:antialiased;
+
+  /* Self-contained viewport + internal scroll, deliberately independent of
+     document-level (html/body) scroll state — other routes' CSS Modules
+     set :global(body){overflow:hidden}, which can linger on the shared
+     <body> after client-side navigation (Next.js keeps it mounted across
+     routes) until a hard refresh clears it. Scrolling inside this root
+     instead means this page works regardless of what leaked in. */
+  height:100vh; height:100dvh; overflow:hidden;
+  display:flex; flex-direction:column;
 }
 
 .guide-root *{box-sizing:border-box;}
@@ -65,11 +74,11 @@
 .guide-root :focus-visible{ outline:2px solid var(--purple-500); outline-offset:2px; }
 
 /* ============ SHELL ============ */
-.guide-shell{ display:flex; max-width:1440px; margin:0 auto; }
+.guide-shell{ display:flex; flex:1; min-height:0; width:100%; }
 
 /* --- sidebar --- */
 .guide-sidebar{
-  width:272px; flex-shrink:0; position:sticky; top:0; height:100vh;
+  width:272px; flex-shrink:0; height:100%;
   overflow-y:auto; padding:28px 18px 40px; border-right:1px solid var(--line);
   background:var(--bg-raised);
 }
@@ -108,10 +117,11 @@
 .sb-home-link:hover{ background:var(--purple-50); }
 
 /* --- main --- */
-.guide-main{ flex:1; min-width:0; }
+.guide-main{ flex:1; min-width:0; height:100%; overflow-y:auto; }
 
 .cover{
-  padding:64px 56px 52px; background:var(--grad-brand); color:#fff; position:relative; overflow:hidden;
+  padding:44px 56px 40px; background:var(--grad-brand); color:#fff; position:relative; overflow:hidden;
+  flex-shrink:0;
 }
 .cover::after{
   content:''; position:absolute; top:-90px; right:-70px; width:340px; height:340px;
@@ -121,17 +131,28 @@
   content:''; position:absolute; bottom:-120px; left:20%; width:260px; height:260px;
   border-radius:50%; background:rgba(255,255,255,0.05); pointer-events:none;
 }
-.cover-eyebrow{
-  display:inline-flex; align-items:center; gap:7px; font-size:11.5px; font-weight:800;
-  letter-spacing:0.09em; text-transform:uppercase; background:rgba(255,255,255,0.14);
-  padding:6px 14px; border-radius:999px; margin-bottom:18px;
+.cover-brand{
+  display:flex; align-items:center; gap:10px; margin-bottom:20px; position:relative; z-index:1;
 }
-.cover h1{ color:#fff; font-size:clamp(2.1rem,4.4vw,3.4rem); font-weight:900; line-height:1.08; max-width:16ch; }
+.cover-brand img{
+  width:32px; height:32px; object-fit:contain; background:rgba(255,255,255,0.16);
+  border-radius:9px; padding:5px;
+}
+.cover-brand span{ font-size:14px; font-weight:900; letter-spacing:-0.01em; }
+.cover-eyebrow{
+  display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:800;
+  letter-spacing:0.09em; text-transform:uppercase; background:rgba(255,255,255,0.14);
+  padding:5px 13px; border-radius:999px; margin-bottom:14px; position:relative; z-index:1;
+}
+.cover h1{
+  color:#fff; font-size:clamp(1.9rem,3.6vw,2.8rem); font-weight:900; line-height:1.15;
+  max-width:22ch; position:relative; z-index:1;
+}
 .cover h1 em{ font-style:normal; color:var(--amber-100); }
-.cover p{ margin-top:16px; max-width:56ch; font-size:16px; color:rgba(255,255,255,0.82); font-weight:600; }
-.cover-meta{ display:flex; gap:28px; margin-top:34px; flex-wrap:wrap; }
-.cover-meta div{ font-size:12.5px; }
-.cover-meta b{ display:block; font-size:15px; font-weight:900; }
+.cover p{ margin-top:14px; max-width:54ch; font-size:15px; color:rgba(255,255,255,0.82); font-weight:600; position:relative; z-index:1; }
+.cover-meta{ display:flex; gap:26px; margin-top:24px; flex-wrap:wrap; position:relative; z-index:1; }
+.cover-meta div{ font-size:12px; }
+.cover-meta b{ display:block; font-size:14px; font-weight:900; }
 .cover-meta span{ color:rgba(255,255,255,0.65); font-weight:700; }
 
 .mod{ padding:56px 56px 8px; border-bottom:1px solid var(--line); scroll-margin-top:20px; }
