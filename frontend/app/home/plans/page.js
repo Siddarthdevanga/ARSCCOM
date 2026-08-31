@@ -49,7 +49,6 @@ export default function PlansPage() {
   const [loadingSub, setLoadingSub] = useState(true);
   const [subError, setSubError] = useState("");
 
-  const [billingInterval, setBillingInterval] = useState("monthly");
   const [upgradingPlan, setUpgradingPlan] = useState("");
   const [activating, setActivating] = useState(false);
 
@@ -89,7 +88,6 @@ export default function PlansPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.MESSAGE || "Failed to load subscription");
       setSubData(data);
-      if (data.BILLING_INTERVAL) setBillingInterval(data.BILLING_INTERVAL);
     } catch (err) {
       setSubError(err?.message || "Unable to fetch subscription details");
     } finally {
@@ -175,38 +173,36 @@ export default function PlansPage() {
   const canUpgradeBusiness   = currentPlan === "trial" && !needsRenewal;
   const canUpgradeEnterprise = ["trial", "business"].includes(currentPlan) && !needsRenewal;
   const canSwitchToBusiness  = currentPlan === "enterprise" && planHasLapsed;
-  const canSwitchToAnnual    = ["business", "enterprise"].includes(currentPlan) && !needsRenewal && currentInterval === "monthly";
-  // The shared toggle only matters when at least one section below actually
-  // reads billingInterval — "Switch to Annual" uses a fixed interval and
-  // doesn't count.
-  const usesSharedToggle = needsRenewal
-    || (currentPlan !== "trial" && !hasAutoDebit)
-    || canUpgradeBusiness || canUpgradeEnterprise || canSwitchToBusiness;
 
   const { bg: statusBg, color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
-  const PlanCard = ({ plan, ctaLabel, interval }) => {
+  // Every card now stands for one fixed plan+interval combination — no
+  // shared toggle. The card matching what the company is actually on
+  // (and not lapsed) gets a "Current Plan" badge.
+  const PlanCard = ({ plan, interval, ctaLabel }) => {
     const meta = PLAN_CARD_META[plan];
-    const useInterval = interval || billingInterval;
-    const pricing = meta.pricing[useInterval];
+    const pricing = meta.pricing[interval];
     const { Icon } = meta;
-    const busyKey = plan + useInterval;
+    const busyKey = plan + interval;
+    const isCurrent = !needsRenewal && plan === currentPlan && interval === currentInterval;
     return (
-      <div className={`${styles.planCard} ${plan === "enterprise" ? styles.enterpriseCard : ""}`}>
+      <div className={`${styles.planCard} ${plan === "enterprise" ? styles.enterpriseCard : ""} ${isCurrent ? styles.currentCard : ""}`}>
+        {isCurrent && <span className={styles.currentBadge}>Current Plan</span>}
         <div className={styles.planIconWrapper}><Icon size={20}/></div>
         <div className={styles.planCardInfo}>
           <h6>{meta.name}</h6>
-          <div className={styles.planPricing}>
-            <span className={styles.price}>{pricing.price}</span>
-            <span className={styles.period}> {pricing.period}</span>
-          </div>
+          <span className={styles.intervalTag}>{interval === "annual" ? "Annual" : "Monthly"}</span>
+        </div>
+        <div className={styles.planPricing}>
+          <span className={styles.price}>{pricing.price}</span>
+          <span className={styles.period}> {pricing.period}</span>
         </div>
         <ul className={styles.featureList}>
           {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
         </ul>
         <button
           className={`${styles.upgradeBtn} ${plan === "enterprise" ? styles.enterpriseBtn : ""}`}
-          onClick={() => handleSelectPlan(plan, useInterval)}
+          onClick={() => handleSelectPlan(plan, interval)}
           disabled={!!upgradingPlan}
         >
           {upgradingPlan === busyKey ? <><div className={styles.btnSpinner}/> Processing…</> : ctaLabel}
@@ -307,25 +303,7 @@ export default function PlansPage() {
                 </div>
               </div>
 
-              {/* ===== SHARED BILLING INTERVAL TOGGLE — governs every plan
-                  card below except the fixed-interval "Switch to Annual"
-                  card, which only ever offers annual. Hidden when nothing
-                  on the page actually reads it. ===== */}
-              {usesSharedToggle && (
-                <div className={styles.sharedIntervalRow}>
-                  <span className={styles.sharedIntervalLabel}>Billing cycle for plan options below</span>
-                  <div className={styles.intervalToggle} role="tablist" aria-label="Billing interval">
-                    <button type="button" role="tab" aria-selected={billingInterval === "monthly"}
-                      className={`${styles.intervalBtn} ${billingInterval === "monthly" ? styles.intervalBtnActive : ""}`}
-                      onClick={() => setBillingInterval("monthly")}>Monthly</button>
-                    <button type="button" role="tab" aria-selected={billingInterval === "annual"}
-                      className={`${styles.intervalBtn} ${billingInterval === "annual" ? styles.intervalBtnActive : ""}`}
-                      onClick={() => setBillingInterval("annual")}>Annual</button>
-                  </div>
-                </div>
-              )}
-
-              {/* ===== EXPIRED/CANCELLED — free choice of any plan ===== */}
+              {/* ===== EXPIRED/CANCELLED — free choice of any plan+interval ===== */}
               {needsRenewal && (
                 <section className={styles.planSection}>
                   <div className={styles.warningNote}>
@@ -335,20 +313,26 @@ export default function PlansPage() {
                   <div className={styles.planGrid}>
                     {currentPlan === "trial" && (
                       <>
-                        <PlanCard plan="business" ctaLabel="Upgrade to Business" />
-                        <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
+                        <PlanCard plan="business" interval="monthly" ctaLabel="Upgrade to Business" />
+                        <PlanCard plan="business" interval="annual" ctaLabel="Upgrade to Business" />
+                        <PlanCard plan="enterprise" interval="monthly" ctaLabel="Upgrade to Enterprise" />
+                        <PlanCard plan="enterprise" interval="annual" ctaLabel="Upgrade to Enterprise" />
                       </>
                     )}
                     {currentPlan === "business" && (
                       <>
-                        <PlanCard plan="business" ctaLabel="Renew Business" />
-                        <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />
+                        <PlanCard plan="business" interval="monthly" ctaLabel="Renew Business" />
+                        <PlanCard plan="business" interval="annual" ctaLabel="Renew Business" />
+                        <PlanCard plan="enterprise" interval="monthly" ctaLabel="Upgrade to Enterprise" />
+                        <PlanCard plan="enterprise" interval="annual" ctaLabel="Upgrade to Enterprise" />
                       </>
                     )}
                     {currentPlan === "enterprise" && (
                       <>
-                        <PlanCard plan="business" ctaLabel="Switch to Business" />
-                        <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />
+                        <PlanCard plan="business" interval="monthly" ctaLabel="Switch to Business" />
+                        <PlanCard plan="business" interval="annual" ctaLabel="Switch to Business" />
+                        <PlanCard plan="enterprise" interval="monthly" ctaLabel="Renew Enterprise" />
+                        <PlanCard plan="enterprise" interval="annual" ctaLabel="Renew Enterprise" />
                       </>
                     )}
                     <p className={styles.customBuildNote}>
@@ -361,7 +345,8 @@ export default function PlansPage() {
 
               {!needsRenewal && (
                 <>
-                  {/* ===== RENEW (manual, no live auto-debit) ===== */}
+                  {/* ===== RENEW (manual, no live auto-debit) — both intervals,
+                      the one matching what's already running is badged ===== */}
                   {currentPlan !== "trial" && !hasAutoDebit && (
                     <section className={styles.planSection}>
                       <div className={styles.sectionHeader}>
@@ -374,13 +359,24 @@ export default function PlansPage() {
                         </p>
                       )}
                       <div className={styles.planGrid}>
-                        {currentPlan === "business" && <PlanCard plan="business" ctaLabel="Renew Business" />}
-                        {currentPlan === "enterprise" && <PlanCard plan="enterprise" ctaLabel="Renew Enterprise" />}
+                        {currentPlan === "business" && (
+                          <>
+                            <PlanCard plan="business" interval="monthly" ctaLabel="Renew Business" />
+                            <PlanCard plan="business" interval="annual" ctaLabel="Switch to Annual" />
+                          </>
+                        )}
+                        {currentPlan === "enterprise" && (
+                          <>
+                            <PlanCard plan="enterprise" interval="monthly" ctaLabel="Renew Enterprise" />
+                            <PlanCard plan="enterprise" interval="annual" ctaLabel="Switch to Annual" />
+                          </>
+                        )}
                       </div>
                     </section>
                   )}
 
-                  {/* ===== AUTO-DEBIT LIVE — nothing to renew ===== */}
+                  {/* ===== AUTO-DEBIT LIVE — nothing to renew, but still offer
+                      switching to annual since that's a real plan change ===== */}
                   {currentPlan !== "trial" && hasAutoDebit && (
                     <section className={styles.planSection}>
                       <div className={styles.autoRenewNote}>
@@ -389,24 +385,15 @@ export default function PlansPage() {
                           Auto-renews on {formatDate(subData.EXPIRES_ON)} — your card/UPI mandate handles this automatically, no action needed.
                         </span>
                       </div>
+                      {currentInterval === "monthly" && (
+                        <div className={styles.planGrid} style={{ marginTop: "16px" }}>
+                          <PlanCard plan={currentPlan} interval="annual" ctaLabel={`Switch ${PLAN_LABELS[currentPlan]} to Annual`} />
+                        </div>
+                      )}
                     </section>
                   )}
 
-                  {/* ===== SWITCH TO ANNUAL — same tier, monthly → annual ===== */}
-                  {canSwitchToAnnual && (
-                    <section className={styles.planSection}>
-                      <div className={styles.sectionHeader}>
-                        <TrendingUp size={18}/>
-                        <h5>Switch to Annual Billing</h5>
-                      </div>
-                      <p className={styles.sectionDescription}>Save with yearly billing — takes effect on your next billing date.</p>
-                      <div className={styles.planGrid}>
-                        <PlanCard plan={currentPlan} interval="annual" ctaLabel={`Switch ${PLAN_LABELS[currentPlan]} to Annual`} />
-                      </div>
-                    </section>
-                  )}
-
-                  {/* ===== UPGRADE TO HIGHER TIER ===== */}
+                  {/* ===== UPGRADE TO HIGHER TIER — both intervals ===== */}
                   {(canUpgradeBusiness || canUpgradeEnterprise) && (
                     <section className={styles.planSection}>
                       <div className={styles.sectionHeader}>
@@ -415,8 +402,18 @@ export default function PlansPage() {
                       </div>
                       <p className={styles.sectionDescription}>Unlock more features and scale with your business.</p>
                       <div className={styles.planGrid}>
-                        {canUpgradeBusiness && <PlanCard plan="business" ctaLabel="Upgrade to Business" />}
-                        {canUpgradeEnterprise && <PlanCard plan="enterprise" ctaLabel="Upgrade to Enterprise" />}
+                        {canUpgradeBusiness && (
+                          <>
+                            <PlanCard plan="business" interval="monthly" ctaLabel="Upgrade to Business" />
+                            <PlanCard plan="business" interval="annual" ctaLabel="Upgrade to Business" />
+                          </>
+                        )}
+                        {canUpgradeEnterprise && (
+                          <>
+                            <PlanCard plan="enterprise" interval="monthly" ctaLabel="Upgrade to Enterprise" />
+                            <PlanCard plan="enterprise" interval="annual" ctaLabel="Upgrade to Enterprise" />
+                          </>
+                        )}
                         <p className={styles.customBuildNote}>
                           Need something beyond these plans? We build custom Visitor Management as per your needs —{" "}
                           <a href="/contact-us">Contact Support</a>
@@ -425,7 +422,7 @@ export default function PlansPage() {
                     </section>
                   )}
 
-                  {/* ===== SWITCH DOWN — only once lapsed (grace period) ===== */}
+                  {/* ===== SWITCH DOWN — only once lapsed (grace period), both intervals ===== */}
                   {canSwitchToBusiness && (
                     <section className={styles.planSection}>
                       <div className={styles.sectionHeader}>
@@ -434,7 +431,8 @@ export default function PlansPage() {
                       </div>
                       <p className={styles.sectionDescription}>Only need visitor management? Switch down to Business.</p>
                       <div className={styles.planGrid}>
-                        <PlanCard plan="business" ctaLabel="Switch to Business" />
+                        <PlanCard plan="business" interval="monthly" ctaLabel="Switch to Business" />
+                        <PlanCard plan="business" interval="annual" ctaLabel="Switch to Business" />
                       </div>
                     </section>
                   )}

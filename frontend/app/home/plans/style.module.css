@@ -141,25 +141,6 @@
 /* ================= MAIN CONTENT ================= */
 .mainContent { padding: 24px 36px 48px; width: 100%; }
 
-/* ================= SHARED INTERVAL TOGGLE ================= */
-.sharedIntervalRow {
-  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
-  gap: 12px; margin-bottom: 24px;
-}
-.sharedIntervalLabel { font-size: 13px; font-weight: 700; color: #4a2a7a; }
-.intervalToggle {
-  display: flex; background: #f0e9fc; border-radius: 999px; padding: 4px; gap: 4px; width: fit-content;
-}
-.intervalBtn {
-  border: none; background: transparent; padding: 8px 20px; border-radius: 999px;
-  font-size: 13px; font-weight: 700; color: #6A0DAD; cursor: pointer;
-  font-family: 'Nunito', sans-serif; transition: all 0.2s;
-}
-.intervalBtn:hover { color: #4A00A0; }
-.intervalBtnActive, .intervalBtnActive:hover {
-  background: #fff; color: #4A00A0; box-shadow: 0 2px 8px rgba(74,0,160,0.15);
-}
-
 /* ================= DETAILS CARD ================= */
 .detailsCard {
   background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
@@ -198,6 +179,7 @@
 
 /* ================= PLAN CARD ================= */
 .planCard {
+  position: relative;
   background: #fff; border: 1.5px solid #ede8f8; border-radius: 20px;
   padding: 20px; display: flex; flex-direction: column; gap: 12px;
   transition: all 0.2s;
@@ -205,6 +187,15 @@
 .planCard:hover { border-color: #8B2BE2; box-shadow: 0 4px 20px rgba(98,0,214,0.15); transform: translateY(-2px); }
 .enterpriseCard { background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%); border-color: rgba(245,158,11,0.3); }
 .enterpriseCard:hover { border-color: #f59e0b; }
+
+.currentCard { border-color: #059669; border-width: 2px; box-shadow: 0 4px 20px rgba(5,150,105,0.15); }
+.currentCard:hover { border-color: #059669; }
+.currentBadge {
+  position: absolute; top: -11px; left: 16px;
+  background: #059669; color: #fff; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 4px 12px; border-radius: 999px; box-shadow: 0 2px 8px rgba(5,150,105,0.35);
+}
 
 .planIconWrapper {
   width: 40px; height: 40px; border-radius: 12px;
@@ -214,8 +205,13 @@
 }
 .enterpriseCard .planIconWrapper { background: linear-gradient(135deg, #D97706 0%, #F59E0B 60%, #FBBF24 100%); box-shadow: 0 4px 20px rgba(245,158,11,0.4); }
 
-.planCardInfo { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.planCardInfo { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .planCardInfo h6 { font-size: 0.95rem; font-weight: 800; color: #2D0070; margin: 0; }
+.intervalTag {
+  font-size: 10px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #8B2BE2; background: #f0e9fc; padding: 3px 9px; border-radius: 999px;
+}
+.enterpriseCard .intervalTag { color: #D97706; background: #fef3c7; }
 .planPricing { display: flex; align-items: baseline; gap: 3px; }
 .price { font-size: 1.25rem; font-weight: 900; color: #4A00A0; letter-spacing: -0.02em; }
 .period { font-size: 0.68rem; color: #8B2BE2; }
