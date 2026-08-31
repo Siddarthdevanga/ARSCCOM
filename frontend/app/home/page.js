@@ -19,6 +19,7 @@ import {
   UserCog,
   Lock,
   ListChecks,
+  BookOpen,
 } from "lucide-react";
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
@@ -671,6 +672,16 @@ export default function Home() {
           </span>
         </div>
         {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}
+      </button>
+
+      {/* User Guide — always reachable, public page, opens in the same tab */}
+      <button className={styles.menuItem} onClick={() => { setShowMenu(false); router.push("/guide"); }}>
+        <div className={styles.menuItemIcon}><BookOpen size={18}/></div>
+        <div className={styles.menuItemContent}>
+          <span className={styles.menuItemTitle}>User Guide</span>
+          <span className={styles.menuItemSubtitle}>How every feature works, step by step</span>
+        </div>
+        <ChevronRight size={16} className={styles.menuItemArrow}/>
       </button>
 
       {/* My Account — always reachable, even when expired */}

@@ -16,6 +16,7 @@ const BODY_HTML = `
       <a href="#features">Features</a>
       <a href="#trial">Pricing</a>
       <a href="#faq">FAQ</a>
+      <a href="/guide">Guide</a>
     </div>
   </div>
 </nav>
