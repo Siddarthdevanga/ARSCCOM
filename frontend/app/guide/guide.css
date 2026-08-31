@@ -412,3 +412,33 @@
   .cover{ padding:44px 22px 36px; }
   .guide-footer{ padding:24px 22px 40px; }
 }
+
+/* ============ DESKTOP TYPE BUMP ============
+   The guide's own prose reads a touch large now, on request -- scoped to
+   desktop widths and to the guide's own text only. The mockup panels
+   (.frame/.mk-*) are deliberately left untouched since they simulate real
+   product screenshots at their real proportions. */
+@media (min-width:901px){
+  .cover h1{ font-size:clamp(2.1rem,4vw,3.1rem); }
+  .cover p{ font-size:17px; }
+  .cover-meta b{ font-size:16px; }
+  .cover-meta span{ font-size:13px; }
+  .cover-brand span{ font-size:16px; }
+
+  .mod h2{ font-size:clamp(1.7rem,2.9vw,2.25rem); }
+  .mod-sub{ font-size:16.5px; }
+  .mod-eyebrow{ font-size:12.5px; }
+
+  .steps li{ font-size:15px; }
+  .steps li::before{ width:28px; height:28px; font-size:13px; }
+  .note{ font-size:14px; }
+
+  .rtable{ font-size:14.5px; }
+  .rtable th{ font-size:11.5px; }
+
+  .g-item p{ font-size:13.5px; }
+  .contact-item span{ font-size:15px; }
+
+  .sb-link{ font-size:14.5px; }
+  .sb-label{ font-size:11px; }
+}

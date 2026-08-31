@@ -72,7 +72,7 @@ const BODY_HTML = `
       <p class="mod-sub">There are genuinely <b>two different</b> ways to sign up, not one form with two doors — the landing page's "Start Trial" button pays first and asks for your company details after; going straight to <span class="field">/register</span> instead asks for everything up front and pays last. Pick whichever matches how you arrived.</p>
       <div class="mod-routes"><span class="route">/</span><span class="route">/register</span><span class="route">/complete-registration</span><span class="route">/subscription</span></div>
 
-      <h3 style="font-size:15px; font-weight:900; margin-top:30px; margin-bottom:6px;">Path A — via the landing page (pay first, details after)</h3>
+      <h3 style="font-size:17px; font-weight:900; margin-top:30px; margin-bottom:6px;">Path A — via the landing page (pay first, details after)</h3>
       <div class="panel">
         <div class="panel-col">
         <ol class="steps">
@@ -126,7 +126,7 @@ const BODY_HTML = `
         </div>
       </div>
 
-      <h3 style="font-size:15px; font-weight:900; margin-top:36px; margin-bottom:6px;">Path B — via /register directly (details first, pay last)</h3>
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">Path B — via /register directly (details first, pay last)</h3>
       <div class="panel">
         <div class="panel-col">
         <ol class="steps">
@@ -306,7 +306,7 @@ const BODY_HTML = `
       <p class="mod-sub">This module has two halves: what <b>your team</b> sees on the dashboard, and what the <b>visitor</b> fills in on their own phone after scanning your QR code.</p>
       <div class="mod-routes"><span class="route">/visitor/dashboard</span><span class="route">/visitor/[company-slug]</span><span class="route">/v/pass</span></div>
 
-      <h3 style="font-size:15px; font-weight:900; margin-top:34px; margin-bottom:6px;">Your side — the front-desk dashboard</h3>
+      <h3 style="font-size:17px; font-weight:900; margin-top:34px; margin-bottom:6px;">Your side — the front-desk dashboard</h3>
       <div class="panel">
         <ol class="steps">
           <li>Open <b>Visitor Management</b> from the home dashboard. You'll see your unique <b>QR code</b> and registration link at the top — print the QR, or display it on a tablet at reception.</li>
@@ -339,7 +339,7 @@ const BODY_HTML = `
         </div>
       </div>
 
-      <h3 style="font-size:15px; font-weight:900; margin-top:36px; margin-bottom:6px;">Their side — the visitor's own phone</h3>
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">Their side — the visitor's own phone</h3>
       <div class="panel">
         <div class="panel-col">
         <ol class="steps">
