@@ -74,6 +74,7 @@ const BODY_HTML = `
 
       <h3 style="font-size:15px; font-weight:900; margin-top:30px; margin-bottom:6px;">Path A — via the landing page (pay first, details after)</h3>
       <div class="panel">
+        <div class="panel-col">
         <ol class="steps">
           <li>On the landing page at <span class="field">/</span>, click any <b>"Start 15-Day Trial for ₹49"</b> button. This opens an <b>in-page popup</b> — you never leave the landing page.</li>
           <li>The popup asks for just two things: <b>Email</b> and <b>Phone Number</b>.</li>
@@ -85,6 +86,8 @@ const BODY_HTML = `
           <li>Set your real <b>Company Name</b>, upload a <b>Logo</b>, optionally add a <b>WhatsApp URL</b>, and choose a proper <b>Password</b> to replace the temporary one.</li>
           <li>Submit — you're taken straight to <span class="field">/home</span>. No plan-selection step; you already paid.</li>
         </ol>
+        <div class="note warn">This is deliberately lightweight — only email and phone, nothing else — because the goal is to remove friction between "interested" and "paid." Everything else about the company is filled in afterward, once they're already a customer.</div>
+        </div>
         <div>
           <div class="frame">
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/</span></div>
@@ -123,10 +126,9 @@ const BODY_HTML = `
         </div>
       </div>
 
-      <div class="note warn">This is deliberately lightweight — only email and phone, nothing else — because the goal is to remove friction between "interested" and "paid." Everything else about the company is filled in afterward, once they're already a customer.</div>
-
       <h3 style="font-size:15px; font-weight:900; margin-top:36px; margin-bottom:6px;">Path B — via /register directly (details first, pay last)</h3>
       <div class="panel">
+        <div class="panel-col">
         <ol class="steps">
           <li>Navigate <b>directly</b> to <span class="field">/register</span> — e.g. from a link shared in a sales conversation, not through the landing page's popup.</li>
           <li>Fill in <b>Company Information</b>: Company Name, Admin Email, Admin Phone (fixed <span class="field">+91</span> prefix), and optionally a WhatsApp URL.</li>
@@ -136,6 +138,8 @@ const BODY_HTML = `
           <li>You land on <span class="field">/subscription</span> — a one-time plan-selection screen, since nothing has been paid yet. Toggle <b>Monthly / Annual</b>, then pick a card and pay.</li>
           <li>On successful payment you're redirected to <span class="field">/home</span>.</li>
         </ol>
+        <div class="note tip">Both paths end up as a fully paid, fully profiled company — they just ask for the same information in a different order. Path A optimises for the fastest possible "yes"; Path B suits someone who already knows they're committing and would rather set everything up in one sitting.</div>
+        </div>
         <div>
           <div class="frame">
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/register</span></div>
@@ -188,8 +192,6 @@ const BODY_HTML = `
           </div>
         </div>
       </div>
-
-      <div class="note tip">Both paths end up as a fully paid, fully profiled company — they just ask for the same information in a different order. Path A optimises for the fastest possible "yes"; Path B suits someone who already knows they're committing and would rather set everything up in one sitting.</div>
     </section>
 
     <!-- ============ 02 LOGIN ============ -->
@@ -339,6 +341,7 @@ const BODY_HTML = `
 
       <h3 style="font-size:15px; font-weight:900; margin-top:36px; margin-bottom:6px;">Their side — the visitor's own phone</h3>
       <div class="panel">
+        <div class="panel-col">
         <ol class="steps">
           <li>The visitor <b>scans your QR code</b> or opens the registration link — no app, no login, no account needed.</li>
           <li><b>Step 1:</b> Name, Phone, and Email (if enabled in Form Builder).</li>
@@ -348,6 +351,8 @@ const BODY_HTML = `
           <li>The visitor receives their own <b>digital pass</b> — name, photo, and live status — that updates in real time as their visit progresses.</li>
           <li><b>Returning visitors:</b> if the same phone number has visited before, the OTP step is skipped entirely — they go straight to a pre-filled review screen.</li>
         </ol>
+        <div class="note info">Once a host accepts (or the visitor checks in), a <b>feedback message</b> goes out on WhatsApp roughly an hour later, asking for a quick 👍 Excellent / 😊 Good / 👎 Could Be Better rating — replying with a star also triggers their checkout.</div>
+        </div>
         <div>
           <div class="frame">
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/visitor/zodopt-tech</span></div>
@@ -391,8 +396,6 @@ const BODY_HTML = `
           </div>
         </div>
       </div>
-
-      <div class="note info">Once a host accepts (or the visitor checks in), a <b>feedback message</b> goes out on WhatsApp roughly an hour later, asking for a quick 👍 Excellent / 😊 Good / 👎 Could Be Better rating — replying with a star also triggers their checkout.</div>
     </section>
 
     <!-- ============ 05 EMPLOYEE DIRECTORY ============ -->
