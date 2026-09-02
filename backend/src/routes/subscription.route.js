@@ -80,7 +80,11 @@ router.get("/details", authenticate, async (req, res) => {
 
       CUSTOMER_ID,
 
-      TRIAL_ENDS_ON:  company.trial_ends_at           || null,
+      // Only relevant while genuinely still on trial — once converted to
+      // Business/Enterprise (whether by the 15-day auto-convert or a manual
+      // early upgrade), trial_ends_at is stale forever and shouldn't keep
+      // showing up alongside the real EXPIRES_ON date.
+      TRIAL_ENDS_ON:  company.plan === "trial" ? (company.trial_ends_at || null) : null,
       EXPIRES_ON:     company.subscription_ends_at     || null,
       LAST_PAID_ON:   company.last_payment_created_at  || null,
 
