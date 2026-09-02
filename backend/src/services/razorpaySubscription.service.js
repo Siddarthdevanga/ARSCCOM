@@ -257,23 +257,48 @@ const upgradeViaCancelAndRecreate = async ({ companyId, plan, cleanInterval, pla
 ====================================================== */
 export const cancelSubscription = async (companyId) => {
   const [[company]] = await db.query(
-    `SELECT razorpay_subscription_id FROM companies WHERE id = ? LIMIT 1`,
+    `SELECT razorpay_subscription_id, plan FROM companies WHERE id = ? LIMIT 1`,
     [companyId]
   );
   if (!company?.razorpay_subscription_id) {
     throw new Error("No active Razorpay subscription for this company");
   }
 
+  // A trial's mandate is often still only "authenticated" (real billing
+  // hasn't started yet — that only happens at day 15 via start_at).
+  // Razorpay rejects cancel_at_cycle_end:1 on a subscription with no
+  // billing cycle yet (confirmed against their docs) — it needs an
+  // immediate cancel instead. Only a genuinely "active" subscription
+  // (already billing) supports the cycle-end deferral.
+  let cancelAtCycleEnd = 1;
+  try {
+    const { data } = await axios.get(
+      `${RAZORPAY_API}/subscriptions/${company.razorpay_subscription_id}`,
+      { auth: razorpayAuth() }
+    );
+    if (data.status !== "active") cancelAtCycleEnd = 0;
+  } catch (err) {
+    console.error(`[RAZORPAY-SUB] status check before cancel failed for ${company.razorpay_subscription_id}:`, err.response?.data?.error?.description || err.message);
+  }
+
   await axios.post(
     `${RAZORPAY_API}/subscriptions/${company.razorpay_subscription_id}/cancel`,
-    { cancel_at_cycle_end: 1 },
+    { cancel_at_cycle_end: cancelAtCycleEnd },
     { auth: razorpayAuth() }
   );
 
-  // Auto-debit is genuinely off from this point, even though plan access
-  // continues until subscription_ends_at — so "Renew" should reappear for
-  // the customer right away rather than waiting for the date to lapse.
-  await db.query(`UPDATE companies SET razorpay_auto_debit_active = 0 WHERE id = ?`, [companyId]);
+  if (company.plan === "trial") {
+    // Mandate is dead immediately — the trial itself was already paid for
+    // (the ₹49) and its access continues to trial_ends_at regardless;
+    // there's simply no future conversion charge coming anymore. Clearing
+    // the id means HAS_TRIAL_MANDATE correctly reads false from here on.
+    await db.query(`UPDATE companies SET razorpay_subscription_id = NULL WHERE id = ?`, [companyId]);
+  } else {
+    // Auto-debit is genuinely off from this point, even though plan access
+    // continues until subscription_ends_at — so "Renew" should reappear for
+    // the customer right away rather than waiting for the date to lapse.
+    await db.query(`UPDATE companies SET razorpay_auto_debit_active = 0 WHERE id = ?`, [companyId]);
+  }
 
   return { cancelled: true };
 };

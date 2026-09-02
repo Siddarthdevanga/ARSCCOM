@@ -1,7 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
-import { createTrialOrderForExistingCompany } from "../services/razorpay.service.js";
+import { createTrialSubscriptionForExistingCompany } from "../services/razorpayTrialSubscription.service.js";
 import { createSubscription } from "../services/razorpaySubscription.service.js";
 
 const router = express.Router();
@@ -11,13 +11,19 @@ const router = express.Router();
  * payment-link flow, kept at the same route/response shape the frontend
  * already calls).
  *
- * TRIAL                 → one-time ₹49 Razorpay Order (never recurring)
+ * TRIAL                 → real Razorpay Subscription against the trial-
+ *                          origin Business Monthly plan (mandate + ₹49
+ *                          now, auto-converts to real Business billing
+ *                          after 15 days via start_at — see
+ *                          razorpayTrialSubscription.service.js)
  * BUSINESS / ENTERPRISE → real Razorpay Subscription (auto-debit)
  *
- * Trial activates via the payment.captured webhook (razorpay.service.js).
- * Business/Enterprise activates via the subscription.activated/charged
- * webhook (razorpaySubscription.service.js) once the customer authorizes
- * the mandate in the checkout modal.
+ * Trial activates via the subscription.authenticated webhook
+ * (razorpayTrialSubscription.service.js); its later conversion to real
+ * Business billing, and Business/Enterprise's own activation, both go
+ * via the subscription.activated/charged webhook
+ * (razorpaySubscription.service.js) once the customer authorizes the
+ * mandate in the checkout modal.
  */
 
 router.post("/subscribe", authenticate, async (req, res) => {
@@ -44,8 +50,8 @@ router.post("/subscribe", authenticate, async (req, res) => {
     }
 
     if (plan === "free") {
-      const order = await createTrialOrderForExistingCompany(companyId);
-      return res.json({ success: true, mode: "order", ...order });
+      const subscription = await createTrialSubscriptionForExistingCompany(companyId);
+      return res.json({ success: true, mode: "subscription", ...subscription });
     }
 
     const subscription = await createSubscription({ companyId, plan, interval });

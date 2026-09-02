@@ -31,6 +31,7 @@ router.get("/details", authenticate, async (req, res) => {
         grace_period_day,
         razorpay_auto_debit_active,
         razorpay_customer_id,
+        razorpay_subscription_id,
         billing_interval,
         pending_upgrade_plan,
         pending_billing_interval
@@ -91,6 +92,12 @@ router.get("/details", authenticate, async (req, res) => {
       // just "an id happens to be stored") — drives whether the "Renew"
       // action is shown at all on the home dashboard.
       HAS_AUTO_DEBIT: !!company.razorpay_auto_debit_active,
+
+      // A trial's mandate is authorized immediately but stays unconfirmed
+      // (auto_debit_active only flips to 1 at the real day-15 conversion),
+      // so HAS_AUTO_DEBIT alone can't signal "there's something to cancel"
+      // during the trial window — this can.
+      HAS_TRIAL_MANDATE: company.plan === "trial" && !!company.razorpay_subscription_id,
 
       // Actual current billing cycle — needed to know whether a Monthly →
       // Annual switch is still a real available option for this company.

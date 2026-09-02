@@ -1,6 +1,7 @@
 import express from "express";
-import { verifyRazorpaySignature, handlePaymentCaptured } from "../services/razorpay.service.js";
+import { verifyRazorpaySignature } from "../services/razorpay.service.js";
 import { handleSubscriptionWebhookEvent } from "../services/razorpaySubscription.service.js";
+import { handleSubscriptionAuthenticated } from "../services/razorpayTrialSubscription.service.js";
 
 const router = express.Router();
 
@@ -27,9 +28,9 @@ router.post("/", async (req, res) => {
     const event = req.body?.event;
     console.log("🔥 RAZORPAY WEBHOOK HIT —", event);
 
-    if (event === "payment.captured") {
-      const result = await handlePaymentCaptured(req.body?.payload || {});
-      console.log("✅ RAZORPAY WEBHOOK PROCESSED:", result);
+    if (event === "subscription.authenticated") {
+      const result = await handleSubscriptionAuthenticated(req.body?.payload || {});
+      console.log("✅ RAZORPAY TRIAL WEBHOOK PROCESSED:", result);
       return res.json({ received: true, ...result });
     }
 

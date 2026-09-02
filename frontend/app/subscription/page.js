@@ -130,7 +130,7 @@ export default function SubscriptionPage() {
             ? { order_id: data.orderId, amount: data.amount, currency: data.currency }
             : { subscription_id: data.subscriptionId }),
           name: "Hai Visitor",
-          description: plan === "free" ? "15-Day Trial" : `${plan[0].toUpperCase()}${plan.slice(1)} Plan (${billingInterval})`,
+          description: plan === "free" ? "15-Day Trial (auto-continues to Business ₹500/mo unless cancelled)" : `${plan[0].toUpperCase()}${plan.slice(1)} Plan (${billingInterval})`,
           prefill: { email: company?.email || "", contact: company?.phone || "" },
           handler: () => {
             setActivating(true);

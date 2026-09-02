@@ -166,6 +166,7 @@ export default function PlansPage() {
   const currentStatus  = subData?.STATUS?.toLowerCase() || "";
   const currentInterval = subData?.BILLING_INTERVAL || "monthly";
   const hasAutoDebit   = subData?.HAS_AUTO_DEBIT === true;
+  const hasTrialMandate = subData?.HAS_TRIAL_MANDATE === true;
   const inGracePeriod  = subData?.IN_GRACE_PERIOD === true;
   const needsRenewal   = ["expired", "cancelled"].includes(currentStatus);
   const planHasLapsed  = ["grace_period", "expired", "cancelled"].includes(currentStatus);
@@ -437,7 +438,7 @@ export default function PlansPage() {
                     </section>
                   )}
 
-                  {/* ===== CANCEL SUBSCRIPTION ===== */}
+                  {/* ===== CANCEL SUBSCRIPTION (Business/Enterprise) ===== */}
                   {["business", "enterprise"].includes(currentPlan) && currentStatus === "active" && (
                     <section className={styles.planSection}>
                       <div className={styles.dangerCard}>
@@ -449,6 +450,24 @@ export default function PlansPage() {
                         </p>
                         <button className={styles.dangerBtn} onClick={() => setShowCancelConfirm(true)}>
                           Cancel Subscription
+                        </button>
+                      </div>
+                    </section>
+                  )}
+
+                  {/* ===== CANCEL TRIAL AUTO-CONVERSION — mandate authorized at
+                      signup, real Business billing hasn't started yet ===== */}
+                  {currentPlan === "trial" && currentStatus === "active" && hasTrialMandate && (
+                    <section className={styles.planSection}>
+                      <div className={styles.dangerCard}>
+                        <div className={styles.sectionHeader}>
+                          <h5>Cancel Auto-Continue</h5>
+                        </div>
+                        <p className={styles.sectionDescription}>
+                          Your trial is set to automatically continue as Business (₹500/mo + GST) on {formatDate(subData.TRIAL_ENDS_ON)}. Cancelling stops that — you'll keep full trial access until then, with no further charges after.
+                        </p>
+                        <button className={styles.dangerBtn} onClick={() => setShowCancelConfirm(true)}>
+                          Cancel Auto-Continue
                         </button>
                       </div>
                     </section>

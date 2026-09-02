@@ -45,9 +45,7 @@ export const calcPrice = (plan, interval = "monthly") => {
 /**
  * Razorpay Plan IDs — created manually in the Razorpay dashboard (Business/
  * Enterprise × Monthly/Annual, GST-inclusive amounts baked into each Plan
- * directly, matching PLAN_PRICING above with GST applied). Trial has no
- * Razorpay Plan — it stays a one-time Orders-API charge, never a recurring
- * subscription.
+ * directly, matching PLAN_PRICING above with GST applied).
  */
 export const getRazorpayPlanId = (plan, interval) => {
   const key = `RAZORPAY_PLAN_${plan.toUpperCase()}_${interval.toUpperCase()}`;
@@ -55,10 +53,27 @@ export const getRazorpayPlanId = (plan, interval) => {
 };
 
 /**
+ * Trial's own Razorpay Plan — same ₹500/mo price as RAZORPAY_PLAN_BUSINESS_MONTHLY
+ * but a SEPARATE Plan object, so Razorpay's own dashboard/reporting can tell
+ * "converted from a trial" apart from "signed up for Business directly".
+ * Every trial subscription is created against this plan with a 15-day
+ * delayed start_at (see razorpaySubscription.service.js) — the mandate is
+ * authorized immediately, the ₹49 is collected as a one-time addon, and the
+ * first real ₹500 charge only fires once the trial period ends, at which
+ * point it behaves exactly like any other Business Monthly subscription.
+ */
+export const getTrialRazorpayPlanId = () => process.env.RAZORPAY_PLAN_TRIAL_BUSINESS_MONTHLY || null;
+
+/**
  * Reverse lookup — given a Razorpay Plan ID (from a webhook payload), returns
- * { plan, interval } or null if it doesn't match any configured plan.
+ * { plan, interval } or null if it doesn't match any configured plan. The
+ * trial-origin plan resolves to the same { plan: "business", interval:
+ * "monthly" } as a direct Business Monthly signup — by the time this matters
+ * (the real first charge, not the trial's own addon), it IS a Business
+ * Monthly subscription in every way that matters.
  */
 export const razorpayPlanIdToPlan = (planId) => {
+  if (planId && planId === getTrialRazorpayPlanId()) return { plan: "business", interval: "monthly" };
   for (const plan of ["business", "enterprise"]) {
     for (const interval of ["monthly", "annual"]) {
       if (getRazorpayPlanId(plan, interval) === planId) return { plan, interval };
