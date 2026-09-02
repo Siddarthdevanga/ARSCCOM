@@ -444,6 +444,26 @@ export const handleSubscriptionWebhookEvent = async (event, payload) => {
     ? endsAt.toISOString().slice(0, 19).replace("T", " ")
     : null;
 
+  // Confirmed via a real webhook payload: entity.customer_id is still null
+  // at subscription.authenticated (it's captured there too, in
+  // razorpayTrialSubscription.service.js, but always stores NULL) — Razorpay
+  // doesn't attach the actual cust_... id until the subscription reaches
+  // active. This is the first point it's reliably present.
+  const customerId = entity.customer_id || null;
+
+  // A trial customer almost always completes /complete-registration (real
+  // company name) long before this conversion fires, but at that earlier
+  // point razorpay_customer_id didn't exist yet — the name-sync attempted
+  // there was a silent no-op. Push it now, the first moment a customer id
+  // actually exists to push it to. Best-effort, never blocks activation.
+  if (customerId && company.name) {
+    axios.put(
+      `${RAZORPAY_API}/customers/${customerId}`,
+      { name: company.name },
+      { auth: razorpayAuth() }
+    ).catch((err) => console.error(`[RAZORPAY-SUB] failed to sync customer name for ${customerId}:`, err.response?.data?.error?.description || err.message));
+  }
+
   await db.query(
     `UPDATE companies SET
        subscription_status = 'active',
@@ -451,6 +471,7 @@ export const handleSubscriptionWebhookEvent = async (event, payload) => {
        billing_interval = ?,
        subscription_ends_at = COALESCE(?, subscription_ends_at),
        razorpay_subscription_id = ?,
+       razorpay_customer_id = COALESCE(?, razorpay_customer_id),
        razorpay_auto_debit_active = 1,
        razorpay_charge_reminder_sent = 0,
        pending_upgrade_plan = NULL,
@@ -461,7 +482,7 @@ export const handleSubscriptionWebhookEvent = async (event, payload) => {
        wa_reminders_sent = '',
        updated_at = NOW()
      WHERE id = ?`,
-    [plan, interval, mysqlEnds, subscriptionId, company.id]
+    [plan, interval, mysqlEnds, subscriptionId, customerId, company.id]
   );
 
   await syncRoomActivationByPlan(company.id, plan);
