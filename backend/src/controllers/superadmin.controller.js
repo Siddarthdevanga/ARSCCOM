@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import * as service from "../services/superadmin.service.js";
 import { db } from "../config/db.js";
-import { sendImageWhatsApp, sendVideoWhatsApp, registerOptIn } from "../services/gupshup.service.js";
+import { sendBroadcastTemplate, registerOptIn } from "../services/gupshup.service.js";
 import * as razorpayService from "../services/razorpay.service.js";
 
 const JWT_EXPIRY = "12h";
@@ -509,52 +509,101 @@ export const bulkOptInLeads = async (_req, res) => {
   }
 };
 
+const VALID_BROADCAST_PLANS = ["trial", "business", "enterprise"];
+
+const normalizeBroadcastPlans = (plans) => {
+  const list = Array.isArray(plans) ? plans : [];
+  const clean = list.filter((p) => VALID_BROADCAST_PLANS.includes(p));
+  return clean.length ? clean : VALID_BROADCAST_PLANS; // default = all
+};
+
 /* ======================================================
-   SEND VIDEO WHATSAPP BROADCAST
-   POST /api/superadmin/send-video-message
-   body: { phones: string, videoUrl: string, message: string }
+   BROADCAST RECIPIENT COUNT (preview before sending)
+   GET /api/superadmin/broadcast-recipient-count?plans=trial,business
 ====================================================== */
-export const sendVideoMessage = async (req, res) => {
+export const broadcastRecipientCount = async (req, res) => {
   try {
-    const { phones, videoUrl, message, mediaType = "image" } = req.body;
-
-    if (!phones || !videoUrl || !message) {
-      return res.status(400).json({ success: false, message: "phones, videoUrl and message are required" });
-    }
-
-    const phoneList = phones
-      .split(/[\n,]+/)
-      .map((p) => p.trim().replace(/\D/g, ""))
-      .filter((p) => p.length >= 10);
-
-    if (phoneList.length === 0) {
-      return res.status(400).json({ success: false, message: "No valid phone numbers provided" });
-    }
-
-    // Only send to leads who have opted-in (messaged the bot at least once)
-    const normalised = phoneList.map(p => p.length === 10 ? `91${p}` : p);
-    const placeholders = normalised.map(() => "?").join(",");
-    const [optedIn] = await db.query(
-      `SELECT phone FROM whatsapp_leads WHERE phone IN (${placeholders}) AND opted_in = 1`,
-      normalised
+    const plans = normalizeBroadcastPlans((req.query.plans || "").split(",").map((p) => p.trim()));
+    const placeholders = plans.map(() => "?").join(",");
+    const [[{ count }]] = await db.query(
+      `SELECT COUNT(DISTINCT u.id) AS count
+       FROM companies c
+       JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
+       WHERE c.plan IN (${placeholders}) AND u.phone IS NOT NULL AND u.phone != ''`,
+      plans
     );
-    const optedInSet = new Set(optedIn.map(r => r.phone));
+    return res.json({ success: true, count });
+  } catch (err) {
+    console.error("BROADCAST COUNT ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
 
-    const results = { sent: [], failed: [], skipped: [] };
-    const sender = mediaType === "video" ? sendVideoWhatsApp : sendImageWhatsApp;
+/* ======================================================
+   SEND PLAN-TARGETED WHATSAPP BROADCAST
+   POST /api/superadmin/send-broadcast
+   body: { plans: string[], message: string, imageUrl?: string }
+   --------------------------------------------------------
+   Template-based (not a raw session message) — reaches every recipient
+   regardless of whether they've messaged the bot recently. Requires
+   GUPSHUP_BROADCAST_TEXT_TEMPLATE (body-only) and, when imageUrl is
+   given, GUPSHUP_BROADCAST_IMAGE_TEMPLATE (IMAGE header + same body
+   shape) — both Marketing-category templates created manually in the
+   Gupshup dashboard. registerOptIn is called best-effort per recipient
+   first, since Marketing templates require Meta-recognized consent —
+   real customers were never opted in via any earlier flow.
+====================================================== */
+export const sendBroadcast = async (req, res) => {
+  try {
+    const { message, imageUrl } = req.body;
+    const plans = normalizeBroadcastPlans(req.body.plans);
 
-    for (const rawPhone of phoneList) {
-      const destination = rawPhone.length === 10 ? `91${rawPhone}` : rawPhone;
-      if (!optedInSet.has(destination)) {
-        results.skipped.push(destination);
-        continue;
-      }
+    const cleanMessage = (message || "").trim();
+    if (!cleanMessage) {
+      return res.status(400).json({ success: false, message: "Message is required" });
+    }
+
+    const templateId = imageUrl
+      ? process.env.GUPSHUP_BROADCAST_IMAGE_TEMPLATE
+      : process.env.GUPSHUP_BROADCAST_TEXT_TEMPLATE;
+    if (!templateId) {
+      return res.status(400).json({
+        success: false,
+        message: `${imageUrl ? "GUPSHUP_BROADCAST_IMAGE_TEMPLATE" : "GUPSHUP_BROADCAST_TEXT_TEMPLATE"} is not configured`,
+      });
+    }
+
+    const placeholders = plans.map(() => "?").join(",");
+    const [recipients] = await db.query(
+      `SELECT DISTINCT c.name, u.phone
+       FROM companies c
+       JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
+       WHERE c.plan IN (${placeholders}) AND u.phone IS NOT NULL AND u.phone != ''`,
+      plans
+    );
+
+    if (recipients.length === 0) {
+      return res.status(400).json({ success: false, message: "No recipients match the selected plan(s)" });
+    }
+
+    const results = { sent: [], failed: [] };
+
+    for (const r of recipients) {
+      const digits = String(r.phone).replace(/\D/g, "");
+      const destination = digits.length === 10 ? `91${digits}` : digits;
+
       try {
-        await sender(destination, videoUrl, message);
-        results.sent.push(destination);
+        await registerOptIn(destination);
       } catch (e) {
-        console.error(`[BROADCAST] Failed for ${destination}:`, e.message);
-        results.failed.push({ phone: destination, error: e.message });
+        console.error(`[BROADCAST] opt-in registration failed for ${destination} (non-fatal):`, e.message);
+      }
+
+      try {
+        await sendBroadcastTemplate(destination, templateId, [cleanMessage], imageUrl || null);
+        results.sent.push({ company: r.name, phone: destination });
+      } catch (e) {
+        console.error(`[BROADCAST] send failed for ${destination}:`, e.message);
+        results.failed.push({ company: r.name, phone: destination, error: e.message });
       }
     }
 
@@ -564,7 +613,7 @@ export const sendVideoMessage = async (req, res) => {
       results,
     });
   } catch (err) {
-    console.error("SEND VIDEO MESSAGE ERROR:", err.message);
+    console.error("SEND BROADCAST ERROR:", err.message);
     return res.status(500).json({ success: false, message: err.message });
   }
 };

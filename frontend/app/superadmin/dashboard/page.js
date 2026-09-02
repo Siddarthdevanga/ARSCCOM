@@ -718,7 +718,7 @@ export default function SuperAdminDashboard() {
           {isFullAdmin && (
             <>
               <a href="/superadmin/whatsapp-leads" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Leads</a>
-              <a href="/superadmin/video-broadcast" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>Image Broadcast</a>
+              <a href="/superadmin/broadcast" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Broadcast</a>
               <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
                 + Add Sub-Admin
               </button>

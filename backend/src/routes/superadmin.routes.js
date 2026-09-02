@@ -40,8 +40,9 @@ router.post("/razorpay-signups/:id/send-onboarding-message",  ctrl.sendOnboardin
 router.get ("/whatsapp-leads",                              ctrl.whatsappLeads);
 router.post("/demo-appointments/:id/mark-attended",         ctrl.markDemoAttended);
 
-// ── Video Broadcast ────────────────────────────────────
-router.post("/send-video-message",  ctrl.sendVideoMessage);
+// ── WhatsApp Broadcast (plan-targeted, template-based) ──
+router.get ("/broadcast-recipient-count", ctrl.broadcastRecipientCount);
+router.post("/send-broadcast",            ctrl.sendBroadcast);
 router.post("/bulk-optin-leads",    ctrl.bulkOptInLeads);
 
 // ── Company ────────────────────────────────────────────

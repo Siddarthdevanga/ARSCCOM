@@ -119,69 +119,38 @@ export const sendIntroMessage = async (destination) => {
 };
 
 /* --------------------------------------------------
-   Send image template — marketing bot app
-   Template must have IMAGE header + {{1}} body.
-   imageUrl: publicly accessible image URL (JPEG/PNG).
+   Send an approved template message, optionally with an IMAGE header —
+   used by the Superadmin plan-targeted broadcast. A template message
+   (unlike sendIntroMessage's session message) doesn't need an open 24h
+   conversation window and is the only reliable way to reach a cold
+   contact — confirmed against Gupshup's docs: the `message` field
+   ({type:"image", image:{link}}) is required only when the template
+   itself has a media header, and is simply omitted for a text-only
+   template.
+   imageUrl: publicly accessible image URL, or falsy for a text-only send.
 -------------------------------------------------- */
-export const sendImageWhatsApp = async (destination, imageUrl, bodyText) => {
+export const sendBroadcastTemplate = async (destination, templateId, params, imageUrl) => {
   const { apiKey, appName, srcNum } = getConfig();
-
-  const message = JSON.stringify({
-    type:        "image",
-    originalUrl: imageUrl,
-    previewUrl:  imageUrl,
-    caption:     bodyText,
-  });
 
   const body = new URLSearchParams({
     channel:    "whatsapp",
     source:     srcNum,
     destination,
     "src.name": appName,
-    message,
+    template:   JSON.stringify({ id: templateId, params }),
   });
-
-  console.log(`[WA-IMG] dest=${destination} imageUrl=${imageUrl}`);
-
-  try {
-    const { data } = await axios.post(MSG_URL, body.toString(), {
-      headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
-    });
-    console.log(`[WA] image msg → ${destination}:`, JSON.stringify(data));
-    return data;
-  } catch (err) {
-    console.error(`[WA] image msg failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
-    throw err;
+  if (imageUrl) {
+    body.append("message", JSON.stringify({ type: "image", image: { link: imageUrl } }));
   }
-};
-
-export const sendVideoWhatsApp = async (destination, videoUrl, bodyText) => {
-  const { apiKey, appName, srcNum } = getConfig();
-
-  const message = JSON.stringify({
-    type:    "video",
-    url:     videoUrl,
-    caption: bodyText,
-  });
-
-  const body = new URLSearchParams({
-    channel:    "whatsapp",
-    source:     srcNum,
-    destination,
-    "src.name": appName,
-    message,
-  });
-
-  console.log(`[WA-VID] dest=${destination} videoUrl=${videoUrl}`);
 
   try {
-    const { data } = await axios.post(MSG_URL, body.toString(), {
+    const { data } = await axios.post(TEMPLATE_URL, body.toString(), {
       headers: { apikey: apiKey, "Content-Type": "application/x-www-form-urlencoded" },
     });
-    console.log(`[WA] video msg → ${destination}:`, JSON.stringify(data));
+    console.log(`[WA-BROADCAST] template "${templateId}" → ${destination}:`, JSON.stringify(data));
     return data;
   } catch (err) {
-    console.error(`[WA] video msg failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
+    console.error(`[WA-BROADCAST] template "${templateId}" failed for ${destination}:`, err.response?.status, JSON.stringify(err.response?.data));
     throw err;
   }
 };
