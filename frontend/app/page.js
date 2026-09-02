@@ -434,13 +434,18 @@ const BODY_HTML = `
 
 const META_PIXEL_ID = '1981723482403279';
 
+// Must never fire real ad-conversion events from staging test traffic —
+// same staging check as layout.js's GA/robots gating (NEXT_PUBLIC_SITE_URL
+// already differs per deployment).
+const IS_STAGING = (process.env.NEXT_PUBLIC_SITE_URL || '').includes('staging');
+
 // Meta Pixel — landing page only (not loaded on any other route). Standard
 // client-side pixel, firing on the browser's own confirmation of events —
 // same trust model as the snippet Meta's Events Manager hands out. Loaded
 // once per mount; guarded against being injected twice (e.g. React 18
 // strict-mode double-invoking effects in dev).
 const loadMetaPixel = () => {
-  if (window.fbq) return;
+  if (IS_STAGING || window.fbq) return;
   const n = window.fbq = function () {
     n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
   };

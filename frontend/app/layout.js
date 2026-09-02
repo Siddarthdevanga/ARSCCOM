@@ -19,6 +19,12 @@ export const SITE = {
   reviewCount: '500',
 };
 
+// Staging must never fire real GA/Google Ads/Meta Pixel events from test
+// traffic, and must never get indexed as a duplicate of the real site —
+// both driven off NEXT_PUBLIC_SITE_URL, which already differs per
+// deployment (set to https://staging.haivisitor.zodopt.com on staging).
+export const IS_STAGING = SITE.domain.includes('staging');
+
 /* ── Dynamic Metadata ────────────────────────────────────── */
 export const metadata = {
   metadataBase: new URL(SITE.domain),
@@ -68,17 +74,19 @@ export const metadata = {
   creator:   SITE.brand,
   publisher: SITE.brand,
 
-  robots: {
-    index:  true,
-    follow: true,
-    googleBot: {
-      index:               true,
-      follow:              true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet':       -1,
-    },
-  },
+  robots: IS_STAGING
+    ? { index: false, follow: false, googleBot: { index: false, follow: false } }
+    : {
+        index:  true,
+        follow: true,
+        googleBot: {
+          index:               true,
+          follow:              true,
+          'max-video-preview': -1,
+          'max-image-preview': 'large',
+          'max-snippet':       -1,
+        },
+      },
 
   alternates: {
     canonical: `${SITE.domain}/`,
@@ -108,9 +116,11 @@ export const metadata = {
     images:      [SITE.ogImage],
   },
 
-  verification: {
-    google: 'AW-17980176621', // ← replace with actual token
-  },
+  ...(IS_STAGING ? {} : {
+    verification: {
+      google: 'AW-17980176621', // ← replace with actual token
+    },
+  }),
 
   category: 'technology',
 };
@@ -238,30 +248,37 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        {/* Preconnect for performance */}
-        <link rel="preconnect" href="https://www.googletagmanager.com" />
-        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        {/* Analytics, ads verification, and search-rich-result structured
+            data are all real-world/production signals — none of it should
+            fire from or describe the staging deployment. */}
+        {!IS_STAGING && (
+          <>
+            {/* Preconnect for performance */}
+            <link rel="preconnect" href="https://www.googletagmanager.com" />
+            <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
 
-        {/* Google Analytics 4 */}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="ga4-init" strategy="afterInteractive">{`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA_ID}');
-        `}</Script>
+            {/* Google Analytics 4 */}
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+              strategy="afterInteractive"
+            />
+            <Script id="ga4-init" strategy="afterInteractive">{`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${GA_ID}');
+            `}</Script>
 
-        {/* Structured Data */}
-        {structuredData.map((schema, i) => (
-          <script
-            key={i}
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-          />
-        ))}
+            {/* Structured Data */}
+            {structuredData.map((schema, i) => (
+              <script
+                key={i}
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+              />
+            ))}
+          </>
+        )}
       </head>
 
       <body>
