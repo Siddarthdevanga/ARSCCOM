@@ -355,10 +355,23 @@ export const updatePlan = async (companyId, plan) => {
   if (!validPlans.includes(plan)) throw new Error("Invalid plan");
   await assertCompanyExists(companyId);
 
-  await db.query(
-    `UPDATE companies SET plan = ?, updated_at = NOW() WHERE id = ?`,
-    [plan, companyId]
-  );
+  // A company should only ever carry ONE of these two dates at a time —
+  // trial_ends_at for plan='trial', subscription_ends_at for business/
+  // enterprise. Without this, manually switching plans here leaves the
+  // now-irrelevant date sitting in the DB (e.g. trial_ends_at surviving a
+  // switch to business), which shows up stale anywhere that reads the raw
+  // column directly instead of going through a plan-gated API.
+  if (plan === "trial") {
+    await db.query(
+      `UPDATE companies SET plan = ?, subscription_ends_at = NULL, updated_at = NOW() WHERE id = ?`,
+      [plan, companyId]
+    );
+  } else {
+    await db.query(
+      `UPDATE companies SET plan = ?, trial_ends_at = NULL, updated_at = NOW() WHERE id = ?`,
+      [plan, companyId]
+    );
+  }
 
   await syncRoomActivationByPlan(companyId, plan);
 };
@@ -468,7 +481,7 @@ export const extendTrial = async (companyId, trialEndsAt) => {
 
   await db.query(
     `UPDATE companies
-     SET trial_ends_at = ?, subscription_status = 'trial', updated_at = NOW()
+     SET trial_ends_at = ?, subscription_status = 'trial', subscription_ends_at = NULL, updated_at = NOW()
      WHERE id = ?`,
     [trialEndsAt, companyId]
   );
@@ -499,10 +512,21 @@ export const updateSubscriptionDates = async (companyId, { subscription_start, s
     warnings.push(`This company's current plan is "trial" — subscription_ends_at applies to business/enterprise plans (use Extend Trial instead for trial dates).`);
   }
 
-  await db.query(
-    `UPDATE companies SET subscription_ends_at = ?, updated_at = NOW() WHERE id = ?`,
-    [subscription_ends_at, companyId]
-  );
+  // Only clear trial_ends_at when the company isn't currently trial —
+  // if it IS trial, the warning above already flags the mismatch and we
+  // leave both dates alone rather than silently overriding what the
+  // admin might still be deciding.
+  if (company.plan === "trial") {
+    await db.query(
+      `UPDATE companies SET subscription_ends_at = ?, updated_at = NOW() WHERE id = ?`,
+      [subscription_ends_at, companyId]
+    );
+  } else {
+    await db.query(
+      `UPDATE companies SET subscription_ends_at = ?, trial_ends_at = NULL, updated_at = NOW() WHERE id = ?`,
+      [subscription_ends_at, companyId]
+    );
+  }
   return { warnings };
 };
 
