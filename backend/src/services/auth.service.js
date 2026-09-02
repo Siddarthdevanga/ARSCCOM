@@ -137,13 +137,19 @@ export const registerCompany = async (data, file) => {
   validateEmail(email);
   validatePassword(password);
 
-  // Check for existing email
+  // Check for an existing account by email OR phone — a duplicate signup
+  // attempt (e.g. someone who already started a trial via the landing
+  // page's popup with this same phone but a different email) needs to be
+  // caught here too, not just an exact email match.
   const [existing] = await db.execute(
-    "SELECT id FROM users WHERE email = ? LIMIT 1",
-    [email]
+    "SELECT id FROM users WHERE email = ? OR phone = ? LIMIT 1",
+    [email, phone]
   );
   if (existing.length) {
-    throw new Error("Email already registered");
+    const err = new Error("This email or phone number is already registered.");
+    err.code = "ALREADY_REGISTERED";
+    err.statusCode = 409;
+    throw err;
   }
 
   // Generate unique slug

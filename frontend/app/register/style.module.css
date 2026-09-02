@@ -480,3 +480,83 @@
   outline: 3px solid #6200d6;
   outline-offset: 2px;
 }
+
+/* ================= ALREADY-REGISTERED MODAL ================= */
+.existsOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 0, 56, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  animation: existsFadeIn 0.15s ease;
+}
+.existsCard {
+  background: #fff;
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(26, 0, 56, 0.3);
+  animation: existsPopIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+  text-align: center;
+}
+.existsIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: #F1ECFB;
+  color: #6200d6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 26px;
+}
+.existsTitle {
+  font-family: 'Nunito', sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  color: #1a0038;
+  margin: 0 0 10px;
+}
+.existsText {
+  font-family: 'Nunito', sans-serif;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #5a4a70;
+  margin: 0 0 24px;
+}
+.existsActions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.existsLoginBtn,
+.existsCloseBtn {
+  font-family: 'Nunito', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 12px;
+  padding: 13px 20px;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+.existsLoginBtn {
+  background: #6200d6;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(98, 0, 214, 0.3);
+}
+.existsLoginBtn:hover { background: #4a00a8; transform: translateY(-1px); }
+.existsCloseBtn {
+  background: transparent;
+  color: #6200d6;
+}
+.existsCloseBtn:hover { background: rgba(98, 0, 214, 0.08); }
+
+@keyframes existsFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes existsPopIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }

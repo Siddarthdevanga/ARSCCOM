@@ -100,6 +100,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showExistsModal, setShowExistsModal] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "https://www.wheelbrand.in";
 
@@ -174,7 +175,11 @@ export default function RegisterPage() {
       const res = await fetch(`${API_BASE}/api/auth/register`, { method: "POST", body: payload, credentials: "include" });
       if (res.status === 413) { setError("Logo file is too large. Please upload an image under 1 MB."); return; }
       const data = await res.json();
-      if (!res.ok) { setError(data?.message || "Registration failed"); return; }
+      if (!res.ok) {
+        if (data?.code === "ALREADY_REGISTERED") { setShowExistsModal(true); return; }
+        setError(data?.message || "Registration failed");
+        return;
+      }
       const normalizedEmail = email.trim().toLowerCase();
       if (normalizedEmail) localStorage.setItem("regEmail", normalizedEmail);
       if (data?.company) {
@@ -453,6 +458,29 @@ export default function RegisterPage() {
           </div>
         </main>
       </div>
+
+      {/* ── Already registered ── */}
+      {showExistsModal && (
+        <div className={styles.existsOverlay} onClick={() => setShowExistsModal(false)} role="presentation">
+          <div className={styles.existsCard} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className={styles.existsIcon}>👋</div>
+            <h3 className={styles.existsTitle}>You already have an account</h3>
+            <p className={styles.existsText}>
+              This email or phone number is already registered with Hai Visitor. If you started a trial from
+              our website, check your email for the temporary password we sent you. Otherwise, log in with
+              your existing password — or reset it if you've forgotten it.
+            </p>
+            <div className={styles.existsActions}>
+              <button type="button" className={styles.existsLoginBtn} onClick={() => router.push("/login")}>
+                Go to Login
+              </button>
+              <button type="button" className={styles.existsCloseBtn} onClick={() => setShowExistsModal(false)}>
+                Try Different Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

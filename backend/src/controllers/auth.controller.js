@@ -118,6 +118,7 @@ export const register = async (req, res) => {
 
     return res.status(err?.statusCode || 400).json({
       success: false,
+      code: err?.code || undefined,
       message: err?.message || "Registration failed",
     });
   }
