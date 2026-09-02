@@ -314,6 +314,38 @@ const logSubscriptionEvent = async ({ event, subscriptionId, companyId, status, 
 };
 
 /* ======================================================
+   UPDATE RAZORPAY CUSTOMER NAME
+   --------------------------------------------------------
+   Trial signups never carry a real company name at checkout time — the
+   Razorpay Customer record is stuck showing whatever placeholder Razorpay
+   assigned. Called from /complete-registration once the customer sets
+   their real company name, so Razorpay's own dashboard reflects it too.
+   Best-effort: never blocks registration completion if it fails, and a
+   company with no razorpay_customer_id on file (e.g. Path B business/
+   enterprise, or Trial before this field existed) is a silent no-op.
+====================================================== */
+export const updateRazorpayCustomerName = async (companyId, name) => {
+  const cleanName = name?.trim();
+  if (!cleanName) return;
+
+  const [[company]] = await db.query(
+    `SELECT razorpay_customer_id FROM companies WHERE id = ? LIMIT 1`,
+    [companyId]
+  );
+  if (!company?.razorpay_customer_id) return;
+
+  try {
+    await axios.put(
+      `${RAZORPAY_API}/customers/${company.razorpay_customer_id}`,
+      { name: cleanName },
+      { auth: razorpayAuth() }
+    );
+  } catch (err) {
+    console.error(`[RAZORPAY-TRIAL] failed to update customer name for ${company.razorpay_customer_id}:`, err.response?.data?.error?.description || err.message);
+  }
+};
+
+/* ======================================================
    RESEND TEMP PASSWORD — superadmin-triggered
    --------------------------------------------------------
    Same regenerate-and-notify logic as the webhook's own duplicate-
@@ -369,6 +401,12 @@ export const handleSubscriptionAuthenticated = async (payload) => {
   // "Razorpay Payment Source" tab (which reads amount_paid/razorpay_payment_id
   // for every registration_source='razorpay' company) still shows it.
   const paymentId = payload?.payment?.entity?.id || null;
+  // Populated by Razorpay once checkout completes — stored so
+  // updateRazorpayCustomerName() can later push the real company name to
+  // Razorpay once the customer sets it at /complete-registration (we never
+  // pre-create a Customer for trial signups the way the Business/Enterprise
+  // upgrade path does, so this is the only place it's captured from).
+  const customerId = entity.customer_id || null;
 
   const log = (status, companyId) => logSubscriptionEvent({ event: "subscription.authenticated", subscriptionId, companyId, status, rawPayload: payload });
 
@@ -418,6 +456,7 @@ export const handleSubscriptionAuthenticated = async (payload) => {
            billing_interval = 'monthly',
            trial_ends_at = ?,
            razorpay_subscription_id = ?,
+           razorpay_customer_id = COALESCE(?, razorpay_customer_id),
            razorpay_auto_debit_active = 0,
            razorpay_payment_id = ?,
            amount_paid = ?,
@@ -425,7 +464,7 @@ export const handleSubscriptionAuthenticated = async (payload) => {
            pending_billing_interval = NULL,
            updated_at = NOW()
          WHERE id = ?`,
-        [mysqlTrialEnds, subscriptionId, paymentId, TRIAL_AMOUNT_PAISE, existingCompanyId]
+        [mysqlTrialEnds, subscriptionId, customerId, paymentId, TRIAL_AMOUNT_PAISE, existingCompanyId]
       );
     } catch (err) {
       console.error("[RAZORPAY-TRIAL] existing-company activation failed:", err.message);
@@ -500,10 +539,10 @@ export const handleSubscriptionAuthenticated = async (payload) => {
         `INSERT INTO companies
          (name, slug, code_prefix, logo_url, rooms, subscription_status, plan,
           registration_source, registration_complete, razorpay_subscription_id,
-          razorpay_auto_debit_active, billing_interval, trial_ends_at,
-          razorpay_payment_id, amount_paid)
-         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?, 0, 'monthly', ?, ?, ?)`,
-        [name, slug, codePrefix, conferenceRooms, subscriptionId, mysqlTrialEnds, paymentId, TRIAL_AMOUNT_PAISE]
+          razorpay_customer_id, razorpay_auto_debit_active, billing_interval,
+          trial_ends_at, razorpay_payment_id, amount_paid)
+         VALUES (?, ?, ?, '', ?, 'trial', 'trial', 'razorpay', 0, ?, ?, 0, 'monthly', ?, ?, ?)`,
+        [name, slug, codePrefix, conferenceRooms, subscriptionId, customerId, mysqlTrialEnds, paymentId, TRIAL_AMOUNT_PAISE]
       );
       companyId = companyResult.insertId;
     } catch (err) {

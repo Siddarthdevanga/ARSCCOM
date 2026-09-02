@@ -1,4 +1,5 @@
 import * as service from "../services/auth.service.js";
+import { updateRazorpayCustomerName } from "../services/razorpayTrialSubscription.service.js";
 
 const EMAIL_RE    = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
 const PHONE_RE    = /^[6-9]\d{9}$/;
@@ -220,6 +221,14 @@ export const completeRegistration = async (req, res) => {
         whatsappUrl,
       },
       req.file
+    );
+
+    // Best-effort — keeps Razorpay's own Customer record showing the real
+    // company name instead of whatever placeholder it was created with at
+    // trial signup. Never blocks the response; a company with no
+    // razorpay_customer_id on file is a silent no-op.
+    updateRazorpayCustomerName(result.company.id, result.company.name).catch((err) =>
+      console.error("[COMPLETE REGISTRATION] Razorpay customer name update failed:", err.message)
     );
 
     return res.status(200).json({
