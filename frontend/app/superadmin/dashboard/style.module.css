@@ -132,7 +132,7 @@
 /* ================= HERO ================= */
 .hero {
   background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
-  padding: 36px 36px 48px;
+  padding: 20px 36px 24px;
   position: relative;
   overflow: hidden;
   flex-shrink: 0;
@@ -157,33 +157,33 @@
 }
 
 .heroTitle {
-  font-size: 2.4rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #fff;
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   line-height: 1.15;
 }
 .heroTitle span { color: #f0a500; }
 
 .heroSub {
   color: rgba(255,255,255,0.72);
-  font-size: 0.95rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  margin: 0 0 28px;
+  margin: 0 0 14px;
 }
 
 .heroStats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  max-width: 760px;
+  gap: 10px;
+  max-width: 640px;
 }
 
 .heroStatCard {
   background: rgba(255,255,255,0.12);
   border: 1.5px solid rgba(255,255,255,0.2);
-  border-radius: 18px;
-  padding: 18px 20px;
+  border-radius: 14px;
+  padding: 10px 14px;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: all 0.25s;
@@ -194,16 +194,16 @@
 }
 
 .heroStatLabel {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   color: rgba(255,255,255,0.68);
-  letter-spacing: 1.2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .heroStatValue {
-  font-size: 2.2rem;
+  font-size: 1.4rem;
   font-weight: 900;
   color: #fff;
   line-height: 1;
@@ -275,6 +275,20 @@
   border: 1.5px solid #ddd2f0;
   box-shadow: 0 4px 20px rgba(98,0,214,0.06);
   overflow: hidden;
+  position: relative;
+}
+
+/* Right-edge fade — the only visual cue on narrow screens that the table
+   has more columns off to the side. Purely decorative (no JS scroll
+   tracking needed): sits above the scroll container, ignores clicks. */
+.tableWrapper::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 28px;
+  background: linear-gradient(90deg, transparent, rgba(98,0,214,0.10));
+  pointer-events: none;
+  z-index: 3;
 }
 
 .tableScroll {
@@ -283,6 +297,18 @@
   max-height: calc(100vh - 420px);
   -webkit-overflow-scrolling: touch;
 }
+
+/* Company column stays put while the rest of the table scrolls
+   horizontally, so you never lose track of which row you're on. */
+.stickyCol {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #f0e9fb;
+}
+.table thead .stickyCol { z-index: 4; background: linear-gradient(135deg, #4a00b4, #7a00ff); }
+.table tbody tr:hover .stickyCol { background: #ede4fa; }
+.rowSuspended .stickyCol { background: #f0e9fb; }
 
 .loadingState {
   display: flex;
@@ -318,7 +344,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 13px;
-  min-width: 900px;
+  min-width: 640px;
 }
 
 .table thead {
@@ -699,16 +725,17 @@
   .heroStats    { grid-template-columns: repeat(2, 1fr); }
   .filterBar    { padding: 16px 20px 0; }
   .tableWrapper { margin: 16px 20px 40px; }
-  .hero         { padding: 28px 20px 40px; }
+  .hero         { padding: 16px 20px 20px; }
 }
 
 @media (max-width: 600px) {
   .header        { padding: 0 16px; height: 56px; }
   .superBadge    { display: none; }
   .adminEmail    { font-size: 11px; }
-  .heroTitle     { font-size: 1.7rem; }
-  .heroStats     { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-  .heroStatValue { font-size: 1.8rem; }
+  .heroTitle     { font-size: 1.2rem; }
+  .heroSub       { margin-bottom: 10px; }
+  .heroStats     { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .heroStatValue { font-size: 1.2rem; }
   .filterBar     { gap: 8px; }
   .searchInput   { min-width: 100%; }
   .overviewGrid  { grid-template-columns: 1fr; }

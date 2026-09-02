@@ -464,12 +464,20 @@ export const handleSubscriptionWebhookEvent = async (event, payload) => {
     ).catch((err) => console.error(`[RAZORPAY-SUB] failed to sync customer name for ${customerId}:`, err.response?.data?.error?.description || err.message));
   }
 
+  // planMatch only ever resolves to 'business'/'enterprise' (see
+  // razorpayPlanIdToPlan), so trial_ends_at is always safe to clear here —
+  // this is the actual trial→Business auto-conversion moment (or a plain
+  // Business/Enterprise renewal, where it's already NULL). Without this,
+  // Superadmin's company list — which reads this column directly, not
+  // through subscription.route.js's plan-gated API — shows a stale Trial
+  // Ends date forever after every real conversion.
   await db.query(
     `UPDATE companies SET
        subscription_status = 'active',
        plan = ?,
        billing_interval = ?,
        subscription_ends_at = COALESCE(?, subscription_ends_at),
+       trial_ends_at = NULL,
        razorpay_subscription_id = ?,
        razorpay_customer_id = COALESCE(?, razorpay_customer_id),
        razorpay_auto_debit_active = 1,

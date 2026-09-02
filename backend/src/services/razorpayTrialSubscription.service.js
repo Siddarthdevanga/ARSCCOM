@@ -99,8 +99,12 @@ export const createTrialSubscription = async ({ email, phone }) => {
   // Catch an already-registered email/phone before authorizing a mandate —
   // the webhook's own dedup (resend temp password) is a safety net, not
   // meant to be the first line of defense against a real repeat signup.
+  // Compared on the last 10 digits, not a raw match — /register stores
+  // phone as "91" + 10 digits, while this flow stores the bare 10-digit
+  // number. A raw match would miss a duplicate against a web-registered
+  // account that used this same phone with a different email.
   const [[existingUser]] = await db.query(
-    `SELECT id FROM users WHERE email = ? OR phone = ? LIMIT 1`,
+    `SELECT id FROM users WHERE email = ? OR RIGHT(phone, 10) = ? LIMIT 1`,
     [cleanEmail, cleanPhone]
   );
   if (existingUser) {
@@ -554,9 +558,11 @@ export const handleSubscriptionAuthenticated = async (payload) => {
   }
 
   // Existing account? Same dedup safety net the old Orders flow had —
-  // regenerate and resend rather than creating a second company.
+  // regenerate and resend rather than creating a second company. Compared
+  // on the last 10 digits — see the comment on the same check above in
+  // createTrialSubscription().
   const [[existingUser]] = await db.query(
-    `SELECT u.id, u.email, u.phone FROM users u WHERE u.email = ? OR u.phone = ? LIMIT 1`,
+    `SELECT u.id, u.email, u.phone FROM users u WHERE u.email = ? OR RIGHT(u.phone, 10) = ? LIMIT 1`,
     [cleanEmail, cleanPhone]
   );
   if (existingUser) {

@@ -45,7 +45,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
     if (!company) return res.status(404).json({ success: false, message: "Company not found" });
 
     const status = (company.subscription_status || "").toLowerCase();
-    if (["trial", "active"].includes(status)) {
+    if (["trial", "active", "grace_period"].includes(status)) {
       return res.status(403).json({ success: false, message: "Subscription already active" });
     }
 

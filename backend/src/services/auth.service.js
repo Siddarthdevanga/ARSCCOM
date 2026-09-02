@@ -140,10 +140,15 @@ export const registerCompany = async (data, file) => {
   // Check for an existing account by email OR phone — a duplicate signup
   // attempt (e.g. someone who already started a trial via the landing
   // page's popup with this same phone but a different email) needs to be
-  // caught here too, not just an exact email match.
+  // caught here too, not just an exact email match. Compared on the last
+  // 10 digits rather than a raw match: this form sends phone as "91" +
+  // 10 digits, while the trial-subscription flows store just the bare
+  // 10-digit number — a raw string match would silently miss exactly the
+  // cross-flow duplicate this check exists to catch.
+  const phoneLast10 = (phone || "").replace(/\D/g, "").slice(-10);
   const [existing] = await db.execute(
-    "SELECT id FROM users WHERE email = ? OR phone = ? LIMIT 1",
-    [email, phone]
+    "SELECT id FROM users WHERE email = ? OR RIGHT(phone, 10) = ? LIMIT 1",
+    [email, phoneLast10]
   );
   if (existing.length) {
     const err = new Error("This email or phone number is already registered.");
@@ -417,7 +422,7 @@ export const login = async ({ identifier, email, password }) => {
        c.grace_period_day
      FROM users u
      JOIN companies c ON c.id = u.company_id
-     WHERE u.email = ? OR u.phone = ?
+     WHERE u.email = ? OR RIGHT(u.phone, 10) = ?
      LIMIT 1`,
     [cleanEmail, cleanPhone]
   );

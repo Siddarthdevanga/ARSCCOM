@@ -839,22 +839,18 @@ export default function SuperAdminDashboard() {
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <th>Company</th>
+                        <th className={styles.stickyCol}>Company</th>
                         <th>Plan</th>
                         <th>Status</th>
-                        <th>Trial Ends</th>
-                        <th>Sub Ends</th>
-                        <th>Rooms</th>
-                        <th>Bookings</th>
+                        <th>Expires</th>
                         <th>Visitors</th>
-                        <th>Users</th>
                         <th>Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {filtered.map((c) => (
                         <tr key={c.id} className={c.is_suspended ? styles.rowSuspended : ""}>
-                          <td>
+                          <td className={styles.stickyCol}>
                             <div className={styles.companyCell}>
                               <span className={styles.companyName}>{c.name}</span>
                               <span className={styles.companySlug}>{c.slug}</span>
@@ -863,12 +859,11 @@ export default function SuperAdminDashboard() {
                           </td>
                           <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
                           <td><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status || "-"}</span></td>
-                          <td className={styles.dateCell}>{c.trial_ends_at?.slice(0, 10) || "-"}</td>
-                          <td className={styles.dateCell}>{c.subscription_ends_at?.slice(0, 10) || "-"}</td>
-                          <td className={styles.numCell}>{c.total_rooms}</td>
-                          <td className={styles.numCell}>{c.total_bookings}</td>
+                          {/* Trial/Sub Ends are mutually exclusive per company —
+                              only one is ever populated, so one column covers
+                              both instead of always showing a dangling "-". */}
+                          <td className={styles.dateCell}>{(c.trial_ends_at || c.subscription_ends_at)?.slice(0, 10) || "-"}</td>
                           <td className={styles.numCell}>{c.total_visitors}</td>
-                          <td className={styles.numCell}>{c.total_users}</td>
                           <td>
                             <button className={styles.manageBtn} onClick={() => setSelected(c)}>
                               Manage
