@@ -196,6 +196,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Onboarding Nurture Cron Scheduled (Daily 10:00 AM IST)");
 
+    const { sendMandateNudges } = await import("./cron/trialMandateNudgeCron.js");
+    cron.default.schedule('0 11 * * *', async () => {
+      try { await sendMandateNudges(); } catch (e) { console.error("❌ Trial mandate nudge cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ Trial Mandate Nudge Cron Scheduled (Daily 11:00 AM IST)");
+
     const { sendCheckoutFeedbackMessages } = await import("./cron/checkoutFeedbackCron.js");
     cron.default.schedule('*/5 * * * *', async () => {
       try { await sendCheckoutFeedbackMessages(); } catch (e) { console.error("❌ Checkout feedback cron failed:", e); }

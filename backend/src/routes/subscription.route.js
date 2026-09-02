@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { createMandateForExistingTrial } from "../services/razorpayTrialSubscription.service.js";
 
 const router = express.Router();
 
@@ -103,6 +104,13 @@ router.get("/details", authenticate, async (req, res) => {
       // during the trial window — this can.
       HAS_TRIAL_MANDATE: company.plan === "trial" && !!company.razorpay_subscription_id,
 
+      // Trial-plan companies still eligible (trial or grace_period) with
+      // NO mandate on file at all — signed up under the old one-time-Order
+      // flow before auto-convert existed. Drives the "Add Auto-Pay" banner.
+      NEEDS_MANDATE: company.plan === "trial" &&
+        !company.razorpay_subscription_id &&
+        ["trial", "grace_period"].includes(company.subscription_status),
+
       // Actual current billing cycle — needed to know whether a Monthly →
       // Annual switch is still a real available option for this company.
       BILLING_INTERVAL: company.billing_interval || "monthly",
@@ -120,6 +128,28 @@ router.get("/details", authenticate, async (req, res) => {
       SUCCESS: false,
       MESSAGE: "Failed to fetch subscription"
     });
+  }
+});
+
+/**
+ * Add Auto-Pay — for existing trial companies (trial or grace_period)
+ * that have never authorized a Razorpay mandate (old one-time-Order
+ * signups). Creates a real subscription mandate with no addon charge
+ * (they already paid the trial fee once). Frontend opens Razorpay
+ * Checkout against the returned subscriptionId, same as /api/upgrade.
+ */
+router.post("/add-mandate", authenticate, async (req, res) => {
+  try {
+    const companyId = req.user?.companyId;
+    if (!companyId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const result = await createMandateForExistingTrial(companyId);
+    return res.json({ success: true, mode: "subscription", ...result });
+  } catch (err) {
+    console.error("❌ ADD-MANDATE ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message || "Failed to add auto-pay" });
   }
 });
 

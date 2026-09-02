@@ -60,6 +60,8 @@ export default function PlansPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
+  const [addingMandate, setAddingMandate] = useState(false);
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   /* ── Razorpay Checkout.js ── */
@@ -140,6 +142,43 @@ export default function PlansPage() {
     }
   };
 
+  const handleAddMandate = async () => {
+    if (addingMandate) return;
+    try {
+      setAddingMandate(true);
+      const res = await fetch(`${API_BASE}/api/subscription/add-mandate`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Failed to add auto-pay");
+
+      if (data.mode === "subscription" && data.subscriptionId && window.Razorpay) {
+        const rzp = new window.Razorpay({
+          key: data.keyId,
+          subscription_id: data.subscriptionId,
+          name: "Hai Visitor",
+          description: "Add Auto-Pay — continue your trial into Business automatically",
+          prefill: { email: company?.email || "", contact: company?.phone || "" },
+          handler: () => {
+            setActivating(true);
+            setTimeout(() => { setActivating(false); fetchSubscription(); }, 3000);
+          },
+          modal: { ondismiss: () => setAddingMandate(false) },
+        });
+        rzp.on("payment.failed", () => showError("Could not authorize auto-pay. Please try again."));
+        rzp.open();
+        return;
+      }
+
+      throw new Error(data.message || "Unexpected server response");
+    } catch (err) {
+      showError(err?.message || "Please try again.");
+    } finally {
+      setAddingMandate(false);
+    }
+  };
+
   const confirmCancelSubscription = async () => {
     try {
       setCancelling(true);
@@ -167,6 +206,7 @@ export default function PlansPage() {
   const currentInterval = subData?.BILLING_INTERVAL || "monthly";
   const hasAutoDebit   = subData?.HAS_AUTO_DEBIT === true;
   const hasTrialMandate = subData?.HAS_TRIAL_MANDATE === true;
+  const needsMandate    = subData?.NEEDS_MANDATE === true;
   const inGracePeriod  = subData?.IN_GRACE_PERIOD === true;
   const needsRenewal   = ["expired", "cancelled"].includes(currentStatus);
   const planHasLapsed  = ["grace_period", "expired", "cancelled"].includes(currentStatus);
@@ -346,6 +386,31 @@ export default function PlansPage() {
 
               {!needsRenewal && (
                 <>
+                  {/* ===== ADD AUTO-PAY — trial companies from the old one-time
+                      -Order flow with no mandate on file at all. Without this,
+                      they can only ever expire; this lets them opt into the
+                      same auto-convert-to-Business path newer signups get. ===== */}
+                  {needsMandate && (
+                    <section className={styles.planSection}>
+                      <div className={styles.autoRenewNote} style={{ background: "rgba(124,58,237,0.12)", borderColor: "rgba(124,58,237,0.3)" }}>
+                        <ShieldCheck size={18}/>
+                        <span>
+                          {currentStatus === "grace_period"
+                            ? "Your trial has ended. Add auto-pay to reactivate instantly — your Business Plan (₹500/mo + GST) starts right away."
+                            : `Add auto-pay so your Business Plan (₹500/mo + GST) continues automatically on ${formatDate(subData.TRIAL_ENDS_ON)} — no gap in access, no re-registering.`}
+                        </span>
+                      </div>
+                      <button
+                        className={styles.upgradeBtn}
+                        style={{ marginTop: "14px" }}
+                        onClick={handleAddMandate}
+                        disabled={addingMandate}
+                      >
+                        {addingMandate ? <><div className={styles.btnSpinner}/> Processing…</> : "Add Auto-Pay"}
+                      </button>
+                    </section>
+                  )}
+
                   {/* ===== RENEW (manual, no live auto-debit) — both intervals,
                       the one matching what's already running is badged ===== */}
                   {currentPlan !== "trial" && !hasAutoDebit && (

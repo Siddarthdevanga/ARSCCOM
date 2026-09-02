@@ -189,6 +189,55 @@ export const createTrialSubscriptionForExistingCompany = async (companyId) => {
 };
 
 /* ======================================================
+   CREATE MANDATE FOR AN EXISTING NO-MANDATE TRIAL COMPANY
+   --------------------------------------------------------
+   For companies that signed up under the OLD one-time-Order trial flow
+   (or otherwise never authorized a mandate) and are still eligible
+   (status trial or grace_period). Adds a real Razorpay mandate WITHOUT
+   the ₹49 addon — they already paid that once under the old flow, so
+   charging it again here would be a double-charge. start_at keeps their
+   ORIGINAL conversion date (no free extension for adding a mandate
+   late); if that date has already passed (deep into grace period),
+   Razorpay requires start_at in the future, so it falls back to "as
+   soon as possible" instead.
+====================================================== */
+export const createMandateForExistingTrial = async (companyId) => {
+  const [[company]] = await db.query(
+    `SELECT id, plan, subscription_status, razorpay_subscription_id, trial_ends_at
+     FROM companies WHERE id = ? LIMIT 1`,
+    [companyId]
+  );
+  if (!company) throw new Error("Company not found");
+  if (company.plan !== "trial") throw new Error("Only trial-plan accounts can add auto-pay this way");
+  if (company.razorpay_subscription_id) throw new Error("A payment mandate already exists for this account");
+  if (!["trial", "grace_period"].includes(company.subscription_status)) {
+    throw new Error("This account is not eligible to add auto-pay");
+  }
+
+  const planId = getTrialRazorpayPlanId();
+  if (!planId) throw new Error("Trial Razorpay plan not configured (RAZORPAY_PLAN_TRIAL_BUSINESS_MONTHLY)");
+
+  const minStartAt = Math.floor(Date.now() / 1000) + 600; // Razorpay requires start_at to be in the future
+  const existingEndsAt = company.trial_ends_at ? Math.floor(new Date(company.trial_ends_at).getTime() / 1000) : null;
+  const startAt = existingEndsAt && existingEndsAt > minStartAt ? existingEndsAt : minStartAt;
+
+  const { data: subscription } = await axios.post(
+    `${RAZORPAY_API}/subscriptions`,
+    {
+      plan_id: planId,
+      customer_notify: 1,
+      total_count: TOTAL_COUNT_MONTHLY,
+      start_at: startAt,
+      // No addon — see comment above.
+      notes: { companyId: String(companyId), isNewTrialSignup: "false" },
+    },
+    { auth: razorpayAuth() }
+  );
+
+  return { subscriptionId: subscription.id, keyId: process.env.RAZORPAY_KEY_ID };
+};
+
+/* ======================================================
    WELCOME EMAIL (temp password) — Path A only, new account.
    Same shape as the old razorpay.service.js version, with a courtesy
    mention of the auto-conversion added per the confirmed plan.
@@ -449,6 +498,12 @@ export const handleSubscriptionAuthenticated = async (payload) => {
     }
 
     try {
+      // paymentId is only present when an addon was actually charged on
+      // this subscription (a brand-new trial checkout). A mandate added
+      // later to an already-existing trial (createMandateForExistingTrial,
+      // no addon) has no payment entity in this event at all — leave
+      // razorpay_payment_id/amount_paid untouched rather than overwriting
+      // them with a ₹49 charge that never happened this time.
       await db.execute(
         `UPDATE companies SET
            subscription_status = 'trial',
@@ -458,13 +513,15 @@ export const handleSubscriptionAuthenticated = async (payload) => {
            razorpay_subscription_id = ?,
            razorpay_customer_id = COALESCE(?, razorpay_customer_id),
            razorpay_auto_debit_active = 0,
-           razorpay_payment_id = ?,
-           amount_paid = ?,
+           razorpay_payment_id = COALESCE(?, razorpay_payment_id),
+           amount_paid = CASE WHEN ? IS NOT NULL THEN ? ELSE amount_paid END,
+           grace_period_ends_at = NULL,
+           grace_period_day = 0,
            pending_upgrade_plan = NULL,
            pending_billing_interval = NULL,
            updated_at = NOW()
          WHERE id = ?`,
-        [mysqlTrialEnds, subscriptionId, customerId, paymentId, TRIAL_AMOUNT_PAISE, existingCompanyId]
+        [mysqlTrialEnds, subscriptionId, customerId, paymentId, paymentId, TRIAL_AMOUNT_PAISE, existingCompanyId]
       );
     } catch (err) {
       console.error("[RAZORPAY-TRIAL] existing-company activation failed:", err.message);
