@@ -65,6 +65,67 @@
   transform: translateY(0);
 }
 
+/* Same structure as .gracePeriodBanner, purple instead of amber — a
+   distinct "here's something you can do" tone rather than a warning. */
+.mandateBanner {
+  background: linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%);
+  border-left: 4px solid #7C3AED;
+  padding: 20px 24px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.15);
+  animation: fadeIn 0.3s ease-in;
+}
+
+.mandateBanner svg {
+  flex-shrink: 0;
+  color: #7C3AED;
+}
+
+.mandateBanner > div {
+  flex: 1;
+}
+
+.mandateBanner h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #4C1D95;
+}
+
+.mandateBanner p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #5B21B6;
+  line-height: 1.5;
+}
+
+.mandateBanner button {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);
+}
+
+.mandateBanner button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(122, 0, 255, 0.4);
+}
+
+.mandateBanner button:active {
+  transform: translateY(0);
+}
+
 /* ======================================================
    EXPIRY MODAL (Home Dashboard — renewal popup)
 ====================================================== */
@@ -435,6 +496,17 @@
   }
 
   .gracePeriodBanner button {
+    width: 100%;
+    margin-top: 12px;
+  }
+
+  .mandateBanner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+  }
+
+  .mandateBanner button {
     width: 100%;
     margin-top: 12px;
   }

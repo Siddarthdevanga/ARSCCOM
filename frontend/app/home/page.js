@@ -20,6 +20,7 @@ import {
   Lock,
   ListChecks,
   BookOpen,
+  ShieldCheck,
 } from "lucide-react";
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
@@ -581,6 +582,11 @@ export default function Home() {
 
   const needsRenewal         = ["expired", "cancelled"].includes(currentStatus);
   const inGracePeriod        = subData?.IN_GRACE_PERIOD === true;
+  // Trial company from the old one-time-Order flow, still eligible (trial
+  // or grace_period) but with no Razorpay mandate on file at all — same
+  // eligibility this dashboard's own Plans page uses for its "Add
+  // Auto-Pay" banner (NEEDS_MANDATE, from subscription.route.js).
+  const needsMandate         = subData?.NEEDS_MANDATE === true;
 
   // Days remaining until the active plan expires (trial or paid), used to
   // surface a "renew soon" nudge on the main dashboard before it lapses.
@@ -750,6 +756,24 @@ export default function Home() {
       {/* ── SCROLL BODY ── */}
       <div className={styles.scrollBody}>
         <main className={styles.main}>
+
+          {/* ADD AUTO-PAY BANNER — same eligibility as the Plans page's own
+              banner, surfaced here too since most people land on this
+              dashboard first and may never open Plans & Billing otherwise. */}
+          {needsMandate && (
+            <div className={graceStyles.mandateBanner}>
+              <ShieldCheck size={24} />
+              <div>
+                <h3>Add Auto-Pay</h3>
+                <p>
+                  {currentStatus === "grace_period"
+                    ? "Your trial has ended. Add auto-pay to reactivate instantly — your Business Plan (₹500/mo + GST) starts right away."
+                    : `Add auto-pay so your Business Plan (₹500/mo + GST) continues automatically on ${formatDate(subData.TRIAL_ENDS_ON)} — no gap in access, no re-registering.`}
+                </p>
+              </div>
+              <button onClick={handleOpenPlans}>Add Auto-Pay</button>
+            </div>
+          )}
 
           {/* GRACE PERIOD BANNER */}
           {inGracePeriod && (
