@@ -648,21 +648,26 @@ export default function HomePage() {
           return;
         }
 
-        // Subscription created — real purchase intent (email/phone validated,
-        // about to see the Razorpay checkout), distinct from the Purchase
-        // event fired only once the mandate is actually authorized below.
+        // Order created — real purchase intent (email/phone validated, about
+        // to see the Razorpay checkout), distinct from the Purchase event
+        // fired only once payment actually completes below.
         window.fbq?.('track', 'Lead');
 
         const rzp = new window.Razorpay({
           key: data.keyId,
-          subscription_id: data.subscriptionId,
+          amount: data.amount,
+          currency: data.currency,
+          order_id: data.orderId,
           name: 'Hai Visitor',
-          description: '15-Day Trial (auto-continues to Business ₹500/mo unless cancelled)',
+          description: '15-Day Trial',
           prefill: { email: emailInput.value.trim(), contact: phoneInput.value.trim() },
           handler: () => {
             if (formView) formView.style.display = 'none';
             if (successView) successView.style.display = '';
-            window.fbq?.('track', 'Purchase', { value: 49, currency: 'INR' });
+            window.fbq?.('track', 'Purchase', {
+              value: (data.amount || 4900) / 100,
+              currency: data.currency || 'INR',
+            });
           },
           modal: {
             ondismiss: () => { resetSubmitBtn(); },

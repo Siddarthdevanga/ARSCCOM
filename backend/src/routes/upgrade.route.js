@@ -2,7 +2,7 @@ import express from "express";
 import { db } from "../config/db.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { calcPrice } from "../constants/pricing.js";
-import { createSubscription, updateSubscriptionPlan, cancelSubscription, isSubscriptionUpdatable } from "../services/razorpaySubscription.service.js";
+import { createSubscription, updateSubscriptionPlan, cancelSubscription as cancelRazorpaySubscription, isSubscriptionUpdatable } from "../services/razorpaySubscription.service.js";
 
 const router = express.Router();
 
@@ -129,6 +129,28 @@ router.post("/", authenticate, async (req, res) => {
       await db.query(`UPDATE companies SET razorpay_subscription_id = NULL WHERE id = ?`, [companyId]);
     }
 
+    // A mid-trial customer (Path B — trial mandate authenticated but not
+    // yet converted) manually upgrading here BEFORE their 15 days is up
+    // would otherwise leave that mandate live while a second one gets
+    // created below — createSubscription()'s own cleanup only cancels a
+    // stale/abandoned subscription, and "authenticated" counts as live, so
+    // it would never touch this one. Cancel it explicitly first; a manual
+    // upgrade supersedes the auto-convert path entirely. Deliberately NOT
+    // best-effort: if the cancel fails, we must not proceed to create a
+    // second live mandate — that would recreate the exact double-charge
+    // risk this exists to prevent. Surface a clear error instead.
+    if (currentPlan === "trial" && company.razorpay_subscription_id) {
+      try {
+        await cancelRazorpaySubscription(companyId);
+      } catch (err) {
+        console.error(`[UPGRADE] failed to cancel trial mandate for company ${companyId} before manual upgrade:`, err.message);
+        return res.status(500).json({
+          success: false,
+          message: "Couldn't switch off your trial's auto-continue before upgrading. Please try again in a moment, or contact support.",
+        });
+      }
+    }
+
     // No active mandate yet (still on Trial, or previously cancelled/
     // expired) — needs a fresh checkout to authorize auto-debit.
     const subscription = await createSubscription({ companyId, plan, interval, offerId });
@@ -161,7 +183,7 @@ router.post("/cancel", authenticate, async (req, res) => {
     const companyId = req.user?.companyId;
     if (!companyId) return res.status(401).json({ success: false, message: "Authentication failed" });
 
-    await cancelSubscription(companyId);
+    await cancelRazorpaySubscription(companyId);
     return res.json({
       success: true,
       message: "Subscription cancelled. You'll keep access until your current billing period ends — no further charges after that.",
