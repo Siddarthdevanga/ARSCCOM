@@ -13,6 +13,12 @@ export default function SubscriptionPage() {
   const [billingInterval, setBillingInterval] = useState("monthly"); // "monthly" | "annual" — affects Business and Enterprise
   const [activating, setActivating] = useState(false);
 
+  // Business Annual only — a popup to optionally add a promo code before
+  // continuing, rather than an always-visible inline field like the
+  // /home/plans upgrade cards use.
+  const [showPromoModal, setShowPromoModal] = useState(false);
+  const [promoInput, setPromoInput] = useState("");
+
   useEffect(() => {
     if (document.getElementById("razorpay-checkout-js")) return;
     const script = document.createElement("script");
@@ -79,7 +85,7 @@ export default function SubscriptionPage() {
     }
   };
 
-  const choosePlan = async (plan) => {
+  const choosePlan = async (plan, promoCode) => {
     if (loadingPlan) return;
 
     setError("");
@@ -92,7 +98,7 @@ export default function SubscriptionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan, interval: plan === "free" ? "monthly" : billingInterval }),
+        body: JSON.stringify({ plan, interval: plan === "free" ? "monthly" : billingInterval, promoCode: promoCode || undefined }),
       });
 
       let data = {};
@@ -307,11 +313,19 @@ export default function SubscriptionPage() {
                   ))}
                 </ul>
 
-                {/* CTA */}
+                {/* CTA — Business Annual opens a promo-code popup first;
+                    every other plan/interval goes straight to checkout. */}
                 <button
                   className={`${styles.planBtn} ${plan.highlight ? styles.planBtnHighlight : ""}`}
                   disabled={loadingPlan === plan.key}
-                  onClick={() => choosePlan(plan.key)}
+                  onClick={() => {
+                    if (plan.key === "business" && billingInterval === "annual") {
+                      setPromoInput("");
+                      setShowPromoModal(true);
+                      return;
+                    }
+                    choosePlan(plan.key);
+                  }}
                 >
                   {loadingPlan === plan.key ? (
                     <><span className={styles.btnSpinner} /> Processing…</>
@@ -324,6 +338,47 @@ export default function SubscriptionPage() {
           </div>
         </main>
       </div>
+
+      {/* ===== PROMO CODE POPUP — Business Annual only ===== */}
+      {showPromoModal && (
+        <div
+          onClick={() => setShowPromoModal(false)}
+          style={{ position: "fixed", inset: 0, background: "rgba(23,12,43,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "#fff", borderRadius: 16, padding: 28, maxWidth: 380, width: "100%" }}
+          >
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1a0038", margin: "0 0 10px" }}>
+              Have a promo code?
+            </h3>
+            <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
+              Add it below, or just continue without one.
+            </p>
+            <input
+              type="text"
+              placeholder="Enter promo code (optional)"
+              value={promoInput}
+              onChange={(e) => setPromoInput(e.target.value)}
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #ddd2f0", fontSize: 13, outline: "none", marginBottom: 16 }}
+            />
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowPromoModal(false)}
+                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "1.5px solid #e5e7eb", background: "#fff", color: "#374151", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowPromoModal(false); choosePlan("business", promoInput); }}
+                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

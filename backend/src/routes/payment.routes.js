@@ -1,6 +1,7 @@
 import express from "express";
 import { db } from "../config/db.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
+import { resolvePromoOfferId } from "../constants/promoCodes.js";
 import { createTrialSubscriptionForExistingCompany } from "../services/razorpayTrialSubscription.service.js";
 import { createSubscription } from "../services/razorpaySubscription.service.js";
 
@@ -28,7 +29,7 @@ const router = express.Router();
 
 router.post("/subscribe", authenticate, async (req, res) => {
   try {
-    const { plan } = req.body;
+    const { plan, promoCode } = req.body;
     const interval = req.body.interval === "annual" ? "annual" : "monthly";
     const companyId = req.user?.companyId;
 
@@ -37,6 +38,11 @@ router.post("/subscribe", authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid plan selected" });
     }
     if (!companyId) return res.status(401).json({ success: false, message: "Authentication failed" });
+
+    const { offerId, error: promoError } = resolvePromoOfferId(promoCode, plan, interval);
+    if (promoError) {
+      return res.status(400).json({ success: false, message: promoError });
+    }
 
     const [[company]] = await db.query(
       `SELECT subscription_status FROM companies WHERE id = ? LIMIT 1`,
@@ -54,7 +60,7 @@ router.post("/subscribe", authenticate, async (req, res) => {
       return res.json({ success: true, mode: "subscription", ...subscription });
     }
 
-    const subscription = await createSubscription({ companyId, plan, interval });
+    const subscription = await createSubscription({ companyId, plan, interval, offerId });
     return res.json({ success: true, mode: "subscription", ...subscription });
 
   } catch (err) {

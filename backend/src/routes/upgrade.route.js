@@ -2,6 +2,7 @@ import express from "express";
 import { db } from "../config/db.js";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { calcPrice } from "../constants/pricing.js";
+import { resolvePromoOfferId } from "../constants/promoCodes.js";
 import { createSubscription, updateSubscriptionPlan, cancelSubscription as cancelRazorpaySubscription, isSubscriptionUpdatable } from "../services/razorpaySubscription.service.js";
 
 const router = express.Router();
@@ -27,13 +28,6 @@ const router = express.Router();
 
 const PLAN_LABELS = { business: "Business", enterprise: "Enterprise" };
 
-// Hardcoded for now — a single live promo. Worth promoting to a small
-// DB-backed table (code -> {plan, interval, offerId}) once there's a
-// second one to manage; not worth that scope while there's only one.
-const PROMO_CODES = {
-  WEB30: { plan: "business", interval: "annual", offerId: "offer_TXU3V0c40VEuze" },
-};
-
 router.post("/", authenticate, async (req, res) => {
   try {
     const { plan, promoCode } = req.body;
@@ -46,13 +40,9 @@ router.post("/", authenticate, async (req, res) => {
     }
     if (!companyId) return res.status(401).json({ success: false, message: "Authentication failed" });
 
-    let offerId;
-    if (promoCode) {
-      const promo = PROMO_CODES[String(promoCode).trim().toUpperCase()];
-      if (!promo || promo.plan !== plan || promo.interval !== interval) {
-        return res.status(400).json({ success: false, message: "This promo code isn't valid for the selected plan" });
-      }
-      offerId = promo.offerId;
+    const { offerId, error: promoError } = resolvePromoOfferId(promoCode, plan, interval);
+    if (promoError) {
+      return res.status(400).json({ success: false, message: promoError });
     }
 
     if (plan === "trial") {
