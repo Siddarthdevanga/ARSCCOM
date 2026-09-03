@@ -62,6 +62,9 @@ export default function PlansPage() {
 
   const [addingMandate, setAddingMandate] = useState(false);
 
+  // Only the Business Annual card offers a promo code field right now.
+  const [businessAnnualPromo, setBusinessAnnualPromo] = useState("");
+
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
 
   /* ── Razorpay Checkout.js ── */
@@ -97,7 +100,7 @@ export default function PlansPage() {
     }
   };
 
-  const handleSelectPlan = async (plan, selectedInterval) => {
+  const handleSelectPlan = async (plan, selectedInterval, promoCode) => {
     if (upgradingPlan) return;
     try {
       setUpgradingPlan(plan + selectedInterval);
@@ -105,7 +108,7 @@ export default function PlansPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ plan, interval: selectedInterval }),
+        body: JSON.stringify({ plan, interval: selectedInterval, promoCode: promoCode || undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Request failed");
@@ -226,6 +229,7 @@ export default function PlansPage() {
     const { Icon } = meta;
     const busyKey = plan + interval;
     const isCurrent = !needsRenewal && plan === currentPlan && interval === currentInterval;
+    const showPromoField = plan === "business" && interval === "annual";
     return (
       <div className={`${styles.planCard} ${plan === "enterprise" ? styles.enterpriseCard : ""} ${isCurrent ? styles.currentCard : ""}`}>
         {isCurrent && <span className={styles.currentBadge}>Current Plan</span>}
@@ -241,9 +245,18 @@ export default function PlansPage() {
         <ul className={styles.featureList}>
           {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
         </ul>
+        {showPromoField && !isCurrent && (
+          <input
+            type="text"
+            placeholder="Have a promo code?"
+            value={businessAnnualPromo}
+            onChange={(e) => setBusinessAnnualPromo(e.target.value)}
+            className={styles.promoInput}
+          />
+        )}
         <button
           className={`${styles.upgradeBtn} ${plan === "enterprise" ? styles.enterpriseBtn : ""}`}
-          onClick={() => handleSelectPlan(plan, interval)}
+          onClick={() => handleSelectPlan(plan, interval, showPromoField ? businessAnnualPromo : undefined)}
           disabled={!!upgradingPlan}
         >
           {upgradingPlan === busyKey ? <><div className={styles.btnSpinner}/> Processing…</> : ctaLabel}

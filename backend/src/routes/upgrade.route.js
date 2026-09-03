@@ -27,9 +27,16 @@ const router = express.Router();
 
 const PLAN_LABELS = { business: "Business", enterprise: "Enterprise" };
 
+// Hardcoded for now — a single live promo. Worth promoting to a small
+// DB-backed table (code -> {plan, interval, offerId}) once there's a
+// second one to manage; not worth that scope while there's only one.
+const PROMO_CODES = {
+  WEB30: { plan: "business", interval: "annual", offerId: "offer_TXU3V0c40VEuze" },
+};
+
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { plan } = req.body;
+    const { plan, promoCode } = req.body;
     const interval = req.body.interval === "annual" ? "annual" : "monthly";
     const companyId = req.user?.companyId;
 
@@ -38,6 +45,15 @@ router.post("/", authenticate, async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid plan. Choose 'trial', 'business' or 'enterprise'" });
     }
     if (!companyId) return res.status(401).json({ success: false, message: "Authentication failed" });
+
+    let offerId;
+    if (promoCode) {
+      const promo = PROMO_CODES[String(promoCode).trim().toUpperCase()];
+      if (!promo || promo.plan !== plan || promo.interval !== interval) {
+        return res.status(400).json({ success: false, message: "This promo code isn't valid for the selected plan" });
+      }
+      offerId = promo.offerId;
+    }
 
     if (plan === "trial") {
       return res.status(403).json({ success: false, message: "Trial plan can only be used once. Please upgrade to the Business or Enterprise plan." });
@@ -75,6 +91,17 @@ router.post("/", authenticate, async (req, res) => {
     if (company.razorpay_subscription_id && status === "active") {
       const updatable = await isSubscriptionUpdatable(company.razorpay_subscription_id);
       if (updatable) {
+        // offer_id is only accepted by Razorpay's CREATE Subscription API,
+        // not the update-plan-in-place path used here — rather than
+        // silently charging full price while implying a discount applied,
+        // reject clearly so the customer knows to contact support instead.
+        if (offerId) {
+          return res.status(400).json({
+            success: false,
+            message: "This promo code only applies to a new subscription, not a plan change on an existing one. Contact support if you'd like this applied.",
+          });
+        }
+
         const result = await updateSubscriptionPlan({ companyId, plan, interval });
 
         // UPI mandates can't be updated in-place at all — updateSubscriptionPlan
@@ -104,7 +131,7 @@ router.post("/", authenticate, async (req, res) => {
 
     // No active mandate yet (still on Trial, or previously cancelled/
     // expired) — needs a fresh checkout to authorize auto-debit.
-    const subscription = await createSubscription({ companyId, plan, interval });
+    const subscription = await createSubscription({ companyId, plan, interval, offerId });
     return res.json({
       success: true,
       mode: "subscription",

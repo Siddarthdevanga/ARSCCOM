@@ -61,7 +61,7 @@ export const isSubscriptionUpdatable = async (subscriptionId) => {
    CREATE SUBSCRIPTION — first-time signup, or upgrade from a plan
    that never had an active Razorpay subscription (e.g. Trial).
 ====================================================== */
-export const createSubscription = async ({ companyId, plan, interval }) => {
+export const createSubscription = async ({ companyId, plan, interval, offerId }) => {
   if (!["business", "enterprise"].includes(plan)) {
     throw new Error("Invalid plan — must be 'business' or 'enterprise'");
   }
@@ -131,6 +131,11 @@ export const createSubscription = async ({ companyId, plan, interval }) => {
       customer_notify: 1,
       total_count: TOTAL_COUNT[cleanInterval],
       notes: { companyId: String(companyId), plan, interval: cleanInterval },
+      // Confirmed against Razorpay's own Create Subscription docs: offer_id
+      // is accepted at creation time and requires "the plan amount is
+      // greater than the minimum amount set for the offer" — Razorpay
+      // handles the actual discount math and its own reporting from here.
+      ...(offerId ? { offer_id: offerId } : {}),
     },
     { auth: razorpayAuth() }
   );
