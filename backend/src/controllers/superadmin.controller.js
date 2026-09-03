@@ -518,57 +518,12 @@ const normalizeBroadcastPlans = (plans) => {
 };
 
 /* ======================================================
-   BROADCAST RECIPIENT COUNT (preview before sending)
-   GET /api/superadmin/broadcast-recipient-count?plans=trial,business
+   BROADCAST RECIPIENTS (preview + editable list before sending)
+   GET /api/superadmin/broadcast-recipients?plans=trial,business
 ====================================================== */
-export const broadcastRecipientCount = async (req, res) => {
+export const broadcastRecipients = async (req, res) => {
   try {
     const plans = normalizeBroadcastPlans((req.query.plans || "").split(",").map((p) => p.trim()));
-    const placeholders = plans.map(() => "?").join(",");
-    const [[{ count }]] = await db.query(
-      `SELECT COUNT(DISTINCT u.id) AS count
-       FROM companies c
-       JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
-       WHERE c.plan IN (${placeholders}) AND u.phone IS NOT NULL AND u.phone != ''`,
-      plans
-    );
-    return res.json({ success: true, count });
-  } catch (err) {
-    console.error("BROADCAST COUNT ERROR:", err.message);
-    return res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-/* ======================================================
-   SEND PLAN-TARGETED WHATSAPP BROADCAST
-   POST /api/superadmin/send-broadcast
-   body: { plans: string[], message: string }
-   --------------------------------------------------------
-   Template-based (not a raw session message) — reaches every recipient
-   regardless of whether they've messaged the bot recently. Text-only,
-   one template (GUPSHUP_BROADCAST_TEMPLATE) with a single {{1}}
-   placeholder — the greeting ("Hi [Company], 👋") and the admin's typed
-   message are combined into that one value per recipient, since Gupshup
-   rejected a 2-variable version as too thin on fixed template text.
-   registerOptIn is called best-effort per recipient first, since a
-   Marketing-category template requires Meta-recognized consent — real
-   customers were never opted in via any earlier flow.
-====================================================== */
-export const sendBroadcast = async (req, res) => {
-  try {
-    const { message } = req.body;
-    const plans = normalizeBroadcastPlans(req.body.plans);
-
-    const cleanMessage = (message || "").trim();
-    if (!cleanMessage) {
-      return res.status(400).json({ success: false, message: "Message is required" });
-    }
-
-    const templateId = process.env.GUPSHUP_BROADCAST_TEMPLATE;
-    if (!templateId) {
-      return res.status(400).json({ success: false, message: "GUPSHUP_BROADCAST_TEMPLATE is not configured" });
-    }
-
     const placeholders = plans.map(() => "?").join(",");
     // GROUP BY phone (not DISTINCT name+phone) — if the same number were
     // ever shared across two differently-named companies, that person
@@ -582,31 +537,89 @@ export const sendBroadcast = async (req, res) => {
        GROUP BY u.phone`,
       plans
     );
+    return res.json({ success: true, recipients });
+  } catch (err) {
+    console.error("BROADCAST RECIPIENTS ERROR:", err.message);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+const MAX_BROADCAST_RECIPIENTS = 300;
+
+/* ======================================================
+   SEND WHATSAPP BROADCAST
+   POST /api/superadmin/send-broadcast
+   body: { recipients: [{ name, phone }], message: string }
+   --------------------------------------------------------
+   recipients is the final, admin-reviewed list from the broadcast page
+   — built from plan-derived customers (fetched via
+   GET /broadcast-recipients, then individually removable) plus any
+   manually-added custom numbers. The server no longer re-derives
+   recipients from a plan filter itself; it only validates and sends
+   exactly the list it's given.
+
+   Template-based (not a raw session message) — reaches every recipient
+   regardless of whether they've messaged the bot recently. Text-only,
+   one template (GUPSHUP_BROADCAST_TEMPLATE) with a single {{1}}
+   placeholder — the greeting ("Hi [Name], 👋") and the admin's typed
+   message are combined into that one value per recipient, since Gupshup
+   rejected a 2-variable version as too thin on fixed template text.
+   registerOptIn is called best-effort per recipient first, since a
+   Marketing-category template requires Meta-recognized consent — real
+   customers were never opted in via any earlier flow.
+====================================================== */
+export const sendBroadcast = async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    const cleanMessage = (message || "").trim();
+    if (!cleanMessage) {
+      return res.status(400).json({ success: false, message: "Message is required" });
+    }
+
+    const templateId = process.env.GUPSHUP_BROADCAST_TEMPLATE;
+    if (!templateId) {
+      return res.status(400).json({ success: false, message: "GUPSHUP_BROADCAST_TEMPLATE is not configured" });
+    }
+
+    const rawRecipients = Array.isArray(req.body.recipients) ? req.body.recipients : [];
+
+    // Normalize + dedupe by phone server-side too — the frontend already
+    // builds a clean, deduped list, but this endpoint shouldn't trust that
+    // blindly, and a custom-typed number could easily collide with a
+    // plan-derived one.
+    const byPhone = new Map();
+    for (const r of rawRecipients) {
+      const digits = String(r?.phone || "").replace(/\D/g, "");
+      if (digits.length < 10) continue;
+      const destination = digits.length === 10 ? `91${digits}` : digits;
+      const name = (r?.name || "").trim() || "there";
+      if (!byPhone.has(destination)) byPhone.set(destination, name);
+    }
+    const recipients = Array.from(byPhone, ([phone, name]) => ({ phone, name }));
 
     if (recipients.length === 0) {
-      return res.status(400).json({ success: false, message: "No recipients match the selected plan(s)" });
+      return res.status(400).json({ success: false, message: "At least one valid recipient is required" });
     }
 
     // Sequential per-recipient sends (registerOptIn + template send) can
     // run long enough to hit a reverse-proxy timeout for a very large
     // list — the backend would keep sending regardless, but the admin's
     // browser would see a failed request and could reasonably retry,
-    // genuinely double-messaging everyone. Capping here forces narrowing
-    // the plan filter instead of risking that, until this is worth
+    // genuinely double-messaging everyone. Capping here forces sending in
+    // smaller batches instead of risking that, until this is worth
     // building real background-job + progress infrastructure for.
-    const MAX_BROADCAST_RECIPIENTS = 300;
     if (recipients.length > MAX_BROADCAST_RECIPIENTS) {
       return res.status(400).json({
         success: false,
-        message: `${recipients.length} recipients matched — that's over the ${MAX_BROADCAST_RECIPIENTS} limit for a single broadcast. Narrow the plan selection and send in smaller batches.`,
+        message: `${recipients.length} recipients selected — that's over the ${MAX_BROADCAST_RECIPIENTS} limit for a single broadcast. Remove some and send in smaller batches.`,
       });
     }
 
     const results = { sent: [], failed: [] };
 
     for (const r of recipients) {
-      const digits = String(r.phone).replace(/\D/g, "");
-      const destination = digits.length === 10 ? `91${digits}` : digits;
+      const destination = r.phone;
 
       try {
         await registerOptIn(destination);

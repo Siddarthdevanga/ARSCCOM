@@ -10,16 +10,32 @@ const PLAN_OPTIONS = [
   { value: "enterprise", label: "Enterprise" },
 ];
 
+const normalizePhone = (raw) => {
+  const digits = String(raw || "").replace(/\D/g, "");
+  if (digits.length < 10) return null;
+  return digits.length === 10 ? `91${digits}` : digits;
+};
+
 export default function Broadcast() {
   const router = useRouter();
   const [token, setToken] = useState("");
 
-  const [plans, setPlans] = useState(PLAN_OPTIONS.map(p => p.value)); // all checked by default
+  const [plans, setPlans] = useState(PLAN_OPTIONS.map(p => p.value)); // all checked by default = "send to all"
+
+  // Plan-derived recipients (fetched fresh whenever `plans` changes) and
+  // which of them the admin has removed from this send.
+  const [planRecipients, setPlanRecipients] = useState([]);
+  const [removedPhones,  setRemovedPhones]  = useState(new Set());
+  const [loadingList,    setLoadingList]    = useState(false);
+
+  // Manually-added numbers, independent of the plan filter — persist
+  // across plan changes since they're not derived from it.
+  const [customRecipients, setCustomRecipients] = useState([]); // [{name, phone}]
+  const [customName,  setCustomName]  = useState("");
+  const [customPhone, setCustomPhone] = useState("");
+  const [customError, setCustomError] = useState("");
+
   const [message,  setMessage]  = useState("");
-
-  const [recipientCount, setRecipientCount] = useState(null);
-  const [countLoading,   setCountLoading]   = useState(false);
-
   const [showConfirm, setShowConfirm] = useState(false);
   const [sending,     setSending]     = useState(false);
   const [result,      setResult]      = useState(null);
@@ -31,26 +47,59 @@ export default function Broadcast() {
     setToken(t);
   }, [router]);
 
-  // Recipient count preview — refetches whenever the plan selection changes,
-  // so the admin knows how many real people they're about to message before
-  // committing to Send.
+  // Refetch the plan-derived list whenever the plan selection changes.
+  // This resets any per-row removals for THIS list — changing which
+  // plans you're targeting is a big enough change that starting the
+  // review list fresh is the least surprising behavior. Custom numbers
+  // are untouched, since they don't come from this fetch at all.
   useEffect(() => {
-    if (!token || plans.length === 0) { setRecipientCount(0); return; }
+    if (!token) return;
+    if (plans.length === 0) { setPlanRecipients([]); setRemovedPhones(new Set()); return; }
     let cancelled = false;
-    setCountLoading(true);
-    fetch(`${API}/api/superadmin/broadcast-recipient-count?plans=${plans.join(",")}`, {
+    setLoadingList(true);
+    fetch(`${API}/api/superadmin/broadcast-recipients?plans=${plans.join(",")}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(res => res.json())
-      .then(data => { if (!cancelled) setRecipientCount(data.success ? data.count : null); })
-      .catch(() => { if (!cancelled) setRecipientCount(null); })
-      .finally(() => { if (!cancelled) setCountLoading(false); });
+      .then(data => {
+        if (cancelled) return;
+        setPlanRecipients(data.success ? data.recipients : []);
+        setRemovedPhones(new Set());
+      })
+      .catch(() => { if (!cancelled) setPlanRecipients([]); })
+      .finally(() => { if (!cancelled) setLoadingList(false); });
     return () => { cancelled = true; };
   }, [token, plans]);
 
   const togglePlan = (value) => {
     setPlans(prev => prev.includes(value) ? prev.filter(p => p !== value) : [...prev, value]);
   };
+  const selectAllPlans = () => setPlans(PLAN_OPTIONS.map(p => p.value));
+  const clearAllPlans  = () => setPlans([]);
+
+  const removePlanRecipient = (phone) => {
+    setRemovedPhones(prev => new Set(prev).add(phone));
+  };
+
+  const addCustomRecipient = () => {
+    setCustomError("");
+    const phone = normalizePhone(customPhone);
+    if (!phone) { setCustomError("Enter a valid phone number (at least 10 digits)"); return; }
+    if (customRecipients.some(r => r.phone === phone) || activePlanRecipients.some(r => r.phone === phone)) {
+      setCustomError("This number is already in the list");
+      return;
+    }
+    setCustomRecipients(prev => [...prev, { name: customName.trim() || "there", phone }]);
+    setCustomName("");
+    setCustomPhone("");
+  };
+
+  const removeCustomRecipient = (phone) => {
+    setCustomRecipients(prev => prev.filter(r => r.phone !== phone));
+  };
+
+  const activePlanRecipients = planRecipients.filter(r => !removedPhones.has(r.phone));
+  const finalRecipients = [...activePlanRecipients, ...customRecipients];
 
   const handleSend = async () => {
     setError("");
@@ -62,7 +111,7 @@ export default function Broadcast() {
       const res  = await fetch(`${API}/api/superadmin/send-broadcast`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ plans, message: message.trim() }),
+        body:    JSON.stringify({ recipients: finalRecipients, message: message.trim() }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
@@ -74,7 +123,7 @@ export default function Broadcast() {
     }
   };
 
-  const canSend = plans.length > 0 && message.trim().length > 0 && !sending;
+  const canSend = finalRecipients.length > 0 && message.trim().length > 0 && !sending;
 
   return (
     <div className={styles.page}>
@@ -93,17 +142,23 @@ export default function Broadcast() {
       <div style={{ maxWidth: 680, margin: "2rem auto", padding: "0 1rem" }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>WhatsApp Broadcast</h1>
         <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
-          Send a WhatsApp announcement to your real customers, targeted by plan — via an approved template, so it
-          reaches everyone regardless of whether they've messaged the bot recently.
+          Send a WhatsApp announcement to your real customers, targeted by plan or by specific number — via an
+          approved template, so it reaches everyone regardless of whether they've messaged the bot recently.
         </p>
 
         <div style={{ background: "#fff", borderRadius: 12, border: "1px solid #e5e7eb", padding: "1.5rem", display: "flex", flexDirection: "column", gap: 20 }}>
 
           {/* Plan targeting */}
           <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 8 }}>
-              Send To <span style={{ color: "#ef4444" }}>*</span>
-            </label>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+              <label style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+                Send To (by plan)
+              </label>
+              <div style={{ display: "flex", gap: 10 }}>
+                <button onClick={selectAllPlans} style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", background: "none", border: "none", cursor: "pointer" }}>Select All</button>
+                <button onClick={clearAllPlans}  style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", background: "none", border: "none", cursor: "pointer" }}>Clear</button>
+              </div>
+            </div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {PLAN_OPTIONS.map(({ value, label }) => (
                 <button
@@ -120,9 +175,81 @@ export default function Broadcast() {
                 </button>
               ))}
             </div>
-            <p style={{ fontSize: 12, color: "#7c3aed", fontWeight: 700, marginTop: 8 }}>
-              {countLoading ? "Counting recipients…" : recipientCount === null ? "" : `${recipientCount} recipient${recipientCount === 1 ? "" : "s"} will receive this`}
-            </p>
+          </div>
+
+          {/* Add a custom number */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+              Add a Custom Number <span style={{ color: "#9ca3af", fontWeight: 500 }}>(optional, in addition to the plans above)</span>
+            </label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="text"
+                placeholder="Name (optional)"
+                value={customName}
+                onChange={e => setCustomName(e.target.value)}
+                style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none" }}
+              />
+              <input
+                type="text"
+                placeholder="917406208011"
+                value={customPhone}
+                onChange={e => setCustomPhone(e.target.value)}
+                style={{ flex: 1, padding: "9px 12px", borderRadius: 8, border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none", fontFamily: "monospace" }}
+              />
+              <button
+                onClick={addCustomRecipient}
+                style={{ padding: "9px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}
+              >
+                + Add
+              </button>
+            </div>
+            {customError && <p style={{ fontSize: 11, color: "#dc2626", marginTop: 4 }}>{customError}</p>}
+          </div>
+
+          {/* Recipient list — editable, shows exactly who gets this */}
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
+              Recipients ({finalRecipients.length}) {loadingList && "— loading…"}
+            </label>
+            <div style={{ maxHeight: 240, overflowY: "auto", border: "1.5px solid #e5e7eb", borderRadius: 8 }}>
+              {finalRecipients.length === 0 && !loadingList && (
+                <p style={{ fontSize: 12, color: "#9ca3af", padding: "14px", margin: 0, textAlign: "center" }}>
+                  No recipients yet — select a plan above or add a custom number.
+                </p>
+              )}
+              {activePlanRecipients.map(r => (
+                <div key={r.phone} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #f3f4f6" }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#1a0038" }}>{r.name}</span>
+                    <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 8, fontFamily: "monospace" }}>{r.phone}</span>
+                  </div>
+                  <button
+                    onClick={() => removePlanRecipient(r.phone)}
+                    title="Remove from this send"
+                    style={{ background: "none", border: "none", color: "#dc2626", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: "0 4px" }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              {customRecipients.map(r => (
+                <div key={r.phone} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #f3f4f6", background: "rgba(124,58,237,0.04)" }}>
+                  <div>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#1a0038" }}>{r.name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", marginLeft: 8 }}>CUSTOM</span>
+                    <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 8, fontFamily: "monospace" }}>{r.phone}</span>
+                  </div>
+                  <button
+                    onClick={() => removeCustomRecipient(r.phone)}
+                    title="Remove from this send"
+                    style={{ background: "none", border: "none", color: "#dc2626", fontSize: 16, cursor: "pointer", lineHeight: 1, padding: "0 4px" }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Message */}
@@ -142,7 +269,7 @@ export default function Broadcast() {
               }}
             />
             <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-              Each company automatically gets "Hi [Company Name], 👋" before this, and a Hai Visitor thank-you footer after — just write the middle part.
+              Each recipient automatically gets "Hi [Name], 👋" before this, and a Hai Visitor thank-you footer after — just write the middle part.
             </p>
           </div>
 
@@ -196,10 +323,10 @@ export default function Broadcast() {
             style={{ background: "#fff", borderRadius: 16, padding: "28px", maxWidth: 420, width: "100%" }}
           >
             <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1a0038", margin: "0 0 10px" }}>
-              Send to {recipientCount ?? "…"} recipient{recipientCount === 1 ? "" : "s"}?
+              Send to {finalRecipients.length} recipient{finalRecipients.length === 1 ? "" : "s"}?
             </h3>
             <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 20px", lineHeight: 1.5 }}>
-              This sends a real WhatsApp message to every active user on the {plans.map(p => PLAN_OPTIONS.find(o => o.value === p)?.label).join(", ")} plan{plans.length > 1 ? "s" : ""}. This can't be undone once sent.
+              This sends a real WhatsApp message to everyone currently in the recipient list. This can't be undone once sent.
             </p>
             <div style={{ display: "flex", gap: 10 }}>
               <button
