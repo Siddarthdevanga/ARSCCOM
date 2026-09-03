@@ -41,6 +41,51 @@ const PLAN_CARD_META = {
   },
 };
 
+// Hoisted to module scope, NOT defined inside PlansPage's render body — a
+// component defined inline gets a brand-new type identity on every parent
+// re-render, so React remounts it instead of reconciling. That was silently
+// breaking the promo code input specifically: every keystroke set state on
+// the parent, which redefined this component, which unmounted/remounted
+// the <input>, dropping focus after every single character typed.
+function PlanCard({ plan, interval, ctaLabel, isCurrent, showPromoField, promoValue, onPromoChange, onSelect, busy, disabled }) {
+  const meta = PLAN_CARD_META[plan];
+  const pricing = meta.pricing[interval];
+  const { Icon } = meta;
+  return (
+    <div className={`${styles.planCard} ${plan === "enterprise" ? styles.enterpriseCard : ""} ${isCurrent ? styles.currentCard : ""}`}>
+      {isCurrent && <span className={styles.currentBadge}>Current Plan</span>}
+      <div className={styles.planIconWrapper}><Icon size={20}/></div>
+      <div className={styles.planCardInfo}>
+        <h6>{meta.name}</h6>
+        <span className={styles.intervalTag}>{interval === "annual" ? "Annual" : "Monthly"}</span>
+      </div>
+      <div className={styles.planPricing}>
+        <span className={styles.price}>{pricing.price}</span>
+        <span className={styles.period}> {pricing.period}</span>
+      </div>
+      <ul className={styles.featureList}>
+        {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
+      </ul>
+      {showPromoField && !isCurrent && (
+        <input
+          type="text"
+          placeholder="Have a promo code?"
+          value={promoValue}
+          onChange={(e) => onPromoChange(e.target.value)}
+          className={styles.promoInput}
+        />
+      )}
+      <button
+        className={`${styles.upgradeBtn} ${plan === "enterprise" ? styles.enterpriseBtn : ""}`}
+        onClick={() => onSelect(plan, interval, showPromoField ? promoValue : undefined)}
+        disabled={disabled}
+      >
+        {busy ? <><div className={styles.btnSpinner}/> Processing…</> : ctaLabel}
+      </button>
+    </div>
+  );
+}
+
 export default function PlansPage() {
   const router = useRouter();
 
@@ -180,50 +225,23 @@ export default function PlansPage() {
 
   const { bg: statusBg, color: statusColor, Icon: StatusIcon } = getStatusStyle(subData?.STATUS);
 
-  // Every card now stands for one fixed plan+interval combination — no
-  // shared toggle. The card matching what the company is actually on
-  // (and not lapsed) gets a "Current Plan" badge.
-  const PlanCard = ({ plan, interval, ctaLabel }) => {
-    const meta = PLAN_CARD_META[plan];
-    const pricing = meta.pricing[interval];
-    const { Icon } = meta;
-    const busyKey = plan + interval;
-    const isCurrent = !needsRenewal && plan === currentPlan && interval === currentInterval;
-    const showPromoField = plan === "business" && interval === "annual";
-    return (
-      <div className={`${styles.planCard} ${plan === "enterprise" ? styles.enterpriseCard : ""} ${isCurrent ? styles.currentCard : ""}`}>
-        {isCurrent && <span className={styles.currentBadge}>Current Plan</span>}
-        <div className={styles.planIconWrapper}><Icon size={20}/></div>
-        <div className={styles.planCardInfo}>
-          <h6>{meta.name}</h6>
-          <span className={styles.intervalTag}>{interval === "annual" ? "Annual" : "Monthly"}</span>
-        </div>
-        <div className={styles.planPricing}>
-          <span className={styles.price}>{pricing.price}</span>
-          <span className={styles.period}> {pricing.period}</span>
-        </div>
-        <ul className={styles.featureList}>
-          {meta.features.map((f, i) => <li key={i}><CheckCircle size={13}/> {f}</li>)}
-        </ul>
-        {showPromoField && !isCurrent && (
-          <input
-            type="text"
-            placeholder="Have a promo code?"
-            value={businessAnnualPromo}
-            onChange={(e) => setBusinessAnnualPromo(e.target.value)}
-            className={styles.promoInput}
-          />
-        )}
-        <button
-          className={`${styles.upgradeBtn} ${plan === "enterprise" ? styles.enterpriseBtn : ""}`}
-          onClick={() => handleSelectPlan(plan, interval, showPromoField ? businessAnnualPromo : undefined)}
-          disabled={!!upgradingPlan}
-        >
-          {upgradingPlan === busyKey ? <><div className={styles.btnSpinner}/> Processing…</> : ctaLabel}
-        </button>
-      </div>
-    );
-  };
+  // Plain function, not a component — returns JSX using the module-level
+  // PlanCard, whose type identity stays stable across re-renders (see the
+  // comment on PlanCard itself for why that distinction matters here).
+  const renderPlanCard = (plan, interval, ctaLabel) => (
+    <PlanCard
+      plan={plan}
+      interval={interval}
+      ctaLabel={ctaLabel}
+      isCurrent={!needsRenewal && plan === currentPlan && interval === currentInterval}
+      showPromoField={plan === "business" && interval === "annual"}
+      promoValue={businessAnnualPromo}
+      onPromoChange={setBusinessAnnualPromo}
+      onSelect={handleSelectPlan}
+      busy={upgradingPlan === plan + interval}
+      disabled={!!upgradingPlan}
+    />
+  );
 
   return (
     <div className={styles.container}>
@@ -327,26 +345,26 @@ export default function PlansPage() {
                   <div className={styles.planGrid}>
                     {currentPlan === "trial" && (
                       <>
-                        <PlanCard plan="business" interval="monthly" ctaLabel="Upgrade to Business" />
-                        <PlanCard plan="business" interval="annual" ctaLabel="Upgrade to Business" />
-                        <PlanCard plan="enterprise" interval="monthly" ctaLabel="Upgrade to Enterprise" />
-                        <PlanCard plan="enterprise" interval="annual" ctaLabel="Upgrade to Enterprise" />
+                        {renderPlanCard("business", "monthly", "Upgrade to Business")}
+                        {renderPlanCard("business", "annual", "Upgrade to Business")}
+                        {renderPlanCard("enterprise", "monthly", "Upgrade to Enterprise")}
+                        {renderPlanCard("enterprise", "annual", "Upgrade to Enterprise")}
                       </>
                     )}
                     {currentPlan === "business" && (
                       <>
-                        <PlanCard plan="business" interval="monthly" ctaLabel="Renew Business" />
-                        <PlanCard plan="business" interval="annual" ctaLabel="Renew Business" />
-                        <PlanCard plan="enterprise" interval="monthly" ctaLabel="Upgrade to Enterprise" />
-                        <PlanCard plan="enterprise" interval="annual" ctaLabel="Upgrade to Enterprise" />
+                        {renderPlanCard("business", "monthly", "Renew Business")}
+                        {renderPlanCard("business", "annual", "Renew Business")}
+                        {renderPlanCard("enterprise", "monthly", "Upgrade to Enterprise")}
+                        {renderPlanCard("enterprise", "annual", "Upgrade to Enterprise")}
                       </>
                     )}
                     {currentPlan === "enterprise" && (
                       <>
-                        <PlanCard plan="business" interval="monthly" ctaLabel="Switch to Business" />
-                        <PlanCard plan="business" interval="annual" ctaLabel="Switch to Business" />
-                        <PlanCard plan="enterprise" interval="monthly" ctaLabel="Renew Enterprise" />
-                        <PlanCard plan="enterprise" interval="annual" ctaLabel="Renew Enterprise" />
+                        {renderPlanCard("business", "monthly", "Switch to Business")}
+                        {renderPlanCard("business", "annual", "Switch to Business")}
+                        {renderPlanCard("enterprise", "monthly", "Renew Enterprise")}
+                        {renderPlanCard("enterprise", "annual", "Renew Enterprise")}
                       </>
                     )}
                     <p className={styles.customBuildNote}>
@@ -375,14 +393,14 @@ export default function PlansPage() {
                       <div className={styles.planGrid}>
                         {currentPlan === "business" && (
                           <>
-                            <PlanCard plan="business" interval="monthly" ctaLabel="Renew Business" />
-                            <PlanCard plan="business" interval="annual" ctaLabel="Switch to Annual" />
+                            {renderPlanCard("business", "monthly", "Renew Business")}
+                            {renderPlanCard("business", "annual", "Switch to Annual")}
                           </>
                         )}
                         {currentPlan === "enterprise" && (
                           <>
-                            <PlanCard plan="enterprise" interval="monthly" ctaLabel="Renew Enterprise" />
-                            <PlanCard plan="enterprise" interval="annual" ctaLabel="Switch to Annual" />
+                            {renderPlanCard("enterprise", "monthly", "Renew Enterprise")}
+                            {renderPlanCard("enterprise", "annual", "Switch to Annual")}
                           </>
                         )}
                       </div>
@@ -401,7 +419,7 @@ export default function PlansPage() {
                       </div>
                       {currentInterval === "monthly" && (
                         <div className={styles.planGrid} style={{ marginTop: "16px" }}>
-                          <PlanCard plan={currentPlan} interval="annual" ctaLabel={`Switch ${PLAN_LABELS[currentPlan]} to Annual`} />
+                          {renderPlanCard(currentPlan, "annual", `Switch ${PLAN_LABELS[currentPlan]} to Annual`)}
                         </div>
                       )}
                     </section>
@@ -418,14 +436,14 @@ export default function PlansPage() {
                       <div className={styles.planGrid}>
                         {canUpgradeBusiness && (
                           <>
-                            <PlanCard plan="business" interval="monthly" ctaLabel="Upgrade to Business" />
-                            <PlanCard plan="business" interval="annual" ctaLabel="Upgrade to Business" />
+                            {renderPlanCard("business", "monthly", "Upgrade to Business")}
+                            {renderPlanCard("business", "annual", "Upgrade to Business")}
                           </>
                         )}
                         {canUpgradeEnterprise && (
                           <>
-                            <PlanCard plan="enterprise" interval="monthly" ctaLabel="Upgrade to Enterprise" />
-                            <PlanCard plan="enterprise" interval="annual" ctaLabel="Upgrade to Enterprise" />
+                            {renderPlanCard("enterprise", "monthly", "Upgrade to Enterprise")}
+                            {renderPlanCard("enterprise", "annual", "Upgrade to Enterprise")}
                           </>
                         )}
                         <p className={styles.customBuildNote}>
@@ -445,8 +463,8 @@ export default function PlansPage() {
                       </div>
                       <p className={styles.sectionDescription}>Only need visitor management? Switch down to Business.</p>
                       <div className={styles.planGrid}>
-                        <PlanCard plan="business" interval="monthly" ctaLabel="Switch to Business" />
-                        <PlanCard plan="business" interval="annual" ctaLabel="Switch to Business" />
+                        {renderPlanCard("business", "monthly", "Switch to Business")}
+                        {renderPlanCard("business", "annual", "Switch to Business")}
                       </div>
                     </section>
                   )}
