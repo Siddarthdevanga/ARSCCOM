@@ -15,7 +15,6 @@ export default function Broadcast() {
   const [token, setToken] = useState("");
 
   const [plans, setPlans] = useState(PLAN_OPTIONS.map(p => p.value)); // all checked by default
-  const [imageUrl, setImageUrl] = useState("");
   const [message,  setMessage]  = useState("");
 
   const [recipientCount, setRecipientCount] = useState(null);
@@ -63,7 +62,7 @@ export default function Broadcast() {
       const res  = await fetch(`${API}/api/superadmin/send-broadcast`, {
         method:  "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body:    JSON.stringify({ plans, message: message.trim(), imageUrl: imageUrl.trim() || undefined }),
+        body:    JSON.stringify({ plans, message: message.trim() }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message);
@@ -126,27 +125,6 @@ export default function Broadcast() {
             </p>
           </div>
 
-          {/* Image URL (optional) */}
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
-              Image URL <span style={{ color: "#9ca3af", fontWeight: 500 }}>(optional)</span>
-            </label>
-            <input
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              value={imageUrl}
-              onChange={e => setImageUrl(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 12px", borderRadius: 8,
-                border: "1.5px solid #e5e7eb", fontSize: 13, outline: "none",
-                boxSizing: "border-box",
-              }}
-            />
-            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
-              Leave blank to send a text-only message. Must be a publicly accessible image URL (JPEG or PNG).
-            </p>
-          </div>
-
           {/* Message */}
           <div>
             <label style={{ fontSize: 12, fontWeight: 700, color: "#374151", display: "block", marginBottom: 6 }}>
@@ -163,6 +141,9 @@ export default function Broadcast() {
                 resize: "vertical", boxSizing: "border-box",
               }}
             />
+            <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>
+              Each company automatically gets "Hi [Company Name], 👋" before this, and a Hai Visitor thank-you footer after — just write the middle part.
+            </p>
           </div>
 
           {/* Error */}

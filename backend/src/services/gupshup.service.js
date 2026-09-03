@@ -119,17 +119,12 @@ export const sendIntroMessage = async (destination) => {
 };
 
 /* --------------------------------------------------
-   Send an approved template message, optionally with an IMAGE header —
-   used by the Superadmin plan-targeted broadcast. A template message
-   (unlike sendIntroMessage's session message) doesn't need an open 24h
-   conversation window and is the only reliable way to reach a cold
-   contact — confirmed against Gupshup's docs: the `message` field
-   ({type:"image", image:{link}}) is required only when the template
-   itself has a media header, and is simply omitted for a text-only
-   template.
-   imageUrl: publicly accessible image URL, or falsy for a text-only send.
+   Send an approved template message — used by the Superadmin
+   plan-targeted broadcast. A template message (unlike sendIntroMessage's
+   session message) doesn't need an open 24h conversation window and is
+   the only reliable way to reach a cold contact.
 -------------------------------------------------- */
-export const sendBroadcastTemplate = async (destination, templateId, params, imageUrl) => {
+export const sendBroadcastTemplate = async (destination, templateId, params) => {
   const { apiKey, appName, srcNum } = getConfig();
 
   const body = new URLSearchParams({
@@ -139,9 +134,6 @@ export const sendBroadcastTemplate = async (destination, templateId, params, ima
     "src.name": appName,
     template:   JSON.stringify({ id: templateId, params }),
   });
-  if (imageUrl) {
-    body.append("message", JSON.stringify({ type: "image", image: { link: imageUrl } }));
-  }
 
   try {
     const { data } = await axios.post(TEMPLATE_URL, body.toString(), {

@@ -542,20 +542,21 @@ export const broadcastRecipientCount = async (req, res) => {
 /* ======================================================
    SEND PLAN-TARGETED WHATSAPP BROADCAST
    POST /api/superadmin/send-broadcast
-   body: { plans: string[], message: string, imageUrl?: string }
+   body: { plans: string[], message: string }
    --------------------------------------------------------
    Template-based (not a raw session message) — reaches every recipient
-   regardless of whether they've messaged the bot recently. Requires
-   GUPSHUP_BROADCAST_TEXT_TEMPLATE (body-only) and, when imageUrl is
-   given, GUPSHUP_BROADCAST_IMAGE_TEMPLATE (IMAGE header + same body
-   shape) — both Marketing-category templates created manually in the
-   Gupshup dashboard. registerOptIn is called best-effort per recipient
-   first, since Marketing templates require Meta-recognized consent —
-   real customers were never opted in via any earlier flow.
+   regardless of whether they've messaged the bot recently. Text-only,
+   one template (GUPSHUP_BROADCAST_TEMPLATE) with a single {{1}}
+   placeholder — the greeting ("Hi [Company], 👋") and the admin's typed
+   message are combined into that one value per recipient, since Gupshup
+   rejected a 2-variable version as too thin on fixed template text.
+   registerOptIn is called best-effort per recipient first, since a
+   Marketing-category template requires Meta-recognized consent — real
+   customers were never opted in via any earlier flow.
 ====================================================== */
 export const sendBroadcast = async (req, res) => {
   try {
-    const { message, imageUrl } = req.body;
+    const { message } = req.body;
     const plans = normalizeBroadcastPlans(req.body.plans);
 
     const cleanMessage = (message || "").trim();
@@ -563,27 +564,42 @@ export const sendBroadcast = async (req, res) => {
       return res.status(400).json({ success: false, message: "Message is required" });
     }
 
-    const templateId = imageUrl
-      ? process.env.GUPSHUP_BROADCAST_IMAGE_TEMPLATE
-      : process.env.GUPSHUP_BROADCAST_TEXT_TEMPLATE;
+    const templateId = process.env.GUPSHUP_BROADCAST_TEMPLATE;
     if (!templateId) {
-      return res.status(400).json({
-        success: false,
-        message: `${imageUrl ? "GUPSHUP_BROADCAST_IMAGE_TEMPLATE" : "GUPSHUP_BROADCAST_TEXT_TEMPLATE"} is not configured`,
-      });
+      return res.status(400).json({ success: false, message: "GUPSHUP_BROADCAST_TEMPLATE is not configured" });
     }
 
     const placeholders = plans.map(() => "?").join(",");
+    // GROUP BY phone (not DISTINCT name+phone) — if the same number were
+    // ever shared across two differently-named companies, that person
+    // would otherwise get two separate messages, each greeted with a
+    // different company name.
     const [recipients] = await db.query(
-      `SELECT DISTINCT c.name, u.phone
+      `SELECT u.phone, MIN(c.name) AS name
        FROM companies c
        JOIN users u ON u.company_id = c.id AND u.role = 'user' AND u.is_active = 1
-       WHERE c.plan IN (${placeholders}) AND u.phone IS NOT NULL AND u.phone != ''`,
+       WHERE c.plan IN (${placeholders}) AND u.phone IS NOT NULL AND u.phone != ''
+       GROUP BY u.phone`,
       plans
     );
 
     if (recipients.length === 0) {
       return res.status(400).json({ success: false, message: "No recipients match the selected plan(s)" });
+    }
+
+    // Sequential per-recipient sends (registerOptIn + template send) can
+    // run long enough to hit a reverse-proxy timeout for a very large
+    // list — the backend would keep sending regardless, but the admin's
+    // browser would see a failed request and could reasonably retry,
+    // genuinely double-messaging everyone. Capping here forces narrowing
+    // the plan filter instead of risking that, until this is worth
+    // building real background-job + progress infrastructure for.
+    const MAX_BROADCAST_RECIPIENTS = 300;
+    if (recipients.length > MAX_BROADCAST_RECIPIENTS) {
+      return res.status(400).json({
+        success: false,
+        message: `${recipients.length} recipients matched — that's over the ${MAX_BROADCAST_RECIPIENTS} limit for a single broadcast. Narrow the plan selection and send in smaller batches.`,
+      });
     }
 
     const results = { sent: [], failed: [] };
@@ -599,7 +615,12 @@ export const sendBroadcast = async (req, res) => {
       }
 
       try {
-        await sendBroadcastTemplate(destination, templateId, [cleanMessage], imageUrl || null);
+        // Gupshup rejected a 2-variable version of this template as too
+        // thin on fixed text — the greeting is now built into the one
+        // {{1}} value here instead of being its own placeholder, and the
+        // template supplies the fixed "Thank You" footer around it.
+        const greeted = `Hi ${r.name}, 👋\n\n${cleanMessage}`;
+        await sendBroadcastTemplate(destination, templateId, [greeted]);
         results.sent.push({ company: r.name, phone: destination });
       } catch (e) {
         console.error(`[BROADCAST] send failed for ${destination}:`, e.message);
