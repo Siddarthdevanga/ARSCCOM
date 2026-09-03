@@ -560,13 +560,15 @@ const MAX_BROADCAST_RECIPIENTS = 300;
 
    Template-based (not a raw session message) — reaches every recipient
    regardless of whether they've messaged the bot recently. Text-only,
-   one template (GUPSHUP_BROADCAST_TEMPLATE) with a single {{1}}
-   placeholder — the greeting ("Hi [Name], 👋") and the admin's typed
-   message are combined into that one value per recipient, since Gupshup
-   rejected a 2-variable version as too thin on fixed template text.
-   registerOptIn is called best-effort per recipient first, since a
-   Marketing-category template requires Meta-recognized consent — real
-   customers were never opted in via any earlier flow.
+   one Utility-category template (GUPSHUP_BROADCAST_TEMPLATE) with a
+   single {{1}} placeholder — the greeting ("Hi [Name], 👋") and the
+   admin's typed message are combined into that one value per recipient,
+   since Gupshup rejected a 2-variable version as too thin on fixed
+   template text. Utility (not Marketing) is the right category for
+   messaging your own existing customers — no per-recipient opt-in
+   registration needed (a Marketing-category attempt at this failed
+   anyway: the opt-in endpoint uses a different, older Gupshup API
+   family whose auth these credentials don't recognize).
 ====================================================== */
 export const sendBroadcast = async (req, res) => {
   try {
@@ -602,8 +604,8 @@ export const sendBroadcast = async (req, res) => {
       return res.status(400).json({ success: false, message: "At least one valid recipient is required" });
     }
 
-    // Sequential per-recipient sends (registerOptIn + template send) can
-    // run long enough to hit a reverse-proxy timeout for a very large
+    // Sequential per-recipient sends can run long enough to hit a
+    // reverse-proxy timeout for a very large
     // list — the backend would keep sending regardless, but the admin's
     // browser would see a failed request and could reasonably retry,
     // genuinely double-messaging everyone. Capping here forces sending in
@@ -620,12 +622,6 @@ export const sendBroadcast = async (req, res) => {
 
     for (const r of recipients) {
       const destination = r.phone;
-
-      try {
-        await registerOptIn(destination);
-      } catch (e) {
-        console.error(`[BROADCAST] opt-in registration failed for ${destination} (non-fatal):`, e.message);
-      }
 
       try {
         // Gupshup rejected a 2-variable version of this template as too
