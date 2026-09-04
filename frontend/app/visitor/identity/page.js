@@ -207,7 +207,10 @@ export default function VisitorIdentity() {
       localStorage.removeItem("visitor_secondary");
       localStorage.removeItem("visitor_returning");
 
-      router.push(`/visitor/pass?visitorCode=${data.visitor.visitorCode}`);
+      // The pass page's public lookup is keyed on passToken (unguessable),
+      // not visitorCode (a plain sequential counter) — passing visitorCode
+      // here would 404 against that route.
+      router.push(`/visitor/pass?visitorCode=${data.visitor.passToken}`);
     } catch (err) {
       console.error("GENERATE PASS ERROR:", err);
       setError(err.message || "Failed to generate visitor pass");

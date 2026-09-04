@@ -356,7 +356,10 @@ export default function NewVisitorPage() {
       localStorage.removeItem("visitor_returning");
       localStorage.removeItem("visitor_primary");
       localStorage.removeItem("visitor_secondary");
-      router.push(`/visitor/pass?visitorCode=${data.visitor.visitorCode}`);
+      // The pass page's public lookup is keyed on passToken (unguessable),
+      // not visitorCode (a plain sequential counter) — passing visitorCode
+      // here would 404 against that route.
+      router.push(`/visitor/pass?visitorCode=${data.visitor.passToken}`);
     } catch (err) {
       setMiniError(err.message || "Failed to issue pass");
     } finally {
