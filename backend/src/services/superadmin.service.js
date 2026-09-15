@@ -193,6 +193,10 @@ export const getCompaniesForExport = async (from, to) => {
      for the Superadmin dashboard's "Razorpay Payment Source" tab
 ====================================================== */
 export const getRazorpaySignups = async () => {
+  // A plain JOIN duplicates a company's row once per user it has — the
+  // frontend keys each table row by this id, so any company with more
+  // than one user threw off rendering. One deterministic user per
+  // company (earliest-created), same as getCompaniesForExport.
   const [rows] = await db.query(
     `SELECT
        c.id,
@@ -202,10 +206,9 @@ export const getRazorpaySignups = async () => {
        c.registration_complete,
        c.created_at,
        c.onboarding_nurture_sent,
-       u.email,
-       u.phone
+       (SELECT u.email FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS email,
+       (SELECT u.phone FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS phone
      FROM companies c
-     JOIN users u ON u.company_id = c.id
      WHERE c.registration_source = 'razorpay'
      ORDER BY c.created_at DESC`
   );
