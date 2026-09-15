@@ -373,9 +373,11 @@
 }
 
 .tableScroll {
+  /* No vertical cap/inner scrollbar — the table grows to its natural
+     height (however many companies there are) and the page itself
+     scrolls via .scrollBody. That reserved-but-empty max-height was
+     exactly what left dead space below a short row count. */
   overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 420px);
   -webkit-overflow-scrolling: touch;
 }
 
