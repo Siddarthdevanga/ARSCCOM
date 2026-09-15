@@ -208,7 +208,14 @@ export default function ConferenceDashboard() {
         const imgRes = await fetch(`${base}/image`, {
           method: "PATCH", credentials: "include", body: fd,
         });
-        if (!imgRes.ok) { const d = await imgRes.json(); throw new Error(d?.message || "Image upload failed"); }
+        if (imgRes.status === 413) throw new Error("Image file is too large. Please use a smaller image.");
+        if (!imgRes.ok) {
+          // A rejection before this reaches our app (e.g. a proxy body-size
+          // limit) comes back as an HTML error page, not JSON.
+          const contentType = imgRes.headers.get("content-type");
+          const d = contentType && contentType.includes("application/json") ? await imgRes.json() : {};
+          throw new Error(d?.message || "Image upload failed");
+        }
       }
 
       cancelEdit(); await loadDashboard(); showNotification("Room updated!", "success");
@@ -243,7 +250,14 @@ export default function ConferenceDashboard() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/conference/rooms`, {
         method: "POST", credentials: "include", body: fd,
       });
-      if (!res.ok) { const d = await res.json(); throw new Error(d?.message || "Create failed"); }
+      if (res.status === 413) throw new Error("Image file is too large. Please use a smaller image.");
+      const contentType = res.headers.get("content-type");
+      const isJson = contentType && contentType.includes("application/json");
+      if (!res.ok) {
+        const d = isJson ? await res.json() : {};
+        throw new Error(d?.message || "Create failed");
+      }
+      if (!isJson) throw new Error("Server returned an invalid response");
       const response = await res.json();
       setNewRoomName(""); setNewRoomNumber(""); setNewRoomCapacity("");
       setNewRoomImage(null); setNewRoomImagePreview(null); setShowAddRoomModal(false);

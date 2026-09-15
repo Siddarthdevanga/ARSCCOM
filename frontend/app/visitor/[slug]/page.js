@@ -642,6 +642,13 @@ export default function PublicVisitorRegistration() {
           body: fd, credentials: "omit", signal: controller.signal,
         });
         clearTimeout(timer);
+        if (res.status === 413) throw new Error("Photo file is too large. Please retake it or use a smaller image.");
+        // A rejection before this reaches our app (e.g. a proxy body-size
+        // limit) comes back as an HTML error page, not JSON.
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server returned an invalid response");
+        }
         data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.message || "Registration failed.");
       } catch (err) {
@@ -702,6 +709,13 @@ export default function PublicVisitorRegistration() {
           body: fd, credentials: "omit", signal: controller.signal,
         });
         clearTimeout(timer);
+        if (res.status === 413) throw new Error("Photo file is too large. Please retake it or use a smaller image.");
+        // A rejection before this reaches our app (e.g. a proxy body-size
+        // limit) comes back as an HTML error page, not JSON.
+        const contentType = res.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          throw new Error("Server returned an invalid response");
+        }
         data = await res.json();
         if (!res.ok || !data.success) throw new Error(data.message || "Registration failed.");
       } catch (err) {

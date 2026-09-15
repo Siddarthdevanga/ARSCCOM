@@ -350,7 +350,19 @@ export default function NewVisitorPage() {
         credentials: "include",
         body: fd,
       });
-      const data = await res.json();
+
+      if (res.status === 413) throw new Error("Photo file is too large. Please use a smaller image.");
+
+      // A rejection before this reaches our app (e.g. a proxy body-size
+      // limit) comes back as an HTML error page, not JSON — parsing that
+      // as JSON throws and used to surface as a generic connection error.
+      const contentType = res.headers.get("content-type");
+      let data = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        throw new Error("Server returned an invalid response");
+      }
       if (!res.ok) throw new Error(data?.message || "Failed to issue pass");
 
       localStorage.removeItem("visitor_returning");
