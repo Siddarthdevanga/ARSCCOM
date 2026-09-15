@@ -128,7 +128,24 @@ export default function CompleteRegistrationPage() {
         credentials: "include",
       });
 
-      const data = await res.json();
+      if (res.status === 413) {
+        setError("Logo file is too large. Please upload a smaller image.");
+        return;
+      }
+
+      // A rejection before this even reaches our app (e.g. a proxy body-size
+      // limit) comes back as an HTML error page, not JSON — parsing that as
+      // JSON throws and used to surface as a generic "can't connect" message
+      // instead of anything useful.
+      const contentType = res.headers.get("content-type");
+      let data = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(text ? "Server returned an invalid response" : "Failed to complete registration");
+      }
+
       if (!res.ok) {
         setError(data?.message || "Failed to complete registration");
         return;
