@@ -388,8 +388,15 @@
   /* No vertical cap/inner scrollbar — the table grows to its natural
      height (however many companies there are) and the page itself
      scrolls via .scrollBody. That reserved-but-empty max-height was
-     exactly what left dead space below a short row count. */
+     exactly what left dead space below a short row count.
+     overflow-y is pinned to visible explicitly — leaving it unset lets
+     the browser silently force it to 'auto' (per spec, overflow-x and
+     overflow-y can't mix 'visible' with a non-'visible' value), turning
+     this into an unintended second vertical scroll container that can
+     hijack the sticky <thead> and swallow wheel-scroll events instead
+     of letting them bubble up to .scrollBody. */
   overflow-x: auto;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
 }
 
