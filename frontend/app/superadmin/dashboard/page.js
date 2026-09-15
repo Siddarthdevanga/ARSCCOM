@@ -3,7 +3,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import {
+  Menu, X, LayoutDashboard, Pencil, CreditCard, CalendarDays, Clock, AlertTriangle,
+  MessageCircle, Megaphone, Link2,
+} from "lucide-react";
 import styles from "./style.module.css";
+
+const TAB_META = {
+  overview: { label: "Overview", Icon: LayoutDashboard },
+  edit:     { label: "Edit",     Icon: Pencil },
+  plan:     { label: "Plan",     Icon: CreditCard },
+  dates:    { label: "Dates",    Icon: CalendarDays },
+  grace:    { label: "Grace",    Icon: Clock },
+  danger:   { label: "Danger",   Icon: AlertTriangle },
+};
 
 /* ======================================================
    HELPERS
@@ -140,29 +153,36 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
 
-        {/* TABS */}
-        <div className={styles.tabs}>
-          {TABS.map((t) => (
-            <button
-              key={t}
-              className={`${styles.tab} ${tab === t ? styles.tabActive : ""}`}
-              onClick={() => { setTab(t); setMsg(null); }}
-            >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
+        <div className={styles.modalLayout}>
 
-        {msg && (
-          <div className={`${styles.modalMsg} ${msg.type === "success" ? styles.modalMsgSuccess : styles.modalMsgError}`}>
-            {msg.text}
+          {/* SIDEBAR */}
+          <div className={styles.sidebar}>
+            {TABS.map((t) => {
+              const { label, Icon } = TAB_META[t];
+              return (
+                <button
+                  key={t}
+                  className={`${styles.sidebarTab} ${tab === t ? styles.sidebarTabActive : ""} ${t === "danger" ? styles.sidebarTabDanger : ""}`}
+                  onClick={() => { setTab(t); setMsg(null); }}
+                >
+                  <Icon size={16} />
+                  {label}
+                </button>
+              );
+            })}
           </div>
-        )}
 
-        <div className={styles.modalBody}>
+          <div className={styles.modalMain}>
+            {msg && (
+              <div className={`${styles.modalMsg} ${msg.type === "success" ? styles.modalMsgSuccess : styles.modalMsgError}`}>
+                {msg.text}
+              </div>
+            )}
 
-          {/* ── OVERVIEW ── */}
-          {tab === "overview" && (
+            <div className={styles.modalBody}>
+
+              {/* ── OVERVIEW ── */}
+              {tab === "overview" && (
             <div className={styles.overviewGrid}>
               {[
                 ["Plan",       <span className={`${styles.badge} ${planColor(company.plan)}`}>{(company.plan || "trial").toUpperCase()}</span>],
@@ -425,6 +445,8 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
             </div>
           )}
 
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -536,6 +558,7 @@ export default function SuperAdminDashboard() {
   const isFullAdmin = admin?.role === "superadmin";
 
   const [showAddAdmin,  setShowAddAdmin]  = useState(false);
+  const [showNavDrawer, setShowNavDrawer] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
@@ -659,10 +682,12 @@ export default function SuperAdminDashboard() {
   };
 
   /* ── STATS ── */
-  const totalCompanies = companies.length;
-  const activeCount    = companies.filter((c) => c.subscription_status === "active").length;
-  const trialCount     = companies.filter((c) => c.subscription_status === "trial").length;
-  const suspendedCount = companies.filter((c) => c.is_suspended).length;
+  const totalCompanies  = companies.length;
+  const activeCount     = companies.filter((c) => c.subscription_status === "active").length;
+  const suspendedCount  = companies.filter((c) => c.is_suspended).length;
+  const businessCount   = companies.filter((c) => c.plan === "business").length;
+  const enterpriseCount = companies.filter((c) => c.plan === "enterprise").length;
+  const trialPlanCount  = companies.filter((c) => c.plan === "trial").length;
 
   /* ── FILTER ── */
   const filtered = companies.filter((c) => {
@@ -701,6 +726,11 @@ export default function SuperAdminDashboard() {
       {/* ── HEADER ── */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
+          {isFullAdmin && (
+            <button className={styles.hamburgerBtn} onClick={() => setShowNavDrawer(true)} aria-label="Open menu">
+              <Menu size={20} />
+            </button>
+          )}
           <div className={styles.logoContainer}>
             <Image
               src="/haivisitor.png"
@@ -716,17 +746,45 @@ export default function SuperAdminDashboard() {
         <div className={styles.headerRight}>
           <span className={styles.adminEmail}>{admin?.email}</span>
           {isFullAdmin && (
-            <>
-              <a href="/superadmin/whatsapp-leads" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Leads</a>
-              <a href="/superadmin/broadcast" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: "8px" }}>WhatsApp Broadcast</a>
-              <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
-                + Add Sub-Admin
-              </button>
-            </>
+            <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
+              + Add Sub-Admin
+            </button>
           )}
           <button className={styles.logoutBtn} onClick={logout}>Logout</button>
         </div>
       </header>
+
+      {/* ── NAV DRAWER ── */}
+      {isFullAdmin && showNavDrawer && (
+        <div className={styles.drawerOverlay} onClick={() => setShowNavDrawer(false)}>
+          <nav className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.drawerHeader}>
+              <span className={styles.superBadge}>SUPERADMIN</span>
+              <button className={styles.modalClose} onClick={() => setShowNavDrawer(false)} aria-label="Close menu">
+                <X size={16} />
+              </button>
+            </div>
+            <button
+              className={`${styles.drawerLink} ${activeTab === "companies" ? styles.drawerLinkActive : ""}`}
+              onClick={() => { setActiveTab("companies"); setShowNavDrawer(false); }}
+            >
+              <LayoutDashboard size={17} /> Dashboard
+            </button>
+            <a href="/superadmin/whatsapp-leads" className={styles.drawerLink}>
+              <MessageCircle size={17} /> WhatsApp Leads
+            </a>
+            <a href="/superadmin/broadcast" className={styles.drawerLink}>
+              <Megaphone size={17} /> WhatsApp Broadcast
+            </a>
+            <button
+              className={`${styles.drawerLink} ${activeTab === "razorpay" ? styles.drawerLinkActive : ""}`}
+              onClick={() => { setActiveTab("razorpay"); setShowNavDrawer(false); }}
+            >
+              <Link2 size={17} /> Landing Page Conversion
+            </button>
+          </nav>
+        </div>
+      )}
 
       {isFullAdmin && showAddAdmin && (
         <SubAdminModal
@@ -759,12 +817,20 @@ export default function SuperAdminDashboard() {
                 <div className={`${styles.heroStatValue} ${styles.valActive}`}>{activeCount}</div>
               </div>
               <div className={styles.heroStatCard}>
-                <div className={styles.heroStatLabel}>On Trial</div>
-                <div className={`${styles.heroStatValue} ${styles.valTrial}`}>{trialCount}</div>
-              </div>
-              <div className={styles.heroStatCard}>
                 <div className={styles.heroStatLabel}>Suspended</div>
                 <div className={`${styles.heroStatValue} ${styles.valSuspended}`}>{suspendedCount}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Business</div>
+                <div className={`${styles.heroStatValue} ${styles.valBusiness}`}>{businessCount}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Enterprise</div>
+                <div className={`${styles.heroStatValue} ${styles.valEnterprise}`}>{enterpriseCount}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Trial</div>
+                <div className={`${styles.heroStatValue} ${styles.valTrial}`}>{trialPlanCount}</div>
               </div>
             </div>
           </section>
@@ -775,25 +841,6 @@ export default function SuperAdminDashboard() {
             </h1>
             <p className={styles.heroSub}>Read-only view of trial signups from the landing page</p>
           </section>
-        )}
-
-        {/* ── PAGE TABS — full superadmin only; the restricted role has
-             exactly one view, so no tab switcher is shown at all ── */}
-        {isFullAdmin && (
-          <div className={styles.tabs}>
-            <button
-              className={`${styles.tab} ${activeTab === "companies" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("companies")}
-            >
-              All Companies
-            </button>
-            <button
-              className={`${styles.tab} ${activeTab === "razorpay" ? styles.tabActive : ""}`}
-              onClick={() => setActiveTab("razorpay")}
-            >
-              Landing Page Conversions
-            </button>
-          </div>
         )}
 
         {isFullAdmin && activeTab === "companies" && (
@@ -852,9 +899,12 @@ export default function SuperAdminDashboard() {
                         <tr key={c.id} className={c.is_suspended ? styles.rowSuspended : ""}>
                           <td className={styles.stickyCol}>
                             <div className={styles.companyCell}>
-                              <span className={styles.companyName}>{c.name}</span>
-                              <span className={styles.companySlug}>{c.slug}</span>
-                              {c.is_suspended && <span className={styles.suspendedTag}>SUSPENDED</span>}
+                              <span className={styles.companyAvatar} aria-hidden="true">{(c.name || "?").trim().charAt(0).toUpperCase()}</span>
+                              <div className={styles.companyCellText}>
+                                <span className={styles.companyName}>{c.name}</span>
+                                <span className={styles.companySlug}>{c.slug}</span>
+                                {c.is_suspended && <span className={styles.suspendedTag}>SUSPENDED</span>}
+                              </div>
                             </div>
                           </td>
                           <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
@@ -914,6 +964,7 @@ export default function SuperAdminDashboard() {
                         <tr key={s.id}>
                           <td>
                             <div className={styles.companyCell}>
+                              <span className={styles.companyAvatar} aria-hidden="true">{(s.name || "?").trim().charAt(0).toUpperCase()}</span>
                               <span className={styles.companyName}>{s.name}</span>
                             </div>
                           </td>
