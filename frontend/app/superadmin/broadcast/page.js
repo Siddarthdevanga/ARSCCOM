@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import styles from "../dashboard/style.module.css";
+import SuperAdminNav from "../dashboard/NavHeader";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const PLAN_OPTIONS = [
@@ -19,6 +20,7 @@ const normalizePhone = (raw) => {
 export default function Broadcast() {
   const router = useRouter();
   const [token, setToken] = useState("");
+  const [admin, setAdmin] = useState(null);
 
   const [plans, setPlans] = useState(PLAN_OPTIONS.map(p => p.value)); // all checked by default = "send to all"
 
@@ -43,9 +45,19 @@ export default function Broadcast() {
 
   useEffect(() => {
     const t = localStorage.getItem("sa_token");
-    if (!t) { router.replace("/login"); return; }
-    setToken(t);
+    const a = localStorage.getItem("sa_admin");
+    if (!t || !a) { router.replace("/login"); return; }
+    try { setToken(t); setAdmin(JSON.parse(a)); }
+    catch {
+      localStorage.removeItem("sa_token"); localStorage.removeItem("sa_admin");
+      router.replace("/login");
+    }
   }, [router]);
+
+  const logout = () => {
+    localStorage.removeItem("sa_token"); localStorage.removeItem("sa_admin");
+    router.replace("/login");
+  };
 
   // Refetch the plan-derived list whenever the plan selection changes.
   // This resets any per-row removals for THIS list — changing which
@@ -125,19 +137,18 @@ export default function Broadcast() {
 
   const canSend = finalRecipients.length > 0 && message.trim().length > 0 && !sending;
 
+  if (!token) return null;
+
+  const isFullAdmin = admin?.role === "superadmin";
+
   return (
     <div className={styles.page}>
-      {/* Header */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <span style={{ fontWeight: 800, fontSize: 18, color: "#7c3aed" }}>Hai Visitor</span>
-          <span className={styles.superBadge}>SUPERADMIN</span>
-        </div>
-        <div className={styles.headerRight}>
-          <a href="/superadmin/dashboard"     className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: 8 }}>← Dashboard</a>
-          <a href="/superadmin/whatsapp-leads" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: 8 }}>WhatsApp Leads</a>
-        </div>
-      </header>
+      <SuperAdminNav
+        admin={admin}
+        isFullAdmin={isFullAdmin}
+        activeView="broadcast"
+        onLogout={logout}
+      />
 
       <div style={{ maxWidth: 680, margin: "2rem auto", padding: "0 1rem" }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>WhatsApp Broadcast</h1>

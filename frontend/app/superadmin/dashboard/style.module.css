@@ -333,6 +333,18 @@
 }
 .filterSelect:focus { border-color: #6200d6; }
 
+.dayBadges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.actionGroup {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .refreshBtn {
   background: #6200d6;
   color: #fff;

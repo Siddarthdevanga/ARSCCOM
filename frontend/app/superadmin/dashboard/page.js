@@ -2,12 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import {
-  Menu, X, LayoutDashboard, Pencil, CreditCard, CalendarDays, Clock, AlertTriangle,
-  MessageCircle, Megaphone, Link2,
+  LayoutDashboard, Pencil, CreditCard, CalendarDays, Clock, AlertTriangle,
 } from "lucide-react";
 import styles from "./style.module.css";
+import SuperAdminNav from "./NavHeader";
 
 const TAB_META = {
   overview: { label: "Overview", Icon: LayoutDashboard },
@@ -546,11 +545,17 @@ export default function SuperAdminDashboard() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [toast,        setToast]        = useState({ show: false, message: "", type: "success" });
 
-  const [activeTab,       setActiveTab]       = useState("companies");
+  const [activeTab, setActiveTab] = useState(() =>
+    (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "razorpay")
+      ? "razorpay"
+      : "companies"
+  );
   const [razorpaySignups, setRazorpaySignups] = useState([]);
   const [razorpayLoading, setRazorpayLoading] = useState(false);
   const [resendingId,     setResendingId]     = useState(null);
   const [sendingVideoId,  setSendingVideoId]  = useState(null);
+  const [razorpaySearch,  setRazorpaySearch]  = useState("");
+  const [razorpayStatus,  setRazorpayStatus]  = useState("all");
 
   // Restricted sub-admins (role: superadmin_readonly) can only ever see
   // Landing Page Conversions — every other route/tab/action is hidden for
@@ -558,7 +563,6 @@ export default function SuperAdminDashboard() {
   const isFullAdmin = admin?.role === "superadmin";
 
   const [showAddAdmin,  setShowAddAdmin]  = useState(false);
-  const [showNavDrawer, setShowNavDrawer] = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
@@ -700,6 +704,18 @@ export default function SuperAdminDashboard() {
     return matchSearch && matchPlan && matchStatus;
   });
 
+  const filteredSignups = razorpaySignups.filter((s) => {
+    const matchSearch =
+      !razorpaySearch ||
+      s.name?.toLowerCase().includes(razorpaySearch.toLowerCase()) ||
+      s.email?.toLowerCase().includes(razorpaySearch.toLowerCase()) ||
+      s.phone?.includes(razorpaySearch);
+    const matchStatus =
+      razorpayStatus === "all" ||
+      (razorpayStatus === "complete" ? s.registration_complete : !s.registration_complete);
+    return matchSearch && matchStatus;
+  });
+
   if (!token) return null;
 
   return (
@@ -723,68 +739,20 @@ export default function SuperAdminDashboard() {
         />
       )}
 
-      {/* ── HEADER ── */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          {isFullAdmin && (
-            <button className={styles.hamburgerBtn} onClick={() => setShowNavDrawer(true)} aria-label="Open menu">
-              <Menu size={20} />
-            </button>
-          )}
-          <div className={styles.logoContainer}>
-            <Image
-              src="/haivisitor.png"
-              alt="Hai Visitor Logo"
-              width={280}
-              height={90}
-              priority
-              className={styles.brandLogo}
-            />
-          </div>
-          <span className={styles.superBadge}>SUPERADMIN</span>
-        </div>
-        <div className={styles.headerRight}>
-          <span className={styles.adminEmail}>{admin?.email}</span>
-          {isFullAdmin && (
-            <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
-              + Add Sub-Admin
-            </button>
-          )}
-          <button className={styles.logoutBtn} onClick={logout}>Logout</button>
-        </div>
-      </header>
-
-      {/* ── NAV DRAWER ── */}
-      {isFullAdmin && showNavDrawer && (
-        <div className={styles.drawerOverlay} onClick={() => setShowNavDrawer(false)}>
-          <nav className={styles.drawer} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.drawerHeader}>
-              <span className={styles.superBadge}>SUPERADMIN</span>
-              <button className={styles.modalClose} onClick={() => setShowNavDrawer(false)} aria-label="Close menu">
-                <X size={16} />
-              </button>
-            </div>
-            <button
-              className={`${styles.drawerLink} ${activeTab === "companies" ? styles.drawerLinkActive : ""}`}
-              onClick={() => { setActiveTab("companies"); setShowNavDrawer(false); }}
-            >
-              <LayoutDashboard size={17} /> Dashboard
-            </button>
-            <a href="/superadmin/whatsapp-leads" className={styles.drawerLink}>
-              <MessageCircle size={17} /> WhatsApp Leads
-            </a>
-            <a href="/superadmin/broadcast" className={styles.drawerLink}>
-              <Megaphone size={17} /> WhatsApp Broadcast
-            </a>
-            <button
-              className={`${styles.drawerLink} ${activeTab === "razorpay" ? styles.drawerLinkActive : ""}`}
-              onClick={() => { setActiveTab("razorpay"); setShowNavDrawer(false); }}
-            >
-              <Link2 size={17} /> Landing Page Conversion
-            </button>
-          </nav>
-        </div>
-      )}
+      {/* ── HEADER + NAV DRAWER ── */}
+      <SuperAdminNav
+        admin={admin}
+        isFullAdmin={isFullAdmin}
+        activeView={activeTab}
+        onDashboardNav={() => setActiveTab("companies")}
+        onRazorpayNav={() => setActiveTab("razorpay")}
+        onLogout={logout}
+        headerRightExtra={isFullAdmin && (
+          <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
+            + Add Sub-Admin
+          </button>
+        )}
+      />
 
       {isFullAdmin && showAddAdmin && (
         <SubAdminModal
@@ -932,6 +900,20 @@ export default function SuperAdminDashboard() {
         {activeTab === "razorpay" && (
           <>
             <div className={styles.filterBar}>
+              <input
+                className={styles.searchInput}
+                type="text"
+                placeholder="🔍  Search name, email or phone…"
+                value={razorpaySearch}
+                onChange={(e) => setRazorpaySearch(e.target.value)}
+              />
+              {isFullAdmin && (
+                <select className={styles.filterSelect} value={razorpayStatus} onChange={(e) => setRazorpayStatus(e.target.value)}>
+                  <option value="all">All Setup Statuses</option>
+                  <option value="complete">Complete</option>
+                  <option value="incomplete">Setup Incomplete</option>
+                </select>
+              )}
               <button className={styles.refreshBtn} onClick={() => fetchRazorpaySignups(token)}>↻ Refresh</button>
             </div>
 
@@ -941,8 +923,8 @@ export default function SuperAdminDashboard() {
                   <div className={styles.spinner} />
                   <p>Loading landing page conversions…</p>
                 </div>
-              ) : razorpaySignups.length === 0 ? (
-                <div className={styles.emptyState}>No landing-page trial signups yet</div>
+              ) : filteredSignups.length === 0 ? (
+                <div className={styles.emptyState}>No landing-page trial signups found</div>
               ) : (
                 <div className={styles.tableScroll}>
                   <table className={styles.table}>
@@ -960,7 +942,7 @@ export default function SuperAdminDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {razorpaySignups.map((s) => (
+                      {filteredSignups.map((s) => (
                         <tr key={s.id}>
                           <td>
                             <div className={styles.companyCell}>
@@ -986,7 +968,7 @@ export default function SuperAdminDashboard() {
                           )}
                           {isFullAdmin && (
                             <td>
-                              <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                              <div className={styles.dayBadges}>
                                 {[1, 5, 7, 10, 12].map((day) => {
                                   const sentDays = (s.onboarding_nurture_sent || "").split(",").filter(Boolean);
                                   const sent = sentDays.includes(String(day));
@@ -1005,7 +987,7 @@ export default function SuperAdminDashboard() {
                           )}
                           {isFullAdmin && (
                             <td>
-                              <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                              <div className={styles.actionGroup}>
                                 <button
                                   className={styles.manageBtn}
                                   disabled={resendingId === s.id}

@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { Users, Calendar, CheckCircle, XCircle, MessageSquare, Star, UserMinus } from "lucide-react";
 import styles from "../dashboard/style.module.css";
+import SuperAdminNav from "../dashboard/NavHeader";
 
 /* ─────────────── TREE LAYOUT ─────────────── */
 
@@ -504,21 +504,16 @@ export default function WhatsAppLeadsPage() {
 
   if (!token) return null;
 
+  const isFullAdmin = admin?.role === "superadmin";
+
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.logoContainer}>
-            <Image src="/haivisitor.png" alt="Hai Visitor Logo" width={280} height={90} priority className={styles.brandLogo} />
-          </div>
-          <span className={styles.superBadge}>SUPERADMIN</span>
-        </div>
-        <div className={styles.headerRight}>
-          <span className={styles.adminEmail}>{admin?.email}</span>
-          <a href="/superadmin/dashboard" className={styles.logoutBtn} style={{ textDecoration: "none", marginRight: 8 }}>← Dashboard</a>
-          <button className={styles.logoutBtn} onClick={logout}>Logout</button>
-        </div>
-      </header>
+      <SuperAdminNav
+        admin={admin}
+        isFullAdmin={isFullAdmin}
+        activeView="whatsapp-leads"
+        onLogout={logout}
+      />
 
       <div className={styles.scrollBody}>
         <section className={styles.hero}>
