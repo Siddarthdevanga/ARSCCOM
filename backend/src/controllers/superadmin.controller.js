@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import ExcelJS from "exceljs";
 import * as service from "../services/superadmin.service.js";
 import { db } from "../config/db.js";
 import { sendBroadcastTemplate, registerOptIn } from "../services/gupshup.service.js";
@@ -108,6 +109,96 @@ export const dashboard = async (req, res) => {
   } catch (err) {
     console.error("SUPERADMIN DASHBOARD ERROR:", err.message);
     return res.status(500).json({ success: false, message: "Failed to load dashboard" });
+  }
+};
+
+/* ======================================================
+   COMPANIES EXPORT (EXCEL)
+   GET /api/superadmin/companies/export?from=YYYY-MM-DD&to=YYYY-MM-DD
+====================================================== */
+export const exportCompanies = async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to || !/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      return res.status(400).json({ success: false, message: "Valid 'from' and 'to' dates (YYYY-MM-DD) are required" });
+    }
+
+    const companies = await service.getCompaniesForExport(from, to);
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Companies");
+    ws.properties.defaultRowHeight = 20;
+
+    ws.columns = [
+      { width: 30 }, { width: 16 }, { width: 30 }, { width: 18 },
+      { width: 16 }, { width: 16 },
+    ];
+
+    ws.addRow(new Array(6).fill(null));
+    ws.mergeCells("A1:F1");
+    ws.getCell("A1").value = `Companies  —  Registered ${from} to ${to}`;
+    ws.getRow(1).height = 34;
+    ws.getRow(1).eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF6200d6" } };
+      cell.font = { size: 15, bold: true, color: { argb: "FFFFFFFF" } };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+    });
+
+    ws.addRow(new Array(6).fill(null));
+    ws.mergeCells("A2:F2");
+    ws.getCell("A2").value = `Generated: ${new Date().toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: true })}   |   Total Records: ${companies.length}`;
+    ws.getRow(2).height = 22;
+    ws.getRow(2).eachCell({ includeEmpty: true }, (cell) => {
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF3F0FF" } };
+      cell.font = { size: 10, italic: true, color: { argb: "FF5a5a8a" } };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+    });
+
+    ws.addRow([]);
+    ws.getRow(3).height = 6;
+
+    const headerRow = ws.addRow(["Company Name", "Plan", "Email", "Phone", "Status", "Expires On"]);
+    headerRow.height = 26;
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
+    headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7a00ff" } };
+    headerRow.alignment = { vertical: "middle", horizontal: "center" };
+
+    const fmtDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" }) : "-");
+
+    companies.forEach((c, i) => {
+      const row = ws.addRow([
+        c.name || "-",
+        (c.plan || "trial").toUpperCase(),
+        c.email || "-",
+        c.phone || "-",
+        c.subscription_status || "-",
+        fmtDate(c.trial_ends_at || c.subscription_ends_at),
+      ]);
+      if (i % 2 === 0) row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8F6FF" } };
+    });
+
+    ws.eachRow((row, rowNumber) => {
+      if (rowNumber >= 4) {
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          cell.border = {
+            top: { style: "thin", color: { argb: "FFcccccc" } },
+            left: { style: "thin", color: { argb: "FFcccccc" } },
+            bottom: { style: "thin", color: { argb: "FFcccccc" } },
+            right: { style: "thin", color: { argb: "FFcccccc" } },
+          };
+        });
+      }
+    });
+    ws.views = [{ state: "frozen", xSplit: 0, ySplit: 4 }];
+
+    const fn = `companies-${from}-to-${to}-${Date.now()}.xlsx`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${fn}"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("SUPERADMIN EXPORT COMPANIES ERROR:", err.message);
+    return res.status(500).json({ success: false, message: "Failed to export companies" });
   }
 };
 

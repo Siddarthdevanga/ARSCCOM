@@ -28,6 +28,7 @@ router.use(requireFullSuperAdmin);
 
 // ── Dashboard ──────────────────────────────────────────
 router.get("/dashboard", ctrl.dashboard);
+router.get("/companies/export", ctrl.exportCompanies);
 
 // ── Sub-Admins ─────────────────────────────────────────
 router.post("/sub-admins", ctrl.createSubAdmin);

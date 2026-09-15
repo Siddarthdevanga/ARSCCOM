@@ -529,6 +529,87 @@ function SubAdminModal({ onClose, onCreated, token, apiBase, showToast }) {
 }
 
 /* ======================================================
+   EXPORT COMPANIES MODAL
+====================================================== */
+const todayStr = () => new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD, local
+
+function ExportCompaniesModal({ onClose, token, apiBase, showToast }) {
+  const [from, setFrom]       = useState(todayStr());
+  const [to, setTo]           = useState(todayStr());
+  const [downloading, setDownloading] = useState(false);
+
+  const setToday = () => { const t = todayStr(); setFrom(t); setTo(t); };
+
+  const download = async () => {
+    if (!from || !to) { showToast("Pick both a from and to date", "error"); return; }
+    if (from > to) { showToast("'From' date must be before 'To' date", "error"); return; }
+
+    setDownloading(true);
+    try {
+      const res = await fetch(`${apiBase}/api/superadmin/companies/export?from=${from}&to=${to}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        showToast(data.message || "Failed to export companies", "error");
+        return;
+      }
+      const blob = await res.blob();
+      const cd = res.headers.get("content-disposition");
+      let filename = `companies-${from}-to-${to}.xlsx`;
+      if (cd) { const m = cd.match(/filename="(.+)"/); if (m) filename = m[1]; }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = filename; a.click();
+      URL.revokeObjectURL(url);
+      showToast("Companies exported");
+      onClose();
+    } catch {
+      showToast("Network error", "error");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.modalHeader}>
+          <div>
+            <h2 className={styles.modalTitle}>Download Companies</h2>
+            <p className={styles.modalSub}>Export by registration date range — name, plan, email, phone, status &amp; expiry</p>
+          </div>
+          <button className={styles.modalClose} onClick={onClose}>✕</button>
+        </div>
+
+        <div className={styles.modalBody}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div style={{ display: "flex", gap: "12px" }}>
+              <div style={{ flex: 1 }}>
+                <label className={styles.label}>From</label>
+                <input type="date" className={styles.input} value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className={styles.label}>To</label>
+                <input type="date" className={styles.input} value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} />
+              </div>
+            </div>
+
+            <button className={styles.filterSelect} style={{ alignSelf: "flex-start" }} onClick={setToday}>
+              Today
+            </button>
+
+            <button className={styles.btnPrimary} disabled={downloading} onClick={download}>
+              {downloading ? "Downloading…" : "⬇ Download Excel"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================
    MAIN PAGE
 ====================================================== */
 export default function SuperAdminDashboard() {
@@ -563,6 +644,7 @@ export default function SuperAdminDashboard() {
   const isFullAdmin = admin?.role === "superadmin";
 
   const [showAddAdmin,  setShowAddAdmin]  = useState(false);
+  const [showExport,    setShowExport]    = useState(false);
 
   const showToast = (message, type = "success") => {
     setToast({ show: true, message, type });
@@ -748,9 +830,14 @@ export default function SuperAdminDashboard() {
         onRazorpayNav={() => setActiveTab("razorpay")}
         onLogout={logout}
         headerRightExtra={isFullAdmin && (
-          <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
-            + Add Sub-Admin
-          </button>
+          <>
+            <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowExport(true)}>
+              ⬇ Export
+            </button>
+            <button className={styles.logoutBtn} style={{ marginRight: "8px" }} onClick={() => setShowAddAdmin((v) => !v)}>
+              + Add Sub-Admin
+            </button>
+          </>
         )}
       />
 
@@ -761,6 +848,15 @@ export default function SuperAdminDashboard() {
           showToast={showToast}
           onClose={() => setShowAddAdmin(false)}
           onCreated={() => setShowAddAdmin(false)}
+        />
+      )}
+
+      {isFullAdmin && showExport && (
+        <ExportCompaniesModal
+          token={token}
+          apiBase={apiBase}
+          showToast={showToast}
+          onClose={() => setShowExport(false)}
         />
       )}
 

@@ -164,6 +164,30 @@ export const getDashboard = async () => {
 };
 
 /* ======================================================
+   COMPANIES EXPORT — registration-date range, for the
+   Superadmin dashboard's "Download Excel" button
+====================================================== */
+export const getCompaniesForExport = async (from, to) => {
+  const [rows] = await db.query(
+    `SELECT
+       c.id,
+       c.name,
+       c.plan,
+       c.subscription_status,
+       c.trial_ends_at,
+       c.subscription_ends_at,
+       c.created_at,
+       (SELECT u.email FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS email,
+       (SELECT u.phone FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS phone
+     FROM companies c
+     WHERE DATE(CONVERT_TZ(c.created_at,'+00:00','+05:30')) BETWEEN ? AND ?
+     ORDER BY c.created_at DESC`,
+    [from, to]
+  );
+  return rows;
+};
+
+/* ======================================================
    RAZORPAY LANDING-PAGE SIGNUPS
    — companies that paid via the landing-page trial popup,
      for the Superadmin dashboard's "Razorpay Payment Source" tab
