@@ -26,6 +26,15 @@
 
 .scrollBody {
   flex: 1;
+  /* A flex item's default min-height is 'auto', which refuses to shrink
+     below its content's natural height — without this, .scrollBody grows
+     tall enough to fit ALL its content instead of staying pinned to the
+     remaining viewport height, and the excess gets silently clipped by
+     .container's overflow:hidden rather than being reachable through
+     .scrollBody's own overflow-y:auto (which never activates, since the
+     box never actually overflows itself). That's what caused content
+     past a certain row count to be un-scrollable to. */
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
