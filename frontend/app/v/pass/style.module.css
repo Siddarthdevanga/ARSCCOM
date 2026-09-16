@@ -95,22 +95,6 @@
   object-fit: cover;
 }
 
-.noPhoto {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  color: #a78bfa;
-  font-size: 28px;
-}
-
-.noPhoto small {
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  color: #c4b5fd;
-}
-
 /* ===== NAME & CODE ===== */
 .visitorName {
   font-size: 22px;

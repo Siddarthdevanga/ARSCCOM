@@ -143,16 +143,15 @@ function PublicPassContent() {
       <main className={styles.card}>
         <div className={styles.badge}>VISITOR PASS</div>
 
-        <div className={styles.photoWrap}>
-          {visitor.photoUrl ? (
+        {/* No placeholder box at all when the visitor has no photo
+            (Photo Capture toggled off) — the card just flows straight
+            from the badge to the next element, matching the in-app
+            pass page's no-photo layout. */}
+        {visitor.photoUrl && (
+          <div className={styles.photoWrap}>
             <img src={visitor.photoUrl} alt="Visitor" className={styles.photo} />
-          ) : (
-            <div className={styles.noPhoto}>
-              <span>📷</span>
-              <small>No Photo</small>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {whatsappUrl && (
           <button
