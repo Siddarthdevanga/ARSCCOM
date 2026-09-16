@@ -232,14 +232,29 @@ export const retireForm = async (companyId, formId) => {
 ====================================================== */
 export const listForms = async (companyId) => {
   const [forms] = await db.execute(
-    `SELECT f.id, f.name, f.slug, f.status, f.theme, f.created_at, f.retired_at,
+    `SELECT f.id, f.name, f.slug, f.status, f.theme, f.display_name_override, f.logo_override_url,
+        f.created_at, f.retired_at,
         (SELECT COUNT(*) FROM smart_form_responses r WHERE r.form_id = f.id) AS response_count
      FROM smart_forms f
      WHERE f.company_id = ?
      ORDER BY f.status = 'active' DESC, f.created_at DESC`,
     [companyId]
   );
-  return forms;
+  // The raw S3 key (logo_override_url) is an internal detail — the
+  // frontend only needs to know whether an override exists, and can
+  // fetch it via the public logo-proxy route by slug.
+  return forms.map((f) => ({
+    id: f.id,
+    name: f.name,
+    slug: f.slug,
+    status: f.status,
+    theme: f.theme,
+    displayNameOverride: f.display_name_override,
+    hasLogoOverride: !!f.logo_override_url,
+    created_at: f.created_at,
+    retired_at: f.retired_at,
+    response_count: f.response_count,
+  }));
 };
 
 /* ======================================================
