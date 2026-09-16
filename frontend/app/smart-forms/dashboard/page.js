@@ -3,10 +3,18 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
+import { ListChecks, QrCode as QrCodeIcon, Smartphone, BarChart3 } from "lucide-react";
 import styles from "../../visitor/primary_details/style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const MAX_ACTIVE_FORMS = 2;
+
+const HOW_IT_WORKS = [
+  { icon: ListChecks,  title: "Create a form",       desc: "Pick up to 5 fields and a theme" },
+  { icon: QrCodeIcon,  title: "Download the QR code", desc: "Print it or display it anywhere" },
+  { icon: Smartphone,  title: "People scan & submit", desc: "No login needed — takes seconds" },
+  { icon: BarChart3,   title: "View & export",        desc: "See every response in one place" },
+];
 
 export default function SmartFormsDashboard() {
   const router = useRouter();
@@ -142,8 +150,32 @@ export default function SmartFormsDashboard() {
           {loading ? (
             <p style={{ textAlign: "center", color: "#9ca3af", padding: "2rem" }}>Loading…</p>
           ) : forms.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "3rem 1rem", color: "#9ca3af" }}>
-              No Smart Forms yet — create one to start collecting information via QR code.
+            <div style={{ padding: "1rem 0 2rem" }}>
+              <p style={{ textAlign: "center", color: "#6b7280", fontSize: 14, margin: "0 0 1.75rem" }}>
+                A Smart Form turns any QR code into a quick way to collect information — no app, no login, just a scan.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "1.25rem" }}>
+                {HOW_IT_WORKS.map((step, i) => (
+                  <div key={step.title} style={{
+                    display: "flex", alignItems: "flex-start", gap: 10, width: 220,
+                  }}>
+                    <div style={{
+                      width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                      background: "linear-gradient(135deg,#6200d6,#a855f7)", color: "#fff",
+                      display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12,
+                    }}>
+                      {i + 1}
+                    </div>
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                        <step.icon size={14} color="#6200d6" />
+                        <span style={{ fontWeight: 800, fontSize: 13.5, color: "#1a0038" }}>{step.title}</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: 12.5, color: "#6b7280", lineHeight: 1.4 }}>{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem" }}>
