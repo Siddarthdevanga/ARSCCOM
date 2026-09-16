@@ -289,6 +289,14 @@ export default function NewVisitorPage() {
     setLooking(true);
     setProfile(null);
     setError("");
+    // A captured-but-unsaved photo (and any open camera stream) belongs to
+    // whichever phone number was being looked up when it was taken — must
+    // not silently ride along onto a different visitor's submission if
+    // staff corrects a mistyped number mid-lookup.
+    cameraStream?.getTracks().forEach((track) => track.stop());
+    setCameraStream(null);
+    setCameraActive(false);
+    setNewPhoto(null);
     (async () => {
       try {
         const res = await fetch(`${API}/api/visitors/returning?phone=${digits}`, {
