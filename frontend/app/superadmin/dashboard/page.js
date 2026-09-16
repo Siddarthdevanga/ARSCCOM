@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import styles from "./style.module.css";
 import SuperAdminNav from "./NavHeader";
+import { APP_VERSION } from "../../constants/appVersion";
 
 const TAB_META = {
   overview: { label: "Overview", Icon: LayoutDashboard },
@@ -1111,6 +1112,9 @@ export default function SuperAdminDashboard() {
           </>
         )}
 
+        <footer style={{ textAlign: "center", padding: "16px 0 24px", fontSize: "12px", color: "#9980c8" }}>
+          Hai Visitor v{APP_VERSION}
+        </footer>
       </div>
     </div>
   );

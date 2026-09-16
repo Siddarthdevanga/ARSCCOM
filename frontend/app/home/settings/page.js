@@ -6,6 +6,7 @@ import {
   Building2, User, Lock, Eye, EyeOff, Upload, Edit2, Check, X, Loader2,
 } from "lucide-react";
 import styles from "./style.module.css";
+import { APP_VERSION } from "../../constants/appVersion";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -589,6 +590,10 @@ export default function SettingsPage() {
 
           </div>
         </main>
+
+        <footer style={{ textAlign: "center", padding: "16px 0 24px", fontSize: "12px", color: "#9ca3af" }}>
+          Hai Visitor v{APP_VERSION}
+        </footer>
       </div>
 
       {/* ===== VISITOR CODE PREFIX CONFIRM MODAL ===== */}

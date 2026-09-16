@@ -1,67 +1,85 @@
 /* ======================================================
-   GRACE PERIOD BANNER (Home Dashboard)
+   GRACE PERIOD TICKER (Home Dashboard only) — a slim,
+   continuously-scrolling marquee bar instead of a tall
+   static block, same amber warning palette as before.
 ====================================================== */
-.gracePeriodBanner {
+.gracePeriodTicker {
   background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%);
-  border-left: 4px solid #F59E0B;
-  padding: 20px 24px;
-  border-radius: 12px;
+  border-bottom: 2px solid #F59E0B;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
+  padding: 9px 16px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
-  animation: fadeIn 0.3s ease-in;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
 }
 
-.gracePeriodBanner svg {
+.tickerViewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+}
+
+.tickerTrack {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll 20s linear infinite;
+}
+
+.tickerContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding-right: 64px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #78350F;
+}
+
+.tickerContent svg {
   flex-shrink: 0;
   color: #D97706;
 }
 
-.gracePeriodBanner > div {
-  flex: 1;
-}
-
-.gracePeriodBanner h3 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  font-weight: 600;
+.tickerContent strong {
+  font-weight: 800;
   color: #92400E;
 }
 
-.gracePeriodBanner p {
-  margin: 4px 0;
-  font-size: 14px;
-  color: #78350F;
-  line-height: 1.5;
+@keyframes tickerScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
 
-.gracePeriodBanner p strong {
-  font-weight: 700;
-  color: #92400E;
+@media (prefers-reduced-motion: reduce) {
+  .tickerTrack { animation: none; }
 }
 
-.gracePeriodBanner button {
+.tickerRenewBtn {
   flex-shrink: 0;
   background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
   color: white;
   border: none;
-  padding: 12px 24px;
+  padding: 9px 20px;
   border-radius: 8px;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
   box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);
 }
 
-.gracePeriodBanner button:hover {
+.tickerRenewBtn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(122, 0, 255, 0.4);
 }
 
-.gracePeriodBanner button:active {
+.tickerRenewBtn:active {
   transform: translateY(0);
 }
 
@@ -428,15 +446,18 @@
    RESPONSIVE
 ====================================================== */
 @media (max-width: 768px) {
-  .gracePeriodBanner {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 16px;
+  .gracePeriodTicker {
+    padding: 8px 12px;
+    gap: 10px;
   }
 
-  .gracePeriodBanner button {
-    width: 100%;
-    margin-top: 12px;
+  .tickerContent {
+    font-size: 12.5px;
+  }
+
+  .tickerRenewBtn {
+    padding: 8px 14px;
+    font-size: 12px;
   }
 
   .graceBanner {
