@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Download, Users, CalendarDays, TrendingUp, TrendingDown,
   CheckCircle, XCircle, Clock, AlertCircle, Activity, BarChart2,
-  FileDown, RefreshCw, UserCheck, Layers, Calendar, Timer,
+  FileDown, RefreshCw, UserCheck, Layers, Calendar, Timer, QrCode,
 } from "lucide-react";
 import styles from "./style.module.css";
 
@@ -469,6 +469,7 @@ export default function ReportsPage(){
     const map={
       visitors:{endpoint:"/api/exports/visitors",            label:"Visitor Records"},
       bookings:{endpoint:"/api/exports/conference-bookings", label:"Conference Bookings"},
+      smartForms:{endpoint:"/api/exports/smart-forms",       label:"Smart Forms Responses"},
       all:     {endpoint:"/api/exports/all",                 label:"Complete Report"},
     };
     const{endpoint,label}=map[type]||{};
@@ -765,6 +766,7 @@ export default function ReportsPage(){
               {[
                 {type:"visitors",icon:<Users size={20}/>,    color:"#7c3aed",label:"Visitor Records",    desc:"Check-in/out, pass status and visitor details"},
                 ...(isBusinessPlan?[]:[{type:"bookings",icon:<Calendar size={20}/>,color:"#0ea5e9",label:"Conference Bookings",desc:"Room schedules, departments, hosts and status"}]),
+                {type:"smartForms",icon:<QrCode size={20}/>, color:"#047857",label:"Smart Forms Responses",desc:"All QR-form submissions, tagged by which form"},
               ].map(e=>(
                 <div key={e.type} className={styles.exportCard}>
                   <div className={styles.exportCardTop}>

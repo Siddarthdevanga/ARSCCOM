@@ -27,6 +27,8 @@ import employeeRoutes from "./routes/employee.routes.js";
 import visitResponseRoutes from "./routes/visitResponse.routes.js";
 import logoRoutes from "./routes/logo.routes.js";
 import whatsappRoutes from "./routes/whatsapp.routes.js";
+import smartFormsRoutes from "./routes/smartForms.routes.js";
+import smartFormsPublicRoutes from "./routes/smartForms.public.routes.js";
 
 /* ================= RATE LIMITERS ================= */
 import {
@@ -213,6 +215,10 @@ app.use("/api/razorpay", publicVisitorLimiter, razorpayOrderRoutes);
 app.use("/api/public", visitorPublicRouter);
 app.use("/api/public/conference", conferencePublicRoutes);
 
+// Smart Forms — QR-code scan page, no OTP gate (frictionless by design)
+app.use("/api/public/smart-forms/:slug/submit", publicBookingLimiter);
+app.use("/api/public/smart-forms", smartFormsPublicRoutes);
+
 // Employee email accept/decline (tokenised — no login required)
 app.use("/api/visit-response", visitResponseRoutes);
 
@@ -234,6 +240,9 @@ app.use("/api/employees", adminWriteLimiter, employeeRoutes);
 
 // Conference
 app.use("/api/conference", adminWriteLimiter, conferenceRoutes);
+
+// Smart Forms — QR-code based information collectors
+app.use("/api/smart-forms", adminWriteLimiter, smartFormsRoutes);
 
 // Exports — heavy, low limit
 app.use("/api/exports", exportLimiter, exportsRoutes);

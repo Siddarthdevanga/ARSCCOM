@@ -20,6 +20,7 @@ import {
   Lock,
   ListChecks,
   BookOpen,
+  QrCode,
 } from "lucide-react";
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
@@ -811,6 +812,14 @@ export default function Home() {
                     icon: <DoorOpen size={32}/>,
                     path: "/conference/dashboard",
                   }] : []),
+                  {
+                    key: "smartForms",
+                    title: "Smart Forms",
+                    description: "QR-code based information collectors — custom fields, no login needed",
+                    features: ["Custom Fields", "QR Code", "Response Reports"],
+                    icon: <QrCode size={32}/>,
+                    path: "/smart-forms/dashboard",
+                  },
                 ];
                 const isSingle = modules.length === 1;
                 const showBrief = isSingle && currentPlan === "business" && !needsRenewal;

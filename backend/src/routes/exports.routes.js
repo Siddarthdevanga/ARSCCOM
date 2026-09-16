@@ -411,6 +411,93 @@ router.get("/all", async (req, res) => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
+   SMART FORMS — combined responses across ALL of this company's
+   forms (active + retired, so a retired form's history is never
+   lost from the report), one sheet, tagged by which form each row
+   came from.
+═══════════════════════════════════════════════════════════════ */
+router.get("/smart-forms", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
+    if (!company) return res.status(404).json({ message:"Company not found" });
+
+    const iv = PERIOD_IV[req.query.period];
+    const periodWhere = iv ? `AND r.submitted_at >= NOW() - INTERVAL ${iv}` : "";
+    const label = iv ? (PERIOD_LABELS[req.query.period] || "Custom") : "All Time";
+
+    const [responses] = await db.query(
+      `SELECT r.id, r.submitted_at, f.name AS form_name
+       FROM smart_form_responses r
+       JOIN smart_forms f ON f.id = r.form_id
+       WHERE f.company_id = ? ${periodWhere}
+       ORDER BY r.submitted_at DESC`,
+      [companyId]
+    );
+
+    const responseIds = responses.map((r) => r.id);
+    let valuesByResponse = new Map();
+    let allLabels = [];
+    if (responseIds.length) {
+      const [values] = await db.query(
+        `SELECT response_id, field_label, field_value FROM smart_form_response_values
+         WHERE response_id IN (${responseIds.map(() => "?").join(",")})`,
+        responseIds
+      );
+      const seen = new Set();
+      for (const v of values) {
+        if (!valuesByResponse.has(v.response_id)) valuesByResponse.set(v.response_id, {});
+        valuesByResponse.get(v.response_id)[v.field_label] = v.field_value;
+        if (!seen.has(v.field_label)) { seen.add(v.field_label); allLabels.push(v.field_label); }
+      }
+    }
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Smart Forms Responses");
+    const totalColumns = 3 + allLabels.length;
+    const lastColLetter = numberToColumnLetter(totalColumns);
+    ws.columns = [{ width:22 }, { width:26 }, { width:20 }, ...allLabels.map(() => ({ width:24 }))];
+
+    ws.addRow(new Array(totalColumns).fill(null));
+    ws.mergeCells(`A1:${lastColLetter}1`);
+    ws.getCell("A1").value = `${company.name}  —  Smart Forms Responses  (${label})`;
+    styleTitle(ws, 1, "FF6200d6");
+
+    ws.addRow(new Array(totalColumns).fill(null));
+    ws.mergeCells(`A2:${lastColLetter}2`);
+    ws.getCell("A2").value = `Generated: ${formatDateTime(new Date())}   |   Total Responses: ${responses.length}`;
+    styleMeta(ws, 2);
+
+    ws.addRow([]);
+    ws.getRow(3).height = 6;
+
+    const headerRow = ws.addRow(["Form", "Submitted On", ...allLabels]);
+    applyColumnHeader(headerRow);
+
+    responses.forEach((r, i) => {
+      const vals = valuesByResponse.get(r.id) || {};
+      const row = ws.addRow([
+        r.form_name,
+        formatDateTime(r.submitted_at),
+        ...allLabels.map((label) => vals[label] || "-"),
+      ]);
+      if (i % 2 === 0) row.fill = { type:"pattern", pattern:"solid", fgColor:{ argb:"FFF8F6FF" } };
+    });
+
+    applyBorders(ws);
+    ws.views = [{ state:"frozen", xSplit:0, ySplit:4 }];
+
+    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-smart-forms-${req.query.period||"all"}-${Date.now()}.xlsx`;
+    res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition",`attachment; filename="${fn}"`);
+    await wb.xlsx.write(res); res.end();
+  } catch (err) {
+    console.error("[GET /exports/smart-forms]", err.message);
+    res.status(500).json({ message:"Failed to export Smart Forms responses" });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
    STATS
 ═══════════════════════════════════════════════════════════════ */
 router.get("/stats", async (req, res) => {
