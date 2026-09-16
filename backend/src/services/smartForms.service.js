@@ -348,7 +348,7 @@ export const getPublicForm = async (slug) => {
     logoUrl: form.logo_override_url || null,
     companyId: form.company_id,
     headline: form.headline || `Welcome to ${form.display_name_override || form.company_name}`,
-    subtext: form.subtext || "Please fill in your details below.",
+    subtext: form.subtext || null,
     fields: fields.map((f) => ({
       id: f.id,
       label: f.label,

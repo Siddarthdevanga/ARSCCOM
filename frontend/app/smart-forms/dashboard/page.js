@@ -56,9 +56,10 @@ const roundRect = (ctx, x, y, w, h, r) => {
   ctx.closePath();
 };
 
-/* ── The card — light top (badge + logo), dark theme-colored bottom
-   (form name, QR code, caption, small Hai Visitor footer). Used for
-   both the inline preview and the downloaded PNG, so they always match. ── */
+/* ── The card — light top (logo only, no badge), dark theme-colored
+   bottom (form name — big and highlighted, no company-name subtitle —
+   QR code, caption, small Hai Visitor footer). Used for both the inline
+   preview and the downloaded PNG, so they always match. ── */
 const generateQrCard = async (form, company) => {
   const theme = THEMES[form.theme] || THEMES.purple;
   const dark = shadeHex(theme.accent, -35);
@@ -68,62 +69,76 @@ const generateQrCard = async (form, company) => {
   canvas.width = 640; canvas.height = 940;
   const ctx = canvas.getContext("2d");
 
-  // Top — light section: badge + logo
+  // Top — light section: logo (or a placeholder initial if none set)
   ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, 640, 210);
-
+  ctx.fillRect(0, 0, 640, 190);
   ctx.textAlign = "center";
-  const badgeText = "SMART FORM";
-  ctx.font = "bold 12px Arial";
-  const badgeW = ctx.measureText(badgeText).width + 36;
-  roundRect(ctx, 320 - badgeW / 2, 28, badgeW, 26, 13);
-  ctx.fillStyle = theme.bg;
-  ctx.fill();
-  ctx.fillStyle = theme.accent;
-  ctx.fillText(badgeText, 320, 45);
 
   const logoUrl = form.hasLogoOverride
     ? `${API}/api/public/smart-forms/${form.slug}/logo`
     : (company?.id ? `${API}/api/logo/${company.id}` : null);
 
+  const logoBoxSize = 108;
+  const logoCenterY = 95;
+  let logoDrawn = false;
   if (logoUrl) {
     try {
       const logoImg = await loadImage(logoUrl);
-      const size = 92;
-      const ratio = Math.min(size / logoImg.width, size / logoImg.height);
-      const w = logoImg.width * ratio, h = logoImg.height * ratio;
-      ctx.drawImage(logoImg, 320 - w / 2, 90 - (h - size) / 2, w, h);
-    } catch { /* no logo available — fall through without one */ }
+      // Guard against a broken/zero-dimension image (e.g. a malformed
+      // SVG with no intrinsic size) drawing as huge or not at all —
+      // "contain" sizing here, never cropped, so the whole logo shows.
+      if (logoImg.width > 0 && logoImg.height > 0) {
+        const ratio = Math.min(logoBoxSize / logoImg.width, logoBoxSize / logoImg.height);
+        const w = logoImg.width * ratio, h = logoImg.height * ratio;
+        ctx.drawImage(logoImg, 320 - w / 2, logoCenterY - h / 2, w, h);
+        logoDrawn = true;
+      }
+    } catch { /* no logo available — falls through to the placeholder below */ }
+  }
+  if (!logoDrawn) {
+    const initial = (form.displayNameOverride || company?.name || form.name || "?").trim().charAt(0).toUpperCase();
+    roundRect(ctx, 320 - 44, logoCenterY - 44, 88, 88, 20);
+    ctx.fillStyle = theme.bg;
+    ctx.fill();
+    ctx.fillStyle = theme.accent;
+    ctx.font = "bold 40px Arial";
+    ctx.fillText(initial, 320, logoCenterY + 14);
   }
 
   // Bottom — dark, theme-colored section
-  const gradient = ctx.createLinearGradient(0, 210, 640, 940);
+  const gradient = ctx.createLinearGradient(0, 190, 640, 940);
   gradient.addColorStop(0, theme.accent);
   gradient.addColorStop(1, dark);
   ctx.fillStyle = gradient;
-  ctx.fillRect(0, 210, 640, 730);
+  ctx.fillRect(0, 190, 640, 750);
 
+  // Form name — the big, highlighted title (no company-name line under it).
+  // Shrink the font until it fits the card width so a long name never
+  // silently overflows/clips off the edges.
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 30px Arial";
-  ctx.fillText(form.displayNameOverride || form.name, 320, 270);
-
-  ctx.font = "15px Arial";
-  ctx.fillStyle = "rgba(255,255,255,0.8)";
-  ctx.fillText(company?.name || "", 320, 298);
+  const titleText = form.displayNameOverride || form.name;
+  const maxTitleWidth = 560;
+  let titleSize = 34;
+  ctx.font = `bold ${titleSize}px Arial`;
+  while (titleSize > 18 && ctx.measureText(titleText).width > maxTitleWidth) {
+    titleSize -= 1;
+    ctx.font = `bold ${titleSize}px Arial`;
+  }
+  ctx.fillText(titleText, 320, 250, maxTitleWidth);
 
   const qrDataUrl = await QRCode.toDataURL(publicUrl, { width: 420, margin: 1, color: { dark: "#1a0038", light: "#ffffff" } });
   const qrImg = await loadImage(qrDataUrl);
-  roundRect(ctx, 120, 335, 400, 400, 18);
+  roundRect(ctx, 120, 295, 400, 400, 18);
   ctx.fillStyle = "#ffffff";
   ctx.fill();
-  ctx.drawImage(qrImg, 140, 355, 360, 360);
+  ctx.drawImage(qrImg, 140, 315, 360, 360);
 
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 20px Arial";
-  ctx.fillText("Scan to fill in your details", 320, 790);
+  ctx.fillText("Scan to fill in your details", 320, 750);
   ctx.font = "13px Arial";
   ctx.fillStyle = "rgba(255,255,255,0.75)";
-  ctx.fillText("No login required — takes less than a minute", 320, 813);
+  ctx.fillText("No login required — takes less than a minute", 320, 773);
 
   // Small, subtle Hai Visitor footer
   ctx.font = "11px Arial";

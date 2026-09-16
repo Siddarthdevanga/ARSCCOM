@@ -153,12 +153,22 @@ export default function SmartFormPublicPage() {
     <div style={{ minHeight: "100dvh", background: theme.bg, fontFamily: "'Nunito', Arial, sans-serif", padding: "2rem 1rem", display: "flex", justifyContent: "center" }}>
       <div style={{ width: "100%", maxWidth: 440 }}>
         <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
-          {logoUrl && (
-            <img src={logoUrl} alt={form.displayName} style={{ width: 56, height: 56, borderRadius: 12, objectFit: "cover", marginBottom: 10 }}
+          {logoUrl ? (
+            <img src={logoUrl} alt={form.displayName} style={{ width: 64, height: 64, borderRadius: 14, objectFit: "contain", background: "#fff", boxShadow: "0 2px 10px rgba(0,0,0,0.08)", padding: 6, marginBottom: 10 }}
               onError={(e) => { e.currentTarget.style.display = "none"; }} />
+          ) : (
+            <div style={{
+              width: 64, height: 64, borderRadius: 14, margin: "0 auto 10px", display: "flex",
+              alignItems: "center", justifyContent: "center", background: theme.accent + "22",
+              color: theme.accent, fontWeight: 800, fontSize: 26,
+            }}>
+              {(form.displayName || "?").trim().charAt(0).toUpperCase()}
+            </div>
           )}
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1a0038", margin: "0 0 4px" }}>{form.headline}</h1>
-          <p style={{ fontSize: 13.5, color: "#6b7280", margin: 0 }}>{form.subtext}</p>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1a0038", margin: form.subtext ? "0 0 4px" : 0 }}>{form.headline}</h1>
+          {form.subtext && (
+            <p style={{ fontSize: 13.5, color: "#6b7280", margin: 0 }}>{form.subtext}</p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} style={{ background: "#fff", borderRadius: 18, padding: "1.5rem", boxShadow: "0 8px 30px rgba(0,0,0,0.06)", display: "flex", flexDirection: "column", gap: "1.1rem" }}>
