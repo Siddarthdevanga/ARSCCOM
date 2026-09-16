@@ -559,15 +559,14 @@ router.post("/visitor/:slug/register", handleUpload, async (req, res) => {
     }
 
     /* ── 2. Field validation ──
-       Email is intentionally left out here — its requirement depends on
-       this company's Form Builder toggle, and saveVisitor() (via
-       normalizeVisitorFormFields) is the single source of truth for that.
-       Hard-requiring it here regardless of the toggle was the bug. ── */
+       Email and photo are intentionally left out here — their requirement
+       depends on this company's Form Builder toggles, and saveVisitor()
+       (via normalizeVisitorFormFields) is the single source of truth for
+       that. Hard-requiring them here regardless of the toggle was the bug. ── */
     const existingPhotoKey = req.body.existingPhotoKey?.trim() || null;
     const validationErrors = [];
     if (!req.body.name?.trim())  validationErrors.push("Visitor name is required");
     if (!req.body.phone?.trim()) validationErrors.push("Phone number is required");
-    if (!req.file && !existingPhotoKey) validationErrors.push("Visitor photo is required");
 
     if (validationErrors.length > 0) {
       return res.status(400).json({ success: false, message: validationErrors[0] });

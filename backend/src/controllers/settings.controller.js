@@ -424,7 +424,7 @@ const sendPasswordChangedEmail = async (email, companyName) => {
    GET  /api/settings/visitor-fields
    PUT  /api/settings/visitor-fields
    Body (PUT): { fields: { <fieldKey>: boolean, ... } }
-   Name, WhatsApp Number, and Photo are always collected and
+   Name, WhatsApp Number, and Purpose of Visit are always collected and
    are not part of this toggle set at all.
 ====================================================== */
 export const getVisitorFormFields = async (req, res) => {

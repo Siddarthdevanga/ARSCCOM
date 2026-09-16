@@ -255,8 +255,11 @@ function VisitorPassContent() {
               <div className={styles.errorMsg}>✕ {resendError}</div>
             )}
 
-            {/* Pass body */}
-            <div className={styles.passBody}>
+            {/* Pass body — a visitor with no photo (Photo Capture toggled
+                off at the time this pass was issued) gets a full-width
+                layout instead of a box reserved for a photo that was
+                never captured. */}
+            <div className={visitor.photoUrl ? styles.passBody : styles.passBodyNoPhoto}>
 
               {/* Details */}
               <div className={styles.passDetails}>
@@ -297,22 +300,23 @@ function VisitorPassContent() {
                     {visitor.status === "IN" ? "Checked In" : "Checked Out"}
                   </b>
                 </div>
+
+                {!visitor.photoUrl && (
+                  <div className={styles.joinRowNoPhoto}>
+                    <JoinCommunityButton whatsappUrl={whatsappUrl} companyName={displayCompanyName} />
+                  </div>
+                )}
               </div>
 
               {/* Photo + Join Community */}
-              <div className={styles.photoCol}>
-                <div className={styles.photoBox}>
-                  {visitor.photoUrl ? (
+              {visitor.photoUrl && (
+                <div className={styles.photoCol}>
+                  <div className={styles.photoBox}>
                     <img src={visitor.photoUrl} alt="Visitor" className={styles.photo} />
-                  ) : (
-                    <div className={styles.noPhoto}>
-                      <span>📷</span>
-                      NO PHOTO
-                    </div>
-                  )}
+                  </div>
+                  <JoinCommunityButton whatsappUrl={whatsappUrl} companyName={displayCompanyName} />
                 </div>
-                <JoinCommunityButton whatsappUrl={whatsappUrl} companyName={displayCompanyName} />
-              </div>
+              )}
             </div>
 
             {/* Actions */}

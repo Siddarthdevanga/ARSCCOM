@@ -1,10 +1,10 @@
 /* ======================================================
    CUSTOMIZABLE VISITOR REGISTRATION FIELDS
    ------------------------------------------------------
-   Name, WhatsApp Number, Photo, and Purpose of Visit are always
-   collected — they aren't in this list because they're never
-   toggleable. Everything below defaults to enabled and can be
-   turned off per company via Settings > Form Builder.
+   Name, WhatsApp Number, and Purpose of Visit are always collected —
+   they aren't in this list because they're never toggleable.
+   Everything below defaults to enabled and can be turned off per
+   company via Settings > Form Builder.
 ====================================================== */
 
 export const TOGGLEABLE_VISITOR_FIELDS = [
@@ -20,6 +20,9 @@ export const TOGGLEABLE_VISITOR_FIELDS = [
   "personToMeet",
   "belongings",
   "idProof", // covers both ID Type and ID Number together
+  "photoCapture", // camera/photo capture step — when this AND idProof are
+                   // both off, the whole identity step is skipped entirely
+                   // and the pass is issued straight from secondary details
 ];
 
 export const DEFAULT_VISITOR_FORM_FIELDS = Object.fromEntries(

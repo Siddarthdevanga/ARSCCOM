@@ -51,6 +51,7 @@ const FIELDS = [
   { key: "personToMeet", label: "Person to Meet", step: 2, sub: "Disabling this also turns off the approval WhatsApp sent to that employee" },
   { key: "belongings",   label: "Belongings Checklist", step: 2, sub: "Laptop, bag, documents, mobile, camera, other" },
   { key: "idProof",      label: "ID Proof", step: 3, sub: "ID type and ID number together" },
+  { key: "photoCapture", label: "Photo Capture", step: 3, sub: "Turning this off along with ID Proof skips the whole Identity step — the pass is issued straight after Secondary Details" },
 ];
 
 export default function FormBuilderPage() {

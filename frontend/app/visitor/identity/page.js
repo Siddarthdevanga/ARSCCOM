@@ -24,6 +24,7 @@ export default function VisitorIdentity() {
   /* ================= COMPANY ================= */
   const [company, setCompany] = useState(null);
   const [idProofEnabled, setIdProofEnabled] = useState(true); // Form Builder toggle, default on until loaded
+  const [photoCaptureEnabled, setPhotoCaptureEnabled] = useState(true); // Form Builder toggle, default on until loaded
 
   useEffect(() => {
     const rawCompany = localStorage.getItem("company");
@@ -54,7 +55,10 @@ export default function VisitorIdentity() {
 
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/settings/visitor-fields`, { credentials: "include" })
       .then((r) => r.json())
-      .then((d) => { if (d?.fields && typeof d.fields.idProof === "boolean") setIdProofEnabled(d.fields.idProof); })
+      .then((d) => {
+        if (d?.fields && typeof d.fields.idProof === "boolean") setIdProofEnabled(d.fields.idProof);
+        if (d?.fields && typeof d.fields.photoCapture === "boolean") setPhotoCaptureEnabled(d.fields.photoCapture);
+      })
       .catch(() => {});
   }, [router]);
 
@@ -124,7 +128,7 @@ export default function VisitorIdentity() {
 
   /* ================= VALIDATION ================= */
   const validateAll = () => {
-    if (!photo && !returningKey) { setError("Visitor photo is required"); return false; }
+    if (photoCaptureEnabled && !photo && !returningKey) { setError("Visitor photo is required"); return false; }
     const idErr = idNumberError(idType, idNumber);
     if (idErr) { setIdTouched(true); setError(idErr); return false; }
     return true;
@@ -148,8 +152,11 @@ export default function VisitorIdentity() {
 
       if (!validateAll()) return;
 
-      const blob = await fetch(photo).then((r) => r.blob());
-      const file = new File([blob], "visitor.jpg", { type: "image/jpeg" });
+      let file = null;
+      if (photoCaptureEnabled && photo) {
+        const blob = await fetch(photo).then((r) => r.blob());
+        file = new File([blob], "visitor.jpg", { type: "image/jpeg" });
+      }
 
       const formData = new FormData();
 
@@ -183,12 +190,18 @@ export default function VisitorIdentity() {
         formData.append("employeeId", String(secondary._employeeId));
       }
 
-      formData.append("idType",   idType);
-      formData.append("idNumber", idNumber);
-      if (photo && file) {
-        formData.append("photo", file);
-      } else if (returningKey) {
-        formData.append("existingPhotoKey", returningKey);
+      // idType/idNumber can be pre-filled from a returning visitor's prior
+      // visit even while ID Proof is currently off for this company — the
+      // fields stay hidden in that case, but stale values must not
+      // silently ride along in the submit.
+      formData.append("idType",   idProofEnabled ? idType   : "");
+      formData.append("idNumber", idProofEnabled ? idNumber : "");
+      if (photoCaptureEnabled) {
+        if (photo && file) {
+          formData.append("photo", file);
+        } else if (returningKey) {
+          formData.append("existingPhotoKey", returningKey);
+        }
       }
 
       const res = await fetch(
@@ -297,6 +310,7 @@ export default function VisitorIdentity() {
             <div className={styles.mainLayout}>
 
               {/* ── LEFT: Camera ── */}
+              {photoCaptureEnabled && (
               <div className={styles.leftPane}>
                 <div className={styles.sectionHeader}>
                   <span className={styles.cardDot} />
@@ -353,6 +367,7 @@ export default function VisitorIdentity() {
                   )}
                 </div>
               </div>
+              )}
 
               {/* ── RIGHT: ID Details ── */}
               <div className={styles.rightPane}>

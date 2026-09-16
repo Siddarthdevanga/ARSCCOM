@@ -19,11 +19,8 @@ export const createVisitor = async (req, res) => {
       return res.status(401).json({ success: false, message: "Unauthorized: company missing in token" });
     }
 
-    const existingPhotoKey = req.body.existingPhotoKey?.trim() || null;
-    if (!req.file && !existingPhotoKey) {
-      return res.status(400).json({ success: false, message: "Visitor photo is required" });
-    }
-
+    // Photo requirement itself is enforced inside saveVisitor(), gated on
+    // this company's photoCapture form-field toggle — not hard-required here.
     const visitor = await saveVisitor(companyId, req.body, req.file);
 
     return res.status(201).json({ success: true, message: "Visitor created successfully", visitor });

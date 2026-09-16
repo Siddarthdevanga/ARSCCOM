@@ -366,6 +366,7 @@ export default function PublicVisitorRegistration() {
     email: true, fromCompany: true, department: true, designation: true,
     address: true, city: true, state: true, postalCode: true, country: true,
     personToMeet: true, purpose: true, belongings: true, idProof: true,
+    photoCapture: true,
   });
 
   const [phone,       setPhone]       = useState("");
@@ -600,14 +601,31 @@ export default function PublicVisitorRegistration() {
       if (firstErr) { setError(firstErr); return false; }
     }
     if (step === 3) {
-      if (!photo && !returningPhotoKey) { setError("Visitor photo is required"); return false; }
+      if (formFields.photoCapture && !photo && !returningPhotoKey) { setError("Visitor photo is required"); return false; }
       const idErr = idNumberError(formData.idType, formData.idNumber);
       if (idErr) { setIdTouched(true); setError(idErr); return false; }
     }
     return true;
   }, [step, formData, photo, returningPhotoKey, formFields]);
 
-  const handleNext   = useCallback(() => { if (validateStep()) { setError(""); setStep((p) => p + 1); } }, [validateStep]);
+  // When both ID Proof and Photo Capture are toggled off, step 3 has
+  // nothing left to collect — skip straight from step 2 to submission.
+  const skipIdentityStep = !formFields.idProof && !formFields.photoCapture;
+
+  // Plain function, not useCallback — it must always close over the latest
+  // handleSubmit (itself unmemoized and dependent on state not tracked in
+  // validateStep's deps, like phone/customFieldValues/selectedEmployeeId),
+  // so memoizing this on a narrower dependency list risked calling a stale
+  // handleSubmit closure on the skip-straight-to-submit path.
+  const handleNext = () => {
+    if (!validateStep()) return;
+    setError("");
+    if (step === 2 && skipIdentityStep) {
+      handleSubmit();
+      return;
+    }
+    setStep((p) => p + 1);
+  };
 
   const handleSubmit = async () => {
     if (!validateStep()) return;
@@ -620,16 +638,29 @@ export default function PublicVisitorRegistration() {
       setSubmitting(true); setError("");
       const fd = new FormData();
       Object.entries(formData).forEach(([key, value]) => {
+        // "Edit Details" (returning-visitor pre-fill) can populate idType/
+        // idNumber from a prior visit even while this company's ID Proof
+        // toggle is currently off — the fields stay hidden in that case,
+        // but the stale values must not silently ride along in the submit.
+        if ((key === "idType" || key === "idNumber") && !formFields.idProof) {
+          fd.append(key, "");
+          return;
+        }
         fd.append(key, key === "belongings" ? (Array.isArray(value) ? value.join(", ") : "") : value || "");
       });
       fd.append("phone", `91${phone}`);  // Add phone from OTP verification (with 91 prefix)
       fd.append("customFieldValues", JSON.stringify(
         Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
       ));
-      if (photoBlob) {
-        fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
-      } else if (returningPhotoKey) {
-        fd.append("existingPhotoKey", returningPhotoKey);
+      // Same reasoning for the photo — "Edit Details" can pre-fill
+      // returningPhotoKey from a prior visit even while Photo Capture is
+      // currently off for this company.
+      if (formFields.photoCapture) {
+        if (photoBlob) {
+          fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
+        } else if (returningPhotoKey) {
+          fd.append("existingPhotoKey", returningPhotoKey);
+        }
       }
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
 
@@ -687,15 +718,20 @@ export default function PublicVisitorRegistration() {
       fd.append("state",       r.state       || "");
       fd.append("postalCode",  r.postalCode  || "");
       fd.append("country",     r.country     || "");
-      fd.append("idType",      r.idType      || "");
-      fd.append("idNumber",    r.idNumber    || "");
+      // ID and photo are only carried forward from the visitor's last visit
+      // when this company's toggles are still on — a pass issued after
+      // either is turned off shouldn't resurrect old identity data.
+      if (formFields.idProof) {
+        fd.append("idType",   r.idType   || "");
+        fd.append("idNumber", r.idNumber || "");
+      }
       fd.append("personToMeet", returnPersonToMeet.trim());
       fd.append("purpose", returnPurpose.trim());
       if (returnPurposeCategory)    fd.append("purposeCategory", returnPurposeCategory);
       if (returnPurposeSubcategory) fd.append("purposeSubcategory", returnPurposeSubcategory);
       if (returnBelongings.length) fd.append("belongings", returnBelongings.join(", "));
       if (returnEmployeeId) fd.append("employeeId", String(returnEmployeeId));
-      if (r.photoKey) fd.append("existingPhotoKey", r.photoKey);
+      if (formFields.photoCapture && r.photoKey) fd.append("existingPhotoKey", r.photoKey);
       fd.append("customFieldValues", JSON.stringify(
         Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
       ));
@@ -855,7 +891,10 @@ export default function PublicVisitorRegistration() {
                 We found your details from a previous visit to {company?.name}.
               </p>
 
-              {/* Photo */}
+              {/* Photo — only shown from a prior visit when this company's
+                  Photo Capture toggle is still on; a freshly issued pass
+                  shouldn't resurrect an old photo once that's turned off. */}
+              {formFields.photoCapture && (
               <div style={{ display:"flex", justifyContent:"center", marginBottom:"1.25rem" }}>
                 {returningData.photoUrl
                   ? <img src={returningData.photoUrl} alt="Your photo"
@@ -869,6 +908,7 @@ export default function PublicVisitorRegistration() {
                     </div>
                 }
               </div>
+              )}
 
               {/* All fields grid — optional fields left blank last visit are hidden entirely;
                   required fields (Name, Phone) always show even if somehow empty. */}
@@ -890,10 +930,10 @@ export default function PublicVisitorRegistration() {
                     { k:"Postal Code", v: r.postalCode },
                     { k:"Country",     v: r.country },
                   ]},
-                  { label:"Identity", fields:[
+                  ...(formFields.idProof ? [{ label:"Identity", fields:[
                     { k:"ID Type",     v: r.idType },
                     { k:"ID Number",   v: r.idNumber },
-                  ]},
+                  ]}] : []),
                 ]
                   .map(sec => ({ ...sec, fields: sec.fields.filter(f => f.required || f.v) }))
                   .filter(sec => sec.fields.length > 0);
@@ -1264,8 +1304,10 @@ export default function PublicVisitorRegistration() {
               )}
 
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
-                <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }}>← Back</button>
-                <button className={styles.primaryBtn} onClick={handleNext} style={{ flex:2 }}>Next →</button>
+                <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }} disabled={submitting}>← Back</button>
+                <button className={styles.primaryBtn} onClick={handleNext} style={{ flex:2 }} disabled={submitting}>
+                  {submitting ? "Submitting…" : "Next →"}
+                </button>
               </div>
             </main>
           </div>
@@ -1281,6 +1323,7 @@ export default function PublicVisitorRegistration() {
             <main className={styles.card}>
               <h2 className={styles.title}>Identity Verification</h2>
               {error && <div className={styles.errorMsg}>{error}</div>}
+              {formFields.photoCapture && (
               <div className={styles.cameraContainer}>
                 {/* Returning visitor: show saved photo as default option */}
                 {!cameraActive && !photo && returningPhotoKey && returningData?.photoUrl && (
@@ -1329,6 +1372,7 @@ export default function PublicVisitorRegistration() {
                   </>
                 )}
               </div>
+              )}
               {formFields.idProof && (
                 <>
                   <div className={styles.formGroup}>
@@ -1357,7 +1401,7 @@ export default function PublicVisitorRegistration() {
               <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1rem" }}>
                 <button className={styles.secondaryBtn} onClick={goBack} style={{ flex:1 }} disabled={submitting}>← Back</button>
-                <button className={styles.primaryBtn} onClick={handleSubmit} disabled={(!photo && !returningPhotoKey) || submitting} style={{ flex:2 }}>
+                <button className={styles.primaryBtn} onClick={handleSubmit} disabled={(formFields.photoCapture && !photo && !returningPhotoKey) || submitting} style={{ flex:2 }}>
                   {submitting ? "Submitting…" : "✓ Submit"}
                 </button>
               </div>

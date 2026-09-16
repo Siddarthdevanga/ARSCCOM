@@ -61,7 +61,6 @@ export const saveVisitor = async (companyId, data, file) => {
   if (!companyId) throw new Error("Company ID is required");
 
   const existingPhotoKey = data.existingPhotoKey?.trim() || null;
-  if (!file && !existingPhotoKey) throw new Error("Visitor photo is required");
 
   const {
     name, phone, email, fromCompany, department, designation,
@@ -102,6 +101,9 @@ export const saveVisitor = async (companyId, data, file) => {
     const formFields = normalizeVisitorFormFields(company.visitor_form_fields);
     if (formFields.email && !email?.trim()) {
       throw new Error("Visitor email is required");
+    }
+    if (formFields.photoCapture && !file && !existingPhotoKey) {
+      throw new Error("Visitor photo is required");
     }
 
     /* ── Company-defined custom fields: validate required ones are present ── */

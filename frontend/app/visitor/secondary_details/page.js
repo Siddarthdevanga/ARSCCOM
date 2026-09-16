@@ -292,7 +292,9 @@ export default function SecondaryDetails() {
     fromCompany: true, department: true, designation: true,
     address: true, city: true, state: true, postalCode: true, country: true,
     personToMeet: true, purpose: true, belongings: true,
+    idProof: true, photoCapture: true,
   });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     try {
@@ -379,6 +381,73 @@ export default function SecondaryDetails() {
   const borderFor = (field) =>
     touched[field] && fe[field] ? "1px solid #dc2626" : undefined;
 
+  // When both ID Proof and Photo Capture are toggled off, there's nothing
+  // left for the Identity step to collect — skip it entirely and submit
+  // the visitor record straight from here.
+  const skipIdentityStep = !formFields.idProof && !formFields.photoCapture;
+
+  const submitDirectly = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      const primaryRaw = localStorage.getItem("visitor_primary");
+      if (!primaryRaw) {
+        setError("Visitor details are missing. Please restart registration.");
+        return;
+      }
+      const primary = JSON.parse(primaryRaw);
+
+      const formData = new FormData();
+      formData.append("name",  primary.name);
+      formData.append("phone", primary.phone);
+      formData.append("email", primary.email || "");
+
+      Object.entries(form).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((v) => formData.append(key, v));
+        } else {
+          formData.append(key, value ?? "");
+        }
+      });
+
+      if (selectedEmployeeId) {
+        formData.append("employeeId", String(selectedEmployeeId));
+      }
+
+      formData.append("customFieldValues", JSON.stringify(
+        Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
+      ));
+
+      const res = await fetch(`${API}/api/visitors`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (res.status === 413) throw new Error("Request too large. Please try again.");
+
+      const contentType = res.headers.get("content-type");
+      let data = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        throw new Error("Server returned an invalid response");
+      }
+      if (!res.ok) throw new Error(data?.message || "Visitor creation failed");
+
+      localStorage.removeItem("visitor_primary");
+      localStorage.removeItem("visitor_secondary");
+      localStorage.removeItem("visitor_returning");
+
+      router.push(`/visitor/pass?visitorCode=${data.visitor.passToken}`);
+    } catch (err) {
+      console.error("SUBMIT VISITOR ERROR:", err);
+      setError(err.message || "Failed to generate visitor pass");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const goNext = () => {
     if (formFields.personToMeet && !form.personToMeet.trim()) {
       setError("Person to Meet is required");
@@ -393,6 +462,12 @@ export default function SecondaryDetails() {
     const firstErr = allFields.map(f => fe[f]).find(Boolean);
     if (firstErr) { setError(firstErr); return; }
     setError("");
+
+    if (skipIdentityStep) {
+      submitDirectly();
+      return;
+    }
+
     localStorage.setItem("visitor_secondary", JSON.stringify({
       ...form,
       _employeeId: selectedEmployeeId,
@@ -430,11 +505,15 @@ export default function SecondaryDetails() {
               <span className={styles.stepNum}>2</span>
               <span className={styles.stepLabel}>Secondary Details</span>
             </div>
-            <div className={styles.stepLine} />
-            <div className={styles.step}>
-              <span className={styles.stepNum}>3</span>
-              <span className={styles.stepLabel}>Identity</span>
-            </div>
+            {!skipIdentityStep && (
+              <>
+                <div className={styles.stepLine} />
+                <div className={styles.step}>
+                  <span className={styles.stepNum}>3</span>
+                  <span className={styles.stepLabel}>Identity</span>
+                </div>
+              </>
+            )}
           </div>
         </section>
 
@@ -663,8 +742,10 @@ export default function SecondaryDetails() {
             )}
 
             <div className={styles.buttonRow}>
-              <button className={styles.prevBtn} onClick={goBack}>← Previous</button>
-              <button className={styles.nextBtn} onClick={goNext}>Next →</button>
+              <button className={styles.prevBtn} onClick={goBack} disabled={submitting}>← Previous</button>
+              <button className={styles.nextBtn} onClick={goNext} disabled={submitting}>
+                {submitting ? "Generating Pass…" : skipIdentityStep ? "Generate Pass →" : "Next →"}
+              </button>
             </div>
 
           </div>

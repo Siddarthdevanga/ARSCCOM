@@ -287,6 +287,21 @@
   align-items: flex-start;
 }
 
+/* No photo was ever captured for this visit (Photo Capture toggled off) —
+   the details column takes the full card width instead of leaving a gap
+   where a photo box used to be. */
+.passBodyNoPhoto {
+  display: flex;
+}
+
+.joinRowNoPhoto {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(98, 0, 214, 0.08);
+}
+
 .passDetails {
   flex: 1;
   min-width: 0;

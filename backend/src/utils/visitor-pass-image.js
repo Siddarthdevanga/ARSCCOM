@@ -214,7 +214,10 @@ export const generateVisitorPassImage = async ({
   ctx.fillText("VISITOR DETAILS", detailsX, detailsY);
   detailsY += 35;
 
-  // Details
+  // Details — when there's no photo (Photo Capture toggled off for this
+  // visit), the text column uses the full card width instead of stopping
+  // short to leave room for a photo box that was never captured.
+  const detailsMaxWidth = visitor.photoUrl ? 280 : (cardW - 125);
   ctx.font = `15px ${fontFamily}`;
   const details = [
     { label: "Visitor ID", value: visitorCode },
@@ -227,33 +230,34 @@ export const generateVisitorPassImage = async ({
   details.forEach((detail, index) => {
     ctx.fillStyle = TEXT_GRAY;
     ctx.fillText(`${detail.label}:`, detailsX, detailsY + (index * lineHeight));
-    
+
     ctx.fillStyle = "#333";
     ctx.font = `bold 15px ${fontFamily}`;
-    drawEllipsisText(ctx, detail.value, detailsX + 85, detailsY + (index * lineHeight), 280);
-    
+    drawEllipsisText(ctx, detail.value, detailsX + 85, detailsY + (index * lineHeight), detailsMaxWidth);
+
     ctx.font = `15px ${fontFamily}`;
   });
 
   /* ================= VISITOR PHOTO ================= */
-  const photoX = cardX + cardW - 170;
-  const photoY = cardY + 90;
-  const photoW = 130;
-  const photoH = 160;
-
-  // Photo background
-  ctx.fillStyle = LIGHT_GRAY;
-  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 8);
-  ctx.fill();
-
-  // Photo border
-  ctx.strokeStyle = BRAND_COLOR;
-  ctx.lineWidth = 3;
-  drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 8);
-  ctx.stroke();
-
-  // Load and draw visitor photo
+  // No box, no border, no placeholder text at all when this visit has no
+  // photo — the details column above already took the full card width.
   if (visitor.photoUrl) {
+    const photoX = cardX + cardW - 170;
+    const photoY = cardY + 90;
+    const photoW = 130;
+    const photoH = 160;
+
+    // Photo background
+    ctx.fillStyle = LIGHT_GRAY;
+    drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 8);
+    ctx.fill();
+
+    // Photo border
+    ctx.strokeStyle = BRAND_COLOR;
+    ctx.lineWidth = 3;
+    drawRoundedRect(ctx, photoX, photoY, photoW, photoH, 8);
+    ctx.stroke();
+
     try {
       const img = await loadImage(visitor.photoUrl);
       const ratio = Math.min((photoW - 6) / img.width, (photoH - 6) / img.height);
@@ -268,14 +272,14 @@ export const generateVisitorPassImage = async ({
       ctx.save();
       drawRoundedRect(ctx, photoX + 3, photoY + 3, photoW - 6, photoH - 6, 5);
       ctx.clip();
-      
+
       ctx.drawImage(img, imgX, imgY, imgW, imgH);
       ctx.restore();
-      
+
       console.log("[VISITOR_PASS_IMAGE] Visitor photo loaded successfully");
     } catch (err) {
       console.error("[VISITOR_PASS_IMAGE] Photo load failed:", err.message);
-      
+
       // Fallback: show placeholder text
       ctx.fillStyle = TEXT_GRAY;
       ctx.font = `12px ${fontFamily}`;
@@ -284,13 +288,6 @@ export const generateVisitorPassImage = async ({
       ctx.fillText("Not Available", photoX + photoW / 2, photoY + photoH / 2 + 10);
       ctx.textAlign = "left";
     }
-  } else {
-    // No photo URL provided
-    ctx.fillStyle = TEXT_GRAY;
-    ctx.font = `12px ${fontFamily}`;
-    ctx.textAlign = "center";
-    ctx.fillText("No Photo", photoX + photoW / 2, photoY + photoH / 2);
-    ctx.textAlign = "left";
   }
 
   /* ================= FOOTER ================= */

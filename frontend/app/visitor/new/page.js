@@ -134,7 +134,7 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
 };
 
 /* ── Full profile preview with all fields (nulls greyed) ── */
-function ProfilePreview({ profile, phone }) {
+function ProfilePreview({ profile, phone, formFields }) {
   const r = profile;
   // Optional fields left blank on a prior visit are hidden entirely rather
   // than shown as "Not provided"; required fields (Name, Phone) always show.
@@ -154,17 +154,20 @@ function ProfilePreview({ profile, phone }) {
       { k: "Postal Code", v: r.postalCode },
       { k: "Country",     v: r.country },
     ]},
-    { label: "Identity", fields: [
+    ...(formFields.idProof ? [{ label: "Identity", fields: [
       { k: "ID Type",     v: r.idType },
       { k: "ID Number",   v: r.idNumber },
-    ]},
+    ]}] : []),
   ]
     .map(sec => ({ ...sec, fields: sec.fields.filter(f => f.required || f.v) }))
     .filter(sec => sec.fields.length > 0);
 
   return (
     <div>
-      {/* Photo */}
+      {/* Photo — only carried forward from a prior visit when this
+          company's Photo Capture toggle is still on; a freshly issued
+          pass shouldn't resurrect an old photo once that's turned off. */}
+      {formFields.photoCapture && (
       <div style={{ display:"flex", justifyContent:"center", marginBottom:"1.25rem" }}>
         {r.photoUrl
           ? <img src={r.photoUrl} alt="Visitor photo"
@@ -176,6 +179,7 @@ function ProfilePreview({ profile, phone }) {
             </div>
         }
       </div>
+      )}
 
       {sections.map(sec => (
         <div key={sec.label} style={{ marginBottom:"0.875rem" }}>
@@ -224,8 +228,18 @@ export default function NewVisitorPage() {
   const [belongings,         setBelongings]         = useState([]);
   const [miniError,          setMiniError]          = useState("");
 
+  // Camera capture — only ever needed here when a returning visitor has NO
+  // photo already on file (registered while Photo Capture was off) and the
+  // company now has the toggle back on, so saveVisitor() will require one.
+  const [cameraActive, setCameraActive] = useState(false);
+  const [newPhoto,     setNewPhoto]     = useState(null);
+  const [cameraStream, setCameraStream] = useState(null);
+  const [cameraError,  setCameraError]  = useState("");
+  const videoRef  = useRef(null);
+  const canvasRef = useRef(null);
+
   // Form Builder toggles — default everything on until the real config loads
-  const [formFields, setFormFields] = useState({ personToMeet: true, belongings: true });
+  const [formFields, setFormFields] = useState({ personToMeet: true, belongings: true, idProof: true, photoCapture: true });
 
   // Company-defined Purpose of Visit categories — empty means this company
   // hasn't set any up, so PurposePicker falls back to plain free text.
@@ -298,6 +312,49 @@ export default function NewVisitorPage() {
     prev.includes(item) ? prev.filter(b => b !== item) : [...prev, item]
   );
 
+  /* ── Camera capture — only shown when a returning visitor has no photo
+     already on file and this company's Photo Capture toggle is on ── */
+  useEffect(() => {
+    if (cameraActive && cameraStream && videoRef.current) {
+      videoRef.current.srcObject   = cameraStream;
+      videoRef.current.muted       = true;
+      videoRef.current.playsInline = true;
+      videoRef.current.play();
+    }
+  }, [cameraActive, cameraStream]);
+
+  useEffect(() => {
+    return () => { cameraStream?.getTracks().forEach((track) => track.stop()); };
+  }, [cameraStream]);
+
+  const startCamera = async () => {
+    setCameraError("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      setCameraStream(stream);
+      setCameraActive(true);
+    } catch {
+      setCameraError("Camera access denied or unavailable");
+    }
+  };
+
+  const stopCamera = () => {
+    cameraStream?.getTracks().forEach((track) => track.stop());
+    setCameraStream(null);
+    setCameraActive(false);
+  };
+
+  const capturePhoto = () => {
+    if (!canvasRef.current || !videoRef.current) return;
+    const canvas = canvasRef.current;
+    const video  = videoRef.current;
+    canvas.width  = 400;
+    canvas.height = 300;
+    canvas.getContext("2d").drawImage(video, 0, 0, 400, 300);
+    setNewPhoto(canvas.toDataURL("image/jpeg"));
+    stopCamera();
+  };
+
   const handleProceedNew = () => {
     // New visitor — carry phone to primary_details via localStorage
     localStorage.setItem("visitor_new_phone", phone.replace(/\D/g, ""));
@@ -314,9 +371,15 @@ export default function NewVisitorPage() {
     router.push("/visitor/primary_details");
   };
 
+  // A photo is only ever needed here when Photo Capture is on AND this
+  // returning visitor has none already on file (registered while the
+  // toggle was off) — otherwise their existing photo carries forward as-is.
+  const needsFreshPhoto = formFields.photoCapture && !profile?.photoKey;
+
   const handleIssuePass = async () => {
     if (formFields.personToMeet && !personToMeet.trim()) { setMiniError("Person to Meet is required"); return; }
     if (!purpose.trim()) { setMiniError("Purpose of visit is required"); return; }
+    if (needsFreshPhoto && !newPhoto) { setMiniError("Visitor photo is required"); return; }
     setMiniError("");
     setSubmitting(true);
     try {
@@ -332,15 +395,27 @@ export default function NewVisitorPage() {
       fd.append("state",       profile.state       || "");
       fd.append("postalCode",  profile.postalCode  || "");
       fd.append("country",     profile.country     || "");
-      fd.append("idType",      profile.idType      || "");
-      fd.append("idNumber",    profile.idNumber    || "");
+      // ID and photo are only carried forward from the visitor's last visit
+      // when this company's toggles are still on — a pass issued after
+      // either is turned off shouldn't resurrect old identity data.
+      if (formFields.idProof) {
+        fd.append("idType",   profile.idType   || "");
+        fd.append("idNumber", profile.idNumber || "");
+      }
       fd.append("personToMeet", personToMeet.trim());
       fd.append("purpose", purpose.trim());
       if (purposeCategory)    fd.append("purposeCategory", purposeCategory);
       if (purposeSubcategory) fd.append("purposeSubcategory", purposeSubcategory);
       if (belongings.length) fd.append("belongings", belongings.join(", "));
       if (selectedEmployeeId) fd.append("employeeId", String(selectedEmployeeId));
-      if (profile.photoKey)  fd.append("existingPhotoKey", profile.photoKey);
+      if (formFields.photoCapture) {
+        if (newPhoto) {
+          const blob = await fetch(newPhoto).then((r) => r.blob());
+          fd.append("photo", new File([blob], "visitor.jpg", { type: "image/jpeg" }));
+        } else if (profile.photoKey) {
+          fd.append("existingPhotoKey", profile.photoKey);
+        }
+      }
       fd.append("customFieldValues", JSON.stringify(
         Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
       ));
@@ -476,9 +551,56 @@ export default function NewVisitorPage() {
                   </div>
 
                   <div style={{ border:"1px solid #e5e7eb", borderRadius:"0.75rem", padding:"1rem", background:"#fafafa" }}>
-                    <ProfilePreview profile={profile} phone={phone.replace(/\D/g,"")} />
+                    <ProfilePreview profile={profile} phone={phone.replace(/\D/g,"")} formFields={formFields} />
                   </div>
                 </div>
+
+                {/* Camera capture — only needed when this returning visitor
+                    has no photo on file (registered while the toggle was
+                    off) and Photo Capture is now on again. */}
+                {needsFreshPhoto && (
+                  <div style={{ marginTop:"1rem" }}>
+                    <div style={{ fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase",
+                      letterSpacing:"0.8px", color:"#374151", marginBottom:"0.75rem" }}>
+                      Visitor Photo <span style={{ color:"#e53935" }}>*</span>
+                    </div>
+                    {cameraError && (
+                      <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"0.5rem",
+                        padding:"0.5rem 0.75rem", fontSize:"0.82rem", color:"#b91c1c", marginBottom:"0.75rem" }}>
+                        {cameraError}
+                      </div>
+                    )}
+                    <div style={{ border:"1px solid #e5e7eb", borderRadius:"0.75rem", padding:"1rem",
+                      background:"#fafafa", display:"flex", flexDirection:"column", alignItems:"center", gap:"0.75rem" }}>
+                      {!cameraActive && !newPhoto && (
+                        <button type="button" className={styles.nextBtn} onClick={startCamera}
+                          style={{ maxWidth:220, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+                          </svg>
+                          Start Camera
+                        </button>
+                      )}
+                      {cameraActive && (
+                        <>
+                          <video ref={videoRef} style={{ width:"100%", maxWidth:320, borderRadius:"0.75rem" }} />
+                          <button type="button" className={styles.nextBtn} onClick={capturePhoto} style={{ maxWidth:220 }}>
+                            Capture Photo
+                          </button>
+                        </>
+                      )}
+                      {newPhoto && (
+                        <>
+                          <img src={newPhoto} alt="Captured" style={{ width:"100%", maxWidth:320, borderRadius:"0.75rem" }} />
+                          <button type="button" className={styles.prevBtn} onClick={() => setNewPhoto(null)} style={{ maxWidth:220 }}>
+                            Retake Photo
+                          </button>
+                        </>
+                      )}
+                    </div>
+                    <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
+                  </div>
+                )}
 
                 {/* Mini form — visit-specific */}
                 <div style={{ marginTop:"1.25rem" }}>
