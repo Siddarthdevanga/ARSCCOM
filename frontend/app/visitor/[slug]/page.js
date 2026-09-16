@@ -699,9 +699,15 @@ export default function PublicVisitorRegistration() {
     finally { setSubmitting(false); }
   };
 
+  // A photo is only ever needed here when Photo Capture is on AND this
+  // returning visitor has none already on file (registered while the
+  // toggle was off) — otherwise their existing photo carries forward as-is.
+  const needsFreshReturningPhoto = formFields.photoCapture && !returningData?.photoKey;
+
   const handleReturningSubmit = async () => {
     if (formFields.personToMeet && !returnPersonToMeet.trim()) { setReturnMiniError("Person to Meet is required"); return; }
     if (!returnPurpose.trim()) { setReturnMiniError("Purpose of visit is required"); return; }
+    if (needsFreshReturningPhoto && !photo) { setReturnMiniError("Visitor photo is required"); return; }
     setReturnMiniError(""); setSubmitting(true);
     const waTab = company?.whatsapp_url?.trim() ? window.open("", "_blank") : null;
     try {
@@ -731,7 +737,13 @@ export default function PublicVisitorRegistration() {
       if (returnPurposeSubcategory) fd.append("purposeSubcategory", returnPurposeSubcategory);
       if (returnBelongings.length) fd.append("belongings", returnBelongings.join(", "));
       if (returnEmployeeId) fd.append("employeeId", String(returnEmployeeId));
-      if (formFields.photoCapture && r.photoKey) fd.append("existingPhotoKey", r.photoKey);
+      if (formFields.photoCapture) {
+        if (photoBlob) {
+          fd.append("photo", new File([photoBlob], "visitor.jpg", { type: "image/jpeg" }));
+        } else if (r.photoKey) {
+          fd.append("existingPhotoKey", r.photoKey);
+        }
+      }
       fd.append("customFieldValues", JSON.stringify(
         Object.entries(customFieldValues).map(([fieldId, value]) => ({ fieldId: Number(fieldId), value }))
       ));
@@ -1001,6 +1013,45 @@ export default function PublicVisitorRegistration() {
                     <div style={{ background:"#fef2f2", border:"1px solid #fecaca", borderRadius:"0.5rem",
                       padding:"0.5rem 0.75rem", fontSize:"0.82rem", color:"#b91c1c", marginBottom:"0.75rem" }}>
                       {returnMiniError}
+                    </div>
+                  )}
+
+                  {/* Camera capture — only needed when this returning
+                      visitor has no photo on file (registered while the
+                      toggle was off) and Photo Capture is now on again. */}
+                  {needsFreshReturningPhoto && (
+                    <div className={styles.formGroup}>
+                      <label>Visitor Photo *</label>
+                      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.75rem",
+                        border:"1px solid #e5e7eb", borderRadius:"0.75rem", padding:"1rem", background:"#fafafa" }}>
+                        {!cameraActive && !photo && (
+                          <button type="button" className={styles.primaryBtn} onClick={startCamera}
+                            style={{ maxWidth:220, display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+                            </svg>
+                            Start Camera
+                          </button>
+                        )}
+                        {cameraActive && (
+                          <>
+                            <video ref={videoRef} autoPlay playsInline muted
+                              style={{ width:"100%", maxWidth:320, borderRadius:"0.75rem" }} />
+                            <button type="button" className={styles.primaryBtn} onClick={capturePhoto} style={{ maxWidth:220 }}>
+                              Capture Photo
+                            </button>
+                          </>
+                        )}
+                        {photo && (
+                          <>
+                            <img src={photo} alt="Captured" style={{ width:"100%", maxWidth:320, borderRadius:"0.75rem" }} />
+                            <button type="button" className={styles.secondaryBtn} onClick={retakePhoto} style={{ maxWidth:220 }}>
+                              Retake Photo
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <canvas ref={canvasRef} style={{ display:"none" }} aria-hidden="true" />
                     </div>
                   )}
 
