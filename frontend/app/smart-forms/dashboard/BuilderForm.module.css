@@ -19,12 +19,74 @@
   min-width: 0;
 }
 
-/* Wide screens: two columns — branding/theme on the left (fixed, doesn't
-   need much room), fields on the right (wider — the dependent-dropdown
-   editor needs the extra space). Below this, the page falls back to a
-   single stacked column instead of leaving large empty side gutters. */
+/* Wide screens: two columns — the current step's actual inputs on the
+   left (wide — the fields step especially needs the room for its
+   dependent-dropdown editor), a short "why this step" explanation on
+   the right (fixed, narrower sidebar). Below this, the page falls back
+   to a single stacked column instead of leaving large empty gutters. */
 @media (min-width: 900px) {
   .layout {
-    grid-template-columns: 380px 1fr;
+    grid-template-columns: 1fr 320px;
   }
+}
+
+.stepRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.stepDot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.stepCircle {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 800;
+  background: #ede4fa;
+  color: #6200d6;
+  flex-shrink: 0;
+}
+
+.stepDotActive .stepCircle {
+  background: linear-gradient(135deg,#6200d6,#a855f7);
+  color: #fff;
+}
+
+.stepDotActive {
+  color: #1a0038;
+}
+
+.stepDotDone .stepCircle {
+  background: #00875a;
+  color: #fff;
+}
+
+.stepLine {
+  width: 28px;
+  height: 2px;
+  background: #ede4fa;
+  flex-shrink: 0;
+}
+
+.explainCard {
+  border: 1px dashed #ddd2f0;
+  border-radius: 12px;
+  padding: 1rem;
+  background: #faf8ff;
+  position: sticky;
+  top: 1rem;
 }
