@@ -1,0 +1,30 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.leftCol,
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+/* Wide screens: two columns — branding/theme on the left (fixed, doesn't
+   need much room), fields on the right (wider — the dependent-dropdown
+   editor needs the extra space). Below this, the page falls back to a
+   single stacked column instead of leaving large empty side gutters. */
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 380px 1fr;
+  }
+}

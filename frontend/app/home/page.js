@@ -548,6 +548,7 @@ export default function Home() {
   const handleOpenSettings    = () => { setShowMenu(false); router.push("/home/settings"); };
   const handleOpenEmployees   = () => { setShowMenu(false); router.push("/visitor/admin"); };
   const handleOpenFormBuilder = () => { setShowMenu(false); router.push("/home/form-builder"); };
+  const handleOpenSmartForms  = () => { setShowMenu(false); router.push("/smart-forms/dashboard"); };
   const handleOpenPlans      = () => { setShowMenu(false); router.push("/home/plans"); };
 
   // Clicking a locked module card should never navigate through — it
@@ -670,6 +671,25 @@ export default function Home() {
           <span className={styles.menuItemTitle}>Form Builder</span>
           <span className={styles.menuItemSubtitle}>
             {needsRenewal ? "Renew to unlock" : "Customize visitor registration fields"}
+          </span>
+        </div>
+        {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}
+      </button>
+
+      {/* Smart Forms */}
+      <button
+        className={`${styles.menuItem} ${needsRenewal ? styles.menuItemLocked : ""}`}
+        onClick={needsRenewal ? undefined : handleOpenSmartForms}
+        disabled={needsRenewal}
+        aria-disabled={needsRenewal}
+      >
+        <div className={styles.menuItemIcon}>
+          {needsRenewal ? <Lock size={16}/> : <QrCode size={18}/>}
+        </div>
+        <div className={styles.menuItemContent}>
+          <span className={styles.menuItemTitle}>Smart Forms</span>
+          <span className={styles.menuItemSubtitle}>
+            {needsRenewal ? "Renew to unlock" : "QR-code based information collectors"}
           </span>
         </div>
         {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}

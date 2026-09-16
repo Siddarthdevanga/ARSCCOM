@@ -39,7 +39,7 @@ export default function EditSmartFormPage() {
         </div>
       </header>
       <div className={styles.scrollBody}>
-        <div style={{ maxWidth: 700, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>
+        <div style={{ maxWidth: 1180, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", margin: "0 0 1.25rem" }}>Edit Smart Form</h1>
           {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
           {form && (

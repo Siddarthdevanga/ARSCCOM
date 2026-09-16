@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import layout from "./BuilderForm.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const MAX_FIELDS = 5;
@@ -181,77 +182,83 @@ export default function BuilderForm({ initial, formId, onSaved, onCancel }) {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+    <div className={layout.wrap}>
       {error && (
         <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", color: "#b91c1c", fontSize: 13 }}>
           {error}
         </div>
       )}
 
-      {/* Basic info */}
-      <div style={card}>
-        <label style={label}>Form Name (internal reference)</label>
-        <input style={{ ...input, marginBottom: 12 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Trade Show Booth A" />
+      <div className={layout.layout}>
+        <div className={layout.leftCol}>
+          {/* Basic info */}
+          <div style={card}>
+            <label style={label}>Form Name (internal reference)</label>
+            <input style={{ ...input, marginBottom: 12 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Trade Show Booth A" />
 
-        <label style={label}>Headline (shown on the scan page)</label>
-        <input style={{ ...input, marginBottom: 12 }} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="We'd love your feedback!" maxLength={150} />
+            <label style={label}>Headline (shown on the scan page)</label>
+            <input style={{ ...input, marginBottom: 12 }} value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="We'd love your feedback!" maxLength={150} />
 
-        <label style={label}>Subtext</label>
-        <input style={{ ...input, marginBottom: 12 }} value={subtext} onChange={(e) => setSubtext(e.target.value)} placeholder="Takes less than a minute" maxLength={300} />
+            <label style={label}>Subtext</label>
+            <input style={{ ...input, marginBottom: 12 }} value={subtext} onChange={(e) => setSubtext(e.target.value)} placeholder="Takes less than a minute" maxLength={300} />
 
-        <label style={label}>Display Name Override (optional — defaults to your company name)</label>
-        <input style={{ ...input, marginBottom: 12 }} value={displayNameOverride} onChange={(e) => setDisplayNameOverride(e.target.value)} placeholder={initial?.companyName || "Your company name"} />
+            <label style={label}>Display Name Override (optional — defaults to your company name)</label>
+            <input style={{ ...input, marginBottom: 12 }} value={displayNameOverride} onChange={(e) => setDisplayNameOverride(e.target.value)} placeholder={initial?.companyName || "Your company name"} />
 
-        <label style={label}>Logo Override (optional — defaults to your company logo)</label>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {logoPreview && <img src={logoPreview} alt="Logo preview" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid #e5e7eb" }} />}
-          <button type="button" onClick={() => fileInputRef.current?.click()} style={{ ...input, width: "auto", cursor: "pointer", background: "#fff" }}>
-            Upload Logo
-          </button>
-          <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => {
-            const file = e.target.files?.[0];
-            if (file) { setLogoFile(file); setLogoPreview(URL.createObjectURL(file)); }
-          }} />
-        </div>
-      </div>
+            <label style={label}>Logo Override (optional — defaults to your company logo)</label>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              {logoPreview && <img src={logoPreview} alt="Logo preview" style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", border: "1px solid #e5e7eb" }} />}
+              <button type="button" onClick={() => fileInputRef.current?.click()} style={{ ...input, width: "auto", cursor: "pointer", background: "#fff" }}>
+                Upload Logo
+              </button>
+              <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) { setLogoFile(file); setLogoPreview(URL.createObjectURL(file)); }
+              }} />
+            </div>
+          </div>
 
-      {/* Theme */}
-      <div style={card}>
-        <label style={label}>Theme</label>
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {Object.entries(THEMES).map(([key, t]) => (
-            <button key={key} type="button" onClick={() => setTheme(key)}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10,
-                border: theme === key ? `2px solid ${t.accent}` : "1.5px solid #e5e7eb",
-                background: t.bg, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1a0038",
-              }}>
-              <span style={{ width: 14, height: 14, borderRadius: "50%", background: t.accent, display: "inline-block" }} />
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Fields */}
-      <div style={card}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-          <label style={{ ...label, marginBottom: 0 }}>Fields ({fields.length}/{MAX_FIELDS})</label>
-          <button type="button" onClick={addField} disabled={fields.length >= MAX_FIELDS}
-            style={{ background: fields.length >= MAX_FIELDS ? "#e5e7eb" : "#6200d6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: fields.length >= MAX_FIELDS ? "not-allowed" : "pointer" }}>
-            + Add Field
-          </button>
+          {/* Theme */}
+          <div style={card}>
+            <label style={label}>Theme</label>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {Object.entries(THEMES).map(([key, t]) => (
+                <button key={key} type="button" onClick={() => setTheme(key)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10,
+                    border: theme === key ? `2px solid ${t.accent}` : "1.5px solid #e5e7eb",
+                    background: t.bg, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1a0038",
+                  }}>
+                  <span style={{ width: 14, height: 14, borderRadius: "50%", background: t.accent, display: "inline-block" }} />
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          {fields.map((f, idx) => (
+        <div className={layout.rightCol}>
+          {/* Fields */}
+          <div style={card}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <label style={{ ...label, marginBottom: 0 }}>Fields ({fields.length}/{MAX_FIELDS})</label>
+              <button type="button" onClick={addField} disabled={fields.length >= MAX_FIELDS}
+                style={{ background: fields.length >= MAX_FIELDS ? "#e5e7eb" : "#6200d6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: fields.length >= MAX_FIELDS ? "not-allowed" : "pointer" }}>
+                + Add Field
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              {fields.map((f, idx) => (
             <FieldEditor key={f.key} field={f} index={idx}
               onChange={(patch) => updateField(f.key, patch)}
               onRemove={fields.length > 1 ? () => removeField(f.key) : null}
               onRemoveOption={(optionKey) => removeOptionEverywhere(f.key, optionKey)}
               dependsOnOptions={dropdownFieldsBefore(f.key)}
             />
-          ))}
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
