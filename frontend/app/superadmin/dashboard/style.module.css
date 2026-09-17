@@ -262,9 +262,9 @@
 
 .heroStats {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
   gap: 10px;
-  max-width: 920px;
+  max-width: 1060px;
 }
 
 .heroStatCard {
@@ -923,7 +923,7 @@
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 900px) {
-  .heroStats    { grid-template-columns: repeat(3, 1fr); }
+  .heroStats    { grid-template-columns: repeat(4, 1fr); }
   .filterBar    { padding: 16px 20px 0; }
   .tableWrapper { margin: 16px 20px 40px; }
   .hero         { padding: 16px 20px 20px; }
