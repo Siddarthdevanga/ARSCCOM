@@ -370,7 +370,7 @@ export default function LoginPage() {
               disabled={isDisabled}
               onChange={(e) => setRememberMe(e.target.checked)}
             />
-            Remember me for 30 days
+            Remember me
           </label>
 
           {/* Cooldown banner */}
