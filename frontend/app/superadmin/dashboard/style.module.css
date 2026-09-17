@@ -299,6 +299,7 @@
 .valActive     { color: #7fffb0; }
 .valTrial      { color: #f0a500; }
 .valSuspended  { color: #ff6b6b; }
+.valGrace      { color: #ffe066; }
 .valBusiness   { color: #7fd4ff; }
 .valEnterprise { color: #e6a8ff; }
 
