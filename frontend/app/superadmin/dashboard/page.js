@@ -773,6 +773,7 @@ export default function SuperAdminDashboard() {
   const activeCount     = companies.filter((c) => c.subscription_status === "active").length;
   const suspendedCount  = companies.filter((c) => c.is_suspended).length;
   const graceCount      = companies.filter((c) => c.subscription_status === "grace_period").length;
+  const expiredCount    = companies.filter((c) => c.subscription_status === "expired").length;
   const businessCount   = companies.filter((c) => c.plan === "business").length;
   const enterpriseCount = companies.filter((c) => c.plan === "enterprise").length;
   const trialPlanCount  = companies.filter((c) => c.plan === "trial").length;
@@ -889,6 +890,10 @@ export default function SuperAdminDashboard() {
               <div className={styles.heroStatCard}>
                 <div className={styles.heroStatLabel}>Grace Period</div>
                 <div className={`${styles.heroStatValue} ${styles.valGrace}`}>{graceCount}</div>
+              </div>
+              <div className={styles.heroStatCard}>
+                <div className={styles.heroStatLabel}>Expired</div>
+                <div className={`${styles.heroStatValue} ${styles.valExpired}`}>{expiredCount}</div>
               </div>
               <div className={styles.heroStatCard}>
                 <div className={styles.heroStatLabel}>Business</div>

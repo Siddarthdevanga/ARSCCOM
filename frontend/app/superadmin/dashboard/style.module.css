@@ -262,9 +262,9 @@
 
 .heroStats {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: 10px;
-  max-width: 1060px;
+  max-width: 1180px;
 }
 
 .heroStatCard {
@@ -300,6 +300,7 @@
 .valTrial      { color: #f0a500; }
 .valSuspended  { color: #ff6b6b; }
 .valGrace      { color: #ffe066; }
+.valExpired    { color: #9ca3af; }
 .valBusiness   { color: #7fd4ff; }
 .valEnterprise { color: #e6a8ff; }
 
