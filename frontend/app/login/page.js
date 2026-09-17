@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [activeTab, setActiveTab]       = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const [rememberMe, setRememberMe]     = useState(false);
 
   const [touched, setTouched]           = useState({});
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -134,7 +135,7 @@ export default function LoginPage() {
       const res  = await fetch(`${API_BASE}/api/auth/login`, {
         method:      "POST",
         headers:     { "Content-Type": "application/json" },
-        body:        JSON.stringify({ identifier: normalizedEmail, password }),
+        body:        JSON.stringify({ identifier: normalizedEmail, password, rememberMe }),
         credentials: "include",
       });
 
@@ -360,6 +361,17 @@ export default function LoginPage() {
               </p>
             )}
           </div>
+
+          {/* Remember Me */}
+          <label className={styles.rememberMeRow}>
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              disabled={isDisabled}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Remember me for 30 days
+          </label>
 
           {/* Cooldown banner */}
           {inCooldown && (

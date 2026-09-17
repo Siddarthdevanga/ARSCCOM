@@ -16,6 +16,7 @@ const PASSWORD_MIN_LENGTH = 8;
 const RESET_CODE_EXPIRY_MINUTES = 10;
 const RESEND_COOLDOWN_SECONDS = 30;
 const JWT_EXPIRY = "12h";
+const JWT_EXPIRY_REMEMBERED = "30d";
 export const BCRYPT_ROUNDS = 10;
 
 // Only block cancelled subscriptions, allow expired to login for renewal
@@ -383,7 +384,7 @@ const sendAccountReadyEmail = async (email, companyName) => {
    so they can navigate to /subscription to renew.
    Frontend handles the redirect based on subscription_status.
 ====================================================== */
-export const login = async ({ identifier, email, password }) => {
+export const login = async ({ identifier, email, password, rememberMe }) => {
   // `identifier` is the new email-or-phone field; `email` kept as a fallback
   // so registerCompany()'s internal call (and any other existing caller)
   // doesn't need to change.
@@ -453,7 +454,7 @@ export const login = async ({ identifier, email, password }) => {
       companyName: user.companyName
     },
     process.env.JWT_SECRET,
-    { expiresIn: JWT_EXPIRY }
+    { expiresIn: rememberMe ? JWT_EXPIRY_REMEMBERED : JWT_EXPIRY }
   );
 
   // Calculate grace period info

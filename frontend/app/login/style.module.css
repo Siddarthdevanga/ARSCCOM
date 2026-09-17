@@ -530,6 +530,27 @@
   opacity: 0.65;
 }
 
+/* ================= REMEMBER ME ================= */
+.rememberMeRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: clamp(14px, 2.4vh, 18px);
+  font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(12.5px, 2vw, 14px);
+  font-weight: 600;
+  color: #4a4a4a;
+  cursor: pointer;
+  user-select: none;
+}
+
+.rememberMeRow input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #7a19d6;
+  cursor: pointer;
+}
+
 /* ================= PASSWORD WRAPPER ================= */
 .passwordWrapper {
   position: relative;

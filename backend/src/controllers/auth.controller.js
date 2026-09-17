@@ -135,6 +135,7 @@ export const login = async (req, res) => {
     // channel, so login needs to accept whichever they have on hand.
     const identifier = (req.body?.identifier ?? req.body?.email ?? "").trim().toLowerCase();
     const password    = req.body?.password;
+    const rememberMe  = req.body?.rememberMe === true;
 
     if (!identifier || !password) {
       return res.status(400).json({ success: false, message: "Email or phone number, and password, are required" });
@@ -146,7 +147,7 @@ export const login = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid credentials" });
     }
 
-    const result = await service.login({ identifier, password });
+    const result = await service.login({ identifier, password, rememberMe });
 
     /**
      * result MUST contain:
@@ -174,7 +175,8 @@ export const login = async (req, res) => {
       console.warn("⚠ LOGIN WARNING: Company slug missing");
     }
 
-    res.cookie("token", result.token, { ...cookieOptsFor(req), maxAge: 12 * 60 * 60 * 1000 });
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
+    res.cookie("token", result.token, { ...cookieOptsFor(req), maxAge });
 
     return res.status(200).json({
       success: true,
