@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
+import { ArrowLeft, Download, Loader2, Users, Smartphone, Check, X } from "lucide-react";
 import "../guide/guide.css";
 import styles from "./style.module.css";
 
 const SITE_URL = "https://haivisitor.zodopt.com";
+const A4_WIDTH_MM = 210;
 
 export default function BrochurePage() {
   const [qrDataUrl, setQrDataUrl] = useState(null);
+  const [generating, setGenerating] = useState(false);
+  const rootRef = useRef(null);
 
   useEffect(() => {
     QRCode.toDataURL(SITE_URL, { width: 240, margin: 1, color: { dark: "#241247", light: "#ffffff" } })
@@ -17,22 +21,77 @@ export default function BrochurePage() {
       .catch(() => setQrDataUrl(null));
   }, []);
 
+  // Renders each .page as a high-res image and stitches them into a single
+  // PDF file client-side — triggers a direct file download with no browser
+  // print dialog/preview step, since fidelity there depends entirely on the
+  // browser/OS print engine and was producing inconsistent, broken output.
+  const handleDownload = async () => {
+    if (generating || !rootRef.current) return;
+    setGenerating(true);
+    // Strip the on-screen shadow/rounded corners for the capture so each
+    // embedded page image is a crisp, full-bleed sheet, then restore it —
+    // wait for web fonts to finish loading (not just a repaint) so html2canvas
+    // rasterizes the real Nunito/JetBrains Mono type instead of a fallback font.
+    rootRef.current.classList.add(styles.capturing);
+    await document.fonts.ready;
+    await new Promise((r) => requestAnimationFrame(r));
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const pageEls = Array.from(rootRef.current.querySelectorAll("[data-brochure-page]"));
+
+      // .page only sets a *minimum* height of 297mm (so real content never
+      // gets clipped) — a page whose content actually renders taller than
+      // that must NOT be force-fit into a fixed A4 box, or the image gets
+      // squashed vertically. Size each PDF page to its own captured aspect
+      // ratio instead, so nothing is ever cropped or distorted.
+      let pdf = null;
+      for (let i = 0; i < pageEls.length; i++) {
+        const canvas = await html2canvas(pageEls[i], { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
+        const imgData = canvas.toDataURL("image/jpeg", 0.92);
+        const heightMm = (canvas.height / canvas.width) * A4_WIDTH_MM;
+
+        if (i === 0) {
+          pdf = new jsPDF({ unit: "mm", format: [A4_WIDTH_MM, heightMm], orientation: "portrait" });
+        } else {
+          pdf.addPage([A4_WIDTH_MM, heightMm], "portrait");
+        }
+        pdf.addImage(imgData, "JPEG", 0, 0, A4_WIDTH_MM, heightMm);
+      }
+
+      pdf.save("Hai-Visitor-Brochure.pdf");
+    } catch (err) {
+      console.error("Brochure PDF generation failed:", err);
+      alert("Couldn't generate the PDF. Please try again.");
+    } finally {
+      rootRef.current?.classList.remove(styles.capturing);
+      setGenerating(false);
+    }
+  };
+
   return (
-    <div className={`${styles.root} guide-root`}>
-      {/* ===== ON-SCREEN CONTROLS (hidden in print) ===== */}
+    <div className={`${styles.root} guide-root`} ref={rootRef}>
+      {/* ===== ON-SCREEN CONTROLS (excluded from the PDF capture) ===== */}
       <div className={styles.controlBar}>
         <div>
           <div className={styles.label}>Hai Visitor — Sales Brochure &amp; Setup Guide</div>
-          <div className={styles.sub}>5 pages · Use "Download PDF" to save it, or Ctrl/Cmd+P to print</div>
+          <div className={styles.sub}>5 pages · Click "Download PDF" for an instant file download</div>
         </div>
         <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-          <Link href="/guide" className={styles.backLink}>← Back to User Guide</Link>
-          <button className={styles.downloadBtn} onClick={() => window.print()}>⬇ Download PDF</button>
+          <Link href="/guide" className={styles.backLink}><ArrowLeft size={13} style={{ verticalAlign: "-2px", marginRight: "4px" }} />Back to User Guide</Link>
+          <button className={styles.downloadBtn} onClick={handleDownload} disabled={generating}>
+            {generating
+              ? <><Loader2 size={14} className={styles.spin} style={{ marginRight: "6px" }} />Generating…</>
+              : <><Download size={14} style={{ verticalAlign: "-2px", marginRight: "6px" }} />Download PDF</>}
+          </button>
         </div>
       </div>
 
       {/* ===== PAGE 1 — COVER ===== */}
-      <div className={styles.page}>
+      <div className={styles.page} data-brochure-page>
         <div className={styles.cover}>
           <div className={styles.coverEyebrow}>Sales Brochure &amp; Setup Guide</div>
           <div className={styles.coverLogoWrap}>
@@ -54,7 +113,7 @@ export default function BrochurePage() {
       </div>
 
       {/* ===== PAGE 2 — WHY HAI VISITOR + FEATURES ===== */}
-      <div className={styles.page}>
+      <div className={styles.page} data-brochure-page>
         <div className={styles.pageBody}>
           <div className={styles.pageKicker}><span className={styles.dot} /><span>Why Hai Visitor</span></div>
           <h2 className={styles.pageTitle}>Your front desk deserves better than a paper register</h2>
@@ -73,7 +132,7 @@ export default function BrochurePage() {
                 <div className="mk-logout">Logout</div>
               </div>
               <div className="mk-card" style={{ borderRadius: "0 0 10px 10px", borderTop: "none" }}>
-                <div style={{ fontSize: "11px", fontWeight: 800, color: "#1a0038" }}>Good afternoon 👋</div>
+                <div style={{ fontSize: "11px", fontWeight: 800, color: "#1a0038" }}>Good afternoon</div>
                 <div className="mk-modgrid">
                   <div className="mk-modcard"><div className="ic"></div><b>Visitor Management</b><span>Check-ins, passes &amp; history</span></div>
                   <div className="mk-modcard"><div className="ic" style={{ background: "var(--grad-amber)" }}></div><b>Conference Booking</b><span>Rooms &amp; meeting schedules</span></div>
@@ -129,7 +188,7 @@ export default function BrochurePage() {
       </div>
 
       {/* ===== PAGE 3 — FEATURE DEEP DIVE ===== */}
-      <div className={styles.page}>
+      <div className={styles.page} data-brochure-page>
         <div className={styles.pageBody}>
           <div className={styles.pageKicker}><span className={styles.dot} /><span>Feature Deep Dive</span></div>
           <h2 className={styles.pageTitle}>What your team and your visitors actually experience</h2>
@@ -140,7 +199,7 @@ export default function BrochurePage() {
 
           <div className={styles.dualCol}>
             <div className={styles.dualCard}>
-              <h4>👩‍💼 For your team</h4>
+              <h4><Users size={15} style={{ verticalAlign: "-3px", marginRight: "6px" }} />For your team</h4>
               <ul>
                 <li>A live visitor list, updating automatically, with colour-coded status</li>
                 <li>Accept or decline a visitor request straight from WhatsApp</li>
@@ -149,7 +208,7 @@ export default function BrochurePage() {
               </ul>
             </div>
             <div className={styles.dualCard}>
-              <h4>🙋 For the visitor</h4>
+              <h4><Smartphone size={15} style={{ verticalAlign: "-3px", marginRight: "6px" }} />For the visitor</h4>
               <ul>
                 <li>Scan a QR code and fill in details in under a minute — no app, no login</li>
                 <li>Returning visitors are recognised automatically — nothing to re-type</li>
@@ -189,7 +248,10 @@ export default function BrochurePage() {
                 <div className="frame-body mk-page" style={{ padding: "14px" }}>
                   <div className="mk-whatsapp mk">
                     <b>New Visitor Request</b><br />Ramesh H. is here for "Sofa Enquiry" — meet now?
-                    <div className="actions"><span className="accept">✓ Accept</span><span className="decline">✕ Decline</span></div>
+                    <div className="actions">
+                      <span className="accept"><Check size={10} style={{ verticalAlign: "-1px", marginRight: "3px" }} />Accept</span>
+                      <span className="decline"><X size={10} style={{ verticalAlign: "-1px", marginRight: "3px" }} />Decline</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -217,7 +279,7 @@ export default function BrochurePage() {
       </div>
 
       {/* ===== PAGE 4 — SETUP GUIDE ===== */}
-      <div className={styles.page}>
+      <div className={styles.page} data-brochure-page>
         <div className={styles.pageBody}>
           <div className={styles.pageKicker}><span className={styles.dot} /><span>Getting Started</span></div>
           <h2 className={styles.pageTitle}>From sign-up to your first check-in</h2>
@@ -311,7 +373,7 @@ export default function BrochurePage() {
       </div>
 
       {/* ===== PAGE 5 — PRICING + CONTACT ===== */}
-      <div className={styles.page}>
+      <div className={styles.page} data-brochure-page>
         <div className={styles.pageBody}>
           <div className={styles.pageKicker}><span className={styles.dot} /><span>Plans &amp; Contact</span></div>
           <h2 className={styles.pageTitle}>Plans that scale with you</h2>
