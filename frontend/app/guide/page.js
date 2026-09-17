@@ -34,13 +34,14 @@ const BODY_HTML = `
       <a class="sb-link" href="#conference"><span class="num">06</span> Conference rooms</a>
       <a class="sb-link" href="#reports"><span class="num">07</span> Reports &amp; analytics</a>
       <a class="sb-link" href="#form-builder"><span class="num">08</span> Form builder</a>
+      <a class="sb-link" href="#smart-forms"><span class="num">09</span> Smart Forms</a>
     </div>
 
     <div class="sb-group">
       <div class="sb-label">Account</div>
-      <a class="sb-link" href="#billing"><span class="num">09</span> Plans &amp; billing</a>
-      <a class="sb-link" href="#settings"><span class="num">10</span> Account settings</a>
-      <a class="sb-link" href="#appendix"><span class="num">11</span> Status glossary</a>
+      <a class="sb-link" href="#billing"><span class="num">10</span> Plans &amp; billing</a>
+      <a class="sb-link" href="#settings"><span class="num">11</span> Account settings</a>
+      <a class="sb-link" href="#appendix"><span class="num">12</span> Status glossary</a>
     </div>
 
     <div class="sb-theme-note">Every screen below is a faithful mock of the real product — colors, labels and buttons match what you'll actually see.</div>
@@ -59,7 +60,7 @@ const BODY_HTML = `
       <h1>Everything Hai&nbsp;Visitor does — <em>click by click.</em></h1>
       <p>From the very first "Start Trial" button on the public website through to running reports on a Tuesday afternoon — this guide follows the exact screens, buttons and page redirects you'll encounter, in order.</p>
       <div class="cover-meta">
-        <div><b>11</b><span>Sections</span></div>
+        <div><b>12</b><span>Sections</span></div>
         <div><b>10 min</b><span>Sign-up to first check-in</span></div>
         <div><b>₹49</b><span>To start your trial</span></div>
       </div>
@@ -548,9 +549,105 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 09 PLANS & BILLING ============ -->
+    <!-- ============ 09 SMART FORMS ============ -->
+    <section class="mod" id="smart-forms">
+      <div class="mod-eyebrow"><span class="dot"></span>09 · Beyond Visitors</div>
+      <h2>Smart Forms — your own QR-code data collector</h2>
+      <p class="mod-sub">A Smart Form is a standalone, branded page reached by scanning <b>its own QR code</b> — separate from your visitor-registration QR. There's no login, no OTP, no "visit" concept at all — just a quick form anyone can fill in from their phone. Use it for event feedback, a lead-capture stall at an expo, a suggestion box, a workshop sign-up — anything you want to collect information about that isn't a walk-in visitor. Available on every plan, no extra cost.</p>
+      <div class="mod-routes"><span class="route">/smart-forms/dashboard</span><span class="route">/smart-forms/dashboard/new</span><span class="route">/smart-forms/[slug]</span></div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:34px; margin-bottom:6px;">Building a form — a 3-step wizard</h3>
+      <div class="panel">
+        <div class="panel-col">
+        <ol class="steps">
+          <li>Open <b>Smart Forms</b> from the Menu, then click <b>"+ New Smart Form."</b> You can have up to <b>2 active forms</b> at a time (each with unlimited responses) — retire an old one to free up a slot.</li>
+          <li><b>Step 1 — Basic Info:</b> an internal <b>Name</b> for your own reference, an optional <b>Display Name Override</b> and <b>Logo Override</b> (leave blank to use your real company name/logo), and a <b>Headline</b> shown to whoever scans it, with an optional <b>Subtext</b> line underneath — leave it blank and it simply won't show.</li>
+          <li><b>Step 2 — Theme:</b> pick one of 5 light, professional colour palettes — Purple, Blue, Green, Slate, or Amber — used across the scan page and the QR card.</li>
+          <li><b>Step 3 — Fields:</b> add up to <b>5 fields</b>, each one of Text, Email, Phone, Dropdown, <b>Dependent Dropdown</b>, Rating (1–5), Date, or Feedback (a long text box). Mark any field <b>Required</b>. A Dependent Dropdown's options are scoped to whichever option was picked in an earlier dropdown field — e.g. picking a stall name narrows down the product list that follows.</li>
+          <li>Click <b>Save</b> — your form goes live immediately at its own unguessable link, no publish delay.</li>
+        </ol>
+        <div class="note info">Every step has a short explainer alongside it in the builder, so you always know why a field is there before you fill it in.</div>
+        </div>
+        <div>
+          <div class="frame">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/smart-forms/dashboard/new</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card">
+                <div class="mk-steps-chip"><span>Basic Info</span><span>Theme</span><span class="on">Fields</span></div>
+                <div class="mk-field"><span class="mk-label">Field 3 · Dropdown</span><div class="mk-input filled">Which stall did you visit?</div></div>
+                <div class="mk-purpose"><span class="sel">Sofa</span><span>Modular Kitchen</span><span>Tiles</span></div>
+                <div class="mk-field" style="margin-top:10px;"><span class="mk-label">Field 4 · Dependent Dropdown</span><div class="mk-input filled">Which product caught your eye?</div></div>
+                <div style="font-size:8px; font-weight:700; color:#8578A8; margin-bottom:6px;">Depends on: "Which stall did you visit?" → Sofa</div>
+                <div class="mk-purpose"><span class="sel">Recliner</span><span>3-Seater</span><span>Modular Sofa</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">Sharing the QR code and reading responses</h3>
+      <div class="panel">
+        <div class="panel-col">
+        <ol class="steps">
+          <li>Back on the Smart Forms list, click <b>QR Code</b> next to your form — a branded card (your logo, form name, and a "Scan to fill in your details" QR) generates inline. Click <b>Download PNG</b> to print it, or <b>Copy Link</b> to share it directly.</li>
+          <li>Anyone who scans it lands on a clean, theme-coloured page showing your Headline (and Subtext, if you set one), fills in your fields, and hits Submit — no sign-in, done in under a minute.</li>
+          <li>Back in your dashboard, click <b>Responses</b> on any form to see every submission in a searchable, date-filterable table.</li>
+          <li><b>Reports &amp; Analytics</b> also has a <b>"Smart Forms Responses"</b> export — one Excel file combining every response across all your forms (active and retired), each row tagged with which form it came from.</li>
+          <li><b>Retiring</b> a form (instead of deleting it) frees up a slot for a new one, but every response it ever collected stays fully intact and reportable — the QR code just shows a branded "Form Not Found" page instead of accepting new submissions.</li>
+        </ol>
+        </div>
+        <div>
+          <div class="frame">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/smart-forms/dashboard</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card" style="display:flex; gap:12px; align-items:center;">
+                <div class="mk-qrbox"></div>
+                <div>
+                  <div style="font-size:9.5px; font-weight:800; color:#1a0038;">Trade Show Feedback</div>
+                  <div style="font-size:8px; color:#8578A8; font-weight:700; margin-top:2px;">42 responses · Active</div>
+                </div>
+              </div>
+              <div class="mk-card">
+                <table class="mk-table mk">
+                  <tr><th>Name</th><th>Stall</th><th>Rating</th></tr>
+                  <tr><td><span class="mk-av" style="background:#221C53;">RH</span>Ramesh H.</td><td>Sofa</td><td>★★★★★</td></tr>
+                  <tr><td><span class="mk-av" style="background:#0E7490;">VM</span>Vikram M.</td><td>Tiles</td><td>★★★★</td></tr>
+                  <tr><td><span class="mk-av" style="background:#9F1239;">MI</span>Mohan I.</td><td>Modular Kitchen</td><td>★★★★★</td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="frame" style="margin-top:16px; max-width:300px;">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url" style="text-align:center;">/smart-forms/[slug]</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card">
+                <div style="font-size:11px; font-weight:900; color:#1a0038; text-align:center;">We'd love your feedback!</div>
+                <div style="font-size:8.5px; color:#8578A8; font-weight:700; text-align:center; margin-bottom:10px;">Takes less than a minute</div>
+                <div class="mk-field"><span class="mk-label">Your Name</span><div class="mk-input">Enter your name</div></div>
+                <div class="mk-label">Which stall did you visit?</div>
+                <div class="mk-purpose"><span class="sel">Sofa</span><span>Modular Kitchen</span><span>Tiles</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">Example — a trade-show feedback form, start to finish</h3>
+      <div class="panel" style="grid-template-columns:1fr; max-width:640px;">
+        <ol class="steps">
+          <li>You're running a stall at a trade show and want structured feedback instead of business cards in a bowl. Create a form named <b>"Trade Show Feedback,"</b> theme <b>Amber</b>, headline <b>"We'd love your feedback!"</b></li>
+          <li>Add 4 fields: <b>Name</b> (Text, required), <b>Which stall did you visit?</b> (Dropdown: Sofa / Modular Kitchen / Tiles), <b>Which product caught your eye?</b> (Dependent Dropdown, scoped per stall — Sofa shows Recliner/3-Seater/Modular Sofa; Tiles shows a different product list), and <b>Overall experience</b> (Rating).</li>
+          <li>Save, then download the QR card and print it as a small table-top standee at your stall.</li>
+          <li>Visitors scan it on their own phone, pick their stall, get a relevant product list, rate their experience, and submit — the whole thing takes under 30 seconds and needs nothing from your staff.</li>
+          <li>At the end of the show, open <b>Responses</b> to see every submission, or pull the combined <b>Smart Forms Responses</b> export from Reports &amp; Analytics to hand to your sales team.</li>
+        </ol>
+        <div class="note tip">Because a Dependent Dropdown narrows its options based on an earlier answer, the same form can branch by stall/category without turning into a long, generic questionnaire.</div>
+      </div>
+    </section>
+
+    <!-- ============ 10 PLANS & BILLING ============ -->
     <section class="mod" id="billing">
-      <div class="mod-eyebrow"><span class="dot"></span>09 · Subscription</div>
+      <div class="mod-eyebrow"><span class="dot"></span>10 · Subscription</div>
       <h2>Plans &amp; billing</h2>
       <p class="mod-sub">Every plan action — renewing, upgrading, switching billing cycle, or cancelling — lives on one dedicated page, reachable even when your subscription has lapsed.</p>
       <div class="mod-routes"><span class="route">/home/plans</span></div>
@@ -597,9 +694,9 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 10 SETTINGS ============ -->
+    <!-- ============ 11 SETTINGS ============ -->
     <section class="mod" id="settings">
-      <div class="mod-eyebrow"><span class="dot"></span>10 · Housekeeping</div>
+      <div class="mod-eyebrow"><span class="dot"></span>11 · Housekeeping</div>
       <h2>Account settings</h2>
       <p class="mod-sub">Your company profile, logo, and your own login details all live under My Account.</p>
       <div class="mod-routes"><span class="route">/home/settings</span></div>
@@ -633,9 +730,9 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 11 APPENDIX ============ -->
+    <!-- ============ 12 APPENDIX ============ -->
     <section class="mod" id="appendix">
-      <div class="mod-eyebrow"><span class="dot"></span>11 · Reference</div>
+      <div class="mod-eyebrow"><span class="dot"></span>12 · Reference</div>
       <h2>Status glossary</h2>
       <p class="mod-sub">Every colour-coded badge you'll see across the visitor list, dashboard and reports, explained.</p>
 
