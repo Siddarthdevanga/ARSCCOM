@@ -7,11 +7,14 @@ import {
 } from "lucide-react";
 import styles from "./style.module.css";
 import { APP_VERSION } from "../../constants/appVersion";
+import ConfirmModal from "../../components/ConfirmModal";
 
 export default function SettingsPage() {
   const router = useRouter();
   const [company, setCompany] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -298,17 +301,16 @@ export default function SettingsPage() {
     finally { setSavingPassword(false); }
   };
 
-  const handleLogout = async () => {
-    if (confirm("Are you sure you want to logout?")) {
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, {
-          method: "POST",
-          credentials: "include",
-        });
-      } catch { /* ignore — always clear local state */ }
-      localStorage.clear();
-      router.replace("/login");
-    }
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch { /* ignore — always clear local state */ }
+    localStorage.clear();
+    router.replace("/login");
   };
 
   if (loading) {
@@ -368,7 +370,7 @@ export default function SettingsPage() {
           {company?.id && (
             <img src={`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/logo/${company.id}?v=${logoBust}`} alt="Logo" className={styles.companyLogo} onError={e => { e.currentTarget.style.display = "none"; }} />
           )}
-          <button className={styles.logoutBtn} onClick={handleLogout}>Logout</button>
+          <button className={styles.logoutBtn} onClick={() => setShowLogoutConfirm(true)}>Logout</button>
           <button className={styles.backBtn} onClick={() => router.push("/home")}>← Back</button>
         </div>
       </header>
@@ -617,6 +619,15 @@ export default function SettingsPage() {
         </div>
       )}
 
+      <ConfirmModal
+        open={showLogoutConfirm}
+        title="Log out?"
+        message="You'll need to sign in again to get back to your dashboard."
+        confirmLabel="Log Out"
+        loading={loggingOut}
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </div>
   );
 }

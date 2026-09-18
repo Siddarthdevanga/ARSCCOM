@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { ListChecks, QrCode as QrCodeIcon, Smartphone, BarChart3, Copy, Check, ChevronDown } from "lucide-react";
 import styles from "../../visitor/primary_details/style.module.css";
+import ConfirmModal from "../../components/ConfirmModal";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 const MAX_ACTIVE_FORMS = 2;
@@ -190,6 +191,7 @@ export default function SmartFormsDashboard() {
   const [error, setError] = useState("");
   const [retiringId, setRetiringId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [confirmAction, setConfirmAction] = useState(null); // { type: "retire"|"delete", id, name }
   const [qrOpenId, setQrOpenId] = useState(null);
   const [qrLoadingIds, setQrLoadingIds] = useState({}); // formId -> true while generating
   const [qrImages, setQrImages] = useState({}); // formId -> data URL
@@ -219,8 +221,12 @@ export default function SmartFormsDashboard() {
 
   const activeCount = forms.filter((f) => f.status === "active").length;
 
-  const handleRetire = async (id, name) => {
-    if (!confirm(`Retire "${name}"? Its collected responses stay available, but the QR code stops accepting new submissions.`)) return;
+  const requestRetire = (id, name) => setConfirmAction({ type: "retire", id, name });
+  const requestDelete = (id, name) => setConfirmAction({ type: "delete", id, name });
+  const cancelConfirmAction = () => setConfirmAction(null);
+
+  const handleRetire = async () => {
+    const { id } = confirmAction;
     setRetiringId(id);
     try {
       const res = await fetch(`${API}/api/smart-forms/${id}`, { method: "DELETE", credentials: "include" });
@@ -231,14 +237,15 @@ export default function SmartFormsDashboard() {
       setError(err.message || "Failed to retire form");
     } finally {
       setRetiringId(null);
+      setConfirmAction(null);
     }
   };
 
-  const handleDelete = async (id, name) => {
+  const handleDelete = async () => {
     // Only ever offered on an already-retired form — this just removes it
     // from this list. Every response it ever collected stays intact and
     // still shows up in the Reports & Analytics export, tagged "(Retired)".
-    if (!confirm(`Delete "${name}"? It will disappear from this list, but its collected responses are kept and still appear in Reports & Analytics.`)) return;
+    const { id } = confirmAction;
     setDeletingId(id);
     try {
       const res = await fetch(`${API}/api/smart-forms/${id}/permanent`, { method: "DELETE", credentials: "include" });
@@ -249,6 +256,7 @@ export default function SmartFormsDashboard() {
       setError(err.message || "Failed to delete form");
     } finally {
       setDeletingId(null);
+      setConfirmAction(null);
     }
   };
 
@@ -420,14 +428,14 @@ export default function SmartFormsDashboard() {
                           <button onClick={() => router.push(`/smart-forms/dashboard/${f.id}/edit`)} style={pillBtnStyle()}>
                             Edit
                           </button>
-                          <button onClick={() => handleRetire(f.id, f.name)} disabled={retiringId === f.id}
+                          <button onClick={() => requestRetire(f.id, f.name)} disabled={retiringId === f.id}
                             style={pillBtnStyle("#fef2f2", "#b91c1c")}>
                             {retiringId === f.id ? "Retiring…" : "Retire"}
                           </button>
                         </>
                       )}
                       {f.status === "retired" && (
-                        <button onClick={() => handleDelete(f.id, f.name)} disabled={deletingId === f.id}
+                        <button onClick={() => requestDelete(f.id, f.name)} disabled={deletingId === f.id}
                           style={pillBtnStyle("#fef2f2", "#b91c1c")}>
                           {deletingId === f.id ? "Deleting…" : "Delete"}
                         </button>
@@ -460,6 +468,21 @@ export default function SmartFormsDashboard() {
           )}
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!confirmAction}
+        variant={confirmAction?.type === "delete" ? "danger" : "default"}
+        title={confirmAction?.type === "delete" ? `Delete "${confirmAction?.name}"?` : `Retire "${confirmAction?.name}"?`}
+        message={
+          confirmAction?.type === "delete"
+            ? "It will disappear from this list, but its collected responses are kept and still appear in Reports & Analytics."
+            : "Its collected responses stay available, but the QR code stops accepting new submissions."
+        }
+        confirmLabel={confirmAction?.type === "delete" ? "Delete" : "Retire"}
+        loading={confirmAction?.type === "delete" ? deletingId === confirmAction?.id : retiringId === confirmAction?.id}
+        onConfirm={confirmAction?.type === "delete" ? handleDelete : handleRetire}
+        onCancel={cancelConfirmAction}
+      />
     </div>
   );
 }

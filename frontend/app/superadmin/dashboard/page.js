@@ -8,6 +8,7 @@ import {
 import styles from "./style.module.css";
 import SuperAdminNav from "./NavHeader";
 import { APP_VERSION } from "../../constants/appVersion";
+import ConfirmModal from "../../components/ConfirmModal";
 
 const TAB_META = {
   overview: { label: "Overview", Icon: LayoutDashboard },
@@ -50,6 +51,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
   const [tab, setTab]         = useState("overview");
   const [loading, setLoading] = useState(false);
   const [msg, setMsg]         = useState(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // plan / status / dates
   const [plan, setPlan]               = useState(company.plan || "trial");
@@ -105,8 +107,10 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
         : data.message;
       setMsg({ type: res.ok ? "success" : "error", text });
       if (res.ok) onRefresh();
+      return res.ok;
     } catch {
       setMsg({ type: "error", text: "Network error" });
+      return false;
     } finally {
       setLoading(false);
     }
@@ -433,11 +437,7 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
                 <button
                   className={styles.btnDanger}
                   disabled={loading}
-                  onClick={async () => {
-                    if (!confirm(`DELETE "${company.name}" and ALL its data permanently?`)) return;
-                    await call("", "DELETE", {});
-                    onClose();
-                  }}
+                  onClick={() => setShowDeleteConfirm(true)}
                 >
                   {loading ? "Deleting…" : "🗑 Permanently Delete Company"}
                 </button>
@@ -449,6 +449,23 @@ function CompanyModal({ company, onClose, onRefresh, token, apiBase }) {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={showDeleteConfirm}
+        variant="danger"
+        title={`Delete "${company.name}"?`}
+        message={<>This permanently deletes the company and <strong>ALL</strong> related data — visitors, bookings, responses, everything. This cannot be undone.</>}
+        confirmLabel="Permanently Delete"
+        loading={loading}
+        onConfirm={async () => {
+          const ok = await call("", "DELETE", {});
+          setShowDeleteConfirm(false);
+          // Only close the company modal on success — on failure, stay
+          // open so the error message (set by call() above) is visible.
+          if (ok) onClose();
+        }}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }
