@@ -426,8 +426,15 @@ router.get("/smart-forms", async (req, res) => {
     const periodWhere = iv ? `AND r.submitted_at >= NOW() - INTERVAL ${iv}` : "";
     const label = iv ? (PERIOD_LABELS[req.query.period] || "Custom") : "All Time";
 
+    // Responses are joined by form_id regardless of the form's status —
+    // retiring or deleting a form only changes its status, never removes
+    // the row or its responses, so historical data here is unaffected.
+    // Deleted forms (no longer visible in the Smart Forms dashboard) are
+    // labeled the same as retired ones here, since from a report reader's
+    // perspective both simply mean "no longer an active form."
     const [responses] = await db.query(
-      `SELECT r.id, r.submitted_at, f.name AS form_name
+      `SELECT r.id, r.submitted_at,
+          CASE WHEN f.status != 'active' THEN CONCAT(f.name, ' (Retired)') ELSE f.name END AS form_name
        FROM smart_form_responses r
        JOIN smart_forms f ON f.id = r.form_id
        WHERE f.company_id = ? ${periodWhere}

@@ -228,6 +228,22 @@ export const retireForm = async (companyId, formId) => {
 };
 
 /* ======================================================
+   DELETE FORM — only ever allowed on an already-retired form.
+   This is NOT a SQL row delete: it just moves status to 'deleted'
+   so the row (and every response it ever collected) stays fully
+   intact — deleted forms still count in the combined Reports &
+   Analytics export, just tagged "(Retired)" there. It only removes
+   the form from the everyday Smart Forms dashboard list.
+====================================================== */
+export const deleteForm = async (companyId, formId) => {
+  const [result] = await db.execute(
+    `UPDATE smart_forms SET status = 'deleted', deleted_at = NOW() WHERE id = ? AND company_id = ? AND status = 'retired'`,
+    [formId, companyId]
+  );
+  if (!result.affectedRows) throw new Error("Retired Smart Form not found");
+};
+
+/* ======================================================
    LIST FORMS (company dashboard)
 ====================================================== */
 export const listForms = async (companyId) => {
@@ -236,7 +252,7 @@ export const listForms = async (companyId) => {
         f.created_at, f.retired_at,
         (SELECT COUNT(*) FROM smart_form_responses r WHERE r.form_id = f.id) AS response_count
      FROM smart_forms f
-     WHERE f.company_id = ?
+     WHERE f.company_id = ? AND f.status != 'deleted'
      ORDER BY f.status = 'active' DESC, f.created_at DESC`,
     [companyId]
   );

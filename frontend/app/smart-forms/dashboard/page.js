@@ -189,6 +189,7 @@ export default function SmartFormsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [retiringId, setRetiringId] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
   const [qrOpenId, setQrOpenId] = useState(null);
   const [qrLoadingIds, setQrLoadingIds] = useState({}); // formId -> true while generating
   const [qrImages, setQrImages] = useState({}); // formId -> data URL
@@ -230,6 +231,24 @@ export default function SmartFormsDashboard() {
       setError(err.message || "Failed to retire form");
     } finally {
       setRetiringId(null);
+    }
+  };
+
+  const handleDelete = async (id, name) => {
+    // Only ever offered on an already-retired form — this just removes it
+    // from this list. Every response it ever collected stays intact and
+    // still shows up in the Reports & Analytics export, tagged "(Retired)".
+    if (!confirm(`Delete "${name}"? It will disappear from this list, but its collected responses are kept and still appear in Reports & Analytics.`)) return;
+    setDeletingId(id);
+    try {
+      const res = await fetch(`${API}/api/smart-forms/${id}/permanent`, { method: "DELETE", credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.message || "Failed to delete form");
+      fetchForms();
+    } catch (err) {
+      setError(err.message || "Failed to delete form");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -406,6 +425,12 @@ export default function SmartFormsDashboard() {
                             {retiringId === f.id ? "Retiring…" : "Retire"}
                           </button>
                         </>
+                      )}
+                      {f.status === "retired" && (
+                        <button onClick={() => handleDelete(f.id, f.name)} disabled={deletingId === f.id}
+                          style={pillBtnStyle("#fef2f2", "#b91c1c")}>
+                          {deletingId === f.id ? "Deleting…" : "Delete"}
+                        </button>
                       )}
                     </div>
                   </div>

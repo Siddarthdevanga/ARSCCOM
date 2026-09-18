@@ -94,6 +94,18 @@ export const retireForm = async (req, res) => {
   }
 };
 
+export const deleteForm = async (req, res) => {
+  try {
+    const companyId = companyIdOf(req);
+    if (!companyId) return res.status(401).json({ success: false, message: "Unauthorized" });
+    await service.deleteForm(companyId, req.params.id);
+    return res.json({ success: true, message: "Smart Form deleted" });
+  } catch (err) {
+    console.error("SMART FORMS DELETE ERROR:", err.message);
+    return res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 export const getResponses = async (req, res) => {
   try {
     const companyId = companyIdOf(req);
