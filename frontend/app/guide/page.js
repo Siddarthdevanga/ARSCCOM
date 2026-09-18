@@ -19,7 +19,7 @@ const BODY_HTML = `
     </div>
 
     <a class="sb-home-link" href="/">← Back to haivisitor.zodopt.com</a>
-    <a class="sb-home-link" href="/brochure" style="margin-top:6px;">📄 Download Brochure (PDF)</a>
+    <a class="sb-home-link" href="/Hai-Visitor-Brochure.pdf" download="Hai-Visitor-Brochure.pdf" style="margin-top:6px;">📄 Download Brochure (PDF)</a>
 
     <div class="sb-group">
       <div class="sb-label">Getting started</div>
