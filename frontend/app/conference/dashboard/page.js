@@ -955,7 +955,7 @@ function TodayTimeline({ rooms, bookings }) {
   const HOUR_H   = 68;
   const START_H  = 7;
   const END_H    = 22;
-  const ROOM_COL = 148;
+  const ROOM_COL = 148;   // minimum per room; columns flex wider to fill
   const TIME_W   = 58;
   const hours    = Array.from({ length: END_H - START_H }, (_, i) => START_H + i);
   const totalH   = (END_H - START_H) * HOUR_H;
@@ -1162,7 +1162,7 @@ function TodayTimeline({ rooms, bookings }) {
               {rooms.map((r, i) => {
                 const col = PALETTE[i % PALETTE.length];
                 return (
-                  <div key={r.id} style={{ width:ROOM_COL, flexShrink:0, padding:"0.5rem 0.4rem", borderLeft:"1px solid #e5e7eb", textAlign:"center", borderTop:`3px solid ${col.bg}` }}>
+                  <div key={r.id} style={{ flex:"1 1 0", minWidth:ROOM_COL, padding:"0.5rem 0.4rem", borderLeft:"1px solid #e5e7eb", textAlign:"center", borderTop:`3px solid ${col.bg}` }}>
                     <div style={{ fontSize:"0.72rem", fontWeight:800, color:"#1f2937", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{r.room_name}</div>
                     <div style={{ fontSize:"0.6rem", color:"#9ca3af" }}>#{r.room_number}</div>
                   </div>
@@ -1183,7 +1183,7 @@ function TodayTimeline({ rooms, bookings }) {
                 const col = PALETTE[ri % PALETTE.length];
                 const roomBk = dayBookings.filter(b => b.room_id === room.id);
                 return (
-                  <div key={room.id} style={{ width:ROOM_COL, flexShrink:0, position:"relative", borderLeft:"1px solid #e5e7eb", height:totalH }}>
+                  <div key={room.id} style={{ flex:"1 1 0", minWidth:ROOM_COL, position:"relative", borderLeft:"1px solid #e5e7eb", height:totalH }}>
                     {hours.map(h => (
                       <div key={h} style={{ position:"absolute", top:(h-START_H)*HOUR_H, left:0, right:0, height:HOUR_H, borderBottom:"1px solid #f3f4f6", background: h === nowH ? `${col.bg}08` : h % 2 === 0 ? "#fafafa" : "#fff" }} />
                     ))}

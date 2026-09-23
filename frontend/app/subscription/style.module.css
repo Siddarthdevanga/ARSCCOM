@@ -319,7 +319,7 @@
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--hv-text);
-  border-bottom: 1px solid rgba(221,210,240,0.5);
+  border-bottom: 1px solid rgba(231,231,236,0.8);
 }
 .featureItem:last-child {
   border-bottom: none;

@@ -359,7 +359,7 @@
   content: ''; position: absolute;
   width: clamp(200px,30vw,350px); height: clamp(200px,30vw,350px);
   bottom: -120px; left: -80px; border-radius: 50%;
-  background: radial-gradient(circle, rgba(168,85,247,0.3) 0%, transparent 65%);
+  background: radial-gradient(circle, rgba(245,165,36,0.16) 0%, transparent 65%);
   animation: orbDrift 22s ease-in-out infinite reverse; pointer-events: none;
 }
 
@@ -1089,7 +1089,7 @@
   border: 1.5px solid rgba(5, 5, 5, 0.18);
   border-left: 4px solid #17171a;
   border-radius: 14px;
-  box-shadow: 0 4px 24px rgba(108, 43, 217, 0.14), 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 24px rgba(5, 5, 5, 0.14), 0 2px 8px rgba(0,0,0,0.08);
 }
 
 .insightIcon {
