@@ -235,11 +235,38 @@ export default function LoginPage() {
 
         <div className={styles.brandingContent}>
           <div className={styles.logoContainer}>
-            <Image src="/v-transparent.png" alt="Hai Visitor Logo" width={280} height={280} priority className={styles.brandLogo} />
+            <Image src="/v-transparent.png" alt="Hai Visitor Logo" width={180} height={180} priority className={styles.brandLogo} />
           </div>
-          <h1 className={styles.platformTitle}>ZODOPT&rsquo;S HAI VISITOR</h1>
+
+          <p className={styles.eyebrow}>Zodopt&rsquo;s</p>
+          <h1 className={styles.wordmark}>
+            H<span className={styles.aiChip}>ai</span> Visitor
+          </h1>
           <p className={styles.platformSubtitle}>The Visitor Management Portal</p>
-          <p className={styles.platformTagline}>Streamline check-ins • Enhance security • Optimize space utilization</p>
+
+          <ul className={styles.featureList}>
+            <li className={styles.featureItem}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 6 9 17l-5-5" />
+              </svg>
+              Streamline check-ins
+            </li>
+            <li className={styles.featureItem}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 3l7 3v6c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V6l7-3z" />
+              </svg>
+              Enhance security
+            </li>
+            <li className={styles.featureItem}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                <rect x="14" y="14" width="7" height="7" rx="1.5" />
+              </svg>
+              Optimize space utilization
+            </li>
+          </ul>
         </div>
 
         {activeTab && (
@@ -300,7 +327,8 @@ export default function LoginPage() {
       {/* RIGHT LOGIN SECTION */}
       <div className={styles.rightSection}>
         <div className={styles.loginCard}>
-          <h2 className={styles.loginTitle}>LOGIN TO YOUR ACCOUNT</h2>
+          <h2 className={styles.loginTitle}>Login to your account</h2>
+          <p className={styles.loginSubtitle}>Sign in to continue to your dashboard</p>
 
           <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} noValidate>
 
@@ -363,16 +391,20 @@ export default function LoginPage() {
             )}
           </div>
 
-          {/* Remember Me */}
-          <label className={styles.rememberMeRow}>
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              disabled={isDisabled}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            Remember me
-          </label>
+          {/* Remember Me + Forgot Password share a row: the two decisions a
+              returning user makes at this point sit side by side. */}
+          <div className={styles.formMetaRow}>
+            <label className={styles.rememberMeRow}>
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                disabled={isDisabled}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              Remember me
+            </label>
+            <Link href="/forgot-password" className={styles.forgotLink}>Forgot password?</Link>
+          </div>
 
           {/* Cooldown banner */}
           {inCooldown && (
@@ -413,9 +445,8 @@ export default function LoginPage() {
           </form>
 
           <div className={styles.loginLinks}>
-            <Link href="/register" className={styles.link}>New Registration?</Link>
-            <span className={styles.linkDivider}>|</span>
-            <Link href="/forgot-password" className={styles.link}>Forgot Password?</Link>
+            <span className={styles.registerPrompt}>Don&rsquo;t have an account?</span>
+            <Link href="/register" className={styles.link}>New Registration</Link>
           </div>
 
         </div>
