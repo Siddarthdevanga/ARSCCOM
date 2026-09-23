@@ -74,6 +74,9 @@ export default function VisitorDashboard() {
   const [toast,          setToast]          = useState(null);
   const [checkingOut,    setCheckingOut]    = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(null);
+  const [tab,            setTab]            = useState("active");
+  const [query,          setQuery]          = useState("");
+  const [live,           setLive]           = useState(true);
 
   const toastTimer = useRef(null);
   const pollTimer  = useRef(null);
@@ -111,7 +114,6 @@ export default function VisitorDashboard() {
     try { setCompany(JSON.parse(stored)); } catch {}
 
     fetchDashboard().then(() => setLoading(false));
-    pollTimer.current = setInterval(fetchDashboard, 30_000);
 
     fetch(`${API}/api/settings/visitor-fields`, { credentials: "include" })
       .then((r) => r.json())
@@ -120,6 +122,19 @@ export default function VisitorDashboard() {
 
     return () => { clearInterval(pollTimer.current); };
   }, [fetchDashboard]);
+
+  /* Poll only while Live is on and the tab is visible — a reception screen
+     left in a background tab should not keep hitting the API. */
+  useEffect(() => {
+    if (!live) return;
+    const tick = () => { if (document.visibilityState === "visible") fetchDashboard(); };
+    pollTimer.current = setInterval(tick, 30_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      clearInterval(pollTimer.current);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [live, fetchDashboard]);
 
   useEffect(() => {
     if (!company?.slug) return;
@@ -371,6 +386,37 @@ export default function VisitorDashboard() {
   const planLimit = stats.planLimit        ?? 0;
   const planUsed  = stats.planVisitorsUsed ?? 0;
   const planPct   = planLimit > 0 ? Math.min((planUsed / planLimit) * 100, 100) : 0;
+
+  /* A visitor still marked IN after this long has almost certainly left
+     without checking out — the desk needs that surfaced, not buried. */
+  const LONG_STAY_HOURS = 8;
+  const hoursInside = (checkIn) => {
+    if (!checkIn) return 0;
+    const t = new Date(checkIn).getTime();
+    return Number.isNaN(t) ? 0 : (Date.now() - t) / 3_600_000;
+  };
+  const elapsed = (checkIn) => {
+    const h = hoursInside(checkIn);
+    if (h <= 0) return "—";
+    const hh = Math.floor(h), mm = Math.floor((h - hh) * 60);
+    return hh > 0 ? `${hh}h ${mm}m` : `${mm}m`;
+  };
+
+  const purposeOf = (v) =>
+    [v.purpose_category, v.purpose_subcategory].filter(Boolean).join(" · ") || "—";
+
+  const matches = (v) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return [v.visitor_code, v.name, v.from_company, v.person_to_meet, v.phone,
+            v.purpose_category, v.purpose_subcategory]
+      .some((f) => (f || "").toString().toLowerCase().includes(q));
+  };
+
+  const activeFiltered  = active.filter(matches);
+  const historyFiltered = history.filter(matches);
+  const longStayCount   = active.filter((v) => hoursInside(v.check_in) >= LONG_STAY_HOURS).length;
+  const rows = tab === "active" ? activeFiltered : historyFiltered;
   const planColor = planPct > 85 ? "#cc1100" : planPct > 60 ? "#f0a500" : "#121216";
   const atLimit   = planLimit > 0 && planUsed >= planLimit;
 
@@ -455,227 +501,249 @@ export default function VisitorDashboard() {
         </div>
       </div>
 
-      {/* HERO */}
-      <div className={styles.hero}>
-        <h1 className={styles.heroTitle}>Visitor <span>Dashboard</span></h1>
-        <p className={styles.heroSub}>Real-time overview of all visitors on premises</p>
-        <div className={styles.heroStats}>
-          <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Total Visitors</div>
-            <div className={styles.heroStatValue}>{totalVisitors}</div>
-          </div>
-          <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Currently In</div>
-            <div className={styles.heroStatValue}>{activeCount}</div>
-          </div>
-          <div className={styles.heroStatCard}>
-            <div className={styles.heroStatLabel}>Checked Out</div>
-            <div className={styles.heroStatValue}>{stats.checkedOutToday ?? 0}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* UPGRADE MSG */}
-      {atLimit && (
-        <div className={styles.upgradeMsg}>
-          Visitor limit reached for your plan. Upgrade to allow new check-ins.
-        </div>
-      )}
-
-      {/* PLAN BAR */}
-      {planLimit > 0 && (
-        <div className={styles.planBarWrapper}>
-          <div className={styles.planHeader}>
-            <span>Plan Usage</span>
-            <span className={styles.planName}>{planUsed} / {planLimit} visits</span>
-          </div>
-          <div className={styles.planBarBg}>
-            <div className={styles.planBarFill}
-              style={{ width: `${planPct}%`, background: planColor }} />
-          </div>
-          <div className={styles.planFooter}>
-            <span>{Math.round(planPct)}% used</span>
-            <span>{Math.max(0, planLimit - planUsed)} remaining</span>
-          </div>
-        </div>
-      )}
-
+      {/* Everything below the header scrolls: the hero and plan bar used to
+          sit outside this container, so the visitor list was squeezed into
+          whatever height was left over. */}
       <div className={styles.scrollBody}>
-        <div className={styles.mainContent}>
 
-          {/* ACTIVE VISITORS */}
-          <div className={styles.tablesRow}>
-            <div className={styles.tableCard}>
-              <div className={styles.cardHeader}>
-                <span className={styles.cardDot} />
-                <h2 className={styles.cardTitle}>Active Visitors</h2>
-                <span className={styles.cardCount}>{active.length}</span>
+        {/* COMPACT HERO */}
+        <div className={styles.hero}>
+          <div className={styles.heroTop}>
+            <div>
+              <h1 className={styles.heroTitle}>Visitor <span>Dashboard</span></h1>
+              <p className={styles.heroSub}>Real-time overview of all visitors on premises</p>
+            </div>
+            <button
+              className={`${styles.liveToggle} ${live ? styles.liveOn : ""}`}
+              onClick={() => setLive((l) => !l)}
+              aria-pressed={live}
+              title={live ? "Refreshing every 30s" : "Auto-refresh paused"}
+            >
+              <span className={styles.liveDot} />
+              <span>{live ? "Live" : "Paused"}</span>
+            </button>
+          </div>
+
+          <div className={styles.heroStats}>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Total Visitors</div>
+              <div className={styles.heroStatValue}>{totalVisitors}</div>
+            </div>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Currently In</div>
+              <div className={`${styles.heroStatValue} ${styles.statAmber}`}>{activeCount}</div>
+            </div>
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Checked Out</div>
+              <div className={`${styles.heroStatValue} ${styles.statMint}`}>{stats.checkedOutToday ?? 0}</div>
+            </div>
+            {/* Pending is the only number here that needs someone to act. */}
+            <div className={styles.heroStatCard}>
+              <div className={styles.heroStatLabel}>Awaiting Approval</div>
+              <div className={`${styles.heroStatValue} ${styles.statSky}`}>{stats.pendingVisits ?? 0}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* UPGRADE MSG */}
+        {atLimit && (
+          <div className={styles.upgradeMsg}>
+            Visitor limit reached for your plan. Upgrade to allow new check-ins.
+          </div>
+        )}
+
+        {/* PLAN BAR */}
+        {planLimit > 0 && (
+          <div className={styles.planBarWrapper}>
+            <div className={styles.planHeader}>
+              <span>Plan Usage</span>
+              <span className={styles.planName}>{planUsed} / {planLimit} visits</span>
+            </div>
+            <div className={styles.planBarBg}>
+              <div className={styles.planBarFill}
+                style={{ width: `${planPct}%`, background: planColor }} />
+            </div>
+            <div className={styles.planFooter}>
+              <span>{Math.round(planPct)}% used</span>
+              <span>{Math.max(0, planLimit - planUsed)} remaining</span>
+            </div>
+          </div>
+        )}
+
+        <div className={styles.mainContent}>
+          <div className={styles.listCard}>
+
+            {/* TABS + SEARCH */}
+            <div className={styles.listToolbar}>
+              <div className={styles.tabs} role="tablist">
+                <button
+                  role="tab" aria-selected={tab === "active"}
+                  className={`${styles.tab} ${tab === "active" ? styles.tabOn : ""}`}
+                  onClick={() => setTab("active")}
+                >
+                  Active Visitors
+                  <span className={styles.tabCount}>{active.length}</span>
+                </button>
+                <button
+                  role="tab" aria-selected={tab === "history"}
+                  className={`${styles.tab} ${tab === "history" ? styles.tabOn : ""}`}
+                  onClick={() => setTab("history")}
+                >
+                  Checked Out
+                  <span className={styles.tabCount}>{history.length}</span>
+                </button>
               </div>
 
-              {active.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>—</span>No visitors currently in
-                </div>
-              ) : (
-                <div className={styles.tableScroll}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Code</th>
-                        <th>Visitor</th>
-                        {formFields.personToMeet && <th>Meeting</th>}
-                        <th>Visit Status</th>
-                        <th>Pass</th>
-                        <th>Check In</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {active.map((v) => {
-                        const isPending  = (v.visit_status || "pending") === "pending";
-                        const isUpdating = (s) => updatingStatus === `${v.visitor_code}-${s}`;
-                        return (
-                          <tr key={v.visitor_code}>
-                            <td>
-                              <span className={styles.visitorCode}>{v.visitor_code}</span>
-                            </td>
-                            <td>
-                              <div style={{ fontWeight: 800, color: "#08080c", fontSize: 13 }}>
-                                {v.name}
-                              </div>
-                              {formFields.fromCompany && v.from_company && (
-                                <div style={{ fontSize: 11, color: "#28282c" }}>{v.from_company}</div>
-                              )}
-                            </td>
-                            {formFields.personToMeet && (
-                              <td style={{ fontSize: 12, color: "#0a0a0e" }}>
-                                {v.person_to_meet || "—"}
-                              </td>
-                            )}
-                            <td>
-                              <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                                <VisitStatusBadge status={v.visit_status || "pending"} />
-                                {isPending && (
-                                  <div style={{ display: "flex", gap: 4, marginTop: 2 }}>
-                                    <button
-                                      style={{
-                                        background: "rgba(0,184,148,0.12)", color: "#00a875",
-                                        border: "none", padding: "3px 8px", borderRadius: 50,
-                                        fontSize: 10, fontWeight: 800, cursor: "pointer",
-                                        fontFamily: "inherit", transition: "all 0.15s",
-                                        opacity: updatingStatus ? 0.6 : 1,
-                                      }}
-                                      disabled={!!updatingStatus}
-                                      onClick={() => handleVisitStatus(v.visitor_code, "accepted")}
-                                    >
-                                      {isUpdating("accepted") ? "..." : "Accept"}
-                                    </button>
-                                    <button
-                                      style={{
-                                        background: "rgba(204,17,0,0.08)", color: "#cc1100",
-                                        border: "none", padding: "3px 8px", borderRadius: 50,
-                                        fontSize: 10, fontWeight: 800, cursor: "pointer",
-                                        fontFamily: "inherit", transition: "all 0.15s",
-                                        opacity: updatingStatus ? 0.6 : 1,
-                                      }}
-                                      disabled={!!updatingStatus}
-                                      onClick={() => handleVisitStatus(v.visitor_code, "declined")}
-                                    >
-                                      {isUpdating("declined") ? "..." : "Decline"}
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </td>
-                            <td>
-                              <span style={{
-                                fontSize: 10, fontWeight: 800,
-                                background: v.pass_issued ? "rgba(0,184,148,0.12)" : "rgba(240,165,0,0.12)",
-                                color:      v.pass_issued ? "#00a875" : "#c77800",
-                                padding: "3px 8px", borderRadius: 50,
-                              }}>
-                                {v.pass_issued ? "Sent" : "Pending"}
-                              </span>
-                            </td>
-                            <td style={{ fontSize: 12, color: "#28282c" }}>
-                              {fmtTime(v.check_in)}
-                            </td>
-                            <td>
-                              <button
-                                className={styles.checkoutBtn}
-                                onClick={() => handleCheckout(v.visitor_code)}
-                                disabled={checkingOut === v.visitor_code}
-                              >
-                                {checkingOut === v.visitor_code ? "..." : "Check Out"}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <input
+                className={styles.searchInput}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search name, code, company, host or purpose..."
+                aria-label="Search visitors"
+              />
             </div>
 
-            {/* HISTORY */}
-            <div className={styles.tableCard}>
-              <div className={styles.cardHeader}>
-                <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
-                <h2 className={styles.cardTitle}>Checked Out</h2>
-                <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>
-                  {history.length}
-                </span>
+            {tab === "active" && longStayCount > 0 && (
+              <div className={styles.longStayNotice}>
+                {longStayCount} visitor{longStayCount === 1 ? " has" : "s have"} been on premises
+                over {LONG_STAY_HOURS} hours &mdash; they may have left without checking out.
               </div>
+            )}
 
-              {history.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <span className={styles.emptyIcon}>—</span>No checkout history yet
-                </div>
-              ) : (
-                <div className={styles.tableScroll}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Code</th>
-                        <th>Visitor</th>
-                        <th>Visit Status</th>
-                        <th>Duration</th>
-                        <th>Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map((v) => (
-                        <tr key={v.visitor_code}>
-                          <td>
+            {rows.length === 0 ? (
+              <div className={styles.emptyState}>
+                <span className={styles.emptyIcon}>&mdash;</span>
+                {query.trim()
+                  ? "No visitors match that search"
+                  : tab === "active" ? "No visitors currently in" : "No checkout history yet"}
+              </div>
+            ) : tab === "active" ? (
+              <div className={styles.tableScroll}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Visitor</th>
+                      {formFields.personToMeet && <th>Meeting</th>}
+                      <th>Purpose</th>
+                      <th>Visit Status</th>
+                      <th>Pass</th>
+                      <th>Check In</th>
+                      <th>Time Inside</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeFiltered.map((v) => {
+                      const isPending  = (v.visit_status || "pending") === "pending";
+                      const isUpdating = (st) => updatingStatus === `${v.visitor_code}-${st}`;
+                      const longStay   = hoursInside(v.check_in) >= LONG_STAY_HOURS;
+                      return (
+                        <tr key={v.visitor_code} className={longStay ? styles.rowLongStay : ""}>
+                          <td data-label="Code">
                             <span className={styles.visitorCode}>{v.visitor_code}</span>
                           </td>
-                          <td>
-                            <div style={{ fontWeight: 800, color: "#08080c", fontSize: 13 }}>
-                              {v.name}
-                            </div>
-                            {formFields.personToMeet && v.person_to_meet && (
-                              <div style={{ fontSize: 11, color: "#28282c" }}>
-                                &rarr; {v.person_to_meet}
-                              </div>
+                          <td data-label="Visitor">
+                            <div className={styles.cellName}>{v.name}</div>
+                            {formFields.fromCompany && v.from_company && (
+                              <div className={styles.cellSub}>{v.from_company}</div>
                             )}
                           </td>
-                          <td>
-                            <VisitStatusBadge status={v.visit_status || "checked_out"} />
+                          {formFields.personToMeet && (
+                            <td data-label="Meeting" className={styles.cellMuted}>
+                              {v.person_to_meet || "\u2014"}
+                            </td>
+                          )}
+                          <td data-label="Purpose" className={styles.cellMuted}>{purposeOf(v)}</td>
+                          <td data-label="Visit Status">
+                            <div className={styles.statusCell}>
+                              <VisitStatusBadge status={v.visit_status || "pending"} />
+                              {isPending && (
+                                <div className={styles.statusActions}>
+                                  <button
+                                    className={styles.acceptBtn}
+                                    disabled={!!updatingStatus}
+                                    onClick={() => handleVisitStatus(v.visitor_code, "accepted")}
+                                  >
+                                    {isUpdating("accepted") ? "..." : "Accept"}
+                                  </button>
+                                  <button
+                                    className={styles.declineBtn}
+                                    disabled={!!updatingStatus}
+                                    onClick={() => handleVisitStatus(v.visitor_code, "declined")}
+                                  >
+                                    {isUpdating("declined") ? "..." : "Decline"}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
                           </td>
-                          <td style={{ fontSize: 12, color: "#0a0a0e" }}>
-                            {calcDuration(v.check_in, v.check_out)}
+                          <td data-label="Pass">
+                            <span className={v.pass_issued ? styles.passSent : styles.passPending}>
+                              {v.pass_issued ? "Sent" : "Pending"}
+                            </span>
                           </td>
-                          <td style={{ fontSize: 11, color: "#28282c" }}>
-                            {fmtDate(v.check_in)}
+                          <td data-label="Check In" className={styles.cellMuted}>{fmtTime(v.check_in)}</td>
+                          <td data-label="Time Inside">
+                            <span className={longStay ? styles.elapsedFlag : styles.cellMuted}>
+                              {elapsed(v.check_in)}
+                            </span>
+                          </td>
+                          <td data-label="Action">
+                            <button
+                              className={styles.checkoutBtn}
+                              onClick={() => handleCheckout(v.visitor_code)}
+                              disabled={checkingOut === v.visitor_code}
+                            >
+                              {checkingOut === v.visitor_code ? "..." : "Check Out"}
+                            </button>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className={styles.tableScroll}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>Code</th>
+                      <th>Visitor</th>
+                      <th>Purpose</th>
+                      <th>Visit Status</th>
+                      <th>Duration</th>
+                      <th>Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyFiltered.map((v) => (
+                      <tr key={v.visitor_code}>
+                        <td data-label="Code">
+                          <span className={styles.visitorCode}>{v.visitor_code}</span>
+                        </td>
+                        <td data-label="Visitor">
+                          <div className={styles.cellName}>{v.name}</div>
+                          {formFields.personToMeet && v.person_to_meet && (
+                            <div className={styles.cellSub}>&rarr; {v.person_to_meet}</div>
+                          )}
+                        </td>
+                        <td data-label="Purpose" className={styles.cellMuted}>{purposeOf(v)}</td>
+                        <td data-label="Visit Status">
+                          <VisitStatusBadge status={v.visit_status || "checked_out"} />
+                        </td>
+                        <td data-label="Duration" className={styles.cellMuted}>
+                          {calcDuration(v.check_in, v.check_out)}
+                        </td>
+                        <td data-label="Date" className={styles.cellSub}>{fmtDate(v.check_in)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
           </div>
         </div>
