@@ -217,10 +217,13 @@
    SCROLL BODY + CONTENT
 ═══════════════════════════════════════════════════ */
 .scrollBody { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; }
+/* Full-bleed: the dashboard uses the whole screen, held off the edges by a
+   gutter only. Charts gain the most from the extra width, so nothing is
+   centred in a narrow column any more. */
 .content {
-  max-width:1200px; margin:0 auto;
-  padding:clamp(1.5rem,3vw,2.5rem) clamp(1rem,4vw,2.5rem) 4rem;
-  display:flex; flex-direction:column; gap:clamp(2rem,4vh,3rem);
+  width:100%; margin:0 auto;
+  padding:clamp(1.25rem,2.5vw,2rem) clamp(1rem,2.5vw,2.5rem) 4rem;
+  display:flex; flex-direction:column; gap:clamp(1.5rem,3vh,2.25rem);
 }
 .section { display:flex; flex-direction:column; gap:clamp(1rem,2vh,1.25rem); animation:fadeUp .4s ease both; }
 .section:nth-child(2) { animation-delay:.08s; }
@@ -317,7 +320,6 @@
    SVG CHART SYSTEM
 ═══════════════════════════════════════════════════ */
 .svgWrap   { position:relative; width:100%; }
-.svgChart  { display:block; width:100%; height:180px; overflow:visible; }
 .svgHeat   { display:block; width:100%; height:68px;  overflow:visible; }
 .svgDow    { display:block; width:100%; height:120px; overflow:visible; }
 
@@ -334,7 +336,6 @@
 /* ═══════════════════════════════════════════════════
    DONUT  — fixed 120px, never stretches
 ═══════════════════════════════════════════════════ */
-.donutWrap   { display:grid; grid-template-columns:120px 1fr; gap:1rem; align-items:center; }
 .donutChart  { flex-shrink:0; }
 .donutSvg    { width:120px; height:120px; display:block; flex-shrink:0; }
 .donutSlice  { transition:stroke-dasharray .6s ease; }
@@ -384,7 +385,6 @@
 
 /* ── Empty chart ── */
 .emptyChart { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.5rem; padding:2rem 1rem; color:var(--muted); font-size:.78rem; font-weight:600; text-align:center; }
-.emptyChartIcon { opacity:.3; }
 .emptyChart p { margin:0; }
 
 /* ═══════════════════════════════════════════════════
@@ -483,7 +483,6 @@
 }
 @media (max-width:768px) {
   .kpiGrid    { grid-template-columns:repeat(2,1fr); }
-  .donutWrap  { grid-template-columns:1fr; justify-items:center; }
   .heroInner  { flex-direction:column; align-items:flex-start; gap:1rem; }
   .heroStats  { flex-wrap:wrap; }
   .sectionIndex, .sectionIdx { display:none; }
@@ -500,4 +499,59 @@
   :global(*), :global(*::before), :global(*::after) {
     animation-duration:.01ms !important; transition-duration:.1ms !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CHART.JS SURFACES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Chart.js needs a sized parent: the canvas fills its container, so the
+   container is what decides the height. */
+.chartBox { position:relative; width:100%; height:clamp(200px,26vh,280px); }
+
+.donutBox { position:relative; width:100%; height:clamp(230px,28vh,300px); }
+
+/* Centre readout inside the doughnut hole. pointer-events:none so it never
+   blocks a hover on the arc underneath. */
+.donutCentre {
+  position:absolute; top:calc(50% - 18px); left:0; right:0;
+  display:flex; flex-direction:column; align-items:center; gap:2px;
+  pointer-events:none;
+}
+.donutCentre strong { font-size:clamp(1.4rem,3vw,1.9rem); font-weight:900; color:var(--ink,#17171a); line-height:1; }
+.donutCentre span   { font-size:.6rem; font-weight:800; letter-spacing:.12em; color:#8d8e97; }
+
+/* Wider screens get taller charts — the extra width is wasted if the plot
+   area stays short. */
+@media (min-width:1600px) {
+  .chartBox { height:clamp(240px,24vh,320px); }
+  .donutBox { height:clamp(260px,26vh,340px); }
+}
+
+/* ── Live toggle ─────────────────────────────────────────────────────────── */
+.headerActions { display:flex; align-items:center; gap:.5rem; }
+
+.liveToggle {
+  display:inline-flex; align-items:center; gap:.4rem;
+  padding:.45rem .75rem; border-radius:999px; cursor:pointer;
+  border:1px solid var(--hv-line,#e7e7ec); background:#fff;
+  font-family:inherit; font-size:.72rem; font-weight:800;
+  letter-spacing:.04em; text-transform:uppercase; color:#8d8e97;
+  transition:color .2s ease, border-color .2s ease, background .2s ease;
+}
+.liveToggle:hover { color:#17171a; border-color:#d5d5dd; }
+
+.liveDot { width:7px; height:7px; border-radius:50%; background:#c2c2cb; flex-shrink:0; }
+
+.liveOn { color:#17171a; border-color:#d5d5dd; }
+.liveOn .liveDot { background:#34d399; animation:livePulse 2s ease-in-out infinite; }
+
+@keyframes livePulse {
+  0%,100% { box-shadow:0 0 0 0 rgba(52,211,153,.5); }
+  50%     { box-shadow:0 0 0 5px rgba(52,211,153,0); }
+}
+
+/* Motion here is ambient, not informative — it goes if asked. */
+@media (prefers-reduced-motion:reduce) {
+  .liveOn .liveDot { animation:none; }
 }
