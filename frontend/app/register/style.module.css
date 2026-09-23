@@ -662,8 +662,10 @@
   border-top: 1px solid var(--hv-line, #e7e7ec);
 }
 
-/* A submit button spanning the full card stops reading as a button. */
-.formActions .submitBtn { max-width: 340px; align-self: flex-start; }
+/* A submit button spanning the full card stops reading as a button, so it
+   stays capped — centred, so it sits under the middle of the form rather
+   than hanging off the left edge of a very wide card. */
+.formActions .submitBtn { max-width: 340px; align-self: center; }
 
 @media (max-width: 640px) {
   .formActions .submitBtn { max-width: none; align-self: stretch; }
