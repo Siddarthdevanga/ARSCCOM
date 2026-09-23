@@ -417,7 +417,10 @@ export default function VisitorDashboard() {
   const historyFiltered = history.filter(matches);
   const longStayCount   = active.filter((v) => hoursInside(v.check_in) >= LONG_STAY_HOURS).length;
   const rows = tab === "active" ? activeFiltered : historyFiltered;
-  const planColor = planPct > 85 ? "#cc1100" : planPct > 60 ? "#f0a500" : "#121216";
+  const planColor =
+    planPct >= 85 ? "#ef4444" :   // at the ceiling
+    planPct >= 60 ? "#f5a524" :   // worth watching
+                    "#34d399";    // comfortable
   const atLimit   = planLimit > 0 && planUsed >= planLimit;
 
   return (
@@ -533,11 +536,6 @@ export default function VisitorDashboard() {
             <div className={styles.heroStatCard}>
               <div className={styles.heroStatLabel}>Checked Out</div>
               <div className={`${styles.heroStatValue} ${styles.statMint}`}>{stats.checkedOutToday ?? 0}</div>
-            </div>
-            {/* Pending is the only number here that needs someone to act. */}
-            <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>Awaiting Approval</div>
-              <div className={`${styles.heroStatValue} ${styles.statSky}`}>{stats.pendingVisits ?? 0}</div>
             </div>
           </div>
 

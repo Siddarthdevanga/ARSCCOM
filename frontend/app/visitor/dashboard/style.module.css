@@ -492,7 +492,7 @@
 /* Hero KPI row */
 .heroStats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(8px, 1vw, 14px);
 }
 
@@ -748,7 +748,6 @@
 
 .statAmber { color: var(--hv-amber, #f5a524); }
 .statMint  { color: var(--hv-mint,  #34d399); }
-.statSky   { color: var(--hv-sky,   #38bdf8); }
 
 /* ── Live toggle ─────────────────────────────────────────────────────────── */
 .liveToggle {
