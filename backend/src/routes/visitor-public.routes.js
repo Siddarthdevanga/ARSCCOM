@@ -132,10 +132,10 @@ const emailFooter = (company = {}, logoUrl = null) => `
 
 const otpEmailHtml = (otp, company, logoUrl) => `
   <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-    <h2 style="color:#6c2bd9;">${company.name} – Visitor Verification</h2>
+    <h2 style="color:#19191d;">${company.name} – Visitor Verification</h2>
     <p style="font-size:16px;">Your verification code is:</p>
     <div style="background:#f7f7f7;padding:20px;text-align:center;border-radius:8px;margin:20px 0;">
-      <h1 style="letter-spacing:8px;color:#6c2bd9;margin:0;font-size:36px;">${otp}</h1>
+      <h1 style="letter-spacing:8px;color:#19191d;margin:0;font-size:36px;">${otp}</h1>
     </div>
     <p style="color:#666;">This OTP is valid for <strong>${OTP_EXPIRY_MINUTES} minutes</strong>.</p>
     <p style="color:#999;font-size:12px;margin-top:30px;">
@@ -173,7 +173,7 @@ router.get("/visitor/:slug/info", async (req, res) => {
     const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
     const qrCode    = await QRCode.toDataURL(publicUrl, {
       width: 400, margin: 2,
-      color: { dark: "#3c007a", light: "#ffffff" },
+      color: { dark: "#0d0d11", light: "#ffffff" },
     });
 
     const serviceUnavailable = await isServiceUnavailable(company.id);
@@ -255,7 +255,7 @@ router.get("/visitor/qr/:slug", async (req, res) => {
     const publicUrl = `${process.env.FRONTEND_URL}/visitor/${slug}`;
     const qrBuffer  = await QRCode.toBuffer(publicUrl, {
       width: 400, margin: 2,
-      color: { dark: "#3c007a", light: "#ffffff" },
+      color: { dark: "#0d0d11", light: "#ffffff" },
     });
 
     res.setHeader("Content-Type", "image/png");

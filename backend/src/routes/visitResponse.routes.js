@@ -51,7 +51,7 @@ router.get("/:token/:action", async (req, res) => {
       return res.send(renderPage(
         "Already Responded",
         `This visit has already been marked as <b>${label}</b>.`,
-        "#6c2bd9"
+        "#19191d"
       ));
     }
 
@@ -108,7 +108,7 @@ const renderPage = (title, message, color) => `
       max-width: 480px;
       width: 100%;
       text-align: center;
-      box-shadow: 0 4px 24px rgba(108,43,217,0.10);
+      box-shadow: 0 4px 24px rgba(25, 25, 29,0.10);
     }
     .icon {
       font-size: 56px;

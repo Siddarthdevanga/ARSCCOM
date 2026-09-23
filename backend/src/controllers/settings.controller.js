@@ -17,13 +17,15 @@ const PASSWORD_MIN_LENGTH = 8;
 const emailFooter = () => `
 <br/>
 Regards,<br/>
-<div style="background:#6c2bd9;border-radius:10px;padding:14px 18px;margin:10px 0;display:inline-block;">
-  <img
-    src="https://www.haivisitor.zodopt.com/haivisitor.png"
-    alt="Hai Visitor Logo"
-    style="height:65px;display:block"
-  />
-</div>
+<!-- The lockup carries its own black background, so it needs no
+     wrapper and sits correctly on any client background, including
+     dark mode. -->
+<img
+  src="https://www.haivisitor.zodopt.com/haiv-full-logo.png"
+  alt="Hai Visitor"
+  width="168"
+  style="width:168px;max-width:100%;height:auto;display:block;margin:10px 0;border:0;"
+/>
 <hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
 <p style="font-size:13px;color:#666">
 This email was automatically sent from the Hai Visitor Platform.
@@ -403,7 +405,7 @@ const sendPasswordChangedEmail = async (email, companyName) => {
           ✓ Your password has been updated securely
         </p>
       </div>
-      <h3 style="color:#6c2bd9;margin-top:30px;margin-bottom:10px;">
+      <h3 style="color:#19191d;margin-top:30px;margin-bottom:10px;">
         Important Security Notice
       </h3>
       <p><b style="color:#ff1744;">Did you make this change?</b></p>

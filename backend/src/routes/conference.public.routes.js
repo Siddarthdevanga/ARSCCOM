@@ -153,29 +153,29 @@ const getRoomImageUrl = async (room) => {
 const roomImageBlock = (imageUrl, roomName) =>
   imageUrl
     ? `<img src="${imageUrl}" alt="${roomName}" style="width:100%;max-width:560px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;margin:0 auto 20px;" />`
-    : `<div style="width:100%;max-width:560px;aspect-ratio:16/9;background:linear-gradient(135deg,#6c2bd9,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+    : `<div style="width:100%;max-width:560px;aspect-ratio:16/9;background:linear-gradient(135deg,#19191d,#2c2c30);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
          <span style="color:#fff;font-size:28px;font-weight:800;letter-spacing:1px;">${roomName.charAt(0).toUpperCase()}</span>
        </div>`;
 
 /* ── shared: booking details table ── */
-const bookingTable = (room, booking, accentColor = "#6c2bd9") => `
-  <table style="border-collapse:collapse;margin:0;font-size:14px;width:100%;max-width:560px;border-radius:8px;overflow:hidden;border:1px solid #ede9fe;">
+const bookingTable = (room, booking, accentColor = "#19191d") => `
+  <table style="border-collapse:collapse;margin:0;font-size:14px;width:100%;max-width:560px;border-radius:8px;overflow:hidden;border:1px solid #ededf0;">
     <tr style="background:${accentColor};color:#fff;">
       <td colspan="2" style="padding:10px 14px;font-weight:700;font-size:15px;">Booking Summary</td>
     </tr>
-    <tr style="border-bottom:1px solid #ede9fe;">
+    <tr style="border-bottom:1px solid #ededf0;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;width:130px;">Room</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${room.room_name}${room.room_number ? ` <span style="color:#9ca3af;font-weight:400;">#${room.room_number}</span>` : ""}${room.capacity ? ` <span style="color:#9ca3af;font-size:12px;margin-left:6px;">&bull; ${room.capacity} people</span>` : ""}</td>
     </tr>
-    <tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;">
+    <tr style="border-bottom:1px solid #ededf0;background:#faf5ff;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Date</td>
       <td style="padding:10px 14px;color:#1f2937;">${booking.booking_date}</td>
     </tr>
-    <tr style="border-bottom:1px solid #ede9fe;">
+    <tr style="border-bottom:1px solid #ededf0;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Time</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${prettyTime(booking.start_time)} &ndash; ${prettyTime(booking.end_time)}</td>
     </tr>
-    ${booking.department ? `<tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
+    ${booking.department ? `<tr style="border-bottom:1px solid #ededf0;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
     ${booking.purpose ? `<tr><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
   </table>`;
 
@@ -185,15 +185,15 @@ const sendBookingEmail = async (email, company, room, booking) => {
     to: email,
     subject: `Booking Confirmed – ${room.room_name} | ${company.name}`,
     html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #ede9fe;">
-        <div style="background:linear-gradient(135deg,#6c2bd9,#7c3aed);padding:24px 28px;">
-          <div style="color:#c4b5fd;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #ededf0;">
+        <div style="background:linear-gradient(135deg,#19191d,#1d1d21);padding:24px 28px;">
+          <div style="color:#c2c2c5;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
           <h1 style="color:#fff;margin:0;font-size:22px;">Booking Confirmed</h1>
-          <p style="color:#ddd6fe;margin:6px 0 0;font-size:14px;">Your conference room is reserved</p>
+          <p style="color:#dddde0;margin:6px 0 0;font-size:14px;">Your conference room is reserved</p>
         </div>
         <div style="padding:24px 28px;">
           ${roomImageBlock(roomImageUrl, room.room_name)}
-          ${bookingTable(room, booking, "#6c2bd9")}
+          ${bookingTable(room, booking, "#19191d")}
         </div>
         ${emailFooter(company, logoUrl)}
       </div>`
@@ -248,15 +248,15 @@ const sendTeamMemberEmail = async (memberEmail, memberName, organiserEmail, comp
     to: memberEmail,
     subject: `You've been added to a meeting – ${room.room_name} | ${company.name}`,
     html: `
-      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #ede9fe;">
-        <div style="background:linear-gradient(135deg,#6c2bd9,#7c3aed);padding:24px 28px;">
-          <div style="color:#c4b5fd;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #ededf0;">
+        <div style="background:linear-gradient(135deg,#19191d,#1d1d21);padding:24px 28px;">
+          <div style="color:#c2c2c5;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">${company.name}</div>
           <h1 style="color:#fff;margin:0;font-size:22px;">You've Been Added to a Meeting</h1>
-          <p style="color:#ddd6fe;margin:6px 0 0;font-size:14px;">Hi <b>${memberName}</b> — <b>${organiserEmail}</b> has invited you</p>
+          <p style="color:#dddde0;margin:6px 0 0;font-size:14px;">Hi <b>${memberName}</b> — <b>${organiserEmail}</b> has invited you</p>
         </div>
         <div style="padding:24px 28px;">
           ${roomImageBlock(roomImageUrl, room.room_name)}
-          ${bookingTable(room, booking, "#6c2bd9")}
+          ${bookingTable(room, booking, "#19191d")}
         </div>
         ${emailFooter(company, logoUrl)}
       </div>`

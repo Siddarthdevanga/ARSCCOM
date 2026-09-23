@@ -73,26 +73,26 @@ const emailTemplates = {
           <style>
             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f7fa; }
             .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-            .header { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 40px 30px; text-align: center; }
+            .header { background: linear-gradient(158deg, #121214, #050505); color: white; padding: 40px 30px; text-align: center; border-bottom: 3px solid #f5a524; }
             .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
             .header p { margin: 10px 0 0; font-size: 16px; opacity: 0.95; }
             .content { padding: 40px 30px; }
             .success-icon { text-align: center; font-size: 64px; margin-bottom: 20px; }
             .greeting { font-size: 18px; margin-bottom: 20px; }
-            .info-box { background: linear-gradient(135deg, #f7f4ff, #faf7ff); padding: 25px; margin: 25px 0; border-left: 4px solid #6a00ff; border-radius: 8px; }
+            .info-box { background: linear-gradient(135deg, #f7f4ff, #faf7ff); padding: 25px; margin: 25px 0; border-left: 4px solid #141418; border-radius: 8px; }
             .info-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; padding: 10px 0; border-bottom: 1px solid #e8e4f0; }
             .info-row:last-child { border-bottom: none; }
             .label { font-weight: 600; color: #555; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; }
             .value { color: #333; font-weight: 700; font-size: 16px; }
-            .plan-badge { background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 14px; }
+            .plan-badge { background: #f5a524; color: #1c1204; padding: 8px 20px; border-radius: 25px; display: inline-block; font-weight: bold; font-size: 14px; }
             .features { background: #f9f9f9; padding: 25px; border-radius: 8px; margin: 25px 0; }
-            .features h3 { margin-top: 0; color: #6a00ff; font-size: 20px; }
+            .features h3 { margin-top: 0; color: #141418; font-size: 20px; }
             .features ul { list-style: none; padding: 0; margin: 0; }
             .features li { padding: 12px 0; padding-left: 35px; position: relative; font-size: 15px; }
             .features li:before { content: "✓"; position: absolute; left: 0; color: #00c853; font-weight: bold; font-size: 20px; }
-            .cta-button { display: inline-block; background: linear-gradient(135deg, #6a00ff, #8a2dff); color: white; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(106, 0, 255, 0.3); }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #ffc75f, #f5a524 48%, #e8900d); color: #1c1204; padding: 15px 35px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(245, 165, 36, 0.4); }
             .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
-            .footer strong { color: #6a00ff; font-size: 16px; }
+            .footer strong { color: #141418; font-size: 16px; }
           </style>
         </head>
         <body>
@@ -103,7 +103,7 @@ const emailTemplates = {
             </div>
             <div class="content">
               <div class="success-icon">✅</div>
-              <h2 style="text-align: center; color: #6a00ff; margin-bottom: 10px;">Subscription Activated Successfully</h2>
+              <h2 style="text-align: center; color: #141418; margin-bottom: 10px;">Subscription Activated Successfully</h2>
               <p class="greeting">Dear <strong>${companyName}</strong> Team,</p>
               <p>Congratulations! Your Hai Visitor subscription has been successfully activated. You now have full access to all features included in your plan.</p>
               <div class="info-box">
@@ -154,7 +154,7 @@ const emailTemplates = {
         <style>
           body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f4f7fa; }
           .container { max-width: 600px; margin: 30px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-          .header { background: linear-gradient(135deg, #7a00ff, #9500ff); color: white; padding: 40px 30px; text-align: center; }
+          .header { background: linear-gradient(135deg, #151519, #17171b); color: white; padding: 40px 30px; text-align: center; }
           .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
           .header p { margin: 10px 0 0; font-size: 16px; opacity: 0.95; }
           .content { padding: 40px 30px; }
@@ -164,13 +164,13 @@ const emailTemplates = {
           .plan-badge { display: inline-block; padding: 12px 24px; border-radius: 25px; font-weight: bold; margin: 0 15px; font-size: 16px; }
           .old-plan { background: #e0e0e0; color: #666; }
           .new-plan { background: linear-gradient(135deg, #00c853, #00e676); color: white; box-shadow: 0 4px 15px rgba(0, 200, 83, 0.3); }
-          .arrow { color: #7a00ff; font-size: 32px; margin: 0 10px; font-weight: bold; }
-          .info-box { background: linear-gradient(135deg, #f7f4ff, #faf7ff); padding: 25px; margin: 25px 0; border-left: 4px solid #7a00ff; border-radius: 8px; }
+          .arrow { color: #151519; font-size: 32px; margin: 0 10px; font-weight: bold; }
+          .info-box { background: linear-gradient(135deg, #f7f4ff, #faf7ff); padding: 25px; margin: 25px 0; border-left: 4px solid #151519; border-radius: 8px; }
           .info-row { display: flex; justify-content: space-between; align-items: center; margin: 15px 0; }
           .label { font-weight: 600; color: #555; font-size: 14px; text-transform: uppercase; }
           .value { color: #333; font-weight: 700; font-size: 16px; }
           .footer { background: #f4f4f4; padding: 30px; text-align: center; color: #666; font-size: 14px; }
-          .footer strong { color: #7a00ff; }
+          .footer strong { color: #151519; }
         </style>
       </head>
       <body>
@@ -182,7 +182,7 @@ const emailTemplates = {
           <div class="content">
             <div class="upgrade-icon">🚀</div>
             <div class="celebration">✨ 🎊 ✨</div>
-            <h2 style="text-align: center; color: #7a00ff; margin-bottom: 20px;">Plan Upgrade Successful</h2>
+            <h2 style="text-align: center; color: #151519; margin-bottom: 20px;">Plan Upgrade Successful</h2>
             <p style="font-size: 16px;">Dear <strong>${companyName}</strong> Team,</p>
             <p style="font-size: 16px;">Great news! Your account has been successfully upgraded to the <strong style="color: #00c853;">${toPlan.toUpperCase()}</strong> plan.</p>
             <div class="upgrade-flow">

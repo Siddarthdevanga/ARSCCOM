@@ -302,7 +302,7 @@ export const sendGracePeriodEmail = async ({
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="text-align: center; margin-bottom: 30px;">
-          <h1 style="color: #7a00ff; margin: 0; font-size: 28px;">Hai Visitor</h1>
+          <h1 style="color: #151519; margin: 0; font-size: 28px;">Hai Visitor</h1>
           <p style="color: #666; margin: 5px 0 0 0; font-size: 14px;">Visitor & Conference Management</p>
         </div>
 
@@ -317,9 +317,9 @@ export const sendGracePeriodEmail = async ({
 
           <div style="text-align: center; margin: 30px 0;">
             <a href="${process.env.FRONTEND_URL || "https://www.haivisitor.zodopt.com"}/subscription"
-               style="display: inline-block; background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+               style="display: inline-block; background: linear-gradient(135deg, #151519 0%, #242428 100%);
                       color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px;
-                      font-weight: bold; font-size: 16px; box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);">
+                      font-weight: bold; font-size: 16px; box-shadow: 0 4px 12px rgba(21, 21, 25, 0.3);">
               Renew Subscription Now
             </a>
           </div>

@@ -174,8 +174,8 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
 
     // Header - Purple gradient
     const gradient = ctx.createLinearGradient(0, 0, width, headerHeight);
-    gradient.addColorStop(0, "#6a1b9a");
-    gradient.addColorStop(1, "#8e24aa");
+    gradient.addColorStop(0, "#151519");
+    gradient.addColorStop(1, "#19191d");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, headerHeight);
 
@@ -183,7 +183,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     drawCompanyNameInHeader(ctx, companyName, width, headerHeight);
 
     // Title
-    ctx.fillStyle = "#6a1b9a";
+    ctx.fillStyle = "#151519";
     ctx.font = "bold 36px Arial, sans-serif";
     ctx.textAlign = "center";
     const title = isConference ? "Conference Room Booking" : "Visitor Registration";
@@ -195,7 +195,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     ctx.fillText("Scan QR Code or Visit:", width / 2, 230);
 
     // URL (truncate if too long)
-    ctx.fillStyle = "#7a00ff";
+    ctx.fillStyle = "#151519";
     ctx.font = "bold 18px Arial, sans-serif";
     const maxUrlWidth = width - 100;
     let displayUrl = url;
@@ -219,7 +219,10 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
       width: qrSize,
       margin: 0,
       color: {
-        dark: "#6a1b9a",  // Purple QR code
+        // Pure black modules: QR decoding depends on module/background
+        // contrast, and a tinted code fails on a meaningful share of
+        // scanners. Branding lives in the frame, never in the code itself.
+        dark: "#000000",
         light: "#FFFFFF",
       },
     });
@@ -233,7 +236,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     // Instructions section
     const instructionsY = qrY + qrSize + 50;
 
-    ctx.fillStyle = "#6a1b9a";
+    ctx.fillStyle = "#151519";
     ctx.font = "bold 24px Arial, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(
@@ -273,7 +276,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
     ctx.fillStyle = "#e0e0e0";
     ctx.fillRect(0, height - 80, width, 80);
 
-    ctx.fillStyle = "#7a00ff";
+    ctx.fillStyle = "#151519";
     ctx.font = "bold 28px Arial, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Hai Visitor", width / 2, height - 45);
@@ -302,7 +305,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
 /* ── Email helpers (match public template style) ── */
 
 const emailFooter = (company = {}, logoUrl = null) => `
-  <div style="padding:20px 28px;border-top:1px solid #ede9fe;background:#faf5ff;">
+  <div style="padding:20px 28px;border-top:1px solid #ededf0;background:#faf5ff;">
     ${logoUrl ? `<img src="${logoUrl}" height="40" alt="${company.name || ""}" style="display:block;margin-bottom:10px;" />` : ""}
     <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1f2937;">${company.name || ""}</p>
     <p style="margin:0;font-size:12px;color:#9ca3af;">
@@ -315,29 +318,29 @@ const emailFooter = (company = {}, logoUrl = null) => `
 const roomImageBlock = (imageUrl, roomName) =>
   imageUrl
     ? `<img src="${imageUrl}" alt="${roomName}" style="width:100%;max-width:560px;aspect-ratio:16/9;object-fit:cover;border-radius:8px;display:block;margin:0 auto 20px;" />`
-    : `<div style="width:100%;max-width:560px;aspect-ratio:16/9;background:linear-gradient(135deg,#6c2bd9,#a78bfa);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;min-height:140px;">
+    : `<div style="width:100%;max-width:560px;aspect-ratio:16/9;background:linear-gradient(135deg,#19191d,#2c2c30);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;min-height:140px;">
          <span style="color:#fff;font-size:36px;font-weight:800;letter-spacing:1px;">${(roomName || "R").charAt(0).toUpperCase()}</span>
        </div>`;
 
-const bookingTable = (booking, accentColor = "#6c2bd9") => `
-  <table style="border-collapse:collapse;width:100%;max-width:560px;border-radius:8px;overflow:hidden;border:1px solid #ede9fe;font-size:14px;">
+const bookingTable = (booking, accentColor = "#19191d") => `
+  <table style="border-collapse:collapse;width:100%;max-width:560px;border-radius:8px;overflow:hidden;border:1px solid #ededf0;font-size:14px;">
     <tr style="background:${accentColor};">
       <td colspan="2" style="padding:10px 14px;font-weight:700;font-size:15px;color:#fff;">Booking Summary</td>
     </tr>
-    <tr style="border-bottom:1px solid #ede9fe;">
+    <tr style="border-bottom:1px solid #ededf0;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;width:130px;">Room</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${booking?.room_name || "N/A"}</td>
     </tr>
-    <tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;">
+    <tr style="border-bottom:1px solid #ededf0;background:#faf5ff;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Date</td>
       <td style="padding:10px 14px;color:#1f2937;">${booking?.booking_date || "N/A"}</td>
     </tr>
-    <tr style="border-bottom:1px solid #ede9fe;">
+    <tr style="border-bottom:1px solid #ededf0;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Time</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${toAmPm(booking?.start_time)} &ndash; ${toAmPm(booking?.end_time)}</td>
     </tr>
-    ${booking?.department ? `<tr style="border-bottom:1px solid #ede9fe;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
-    ${booking?.purpose ? `<tr style="border-bottom:1px solid #ede9fe;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
+    ${booking?.department ? `<tr style="border-bottom:1px solid #ededf0;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
+    ${booking?.purpose ? `<tr style="border-bottom:1px solid #ededf0;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
     <tr style="background:#faf5ff;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Status</td>
       <td style="padding:10px 14px;font-weight:700;color:${accentColor};">${booking?.status || "N/A"}</td>
@@ -346,7 +349,7 @@ const bookingTable = (booking, accentColor = "#6c2bd9") => `
 
 /* Color scheme per action */
 const ACTION_THEME = {
-  CONFIRMED:   { bg1: "#6c2bd9", bg2: "#7c3aed", sub: "#ddd6fe", border: "#ede9fe", label: "Your conference room is reserved" },
+  CONFIRMED:   { bg1: "#19191d", bg2: "#1d1d21", sub: "#dddde0", border: "#ededf0", label: "Your conference room is reserved" },
   RESCHEDULED: { bg1: "#1d4ed8", bg2: "#3b82f6", sub: "#dbeafe", border: "#e0f2fe", label: "Your booking details have changed" },
   CANCELLED:   { bg1: "#b91c1c", bg2: "#ef4444", sub: "#fee2e2", border: "#fee2e2", label: "Your conference room booking has been cancelled" },
 };
@@ -1762,7 +1765,7 @@ router.get("/public-booking-info", async (req, res) => {
       width: 512,
       margin: 2,
       color: {
-        dark: "#6a1b9a",
+        dark: "#151519",
         light: "#FFFFFF",
       },
     });

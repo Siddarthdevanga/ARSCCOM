@@ -19,13 +19,13 @@ export const sendResetEmail = async (to, code) => {
       <div style="font-family: Arial; padding: 30px; background:#f5f6fa">
         <div style="max-width:520px;margin:auto;background:#fff;
                     padding:30px;border-radius:10px">
-          <h2 style="color:#3c007a">Password Reset</h2>
+          <h2 style="color:#0d0d11">Password Reset</h2>
           <p>Use the code below to reset your password:</p>
           <div style="
             font-size:28px;
             letter-spacing:4px;
             font-weight:bold;
-            color:#3c007a;
+            color:#0d0d11;
             text-align:center;
             margin:20px 0;
           ">

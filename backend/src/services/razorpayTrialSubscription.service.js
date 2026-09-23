@@ -119,16 +119,16 @@ const sendTrialActivatedEmailForExistingCompany = async ({ email, companyName, c
     to: email,
     subject: "Hai Visitor 15-Day Trial — Now Active",
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">H<span style="color:#FDBA74;">ai</span> Visitor</div>
           <div style="margin-top:6px;display:inline-block;background:rgba(255,255,255,.12);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 14px;border-radius:999px;">15-Day Trial Activated</div>
         </div>
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello <b>${companyName}</b>,</p>
-          <p style="font-size:15px;color:#262046;">Your <b>Hai Visitor 15-Day Trial</b> is now active.</p>
+          <p style="font-size:15px;color:#262629;">Hello <b>${companyName}</b>,</p>
+          <p style="font-size:15px;color:#262629;">Your <b>Hai Visitor 15-Day Trial</b> is now active.</p>
           <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
-            <p style="font-size:13px;color:#6E6890;margin:0;">
+            <p style="font-size:13px;color:#6e6e71;margin:0;">
               Your card/UPI mandate has been authorized. Unless you cancel before then, your Hai Visitor
               <b>Business Plan (₹500/month + GST)</b> begins automatically on <b>${convertsOnLabel}</b> —
               no action needed to continue. You can cancel anytime from Settings before that date.

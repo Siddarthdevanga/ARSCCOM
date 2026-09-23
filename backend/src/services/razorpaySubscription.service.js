@@ -321,27 +321,27 @@ const sendActivationEmail = async ({ email, companyName, plan, interval, endsAt,
       ? `Hai Visitor ${planLabel} — Renewed Successfully`
       : `Welcome to Hai Visitor ${planLabel}!`,
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">H<span style="color:#FDBA74;">ai</span> Visitor</div>
           <div style="margin-top:6px;display:inline-block;background:rgba(255,255,255,.12);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 14px;border-radius:999px;">
             ${planLabel} Plan ${isRenewal ? "Renewed" : "Activated"}
           </div>
         </div>
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello <b>${companyName}</b>,</p>
-          <p style="font-size:15px;color:#262046;">
+          <p style="font-size:15px;color:#262629;">Hello <b>${companyName}</b>,</p>
+          <p style="font-size:15px;color:#262629;">
             ${isRenewal
               ? `Your <b>Hai Visitor ${planLabel}</b> subscription has been renewed successfully.`
               : `Your <b>Hai Visitor ${planLabel}</b> subscription is now active. Thank you for upgrading!`}
           </p>
-          <div style="background:#F1ECFB;border-left:4px solid #7C3AED;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
-              <tr><td style="padding:4px 0;color:#6E6890;">Plan</td><td style="padding:4px 0;text-align:right;font-weight:700;">${planLabel} (${interval === "annual" ? "Annual" : "Monthly"})</td></tr>
-              <tr><td style="padding:4px 0;color:#6E6890;">Next billing date</td><td style="padding:4px 0;text-align:right;font-weight:700;">${endsLabel}</td></tr>
+          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
+              <tr><td style="padding:4px 0;color:#6e6e71;">Plan</td><td style="padding:4px 0;text-align:right;font-weight:700;">${planLabel} (${interval === "annual" ? "Annual" : "Monthly"})</td></tr>
+              <tr><td style="padding:4px 0;color:#6e6e71;">Next billing date</td><td style="padding:4px 0;text-align:right;font-weight:700;">${endsLabel}</td></tr>
             </table>
           </div>
-          <p style="font-size:13px;color:#6E6890;">
+          <p style="font-size:13px;color:#6e6e71;">
             Your card/UPI mandate will be charged automatically on your next billing date — no action needed. You can cancel anytime from Settings.
           </p>
           ${emailFooter()}

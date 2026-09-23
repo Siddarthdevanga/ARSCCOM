@@ -80,18 +80,18 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
       <style>
         body{font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;}
         .container{max-width:600px;margin:0 auto;}
-        .header{background:linear-gradient(135deg,#6c2bd9,#8e44ad);color:white;padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;}
+        .header{background:linear-gradient(135deg,#19191d,#1e1e22);color:white;padding:30px 20px;text-align:center;border-radius:8px 8px 0 0;}
         .content{padding:30px 20px;background:white;}
         .success-badge{background:#e8f5e9;border-left:4px solid #00c853;padding:16px;margin:20px 0;border-radius:4px;}
         .warning-badge{background:#fff3e0;border-left:4px solid #ff9800;padding:16px;margin:20px 0;border-radius:4px;}
-        .info-badge{background:#f8f9ff;border-left:4px solid #6c2bd9;padding:16px;margin:20px 0;border-radius:4px;}
+        .info-badge{background:#f8f9ff;border-left:4px solid #19191d;padding:16px;margin:20px 0;border-radius:4px;}
         .whatsapp-badge{background:#e8f5e9;border-left:4px solid #25D366;padding:20px;margin:20px 0;border-radius:4px;text-align:center;}
         .details-table{width:100%;border-collapse:collapse;margin:20px 0;}
         .details-table td{padding:12px;border:1px solid #e0e0e0;}
         .details-table tr:nth-child(odd){background:#f8f9ff;}
-        .label{font-weight:600;color:#6c2bd9;width:35%;}
+        .label{font-weight:600;color:#19191d;width:35%;}
         .whatsapp-button{display:inline-block;background:#25D366;color:white;padding:12px 30px;text-decoration:none;border-radius:6px;font-weight:600;font-size:15px;}
-        h2{color:#6c2bd9;margin-top:30px;margin-bottom:10px;font-size:20px;}
+        h2{color:#19191d;margin-top:30px;margin-bottom:10px;font-size:20px;}
         ul{font-size:14px;line-height:1.8;color:#333;}
         ul li{margin-bottom:8px;}
       </style>
@@ -136,7 +136,7 @@ export const sendVisitorPassMail = async ({ company = {}, visitor = {} }) => {
             <p style="margin:15px 0 0 0;font-size:13px;color:#666;">Get instant updates and support during your visit</p>
           </div>` : ""}
           <div class="info-badge">
-            <p style="margin:0;color:#6c2bd9;font-weight:600;">Need help? Contact ${companyName} reception for assistance.</p>
+            <p style="margin:0;color:#19191d;font-weight:600;">Need help? Contact ${companyName} reception for assistance.</p>
           </div>
           <p style="margin-top:30px;">Thank you for visiting <b>${companyName}</b>.</p>
           ${emailFooter(company)}
@@ -200,15 +200,15 @@ export const sendEmployeeNotificationMail = async ({
       <style>
         body{font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;}
         .container{max-width:600px;margin:0 auto;}
-        .header{background:linear-gradient(135deg,#6c2bd9,#8e44ad);color:white;padding:28px 20px;text-align:center;border-radius:8px 8px 0 0;}
+        .header{background:linear-gradient(135deg,#19191d,#1e1e22);color:white;padding:28px 20px;text-align:center;border-radius:8px 8px 0 0;}
         .content{padding:30px 20px;background:white;}
-        .visitor-card{background:#f8f9ff;border:1px solid #e0d7ff;border-radius:8px;padding:20px;margin:20px 0;}
+        .visitor-card{background:#f8f9ff;border:1px solid #dedee1;border-radius:8px;padding:20px;margin:20px 0;}
         .details-table{width:100%;border-collapse:collapse;margin:0;}
-        .details-table td{padding:10px 12px;border-bottom:1px solid #e8e3ff;}
+        .details-table td{padding:10px 12px;border-bottom:1px solid #e8e8eb;}
         .details-table tr:last-child td{border-bottom:none;}
-        .label{font-weight:600;color:#6c2bd9;width:40%;font-size:14px;}
+        .label{font-weight:600;color:#19191d;width:40%;font-size:14px;}
         .value{color:#333;font-size:14px;}
-        .action-section{margin:28px 0;padding:24px 20px;background:#f8f9ff;border:1px solid #e0d7ff;border-radius:8px;text-align:center;}
+        .action-section{margin:28px 0;padding:24px 20px;background:#f8f9ff;border:1px solid #dedee1;border-radius:8px;text-align:center;}
         .action-title{font-size:15px;font-weight:700;color:#2d2d2d;margin:0 0 4px 0;letter-spacing:0.2px;}
         .action-sub{font-size:13px;color:#666;margin:0 0 22px 0;}
         .btn{display:inline-block;padding:13px 34px;border-radius:6px;font-weight:600;font-size:14px;text-decoration:none;letter-spacing:0.3px;vertical-align:middle;}
@@ -217,7 +217,7 @@ export const sendEmployeeNotificationMail = async ({
         .action-note{margin:20px 0 0 0;font-size:12px;color:#999;line-height:1.6;}
         .notice{background:#fff8e1;border-left:4px solid #ffc107;padding:14px 16px;border-radius:4px;margin:20px 0;font-size:13px;color:#795548;line-height:1.6;}
         .photo-wrap{text-align:center;margin:16px 0;}
-        .photo-wrap img{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #6c2bd9;}
+        .photo-wrap img{width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #19191d;}
       </style>
       </head><body>
       <div class="container">
@@ -271,7 +271,7 @@ export const sendEmployeeNotificationMail = async ({
               </tr>
               <tr>
                 <td class="label">Visitor Code</td>
-                <td class="value"><span style="font-family:monospace;background:#f0ebff;padding:2px 8px;border-radius:4px;font-size:13px;">${visitor.visitorCode || "-"}</span></td>
+                <td class="value"><span style="font-family:monospace;background:#efeff2;padding:2px 8px;border-radius:4px;font-size:13px;">${visitor.visitorCode || "-"}</span></td>
               </tr>
             </table>
           </div>

@@ -124,10 +124,10 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
     to: email,
     subject: "Welcome to Hai Visitor — Your Trial Account & Login Details",
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
 
         <!-- BRAND HEADER -->
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
             H<span style="color:#FDBA74;">ai</span> Visitor
           </div>
@@ -137,16 +137,16 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
         </div>
 
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello,</p>
+          <p style="font-size:15px;color:#262629;">Hello,</p>
 
-          <p style="font-size:15px;color:#262046;">
+          <p style="font-size:15px;color:#262629;">
             Thank you for your payment. Your <b>Hai Visitor 15-Day Trial</b> is now active.
           </p>
 
           <!-- TRIAL PLAN -->
-          <div style="background:#F1ECFB;border-left:4px solid #7C3AED;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
-            <h3 style="color:#7C3AED;margin:0 0 10px;font-size:15px;">Your Trial Plan Includes</h3>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#1d1d21;margin:0 0 10px;font-size:15px;">Your Trial Plan Includes</h3>
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">✅&nbsp; 100 Visitor Registrations</td></tr>
               <tr><td style="padding:4px 0;">✅&nbsp; 100 Conference Room Bookings</td></tr>
               <tr><td style="padding:4px 0;">✅&nbsp; 2 Conference Rooms</td></tr>
@@ -158,10 +158,10 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
           <!-- LOGIN DETAILS -->
           <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#EA580C;margin:0 0 8px;font-size:15px;">Your Login Details</h3>
-            <p style="font-size:13px;color:#6E6890;margin:0 0 10px;">
+            <p style="font-size:13px;color:#6e6e71;margin:0 0 10px;">
               Login with your email or phone number, using this temporary password:
             </p>
-            <div style="font-size:20px;font-weight:800;letter-spacing:2px;background:#ffffff;border:1px dashed #F97316;color:#221C53;padding:12px 16px;border-radius:8px;text-align:center;">
+            <div style="font-size:20px;font-weight:800;letter-spacing:2px;background:#ffffff;border:1px dashed #F97316;color:#242427;padding:12px 16px;border-radius:8px;text-align:center;">
               ${tempPassword}
             </div>
           </div>
@@ -169,21 +169,21 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
           <!-- COMPLETE REGISTRATION -->
           <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#16A34A;margin:0 0 8px;font-size:15px;">Before You Start — Complete Your Registration</h3>
-            <p style="font-size:13px;color:#6E6890;margin:0 0 8px;">The first time you log in, you'll be asked to:</p>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+            <p style="font-size:13px;color:#6e6e71;margin:0 0 8px;">The first time you log in, you'll be asked to:</p>
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">🔑&nbsp; Set your own password (replacing this temporary one)</td></tr>
               <tr><td style="padding:4px 0;">🏢&nbsp; Enter your <b>Company Name</b></td></tr>
               <tr><td style="padding:4px 0;">🖼️&nbsp; Upload your <b>Company Logo</b></td></tr>
               <tr><td style="padding:4px 0;">💬&nbsp; Add your <b>WhatsApp Number/URL</b> (optional)</td></tr>
             </table>
-            <p style="font-size:13px;color:#6E6890;margin:10px 0 0;">
+            <p style="font-size:13px;color:#6e6e71;margin:10px 0 0;">
               Having these details ready before you log in will make setup quicker.
             </p>
           </div>
 
           <!-- CTA -->
           <div style="text-align:center;margin-top:28px;">
-            <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#F97316;background-image:linear-gradient(95deg,#F97316,#EF3E66);color:#fff;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
+            <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#f5a524;background-image:linear-gradient(135deg,#ffc75f,#f5a524 48%,#e8900d);color:#1c1204;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
               Login to Hai Visitor →
             </a>
           </div>
@@ -219,8 +219,8 @@ const sendPaymentReceiptEmail = async ({ email, phone, paymentId }) => {
     to: email,
     subject: "Payment Receipt — Hai Visitor 15-Day Trial",
     html: `
-      <div style="border:1px solid #e0d9f0;border-radius:12px;padding:24px;max-width:480px;margin:0 auto;">
-        <h2 style="color:#221a35;margin:0 0 16px;">Payment Receipt</h2>
+      <div style="border:1px solid #dedee1;border-radius:12px;padding:24px;max-width:480px;margin:0 auto;">
+        <h2 style="color:#1f1f22;margin:0 0 16px;">Payment Receipt</h2>
 
         <p style="font-size:14px;">
           Thank you for your payment. Here are your payment details:
@@ -228,23 +228,23 @@ const sendPaymentReceiptEmail = async ({ email, phone, paymentId }) => {
 
         <table style="width:100%;border-collapse:collapse;font-size:14px;margin:16px 0;">
           <tr>
-            <td style="padding:8px 0;color:#6E6890;">Amount Paid</td>
+            <td style="padding:8px 0;color:#6e6e71;">Amount Paid</td>
             <td style="padding:8px 0;text-align:right;font-weight:700;">₹${amount}</td>
           </tr>
           <tr style="border-top:1px solid #eee;">
-            <td style="padding:8px 0;color:#6E6890;">Payment ID</td>
+            <td style="padding:8px 0;color:#6e6e71;">Payment ID</td>
             <td style="padding:8px 0;text-align:right;">${paymentId}</td>
           </tr>
           <tr style="border-top:1px solid #eee;">
-            <td style="padding:8px 0;color:#6E6890;">Date</td>
+            <td style="padding:8px 0;color:#6e6e71;">Date</td>
             <td style="padding:8px 0;text-align:right;">${paidOn}</td>
           </tr>
           <tr style="border-top:1px solid #eee;">
-            <td style="padding:8px 0;color:#6E6890;">Email</td>
+            <td style="padding:8px 0;color:#6e6e71;">Email</td>
             <td style="padding:8px 0;text-align:right;">${email}</td>
           </tr>
           <tr style="border-top:1px solid #eee;">
-            <td style="padding:8px 0;color:#6E6890;">Phone</td>
+            <td style="padding:8px 0;color:#6e6e71;">Phone</td>
             <td style="padding:8px 0;text-align:right;">${phone}</td>
           </tr>
         </table>

@@ -36,13 +36,15 @@ export const emailFooter = () => `
 <br/>
 Regards,<br/>
 
-<div style="background:#6c2bd9;border-radius:10px;padding:14px 18px;margin:10px 0;display:inline-block;">
-  <img
-    src="https://www.haivisitor.zodopt.com/haivisitor.png"
-    alt="Hai Visitor Logo"
-    style="height:65px;display:block"
-  />
-</div>
+<!-- The lockup carries its own black background, so it needs no
+     wrapper and sits correctly on any client background, including
+     dark mode. -->
+<img
+  src="https://www.haivisitor.zodopt.com/haiv-full-logo.png"
+  alt="Hai Visitor"
+  width="168"
+  style="width:168px;max-width:100%;height:auto;display:block;margin:10px 0;border:0;"
+/>
 
 <hr style="border:0;border-top:1px solid #ddd;margin:10px 0;" />
 
@@ -235,10 +237,10 @@ const sendWelcomeEmail = async (email, companyName) => {
     to: email,
     subject: `Welcome ${companyName} — Activate Your Hai Visitor Subscription`,
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
 
         <!-- BRAND HEADER -->
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
             H<span style="color:#FDBA74;">ai</span> Visitor
           </div>
@@ -248,9 +250,9 @@ const sendWelcomeEmail = async (email, companyName) => {
         </div>
 
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello <b>${companyName}</b>,</p>
+          <p style="font-size:15px;color:#262629;">Hello <b>${companyName}</b>,</p>
 
-          <p style="font-size:15px;color:#262046;">
+          <p style="font-size:15px;color:#262629;">
             Your organization has been successfully registered on <b>Hai Visitor</b> —
             Visitor &amp; Conference Room Management Platform.
           </p>
@@ -258,7 +260,7 @@ const sendWelcomeEmail = async (email, companyName) => {
           <!-- NEXT STEP -->
           <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#EA580C;margin:0 0 10px;font-size:15px;">Next Step: Choose Your Subscription Plan</h3>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;"><b>Trial</b> — Evaluate Hai Visitor and experience core features</td></tr>
               <tr><td style="padding:4px 0;"><b>Business</b> — Designed for growing organizations with advanced capabilities</td></tr>
               <tr><td style="padding:4px 0;"><b>Enterprise</b> — Tailored, scalable and secure for large enterprises</td></tr>
@@ -266,9 +268,9 @@ const sendWelcomeEmail = async (email, companyName) => {
           </div>
 
           <!-- WHAT YOU GET -->
-          <div style="background:#F1ECFB;border-left:4px solid #7C3AED;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
-            <h3 style="color:#7C3AED;margin:0 0 10px;font-size:15px;">What Hai Visitor Delivers to ${companyName}</h3>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#1d1d21;margin:0 0 10px;font-size:15px;">What Hai Visitor Delivers to ${companyName}</h3>
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">✅&nbsp; Dedicated QR Code for instant visitor self-registration</td></tr>
               <tr><td style="padding:4px 0;">✅&nbsp; Instant Digital Visitor Pass via Email / WhatsApp</td></tr>
               <tr><td style="padding:4px 0;">✅&nbsp; Powerful Live Dashboard with real-time check-ins &amp; analytics</td></tr>
@@ -279,13 +281,13 @@ const sendWelcomeEmail = async (email, companyName) => {
             </table>
           </div>
 
-          <p style="font-size:14px;color:#262046;">
+          <p style="font-size:14px;color:#262629;">
             Login, activate your subscription, and empower <b>${companyName}</b> with smarter Visitor &amp; Conference Management.
           </p>
 
           <!-- CTA -->
           <div style="text-align:center;margin-top:28px;">
-            <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#F97316;background-image:linear-gradient(95deg,#F97316,#EF3E66);color:#fff;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
+            <a href="https://www.haivisitor.zodopt.com/login" style="display:inline-block;background:#f5a524;background-image:linear-gradient(135deg,#ffc75f,#f5a524 48%,#e8900d);color:#1c1204;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
               Login &amp; Choose Your Plan →
             </a>
           </div>
@@ -305,10 +307,10 @@ const sendAccountReadyEmail = async (email, companyName) => {
     to: email,
     subject: `You're All Set, ${companyName} — Start Using Hai Visitor`,
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
 
         <!-- BRAND HEADER -->
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
             H<span style="color:#FDBA74;">ai</span> Visitor
           </div>
@@ -318,16 +320,16 @@ const sendAccountReadyEmail = async (email, companyName) => {
         </div>
 
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello <b>${companyName}</b>,</p>
+          <p style="font-size:15px;color:#262629;">Hello <b>${companyName}</b>,</p>
 
-          <p style="font-size:15px;color:#262046;">
+          <p style="font-size:15px;color:#262629;">
             Your account is ready. Here's a quick look at what you can do with <b>Hai Visitor</b>.
           </p>
 
           <!-- VISITOR REGISTRATION -->
-          <div style="background:#F1ECFB;border-left:4px solid #7C3AED;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
-            <h3 style="color:#7C3AED;margin:0 0 8px;font-size:15px;">📋&nbsp; Registering Visitors</h3>
-            <p style="font-size:14px;color:#262046;line-height:1.6;margin:0;">
+          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#1d1d21;margin:0 0 8px;font-size:15px;">📋&nbsp; Registering Visitors</h3>
+            <p style="font-size:14px;color:#262629;line-height:1.6;margin:0;">
               Visitors register themselves in seconds by scanning your company's QR
               code — no app download, no dedicated hardware. The host gets notified
               instantly and the visitor receives a digital pass, with every check-in
@@ -338,7 +340,7 @@ const sendAccountReadyEmail = async (email, companyName) => {
           <!-- REPORTS & ANALYTICS -->
           <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#EA580C;margin:0 0 8px;font-size:15px;">📊&nbsp; Reports &amp; Analytics</h3>
-            <p style="font-size:14px;color:#262046;line-height:1.6;margin:0;">
+            <p style="font-size:14px;color:#262629;line-height:1.6;margin:0;">
               A live dashboard of who's checked in, visit history, and trends over
               time — searchable and exportable, so you always have a record to fall
               back on.
@@ -348,16 +350,16 @@ const sendAccountReadyEmail = async (email, companyName) => {
           <!-- EMPLOYEE DIRECTORY & FORM BUILDER -->
           <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#16A34A;margin:0 0 10px;font-size:15px;">👥&nbsp; Employee Directory &amp; Form Builder</h3>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">Add your team as hosts — notifications route straight to the right person</td></tr>
               <tr><td style="padding:4px 0;">Customize the visitor registration form — add, remove or reorder fields</td></tr>
             </table>
           </div>
 
           <!-- ACCOUNT SETTINGS -->
-          <div style="background:#F1ECFB;border-left:4px solid #7C3AED;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
-            <h3 style="color:#7C3AED;margin:0 0 8px;font-size:15px;">⚙️&nbsp; Account Settings</h3>
-            <p style="font-size:14px;color:#262046;line-height:1.6;margin:0;">
+          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+            <h3 style="color:#1d1d21;margin:0 0 8px;font-size:15px;">⚙️&nbsp; Account Settings</h3>
+            <p style="font-size:14px;color:#262629;line-height:1.6;margin:0;">
               Update your company logo, WhatsApp number, visitor code prefix and
               other preferences any time from Settings.
             </p>
@@ -365,7 +367,7 @@ const sendAccountReadyEmail = async (email, companyName) => {
 
           <!-- CTA -->
           <div style="text-align:center;margin-top:28px;">
-            <a href="https://www.haivisitor.zodopt.com/home" style="display:inline-block;background:#F97316;background-image:linear-gradient(95deg,#F97316,#EF3E66);color:#fff;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
+            <a href="https://www.haivisitor.zodopt.com/home" style="display:inline-block;background:#f5a524;background-image:linear-gradient(135deg,#ffc75f,#f5a524 48%,#e8900d);color:#1c1204;font-weight:800;font-size:15px;text-decoration:none;padding:14px 36px;border-radius:999px;">
               Login to Hai Visitor →
             </a>
           </div>
@@ -665,10 +667,10 @@ const sendPasswordResetEmail = async (email, companyName, resetCode) => {
     to: email,
     subject: "Hai Visitor — Secure Password Reset Code",
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
 
         <!-- BRAND HEADER -->
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
             H<span style="color:#FDBA74;">ai</span> Visitor
           </div>
@@ -678,9 +680,9 @@ const sendPasswordResetEmail = async (email, companyName, resetCode) => {
         </div>
 
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello <b>${companyName}</b>,</p>
+          <p style="font-size:15px;color:#262629;">Hello <b>${companyName}</b>,</p>
 
-          <p style="font-size:15px;color:#262046;">
+          <p style="font-size:15px;color:#262629;">
             We received a request to reset your Hai Visitor account password.
             Use the secure verification code below to proceed:
           </p>
@@ -688,10 +690,10 @@ const sendPasswordResetEmail = async (email, companyName, resetCode) => {
           <!-- RESET CODE -->
           <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:20px 18px;margin:20px 0;text-align:center;">
             <h3 style="color:#EA580C;margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;">Your Verification Code</h3>
-            <div style="font-size:32px;font-weight:800;letter-spacing:6px;background:#ffffff;border:1px dashed #F97316;color:#221C53;padding:14px 16px;border-radius:8px;">
+            <div style="font-size:32px;font-weight:800;letter-spacing:6px;background:#ffffff;border:1px dashed #F97316;color:#242427;padding:14px 16px;border-radius:8px;">
               ${resetCode}
             </div>
-            <p style="font-size:13px;color:#6E6890;margin:10px 0 0;">
+            <p style="font-size:13px;color:#6e6e71;margin:10px 0 0;">
               Valid for <b>${RESET_CODE_EXPIRY_MINUTES} minutes</b> only
             </p>
           </div>
@@ -699,14 +701,14 @@ const sendPasswordResetEmail = async (email, companyName, resetCode) => {
           <!-- SECURITY INFO -->
           <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#16A34A;margin:0 0 10px;font-size:15px;">Important Security Information</h3>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">Enter this code on the Hai Visitor password reset page</td></tr>
               <tr><td style="padding:4px 0;">If you did not request this, ignore this email and contact your administrator immediately</td></tr>
               <tr><td style="padding:4px 0;">Never share this code with anyone, including Hai Visitor support staff</td></tr>
             </table>
           </div>
 
-          <p style="font-size:13px;color:#6E6890;">
+          <p style="font-size:13px;color:#6e6e71;">
             If your code has expired, simply request a new one from the login page.
             You can request a new code every ${RESEND_COOLDOWN_SECONDS} seconds if needed.
           </p>
@@ -778,10 +780,10 @@ const sendPasswordChangedEmail = async (email, companyName) => {
     to: email,
     subject: "Hai Visitor — Password Successfully Changed",
     html: `
-      <div style="max-width:520px;margin:0 auto;border:1px solid #e0d9f0;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:520px;margin:0 auto;border:1px solid #dedee1;border-radius:16px;overflow:hidden;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;">
 
         <!-- BRAND HEADER -->
-        <div style="background:#221C53;background-image:linear-gradient(95deg,#221C53,#3d2a7a);padding:28px 28px 24px;text-align:center;">
+        <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
             H<span style="color:#FDBA74;">ai</span> Visitor
           </div>
@@ -791,9 +793,9 @@ const sendPasswordChangedEmail = async (email, companyName) => {
         </div>
 
         <div style="padding:28px;">
-          <p style="font-size:15px;color:#262046;">Hello <b>${companyName}</b>,</p>
+          <p style="font-size:15px;color:#262629;">Hello <b>${companyName}</b>,</p>
 
-          <p style="font-size:15px;color:#262046;">
+          <p style="font-size:15px;color:#262629;">
             This email confirms that your Hai Visitor account password has been
             <b style="color:#16A34A;">successfully changed</b>.
           </p>
@@ -801,7 +803,7 @@ const sendPasswordChangedEmail = async (email, companyName) => {
           <!-- CONFIRMATION -->
           <div style="background:#F0FDF4;border-left:4px solid #22C55E;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#16A34A;margin:0 0 10px;font-size:15px;">✓ What This Means</h3>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">You can now login to Hai Visitor using your new password</td></tr>
               <tr><td style="padding:4px 0;">Your account security has been enhanced with password encryption</td></tr>
               <tr><td style="padding:4px 0;">All active sessions remain valid — no need to re-login immediately</td></tr>
@@ -811,14 +813,14 @@ const sendPasswordChangedEmail = async (email, companyName) => {
           <!-- SECURITY NOTICE -->
           <div style="background:#FFF7ED;border-left:4px solid #F97316;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#EA580C;margin:0 0 10px;font-size:15px;">⚠️&nbsp; Important Security Notice</h3>
-            <p style="font-size:14px;color:#262046;margin:0 0 8px;"><b>Did you make this change?</b></p>
-            <table style="width:100%;font-size:14px;color:#262046;border-collapse:collapse;">
+            <p style="font-size:14px;color:#262629;margin:0 0 8px;"><b>Did you make this change?</b></p>
+            <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;"><b>If yes:</b> No further action required. Your account is secure.</td></tr>
               <tr><td style="padding:4px 0;"><b>If no:</b> Someone may have unauthorized access. Contact your administrator immediately and reset your password again.</td></tr>
             </table>
           </div>
 
-          <p style="font-size:14px;color:#262046;">
+          <p style="font-size:14px;color:#262629;">
             Thank you for using Hai Visitor to manage your organization's visitor and
             conference room operations securely.
           </p>

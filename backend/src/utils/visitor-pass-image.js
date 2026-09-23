@@ -17,8 +17,11 @@ if (fs.existsSync(FONT_PATH)) {
 const CANVAS_WIDTH = 720;
 const CANVAS_HEIGHT = 390;
 
-const BRAND_COLOR = "#6c2bd9";
-const ACCENT_COLOR = "#8e44ad";
+// Card furniture is ink; the amber is the single brand accent, matching
+// the login page and the "ai" in the wordmark.
+const BRAND_COLOR  = "#050505";
+const ACCENT_COLOR = "#17171a";
+const AMBER        = "#f5a524";
 const TEXT_GRAY = "#666";
 const LIGHT_GRAY = "#f8f9fa";
 const CARD_RADIUS = 18;
@@ -164,6 +167,11 @@ export const generateVisitorPassImage = async ({
   ctx.arcTo(cardX, cardY, cardX + cardW, cardY, CARD_RADIUS);
   ctx.closePath();
   ctx.fill();
+
+  // Amber hairline under the header — the same accent line that runs along
+  // the top of the login panel and every auth page header.
+  ctx.fillStyle = AMBER;
+  ctx.fillRect(cardX, cardY + 70 - 3, cardW, 3);
 
   // Company name
   ctx.fillStyle = "#ffffff";

@@ -664,8 +664,8 @@ export const forgotPassword = async (email) => {
     html: `
       <p>Hello <b>SuperAdmin</b>,</p>
       <p>Your password reset code is:</p>
-      <div style="background:#f8f9ff;border-left:4px solid #6c2bd9;padding:20px;margin:20px 0;text-align:center;">
-        <h2 style="color:#6c2bd9;margin:0;letter-spacing:4px;font-size:32px;">${code}</h2>
+      <div style="background:#f8f9ff;border-left:4px solid #19191d;padding:20px;margin:20px 0;text-align:center;">
+        <h2 style="color:#19191d;margin:0;letter-spacing:4px;font-size:32px;">${code}</h2>
       </div>
       <p>Valid for <b>10 minutes</b>. Do not share this code.</p>
     `,
