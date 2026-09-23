@@ -40,6 +40,7 @@ export default function LoginPage() {
   const [error, setError]               = useState("");
   const [loading, setLoading]           = useState(false);
   const [activeTab, setActiveTab]       = useState(null);
+  const [billing, setBilling]           = useState("monthly");
   const [showPassword, setShowPassword] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
   const [rememberMe, setRememberMe]     = useState(false);
@@ -296,6 +297,24 @@ export default function LoginPage() {
               {activeTab === "plans" && (
                 <div className={`${styles.dropdownSection} ${styles.tierAmber}`}>
                   <h2>Subscription Plans</h2>
+
+                  {/* Trial and Custom Build have no annual rate, so the
+                      toggle only swaps the two plans that do. */}
+                  <div className={styles.billingToggle} role="group" aria-label="Billing interval">
+                    <button
+                      type="button"
+                      className={billing === "monthly" ? styles.billingActive : ""}
+                      aria-pressed={billing === "monthly"}
+                      onClick={() => setBilling("monthly")}
+                    >Monthly</button>
+                    <button
+                      type="button"
+                      className={billing === "annual" ? styles.billingActive : ""}
+                      aria-pressed={billing === "annual"}
+                      onClick={() => setBilling("annual")}
+                    >Annual</button>
+                  </div>
+
                   <div className={styles.plansGrid}>
                     <div className={`${styles.planCard} ${styles.tierSky}`}>
                       <div className={styles.planHeader}><h3>TRIAL</h3><div className={styles.planPrice}>₹49<span>/15 days</span></div></div>
@@ -304,12 +323,12 @@ export default function LoginPage() {
                     </div>
                     <div className={`${styles.planCard} ${styles.popularPlan} ${styles.tierAmber}`}>
                       <div className={styles.popularBadge}>MOST POPULAR</div>
-                      <div className={styles.planHeader}><h3>BUSINESS</h3><div className={styles.planPrice}>₹500<span>/month</span></div></div>
+                      <div className={styles.planHeader}><h3>BUSINESS</h3><div className={styles.planPrice}>{billing === "annual" ? <>₹5,500<span>/year</span></> : <>₹500<span>/month</span></>}</div></div>
                       <ul className={styles.planFeatures}><li>Unlimited Visitors</li><li>Custom Registration Fields</li><li>Priority Support</li></ul>
                       <Link href="/register"><button className={`${styles.planBtn} ${styles.planBtnPrimary}`}>Get Started</button></Link>
                     </div>
                     <div className={`${styles.planCard} ${styles.tierViolet}`}>
-                      <div className={styles.planHeader}><h3>ENTERPRISE</h3><div className={styles.planPrice}>₹1000<span>/month</span></div></div>
+                      <div className={styles.planHeader}><h3>ENTERPRISE</h3><div className={styles.planPrice}>{billing === "annual" ? <>₹10,000<span>/year</span></> : <>₹1,000<span>/month</span></>}</div></div>
                       <ul className={styles.planFeatures}><li>Unlimited Visitors</li><li>Unlimited Conference Booking &amp; Rooms</li><li>Dedicated Support</li></ul>
                       <Link href="/register"><button className={styles.planBtn}>Get Started</button></Link>
                     </div>

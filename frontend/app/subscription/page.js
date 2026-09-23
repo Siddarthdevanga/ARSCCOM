@@ -234,7 +234,11 @@ export default function SubscriptionPage() {
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logoText}>{company?.name || "Hai Visitor"}</div>
+          {/* The chip is part of OUR wordmark — only ever applied to the
+              fallback, never to a customer's own company name. */}
+          <div className={styles.logoText}>
+            {company?.name || <>H<span className={styles.aiChip}>ai</span> Visitor</>}
+          </div>
         </div>
         <div className={styles.rightHeader}>
           {company?.id && (

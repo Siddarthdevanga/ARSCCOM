@@ -11,6 +11,43 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* ================================================
+     HAI VISITOR BRAND TOKENS
+     Black-and-white ground with a four-colour accent
+     set. Amber leads (it comes from the pin logo);
+     sky, mint and violet support it. Defined here so
+     the auth pages and the login page cannot drift
+     apart — change a value once, every page follows.
+  ================================================ */
+  --hv-ink:          #050505;
+  --hv-ink-2:        #17171a;
+  --hv-paper:        #ffffff;
+
+  --hv-amber:        #f5a524;
+  --hv-amber-lift:   #ffc75f;
+  --hv-amber-deep:   #8a4a00;
+  --hv-sky:          #38bdf8;
+  --hv-mint:         #34d399;
+  --hv-violet:       #a78bfa;
+
+  --hv-amber-wash:   rgba(245, 165, 36, 0.16);
+  --hv-sky-wash:     rgba(56, 189, 248, 0.14);
+  --hv-mint-wash:    rgba(52, 211, 153, 0.14);
+
+  --hv-surface:      #f6f6f8;
+  --hv-surface-2:    #fafafb;
+  --hv-line:         #e7e7ec;
+  --hv-line-strong:  #d5d5dd;
+  --hv-text:         #17171a;
+  --hv-text-soft:    #5f6068;
+  --hv-text-faint:   #8d8e97;
+
+  --hv-danger:       #c0392b;
+  --hv-ok:           #1a7f4b;
+
+  --hv-panel: linear-gradient(158deg, #121214 0%, #050505 48%, #0c0c0f 100%);
+  --hv-cta:   linear-gradient(135deg, #ffc75f 0%, #f5a524 48%, #e8900d 100%);
 }
 
 @theme inline {

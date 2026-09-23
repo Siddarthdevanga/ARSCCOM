@@ -1,7 +1,7 @@
 /* ======================================================
    HAI VISITOR — FORGOT PASSWORD
-   Visitor dashboard theme: Nunito, purple gradient hero,
-   lite purple card, hidden scrollbar (scrolling works)
+   Visitor dashboard theme: Nunito, black gradient hero,
+   light neutral cards, hidden scrollbar (scrolling works)
 ====================================================== */
 
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -29,7 +29,7 @@
 .container {
   height: 100vh;
   height: 100dvh;
-  background: #f3f0fb;
+  background: var(--hv-surface);
   font-family: 'Nunito', sans-serif;
   display: flex;
   flex-direction: column;
@@ -52,7 +52,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid #e8e0f5;
+  border-bottom: 1px solid var(--hv-line);
   position: sticky;
   top: 0;
   z-index: 300;
@@ -66,9 +66,9 @@
 }
 .logoText {
   font-size: 1rem;
-  font-weight: 900;
-  color: #6200d6;
-  letter-spacing: 1.5px;
+  font-weight: 800;
+  color: var(--hv-ink);
+  letter-spacing: 0.2px;
 }
 .rightHeader {
   display: flex;
@@ -81,8 +81,8 @@
   align-items: center;
   gap: 6px;
   background: transparent;
-  color: #6200d6;
-  border: 2px solid #6200d6;
+  color: var(--hv-ink);
+  border: 2px solid var(--hv-ink);
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 13px;
@@ -93,13 +93,13 @@
   white-space: nowrap;
 }
 .backBtn:hover {
-  background: #6200d6;
+  background: var(--hv-ink);
   color: #fff;
 }
 
 /* ================= HERO ================= */
 .hero {
-  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  background: linear-gradient(135deg, #121214 0%, #050505 55%, #0c0c0f 100%);
   padding: 36px 36px 40px;
   text-align: center;
   position: relative;
@@ -126,7 +126,7 @@
   position: relative;
 }
 .heroTitle span {
-  color: #f0a500;
+  color: var(--hv-amber);
 }
 .heroSub {
   color: rgba(255,255,255,0.72);
@@ -147,15 +147,15 @@
 .formCard {
   width: 100%;
   max-width: 520px;
-  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  background: linear-gradient(145deg, var(--hv-surface) 0%, var(--hv-line) 100%);
   border-radius: 22px;
   padding: 32px 32px;
-  border: 1.5px solid #ddd2f0;
-  box-shadow: 0 4px 20px rgba(98,0,214,0.06);
+  border: 1.5px solid var(--hv-line);
+  box-shadow: 0 4px 20px rgba(5, 5, 5,0.06);
   transition: box-shadow 0.3s;
 }
 .formCard:hover {
-  box-shadow: 0 8px 32px rgba(98,0,214,0.12);
+  box-shadow: 0 8px 32px rgba(5, 5, 5,0.12);
 }
 
 /* ================= SECTION HEADER ================= */
@@ -169,14 +169,14 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #6200d6;
+  background: var(--hv-ink);
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(98,0,214,0.15);
+  box-shadow: 0 0 0 3px rgba(5, 5, 5,0.15);
 }
 .cardTitle {
   font-size: 0.95rem;
   font-weight: 900;
-  color: #1a0038;
+  color: var(--hv-text);
   margin: 0;
 }
 
@@ -186,33 +186,33 @@
   height: 56px;
   margin: 0 auto 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6200d6 0%, #8a3ffc 100%);
+  background: linear-gradient(135deg, var(--hv-ink) 0%, var(--hv-ink-2) 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 20px rgba(98, 0, 214, 0.28);
+  box-shadow: 0 8px 20px rgba(5, 5, 5, 0.28);
 }
 
 /* ================= MESSAGES ================= */
 .errorBox {
   padding: 12px 16px;
-  background: #fff0f0;
-  color: #cc1100;
+  background: #fdf5f4;
+  color: var(--hv-danger);
   font-size: 13px;
   font-weight: 700;
-  border-left: 4px solid #cc1100;
+  border-left: 4px solid var(--hv-danger);
   border-radius: 0 12px 12px 0;
   margin-bottom: 16px;
   animation: fadeIn 0.3s ease;
 }
 .successBox {
   padding: 12px 16px;
-  background: #e6f9f0;
-  color: #00875a;
+  background: #f3faf6;
+  color: var(--hv-ok);
   font-size: 13px;
   font-weight: 700;
-  border-left: 4px solid #00b894;
+  border-left: 4px solid var(--hv-mint);
   border-radius: 0 12px 12px 0;
   margin-bottom: 16px;
   display: flex;
@@ -233,7 +233,7 @@
   display: block;
   font-size: 11px;
   font-weight: 800;
-  color: #6200d6;
+  color: var(--hv-ink);
   margin-bottom: 6px;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -243,28 +243,28 @@
   height: 48px;
   padding: 0 16px;
   border-radius: 14px;
-  border: 1.5px solid #ddd2f0;
+  border: 1.5px solid var(--hv-line);
   font-size: 14px;
   font-weight: 600;
   font-family: 'Nunito', sans-serif;
   background: #fff;
-  color: #1a0038;
+  color: var(--hv-text);
   transition: border-color 0.2s, box-shadow 0.2s;
   -webkit-appearance: none;
 }
 .input:focus {
   outline: none;
-  border-color: #6200d6;
-  box-shadow: 0 0 0 3px rgba(98,0,214,0.1);
-  background: #faf8ff;
+  border-color: var(--hv-amber);
+  box-shadow: 0 0 0 4px var(--hv-amber-wash);
+  background: var(--hv-paper);
 }
 .input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: #f3f0fb;
+  background: var(--hv-surface);
 }
 .input::placeholder {
-  color: #b8a8d8;
+  color: var(--hv-line-strong);
   font-weight: 600;
 }
 
@@ -274,23 +274,24 @@
   height: 50px;
   border: none;
   border-radius: 50px;
-  background: #6200d6;
-  color: #fff;
+  background: var(--hv-cta);
+  color: #1c1204;
   font-size: 15px;
   font-weight: 800;
   cursor: pointer;
   font-family: 'Nunito', sans-serif;
   transition: all 0.25s;
-  box-shadow: 0 4px 16px rgba(98,0,214,0.3);
+  box-shadow: 0 6px 20px rgba(245, 165, 36, 0.42);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
 }
 .submitBtn:hover:not(:disabled) {
-  background: #4a00a8;
+  background: var(--hv-cta);
+  background-position: 100% 50%;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(98,0,214,0.4);
+  box-shadow: 0 14px 32px rgba(245, 165, 36, 0.52);
 }
 .submitBtn:disabled {
   opacity: 0.45;
@@ -318,12 +319,12 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 700;
-  color: #6200d6;
+  color: var(--hv-ink);
   cursor: pointer;
   transition: all 0.2s;
 }
 .backLink:hover {
-  color: #4a00a8;
+  color: var(--hv-ink);
   text-decoration: underline;
 }
 
@@ -358,4 +359,18 @@
   .lockIcon { width: 46px; height: 46px; }
 }
 
-.loadingState { display:flex; align-items:center; justify-content:center; height:100vh; color:#6c2bd9; font-size:0.9rem; }
+.loadingState { display:flex; align-items:center; justify-content:center; height:100vh; color:var(--hv-ink); font-size:0.9rem; }
+
+/* ================= BRAND WORDMARK ================= */
+/* Matches the login page lockup: "ai" is the product name's payload, so
+   it carries the brand colour. Defined per page because CSS modules
+   cannot share class names — the values come from the global tokens. */
+.aiChip {
+  display: inline-block;
+  background: var(--hv-amber);
+  color: var(--hv-ink);
+  border-radius: 0.18em;
+  padding: 0.02em 0.14em 0.06em;
+  margin: 0 0.02em;
+  line-height: 1;
+}

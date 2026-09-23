@@ -93,7 +93,7 @@ function ResetPasswordForm() {
       {/* ===== HEADER ===== */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logoText}>Hai Visitor</div>
+          <div className={styles.logoText}>H<span className={styles.aiChip}>ai</span> Visitor</div>
         </div>
         <div className={styles.rightHeader}>
           <button className={styles.backBtn} onClick={() => router.replace("/login")}>

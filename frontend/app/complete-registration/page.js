@@ -167,7 +167,7 @@ export default function CompleteRegistrationPage() {
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <div className={styles.logoText}>Hai Visitor</div>
+          <div className={styles.logoText}>H<span className={styles.aiChip}>ai</span> Visitor</div>
         </div>
       </header>
 

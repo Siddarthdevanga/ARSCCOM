@@ -469,6 +469,43 @@
   max-width: 68ch;
 }
 
+/* ================= BILLING TOGGLE ================= */
+.billingToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  margin-top: clamp(18px, 2.6vh, 24px);
+  background: var(--hv-surface, #f6f6f8);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+
+.billingToggle button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(11px, 1.5vw, 12.5px);
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  padding: clamp(8px, 1.2vh, 10px) clamp(16px, 2.2vw, 24px);
+  border-radius: 999px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.billingToggle button:hover {
+  color: var(--text);
+}
+
+.billingActive {
+  background: var(--ink) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(5, 5, 5, 0.22);
+}
+
 /* ================= PLANS GRID ================= */
 /* Always 4 equal columns on one row down to tablet width, so all plans
    (including Custom Build) stay visually equivalent instead of one
