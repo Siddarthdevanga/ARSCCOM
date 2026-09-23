@@ -132,17 +132,16 @@
 }
 
 /* ================= MAIN CONTENT ================= */
+/* Full-bleed: the card fills the screen and the sections inside it decide
+   the column count, rather than a fixed-width strip floating in the middle. */
 .mainContent {
-  padding: 24px 36px 56px;
-  display: flex;
-  justify-content: center;
+  padding: clamp(16px, 2.2vw, 28px) clamp(16px, 2.5vw, 36px) 56px;
 }
 
 /* ================= FORM CARD ================= */
 .formCard {
   width: 100%;
-  max-width: 780px;
-  background: linear-gradient(145deg, var(--hv-surface) 0%, var(--hv-line) 100%);
+  background: var(--hv-paper, #fff);
   border-radius: 22px;
   padding: 28px 32px;
   border: 1.5px solid var(--hv-line);
@@ -592,4 +591,48 @@
     var(--hv-mint) 48%,
     var(--hv-sky) 72%,
     var(--hv-violet) 100%);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FORM SECTIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;          /* lets a grid item shrink instead of overflowing */
+}
+
+/* Actions belong to the form, not to a column, so they always span. */
+.formActions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: clamp(4px, 1vh, 10px);
+  border-top: 1px solid var(--hv-line);
+}
+
+/* The submit button shouldn't stretch to 1800px on a wide screen — a button
+   that wide stops reading as a button. */
+.formActions .submitBtn { max-width: 420px; align-self: flex-start; }
+.formActions .errorBox,
+.formActions .successBox { max-width: 720px; }
+
+/* One column: restore the stacked rhythm the sections used to have. */
+@media (max-width: 640px) {
+  .formActions .submitBtn { max-width: none; align-self: stretch; }
+}
+
+/* Opt-in multi-column layout. Kept off .form itself because
+   complete-registration imports this stylesheet and puts its fields
+   directly inside .form — turning that into a grid would scatter them
+   across columns. auto-fit means the column count follows the width:
+   three across on a wide monitor, two on a laptop, one on a phone, with
+   no breakpoint to maintain. */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+  gap: clamp(16px, 2vw, 28px);
 }

@@ -224,8 +224,11 @@ export default function RegisterPage() {
         {/* ===== MAIN CONTENT ===== */}
         <main className={styles.mainContent}>
           <div className={styles.formCard}>
-            <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
+            <form className={`${styles.form} ${styles.formGrid}`} onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
 
+              {/* Each block is a grid item: on a wide screen they sit side
+                  by side, on a narrow one they stack. */}
+              <div className={styles.formSection}>
               {/* ── Company Info ── */}
               <div className={styles.sectionHeader}>
                 <span className={styles.cardDot} />
@@ -346,7 +349,10 @@ export default function RegisterPage() {
               </div>
 
               {/* ── Logo Upload ── */}
-              <div className={styles.sectionHeader} style={{ marginTop: 8 }}>
+              </div>
+
+              <div className={styles.formSection}>
+              <div className={styles.sectionHeader}>
                 <span className={`${styles.cardDot} ${styles.dotGreen}`} />
                 <h3 className={styles.cardTitle}>Company Logo</h3>
               </div>
@@ -375,7 +381,10 @@ export default function RegisterPage() {
               </div>
 
               {/* ── Security ── */}
-              <div className={styles.sectionHeader} style={{ marginTop: 8 }}>
+              </div>
+
+              <div className={styles.formSection}>
+              <div className={styles.sectionHeader}>
                 <span className={`${styles.cardDot} ${styles.dotGold}`} />
                 <h3 className={styles.cardTitle}>Security</h3>
               </div>
@@ -437,21 +446,24 @@ export default function RegisterPage() {
 
               </div>
 
-              {/* ── Messages ── */}
-              {error && <div className={styles.errorBox} role="alert">{error}</div>}
-              {success && <div className={styles.successBox} role="alert">{success}</div>}
+              </div>
 
-              {/* ── Submit ── */}
-              <button type="submit" className={styles.submitBtn} disabled={loading}>
-                {loading ? <><span className={styles.btnSpinner} /> Registering...</> : "Register & Continue"}
-              </button>
+              {/* Errors and the submit button always span the full width —
+                  they belong to the form, not to any one section. */}
+              <div className={styles.formActions}>
+                {error && <div className={styles.errorBox} role="alert">{error}</div>}
+                {success && <div className={styles.successBox} role="alert">{success}</div>}
 
-              {/* ── Footer ── */}
-              <div className={styles.formFooter}>
-                Already have an account?{" "}
-                <button type="button" className={styles.linkBtn} onClick={() => router.push("/login")} disabled={loading}>
-                  Login here
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                  {loading ? <><span className={styles.btnSpinner} /> Registering...</> : "Register & Continue"}
                 </button>
+
+                <div className={styles.formFooter}>
+                  Already have an account?{" "}
+                  <button type="button" className={styles.linkBtn} onClick={() => router.push("/login")} disabled={loading}>
+                    Login here
+                  </button>
+                </div>
               </div>
 
             </form>
