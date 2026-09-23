@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
+import GracePeriodTicker from "../components/GracePeriodTicker";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TOAST SYSTEM
@@ -774,25 +775,16 @@ export default function Home() {
 
           {/* GRACE PERIOD TICKER */}
           {inGracePeriod && (
-            <div className={graceStyles.gracePeriodTicker}>
-              <div className={graceStyles.tickerViewport}>
-                <div className={graceStyles.tickerTrack}>
-                  {[0, 1].map((i) => (
-                    <div className={graceStyles.tickerContent} key={i} aria-hidden={i === 1}>
-                      <AlertCircle size={16} />
-                      <span>
-                        <strong>Grace Period Active</strong> — Your subscription expired. You have{" "}
-                        <strong>
-                          {subData.GRACE_PERIOD_DAYS_REMAINING} day{subData.GRACE_PERIOD_DAYS_REMAINING !== 1 ? "s" : ""}
-                        </strong>{" "}
-                        remaining to renew. Grace period ends {formatDate(subData.GRACE_PERIOD_ENDS_ON)}.
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <button className={graceStyles.tickerRenewBtn} onClick={handleOpenPlans}>Renew Now</button>
-            </div>
+            <GracePeriodTicker onRenew={handleOpenPlans}>
+              <AlertCircle size={16} />
+              <span>
+                <strong>Grace Period Active</strong> — Your subscription expired. You have{" "}
+                <strong>
+                  {subData.GRACE_PERIOD_DAYS_REMAINING} day{subData.GRACE_PERIOD_DAYS_REMAINING !== 1 ? "s" : ""}
+                </strong>{" "}
+                remaining to renew. Grace period ends {formatDate(subData.GRACE_PERIOD_ENDS_ON)}.
+              </span>
+            </GracePeriodTicker>
           )}
 
           {/* HOME VIEW */}
