@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import LogoIntro from "../components/LogoIntro";
 import styles from "./style.module.css";
 
 const COOLDOWN_SECS = 30;
@@ -225,6 +226,9 @@ export default function LoginPage() {
 
   return (
     <div className={styles.container}>
+
+      {/* Plays once per browser session; see LogoIntro for why. */}
+      <LogoIntro />
 
       {/* LEFT BRANDING SECTION */}
       <div className={styles.leftSection}>

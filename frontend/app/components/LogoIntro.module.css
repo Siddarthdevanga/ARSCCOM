@@ -1,0 +1,63 @@
+/* ============================================================================
+   LOGO INTRO
+   Black ground, because the mark is white on transparency and would be
+   invisible on anything lighter. Same panel gradient as the login page, so
+   the overlay reads as that panel expanding to fill the screen and then
+   pulling back — not as a separate loading screen.
+   ========================================================================== */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(70% 55% at 50% 50%, rgba(245, 165, 36, 0.10) 0%, rgba(245, 165, 36, 0) 68%),
+    linear-gradient(158deg, #121214 0%, #050505 48%, #0c0c0f 100%);
+  opacity: 1;
+  transition: opacity 0.42s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Accent hairline, matching every other surface in the product. */
+.overlay::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    #f5a524 0%, #ffc75f 22%, #34d399 48%, #38bdf8 72%, #a78bfa 100%);
+}
+
+.mark {
+  width: clamp(120px, 16vw, 200px);
+  height: auto;
+  transform-origin: center;
+  animation: markZoom 1.32s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Starts small and slightly soft, pushes past its resting size, then keeps
+   growing as it fades — so it opens into the page rather than stopping and
+   waiting to be dismissed. */
+@keyframes markZoom {
+  0%   { transform: scale(0.62); opacity: 0; filter: blur(6px); }
+  32%  { transform: scale(1.04); opacity: 1; filter: blur(0); }
+  58%  { transform: scale(1);    opacity: 1; }
+  100% { transform: scale(2.35); opacity: 0; }
+}
+
+.leaving {
+  opacity: 0;
+  /* Hands control back the instant the fade begins, so a fast typist is
+     never blocked by something purely decorative. */
+  pointer-events: none;
+}
+
+/* Belt and braces: the component skips rendering entirely under reduced
+   motion, but if it is ever mounted another way, nothing should move. */
+@media (prefers-reduced-motion: reduce) {
+  .overlay { display: none; }
+  .mark { animation: none; }
+}

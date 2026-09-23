@@ -200,31 +200,51 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className={styles.container}>
+    <div className={styles.splitContainer}>
 
-      {/* ===== HEADER ===== */}
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <div className={styles.logoText}>H<span className={styles.aiChip}>ai</span> Visitor</div>
+      {/* Split screen, mirroring the login page: the dark panel gives the
+          width a purpose instead of stretching form fields across it. */}
+      <aside className={styles.brandPanel}>
+        <div className={styles.brandInner}>
+          <img src="/v-transparent.png" alt="" className={styles.brandLogo} />
+          <p className={styles.brandEyebrow}>Zodopt&rsquo;s</p>
+          <h2 className={styles.brandWordmark}>
+            H<span className={styles.brandChip}>ai</span> Visitor
+          </h2>
+          <p className={styles.brandSub}>The Visitor Management Portal</p>
+
+          <ul className={styles.brandPoints}>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+              Set up in minutes &mdash; no hardware needed
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l7 3v6c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V6l7-3z"/></svg>
+              Digital passes and ID verification
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+              Conference rooms and space usage
+            </li>
+          </ul>
         </div>
-        <div className={styles.rightHeader}>
-          <button className={styles.backBtn} onClick={() => router.push("/login")}>← Back</button>
-        </div>
-      </header>
+      </aside>
 
-      {/* ===== SCROLL BODY ===== */}
-      <div className={styles.scrollBody}>
+      {/* ===== FORM COLUMN ===== */}
+      <div className={styles.formPanel}>
+        <div className={styles.formPanelInner}>
 
-        {/* ===== HERO ===== */}
-        <section className={styles.hero}>
-          <h1 className={styles.heroTitle}>Create <span>Account</span></h1>
-          <p className={styles.heroSub}>Register your organization to start managing visitors and conference rooms</p>
-        </section>
+          <div className={styles.formHead}>
+            <button type="button" className={styles.backBtn} onClick={() => router.push("/login")}>
+              &larr; Back to login
+            </button>
+            <h1 className={styles.formTitle}>Create <span>Account</span></h1>
+            <p className={styles.formSubtitle}>
+              Register your organization to start managing visitors and conference rooms
+            </p>
+          </div>
 
-        {/* ===== MAIN CONTENT ===== */}
-        <main className={styles.mainContent}>
-          <div className={styles.formCard}>
-            <form className={`${styles.form} ${styles.formGrid}`} onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
+          <form className={styles.form} onSubmit={(e) => { e.preventDefault(); handleRegister(); }}>
 
               {/* Each block is a grid item: on a wide screen they sit side
                   by side, on a narrow one they stack. */}
@@ -466,9 +486,8 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-            </form>
-          </div>
-        </main>
+          </form>
+        </div>
       </div>
 
       {/* ── Already registered ── */}
