@@ -47,12 +47,12 @@
 /* ================= HEADER ================= */
 .header {
   height: 58px;
-  background: #fff;
+  background: var(--hv-ink);
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid var(--hv-line);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   position: sticky;
   top: 0;
   z-index: 300;
@@ -67,7 +67,7 @@
 .logoText {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--hv-ink);
+  color: #ffffff;
   letter-spacing: 0.2px;
 }
 .rightHeader {
@@ -78,8 +78,8 @@
 }
 .backBtn {
   background: transparent;
-  color: var(--hv-ink);
-  border: 2px solid var(--hv-ink);
+  color: rgba(255, 255, 255, 0.82);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 13px;
@@ -90,8 +90,8 @@
   white-space: nowrap;
 }
 .backBtn:hover {
-  background: var(--hv-ink);
-  color: #fff;
+  background: #ffffff;
+  color: var(--hv-ink);
 }
 
 /* ================= HERO ================= */
@@ -183,7 +183,7 @@
 }
 .dotGold {
   background: var(--hv-amber);
-  box-shadow: 0 0 0 3px rgba(240,165,0,0.15);
+  box-shadow: 0 0 0 3px rgba(245,165,36,0.16);
 }
 .cardTitle {
   font-size: 0.9rem;
@@ -574,4 +574,22 @@
   padding: 0.02em 0.14em 0.06em;
   margin: 0 0.02em;
   line-height: 1;
+}
+
+/* Accent hairline across the top of the header — the same line that runs
+   along the top of the login panel, so every page in the flow opens the
+   same way. .header is position:sticky, which is a positioned ancestor. */
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+    var(--hv-amber) 0%,
+    var(--hv-amber-lift) 22%,
+    var(--hv-mint) 48%,
+    var(--hv-sky) 72%,
+    var(--hv-violet) 100%);
 }
