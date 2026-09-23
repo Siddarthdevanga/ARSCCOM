@@ -150,14 +150,21 @@
   transform: translateX(-50%);
   width: 0;
   height: 2px;
-  background: var(--amber);
+  background: var(--nav-c, var(--amber));
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 2px;
+  box-shadow: 0 0 12px var(--nav-c, var(--amber));
 }
 
+/* Each nav item owns a hue, and the section it opens is built in that
+   same hue — so the colour tells you where you are, twice. */
+.navSky   { --nav-c: var(--sky);   --nav-wash: var(--sky-wash); }
+.navAmber { --nav-c: var(--amber); --nav-wash: var(--amber-wash); }
+.navMint  { --nav-c: var(--mint);  --nav-wash: var(--mint-wash); }
+
 .topNav button:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--nav-c);
+  background: var(--nav-wash);
 }
 
 .topNav button:hover::after,
@@ -166,8 +173,8 @@
 }
 
 .activeNavBtn {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.09) !important;
+  color: var(--nav-c) !important;
+  background: var(--nav-wash) !important;
 }
 
 /* ================= BRANDING CONTENT ================= */
@@ -274,44 +281,59 @@
 }
 
 /* ================= FEATURE LIST ================= */
+/* One row of three. They are peers, so they read better side by side than
+   stacked — and it keeps the panel's vertical rhythm tight. Wraps rather
+   than overflowing once the column gets too narrow to hold them. */
 .featureList {
   list-style: none;
-  margin: clamp(22px, 3.4vh, 36px) 0 0 0;
+  margin: clamp(22px, 3.4vh, 34px) 0 0 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: clamp(10px, 1.5vh, 14px);
-  text-align: left;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 1.1vw, 16px);
   animation: fadeIn 0.9s ease 0.55s both;
 }
 
 .featureItem {
   display: flex;
   align-items: center;
-  gap: clamp(11px, 1.3vw, 15px);
+  gap: clamp(7px, 0.8vw, 10px);
+  padding: clamp(7px, 0.9vh, 9px) clamp(11px, 1.1vw, 15px);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.035);
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(12.5px, 1.35vw, 15px);
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.72);
-  letter-spacing: 0.2px;
+  font-size: clamp(11px, 0.92vw, 13px);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+
+.featureItem:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 /* Tinted disc behind each glyph — keeps the colour legible on black at a
-   size where a bare 1.5px stroke would disappear. */
+   size where a bare stroke would disappear. */
 .featureIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: clamp(28px, 2.9vw, 34px);
-  height: clamp(28px, 2.9vw, 34px);
-  border-radius: 10px;
+  width: clamp(20px, 1.8vw, 24px);
+  height: clamp(20px, 1.8vw, 24px);
+  border-radius: 7px;
   flex-shrink: 0;
-  border: 1px solid currentColor;
 }
 
 .featureIcon svg {
-  width: 55%;
-  height: 55%;
+  width: 62%;
+  height: 62%;
 }
 
 .iconAmber { color: var(--amber); background: var(--amber-wash); }
@@ -410,9 +432,32 @@
   font-size: clamp(23px, 3.4vw, 33px);
   font-weight: 800;
   color: var(--ink);
-  margin: 0 0 clamp(18px, 3vh, 26px) 0;
+  margin: 0 0 clamp(8px, 1.4vh, 12px) 0;
   letter-spacing: -0.5px;
   padding-right: clamp(44px, 6vw, 56px);
+}
+
+/* Headings ramp from ink into the section's own hue. Guarded, because
+   without background-clip support transparent fill = invisible text. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .dropdownSection h2 {
+    background: linear-gradient(96deg, var(--ink) 0%, var(--ink) 30%, var(--tier, var(--amber)) 110%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+/* Short rule in the section hue, sitting under the heading. */
+.dropdownSection h2::after {
+  content: '';
+  display: block;
+  width: 52px;
+  height: 4px;
+  margin-top: clamp(12px, 1.8vh, 16px);
+  border-radius: 999px;
+  background: var(--tier, var(--amber));
+  -webkit-text-fill-color: initial;
 }
 
 .dropdownSection p {
@@ -502,10 +547,11 @@
   font-family: 'Montserrat', sans-serif;
   font-size: clamp(11px, 1.6vw, 13px);
   font-weight: 800;
-  color: var(--text-faint);
+  color: var(--tier, var(--text-faint));
   margin: 0 0 clamp(8px, 1.4vh, 12px) 0;
   letter-spacing: 1.4px;
   text-transform: uppercase;
+  filter: saturate(1.4) brightness(0.72);
 }
 
 .planPrice {
@@ -679,6 +725,19 @@
   position: relative;
 }
 
+/* Two very faint colour washes so the white half isn't a flat void. They
+   sit under the card and are barely nameable as colour — the card still
+   reads as the brightest thing in the column. */
+.rightSection::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(60% 45% at 88% 6%, rgba(245, 165, 36, 0.11) 0%, rgba(245, 165, 36, 0) 68%),
+    radial-gradient(55% 45% at 6% 96%, rgba(56, 189, 248, 0.11) 0%, rgba(56, 189, 248, 0) 70%);
+  pointer-events: none;
+}
+
 .loginCard {
   width: 100%;
   max-width: clamp(380px, 92%, 448px);
@@ -692,6 +751,7 @@
     0 20px 56px rgba(16, 17, 26, 0.09);
   animation: fadeInRight 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  z-index: 1;
   overflow: hidden;
 }
 
@@ -726,6 +786,18 @@
   letter-spacing: -0.5px;
   white-space: normal;
   overflow-wrap: break-word;
+}
+
+/* Ramps from ink into a deep amber. Deep, not bright: this is body-weight
+   reading text, and it has to clear contrast on white. Guarded, because
+   without background-clip support a transparent fill renders nothing. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .loginTitle {
+    background: linear-gradient(98deg, #121214 0%, #121214 26%, #8a4a00 78%, #b06a05 100%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
 }
 
 .loginSubtitle {
@@ -911,11 +983,16 @@
 }
 
 /* ================= LOGIN BUTTON ================= */
+/* The single most important control on the page, so it carries the brand
+   colour outright. Near-black label on amber clears contrast comfortably
+   — white on amber would not. */
 .loginBtn {
   width: 100%;
   padding: clamp(14px, 2.4vh, 17px);
-  background: linear-gradient(180deg, #1d1d1f 0%, #050505 100%);
-  color: #ffffff;
+  background: linear-gradient(135deg, var(--amber-lift) 0%, var(--amber) 48%, #e8900d 100%);
+  background-size: 200% 200%;
+  background-position: 0% 50%;
+  color: #1c1204;
   border: none;
   border-radius: clamp(9px, 1.4vw, 11px);
   font-family: 'Montserrat', sans-serif;
@@ -923,26 +1000,27 @@
   font-weight: 800;
   letter-spacing: 1.6px;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: clamp(18px, 3vh, 24px);
   text-transform: uppercase;
   position: relative;
-  box-shadow: 0 4px 14px rgba(5, 5, 5, 0.2);
+  box-shadow: 0 6px 20px rgba(245, 165, 36, 0.4);
 }
 
 .loginBtn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(5, 5, 5, 0.3), 0 0 0 1px var(--amber);
+  background-position: 100% 50%;
+  box-shadow: 0 14px 34px rgba(245, 165, 36, 0.52);
 }
 
 .loginBtn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: 0 3px 10px rgba(5, 5, 5, 0.25);
+  box-shadow: 0 4px 12px rgba(245, 165, 36, 0.4);
 }
 
 .loginBtn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 4px var(--amber-wash), 0 4px 14px rgba(5, 5, 5, 0.2);
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .loginBtn:disabled {

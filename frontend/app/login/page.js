@@ -228,9 +228,9 @@ export default function LoginPage() {
       {/* LEFT BRANDING SECTION */}
       <div className={styles.leftSection}>
         <nav className={styles.topNav}>
-          <button className={activeTab === "about" ? styles.activeNavBtn : ""} onClick={() => setActiveTab(activeTab === "about" ? null : "about")}>ABOUT</button>
-          <button className={activeTab === "plans" ? styles.activeNavBtn : ""} onClick={() => setActiveTab(activeTab === "plans" ? null : "plans")}>PLANS</button>
-          <button className={activeTab === "contact" ? styles.activeNavBtn : ""} onClick={() => setActiveTab(activeTab === "contact" ? null : "contact")}>CONTACT</button>
+          <button className={`${styles.navSky} ${activeTab === "about" ? styles.activeNavBtn : ""}`} onClick={() => setActiveTab(activeTab === "about" ? null : "about")}>ABOUT</button>
+          <button className={`${styles.navAmber} ${activeTab === "plans" ? styles.activeNavBtn : ""}`} onClick={() => setActiveTab(activeTab === "plans" ? null : "plans")}>PLANS</button>
+          <button className={`${styles.navMint} ${activeTab === "contact" ? styles.activeNavBtn : ""}`} onClick={() => setActiveTab(activeTab === "contact" ? null : "contact")}>CONTACT</button>
         </nav>
 
         <div className={styles.brandingContent}>
@@ -287,14 +287,14 @@ export default function LoginPage() {
           <div className={styles.dropdownOverlay} onClick={() => setActiveTab(null)}>
             <div className={styles.dropdownContent} onClick={(e) => e.stopPropagation()}>
               {activeTab === "about" && (
-                <div className={styles.dropdownSection}>
+                <div className={`${styles.dropdownSection} ${styles.tierSky}`}>
                   <h2>About Hai Visitor</h2>
                   <p>Hai Visitor is a secure Visitor & Conference Management Platform designed to digitalize visitor flow, improve security, and enhance organizational efficiency.</p>
                   <p>Transform your workplace with seamless visitor management, automated meeting coordination, and intelligent space utilization — all in one powerful platform.</p>
                 </div>
               )}
               {activeTab === "plans" && (
-                <div className={styles.dropdownSection}>
+                <div className={`${styles.dropdownSection} ${styles.tierAmber}`}>
                   <h2>Subscription Plans</h2>
                   <div className={styles.plansGrid}>
                     <div className={`${styles.planCard} ${styles.tierSky}`}>
@@ -322,7 +322,7 @@ export default function LoginPage() {
                 </div>
               )}
               {activeTab === "contact" && (
-                <div className={styles.dropdownSection}>
+                <div className={`${styles.dropdownSection} ${styles.tierMint}`}>
                   <h2>Get in Touch</h2>
                   <div className={styles.contactGrid}>
                     <div className={styles.contactItem}>
