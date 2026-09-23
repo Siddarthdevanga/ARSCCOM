@@ -235,7 +235,7 @@ export default function LoginPage() {
 
         <div className={styles.brandingContent}>
           <div className={styles.logoContainer}>
-            <Image src="/v-transparent.png" alt="Hai Visitor Logo" width={180} height={180} priority className={styles.brandLogo} />
+            <Image src="/v-transparent.png" alt="Hai Visitor Logo" width={300} height={300} priority className={styles.brandLogo} />
           </div>
 
           <p className={styles.eyebrow}>Zodopt&rsquo;s</p>
@@ -244,32 +244,46 @@ export default function LoginPage() {
           </h1>
           <p className={styles.platformSubtitle}>The Visitor Management Portal</p>
 
+          {/* Each feature carries its own hue from the three-colour set —
+              small, on black, and always in the same order, so the colours
+              read as a system rather than as decoration. */}
           <ul className={styles.featureList}>
             <li className={styles.featureItem}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
+              <span className={`${styles.featureIcon} ${styles.iconAmber}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5" />
+                </svg>
+              </span>
               Streamline check-ins
             </li>
             <li className={styles.featureItem}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 3l7 3v6c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V6l7-3z" />
-              </svg>
+              <span className={`${styles.featureIcon} ${styles.iconSky}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 3l7 3v6c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V6l7-3z" />
+                </svg>
+              </span>
               Enhance security
             </li>
             <li className={styles.featureItem}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <rect x="3" y="3" width="7" height="7" rx="1.5" />
-                <rect x="14" y="3" width="7" height="7" rx="1.5" />
-                <rect x="3" y="14" width="7" height="7" rx="1.5" />
-                <rect x="14" y="14" width="7" height="7" rx="1.5" />
-              </svg>
+              <span className={`${styles.featureIcon} ${styles.iconMint}`}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="7" rx="1.5" />
+                  <rect x="3" y="14" width="7" height="7" rx="1.5" />
+                  <rect x="14" y="14" width="7" height="7" rx="1.5" />
+                </svg>
+              </span>
               Optimize space utilization
             </li>
           </ul>
         </div>
 
-        {activeTab && (
+      </div>
+
+      {/* The overlay is a sibling of both panels, never a child of
+          .leftSection — that column is a scroll container, and a fixed
+          overlay nested inside it gets clipped to the column's width. */}
+      {activeTab && (
           <div className={styles.dropdownOverlay} onClick={() => setActiveTab(null)}>
             <div className={styles.dropdownContent} onClick={(e) => e.stopPropagation()}>
               {activeTab === "about" && (
@@ -283,23 +297,23 @@ export default function LoginPage() {
                 <div className={styles.dropdownSection}>
                   <h2>Subscription Plans</h2>
                   <div className={styles.plansGrid}>
-                    <div className={styles.planCard}>
+                    <div className={`${styles.planCard} ${styles.tierSky}`}>
                       <div className={styles.planHeader}><h3>TRIAL</h3><div className={styles.planPrice}>₹49<span>/15 days</span></div></div>
                       <ul className={styles.planFeatures}><li>100 Visitor Bookings</li><li>2 Conference Rooms · 100 Bookings</li><li>Email Support</li></ul>
                       <Link href="/register"><button className={styles.planBtn}>Start Trial</button></Link>
                     </div>
-                    <div className={`${styles.planCard} ${styles.popularPlan}`}>
+                    <div className={`${styles.planCard} ${styles.popularPlan} ${styles.tierAmber}`}>
                       <div className={styles.popularBadge}>MOST POPULAR</div>
                       <div className={styles.planHeader}><h3>BUSINESS</h3><div className={styles.planPrice}>₹500<span>/month</span></div></div>
                       <ul className={styles.planFeatures}><li>Unlimited Visitors</li><li>Custom Registration Fields</li><li>Priority Support</li></ul>
-                      <Link href="/register"><button className={styles.planBtn}>Get Started</button></Link>
+                      <Link href="/register"><button className={`${styles.planBtn} ${styles.planBtnPrimary}`}>Get Started</button></Link>
                     </div>
-                    <div className={styles.planCard}>
+                    <div className={`${styles.planCard} ${styles.tierViolet}`}>
                       <div className={styles.planHeader}><h3>ENTERPRISE</h3><div className={styles.planPrice}>₹1000<span>/month</span></div></div>
                       <ul className={styles.planFeatures}><li>Unlimited Visitors</li><li>Unlimited Conference Booking &amp; Rooms</li><li>Dedicated Support</li></ul>
                       <Link href="/register"><button className={styles.planBtn}>Get Started</button></Link>
                     </div>
-                    <div className={styles.planCard}>
+                    <div className={`${styles.planCard} ${styles.tierMint}`}>
                       <div className={styles.planHeader}><h3>CUSTOM BUILD</h3><div className={styles.planPrice}>Contact Us</div></div>
                       <ul className={styles.planFeatures}><li>Custom Build of Visitor Management</li><li>Tailored to Your Needs</li><li>Dedicated Support</li></ul>
                       <Link href="/contact-us"><button className={styles.planBtn}>Contact Support</button></Link>
@@ -311,9 +325,32 @@ export default function LoginPage() {
                 <div className={styles.dropdownSection}>
                   <h2>Get in Touch</h2>
                   <div className={styles.contactGrid}>
-                    <div className={styles.contactItem}><div className={styles.contactIcon}>📧</div><div><strong>Email</strong><p>admin@haivisitor.zodopt.com</p></div></div>
-                    <div className={styles.contactItem}><div className={styles.contactIcon}>📞</div><div><strong>Phone</strong><p>+91 8647878785</p></div></div>
-                    <div className={styles.contactItem}><div className={styles.contactIcon}>⏰</div><div><strong>Support Hours</strong><p>Mon-Fri, 9AM-6PM IST</p></div></div>
+                    <div className={styles.contactItem}>
+                      <div className={`${styles.contactIcon} ${styles.iconAmber}`}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" />
+                          <path d="m3 7 9 6 9-6" />
+                        </svg>
+                      </div>
+                      <div><strong>Email</strong><p>admin@haivisitor.zodopt.com</p></div>
+                    </div>
+                    <div className={styles.contactItem}>
+                      <div className={`${styles.contactIcon} ${styles.iconSky}`}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z" />
+                        </svg>
+                      </div>
+                      <div><strong>Phone</strong><p>+91 8647878785</p></div>
+                    </div>
+                    <div className={styles.contactItem}>
+                      <div className={`${styles.contactIcon} ${styles.iconMint}`}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="9.5" />
+                          <path d="M12 6.5V12l3.5 2" />
+                        </svg>
+                      </div>
+                      <div><strong>Support Hours</strong><p>Mon-Fri, 9AM-6PM IST</p></div>
+                    </div>
                   </div>
                   <p className={styles.contactFooter}>Our dedicated team is ready to help you streamline your visitor management.</p>
                 </div>
@@ -321,8 +358,7 @@ export default function LoginPage() {
               <button className={styles.closeDropdown} onClick={() => setActiveTab(null)}>✕</button>
             </div>
           </div>
-        )}
-      </div>
+      )}
 
       {/* RIGHT LOGIN SECTION */}
       <div className={styles.rightSection}>

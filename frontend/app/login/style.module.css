@@ -1,10 +1,10 @@
 /* ======================================================
    HAI VISITOR — LOGIN PAGE
-   Monochrome ground with a single amber accent. The
-   accent is load-bearing, not decorative: it marks where
-   the user is (focus), what the product does (feature
-   icons) and what we want them to pick (popular plan).
-   Everything else stays black, white and grey.
+   Black-and-white theme with a four-colour accent set.
+   The neutrals carry the layout; the colours only ever
+   mark meaning — focus, capability, tier, recommendation.
+   Amber is the brand lead (taken from the pin logo);
+   sky, mint and violet are its supporting set.
 ====================================================== */
 
 /* ================= GLOBAL SCROLLBAR KILL ================= */
@@ -29,21 +29,27 @@
 /* ================= CONTAINER + TOKENS ================= */
 .container {
   --ink:          #050505;
-  --ink-2:        #101010;
   --paper:        #ffffff;
 
-  --accent:       #f0a500;
-  --accent-lift:  #ffc043;
-  --accent-wash:  rgba(240, 165, 0, 0.16);
+  --amber:        #f5a524;
+  --amber-lift:   #ffc75f;
+  --sky:          #38bdf8;
+  --mint:         #34d399;
+  --violet:       #a78bfa;
 
-  --line:         #e6e6ea;
-  --line-strong:  #d4d4da;
+  --amber-wash:   rgba(245, 165, 36, 0.16);
+  --sky-wash:     rgba(56, 189, 248, 0.14);
+  --mint-wash:    rgba(52, 211, 153, 0.14);
+  --violet-wash:  rgba(167, 139, 250, 0.14);
+
+  --line:         #e7e7ec;
+  --line-strong:  #d5d5dd;
   --text:         #17171a;
   --text-soft:    #5f6068;
   --text-faint:   #8d8e97;
 
-  --danger:       #9b1c1c;
-  --ok:           #1a6b3c;
+  --danger:       #c0392b;
+  --ok:           #1a7f4b;
 
   display: flex;
   height: 100vh;
@@ -56,43 +62,39 @@
 /* ================= LEFT BRANDING SECTION ================= */
 .leftSection {
   flex: 0 0 55%;
-  /* Three stacked layers give the panel depth a flat fill can't: a soft
-     spotlight behind the mark, a warm bloom low-left, and the base ramp. */
+  /* Layered light gives the panel depth a flat fill can't: a spotlight
+     behind the mark, a warm bloom low-left, a cool one high-right. */
   background:
-    radial-gradient(110% 80% at 50% 22%, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 58%),
-    radial-gradient(70% 55% at 12% 100%, rgba(240, 165, 0, 0.10) 0%, rgba(240, 165, 0, 0) 70%),
-    linear-gradient(158deg, #121212 0%, #050505 48%, #0d0d0d 100%);
+    radial-gradient(105% 75% at 50% 26%, rgba(255, 255, 255, 0.11) 0%, rgba(255, 255, 255, 0) 58%),
+    radial-gradient(65% 50% at 8% 100%, rgba(245, 165, 36, 0.13) 0%, rgba(245, 165, 36, 0) 72%),
+    radial-gradient(55% 45% at 96% 4%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0) 70%),
+    linear-gradient(158deg, #121214 0%, #050505 48%, #0c0c0f 100%);
   display: flex;
   flex-direction: column;
   position: relative;
-  isolation: isolate;
-  /* In the split desktop layout this column has a fixed height (100vh via
-     .container) with no scroll of its own — if its content is ever taller
-     than the viewport (short browser window, tablet landscape), it was
-     silently clipped with no way to see the rest. This is the escape hatch. */
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Faint engineering grid, faded out at the edges so it reads as texture
+/* Faint engineering grid, faded at the edges so it reads as texture
    rather than as a pattern with a visible boundary. */
 .leftSection::before {
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
-  background-size: 72px 72px;
-  -webkit-mask-image: radial-gradient(75% 65% at 50% 42%, #000 0%, transparent 100%);
-          mask-image: radial-gradient(75% 65% at 50% 42%, #000 0%, transparent 100%);
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 76px 76px;
+  -webkit-mask-image: radial-gradient(78% 66% at 50% 44%, #000 0%, transparent 100%);
+          mask-image: radial-gradient(78% 66% at 50% 44%, #000 0%, transparent 100%);
   pointer-events: none;
 }
 
-/* Hairline of accent along the very top edge — the first thing the eye
-   registers, and the only chrome on the panel. */
+/* The full accent set as a hairline along the top edge — the one place
+   the whole palette appears together. */
 .leftSection::after {
   content: '';
   position: absolute;
@@ -100,8 +102,13 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--accent-lift) 40%, rgba(255, 192, 67, 0) 100%);
-  z-index: 1;
+  background: linear-gradient(90deg,
+    var(--amber) 0%,
+    var(--amber-lift) 22%,
+    var(--mint) 48%,
+    var(--sky) 72%,
+    var(--violet) 100%);
+  z-index: 3;
 }
 
 /* ================= TOP NAV ================= */
@@ -113,8 +120,8 @@
   /* gap is vw-based off the full viewport but this row lives inside
      .leftSection, a ~45-55% column above 900px — flex-wrap is the safety
      net if 3 buttons + gaps ever don't fit that narrower width. */
-  gap: clamp(20px, 3vw, 52px);
-  padding: clamp(26px, 3.2vh, 38px) clamp(32px, 3.5vw, 52px);
+  gap: clamp(18px, 2.6vw, 46px);
+  padding: clamp(24px, 3vh, 34px) clamp(32px, 3.5vw, 52px);
   position: relative;
   z-index: 10;
   flex-shrink: 0;
@@ -123,13 +130,13 @@
 .topNav button {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(255, 255, 255, 0.6);
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(11px, 1.15vw, 12.5px);
   font-weight: 700;
   letter-spacing: 2px;
   cursor: pointer;
-  transition: color 0.3s ease, background 0.3s ease, transform 0.3s ease;
+  transition: color 0.25s ease, background 0.25s ease;
   padding: clamp(9px, 1.3vh, 11px) clamp(14px, 1.8vw, 18px);
   position: relative;
   border-radius: 8px;
@@ -143,7 +150,7 @@
   transform: translateX(-50%);
   width: 0;
   height: 2px;
-  background: var(--accent);
+  background: var(--amber);
   transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-radius: 2px;
 }
@@ -170,7 +177,7 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: clamp(20px, 3vh, 40px) clamp(36px, 4.5vw, 70px) clamp(32px, 5vh, 56px);
+  padding: clamp(12px, 2vh, 28px) clamp(36px, 4.5vw, 70px) clamp(28px, 4.5vh, 48px);
   text-align: center;
   min-height: 0;
   position: relative;
@@ -179,20 +186,22 @@
 
 .logoContainer {
   position: relative;
-  margin-bottom: clamp(18px, 2.6vh, 28px);
+  margin-bottom: clamp(14px, 2.2vh, 24px);
   animation: fadeInScale 1.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Soft halo so the mark sits in the panel instead of on top of it. */
+/* Warm halo so the mark sits in the panel instead of on top of it. */
 .logoContainer::before {
   content: '';
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 190%;
-  height: 190%;
+  width: 180%;
+  height: 180%;
   transform: translate(-50%, -50%);
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 65%);
+  background:
+    radial-gradient(circle, rgba(245, 165, 36, 0.13) 0%, rgba(245, 165, 36, 0) 58%),
+    radial-gradient(circle, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0) 62%);
   pointer-events: none;
 }
 
@@ -205,7 +214,7 @@
    left panel. Do not place it on a light surface. */
 .brandLogo {
   position: relative;
-  width: clamp(112px, 13vw, 160px);
+  width: clamp(150px, 19vw, 248px);
   height: auto;
   max-width: 100%;
 }
@@ -216,8 +225,8 @@
   font-weight: 700;
   letter-spacing: clamp(3px, 0.45vw, 5.5px);
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.5);
-  margin: 0 0 clamp(8px, 1.2vh, 12px) 0;
+  color: rgba(255, 255, 255, 0.46);
+  margin: 0 0 clamp(6px, 1vh, 10px) 0;
   animation: fadeIn 0.9s ease 0.2s both;
 }
 
@@ -226,7 +235,7 @@
   /* Sized in vw against the full viewport, but this element lives inside
      .leftSection which is only ~45-55% of that width above 900px — so this
      must stay comfortably small enough to fit a narrower column. */
-  font-size: clamp(30px, 4.2vw, 58px);
+  font-size: clamp(30px, 4vw, 56px);
   font-weight: 800;
   letter-spacing: -0.5px;
   line-height: 1.05;
@@ -237,28 +246,29 @@
   max-width: 100%;
 }
 
-/* "ai" is the product name's payload, so it gets the one piece of emphasis
-   on the panel: the panel's own colours, inverted. No new hue needed. */
+/* "ai" is the product name's payload, so it gets the brand colour and the
+   only filled shape on the panel. */
 .aiChip {
   display: inline-block;
-  background: #ffffff;
+  background: linear-gradient(145deg, var(--amber-lift) 0%, var(--amber) 100%);
   color: var(--ink);
   border-radius: 0.16em;
   padding: 0.04em 0.13em 0.07em;
   margin: 0 0.03em;
   line-height: 1;
   transform: translateY(-0.02em);
+  box-shadow: 0 0 34px rgba(245, 165, 36, 0.4);
 }
 
 .platformSubtitle {
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(11px, 1.25vw, 14px);
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.7);
   letter-spacing: clamp(1.5px, 0.26vw, 3.4px);
   text-transform: uppercase;
   margin: 0;
-  padding-top: clamp(14px, 2vh, 18px);
+  padding-top: clamp(13px, 1.9vh, 17px);
   border-top: 1px solid rgba(255, 255, 255, 0.14);
   animation: fadeIn 0.9s ease 0.4s both;
 }
@@ -266,11 +276,11 @@
 /* ================= FEATURE LIST ================= */
 .featureList {
   list-style: none;
-  margin: clamp(26px, 4vh, 40px) 0 0 0;
+  margin: clamp(22px, 3.4vh, 36px) 0 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: clamp(11px, 1.6vh, 15px);
+  gap: clamp(10px, 1.5vh, 14px);
   text-align: left;
   animation: fadeIn 0.9s ease 0.55s both;
 }
@@ -278,77 +288,114 @@
 .featureItem {
   display: flex;
   align-items: center;
-  gap: clamp(10px, 1.2vw, 14px);
+  gap: clamp(11px, 1.3vw, 15px);
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(12.5px, 1.35vw, 15px);
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.66);
+  color: rgba(255, 255, 255, 0.72);
   letter-spacing: 0.2px;
 }
 
-.featureItem svg {
-  width: clamp(15px, 1.5vw, 17px);
-  height: clamp(15px, 1.5vw, 17px);
+/* Tinted disc behind each glyph — keeps the colour legible on black at a
+   size where a bare 1.5px stroke would disappear. */
+.featureIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(28px, 2.9vw, 34px);
+  height: clamp(28px, 2.9vw, 34px);
+  border-radius: 10px;
   flex-shrink: 0;
-  color: var(--accent);
+  border: 1px solid currentColor;
 }
+
+.featureIcon svg {
+  width: 55%;
+  height: 55%;
+}
+
+.iconAmber { color: var(--amber); background: var(--amber-wash); }
+.iconSky   { color: var(--sky);   background: var(--sky-wash); }
+.iconMint  { color: var(--mint);  background: var(--mint-wash); }
 
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ================= DROPDOWN OVERLAY ================= */
+/* ================= MODAL OVERLAY ================= */
+/* Rendered as a sibling of both panels. Never nest this inside
+   .leftSection: that column scrolls and hides overflow-x, which clips a
+   fixed overlay to the column instead of the viewport. */
 .dropdownOverlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.74);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  z-index: 100;
-  animation: fadeIn 0.3s ease;
+  inset: 0;
+  background: rgba(4, 4, 6, 0.76);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  z-index: 1000;
+  animation: fadeIn 0.28s ease;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   padding: clamp(24px, 4vh, 48px) clamp(20px, 3vw, 40px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .dropdownContent {
-  max-width: clamp(600px, 88vw, 1100px);
+  width: 100%;
+  max-width: min(1100px, 92vw);
   margin: auto;
   background: var(--paper);
-  border-radius: clamp(18px, 2.6vw, 28px);
-  padding: clamp(36px, 6vh, 64px) clamp(32px, 5vw, 56px);
-  box-shadow: 0 32px 90px rgba(0, 0, 0, 0.45);
-  animation: slideInScale 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: clamp(18px, 2.4vw, 26px);
+  padding: clamp(38px, 6vh, 60px) clamp(30px, 4.5vw, 54px);
+  box-shadow: 0 36px 100px rgba(0, 0, 0, 0.5);
+  animation: slideInScale 0.38s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  overflow: hidden;
+}
+
+/* Same accent hairline as the panel, tying the modal to the page. */
+.dropdownContent::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--amber) 0%,
+    var(--amber-lift) 22%,
+    var(--mint) 48%,
+    var(--sky) 72%,
+    var(--violet) 100%);
 }
 
 @keyframes slideInScale {
-  from { opacity: 0; transform: scale(0.96) translateY(-24px); }
+  from { opacity: 0; transform: scale(0.96) translateY(-22px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .closeDropdown {
   position: absolute;
-  top: clamp(18px, 3vh, 28px);
-  right: clamp(18px, 3vw, 28px);
-  width: clamp(38px, 5.5vw, 44px);
-  height: clamp(38px, 5.5vw, 44px);
+  top: clamp(18px, 3vh, 26px);
+  right: clamp(18px, 3vw, 26px);
+  width: clamp(36px, 5vw, 42px);
+  height: clamp(36px, 5vw, 42px);
   border-radius: 50%;
-  background: #f3f3f5;
+  background: #f4f4f6;
   border: 1px solid var(--line);
-  font-size: clamp(19px, 2.8vw, 22px);
+  font-size: clamp(18px, 2.6vw, 21px);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  transition: all 0.28s ease;
   color: var(--text-soft);
   font-weight: 300;
   font-family: 'Inter', sans-serif;
+  z-index: 2;
 }
 
 .closeDropdown:hover {
@@ -360,19 +407,21 @@
 
 .dropdownSection h2 {
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(24px, 3.8vw, 34px);
+  font-size: clamp(23px, 3.4vw, 33px);
   font-weight: 800;
   color: var(--ink);
-  margin: 0 0 clamp(18px, 3vh, 28px) 0;
-  letter-spacing: -0.4px;
+  margin: 0 0 clamp(18px, 3vh, 26px) 0;
+  letter-spacing: -0.5px;
+  padding-right: clamp(44px, 6vw, 56px);
 }
 
 .dropdownSection p {
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  font-size: clamp(14px, 2.2vw, 16px);
+  font-size: clamp(14px, 1.9vw, 16px);
   line-height: 1.8;
   color: var(--text-soft);
-  margin-bottom: clamp(14px, 2.4vh, 18px);
+  margin: 0 0 clamp(14px, 2.4vh, 18px) 0;
+  max-width: 68ch;
 }
 
 /* ================= PLANS GRID ================= */
@@ -382,15 +431,22 @@
 .plansGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(10px, 1.4vw, 22px);
-  margin-top: clamp(28px, 4vh, 36px);
+  gap: clamp(10px, 1.4vw, 20px);
+  margin-top: clamp(26px, 4vh, 34px);
   align-items: stretch;
 }
+
+/* Each tier owns a hue, set once here and picked up by the rule, the
+   price, the checkmarks and the hover state below. */
+.tierAmber  { --tier: var(--amber);  --tier-wash: var(--amber-wash); }
+.tierSky    { --tier: var(--sky);    --tier-wash: var(--sky-wash); }
+.tierMint   { --tier: var(--mint);   --tier-wash: var(--mint-wash); }
+.tierViolet { --tier: var(--violet); --tier-wash: var(--violet-wash); }
 
 .planCard {
   background: var(--paper);
   border-radius: clamp(14px, 2vw, 18px);
-  padding: clamp(20px, 2.6vh, 32px) clamp(14px, 1.8vw, 26px);
+  padding: clamp(22px, 2.8vh, 32px) clamp(14px, 1.8vw, 24px);
   border: 1px solid var(--line);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -399,31 +455,37 @@
   flex-direction: column;
 }
 
+.planCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: clamp(14px, 1.8vw, 24px);
+  right: clamp(14px, 1.8vw, 24px);
+  height: 3px;
+  border-radius: 0 0 3px 3px;
+  background: var(--tier, var(--line-strong));
+}
+
 .planCard > a { margin-top: auto; }
 
 .planCard:hover {
   transform: translateY(-6px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.13);
-  border-color: var(--ink);
+  border-color: var(--tier, var(--ink));
+  box-shadow: 0 18px 46px var(--tier-wash, rgba(0, 0, 0, 0.12));
 }
 
 .popularPlan {
-  border-color: var(--ink);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.14);
+  border-color: var(--tier);
+  box-shadow: 0 14px 38px var(--tier-wash);
 }
 
-.popularPlan:hover {
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.2);
-}
-
-/* The one plan we want chosen is the one place a coloured badge earns
-   its keep — it is a recommendation, not decoration. */
+/* The one plan we want chosen gets the loudest badge. */
 .popularBadge {
   position: absolute;
   top: clamp(-11px, -1.6vh, -13px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--accent);
+  background: var(--tier, var(--ink));
   color: var(--ink);
   font-family: 'Montserrat', sans-serif;
   font-size: clamp(8.5px, 1.3vw, 10px);
@@ -431,8 +493,9 @@
   padding: clamp(5px, 1vh, 7px) clamp(10px, 1.8vw, 14px);
   border-radius: 999px;
   letter-spacing: 0.9px;
-  box-shadow: 0 4px 14px rgba(240, 165, 0, 0.4);
+  box-shadow: 0 4px 14px var(--tier-wash);
   white-space: nowrap;
+  z-index: 2;
 }
 
 .planHeader h3 {
@@ -447,7 +510,7 @@
 
 .planPrice {
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(21px, 3.4vw, 30px);
+  font-size: clamp(21px, 3.2vw, 30px);
   font-weight: 800;
   color: var(--ink);
   margin-bottom: clamp(16px, 2.6vh, 22px);
@@ -484,7 +547,7 @@
   content: '✓';
   position: absolute;
   left: 0;
-  color: var(--accent);
+  color: var(--tier, var(--ink));
   font-weight: 900;
   font-size: clamp(12px, 1.7vw, 14px);
 }
@@ -492,25 +555,39 @@
 .planBtn {
   width: 100%;
   padding: clamp(11px, 1.9vh, 14px) clamp(6px, 1vw, 10px);
-  background: var(--ink);
-  color: #ffffff;
-  border: 1px solid var(--ink);
+  background: var(--paper);
+  color: var(--ink);
+  border: 1.5px solid var(--line-strong);
   border-radius: clamp(9px, 1.4vw, 11px);
   font-family: 'Montserrat', sans-serif;
   font-size: clamp(10.5px, 1.5vw, 12px);
   font-weight: 800;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   letter-spacing: 0.8px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .planBtn:hover {
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
   transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.16);
+}
+
+/* Only the recommended plan gets a filled button — one clear default. */
+.planBtnPrimary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #ffffff;
+}
+
+.planBtnPrimary:hover {
+  background: var(--tier);
+  border-color: var(--tier);
+  color: var(--ink);
+  box-shadow: 0 10px 26px var(--tier-wash);
 }
 
 .planBtn:active {
@@ -521,61 +598,70 @@
 .contactGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(clamp(220px, 100%, 280px), 1fr));
-  gap: clamp(16px, 2.4vw, 22px);
-  margin-top: clamp(28px, 4vh, 36px);
+  gap: clamp(14px, 2.2vw, 20px);
+  margin-top: clamp(26px, 4vh, 34px);
 }
 
 .contactItem {
   display: flex;
-  align-items: flex-start;
-  gap: clamp(14px, 2.2vw, 18px);
-  padding: clamp(20px, 3.2vh, 26px);
-  background: #fafafb;
+  align-items: center;
+  gap: clamp(13px, 2vw, 17px);
+  padding: clamp(18px, 3vh, 24px);
+  background: #fbfbfc;
   border-radius: clamp(13px, 2vw, 16px);
   border: 1px solid var(--line);
-  transition: all 0.3s ease;
+  transition: all 0.28s ease;
 }
 
 .contactItem:hover {
-  border-color: var(--ink);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+  border-color: currentColor;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
-/* Emoji icons render in full colour regardless of CSS colour — desaturate
-   them so the monochrome palette holds. */
+/* Real SVG glyphs, not emoji — emoji render in full colour regardless of
+   CSS and cannot be brought into the palette. */
 .contactIcon {
-  font-size: clamp(24px, 3.8vw, 30px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: clamp(40px, 5.4vw, 46px);
+  height: clamp(40px, 5.4vw, 46px);
+  border-radius: 12px;
   flex-shrink: 0;
-  filter: grayscale(1);
-  opacity: 0.8;
+}
+
+.contactIcon svg {
+  width: 52%;
+  height: 52%;
 }
 
 .contactItem strong {
   display: block;
   font-family: 'Montserrat', sans-serif;
-  font-size: clamp(11px, 1.7vw, 12.5px);
+  font-size: clamp(10.5px, 1.6vw, 11.5px);
   font-weight: 700;
   color: var(--text-faint);
   letter-spacing: 1.3px;
   text-transform: uppercase;
-  margin-bottom: clamp(5px, 1vh, 7px);
+  margin-bottom: clamp(4px, 0.9vh, 6px);
 }
 
 .contactItem p {
   font-family: 'Poppins', sans-serif;
-  font-size: clamp(14px, 2.2vw, 15.5px);
+  font-size: clamp(13.5px, 2vw, 15px);
   color: var(--ink);
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.5;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .contactFooter {
-  margin-top: clamp(26px, 4vh, 34px);
+  margin-top: clamp(24px, 3.6vh, 32px);
   text-align: center;
   font-family: 'Poppins', sans-serif;
-  font-size: clamp(14px, 2.2vw, 15px);
+  font-size: clamp(13.5px, 2vw, 15px);
   color: var(--text-faint);
   line-height: 1.6;
 }
@@ -597,7 +683,7 @@
   width: 100%;
   max-width: clamp(380px, 92%, 448px);
   background: var(--paper);
-  padding: clamp(34px, 5vh, 46px) clamp(30px, 4.5vw, 42px);
+  padding: clamp(32px, 4.6vh, 44px) clamp(28px, 4.2vw, 40px);
   border-radius: clamp(18px, 2.4vw, 24px);
   border: 1px solid var(--line);
   /* Two shadows: a tight one for the edge, a wide soft one for lift. */
@@ -605,6 +691,24 @@
     0 1px 2px rgba(16, 17, 26, 0.04),
     0 20px 56px rgba(16, 17, 26, 0.09);
   animation: fadeInRight 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Accent hairline across the card top — the one piece of colour that
+   carries across the fold to the light side of the page. */
+.loginCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    var(--amber) 0%,
+    var(--amber-lift) 30%,
+    var(--mint) 60%,
+    var(--sky) 100%);
 }
 
 @keyframes fadeInRight {
@@ -628,7 +732,7 @@
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(13px, 2vw, 14.5px);
   color: var(--text-faint);
-  margin: 0 0 clamp(26px, 4vh, 34px) 0;
+  margin: 0 0 clamp(24px, 3.6vh, 32px) 0;
   line-height: 1.5;
 }
 
@@ -670,9 +774,9 @@
    colour-shift the user has to hunt for. */
 .inputGroup input:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--amber);
   background: var(--paper);
-  box-shadow: 0 0 0 4px var(--accent-wash);
+  box-shadow: 0 0 0 4px var(--amber-wash);
 }
 
 .inputGroup input:disabled {
@@ -785,20 +889,19 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* The page is monochrome, but pass/fail must not be distinguishable by
-   wording alone — these two keep a muted red / green tint on a neutral
-   ground so the state reads at a glance without fighting the accent. */
+/* Pass and fail must never be distinguishable by wording alone. These are
+   functional colours, kept outside the brand set on purpose. */
 .errorMessage {
-  background: #fcfafa;
+  background: #fdf5f4;
   color: var(--danger);
-  border: 1px solid var(--line);
+  border: 1px solid #f2dad6;
   border-left: 3px solid var(--danger);
 }
 
 .successMessage {
-  background: #fafcfb;
+  background: #f3faf6;
   color: var(--ok);
-  border: 1px solid var(--line);
+  border: 1px solid #d3ece0;
   border-left: 3px solid var(--ok);
 }
 
@@ -829,7 +932,7 @@
 
 .loginBtn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(5, 5, 5, 0.3);
+  box-shadow: 0 12px 30px rgba(5, 5, 5, 0.3), 0 0 0 1px var(--amber);
 }
 
 .loginBtn:active:not(:disabled) {
@@ -839,7 +942,7 @@
 
 .loginBtn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px var(--accent-wash), 0 4px 14px rgba(5, 5, 5, 0.2);
+  box-shadow: 0 0 0 4px var(--amber-wash), 0 4px 14px rgba(5, 5, 5, 0.2);
 }
 
 .loginBtn:disabled {
@@ -883,7 +986,7 @@
   bottom: -3px;
   width: 100%;
   height: 2px;
-  background: var(--accent);
+  background: var(--amber);
   transform: scaleX(0);
   transform-origin: left;
   transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
@@ -915,12 +1018,12 @@
   .leftSection {
     flex: none;
     min-height: auto;
-    padding-bottom: clamp(28px, 5vh, 44px);
+    padding-bottom: clamp(26px, 4.5vh, 40px);
   }
 
   .topNav {
     justify-content: center;
-    gap: clamp(26px, 5vw, 44px);
+    gap: clamp(24px, 5vw, 42px);
   }
 
   /* Stacked, the feature list reads better centred under the wordmark
@@ -933,7 +1036,7 @@
     flex: none;
     min-height: auto;
     padding: clamp(28px, 4vh, 40px) clamp(20px, 4vw, 36px) clamp(40px, 6vh, 56px);
-    background: #f7f7f9;
+    background: #f6f6f8;
   }
 
   .plansGrid {
@@ -956,18 +1059,18 @@
   .planBtn { font-size: 13px; padding: 15px; letter-spacing: 1px; }
 
   .topNav {
-    gap: 18px;
-    padding: 24px 20px;
+    gap: 16px;
+    padding: 22px 18px;
   }
 
   .topNav button {
     font-size: 11px;
     letter-spacing: 1.6px;
-    padding: 9px 12px;
+    padding: 9px 11px;
   }
 
   .brandingContent {
-    padding: 20px 24px 36px;
+    padding: 14px 24px 34px;
   }
 
   .wordmark {
@@ -975,7 +1078,11 @@
   }
 
   .dropdownContent {
-    padding: 32px 24px;
+    padding: 34px 22px;
+  }
+
+  .dropdownSection h2 {
+    padding-right: 44px;
   }
 
   .loginCard {
@@ -985,14 +1092,14 @@
 
 @media (max-width: 400px) {
   .topNav {
-    gap: 14px;
-    padding: 22px 16px;
+    gap: 12px;
+    padding: 20px 14px;
   }
 
   .topNav button {
     font-size: 10px;
-    letter-spacing: 1.3px;
-    padding: 8px 10px;
+    letter-spacing: 1.2px;
+    padding: 8px 9px;
   }
 
   .wordmark {
