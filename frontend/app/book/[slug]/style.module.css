@@ -2,7 +2,7 @@
 .page {
   min-height: 100vh;
   height: 100vh;
-  background: #f0eef8;
+  background: #f0f0f3;
   padding: 0;
   overflow-y: auto;
   overflow-x: hidden;
@@ -141,7 +141,7 @@
 /* ================= HEADER ================= */
 .header {
   background: #fff;
-  border-bottom: 1px solid #e8e4f3;
+  border-bottom: 1px solid #e7e7ea;
   padding: 0 2rem;
   height: 64px;
   display: flex;
@@ -184,7 +184,7 @@
   color: #1d1d21;
   margin: 0;
   font-weight: 600;
-  background: #f0eef8;
+  background: #f0f0f3;
   padding: 0.2rem 0.6rem;
   border-radius: 1rem;
   white-space: nowrap;
@@ -202,7 +202,7 @@
   color: #151519;
   font-size: 0.85rem;
   font-weight: 600;
-  background: #f0eef8;
+  background: #f0f0f3;
   padding: 0.4rem 0.875rem;
   border-radius: 2rem;
   max-width: 220px;
@@ -331,7 +331,7 @@
   border-radius: 1rem;
   padding: 1.75rem;
   box-shadow: 0 2px 20px rgba(21, 21, 25, 0.08);
-  border: 1px solid #e8e4f3;
+  border: 1px solid #e7e7ea;
   transition: box-shadow 0.2s ease;
 }
 
@@ -348,7 +348,7 @@
   align-items: center;
   gap: 0.5rem;
   padding-bottom: 1rem;
-  border-bottom: 2px solid #f0eef8;
+  border-bottom: 2px solid #f0f0f3;
 }
 
 .card h2::before {
@@ -368,7 +368,7 @@
   border-radius: 1rem;
   padding: 2.25rem;
   box-shadow: 0 4px 32px rgba(21, 21, 25, 0.12);
-  border: 1px solid #e8e4f3;
+  border: 1px solid #e7e7ea;
 }
 
 .authHeader {
@@ -430,7 +430,7 @@
   border: 1.5px solid #dddde0;
   font-size: 0.9rem;
   outline: none;
-  background: #faf9ff;
+  background: #fafafd;
   transition: all 0.2s ease;
   font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   color: #212124;
@@ -450,7 +450,7 @@
 
 .input:disabled,
 .select:disabled {
-  background: #f5f3ff;
+  background: #f5f5f8;
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -467,7 +467,7 @@
   background-repeat: no-repeat;
   background-position: right 0.75rem center;
   background-size: 1.1rem;
-  background-color: #faf9ff;
+  background-color: #fafafd;
   padding-right: 2.5rem;
 }
 
@@ -509,7 +509,7 @@
   padding: 0.75rem 1rem;
   border-radius: 0.625rem;
   border: 1.5px solid #dddde0;
-  background: #faf9ff;
+  background: #fafafd;
   cursor: pointer;
   display: flex;
   justify-content: space-between;
@@ -534,7 +534,7 @@
 }
 
 .timeInputDisabled {
-  background: #f5f3ff;
+  background: #f5f5f8;
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -625,13 +625,13 @@
   padding: 0.75rem 1.125rem;
   cursor: pointer;
   transition: all 0.15s ease;
-  border-bottom: 1px solid #f3f0ff;
+  border-bottom: 1px solid #f3f3f6;
   font-size: 0.9rem;
   color: #374151;
 }
 
 .timeOption:hover {
-  background: #f5f3ff;
+  background: #f5f5f8;
   padding-left: 1.375rem;
   color: #151519;
 }
@@ -641,7 +641,7 @@
 }
 
 .timeOption:focus {
-  background: #f5f3ff;
+  background: #f5f5f8;
   outline: 2px solid #1d1d21;
   outline-offset: -2px;
 }
@@ -721,7 +721,7 @@
 }
 
 .secondaryBtn:hover:not(:disabled) {
-  background: #f5f3ff;
+  background: #f5f5f8;
   transform: translateY(-1px);
 }
 
@@ -852,8 +852,8 @@
 }
 
 .bookingItem {
-  background: #faf9ff;
-  border: 1.5px solid #e8e4f3;
+  background: #fafafd;
+  border: 1.5px solid #e7e7ea;
   border-radius: 0.75rem;
   padding: 1.125rem;
   transition: all 0.2s ease;
@@ -1012,7 +1012,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1.25rem 1.5rem;
-  border-bottom: 1.5px solid #f3f0ff;
+  border-bottom: 1.5px solid #f3f3f6;
 }
 
 .modalHeader h3 {
@@ -1051,7 +1051,7 @@
 }
 
 .modalClose {
-  background: #f3f0ff;
+  background: #f3f3f6;
   border: none;
   font-size: 1.5rem;
   color: #1d1d21;
@@ -1115,7 +1115,7 @@
   gap: 1rem;
   margin: 1.25rem 0;
   padding: 1rem;
-  background: #f5f3ff;
+  background: #f5f5f8;
   border-radius: 0.75rem;
   border: 1px solid #ededf0;
 }
@@ -1409,11 +1409,11 @@
 .memberSearching { padding: 12px 16px; font-size: 13px; color: #28282c; font-weight: 600; }
 .memberOption {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #f3efff;
+  padding: 10px 16px; cursor: pointer; border-bottom: 1px solid #f2f2f5;
   transition: background 0.15s;
 }
 .memberOption:last-child { border-bottom: none; }
-.memberOption:hover { background: #f5f0ff; }
+.memberOption:hover { background: #f3f3f6; }
 .memberName { font-size: 13px; font-weight: 700; color: #0c0c10; }
 .memberDept { font-size: 11px; color: #28282c; font-weight: 600; background: #efeff2; padding: 2px 8px; border-radius: 20px; }
 .memberChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

@@ -76,7 +76,7 @@ export default function VisitResponsePage() {
   return (
     <div style={{
       fontFamily: "Arial, Helvetica, sans-serif",
-      background: "#f5f3ff",
+      background: "#f5f5f8",
       minHeight: "100vh",
       display: "flex",
       alignItems: "center",

@@ -125,7 +125,7 @@ export default function SmartFormResponsesPage() {
                 </thead>
                 <tbody>
                   {responses.map((r, i) => (
-                    <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf8ff" }}>
+                    <tr key={r.id} style={{ background: i % 2 === 0 ? "#fff" : "#f9f9fc" }}>
                       <td style={tdStyle}>{new Date(r.submittedAt).toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                       {allColumns.map((c) => <td key={c} style={tdStyle}>{r.values[c] || "-"}</td>)}
                     </tr>
@@ -141,4 +141,4 @@ export default function SmartFormResponsesPage() {
 }
 
 const thStyle = { padding: "10px 14px", textAlign: "left", color: "#fff", fontWeight: 700, fontSize: 11.5, textTransform: "uppercase", whiteSpace: "nowrap" };
-const tdStyle = { padding: "9px 14px", borderBottom: "1px solid #f3f0fb", color: "#08080c", whiteSpace: "nowrap" };
+const tdStyle = { padding: "9px 14px", borderBottom: "1px solid #f2f2f5", color: "#08080c", whiteSpace: "nowrap" };

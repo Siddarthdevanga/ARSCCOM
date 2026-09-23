@@ -29,7 +29,7 @@
 .container {
   height: 100vh;
   height: 100dvh;
-  background: #f3f0fb;
+  background: #f2f2f5;
   font-family: 'Nunito', sans-serif;
   display: flex;
   flex-direction: column;
@@ -57,7 +57,7 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #ede8f8;
+  border: 4px solid #ebebee;
   border-top-color: #121216;
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
@@ -143,7 +143,7 @@
 
 /* ================= DETAILS CARD ================= */
 .detailsCard {
-  background: linear-gradient(145deg, #f4eeff 0%, #e9e9ec 100%);
+  background: linear-gradient(145deg, #f2f2f5 0%, #e9e9ec 100%);
   border-radius: 22px; padding: 22px 26px; border: 1.5px solid #d9d9dc;
   box-shadow: 0 4px 20px rgba(18, 18, 22,0.06);
   margin-bottom: 24px;
@@ -180,7 +180,7 @@
 /* ================= PLAN CARD ================= */
 .planCard {
   position: relative;
-  background: #fff; border: 1.5px solid #ede8f8; border-radius: 20px;
+  background: #fff; border: 1.5px solid #ebebee; border-radius: 20px;
   padding: 20px; display: flex; flex-direction: column; gap: 12px;
   transition: all 0.2s;
 }

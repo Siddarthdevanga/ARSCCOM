@@ -193,7 +193,7 @@
 }
 
 .hamburgerBtn:hover { background: var(--hv-surface, #f6f6f8); }
-.hamburgerBtn:active { background: #ede8f8; }
+.hamburgerBtn:active { background: #ebebee; }
 
 .dot {
   display: block;
@@ -315,7 +315,7 @@
 .spinner {
   width: 36px;
   height: 36px;
-  border: 4px solid #ede8f8;
+  border: 4px solid #ebebee;
   border-top-color: #121216;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -332,9 +332,9 @@
   text-align: center;
   margin-bottom: 1.5rem;
   padding: 1.25rem;
-  background: #f8f5ff;
+  background: #f7f7fa;
   border-radius: 18px;
-  border: 1.5px solid #ede8f8;
+  border: 1.5px solid #ebebee;
 }
 
 .qrImage {
@@ -374,10 +374,10 @@
 .urlInput {
   flex: 1;
   padding: 0.8rem 0.9rem;
-  border: 1.5px solid #ede8f8;
+  border: 1.5px solid #ebebee;
   border-radius: 12px;
   font-size: 0.78rem;
-  background: #f8f5ff;
+  background: #f7f7fa;
   color: #08080c;
   font-family: 'Courier New', monospace;
   min-width: 0;
@@ -420,7 +420,7 @@
 
 /* Instructions */
 .navInstructions {
-  background: #f8f5ff;
+  background: #f7f7fa;
   border-radius: 14px;
   padding: 1.1rem;
   border-left: 4px solid #121216;

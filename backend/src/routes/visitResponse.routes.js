@@ -94,7 +94,7 @@ const renderPage = (title, message, color) => `
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: Arial, Helvetica, sans-serif;
-      background: #f5f3ff;
+      background: #f5f5f8;
       display: flex;
       align-items: center;
       justify-content: center;

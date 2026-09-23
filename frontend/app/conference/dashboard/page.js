@@ -1229,7 +1229,7 @@ function TodayTimeline({ rooms, bookings }) {
               return (
                 <div key={d}
                   onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
-                  style={{ padding:"0.6rem 0.5rem", borderLeft: di > 0 ? "1px solid #f3f4f6" : "none", cursor:"pointer", minHeight:130, background: isTd ? "#f5f3ff" : "#fff" }}
+                  style={{ padding:"0.6rem 0.5rem", borderLeft: di > 0 ? "1px solid #f3f4f6" : "none", cursor:"pointer", minHeight:130, background: isTd ? "#f5f5f8" : "#fff" }}
                   onMouseEnter={e => !isTd && (e.currentTarget.style.background="#fafafa")}
                   onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fff")}>
                   <div style={{ fontSize:"0.58rem", color: isTd ? "#1d1d21" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
@@ -1288,12 +1288,12 @@ function TodayTimeline({ rooms, bookings }) {
                   <div key={d}
                     onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
                     style={{ padding:"0.3rem 0.28rem", borderRadius:"0.5rem", minHeight:72, cursor:"pointer",
-                      background: isTd ? "#f5f3ff" : "#fff",
+                      background: isTd ? "#f5f5f8" : "#fff",
                       border:`1.5px solid ${isTd ? "#3a3a42" : "#e5e7eb"}`,
                       boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(29, 29, 33,0.06)" : "none",
                       transition:"background 0.12s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ededf0" : "#f5f3ff"; e.currentTarget.style.borderColor = "#3a3a42"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#3a3a42" : "#e5e7eb"; }}>
+                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ededf0" : "#f5f5f8"; e.currentTarget.style.borderColor = "#3a3a42"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f5f8" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#3a3a42" : "#e5e7eb"; }}>
                     {/* Date number */}
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
                       <span style={{

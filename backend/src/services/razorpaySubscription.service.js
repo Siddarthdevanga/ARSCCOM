@@ -335,7 +335,7 @@ const sendActivationEmail = async ({ email, companyName, plan, interval, endsAt,
               ? `Your <b>Hai Visitor ${planLabel}</b> subscription has been renewed successfully.`
               : `Your <b>Hai Visitor ${planLabel}</b> subscription is now active. Thank you for upgrading!`}
           </p>
-          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+          <div style="background:#efeff2;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;color:#6e6e71;">Plan</td><td style="padding:4px 0;text-align:right;font-weight:700;">${planLabel} (${interval === "annual" ? "Annual" : "Monthly"})</td></tr>
               <tr><td style="padding:4px 0;color:#6e6e71;">Next billing date</td><td style="padding:4px 0;text-align:right;font-weight:700;">${endsLabel}</td></tr>

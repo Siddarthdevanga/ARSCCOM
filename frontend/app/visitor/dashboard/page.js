@@ -272,7 +272,7 @@ export default function VisitorDashboard() {
         ctx.shadowBlur  = 0;
 
         /* border */
-        ctx.strokeStyle = "#ede8f8";
+        ctx.strokeStyle = "#ebebee";
         ctx.lineWidth   = 2;
         roundRect(ctx, qrX - 16, qrY - 16, qrSize + 32, qrSize + 32, 18);
         ctx.stroke();
@@ -286,7 +286,7 @@ export default function VisitorDashboard() {
 
     /* ── Divider ── */
     const dividerY = 645;
-    ctx.strokeStyle = "#ede8f8";
+    ctx.strokeStyle = "#ebebee";
     ctx.lineWidth   = 1.5;
     ctx.beginPath();
     ctx.moveTo(60, dividerY);
@@ -323,7 +323,7 @@ export default function VisitorDashboard() {
     });
 
     /* ── Footer background ── */
-    ctx.fillStyle = "#f3f0fb";
+    ctx.fillStyle = "#f2f2f5";
     ctx.fillRect(0, H - 80, W, 80);
 
     /* ── Footer top border ── */

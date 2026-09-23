@@ -167,7 +167,7 @@ const bookingTable = (room, booking, accentColor = "#19191d") => `
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;width:130px;">Room</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${room.room_name}${room.room_number ? ` <span style="color:#9ca3af;font-weight:400;">#${room.room_number}</span>` : ""}${room.capacity ? ` <span style="color:#9ca3af;font-size:12px;margin-left:6px;">&bull; ${room.capacity} people</span>` : ""}</td>
     </tr>
-    <tr style="border-bottom:1px solid #ededf0;background:#faf5ff;">
+    <tr style="border-bottom:1px solid #ededf0;background:#f8f8fb;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Date</td>
       <td style="padding:10px 14px;color:#1f2937;">${booking.booking_date}</td>
     </tr>
@@ -175,7 +175,7 @@ const bookingTable = (room, booking, accentColor = "#19191d") => `
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Time</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${prettyTime(booking.start_time)} &ndash; ${prettyTime(booking.end_time)}</td>
     </tr>
-    ${booking.department ? `<tr style="border-bottom:1px solid #ededf0;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
+    ${booking.department ? `<tr style="border-bottom:1px solid #ededf0;background:#f8f8fb;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
     ${booking.purpose ? `<tr><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
   </table>`;
 

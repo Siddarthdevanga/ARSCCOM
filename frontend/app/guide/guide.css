@@ -2,14 +2,14 @@
 
 /* ============ TOKENS ============ */
 .guide-root{
-  --bg:#F7F4FC;
+  --bg:#f6f6f9;
   --bg-raised:#FFFFFF;
-  --bg-sunken:#EFE9FA;
+  --bg-sunken:#ededf0;
   --ink:#1d1d20;
   --ink-soft:#58585b;
   --ink-faint:#818184;
   --line:#dedee1;
-  --line-soft:#EDE6F8;
+  --line-soft:#eaeaed;
 
   --purple-900:#0b0b0f;
   --purple-800:#0f0f13;
@@ -17,7 +17,7 @@
   --purple-600:#18181c;
   --purple-500:#1b1b1f;
   --purple-100:#ededf0;
-  --purple-50:#F5F3FF;
+  --purple-50:#f5f5f8;
 
   --amber-600:#D97706;
   --amber-500:#F59E0B;
@@ -222,7 +222,7 @@
   color:var(--ink-faint); background:var(--bg-raised); padding:3px 10px; border-radius:6px;
   border:1px solid var(--line-soft); flex:1;
 }
-.frame-body{ background:#F3EEFB; padding:0; }
+.frame-body{ background:#f1f1f4; padding:0; }
 
 /* ============ MOCKUP KIT (fixed colors — real product look) ============ */
 .mk{ font-family:'Nunito',sans-serif; color:#08080c; }
@@ -257,7 +257,7 @@
 .mk-btn-primary{ background:linear-gradient(95deg,#F97316,#EF3E66); color:#fff; margin-top:14px; box-shadow:0 6px 16px rgba(239,62,102,0.3); }
 .mk-trust span{ font-size:8px; color:#818184; font-weight:700; }
 
-.mk-page{ background:#F3EEFB; padding:18px; }
+.mk-page{ background:#f1f1f4; padding:18px; }
 .mk-card{ background:#fff; border-radius:14px; padding:16px; border:1px solid #e9e9ec; box-shadow:0 4px 16px rgba(18, 18, 22,0.06); }
 .mk-card + .mk-card{ margin-top:12px; }
 .mk-card-title{ font-size:12px; font-weight:900; color:#08080c; display:flex; align-items:center; gap:7px; margin-bottom:10px; }
@@ -271,7 +271,7 @@
 .mk-input.filled{ color:#08080c; }
 .mk-row2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 
-.mk-upload{ border:1.5px dashed #d9d9dc; border-radius:10px; padding:14px; text-align:center; font-size:9.5px; color:#818184; font-weight:700; background:#faf8ff; }
+.mk-upload{ border:1.5px dashed #d9d9dc; border-radius:10px; padding:14px; text-align:center; font-size:9.5px; color:#818184; font-weight:700; background:#f9f9fc; }
 
 .mk-strength{ display:flex; gap:3px; margin-top:5px; }
 .mk-strength span{ flex:1; height:3px; border-radius:3px; background:#e5e7eb; }
@@ -280,7 +280,7 @@
 .mk-submit{ width:100%; text-align:center; background:#121216; color:#fff; font-weight:800; font-size:11px; padding:10px; border-radius:10px; margin-top:6px; box-shadow:0 4px 14px rgba(18, 18, 22,0.3); }
 
 .mk-plans{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
-.mk-plan{ background:#fff; border:1.5px solid #ede8f8; border-radius:12px; padding:12px; position:relative; }
+.mk-plan{ background:#fff; border:1.5px solid #ebebee; border-radius:12px; padding:12px; position:relative; }
 .mk-plan.pop{ border-color:#121216; box-shadow:0 4px 16px rgba(18, 18, 22,0.15); }
 .mk-plan-badge{ position:absolute; top:-9px; left:10px; background:#121216; color:#fff; font-size:7.5px; font-weight:800; padding:2px 8px; border-radius:999px; letter-spacing:0.04em; }
 .mk-plan h4{ font-size:10.5px; font-weight:900; color:#08080c; margin-bottom:4px; }
@@ -305,14 +305,14 @@
 .mk-login-title{ font-size:12px; font-weight:900; text-align:center; color:#08080c; letter-spacing:0.03em; margin-bottom:14px; }
 .mk-login-links{ display:flex; justify-content:center; gap:8px; font-size:9px; font-weight:700; color:#121216; margin-top:10px; }
 
-.mk-dash-header{ background:#fff; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #ede8f8; }
+.mk-dash-header{ background:#fff; display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #ebebee; }
 .mk-hamburger{ width:26px; height:26px; border-radius:8px; background:linear-gradient(135deg,#0f0f13,#1b1b1f); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2.5px; }
 .mk-hamburger span{ width:12px; height:1.5px; background:#fff; border-radius:2px; }
 .mk-dash-header .co{ font-size:11px; font-weight:900; color:#08080c; }
 .mk-logout{ font-size:8.5px; font-weight:800; color:#cc1100; border:1.5px solid #f0d0d0; padding:4px 10px; border-radius:999px; }
 
 .mk-modgrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
-.mk-modcard{ background:#fff; border:1.5px solid #ede8f8; border-radius:12px; padding:14px; }
+.mk-modcard{ background:#fff; border:1.5px solid #ebebee; border-radius:12px; padding:14px; }
 .mk-modcard .ic{ width:32px; height:32px; border-radius:9px; background:var(--grad-brand); margin-bottom:8px; }
 .mk-modcard b{ display:block; font-size:10.5px; font-weight:900; color:#08080c; }
 .mk-modcard span{ font-size:8.5px; color:#818184; font-weight:700; }
@@ -332,16 +332,16 @@
 .mk-qrbox{ width:64px; height:64px; border-radius:10px; background:repeating-conic-gradient(#08080c 0% 25%, #fff 0% 50%) 0 0/12px 12px; flex-shrink:0; border:3px solid #fff; box-shadow:0 2px 8px rgba(0,0,0,0.12); }
 
 .mk-table{ width:100%; border-collapse:collapse; font-size:9px; }
-.mk-table th{ text-align:left; font-size:8px; font-weight:800; color:#818184; text-transform:uppercase; letter-spacing:0.03em; padding:6px 6px; border-bottom:1.5px solid #ede8f8; }
-.mk-table td{ padding:7px 6px; border-bottom:1px solid #f3eefb; color:#343437; font-weight:600; }
+.mk-table th{ text-align:left; font-size:8px; font-weight:800; color:#818184; text-transform:uppercase; letter-spacing:0.03em; padding:6px 6px; border-bottom:1.5px solid #ebebee; }
+.mk-table td{ padding:7px 6px; border-bottom:1px solid #f1f1f4; color:#343437; font-weight:600; }
 .mk-av{ width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; color:#fff; font-size:7.5px; font-weight:800; margin-right:5px; }
 
 .mk-steps-chip{ display:flex; gap:5px; margin-bottom:10px; }
-.mk-steps-chip span{ font-size:7.5px; font-weight:800; padding:3px 9px; border-radius:999px; background:#ede8f8; color:#818184; }
+.mk-steps-chip span{ font-size:7.5px; font-weight:800; padding:3px 9px; border-radius:999px; background:#ebebee; color:#818184; }
 .mk-steps-chip span.on{ background:#121216; color:#fff; }
 
 .mk-purpose{ display:flex; gap:6px; flex-wrap:wrap; }
-.mk-purpose span{ font-size:8.5px; font-weight:700; padding:5px 10px; border-radius:999px; border:1.5px solid #ede8f8; color:#141418; }
+.mk-purpose span{ font-size:8.5px; font-weight:700; padding:5px 10px; border-radius:999px; border:1.5px solid #ebebee; color:#141418; }
 .mk-purpose span.sel{ background:#121216; color:#fff; border-color:#121216; }
 
 .mk-camera{ background:#08080c; border-radius:12px; height:70px; display:flex; align-items:center; justify-content:center; color:rgba(255,255,255,0.4); font-size:9px; font-weight:700; }
@@ -358,7 +358,7 @@
 .mk-pass span{ font-size:8px; opacity:0.75; font-weight:700; }
 .mk-pass .qr{ width:56px; height:56px; margin:10px auto; background:repeating-conic-gradient(#fff 0% 25%, transparent 0% 50%) 0 0/10px 10px; border-radius:8px; }
 
-.mk-toggle{ display:flex; align-items:center; justify-content:space-between; background:#fff; border:1.5px solid #ede8f8; border-radius:9px; padding:8px 10px; margin-bottom:6px; }
+.mk-toggle{ display:flex; align-items:center; justify-content:space-between; background:#fff; border:1.5px solid #ebebee; border-radius:9px; padding:8px 10px; margin-bottom:6px; }
 .mk-toggle .l{ font-size:9px; font-weight:700; color:#08080c; }
 .mk-toggle .l small{ display:block; font-size:7.5px; color:#818184; font-weight:600; }
 .mk-switch{ width:26px; height:14px; border-radius:999px; background:#e2e2e5; position:relative; flex-shrink:0; }
@@ -367,25 +367,25 @@
 .mk-switch.on::after{ left:14px; }
 
 .mk-kpi{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
-.mk-kpicard{ background:#fff; border:1.5px solid #ede8f8; border-radius:10px; padding:9px; }
+.mk-kpicard{ background:#fff; border:1.5px solid #ebebee; border-radius:10px; padding:9px; }
 .mk-kpicard b{ display:block; font-size:15px; font-weight:900; color:#08080c; }
 .mk-kpicard span{ font-size:7.5px; color:#818184; font-weight:700; text-transform:uppercase; }
 .mk-chart{ display:flex; align-items:flex-end; gap:5px; height:52px; margin-top:10px; }
 .mk-chart div{ flex:1; background:linear-gradient(180deg,#1b1b1f,#0f0f13); border-radius:4px 4px 0 0; }
 
 .mk-pill-row{ display:flex; gap:5px; flex-wrap:wrap; }
-.mk-pill{ font-size:8px; font-weight:800; padding:4px 10px; border-radius:999px; background:#ede8f8; color:#121216; }
+.mk-pill{ font-size:8px; font-weight:800; padding:4px 10px; border-radius:999px; background:#ebebee; color:#121216; }
 .mk-pill.on{ background:#121216; color:#fff; }
 
 .mk-current-badge{ position:absolute; top:-8px; left:12px; background:#059669; color:#fff; font-size:7px; font-weight:800; padding:3px 9px; border-radius:999px; text-transform:uppercase; }
 
-.mk-room{ background:#fff; border:1.5px solid #ede8f8; border-radius:10px; overflow:hidden; }
+.mk-room{ background:#fff; border:1.5px solid #ebebee; border-radius:10px; overflow:hidden; }
 .mk-room .img{ height:38px; background:#ededf0; }
 .mk-room .b{ padding:7px 8px; }
 .mk-room .b b{ font-size:9px; font-weight:800; color:#08080c; }
 .mk-room .b span{ font-size:7.5px; color:#818184; font-weight:700; }
 .mk-slots{ display:flex; gap:4px; flex-wrap:wrap; margin-top:8px; }
-.mk-slots span{ font-size:7.5px; font-weight:700; padding:4px 7px; border-radius:6px; background:#f3eefb; color:#131317; }
+.mk-slots span{ font-size:7.5px; font-weight:700; padding:4px 7px; border-radius:6px; background:#f1f1f4; color:#131317; }
 .mk-slots span.taken{ background:#fef2f2; color:#cc1100; text-decoration:line-through; }
 
 /* ============ redirect table ============ */

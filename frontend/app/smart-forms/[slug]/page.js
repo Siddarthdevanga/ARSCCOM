@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 const THEMES = {
-  purple: { accent: "#121216", bg: "#f6f1fd" },
+  purple: { accent: "#121216", bg: "#f4f4f7" },
   blue:   { accent: "#0369a1", bg: "#f0f9ff" },
   green:  { accent: "#047857", bg: "#f0fdf6" },
   slate:  { accent: "#334155", bg: "#f8fafc" },
@@ -193,7 +193,7 @@ export default function SmartFormPublicPage() {
   );
 }
 
-function Centered({ children, bg = "#f6f1fd" }) {
+function Centered({ children, bg = "#f4f4f7" }) {
   return (
     <div style={{ minHeight: "100dvh", background: bg, display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
       {children}

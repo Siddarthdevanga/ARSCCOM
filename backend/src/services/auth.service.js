@@ -268,7 +268,7 @@ const sendWelcomeEmail = async (email, companyName) => {
           </div>
 
           <!-- WHAT YOU GET -->
-          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+          <div style="background:#efeff2;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#1d1d21;margin:0 0 10px;font-size:15px;">What Hai Visitor Delivers to ${companyName}</h3>
             <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">✅&nbsp; Dedicated QR Code for instant visitor self-registration</td></tr>
@@ -327,7 +327,7 @@ const sendAccountReadyEmail = async (email, companyName) => {
           </p>
 
           <!-- VISITOR REGISTRATION -->
-          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+          <div style="background:#efeff2;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#1d1d21;margin:0 0 8px;font-size:15px;">📋&nbsp; Registering Visitors</h3>
             <p style="font-size:14px;color:#262629;line-height:1.6;margin:0;">
               Visitors register themselves in seconds by scanning your company's QR
@@ -357,7 +357,7 @@ const sendAccountReadyEmail = async (email, companyName) => {
           </div>
 
           <!-- ACCOUNT SETTINGS -->
-          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+          <div style="background:#efeff2;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#1d1d21;margin:0 0 8px;font-size:15px;">⚙️&nbsp; Account Settings</h3>
             <p style="font-size:14px;color:#262629;line-height:1.6;margin:0;">
               Update your company logo, WhatsApp number, visitor code prefix and

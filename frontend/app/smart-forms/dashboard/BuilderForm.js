@@ -14,7 +14,7 @@ const FIELD_TYPE_LABELS = {
 };
 
 export const THEMES = {
-  purple: { label: "Classic Purple", accent: "#121216", bg: "#f6f1fd" },
+  purple: { label: "Classic Purple", accent: "#121216", bg: "#f4f4f7" },
   blue:   { label: "Ocean Blue",     accent: "#0369a1", bg: "#f0f9ff" },
   green:  { label: "Emerald Green",  accent: "#047857", bg: "#f0fdf6" },
   slate:  { label: "Slate Neutral",  accent: "#334155", bg: "#f8fafc" },

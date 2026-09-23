@@ -325,7 +325,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
                   top:  node.cy - h / 2,
                   width: w, height: h,
                   background: isActive ? `${node.color}12` : "#fafafa",
-                  border: isActive ? `2px solid ${node.color}` : "1.5px solid #e9e3f5",
+                  border: isActive ? `2px solid ${node.color}` : "1.5px solid #e7e7ea",
                   borderRadius: isSm ? 9 : 12,
                   cursor: "pointer",
                   padding: isSm ? "6px 8px" : "8px 10px",
@@ -599,7 +599,7 @@ export default function WhatsAppLeadsPage() {
                   const isExpired = ["expired","suspended"].includes(subStatus);
                   const planColor = plan === "TRIAL" ? "#0ea5e9" : plan === "BUSINESS" ? "#10b981" : plan === "ENTERPRISE" ? "#1d1d21" : null;
                   return (
-                    <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ededf0" }}>
+                    <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f8fb", borderBottom: "1px solid #ededf0" }}>
                       <td style={td}>{i + 1}</td>
                       <td style={{ ...td, fontWeight: 600 }}>
                         {lead.unsubscribed ? <span style={{ color: "#9ca3af" }}>{lead.name || "—"}</span> : (lead.name || "—")}

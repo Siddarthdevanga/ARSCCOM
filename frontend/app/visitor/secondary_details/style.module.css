@@ -16,9 +16,9 @@
   --brand-dim:    rgba(18, 18, 22, 0.10);
   --brand-glow:   rgba(18, 18, 22, 0.22);
   --surface:      #ffffff;
-  --surface-soft: #faf8ff;
-  --bg:           #f3f0fb;
-  --card-bg:      linear-gradient(145deg, #f6f0ff 0%, #e9e9ec 100%);
+  --surface-soft: #f9f9fc;
+  --bg:           #f2f2f5;
+  --card-bg:      linear-gradient(145deg, #f4f4f7 0%, #e9e9ec 100%);
   --border:       #d9d9dc;
   --border-focus: #121216;
   --text-dark:    #08080c;
@@ -368,7 +368,7 @@
   background: var(--surface-soft);
 }
 .input:disabled {
-  background: #f0ebfa;
+  background: #eeeef1;
   color: var(--text-muted);
   cursor: not-allowed;
 }
@@ -475,7 +475,7 @@
   border-bottom: 1px solid rgba(18, 18, 22,0.05);
 }
 .acItem:last-child { border-bottom: none; }
-.acItem:hover, .acItemSelected { background: #f5f0ff; }
+.acItem:hover, .acItemSelected { background: #f3f3f6; }
 
 .acAvatar {
   width: 34px;
@@ -525,7 +525,7 @@
   display: inline-flex;
   align-items: center;
   padding: 2px 9px;
-  background: #ede9fb;
+  background: #ececef;
   color: var(--brand);
   font-size: 10px;
   font-weight: 700;

@@ -612,7 +612,7 @@ function CalendarScrollWrapper({ rooms, slug }) {
                 <div key={d}
                   onClick={(e) => { e.stopPropagation(); setDayPopup({ date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
                   style={{ padding:"0.5rem 0.4rem", borderLeft: di > 0 ? "1px solid #f3f4f6" : "none", borderBottom:"1px solid #f3f4f6",
-                    cursor:"pointer", minHeight:110, background: isTd ? "#f5f3ff" : "#fff" }}
+                    cursor:"pointer", minHeight:110, background: isTd ? "#f5f5f8" : "#fff" }}
                   onMouseEnter={e => !isTd && (e.currentTarget.style.background="#fafafa")}
                   onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fff")}>
                   <div style={{ fontSize:"0.56rem", color: isTd ? "#1d1d21" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
@@ -670,12 +670,12 @@ function CalendarScrollWrapper({ rooms, slug }) {
                   <div key={d}
                     onClick={(e) => { e.stopPropagation(); setDayPopup({ date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
                     style={{ padding:"0.3rem 0.28rem", borderRadius:"0.5rem", minHeight:72, cursor:"pointer",
-                      background: isTd ? "#f5f3ff" : "#fff",
+                      background: isTd ? "#f5f5f8" : "#fff",
                       border:`1.5px solid ${isTd ? "#3a3a42" : "#e5e7eb"}`,
                       boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(29, 29, 33,0.06)" : "none",
                       transition:"background 0.12s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ededf0" : "#f5f3ff"; e.currentTarget.style.borderColor = "#3a3a42"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#3a3a42" : "#e5e7eb"; }}>
+                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ededf0" : "#f5f5f8"; e.currentTarget.style.borderColor = "#3a3a42"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f5f8" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#3a3a42" : "#e5e7eb"; }}>
                     {/* Date number */}
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
                       <span style={{
@@ -1927,7 +1927,7 @@ export default function PublicConferenceBooking() {
         <div style={{ maxWidth:960, margin:"0 auto", padding:"0.5rem 1rem 2rem" }}>
 
           {/* ── Sticky search bar ── */}
-          <div style={{ position:"sticky", top:64, zIndex:30, background:"rgba(240,238,248,0.95)",
+          <div style={{ position:"sticky", top:64, zIndex:30, background:"rgba(240, 240, 243,0.95)",
             backdropFilter:"blur(8px)", padding:"0.75rem 0", marginBottom:"0.875rem" }}>
             <div style={{ position:"relative", maxWidth:400 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2"
@@ -2022,7 +2022,7 @@ export default function PublicConferenceBooking() {
               <h2>Book a Conference Room</h2>
 
               {/* Booking mode toggle */}
-              <div style={{ display:"flex", gap:"0.4rem", marginBottom:"1rem", background:"#f5f3ff",
+              <div style={{ display:"flex", gap:"0.4rem", marginBottom:"1rem", background:"#f5f5f8",
                 borderRadius:"0.625rem", padding:"0.25rem" }}>
                 {["single","range"].map(mode => (
                   <button key={mode} onClick={() => { setBookingMode(mode); setFormErrors({}); }}
@@ -2197,7 +2197,7 @@ export default function PublicConferenceBooking() {
                         <div key={rid} style={{ marginBottom:"1rem", borderRadius:"0.75rem",
                           border:"1.5px solid #dddde0", overflow:"hidden" }}>
                           {/* Group header */}
-                          <div style={{ background:"#f5f3ff", padding:"0.75rem 1rem",
+                          <div style={{ background:"#f5f5f8", padding:"0.75rem 1rem",
                             borderBottom:"1px solid #dddde0" }}>
                             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem", flexWrap:"wrap" }}>
                               <div>
@@ -2435,7 +2435,7 @@ export default function PublicConferenceBooking() {
                 </button>
                 <button onClick={() => confirmScopeChoice("range")}
                   style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
-                    border:"1.5px solid #1d1d21", background:"#f5f3ff", cursor:"pointer" }}>
+                    border:"1.5px solid #1d1d21", background:"#f5f5f8", cursor:"pointer" }}>
                   <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#1d1d21" }}>Entire remaining range</div>
                   <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
                     {scopeLoading ? "Loading…" : `${scopeRangeUpcoming} upcoming day${scopeRangeUpcoming !== 1 ? "s" : ""} will be affected`}

@@ -35,7 +35,7 @@
 .container {
   height: 100vh;
   height: 100dvh;
-  background: #f3f0fb;
+  background: #f2f2f5;
   font-family: 'Nunito', sans-serif;
   display: flex;
   flex-direction: column;
@@ -125,7 +125,7 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  background: #f4f2f8;
+  background: #f3f3f6;
   color: #757578;
   border: 1px solid #e0e0e3;
   border-radius: 20px;
@@ -254,8 +254,8 @@
 
 .reorderBtns { display: flex; flex-direction: column; gap: 1px; flex-shrink: 0; }
 .reorderBtn, .reorderBtnSm {
-  background: #faf8ff;
-  border: 1px solid #ede8f8;
+  background: #f9f9fc;
+  border: 1px solid #ebebee;
   border-radius: 4px;
   color: #121216;
   cursor: pointer;
@@ -272,8 +272,8 @@
   font-size: 13px;
   font-weight: 800;
   color: #08080c;
-  border: 1.5px solid #ede8f8;
-  background: #faf8ff;
+  border: 1.5px solid #ebebee;
+  background: #f9f9fc;
   border-radius: 8px;
   padding: 7px 9px;
   font-family: 'Nunito', sans-serif;
@@ -314,8 +314,8 @@
   font-size: 11.5px;
   font-weight: 600;
   color: #08080c;
-  border: 1.5px solid #ede8f8;
-  background: #faf8ff;
+  border: 1.5px solid #ebebee;
+  background: #f9f9fc;
   border-radius: 6px;
   padding: 5px 7px;
   font-family: 'Nunito', sans-serif;
@@ -324,7 +324,7 @@
 .purposeSubNameInput::placeholder { color: #c0c0c3; }
 
 .addBtnSm {
-  background: #f4f2f8;
+  background: #f3f3f6;
   border: 1px solid #d9d9dc;
   color: #121216;
   border-radius: 6px;
@@ -342,7 +342,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: #faf8ff;
+  background: #f9f9fc;
   border: 1.5px dashed #d9d9dc;
   border-radius: 14px;
   padding: 10px 12px;
@@ -354,7 +354,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: #faf8ff;
+  background: #f9f9fc;
   border: 1.5px dashed #d9d9dc;
   color: #121216;
   border-radius: 14px;
@@ -365,7 +365,7 @@
   font-family: 'Nunito', sans-serif;
   transition: background 0.15s, border-color 0.15s;
 }
-.addCategoryTriggerBtn:hover { background: #f4f2f8; border-color: #121216; }
+.addCategoryTriggerBtn:hover { background: #f3f3f6; border-color: #121216; }
 
 .addSubTriggerBtn {
   display: inline-flex;
@@ -456,7 +456,7 @@
 .tabBtn {
   background: #fff;
   color: #121216;
-  border: 1.5px solid #ede8f8;
+  border: 1.5px solid #ebebee;
   padding: clamp(7px, 1.1vh, 10px) clamp(14px, 2vw, 20px);
   border-radius: 999px;
   font-size: clamp(12px, 1.5vh, 13.5px);
@@ -466,7 +466,7 @@
   transition: all 0.2s;
   white-space: nowrap;
 }
-.tabBtn:hover { border-color: #d3d3d6; background: #faf8ff; }
+.tabBtn:hover { border-color: #d3d3d6; background: #f9f9fc; }
 
 .tabBtnActive,
 .tabBtnActive:hover {
@@ -489,8 +489,8 @@
   font-size: 12.5px;
   font-weight: 700;
   color: #08080c;
-  border: 1.5px solid #ede8f8;
-  background: #faf8ff;
+  border: 1.5px solid #ebebee;
+  background: #f9f9fc;
   border-radius: 8px;
   padding: 6px 8px;
   font-family: 'Nunito', sans-serif;

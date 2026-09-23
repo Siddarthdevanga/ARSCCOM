@@ -144,7 +144,7 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
           </p>
 
           <!-- TRIAL PLAN -->
-          <div style="background:#F1ECFB;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
+          <div style="background:#efeff2;border-left:4px solid #1d1d21;border-radius:0 10px 10px 0;padding:16px 18px;margin:20px 0;">
             <h3 style="color:#1d1d21;margin:0 0 10px;font-size:15px;">Your Trial Plan Includes</h3>
             <table style="width:100%;font-size:14px;color:#262629;border-collapse:collapse;">
               <tr><td style="padding:4px 0;">✅&nbsp; 100 Visitor Registrations</td></tr>

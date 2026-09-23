@@ -305,7 +305,7 @@ const generateBrandedQRCode = async (url, companyName, isConference = true) => {
 /* ── Email helpers (match public template style) ── */
 
 const emailFooter = (company = {}, logoUrl = null) => `
-  <div style="padding:20px 28px;border-top:1px solid #ededf0;background:#faf5ff;">
+  <div style="padding:20px 28px;border-top:1px solid #ededf0;background:#f8f8fb;">
     ${logoUrl ? `<img src="${logoUrl}" height="40" alt="${company.name || ""}" style="display:block;margin-bottom:10px;" />` : ""}
     <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1f2937;">${company.name || ""}</p>
     <p style="margin:0;font-size:12px;color:#9ca3af;">
@@ -331,7 +331,7 @@ const bookingTable = (booking, accentColor = "#19191d") => `
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;width:130px;">Room</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${booking?.room_name || "N/A"}</td>
     </tr>
-    <tr style="border-bottom:1px solid #ededf0;background:#faf5ff;">
+    <tr style="border-bottom:1px solid #ededf0;background:#f8f8fb;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Date</td>
       <td style="padding:10px 14px;color:#1f2937;">${booking?.booking_date || "N/A"}</td>
     </tr>
@@ -339,9 +339,9 @@ const bookingTable = (booking, accentColor = "#19191d") => `
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Time</td>
       <td style="padding:10px 14px;color:#1f2937;font-weight:600;">${toAmPm(booking?.start_time)} &ndash; ${toAmPm(booking?.end_time)}</td>
     </tr>
-    ${booking?.department ? `<tr style="border-bottom:1px solid #ededf0;background:#faf5ff;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
+    ${booking?.department ? `<tr style="border-bottom:1px solid #ededf0;background:#f8f8fb;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Department</td><td style="padding:10px 14px;color:#1f2937;">${booking.department}</td></tr>` : ""}
     ${booking?.purpose ? `<tr style="border-bottom:1px solid #ededf0;"><td style="padding:10px 14px;font-weight:600;color:#6b7280;">Purpose</td><td style="padding:10px 14px;color:#1f2937;">${booking.purpose}</td></tr>` : ""}
-    <tr style="background:#faf5ff;">
+    <tr style="background:#f8f8fb;">
       <td style="padding:10px 14px;font-weight:600;color:#6b7280;">Status</td>
       <td style="padding:10px 14px;font-weight:700;color:${accentColor};">${booking?.status || "N/A"}</td>
     </tr>

@@ -29,7 +29,7 @@
 .container {
   height: 100vh;
   height: 100dvh;
-  background: #f3f0fb;
+  background: #f2f2f5;
   font-family: 'Nunito', sans-serif;
   display: flex;
   flex-direction: column;
@@ -51,7 +51,7 @@
   font-size: 1.2rem;
   font-weight: 800;
   color: #121216;
-  background: #f3f0fb;
+  background: #f2f2f5;
 }
 
 /* ================= HEADER ================= */
@@ -225,7 +225,7 @@
 .passCard {
   width: 100%;
   max-width: 720px;
-  background: linear-gradient(145deg, #f4eeff 0%, #e9e9ec 100%);
+  background: linear-gradient(145deg, #f2f2f5 0%, #e9e9ec 100%);
   border-radius: 22px;
   padding: 28px 32px 32px;
   border: 1.5px solid #d9d9dc;
@@ -440,7 +440,7 @@
 }
 
 .resendBtn:hover:not(:disabled) {
-  background: #f4eeff;
+  background: #f2f2f5;
   border-color: #121216;
 }
 

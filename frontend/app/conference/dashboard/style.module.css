@@ -160,7 +160,7 @@
   color: #b2b2b5; cursor: pointer; transition: all 0.2s;
   border-bottom: 3px solid transparent; margin-bottom: -2px;
 }
-.navTabBtn:hover { color: #121216; background: #faf8ff; }
+.navTabBtn:hover { color: #121216; background: #f9f9fc; }
 .navTabActive { color: #121216; border-bottom-color: #121216; }
 
 .navPanelBody {
@@ -188,7 +188,7 @@
   text-align: center;
   margin-bottom: 1.5rem;
   padding: 1.25rem;
-  background: #f8f5ff;
+  background: #f7f7fa;
   border-radius: 18px;
   border: 1.5px solid var(--hv-line, #e7e7ec);
 }
@@ -198,7 +198,7 @@
 .urlSection { margin-bottom: 1.25rem; }
 .urlSection label { display: block; font-weight: 800; font-size: 0.72rem; color: #121216; margin-bottom: 0.5rem; letter-spacing: 1px; text-transform: uppercase; }
 .urlBox { display: flex; gap: 0.5rem; }
-.urlInput { flex: 1; padding: 0.8rem; border: 1.5px solid var(--hv-line, #e7e7ec); border-radius: 12px; font-size: 0.75rem; background: #f8f5ff; color: #08080c; font-family: 'Courier New', monospace; min-width: 0; }
+.urlInput { flex: 1; padding: 0.8rem; border: 1.5px solid var(--hv-line, #e7e7ec); border-radius: 12px; font-size: 0.75rem; background: #f7f7fa; color: #08080c; font-family: 'Courier New', monospace; min-width: 0; }
 .urlInput:focus { outline: none; border-color: #121216; }
 .copyBtn {
   padding: 0.8rem 1rem; background: #121216; color: #fff; border: none;
@@ -215,12 +215,12 @@
 }
 .downloadBtn:hover { background: #d68f00; transform: translateY(-2px); }
 
-.navInstructions { background: #f8f5ff; border-radius: 14px; padding: 1.1rem; border-left: 4px solid #121216; }
+.navInstructions { background: #f7f7fa; border-radius: 14px; padding: 1.1rem; border-left: 4px solid #121216; }
 .navInstructions h4 { margin: 0 0 0.65rem; color: #08080c; font-size: 0.78rem; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; }
 .navInstructions ol { margin: 0; padding-left: 1.2rem; color: #666; font-size: 0.85rem; line-height: 1.8; }
 
 /* Rooms inside nav */
-.planBox { background: #f8f5ff; border-radius: 16px; padding: 16px; border: 1.5px solid var(--hv-line, #e7e7ec); margin-bottom: 16px; }
+.planBox { background: #f7f7fa; border-radius: 16px; padding: 16px; border: 1.5px solid var(--hv-line, #e7e7ec); margin-bottom: 16px; }
 .planRow { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: #08080c; margin-bottom: 8px; }
 .planRow b { color: #121216; }
 .lockedInfo { font-size: 12px; color: #f0a500; font-weight: 700; margin-bottom: 8px; }
@@ -246,7 +246,7 @@
 }
 .roomCard:hover { border-color: #c3c3c6; box-shadow: 0 4px 20px rgba(18, 18, 22,0.08); }
 .roomCardEditing { border-color: #1d1d21; box-shadow: 0 0 0 3px rgba(29, 29, 33,0.1); }
-.roomLocked { opacity: 0.6; background: #faf8ff; }
+.roomLocked { opacity: 0.6; background: #f9f9fc; }
 
 /* ── Card top row ── */
 .roomCardRow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; }
@@ -284,7 +284,7 @@
 
 .roomCardSub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .roomNumChip {
-  background: #f0ecfa; color: #121216;
+  background: #efeff2; color: #121216;
   padding: 2px 10px; border-radius: 6px;
   font-size: 11px; font-weight: 800; letter-spacing: 0.2px;
 }
@@ -324,7 +324,7 @@
   border-top: 1.5px solid var(--hv-line, #e7e7ec);
   padding: 16px;
   display: flex; flex-direction: column; gap: 14px;
-  background: #faf8ff;
+  background: #f9f9fc;
 }
 .editFormFields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .editFieldGroup { display: flex; flex-direction: column; gap: 4px; }
@@ -445,7 +445,7 @@
 
 .formGroup { margin-bottom: 14px; }
 .formGroup label { display: block; font-size: 11px; font-weight: 800; color: #121216; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 5px; }
-.formGroup input { width: 100%; height: 44px; padding: 0 14px; border: 1.5px solid #d9d9dc; border-radius: 12px; font-size: 13px; font-weight: 600; font-family: 'Nunito', sans-serif; box-sizing: border-box; background: #faf8ff; color: #08080c; }
+.formGroup input { width: 100%; height: 44px; padding: 0 14px; border: 1.5px solid #d9d9dc; border-radius: 12px; font-size: 13px; font-weight: 600; font-family: 'Nunito', sans-serif; box-sizing: border-box; background: #f9f9fc; color: #08080c; }
 .formGroup input:focus { outline: none; border-color: #121216; box-shadow: 0 0 0 3px rgba(18, 18, 22,0.1); }
 
 .modalActions { display: flex; gap: 10px; margin-top: 20px; }

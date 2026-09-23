@@ -422,7 +422,7 @@ const BODY_HTML = `
               <div class="mk-card" style="display:flex; justify-content:space-between; align-items:center;">
                 <div class="mk-input" style="width:130px;">Search employees…</div>
                 <div style="display:flex; gap:6px;">
-                  <div class="mk-btn" style="background:#ede8f8; color:#121216; padding:6px 12px; font-size:9px;">Bulk Upload</div>
+                  <div class="mk-btn" style="background:#ebebee; color:#121216; padding:6px 12px; font-size:9px;">Bulk Upload</div>
                   <div class="mk-btn" style="background:#121216; color:#fff; padding:6px 12px; font-size:9px;">+ Add Employee</div>
                 </div>
               </div>
