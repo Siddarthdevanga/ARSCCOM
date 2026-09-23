@@ -171,7 +171,9 @@ export default function SubscriptionPage() {
       price: "₹49",
       period: "",
       sub: "Valid for 15 days",
-      color: "purple",
+      // Maps to .dotInk via the dot${Color} lookup below — keep this key
+      // and that class name in step.
+      color: "ink",
       features: [
         "100 Visitor Bookings",
         "100 Conference Bookings",
@@ -222,7 +224,7 @@ export default function SubscriptionPage() {
 
       {activating && (
         <div style={{
-          position: "fixed", inset: 0, zIndex: 999, background: "rgba(34,28,83,.85)",
+          position: "fixed", inset: 0, zIndex: 999, background: "rgba(5, 5, 5, 0.88)",
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#fff", gap: "1rem",
         }}>
           <div style={{ width: 40, height: 40, border: "3px solid rgba(255,255,255,.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
@@ -353,7 +355,7 @@ export default function SubscriptionPage() {
             onClick={(e) => e.stopPropagation()}
             style={{ background: "#fff", borderRadius: 16, padding: 28, maxWidth: 380, width: "100%" }}
           >
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1a0038", margin: "0 0 10px" }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "var(--hv-text)", margin: "0 0 10px" }}>
               Have a promo code?
             </h3>
             <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 16px", lineHeight: 1.5 }}>
@@ -364,7 +366,7 @@ export default function SubscriptionPage() {
               placeholder="Enter promo code (optional)"
               value={promoInput}
               onChange={(e) => setPromoInput(e.target.value)}
-              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid #ddd2f0", fontSize: 13, outline: "none", marginBottom: 16 }}
+              style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: 10, border: "1.5px solid var(--hv-line-strong)", fontSize: 13, outline: "none", marginBottom: 16 }}
             />
             <div style={{ display: "flex", gap: 10 }}>
               <button

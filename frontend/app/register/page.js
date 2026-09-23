@@ -76,7 +76,7 @@ const STRENGTH_COLOR = ["", "#ef4444", "#f97316", "#eab308", "#22c55e"];
 function InlineErr({ msg, show }) {
   if (!show || !msg) return null;
   return (
-    <p style={{ color: "#dc2626", fontSize: "0.7rem", fontWeight: 700, marginTop: 4, marginBottom: 0, lineHeight: 1.3 }}>
+    <p style={{ color: "var(--hv-danger)", fontSize: "0.7rem", fontWeight: 700, marginTop: 4, marginBottom: 0, lineHeight: 1.3 }}>
       {msg}
     </p>
   );
@@ -123,7 +123,7 @@ export default function RegisterPage() {
   const handleBlur = (field) => setTouched((prev) => ({ ...prev, [field]: true }));
 
   const borderFor = (field) =>
-    touched[field] && fe[field] ? "1.5px solid #dc2626" : "1.5px solid #ddd2f0";
+    touched[field] && fe[field] ? "1.5px solid var(--hv-danger)" : "1.5px solid var(--hv-line-strong)";
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
@@ -239,7 +239,7 @@ export default function RegisterPage() {
                   id="companyName"
                   type="text"
                   className={styles.input}
-                  style={{ borderColor: touched.companyName && fe.companyName ? "#dc2626" : undefined }}
+                  style={{ borderColor: touched.companyName && fe.companyName ? "var(--hv-danger)" : undefined }}
                   placeholder="Enter your company name"
                   value={formData.companyName}
                   onChange={(e) => handleInputChange("companyName", e.target.value)}
@@ -260,7 +260,7 @@ export default function RegisterPage() {
                     id="email"
                     type="email"
                     className={styles.input}
-                    style={{ borderColor: touched.email && fe.email ? "#dc2626" : undefined }}
+                    style={{ borderColor: touched.email && fe.email ? "var(--hv-danger)" : undefined }}
                     placeholder="admin@company.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
@@ -278,18 +278,18 @@ export default function RegisterPage() {
                     display: "flex",
                     height: 46,
                     borderRadius: 12,
-                    border: touched.phone && fe.phone ? "1.5px solid #dc2626" : "1.5px solid #ddd2f0",
+                    border: touched.phone && fe.phone ? "1.5px solid var(--hv-danger)" : "1.5px solid var(--hv-line-strong)",
                     overflow: "hidden",
-                    background: loading ? "#f3f0fb" : "#fff",
+                    background: loading ? "var(--hv-surface)" : "#fff",
                     transition: "border-color 0.2s, box-shadow 0.2s",
                   }}>
                     <span style={{
                       display: "flex",
                       alignItems: "center",
                       padding: "0 12px",
-                      background: "#f5f0ff",
-                      borderRight: "1.5px solid #ddd2f0",
-                      color: "#6200d6",
+                      background: "var(--hv-surface)",
+                      borderRight: "1.5px solid var(--hv-line-strong)",
+                      color: "var(--hv-amber-deep)",
                       fontWeight: 800,
                       fontSize: 13,
                       fontFamily: "Nunito, sans-serif",
@@ -309,7 +309,7 @@ export default function RegisterPage() {
                         fontWeight: 600,
                         fontFamily: "Nunito, sans-serif",
                         background: "transparent",
-                        color: "#1a0038",
+                        color: "var(--hv-text)",
                         opacity: loading ? 0.5 : 1,
                         cursor: loading ? "not-allowed" : "text",
                       }}
@@ -389,7 +389,7 @@ export default function RegisterPage() {
                     id="password"
                     type="password"
                     className={styles.input}
-                    style={{ borderColor: touched.password && fe.password ? "#dc2626" : undefined }}
+                    style={{ borderColor: touched.password && fe.password ? "var(--hv-danger)" : undefined }}
                     placeholder="Min 8 chars, uppercase, number, symbol"
                     value={formData.password}
                     onChange={(e) => handleInputChange("password", e.target.value)}
@@ -424,7 +424,7 @@ export default function RegisterPage() {
                     id="confirmPassword"
                     type="password"
                     className={styles.input}
-                    style={{ borderColor: touched.confirmPassword && fe.confirmPassword ? "#dc2626" : undefined }}
+                    style={{ borderColor: touched.confirmPassword && fe.confirmPassword ? "var(--hv-danger)" : undefined }}
                     placeholder="Re-enter your password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange("confirmPassword", e.target.value)}

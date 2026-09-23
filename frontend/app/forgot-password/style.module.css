@@ -80,9 +80,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.82);
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
+  background: #ffffff;
+  color: var(--hv-ink);
+  border: 1.5px solid #ffffff;
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 13px;
@@ -93,7 +93,7 @@
   white-space: nowrap;
 }
 .backBtn:hover {
-  background: #ffffff;
+  background: var(--hv-line);
   color: var(--hv-ink);
 }
 

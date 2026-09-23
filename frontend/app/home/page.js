@@ -836,10 +836,18 @@ export default function Home() {
                 const isSingle = modules.length === 1;
                 const showBrief = isSingle && currentPlan === "business" && !needsRenewal;
 
+                // Explicit map rather than a styles[`tone${key}`] lookup — a
+                // computed class name silently resolves to undefined if the
+                // key and the CSS ever drift apart.
+                const MODULE_TONE = {
+                  visitor:    styles.toneAmber,
+                  conference: styles.toneSky,
+                };
+
                 const renderCard = (m) => (
                   <div
                     key={m.key}
-                    className={`${styles.moduleCard} ${isSingle ? styles.moduleCardFeatured : ""} ${needsRenewal ? styles.moduleCardLocked : ""}`}
+                    className={`${styles.moduleCard} ${MODULE_TONE[m.key] || ""} ${isSingle ? styles.moduleCardFeatured : ""} ${needsRenewal ? styles.moduleCardLocked : ""}`}
                     onClick={() => handleModuleClick(m.path)}
                     role="button"
                     tabIndex={0}
