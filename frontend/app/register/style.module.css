@@ -36,17 +36,6 @@
   overflow: hidden;
 }
 
-/* Register only. Kept off .container because complete-registration shares
-   this stylesheet and still stacks header -> hero -> form vertically. */
-.splitContainer {
-  height: 100vh;
-  height: 100dvh;
-  display: flex;
-  overflow: hidden;
-  font-family: 'Nunito', sans-serif;
-  background: var(--hv-paper, #fff);
-}
-
 /* ================= SCROLL BODY ================= */
 .scrollBody {
   flex: 1;
@@ -636,123 +625,49 @@
 }
 
 
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   SPLIT LAYOUT
-   Three equal columns held unequal content — four fields, one upload box,
-   two fields — so the bottoms never lined up and half the page sat empty.
-   The width now goes to a brand panel instead of to stretched inputs.
+   FORM LAYOUT
+   Sections stack; the FIELDS inside them flow across the width. The earlier
+   attempt put whole sections side by side, which meant four fields next to
+   one upload box next to two fields — columns that could never line up.
+   Rowing the fields instead keeps every section full-width and even.
    ═══════════════════════════════════════════════════════════════════════════ */
-.brandPanel {
-  flex: 0 0 42%;
-  background:
-    radial-gradient(105% 75% at 50% 24%, rgba(255,255,255,0.09) 0%, rgba(255,255,255,0) 58%),
-    radial-gradient(65% 50% at 10% 100%, rgba(245,165,36,0.13) 0%, rgba(245,165,36,0) 72%),
-    linear-gradient(158deg, #121214 0%, #050505 48%, #0c0c0f 100%);
+.form {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(28px, 4vw, 64px);
-  position: relative;
-  overflow: hidden;
+  flex-direction: column;
+  gap: clamp(18px, 2.4vh, 26px);
 }
 
-/* Same accent hairline as every other page in the flow. */
-.brandPanel::after {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(90deg, #f5a524 0%, #ffc75f 22%, #34d399 48%, #38bdf8 72%, #a78bfa 100%);
-}
-
-.brandInner { text-align: center; max-width: 420px; }
-
-/* White mark on transparency — it only reads against this dark panel. */
-.brandLogo { width: clamp(96px, 11vw, 132px); height: auto; margin-bottom: 18px; }
-
-.brandEyebrow {
-  font-size: 10px; font-weight: 800; letter-spacing: 4px; text-transform: uppercase;
-  color: rgba(255,255,255,0.46); margin: 0 0 6px;
-}
-
-.brandWordmark {
-  font-family: 'Montserrat', 'Nunito', sans-serif;
-  font-size: clamp(1.7rem, 3vw, 2.5rem); font-weight: 800;
-  color: #fff; margin: 0 0 12px; letter-spacing: -0.5px; line-height: 1.1;
-}
-
-.brandChip {
-  display: inline-block;
-  background: linear-gradient(145deg, #ffc75f 0%, #f5a524 100%);
-  color: #050505; border-radius: 0.16em; padding: 0.04em 0.13em 0.07em;
-  margin: 0 0.03em; line-height: 1; box-shadow: 0 0 30px rgba(245,165,36,0.38);
-}
-
-.brandSub {
-  font-size: 11.5px; font-weight: 700; letter-spacing: 2.6px; text-transform: uppercase;
-  color: rgba(255,255,255,0.68); margin: 0;
-  padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.14);
-}
-
-.brandPoints {
-  list-style: none; padding: 0; margin: 28px 0 0;
-  display: flex; flex-direction: column; gap: 13px; text-align: left;
-}
-.brandPoints li {
-  display: flex; align-items: center; gap: 11px;
-  font-size: 13.5px; color: rgba(255,255,255,0.72); font-weight: 500;
-}
-.brandPoints svg { width: 17px; height: 17px; flex-shrink: 0; color: #f5a524; }
-
-/* ── Form column ─────────────────────────────────────────────────────────── */
-.formPanel {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+.formSection {
   display: flex;
-  justify-content: center;
-  padding: clamp(28px, 4vh, 56px) clamp(20px, 3vw, 48px);
+  flex-direction: column;
+  gap: 14px;
 }
 
-/* Capped, because an input stretched to 900px is harder to fill in, not
-   easier — the width belongs to the brand panel, not the fields. */
-.formPanelInner { width: 100%; max-width: 560px; }
-
-.formHead { margin-bottom: clamp(20px, 3vh, 28px); }
-
-.formTitle {
-  font-family: 'Montserrat', 'Nunito', sans-serif;
-  font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 900;
-  color: var(--hv-ink, #050505); margin: 16px 0 6px; letter-spacing: -0.6px;
+/* auto-fit: four fields sit four across on a wide card and fold to two, then
+   one, as it narrows — without a breakpoint to keep in sync. */
+.fieldRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: clamp(12px, 1.4vw, 18px);
+  align-items: start;
 }
-.formTitle span { color: var(--hv-amber-deep, #8a4a00); }
-
-.formSubtitle {
-  font-size: 13.5px; color: var(--hv-text-faint, #8d8e97); margin: 0; line-height: 1.55;
-}
-
-.formPanel .backBtn {
-  background: none; border: none; padding: 0;
-  color: var(--hv-text-soft, #5f6068); font-family: inherit;
-  font-size: 13px; font-weight: 700; cursor: pointer;
-}
-.formPanel .backBtn:hover { color: var(--hv-ink, #050505); text-decoration: underline; text-underline-offset: 3px; }
-
-/* Sections stack in one readable column. */
-.form { display: flex; flex-direction: column; gap: 18px; }
-.formSection { display: flex; flex-direction: column; gap: 14px; }
 
 .formActions {
-  display: flex; flex-direction: column; gap: 14px;
-  padding-top: 18px; border-top: 1px solid var(--hv-line, #e7e7ec);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: clamp(14px, 2vh, 20px);
+  border-top: 1px solid var(--hv-line, #e7e7ec);
 }
-.formActions .submitBtn { max-width: none; align-self: stretch; }
+
+/* A submit button spanning the full card stops reading as a button. */
+.formActions .submitBtn { max-width: 340px; align-self: flex-start; }
+
+@media (max-width: 640px) {
+  .formActions .submitBtn { max-width: none; align-self: stretch; }
+}
 
 /* The dropzone was a 160px void holding one line of text. */
-.logoUpload { min-height: 104px; }
-
-@media (max-width: 1024px) {
-  /* Below this the panel is just a band of wasted height on a form people
-     came here to fill in. */
-  .brandPanel { display: none; }
-  .formPanel  { flex: 1 1 100%; }
-}
+.logoUpload { min-height: 108px; }
