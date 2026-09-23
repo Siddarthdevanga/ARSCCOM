@@ -60,7 +60,9 @@ export default function ConferenceDashboard() {
   const [editRoomImage, setEditRoomImage] = useState(null);
   const [editRoomImagePreview, setEditRoomImagePreview] = useState(null);
 
-  const [filterDay] = useState("today");
+  const [filterDay, setFilterDay] = useState("today");
+  const [query,     setQuery]     = useState("");
+  const [live,      setLive]      = useState(true);
 
   const [notification, setNotification] = useState({ show: false, message: "", type: "" });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -78,8 +80,14 @@ export default function ConferenceDashboard() {
   }, []);
 
   const dates = useMemo(() => ({
-    today: getDate(0), yesterday: getDate(-1), tomorrow: getDate(1)
+    yesterday: getDate(-1), today: getDate(0), tomorrow: getDate(1)
   }), [getDate]);
+
+  const DAY_TABS = [
+    { key: "yesterday", label: "Yesterday" },
+    { key: "today",     label: "Today"     },
+    { key: "tomorrow",  label: "Tomorrow"  },
+  ];
 
   const selectedDate = dates[filterDay];
 
@@ -159,6 +167,18 @@ export default function ConferenceDashboard() {
     setCompany(JSON.parse(storedCompany));
     loadDashboard();
   }, []);
+
+  /* The hero claims this page is live, so it now actually is. Polls only
+     while Live is on and the tab is visible, and silently — loadDashboard
+     leaves `loading` alone after the first run, so a refresh never blanks
+     the screen under someone. */
+  useEffect(() => {
+    if (!live) return;
+    const tick = () => { if (document.visibilityState === "visible") loadDashboard(); };
+    const id = setInterval(tick, 30_000);
+    document.addEventListener("visibilitychange", tick);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", tick); };
+  }, [live]);// eslint-disable-line react-hooks/exhaustive-deps
 
   /* ================= ROOM ACTIONS ================= */
   const handleSyncRooms = async () => {
@@ -274,6 +294,14 @@ export default function ConferenceDashboard() {
       return date === selectedDate && b.status === "BOOKED";
     });
   }, [bookings, selectedDate]);
+
+  const visibleBookings = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return filteredBookings;
+    return filteredBookings.filter((b) =>
+      [b.room_name, b.department, b.booked_by, b.title, b.purpose, b.email]
+        .some((f) => (f || "").toString().toLowerCase().includes(q)));
+  }, [filteredBookings, query]);
 
   const departmentStats = useMemo(() => {
     const map = {};
@@ -608,8 +636,34 @@ export default function ConferenceDashboard() {
 
         {/* ===== HERO ===== */}
         <section className={styles.hero}>
-          <h1 className={styles.heroTitle}>Conference <span>Dashboard</span></h1>
-          <p className={styles.heroSub}>Manage rooms, bookings, and usage in real time</p>
+          <div className={styles.heroTop}>
+            <h1 className={styles.heroTitle}>Conference <span>Dashboard</span></h1>
+            <button
+              className={`${styles.liveToggle} ${live ? styles.liveOn : ""}`}
+              onClick={() => setLive((l) => !l)}
+              aria-pressed={live}
+              title={live ? "Refreshing every 30s" : "Auto-refresh paused"}
+            >
+              <span className={styles.liveDot} />
+              <span>{live ? "Live" : "Paused"}</span>
+            </button>
+          </div>
+
+          {/* The day filter existed in state but had no setter, so the
+              schedule was permanently stuck on today. */}
+          <div className={styles.dayTabs} role="tablist" aria-label="Schedule day">
+            {DAY_TABS.map((d) => (
+              <button
+                key={d.key}
+                role="tab"
+                aria-selected={filterDay === d.key}
+                className={`${styles.dayTab} ${filterDay === d.key ? styles.dayTabOn : ""}`}
+                onClick={() => setFilterDay(d.key)}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
 
           <div className={styles.heroStats}>
             <div className={styles.heroStatCard}>
@@ -618,41 +672,49 @@ export default function ConferenceDashboard() {
               {plan?.lockedRooms > 0 && <div className={styles.heroStatExtra}>+{plan.lockedRooms} locked</div>}
             </div>
             <div className={styles.heroStatCard}>
-              <div className={styles.heroStatLabel}>{filterDay.charAt(0).toUpperCase() + filterDay.slice(1)} Bookings</div>
-              <div className={styles.heroStatValue}>{filteredBookings.length}</div>
+              <div className={styles.heroStatLabel}>
+                {DAY_TABS.find((d) => d.key === filterDay)?.label} Bookings
+              </div>
+              <div className={`${styles.heroStatValue} ${styles.statAmber}`}>{filteredBookings.length}</div>
             </div>
             <div className={styles.heroStatCard}>
               <div className={styles.heroStatLabel}>Departments</div>
-              <div className={styles.heroStatValue}>{departmentStats.length}</div>
+              <div className={`${styles.heroStatValue} ${styles.statMint}`}>{departmentStats.length}</div>
             </div>
           </div>
+
+          {/* Booking usage sits in the hero as one slim line, graded green to
+              red so the colour alone says how much headroom is left. */}
+          {bookingPlan && bookingPlan.limit !== Infinity && (
+            <div className={styles.heroUsage}>
+              <span className={styles.heroUsageLabel}>
+                {bookingPlan.period === "monthly" ? "Bookings This Month" : "Booking Usage"}
+              </span>
+              <div className={styles.heroUsageTrack}>
+                <div
+                  className={styles.heroUsageFill}
+                  style={{
+                    width: `${bookingPercentage}%`,
+                    background:
+                      bookingPercentage >= 85 ? "#ef4444" :
+                      bookingPercentage >= 60 ? "#f5a524" : "#34d399",
+                  }}
+                />
+              </div>
+              <span className={styles.heroUsageMeta}>
+                <strong>{bookingPlan.used} / {bookingPlan.limit}</strong>
+                <span className={styles.heroUsageDim}>
+                  {" "}&middot; {bookingPlan.remaining} left
+                  {bookingPlan.period === "monthly" ? " this month" : ""}
+                </span>
+              </span>
+            </div>
+          )}
         </section>
 
         {/* ===== BOOKING DISABLED WARNING ===== */}
         {isBookingDisabled && (
           <div className={styles.upgradeMsg}>{getBookingDisabledMessage()}</div>
-        )}
-
-        {/* ===== BOOKING USAGE BAR ===== */}
-        {bookingPlan && bookingPlan.limit !== Infinity && (
-          <div className={styles.usageBarWrapper}>
-            <div className={styles.usageHeader}>
-              <span className={styles.usageName}>
-                {bookingPlan.period === "monthly" ? "Bookings This Month" : "Booking Usage (Trial)"}
-              </span>
-              <span>{bookingPlan.remaining} remaining{bookingPlan.period === "monthly" ? " this month" : ""}</span>
-            </div>
-            <div className={styles.usageBarBg}>
-              <div className={styles.usageBarFill} style={{
-                width: `${bookingPercentage}%`,
-                background: bookingPercentage >= 90 ? "#cc1100" : bookingPercentage >= 70 ? "#f0a500" : "#00b894"
-              }} />
-            </div>
-            <div className={styles.usageFooter}>
-              <span>{bookingPlan.used} / {bookingPlan.limit} used</span>
-              {bookingPlan.period === "monthly" && <span style={{color:"#888",fontSize:"12px"}}>Resets on the 1st</span>}
-            </div>
-          </div>
         )}
 
         {/* ===== PUBLIC URL ===== */}
@@ -727,20 +789,42 @@ export default function ConferenceDashboard() {
               <div className={styles.cardHeader}>
                 <span className={`${styles.cardDot} ${styles.cardDotGreen}`} />
                 <h3 className={styles.cardTitle}>Daily Schedule</h3>
-                <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{filteredBookings.length}</span>
+                <span className={`${styles.cardCount} ${styles.cardCountGreen}`}>{visibleBookings.length}</span>
+                <input
+                  className={styles.cardSearch}
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search room, team, host..."
+                  aria-label="Search bookings"
+                />
               </div>
-              {filteredBookings.length === 0 ? (
-                <div className={styles.emptyState}><span className={styles.emptyIcon}>—</span>No bookings scheduled</div>
+              {visibleBookings.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <span className={styles.emptyIcon}>&mdash;</span>
+                  {query.trim() ? "No bookings match that search" : "No bookings scheduled"}
+                </div>
               ) : (
                 <div className={styles.tableScroll}>
                   <table className={styles.table}>
-                    <thead><tr><th>Room</th><th>Time</th><th>Status</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Room</th><th>Time</th><th>Team</th><th>Booked By</th><th>Status</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      {filteredBookings.slice(0, 10).map((b) => (
+                      {/* No slice: the panel scrolls, so capping the list at
+                          ten silently hid bookings on a busy day. */}
+                      {visibleBookings.map((b) => (
                         <tr key={b.id}>
-                          <td><span className={styles.roomCode}>{b.room_name}</span><br /><small>#{b.room_number}</small></td>
-                          <td>{formatNiceTime(b.start_time)} &ndash; {formatNiceTime(b.end_time)}</td>
-                          <td><span className={styles.statusBadge}>{b.status}</span></td>
+                          <td data-label="Room">
+                            <span className={styles.roomCode}>{b.room_name}</span>
+                            <small className={styles.cellSub}>#{b.room_number}</small>
+                          </td>
+                          <td data-label="Time">{formatNiceTime(b.start_time)} &ndash; {formatNiceTime(b.end_time)}</td>
+                          <td data-label="Team" className={styles.cellMuted}>{b.department || "—"}</td>
+                          <td data-label="Booked By" className={styles.cellMuted}>{b.booked_by_name || b.booked_by || "—"}</td>
+                          <td data-label="Status"><span className={styles.statusBadge}>{b.status}</span></td>
                         </tr>
                       ))}
                     </tbody>
