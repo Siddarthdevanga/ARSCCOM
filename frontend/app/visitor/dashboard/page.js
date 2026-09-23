@@ -509,10 +509,7 @@ export default function VisitorDashboard() {
         {/* COMPACT HERO */}
         <div className={styles.hero}>
           <div className={styles.heroTop}>
-            <div>
-              <h1 className={styles.heroTitle}>Visitor <span>Dashboard</span></h1>
-              <p className={styles.heroSub}>Real-time overview of all visitors on premises</p>
-            </div>
+            <h1 className={styles.heroTitle}>Visitor <span>Dashboard</span></h1>
             <button
               className={`${styles.liveToggle} ${live ? styles.liveOn : ""}`}
               onClick={() => setLive((l) => !l)}
@@ -543,30 +540,31 @@ export default function VisitorDashboard() {
               <div className={`${styles.heroStatValue} ${styles.statSky}`}>{stats.pendingVisits ?? 0}</div>
             </div>
           </div>
+
+          {/* Plan usage lives in the hero as a single slim line rather than a
+              card of its own below it — it is reference information, not
+              something the desk acts on. */}
+          {planLimit > 0 && (
+            <div className={styles.heroPlan}>
+              <span className={styles.heroPlanLabel}>Plan Usage</span>
+              <div className={styles.heroPlanTrack}>
+                <div
+                  className={styles.heroPlanFill}
+                  style={{ width: `${planPct}%`, background: planColor }}
+                />
+              </div>
+              <span className={styles.heroPlanMeta}>
+                <strong>{planUsed} / {planLimit}</strong> visits
+                <span className={styles.heroPlanDim}> · {Math.max(0, planLimit - planUsed)} left</span>
+              </span>
+            </div>
+          )}
         </div>
 
         {/* UPGRADE MSG */}
         {atLimit && (
           <div className={styles.upgradeMsg}>
             Visitor limit reached for your plan. Upgrade to allow new check-ins.
-          </div>
-        )}
-
-        {/* PLAN BAR */}
-        {planLimit > 0 && (
-          <div className={styles.planBarWrapper}>
-            <div className={styles.planHeader}>
-              <span>Plan Usage</span>
-              <span className={styles.planName}>{planUsed} / {planLimit} visits</span>
-            </div>
-            <div className={styles.planBarBg}>
-              <div className={styles.planBarFill}
-                style={{ width: `${planPct}%`, background: planColor }} />
-            </div>
-            <div className={styles.planFooter}>
-              <span>{Math.round(planPct)}% used</span>
-              <span>{Math.max(0, planLimit - planUsed)} remaining</span>
-            </div>
           </div>
         )}
 
