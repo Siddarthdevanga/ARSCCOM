@@ -26,7 +26,7 @@ function passwordError(v) {
 function InlineErr({ msg, show }) {
   if (!show || !msg) return null;
   return (
-    <p style={{ color: "#dc2626", fontSize: "0.72rem", fontWeight: 700, marginTop: 4, marginBottom: 0, lineHeight: 1.3 }}>
+    <p style={{ color: "#9b1c1c", fontSize: "0.72rem", fontWeight: 700, marginTop: 4, marginBottom: 0, lineHeight: 1.3 }}>
       {msg}
     </p>
   );
@@ -82,7 +82,7 @@ export default function LoginPage() {
   };
 
   const borderFor = (field) =>
-    touched[field] && fe[field] ? "1px solid #dc2626" : undefined;
+    touched[field] && fe[field] ? "1px solid #9b1c1c" : undefined;
 
   const handleBlur = (field) => setTouched((p) => ({ ...p, [field]: true }));
 
@@ -235,9 +235,10 @@ export default function LoginPage() {
 
         <div className={styles.brandingContent}>
           <div className={styles.logoContainer}>
-            <Image src="/haivisitor.png" alt="Hai Visitor Logo" width={460} height={460} priority className={styles.brandLogo} />
+            <Image src="/v-transparent.png" alt="Hai Visitor Logo" width={280} height={280} priority className={styles.brandLogo} />
           </div>
-          <h1 className={styles.platformTitle}>VISITOR MANAGEMENT PLATFORM</h1>
+          <h1 className={styles.platformTitle}>ZODOPT&rsquo;S HAI VISITOR</h1>
+          <p className={styles.platformSubtitle}>The Visitor Management Portal</p>
           <p className={styles.platformTagline}>Streamline check-ins • Enhance security • Optimize space utilization</p>
         </div>
 
@@ -356,7 +357,7 @@ export default function LoginPage() {
             <InlineErr msg={fe.password} show={touched.password} />
             {/* Caps Lock warning */}
             {capsLock && password && (
-              <p style={{ color: "#f97316", fontSize: "0.72rem", fontWeight: 700, marginTop: 4, marginBottom: 0 }}>
+              <p style={{ color: "#3a3a3a", fontSize: "0.72rem", fontWeight: 700, marginTop: 4, marginBottom: 0 }}>
                 ⚠ Caps Lock is on
               </p>
             )}
@@ -376,8 +377,8 @@ export default function LoginPage() {
           {/* Cooldown banner */}
           {inCooldown && (
             <div style={{
-              background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
-              padding: "10px 14px", fontSize: "0.78rem", fontWeight: 700, color: "#dc2626",
+              background: "#fafafa", border: "1px solid #d8d8d8", borderRadius: 8,
+              padding: "10px 14px", fontSize: "0.78rem", fontWeight: 700, color: "#9b1c1c",
               marginBottom: 8, textAlign: "center",
             }}>
               Too many failed attempts. Please wait {cooldownLeft}s before trying again.
@@ -387,8 +388,8 @@ export default function LoginPage() {
           {/* Failed attempts warning (before cooldown) */}
           {!inCooldown && failedAttempts >= 3 && failedAttempts < MAX_ATTEMPTS && (
             <div style={{
-              background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 8,
-              padding: "8px 14px", fontSize: "0.75rem", fontWeight: 700, color: "#c2410c",
+              background: "#fafafa", border: "1px solid #d8d8d8", borderRadius: 8,
+              padding: "8px 14px", fontSize: "0.75rem", fontWeight: 700, color: "#3a3a3a",
               marginBottom: 8, textAlign: "center",
             }}>
               {MAX_ATTEMPTS - failedAttempts} attempt{MAX_ATTEMPTS - failedAttempts !== 1 ? "s" : ""} remaining before temporary lockout

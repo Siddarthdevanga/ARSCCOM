@@ -35,7 +35,7 @@
 /* ================= LEFT BRANDING SECTION ================= */
 .leftSection {
   flex: 0 0 55%;
-  background: linear-gradient(135deg, #5d00b8 0%, #7a19d6 50%, #6200c4 100%);
+  background: linear-gradient(135deg, #000000 0%, #171717 50%, #000000 100%);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -76,8 +76,7 @@
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   padding: clamp(10px, 1.5vh, 12px) clamp(14px, 1.8vw, 18px);
   position: relative;
-  opacity: 0.9;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  opacity: 0.72;
   border-radius: 8px;
 }
 
@@ -91,7 +90,6 @@
   height: 3px;
   background: white;
   transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
   border-radius: 2px;
 }
 
@@ -133,11 +131,12 @@
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
+/* The mark is a white "V" on transparency — it only reads against the dark
+   left panel. Do not place it on a light surface. */
 .brandLogo {
-  width: clamp(340px, 46vw, 460px);
+  width: clamp(190px, 26vw, 280px);
   height: auto;
   max-width: 100%;
-  filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.35));
 }
 
 .platformTitle {
@@ -149,9 +148,8 @@
   font-size: clamp(18px, 2.2vw, 30px);
   font-weight: 900;
   letter-spacing: clamp(1.5px, 0.3vw, 4px);
-  color: white;
-  margin: 0 0 clamp(14px, 2vh, 20px) 0;
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  margin: 0 0 clamp(8px, 1.2vh, 12px) 0;
   animation: fadeIn 1s ease 0.3s both;
   line-height: 1.3;
   white-space: normal;
@@ -159,11 +157,22 @@
   max-width: 100%;
 }
 
+.platformSubtitle {
+  font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(13px, 1.5vw, 17px);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: clamp(1px, 0.18vw, 2.4px);
+  text-transform: uppercase;
+  margin: 0 0 clamp(14px, 2vh, 20px) 0;
+  animation: fadeIn 1s ease 0.4s both;
+}
+
 .platformTagline {
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(13px, 1.8vw, 16px);
-  color: rgba(255, 255, 255, 0.95);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
   margin: 0;
   letter-spacing: 0.6px;
   animation: fadeIn 1s ease 0.5s both;
@@ -239,7 +248,7 @@
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(26px, 4.2vw, 36px);
   font-weight: 900;
-  color: #5d00b8;
+  color: #000000;
   margin: 0 0 clamp(20px, 3.5vh, 32px) 0;
   letter-spacing: 0.5px;
 }
@@ -265,10 +274,10 @@
 }
 
 .planCard {
-  background: linear-gradient(135deg, #fafbff 0%, #ffffff 100%);
+  background: #ffffff;
   border-radius: clamp(14px, 2vw, 20px);
   padding: clamp(18px, 2.4vh, 32px) clamp(14px, 1.8vw, 28px);
-  border: 2px solid #e8e8e8;
+  border: 2px solid #e2e2e2;
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: visible;
@@ -280,18 +289,18 @@
 
 .planCard:hover {
   transform: translateY(-8px);
-  box-shadow: 0 18px 56px rgba(93, 0, 184, 0.2);
-  border-color: #b388ff;
+  box-shadow: 0 18px 56px rgba(0, 0, 0, 0.16);
+  border-color: #000000;
 }
 
 .popularPlan {
-  border-color: #7a19d6;
+  border-color: #000000;
   border-width: 3px;
-  box-shadow: 0 14px 42px rgba(122, 25, 214, 0.22);
+  box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18);
 }
 
 .popularPlan:hover {
-  box-shadow: 0 20px 64px rgba(122, 25, 214, 0.32);
+  box-shadow: 0 20px 64px rgba(0, 0, 0, 0.28);
 }
 
 .popularBadge {
@@ -299,7 +308,7 @@
   top: clamp(-13px, -1.8vh, -15px);
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #7a19d6, #5d00b8);
+  background: #000000;
   color: white;
   font-family: 'Montserrat', sans-serif;
   font-size: clamp(8.5px, 1.3vw, 10.5px);
@@ -307,7 +316,7 @@
   padding: clamp(5px, 1vh, 7px) clamp(10px, 1.8vw, 14px);
   border-radius: clamp(14px, 2vw, 18px);
   letter-spacing: 0.8px;
-  box-shadow: 0 4px 14px rgba(122, 25, 214, 0.45);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   white-space: nowrap;
 }
 
@@ -315,7 +324,7 @@
   font-family: 'Montserrat', sans-serif;
   font-size: clamp(13px, 1.9vw, 16.5px);
   font-weight: 800;
-  color: #5d00b8;
+  color: #000000;
   margin: 0 0 clamp(10px, 1.6vh, 14px) 0;
   letter-spacing: 0.8px;
 }
@@ -357,7 +366,7 @@
   content: '✓';
   position: absolute;
   left: 0;
-  color: #7a19d6;
+  color: #000000;
   font-weight: 900;
   font-size: clamp(13px, 1.8vw, 15px);
 }
@@ -365,7 +374,7 @@
 .planBtn {
   width: 100%;
   padding: clamp(11px, 1.9vh, 15px) clamp(6px, 1vw, 10px);
-  background: linear-gradient(135deg, #7a19d6, #5d00b8);
+  background: #000000;
   color: white;
   border: none;
   border-radius: clamp(10px, 1.5vw, 13px);
@@ -381,7 +390,7 @@
 
 .planBtn:hover {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 12px 32px rgba(122, 25, 214, 0.5);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
 }
 
 .planBtn:active {
@@ -401,21 +410,24 @@
   align-items: flex-start;
   gap: clamp(16px, 2.6vw, 20px);
   padding: clamp(20px, 3.2vh, 28px);
-  background: linear-gradient(135deg, #f8f5ff 0%, #ffffff 100%);
+  background: #fafafa;
   border-radius: clamp(14px, 2.2vw, 16px);
-  border: 2px solid #e8e0ff;
+  border: 2px solid #e2e2e2;
   transition: all 0.35s ease;
 }
 
 .contactItem:hover {
-  border-color: #d0b8ff;
-  box-shadow: 0 8px 24px rgba(93, 0, 184, 0.15);
+  border-color: #000000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   transform: translateY(-2px);
 }
 
+/* Emoji icons render in full colour regardless of CSS colour — desaturate
+   them so the monochrome palette holds. */
 .contactIcon {
   font-size: clamp(28px, 4.5vw, 36px);
   flex-shrink: 0;
+  filter: grayscale(1);
 }
 
 .contactItem strong {
@@ -423,7 +435,7 @@
   font-family: 'Montserrat', sans-serif;
   font-size: clamp(15px, 2.4vw, 17px);
   font-weight: 700;
-  color: #5d00b8;
+  color: #000000;
   margin-bottom: clamp(6px, 1.2vh, 8px);
 }
 
@@ -448,7 +460,7 @@
 /* ================= RIGHT LOGIN SECTION ================= */
 .rightSection {
   flex: 0 0 45%;
-  background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+  background: #f4f4f4;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -464,7 +476,8 @@
   background: white;
   padding: clamp(36px, 6vh, 52px) clamp(32px, 5vw, 44px);
   border-radius: clamp(18px, 2.8vw, 26px);
-  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.12);
+  border: 1px solid #e6e6e6;
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.1);
   animation: fadeInRight 0.9s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -477,7 +490,7 @@
   font-family: 'Montserrat', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(18px, 3.2vw, 22px);
   font-weight: 800;
-  color: #5d00b8;
+  color: #000000;
   text-align: center;
   margin: 0 0 clamp(32px, 5.5vh, 42px) 0;
   letter-spacing: 0.8px;
@@ -502,7 +515,7 @@
 .inputGroup input {
   width: 100%;
   padding: clamp(13px, 2.2vh, 16px);
-  border: 2px solid #ddd;
+  border: 2px solid #d6d6d6;
   border-radius: clamp(10px, 1.6vw, 12px);
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: clamp(14px, 2.3vw, 16px);
@@ -519,9 +532,9 @@
 
 .inputGroup input:focus {
   outline: none;
-  border-color: #7a19d6;
+  border-color: #000000;
   background: white;
-  box-shadow: 0 0 0 4px rgba(122, 25, 214, 0.12);
+  box-shadow: 0 0 0 4px rgba(0, 0, 0, 0.1);
 }
 
 .inputGroup input:disabled {
@@ -547,7 +560,7 @@
 .rememberMeRow input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #7a19d6;
+  accent-color: #000000;
   cursor: pointer;
 }
 
@@ -611,16 +624,21 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* The page is monochrome, but pass/fail must not be distinguishable by
+   wording alone — these two keep a muted red / green tint on a neutral
+   ground so the state reads at a glance without breaking the palette. */
 .errorMessage {
-  background: rgba(255, 59, 48, 0.1);
-  color: #c62828;
-  border: 2px solid rgba(255, 59, 48, 0.3);
+  background: #fafafa;
+  color: #9b1c1c;
+  border: 2px solid #d8d8d8;
+  border-left: 4px solid #9b1c1c;
 }
 
 .successMessage {
-  background: rgba(52, 199, 89, 0.1);
-  color: #2e7d32;
-  border: 2px solid rgba(52, 199, 89, 0.3);
+  background: #fafafa;
+  color: #1a6b3c;
+  border: 2px solid #d8d8d8;
+  border-left: 4px solid #1a6b3c;
 }
 
 .messageIcon {
@@ -631,7 +649,7 @@
 .loginBtn {
   width: 100%;
   padding: clamp(14px, 2.5vh, 18px);
-  background: linear-gradient(135deg, #7a19d6, #5d00b8);
+  background: #000000;
   color: white;
   border: none;
   border-radius: clamp(10px, 1.6vw, 12px);
@@ -647,7 +665,7 @@
 
 .loginBtn:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 12px 36px rgba(122, 25, 214, 0.4);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.3);
 }
 
 .loginBtn:active:not(:disabled) {
@@ -672,16 +690,17 @@
 }
 
 .link {
-  color: #7a19d6;
-  text-decoration: none;
+  color: #000000;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-color: #bdbdbd;
   font-weight: 700;
   transition: all 0.25s ease;
 }
 
 .link:hover {
-  color: #5d00b8;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+  color: #000000;
+  text-decoration-color: #000000;
 }
 
 .linkDivider {
