@@ -13,7 +13,7 @@ const PDFDocument = require("pdfkit");
 const QRCode = require("qrcode");
 
 const OUT_PATH = path.join(__dirname, "..", "public", "Hai-Visitor-Brochure.pdf");
-const LOGO_PATH = path.join(__dirname, "..", "public", "haivisitor.png");
+const LOGO_PATH = path.join(__dirname, "..", "public", "v-mark.png");
 
 const PAGE_W = 595.28;
 const PAGE_H = 841.89;

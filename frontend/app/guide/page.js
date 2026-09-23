@@ -14,7 +14,7 @@ const BODY_HTML = `
   <!-- ============ SIDEBAR ============ -->
   <nav class="guide-sidebar" aria-label="Guide sections">
     <div class="sb-brand">
-      <div class="mark"><img src="/haivisitor.png" alt="Hai Visitor"/></div>
+      <div class="mark"><img src="/v-transparent.png" alt="Hai Visitor"/></div>
       <div class="name">Hai Visitor<small>Field Guide</small></div>
     </div>
 
@@ -54,7 +54,7 @@ const BODY_HTML = `
     <!-- ============ COVER ============ -->
     <header class="cover">
       <div class="cover-brand">
-        <img src="/haivisitor.png" alt="Hai Visitor"/>
+        <img src="/v-transparent.png" alt="Hai Visitor"/>
         <span>H<em style="font-style:normal; color:#FDBA74;">ai</em> Visitor</span>
       </div>
       <div class="cover-eyebrow">● Complete Walkthrough</div>
@@ -97,7 +97,7 @@ const BODY_HTML = `
               <div class="mk mk-hero">
                 <div class="mk-ticker">₹49 ONLY — 15-DAY TRIAL &nbsp;★&nbsp; NO HARDWARE NEEDED &nbsp;★&nbsp; GO LIVE IN 15 MINUTES</div>
                 <div class="mk-nav">
-                  <div class="mk-logo"><img src="/haivisitor.png" alt="Hai Visitor"/>H<em>ai</em> VISITOR</div>
+                  <div class="mk-logo"><img src="/v-transparent.png" alt="Hai Visitor"/>H<em>ai</em> VISITOR</div>
                   <div class="mk-navlinks"><span>About</span><span>Features</span><span>Pricing</span><span>FAQ</span></div>
                 </div>
                 <div class="mk-h1">You spend money bringing customers in. <span>Don't let their data walk out.</span></div>
@@ -115,7 +115,7 @@ const BODY_HTML = `
             <div class="frame-body mk-page">
               <div class="mk-card">
                 <div style="text-align:center; margin-bottom:8px;">
-                  <img src="/haivisitor.png" alt="Hai Visitor" style="width:28px; height:28px; object-fit:contain; margin:0 auto 4px;"/>
+                  <img src="/v-mark.png" alt="Hai Visitor" style="width:28px; height:28px; object-fit:contain; margin:0 auto 4px; border-radius:6px;"/>
                   <div style="font-size:11px; font-weight:900; color:#242427;">H<span style="color:#F97316;">ai</span> Visitor</div>
                   <span class="mk-pill on" style="margin-top:4px; display:inline-block;">15-Day Trial · ₹49</span>
                 </div>
@@ -220,7 +220,7 @@ const BODY_HTML = `
                 <div class="mk-split-left">
                   <div class="navtabs"><span>ABOUT</span><span>PLANS</span><span>CONTACT</span></div>
                   <div class="center">
-                    <div class="mk-mark"><img src="/haivisitor.png" alt="Hai Visitor"/></div>
+                    <div class="mk-mark"><img src="/v-transparent.png" alt="Hai Visitor"/></div>
                     <b>VISITOR MANAGEMENT PLATFORM</b>
                     <span>Streamline check-ins · Enhance security</span>
                   </div>

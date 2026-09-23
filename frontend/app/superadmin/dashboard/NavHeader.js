@@ -34,7 +34,7 @@ export default function SuperAdminNav({
           )}
           <div className={styles.logoContainer}>
             <Image
-              src="/haivisitor.png"
+              src="/v-mark.png"
               alt="Hai Visitor Logo"
               width={280}
               height={90}

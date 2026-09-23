@@ -11,7 +11,7 @@ export const SITE = {
   domain:      process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com',
   phone:       '+91-8647878785',
   email:       'admin@haivisitor.zodopt.com',
-  logo:        `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com'}/haivisitor.png`,
+  logo:        `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com'}/v-mark.png`,
   ogImage:     `${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.promeet.zodopt.com'}/og-image.png`,
   trialPrice:  '49',
   trialCurrency:'INR',
