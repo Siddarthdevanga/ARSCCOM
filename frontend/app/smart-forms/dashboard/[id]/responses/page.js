@@ -92,11 +92,11 @@ export default function SmartFormResponsesPage() {
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1a0038", margin: 0 }}>{formName || "Responses"}</h1>
+              <h1 style={{ fontSize: 20, fontWeight: 800, color: "#08080c", margin: 0 }}>{formName || "Responses"}</h1>
               <p style={{ fontSize: 12.5, color: "#6b7280", margin: "4px 0 0" }}>{responses.length} response{responses.length !== 1 ? "s" : ""}</p>
             </div>
             <button onClick={handleDownload} disabled={downloading || !responses.length}
-              style={{ background: "linear-gradient(135deg,#6200d6,#a855f7)", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: responses.length ? "pointer" : "not-allowed", opacity: responses.length ? 1 : 0.5 }}>
+              style={{ background: "linear-gradient(135deg,#121216,#242428)", color: "#fff", border: "none", padding: "9px 18px", borderRadius: 10, fontWeight: 700, fontSize: 13, cursor: responses.length ? "pointer" : "not-allowed", opacity: responses.length ? 1 : 0.5 }}>
               {downloading ? "Downloading…" : "⬇ Download Report"}
             </button>
           </div>
@@ -118,7 +118,7 @@ export default function SmartFormResponsesPage() {
             <div style={{ overflowX: "auto", border: "1px solid #e5e7eb", borderRadius: 12 }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
-                  <tr style={{ background: "#6200d6" }}>
+                  <tr style={{ background: "#121216" }}>
                     <th style={thStyle}>Submitted On</th>
                     {allColumns.map((c) => <th key={c} style={thStyle}>{c}</th>)}
                   </tr>
@@ -141,4 +141,4 @@ export default function SmartFormResponsesPage() {
 }
 
 const thStyle = { padding: "10px 14px", textAlign: "left", color: "#fff", fontWeight: 700, fontSize: 11.5, textTransform: "uppercase", whiteSpace: "nowrap" };
-const tdStyle = { padding: "9px 14px", borderBottom: "1px solid #f3f0fb", color: "#1a0038", whiteSpace: "nowrap" };
+const tdStyle = { padding: "9px 14px", borderBottom: "1px solid #f3f0fb", color: "#08080c", whiteSpace: "nowrap" };

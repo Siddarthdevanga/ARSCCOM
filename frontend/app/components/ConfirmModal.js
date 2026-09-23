@@ -20,12 +20,12 @@ export default function ConfirmModal({
 }) {
   if (!open) return null;
   const danger = variant === "danger";
-  const accent = danger ? "#dc2626" : "#6200d6";
+  const accent = danger ? "#dc2626" : "#121216";
 
   return (
     <div
       style={{
-        position: "fixed", inset: 0, background: "rgba(26,0,56,0.55)",
+        position: "fixed", inset: 0, background: "rgba(8, 8, 12,0.55)",
         backdropFilter: "blur(2px)", display: "flex", alignItems: "center",
         // Above the highest z-index used anywhere else in the app (10000,
         // toast notifications) — this can be nested inside an existing
@@ -40,7 +40,7 @@ export default function ConfirmModal({
       <div
         style={{
           background: "#fff", borderRadius: 18, padding: 24, maxWidth: 400,
-          width: "100%", boxShadow: "0 20px 60px rgba(26,0,56,0.3)",
+          width: "100%", boxShadow: "0 20px 60px rgba(8, 8, 12,0.3)",
         }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
@@ -54,10 +54,10 @@ export default function ConfirmModal({
             <AlertTriangle size={20} color="#dc2626" />
           </div>
         )}
-        <h3 style={{ fontFamily: "'Nunito', sans-serif", fontSize: 17, fontWeight: 800, color: "#1a0038", margin: "0 0 10px" }}>
+        <h3 style={{ fontFamily: "'Nunito', sans-serif", fontSize: 17, fontWeight: 800, color: "#08080c", margin: "0 0 10px" }}>
           {title}
         </h3>
-        <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 13.5, lineHeight: 1.6, color: "#5a4a70", margin: "0 0 20px" }}>
+        <div style={{ fontFamily: "'Nunito', sans-serif", fontSize: 13.5, lineHeight: 1.6, color: "#535356", margin: "0 0 20px" }}>
           {message}
         </div>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
@@ -67,7 +67,7 @@ export default function ConfirmModal({
             style={{
               fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, borderRadius: 10,
               padding: "10px 18px", cursor: loading ? "not-allowed" : "pointer", border: "none",
-              background: danger ? "rgba(220,38,38,0.08)" : "rgba(98,0,214,0.08)",
+              background: danger ? "rgba(220,38,38,0.08)" : "rgba(18, 18, 22,0.08)",
               color: accent, opacity: loading ? 0.5 : 1,
             }}
           >
@@ -80,7 +80,7 @@ export default function ConfirmModal({
               fontFamily: "'Nunito', sans-serif", fontWeight: 700, fontSize: 13, borderRadius: 10,
               padding: "10px 18px", cursor: loading ? "not-allowed" : "pointer", border: "none",
               background: accent, color: "#fff",
-              boxShadow: `0 3px 12px ${danger ? "rgba(220,38,38,0.3)" : "rgba(98,0,214,0.3)"}`,
+              boxShadow: `0 3px 12px ${danger ? "rgba(220,38,38,0.3)" : "rgba(18, 18, 22,0.3)"}`,
               display: "inline-flex", alignItems: "center", gap: 6, opacity: loading ? 0.5 : 1,
             }}
           >

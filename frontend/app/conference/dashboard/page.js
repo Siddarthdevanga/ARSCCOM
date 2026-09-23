@@ -677,7 +677,7 @@ export default function ConferenceDashboard() {
         {analyticsData.total > 0 && (
           <section style={{ padding:"0 1rem 1.5rem" }}>
             <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginBottom:"1rem" }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1d1d21" strokeWidth="2">
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
               </svg>
               <span style={{ fontWeight:700, fontSize:"0.95rem", color:"#1f2937" }}>Analytics</span>
@@ -771,8 +771,8 @@ function AreaChart({ data }) {
       <svg viewBox={`0 0 ${W} ${H}`} style={{ width:"100%", height:"auto", overflow:"visible" }}>
         <defs>
           <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.25"/>
-            <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.02"/>
+            <stop offset="0%" stopColor="#1d1d21" stopOpacity="0.25"/>
+            <stop offset="100%" stopColor="#1d1d21" stopOpacity="0.02"/>
           </linearGradient>
         </defs>
         {/* grid lines */}
@@ -781,12 +781,12 @@ function AreaChart({ data }) {
             stroke="#f3f4f6" strokeWidth="1"/>
         ))}
         <polygon points={areaPts} fill="url(#areaGrad)"/>
-        <polyline points={linePts} fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+        <polyline points={linePts} fill="none" stroke="#1d1d21" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
         {xs.map((x, i) => (
           <g key={i}>
-            <circle cx={x} cy={ys[i]} r="3" fill="#7c3aed"/>
+            <circle cx={x} cy={ys[i]} r="3" fill="#1d1d21"/>
             <text x={x} y={H - 4} textAnchor="middle" fontSize="9" fill="#9ca3af">{data[i].label}</text>
-            {data[i].count > 0 && <text x={x} y={ys[i] - 6} textAnchor="middle" fontSize="9" fontWeight="700" fill="#7c3aed">{data[i].count}</text>}
+            {data[i].count > 0 && <text x={x} y={ys[i] - 6} textAnchor="middle" fontSize="9" fontWeight="700" fill="#1d1d21">{data[i].count}</text>}
           </g>
         ))}
       </svg>
@@ -797,7 +797,7 @@ function AreaChart({ data }) {
 /* ─── Analytics: Bookings per room (horizontal bar chart) ─── */
 function RoomBarChart({ data }) {
   const max = Math.max(...data.map(d => d[1]), 1);
-  const colors = ["#7c3aed","#0891b2","#059669","#d97706","#dc2626","#9333ea","#0284c7","#16a34a"];
+  const colors = ["#1d1d21","#0891b2","#059669","#d97706","#dc2626","#1d1d21","#0284c7","#16a34a"];
   return (
     <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb", padding:"1rem" }}>
       <div style={{ fontSize:"0.78rem", fontWeight:700, color:"#374151", marginBottom:"0.75rem" }}>Bookings per Room</div>
@@ -835,9 +835,9 @@ function PeakHoursChart({ byHour }) {
         {workHours.map(h => (
           <div key={h} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"3px" }}>
             <div style={{ width:"100%", height:36, borderRadius:5,
-              background:`rgba(124,58,237,${alpha(h)})`,
+              background:`rgba(29, 29, 33,${alpha(h)})`,
               display:"flex", alignItems:"center", justifyContent:"center" }}>
-              {byHour[h] > 0 && <span style={{ fontSize:"0.6rem", fontWeight:800, color:"#7c3aed" }}>{byHour[h]}</span>}
+              {byHour[h] > 0 && <span style={{ fontSize:"0.6rem", fontWeight:800, color:"#1d1d21" }}>{byHour[h]}</span>}
             </div>
             <span style={{ fontSize:"0.55rem", color:"#9ca3af", fontWeight:600 }}>{toLabel(h)}</span>
           </div>
@@ -846,7 +846,7 @@ function PeakHoursChart({ byHour }) {
       <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", marginTop:"0.75rem", justifyContent:"flex-end" }}>
         <span style={{ fontSize:"0.65rem", color:"#9ca3af" }}>low</span>
         {[0.1,0.3,0.55,0.8,1].map((a,i) => (
-          <div key={i} style={{ width:12, height:12, borderRadius:3, background:`rgba(124,58,237,${a})` }}/>
+          <div key={i} style={{ width:12, height:12, borderRadius:3, background:`rgba(29, 29, 33,${a})` }}/>
         ))}
         <span style={{ fontSize:"0.65rem", color:"#9ca3af" }}>high</span>
       </div>
@@ -856,12 +856,12 @@ function PeakHoursChart({ byHour }) {
 
 /* ─── Room colour palette ─── */
 const PALETTE = [
-  { bg:"#7c3aed", dim:"#a78bfa" },
+  { bg:"#1d1d21", dim:"#3a3a42" },
   { bg:"#0891b2", dim:"#67e8f9" },
   { bg:"#059669", dim:"#6ee7b7" },
   { bg:"#d97706", dim:"#fcd34d" },
   { bg:"#dc2626", dim:"#fca5a5" },
-  { bg:"#9333ea", dim:"#d8b4fe" },
+  { bg:"#1d1d21", dim:"#c7c7ca" },
   { bg:"#0284c7", dim:"#7dd3fc" },
   { bg:"#16a34a", dim:"#86efac" },
 ];
@@ -1002,7 +1002,7 @@ function TodayTimeline({ rooms, bookings }) {
               <span style={{ color:"#9ca3af", fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Team Members</span>
               <div style={{ marginTop:4, display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
                 {members.map((mem, i) => (
-                  <span key={i} style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:99, padding:"2px 8px", fontSize:"0.68rem", fontWeight:700 }}>{mem.name || mem}</span>
+                  <span key={i} style={{ background:"#ededf0", color:"#1d1d21", borderRadius:99, padding:"2px 8px", fontSize:"0.68rem", fontWeight:700 }}>{mem.name || mem}</span>
                 ))}
               </div>
             </div>
@@ -1017,7 +1017,7 @@ function TodayTimeline({ rooms, bookings }) {
       {/* Top bar */}
       <div style={{ padding:"0.5rem 0.875rem", borderBottom:"1px solid #f3f4f6",
         display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.4rem",
-        background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
+        background:"linear-gradient(135deg,#1d1d21,#3a3a42)" }}>
         {/* Title */}
         <div style={{ display:"flex", alignItems:"center", gap:"0.4rem" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="2">
@@ -1033,7 +1033,7 @@ function TodayTimeline({ rooms, bookings }) {
             <button key={v} onClick={() => setCalView(v)}
               style={{ padding:"0.17rem 0.5rem", borderRadius:99, fontSize:"0.65rem", fontWeight:700, cursor:"pointer", border:"none",
                 background: calView === v ? "#fff" : "rgba(255,255,255,0.18)",
-                color: calView === v ? "#7c3aed" : "#fff", transition:"all 0.15s" }}>
+                color: calView === v ? "#1d1d21" : "#fff", transition:"all 0.15s" }}>
               {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
           ))}
@@ -1059,7 +1059,7 @@ function TodayTimeline({ rooms, bookings }) {
           )}
           {calView === "day" && isToday && (
             <button onClick={() => scrollRef.current && (scrollRef.current.scrollTop = Math.max(0, nowTop - 100))}
-              style={{ fontSize:"0.65rem", color:"#7c3aed", background:"#fff", border:"none", borderRadius:99, padding:"0.17rem 0.5rem", cursor:"pointer", fontWeight:700, display:"flex", alignItems:"center", gap:"0.2rem" }}>
+              style={{ fontSize:"0.65rem", color:"#1d1d21", background:"#fff", border:"none", borderRadius:99, padding:"0.17rem 0.5rem", cursor:"pointer", fontWeight:700, display:"flex", alignItems:"center", gap:"0.2rem" }}>
               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
               Now
             </button>
@@ -1089,7 +1089,7 @@ function TodayTimeline({ rooms, bookings }) {
               <div style={{ width:TIME_W, flexShrink:0 }}>
                 {hours.map(h => (
                   <div key={h} style={{ height:HOUR_H, display:"flex", alignItems:"flex-start", paddingTop:5, paddingRight:8, justifyContent:"flex-end", boxSizing:"border-box" }}>
-                    <span style={{ fontSize:"0.62rem", fontWeight: h === nowH ? 800 : 400, color: h === nowH ? "#7c3aed" : "#9ca3af", whiteSpace:"nowrap" }}>
+                    <span style={{ fontSize:"0.62rem", fontWeight: h === nowH ? 800 : 400, color: h === nowH ? "#1d1d21" : "#9ca3af", whiteSpace:"nowrap" }}>
                       {h === 12 ? "12 PM" : h < 12 ? `${h} AM` : `${h-12} PM`}
                     </span>
                   </div>
@@ -1148,14 +1148,14 @@ function TodayTimeline({ rooms, bookings }) {
                   style={{ padding:"0.6rem 0.5rem", borderLeft: di > 0 ? "1px solid #f3f4f6" : "none", cursor:"pointer", minHeight:130, background: isTd ? "#f5f3ff" : "#fff" }}
                   onMouseEnter={e => !isTd && (e.currentTarget.style.background="#fafafa")}
                   onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fff")}>
-                  <div style={{ fontSize:"0.58rem", color: isTd ? "#7c3aed" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
+                  <div style={{ fontSize:"0.58rem", color: isTd ? "#1d1d21" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
                     {dateObj.toLocaleDateString("en-US",{weekday:"short"})}
                   </div>
-                  <div style={{ fontSize:"1rem", fontWeight:800, color: isTd ? "#7c3aed" : "#1f2937", marginBottom:"0.3rem" }}>{dateObj.getDate()}</div>
+                  <div style={{ fontSize:"1rem", fontWeight:800, color: isTd ? "#1d1d21" : "#1f2937", marginBottom:"0.3rem" }}>{dateObj.getDate()}</div>
                   {dayBks.length === 0
                     ? <div style={{ fontSize:"0.58rem", color:"#d1d5db" }}>No bookings</div>
                     : <>
-                        <div style={{ fontSize:"0.6rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.2rem" }}>{dayBks.length} booking{dayBks.length !== 1 ? "s" : ""}</div>
+                        <div style={{ fontSize:"0.6rem", fontWeight:700, color:"#1d1d21", marginBottom:"0.2rem" }}>{dayBks.length} booking{dayBks.length !== 1 ? "s" : ""}</div>
                         {dayBks.slice(0,3).map((b, i) => {
                           const rIdx = rooms.findIndex(r => r.id === b.room_id);
                           const col = PALETTE[rIdx >= 0 ? rIdx % PALETTE.length : 0].bg;
@@ -1190,7 +1190,7 @@ function TodayTimeline({ rooms, bookings }) {
             {/* Day header row */}
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.3rem" }}>
               {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map(d => (
-                <div key={d} style={{ textAlign:"center", fontSize:"0.62rem", fontWeight:700, color:"#7c3aed", padding:"0.25rem 0", letterSpacing:"0.04em" }}>{d}</div>
+                <div key={d} style={{ textAlign:"center", fontSize:"0.62rem", fontWeight:700, color:"#1d1d21", padding:"0.25rem 0", letterSpacing:"0.04em" }}>{d}</div>
               ))}
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:3 }}>
@@ -1205,22 +1205,22 @@ function TodayTimeline({ rooms, bookings }) {
                     onClick={(e) => { e.stopPropagation(); setPopup({ type:"day", date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
                     style={{ padding:"0.3rem 0.28rem", borderRadius:"0.5rem", minHeight:72, cursor:"pointer",
                       background: isTd ? "#f5f3ff" : "#fff",
-                      border:`1.5px solid ${isTd ? "#a78bfa" : "#e5e7eb"}`,
-                      boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(124,58,237,0.06)" : "none",
+                      border:`1.5px solid ${isTd ? "#3a3a42" : "#e5e7eb"}`,
+                      boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(29, 29, 33,0.06)" : "none",
                       transition:"background 0.12s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ede9fe" : "#f5f3ff"; e.currentTarget.style.borderColor = "#a78bfa"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#a78bfa" : "#e5e7eb"; }}>
+                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ededf0" : "#f5f3ff"; e.currentTarget.style.borderColor = "#3a3a42"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#3a3a42" : "#e5e7eb"; }}>
                     {/* Date number */}
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
                       <span style={{
                         fontSize:"0.7rem", fontWeight: isTd ? 800 : 600,
                         color: isTd ? "#fff" : "#374151",
-                        background: isTd ? "#7c3aed" : "transparent",
+                        background: isTd ? "#1d1d21" : "transparent",
                         borderRadius:"50%", width:18, height:18,
                         display:"flex", alignItems:"center", justifyContent:"center"
                       }}>{parseInt(d.split("-")[2])}</span>
                       {dayBks.length > 0 && (
-                        <span style={{ fontSize:"0.5rem", fontWeight:700, color:"#7c3aed", background:"#ede9fe", borderRadius:99, padding:"1px 5px" }}>
+                        <span style={{ fontSize:"0.5rem", fontWeight:700, color:"#1d1d21", background:"#ededf0", borderRadius:99, padding:"1px 5px" }}>
                           {dayBks.length}
                         </span>
                       )}
@@ -1243,7 +1243,7 @@ function TodayTimeline({ rooms, bookings }) {
                         );
                       })}
                       {extra > 0 && (
-                        <div style={{ fontSize:"0.48rem", color:"#7c3aed", fontWeight:700, paddingLeft:2 }}>
+                        <div style={{ fontSize:"0.48rem", color:"#1d1d21", fontWeight:700, paddingLeft:2 }}>
                           +{extra} more
                         </div>
                       )}
@@ -1269,7 +1269,7 @@ function TodayTimeline({ rooms, bookings }) {
           <div onClick={e => e.stopPropagation()}
             style={{ position:"fixed", top: Math.min(popup.y, window.innerHeight - 360), left: Math.min(popup.x, window.innerWidth - 280),
               width:272, background:"#fff", borderRadius:"0.875rem", boxShadow:"0 8px 32px rgba(0,0,0,0.18)", zIndex:1000, overflow:"hidden" }}>
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"0.75rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"0.75rem 1rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>{dl}</div>
                 <div style={{ fontSize:"0.72rem", color:"rgba(255,255,255,0.85)", marginTop:2 }}>
@@ -1290,7 +1290,7 @@ function TodayTimeline({ rooms, bookings }) {
                       <div key={i} style={{ padding:"0.55rem 1rem", borderBottom:"1px solid #f3f4f6", borderLeft:`3px solid ${col.bg}` }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
                           <div style={{ fontWeight:700, fontSize:"0.75rem", color:"#1f2937" }}>{b.room_name}</div>
-                          <div style={{ fontSize:"0.62rem", color:"#7c3aed", fontWeight:700 }}>{fmt2(b.start_time)}–{fmt2(b.end_time)}</div>
+                          <div style={{ fontSize:"0.62rem", color:"#1d1d21", fontWeight:700 }}>{fmt2(b.start_time)}–{fmt2(b.end_time)}</div>
                         </div>
                         <div style={{ fontSize:"0.68rem", color:"#374151", marginTop:2, fontWeight:600 }}>{name}</div>
                         {email && <div style={{ fontSize:"0.62rem", color:"#6b7280" }}>{email}</div>}

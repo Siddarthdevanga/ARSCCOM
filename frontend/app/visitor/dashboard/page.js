@@ -15,7 +15,7 @@ const VS_CONFIG = {
   accepted:    { label: "Accepted",    bg: "rgba(0,184,148,0.12)",  color: "#00a875" },
   declined:    { label: "Declined",    bg: "rgba(204,17,0,0.1)",    color: "#cc1100" },
   checked_in:  { label: "Checked In",  bg: "rgba(59,130,246,0.12)", color: "#2563eb" },
-  checked_out:      { label: "Checked Out",      bg: "rgba(98,0,214,0.1)",    color: "#6200d6" },
+  checked_out:      { label: "Checked Out",      bg: "rgba(18, 18, 22,0.1)",    color: "#121216" },
   auto_checked_out: { label: "Auto Checked Out", bg: "rgba(107,114,128,0.1)", color: "#6b7280" },
 };
 
@@ -127,7 +127,7 @@ export default function VisitorDashboard() {
     setRegUrl(url);
     QRCode.toDataURL(url, {
       width: 220, margin: 2,
-      color: { dark: "#1a0038", light: "#ffffff" },
+      color: { dark: "#08080c", light: "#ffffff" },
     }).then(setQrUrl).catch(() => {});
   }, [company]);
 
@@ -203,8 +203,8 @@ export default function VisitorDashboard() {
 
     /* ── Header gradient ── */
     const headerGrad = ctx.createLinearGradient(0, 0, W, 80);
-    headerGrad.addColorStop(0, "#4a00b4");
-    headerGrad.addColorStop(1, "#7a00ff");
+    headerGrad.addColorStop(0, "#0f0f13");
+    headerGrad.addColorStop(1, "#151519");
     ctx.fillStyle = headerGrad;
     ctx.fillRect(0, 0, W, 80);
 
@@ -216,7 +216,7 @@ export default function VisitorDashboard() {
     ctx.fillText(companyName, W / 2, 40);
 
     /* ── Title ── */
-    ctx.fillStyle   = "#4a00b4";
+    ctx.fillStyle   = "#0f0f13";
     ctx.font        = "bold 32px Arial, sans-serif";
     ctx.textAlign   = "center";
     ctx.textBaseline = "alphabetic";
@@ -228,7 +228,7 @@ export default function VisitorDashboard() {
     ctx.fillText("Scan QR Code or Visit:", W / 2, 185);
 
     /* ── URL ── */
-    ctx.fillStyle = "#4a00b4";
+    ctx.fillStyle = "#0f0f13";
     ctx.font      = "bold 14px Arial, sans-serif";
     const displayUrl = regUrl.length > 72 ? regUrl.slice(0, 70) + "…" : regUrl;
     ctx.fillText(displayUrl, W / 2, 212);
@@ -242,7 +242,7 @@ export default function VisitorDashboard() {
         const qrY    = 235;
 
         /* shadow */
-        ctx.shadowColor   = "rgba(98,0,214,0.15)";
+        ctx.shadowColor   = "rgba(18, 18, 22,0.15)";
         ctx.shadowBlur    = 18;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 4;
@@ -279,7 +279,7 @@ export default function VisitorDashboard() {
     ctx.stroke();
 
     /* ── Instructions heading ── */
-    ctx.fillStyle   = "#4a00b4";
+    ctx.fillStyle   = "#0f0f13";
     ctx.font        = "bold 20px Arial, sans-serif";
     ctx.textAlign   = "left";
     ctx.fillText("Instructions for Visitors:", 60, 690);
@@ -298,7 +298,7 @@ export default function VisitorDashboard() {
     steps.forEach((step, i) => {
       const y = 726 + i * 36;
       /* bullet dot */
-      ctx.fillStyle = "#6200d6";
+      ctx.fillStyle = "#121216";
       ctx.beginPath();
       ctx.arc(76, y - 5, 5, 0, Math.PI * 2);
       ctx.fill();
@@ -312,7 +312,7 @@ export default function VisitorDashboard() {
     ctx.fillRect(0, H - 80, W, 80);
 
     /* ── Footer top border ── */
-    ctx.strokeStyle = "#ddd2f0";
+    ctx.strokeStyle = "#d9d9dc";
     ctx.lineWidth   = 1;
     ctx.beginPath();
     ctx.moveTo(0, H - 80);
@@ -320,12 +320,12 @@ export default function VisitorDashboard() {
     ctx.stroke();
 
     /* ── Footer text ── */
-    ctx.fillStyle   = "#4a00b4";
+    ctx.fillStyle   = "#0f0f13";
     ctx.font        = "bold 22px Arial, sans-serif";
     ctx.textAlign   = "center";
     ctx.fillText("Hai Visitor", W / 2, H - 44);
 
-    ctx.fillStyle = "#9980c8";
+    ctx.fillStyle = "#28282c";
     ctx.font      = "14px Arial, sans-serif";
     ctx.fillText("Visitor Management Platform", W / 2, H - 22);
 
@@ -371,7 +371,7 @@ export default function VisitorDashboard() {
   const planLimit = stats.planLimit        ?? 0;
   const planUsed  = stats.planVisitorsUsed ?? 0;
   const planPct   = planLimit > 0 ? Math.min((planUsed / planLimit) * 100, 100) : 0;
-  const planColor = planPct > 85 ? "#cc1100" : planPct > 60 ? "#f0a500" : "#6200d6";
+  const planColor = planPct > 85 ? "#cc1100" : planPct > 60 ? "#f0a500" : "#121216";
   const atLimit   = planLimit > 0 && planUsed >= planLimit;
 
   return (
@@ -540,15 +540,15 @@ export default function VisitorDashboard() {
                               <span className={styles.visitorCode}>{v.visitor_code}</span>
                             </td>
                             <td>
-                              <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
+                              <div style={{ fontWeight: 800, color: "#08080c", fontSize: 13 }}>
                                 {v.name}
                               </div>
                               {formFields.fromCompany && v.from_company && (
-                                <div style={{ fontSize: 11, color: "#9980c8" }}>{v.from_company}</div>
+                                <div style={{ fontSize: 11, color: "#28282c" }}>{v.from_company}</div>
                               )}
                             </td>
                             {formFields.personToMeet && (
-                              <td style={{ fontSize: 12, color: "#2a0050" }}>
+                              <td style={{ fontSize: 12, color: "#0a0a0e" }}>
                                 {v.person_to_meet || "—"}
                               </td>
                             )}
@@ -597,7 +597,7 @@ export default function VisitorDashboard() {
                                 {v.pass_issued ? "Sent" : "Pending"}
                               </span>
                             </td>
-                            <td style={{ fontSize: 12, color: "#9980c8" }}>
+                            <td style={{ fontSize: 12, color: "#28282c" }}>
                               {fmtTime(v.check_in)}
                             </td>
                             <td>
@@ -651,11 +651,11 @@ export default function VisitorDashboard() {
                             <span className={styles.visitorCode}>{v.visitor_code}</span>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 800, color: "#1a0038", fontSize: 13 }}>
+                            <div style={{ fontWeight: 800, color: "#08080c", fontSize: 13 }}>
                               {v.name}
                             </div>
                             {formFields.personToMeet && v.person_to_meet && (
-                              <div style={{ fontSize: 11, color: "#9980c8" }}>
+                              <div style={{ fontSize: 11, color: "#28282c" }}>
                                 &rarr; {v.person_to_meet}
                               </div>
                             )}
@@ -663,10 +663,10 @@ export default function VisitorDashboard() {
                           <td>
                             <VisitStatusBadge status={v.visit_status || "checked_out"} />
                           </td>
-                          <td style={{ fontSize: 12, color: "#2a0050" }}>
+                          <td style={{ fontSize: 12, color: "#0a0a0e" }}>
                             {calcDuration(v.check_in, v.check_out)}
                           </td>
-                          <td style={{ fontSize: 11, color: "#9980c8" }}>
+                          <td style={{ fontSize: 11, color: "#28282c" }}>
                             {fmtDate(v.check_in)}
                           </td>
                         </tr>

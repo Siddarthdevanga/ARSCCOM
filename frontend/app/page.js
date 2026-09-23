@@ -115,20 +115,20 @@ const BODY_HTML = `
       <div class="tr-head"><b>Live visitor log — what your team sees</b><span class="live">LIVE</span></div>
       <div class="tr-body">
         <div class="tr-track">
-          <div class="tr-row"><div class="tr-av" style="background:#221C53">RH</div><div class="tr-meta"><b>Ramesh H.</b><span>Sofa set · 3-seater · Host: Suresh</span></div><span class="tr-tag">CAPTURED</span></div>
+          <div class="tr-row"><div class="tr-av" style="background:#242427">RH</div><div class="tr-meta"><b>Ramesh H.</b><span>Sofa set · 3-seater · Host: Suresh</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#7C2D4E">AS</div><div class="tr-meta"><b>Anita S.</b><span>Modular kitchen enquiry · Host: Divya</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#0E7490">VM</div><div class="tr-meta"><b>Vikram M.</b><span>Tiles · 2BHK project · Host: Suresh</span></div><span class="tr-tag alert">TEAM ALERTED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#B45309">PN</div><div class="tr-meta"><b>Priya N.</b><span>Bridal lehenga trial · Host: Meera</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#166534">KR</div><div class="tr-meta"><b>Karthik R.</b><span>Test drive enquiry · Host: Arjun</span></div><span class="tr-tag alert">TEAM ALERTED</span></div>
-          <div class="tr-row"><div class="tr-av" style="background:#6D28D9">SD</div><div class="tr-meta"><b>Sneha D.</b><span>Wardrobe & lighting · Host: Divya</span></div><span class="tr-tag">CAPTURED</span></div>
+          <div class="tr-row"><div class="tr-av" style="background:#19191d">SD</div><div class="tr-meta"><b>Sneha D.</b><span>Wardrobe & lighting · Host: Divya</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#9F1239">MI</div><div class="tr-meta"><b>Mohan I.</b><span>Recliner enquiry · Host: Suresh</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#1D4ED8">LB</div><div class="tr-meta"><b>Lakshmi B.</b><span>Sanitaryware · Villa project · Host: Meera</span></div><span class="tr-tag alert">TEAM ALERTED</span></div>
-          <div class="tr-row"><div class="tr-av" style="background:#221C53">RH</div><div class="tr-meta"><b>Ramesh H.</b><span>Sofa set · 3-seater · Host: Suresh</span></div><span class="tr-tag">CAPTURED</span></div>
+          <div class="tr-row"><div class="tr-av" style="background:#242427">RH</div><div class="tr-meta"><b>Ramesh H.</b><span>Sofa set · 3-seater · Host: Suresh</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#7C2D4E">AS</div><div class="tr-meta"><b>Anita S.</b><span>Modular kitchen enquiry · Host: Divya</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#0E7490">VM</div><div class="tr-meta"><b>Vikram M.</b><span>Tiles · 2BHK project · Host: Suresh</span></div><span class="tr-tag alert">TEAM ALERTED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#B45309">PN</div><div class="tr-meta"><b>Priya N.</b><span>Bridal lehenga trial · Host: Meera</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#166534">KR</div><div class="tr-meta"><b>Karthik R.</b><span>Test drive enquiry · Host: Arjun</span></div><span class="tr-tag alert">TEAM ALERTED</span></div>
-          <div class="tr-row"><div class="tr-av" style="background:#6D28D9">SD</div><div class="tr-meta"><b>Sneha D.</b><span>Wardrobe & lighting · Host: Divya</span></div><span class="tr-tag">CAPTURED</span></div>
+          <div class="tr-row"><div class="tr-av" style="background:#19191d">SD</div><div class="tr-meta"><b>Sneha D.</b><span>Wardrobe & lighting · Host: Divya</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#9F1239">MI</div><div class="tr-meta"><b>Mohan I.</b><span>Recliner enquiry · Host: Suresh</span></div><span class="tr-tag">CAPTURED</span></div>
           <div class="tr-row"><div class="tr-av" style="background:#1D4ED8">LB</div><div class="tr-meta"><b>Lakshmi B.</b><span>Sanitaryware · Villa project · Host: Meera</span></div><span class="tr-tag alert">TEAM ALERTED</span></div>
         </div>

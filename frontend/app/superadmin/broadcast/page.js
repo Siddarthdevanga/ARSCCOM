@@ -151,7 +151,7 @@ export default function Broadcast() {
       />
 
       <div style={{ maxWidth: 680, margin: "2rem auto", padding: "0 1rem" }}>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", marginBottom: 4 }}>WhatsApp Broadcast</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#08080c", marginBottom: 4 }}>WhatsApp Broadcast</h1>
         <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 24 }}>
           Send a WhatsApp announcement to your real customers, targeted by plan or by specific number — via an
           approved template, so it reaches everyone regardless of whether they've messaged the bot recently.
@@ -166,7 +166,7 @@ export default function Broadcast() {
                 Send To (by plan)
               </label>
               <div style={{ display: "flex", gap: 10 }}>
-                <button onClick={selectAllPlans} style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", background: "none", border: "none", cursor: "pointer" }}>Select All</button>
+                <button onClick={selectAllPlans} style={{ fontSize: 11, fontWeight: 700, color: "#1d1d21", background: "none", border: "none", cursor: "pointer" }}>Select All</button>
                 <button onClick={clearAllPlans}  style={{ fontSize: 11, fontWeight: 700, color: "#6b7280", background: "none", border: "none", cursor: "pointer" }}>Clear</button>
               </div>
             </div>
@@ -177,9 +177,9 @@ export default function Broadcast() {
                   onClick={() => togglePlan(value)}
                   style={{
                     padding: "7px 20px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                    border: plans.includes(value) ? "2px solid #7c3aed" : "1.5px solid #e5e7eb",
-                    background: plans.includes(value) ? "rgba(124,58,237,0.08)" : "#fff",
-                    color: plans.includes(value) ? "#7c3aed" : "#6b7280",
+                    border: plans.includes(value) ? "2px solid #1d1d21" : "1.5px solid #e5e7eb",
+                    background: plans.includes(value) ? "rgba(29, 29, 33,0.08)" : "#fff",
+                    color: plans.includes(value) ? "#1d1d21" : "#6b7280",
                   }}
                 >
                   {label} Plan
@@ -210,7 +210,7 @@ export default function Broadcast() {
               />
               <button
                 onClick={addCustomRecipient}
-                style={{ padding: "9px 16px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}
+                style={{ padding: "9px 16px", borderRadius: 8, border: "none", background: "#1d1d21", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer", whiteSpace: "nowrap" }}
               >
                 + Add
               </button>
@@ -232,7 +232,7 @@ export default function Broadcast() {
               {activePlanRecipients.map(r => (
                 <div key={r.phone} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #f3f4f6" }}>
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#1a0038" }}>{r.name}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#08080c" }}>{r.name}</span>
                     <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 8, fontFamily: "monospace" }}>{r.phone}</span>
                   </div>
                   <button
@@ -245,10 +245,10 @@ export default function Broadcast() {
                 </div>
               ))}
               {customRecipients.map(r => (
-                <div key={r.phone} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #f3f4f6", background: "rgba(124,58,237,0.04)" }}>
+                <div key={r.phone} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderBottom: "1px solid #f3f4f6", background: "rgba(29, 29, 33,0.04)" }}>
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#1a0038" }}>{r.name}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", marginLeft: 8 }}>CUSTOM</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: "#08080c" }}>{r.name}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#1d1d21", marginLeft: 8 }}>CUSTOM</span>
                     <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 8, fontFamily: "monospace" }}>{r.phone}</span>
                   </div>
                   <button
@@ -311,7 +311,7 @@ export default function Broadcast() {
             onClick={() => setShowConfirm(true)}
             disabled={!canSend}
             style={{
-              background: canSend ? "#7c3aed" : "#c4b5fd",
+              background: canSend ? "#1d1d21" : "#8d8e97",
               color: "#fff", border: "none", borderRadius: 8,
               padding: "12px 24px", fontSize: 14, fontWeight: 700,
               cursor: canSend ? "pointer" : "not-allowed",
@@ -327,13 +327,13 @@ export default function Broadcast() {
       {showConfirm && (
         <div
           onClick={() => setShowConfirm(false)}
-          style={{ position: "fixed", inset: 0, background: "rgba(23,12,43,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
+          style={{ position: "fixed", inset: 0, background: "rgba(19, 19, 22,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20, zIndex: 1000 }}
         >
           <div
             onClick={e => e.stopPropagation()}
             style={{ background: "#fff", borderRadius: 16, padding: "28px", maxWidth: 420, width: "100%" }}
           >
-            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#1a0038", margin: "0 0 10px" }}>
+            <h3 style={{ fontSize: 17, fontWeight: 800, color: "#08080c", margin: "0 0 10px" }}>
               Send to {finalRecipients.length} recipient{finalRecipients.length === 1 ? "" : "s"}?
             </h3>
             <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 20px", lineHeight: 1.5 }}>
@@ -348,7 +348,7 @@ export default function Broadcast() {
               </button>
               <button
                 onClick={handleSend}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#1d1d21", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
               >
                 Yes, Send
               </button>

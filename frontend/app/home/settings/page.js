@@ -510,7 +510,7 @@ export default function SettingsPage() {
               <div className={styles.fieldGroup}>
                 <label className={styles.fieldLabel}>Email 🔒</label>
                 <div className={styles.fieldDisplay}>
-                  <span className={styles.fieldValue} style={{ color: "#b8a8d8" }} title={userEmail}>{userEmail}</span>
+                  <span className={styles.fieldValue} style={{ color: "#b2b2b5" }} title={userEmail}>{userEmail}</span>
                 </div>
                 <p className={styles.fieldHelp}>Email cannot be changed</p>
               </div>

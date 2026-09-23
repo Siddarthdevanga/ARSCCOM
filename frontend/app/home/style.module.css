@@ -803,8 +803,8 @@
 .primaryBtn {
   width: 100%;
   padding: clamp(0.6rem,1.5vh,0.75rem) clamp(1rem,2.5vw,1.25rem);
-  background: var(--grad-brand); border: none; border-radius: var(--r);
-  color: var(--white); font-family: var(--font-sans);
+  background: var(--hv-cta); border: none; border-radius: var(--r);
+  color: #1c1204; font-family: var(--font-sans);
   font-size: clamp(0.78rem,1.8vw,0.875rem); font-weight: 700;
   cursor: pointer; transition: all var(--t); box-shadow: var(--shadow-md); letter-spacing: 0.01em;
 }

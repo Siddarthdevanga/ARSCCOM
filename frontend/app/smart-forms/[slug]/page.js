@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 const THEMES = {
-  purple: { accent: "#6200d6", bg: "#f6f1fd" },
+  purple: { accent: "#121216", bg: "#f6f1fd" },
   blue:   { accent: "#0369a1", bg: "#f0f9ff" },
   green:  { accent: "#047857", bg: "#f0fdf6" },
   slate:  { accent: "#334155", bg: "#f8fafc" },
@@ -128,7 +128,7 @@ export default function SmartFormPublicPage() {
       <Centered bg="#f8fafc">
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>🔍</div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1a0038", margin: "0 0 6px" }}>Form Not Found</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#08080c", margin: "0 0 6px" }}>Form Not Found</h1>
           <p style={{ fontSize: 14, color: "#6b7280", maxWidth: 320 }}>
             This QR code is no longer active, or the link is incorrect.
           </p>
@@ -142,7 +142,7 @@ export default function SmartFormPublicPage() {
       <Centered bg={theme.bg}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>✅</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", margin: "0 0 6px" }}>Thank you!</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#08080c", margin: "0 0 6px" }}>Thank you!</h1>
           <p style={{ fontSize: 14, color: "#6b7280" }}>Your response has been submitted.</p>
         </div>
       </Centered>
@@ -165,7 +165,7 @@ export default function SmartFormPublicPage() {
               {(form.displayName || "?").trim().charAt(0).toUpperCase()}
             </div>
           )}
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#1a0038", margin: form.subtext ? "0 0 4px" : 0 }}>{form.headline}</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: "#08080c", margin: form.subtext ? "0 0 4px" : 0 }}>{form.headline}</h1>
           {form.subtext && (
             <p style={{ fontSize: 13.5, color: "#6b7280", margin: 0 }}>{form.subtext}</p>
           )}

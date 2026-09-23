@@ -11,23 +11,23 @@
    TOKENS
 ────────────────────────────────────────────── */
 :root {
-  --brand:        #6200d6;
-  --brand-light:  #7c3aed;
-  --brand-dim:    rgba(98, 0, 214, 0.10);
-  --brand-glow:   rgba(98, 0, 214, 0.22);
+  --brand:        #121216;
+  --brand-light:  #1d1d21;
+  --brand-dim:    rgba(18, 18, 22, 0.10);
+  --brand-glow:   rgba(18, 18, 22, 0.22);
   --surface:      #ffffff;
   --surface-soft: #faf8ff;
   --bg:           #f3f0fb;
-  --card-bg:      linear-gradient(145deg, #f6f0ff 0%, #ece4fa 100%);
-  --border:       #ddd2f0;
-  --border-focus: #6200d6;
-  --text-dark:    #1a0038;
-  --text-muted:   #7b6b9a;
-  --text-label:   #6200d6;
+  --card-bg:      linear-gradient(145deg, #f6f0ff 0%, #e9e9ec 100%);
+  --border:       #d9d9dc;
+  --border-focus: #121216;
+  --text-dark:    #08080c;
+  --text-muted:   #757578;
+  --text-label:   #121216;
   --radius-input: 12px;
   --radius-card:  22px;
-  --shadow-card:  0 4px 24px rgba(98, 0, 214, 0.07);
-  --shadow-hover: 0 10px 36px rgba(98, 0, 214, 0.13);
+  --shadow-card:  0 4px 24px rgba(18, 18, 22, 0.07);
+  --shadow-hover: 0 10px 36px rgba(18, 18, 22, 0.13);
 }
 
 /* ──────────────────────────────────────────────
@@ -100,7 +100,7 @@
   top: 0;
   z-index: 300;
   flex-shrink: 0;
-  box-shadow: 0 1px 8px rgba(98,0,214,0.05);
+  box-shadow: 0 1px 8px rgba(18, 18, 22,0.05);
 }
 
 .headerLeft {
@@ -157,7 +157,7 @@
    HERO
 ────────────────────────────────────────────── */
 .hero {
-  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  background: linear-gradient(135deg, #0f0f13 0%, #151519 55%, #28282c 100%);
   padding: 30px 36px 34px;
   position: relative;
   overflow: hidden;
@@ -242,7 +242,7 @@
 
 .stepActive .stepNum {
   background: #f0a500;
-  color: #1a0038;
+  color: #08080c;
   border-color: #f0a500;
   box-shadow: 0 0 0 4px rgba(240,165,0,0.25);
 }
@@ -300,7 +300,7 @@
   margin-bottom: 18px;
   margin-top: 10px;
   padding-bottom: 10px;
-  border-bottom: 1.5px solid rgba(98,0,214,0.08);
+  border-bottom: 1.5px solid rgba(18, 18, 22,0.08);
 }
 .sectionHeader:first-child { margin-top: 0; }
 
@@ -310,7 +310,7 @@
   border-radius: 50%;
   background: var(--brand);
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(98,0,214,0.15);
+  box-shadow: 0 0 0 3px rgba(18, 18, 22,0.15);
 }
 .cardDotBlue  { background:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,0.15); }
 .cardDotGreen { background:#00b894; box-shadow:0 0 0 3px rgba(0,184,148,0.15); }
@@ -357,7 +357,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .input::placeholder {
-  color: #c0aee0;
+  color: #b9b9bc;
   font-weight: 500;
   opacity: 1;
 }
@@ -427,7 +427,7 @@
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  border: 2.5px solid rgba(98,0,214,0.15);
+  border: 2.5px solid rgba(18, 18, 22,0.15);
   border-top-color: var(--brand);
   border-radius: 50%;
   animation: acSpin 0.7s linear infinite;
@@ -454,7 +454,7 @@
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 8px 28px rgba(98,0,214,0.14);
+  box-shadow: 0 8px 28px rgba(18, 18, 22,0.14);
   z-index: 999;
   overflow: hidden;
   max-height: 240px;
@@ -472,7 +472,7 @@
   width: 100%;
   text-align: left;
   transition: background 0.15s;
-  border-bottom: 1px solid rgba(98,0,214,0.05);
+  border-bottom: 1px solid rgba(18, 18, 22,0.05);
 }
 .acItem:last-child { border-bottom: none; }
 .acItem:hover, .acItemSelected { background: #f5f0ff; }
@@ -481,7 +481,7 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed, #6200d6);
+  background: linear-gradient(135deg, #1d1d21, #121216);
   color: #fff;
   font-size: 12px;
   font-weight: 800;
@@ -625,7 +625,7 @@
   gap: 14px;
   margin-top: 8px;
   padding-top: 24px;
-  border-top: 1.5px solid rgba(98,0,214,0.07);
+  border-top: 1.5px solid rgba(18, 18, 22,0.07);
 }
 
 .prevBtn {
@@ -669,7 +669,7 @@
 .nextBtn:hover {
   opacity: 0.92;
   transform: translateY(-2px);
-  box-shadow: 0 8px 26px rgba(98,0,214,0.38);
+  box-shadow: 0 8px 26px rgba(18, 18, 22,0.38);
 }
 .nextBtn:active { transform: translateY(0); }
 
@@ -775,7 +775,7 @@
   transform: translateY(-50%);
   background: none;
   border: none;
-  color: #b8a8d8;
+  color: #b2b2b5;
   font-size: 13px;
   cursor: pointer;
   padding: 4px;
@@ -800,7 +800,7 @@
 .acEmptyHint {
   display: block;
   font-size: 11px;
-  color: #b8a8d8;
+  color: #b2b2b5;
   margin-top: 2px;
 }
 

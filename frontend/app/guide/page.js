@@ -116,7 +116,7 @@ const BODY_HTML = `
               <div class="mk-card">
                 <div style="text-align:center; margin-bottom:8px;">
                   <img src="/haivisitor.png" alt="Hai Visitor" style="width:28px; height:28px; object-fit:contain; margin:0 auto 4px;"/>
-                  <div style="font-size:11px; font-weight:900; color:#221C53;">H<span style="color:#F97316;">ai</span> Visitor</div>
+                  <div style="font-size:11px; font-weight:900; color:#242427;">H<span style="color:#F97316;">ai</span> Visitor</div>
                   <span class="mk-pill on" style="margin-top:4px; display:inline-block;">15-Day Trial · ₹49</span>
                 </div>
                 <div class="mk-field"><span class="mk-label">Email *</span><div class="mk-input">you@company.com</div></div>
@@ -229,7 +229,7 @@ const BODY_HTML = `
                   <div class="mk-login-title">LOGIN TO YOUR ACCOUNT</div>
                   <div class="mk-field"><span class="mk-label">Email or Phone Number</span><div class="mk-input">Enter your email or phone number</div></div>
                   <div class="mk-field"><span class="mk-label">Password</span><div class="mk-input filled">••••••••</div></div>
-                  <div class="mk-submit" style="background:linear-gradient(135deg,#4A00A0,#8B2BE2);">LOGIN</div>
+                  <div class="mk-submit" style="background:linear-gradient(135deg,#0f0f13,#1b1b1f);">LOGIN</div>
                   <div class="mk-login-links"><span>New Registration?</span><span>|</span><span>Forgot Password?</span></div>
                 </div>
               </div>
@@ -275,7 +275,7 @@ const BODY_HTML = `
                 <div class="mk-logout">Logout</div>
               </div>
               <div class="mk-card" style="border-radius:0 0 10px 10px; border-top:none;">
-                <div style="font-size:11px; font-weight:800; color:#1a0038;">Good afternoon 👋</div>
+                <div style="font-size:11px; font-weight:800; color:#08080c;">Good afternoon 👋</div>
                 <div class="mk-modgrid">
                   <div class="mk-modcard"><div class="ic"></div><b>Visitor Management</b><span>Check-ins, passes &amp; history</span></div>
                   <div class="mk-modcard"><div class="ic" style="background:var(--grad-amber);"></div><b>Conference Booking</b><span>Rooms &amp; meeting schedules</span></div>
@@ -286,7 +286,7 @@ const BODY_HTML = `
 
           <div class="frame" style="margin-top:16px; max-width:300px;">
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url" style="text-align:center;">Menu</span></div>
-            <div class="frame-body" style="background:#8B2BE2; padding:0;">
+            <div class="frame-body" style="background:#1b1b1f; padding:0;">
               <div class="mk-drawer" style="border-radius:0;">
                 <div class="mk-drawer-item"><div class="dicon"></div> Plans &amp; Billing</div>
                 <div class="mk-drawer-item"><div class="dicon"></div> Reports &amp; Analytics</div>
@@ -323,17 +323,17 @@ const BODY_HTML = `
               <div class="mk-card" style="display:flex; gap:12px; align-items:center;">
                 <div class="mk-qrbox"></div>
                 <div>
-                  <div style="font-size:9.5px; font-weight:800; color:#1a0038;">Your registration QR</div>
-                  <div style="font-size:8px; color:#8578A8; font-weight:700; margin-top:2px;">haivisitor.zodopt.com/visitor/zodopt-tech</div>
+                  <div style="font-size:9.5px; font-weight:800; color:#08080c;">Your registration QR</div>
+                  <div style="font-size:8px; color:#818184; font-weight:700; margin-top:2px;">haivisitor.zodopt.com/visitor/zodopt-tech</div>
                 </div>
               </div>
               <div class="mk-card">
                 <table class="mk-table mk">
                   <tr><th>Visitor</th><th>Purpose</th><th>Status</th></tr>
-                  <tr><td><span class="mk-av" style="background:#221C53;">RH</span>Ramesh H.</td><td>Sofa Enquiry</td><td><span class="mk-badge accepted">Accepted</span></td></tr>
+                  <tr><td><span class="mk-av" style="background:#242427;">RH</span>Ramesh H.</td><td>Sofa Enquiry</td><td><span class="mk-badge accepted">Accepted</span></td></tr>
                   <tr><td><span class="mk-av" style="background:#0E7490;">VM</span>Vikram M.</td><td>Tiles</td><td><span class="mk-badge checkedin">Checked In</span></td></tr>
                   <tr><td><span class="mk-av" style="background:#9F1239;">MI</span>Mohan I.</td><td>Recliner</td><td><span class="mk-badge pending">Pending</span></td></tr>
-                  <tr><td><span class="mk-av" style="background:#6D28D9;">SD</span>Sneha D.</td><td>Wardrobe</td><td><span class="mk-badge checkedout">Checked Out</span></td></tr>
+                  <tr><td><span class="mk-av" style="background:#19191d;">SD</span>Sneha D.</td><td>Wardrobe</td><td><span class="mk-badge checkedout">Checked Out</span></td></tr>
                 </table>
               </div>
             </div>
@@ -422,14 +422,14 @@ const BODY_HTML = `
               <div class="mk-card" style="display:flex; justify-content:space-between; align-items:center;">
                 <div class="mk-input" style="width:130px;">Search employees…</div>
                 <div style="display:flex; gap:6px;">
-                  <div class="mk-btn" style="background:#ede8f8; color:#6200d6; padding:6px 12px; font-size:9px;">Bulk Upload</div>
-                  <div class="mk-btn" style="background:#6200d6; color:#fff; padding:6px 12px; font-size:9px;">+ Add Employee</div>
+                  <div class="mk-btn" style="background:#ede8f8; color:#121216; padding:6px 12px; font-size:9px;">Bulk Upload</div>
+                  <div class="mk-btn" style="background:#121216; color:#fff; padding:6px 12px; font-size:9px;">+ Add Employee</div>
                 </div>
               </div>
               <div class="mk-card">
                 <table class="mk-table mk">
                   <tr><th>Name</th><th>Department</th><th>Status</th></tr>
-                  <tr><td><span class="mk-av" style="background:#4A00A0;">SR</span>Suresh R.</td><td>Sales</td><td><span class="mk-badge accepted">Active</span></td></tr>
+                  <tr><td><span class="mk-av" style="background:#0f0f13;">SR</span>Suresh R.</td><td>Sales</td><td><span class="mk-badge accepted">Active</span></td></tr>
                   <tr><td><span class="mk-av" style="background:#D97706;">DK</span>Divya K.</td><td>Design</td><td><span class="mk-badge accepted">Active</span></td></tr>
                   <tr><td><span class="mk-av" style="background:#6b7280;">AM</span>Arjun M.</td><td>Sales</td><td><span class="mk-badge auto">Inactive</span></td></tr>
                 </table>
@@ -578,7 +578,7 @@ const BODY_HTML = `
                 <div class="mk-field"><span class="mk-label">Field 3 · Dropdown</span><div class="mk-input filled">Which stall did you visit?</div></div>
                 <div class="mk-purpose"><span class="sel">Sofa</span><span>Modular Kitchen</span><span>Tiles</span></div>
                 <div class="mk-field" style="margin-top:10px;"><span class="mk-label">Field 4 · Dependent Dropdown</span><div class="mk-input filled">Which product caught your eye?</div></div>
-                <div style="font-size:8px; font-weight:700; color:#8578A8; margin-bottom:6px;">Depends on: "Which stall did you visit?" → Sofa</div>
+                <div style="font-size:8px; font-weight:700; color:#818184; margin-bottom:6px;">Depends on: "Which stall did you visit?" → Sofa</div>
                 <div class="mk-purpose"><span class="sel">Recliner</span><span>3-Seater</span><span>Modular Sofa</span></div>
               </div>
             </div>
@@ -604,14 +604,14 @@ const BODY_HTML = `
               <div class="mk-card" style="display:flex; gap:12px; align-items:center;">
                 <div class="mk-qrbox"></div>
                 <div>
-                  <div style="font-size:9.5px; font-weight:800; color:#1a0038;">Trade Show Feedback</div>
-                  <div style="font-size:8px; color:#8578A8; font-weight:700; margin-top:2px;">42 responses · Active</div>
+                  <div style="font-size:9.5px; font-weight:800; color:#08080c;">Trade Show Feedback</div>
+                  <div style="font-size:8px; color:#818184; font-weight:700; margin-top:2px;">42 responses · Active</div>
                 </div>
               </div>
               <div class="mk-card">
                 <table class="mk-table mk">
                   <tr><th>Name</th><th>Stall</th><th>Rating</th></tr>
-                  <tr><td><span class="mk-av" style="background:#221C53;">RH</span>Ramesh H.</td><td>Sofa</td><td>★★★★★</td></tr>
+                  <tr><td><span class="mk-av" style="background:#242427;">RH</span>Ramesh H.</td><td>Sofa</td><td>★★★★★</td></tr>
                   <tr><td><span class="mk-av" style="background:#0E7490;">VM</span>Vikram M.</td><td>Tiles</td><td>★★★★</td></tr>
                   <tr><td><span class="mk-av" style="background:#9F1239;">MI</span>Mohan I.</td><td>Modular Kitchen</td><td>★★★★★</td></tr>
                 </table>
@@ -622,8 +622,8 @@ const BODY_HTML = `
             <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url" style="text-align:center;">/smart-forms/[slug]</span></div>
             <div class="frame-body mk-page">
               <div class="mk-card">
-                <div style="font-size:11px; font-weight:900; color:#1a0038; text-align:center;">We'd love your feedback!</div>
-                <div style="font-size:8.5px; color:#8578A8; font-weight:700; text-align:center; margin-bottom:10px;">Takes less than a minute</div>
+                <div style="font-size:11px; font-weight:900; color:#08080c; text-align:center;">We'd love your feedback!</div>
+                <div style="font-size:8.5px; color:#818184; font-weight:700; text-align:center; margin-bottom:10px;">Takes less than a minute</div>
                 <div class="mk-field"><span class="mk-label">Your Name</span><div class="mk-input">Enter your name</div></div>
                 <div class="mk-label">Which stall did you visit?</div>
                 <div class="mk-purpose"><span class="sel">Sofa</span><span>Modular Kitchen</span><span>Tiles</span></div>
@@ -669,22 +669,22 @@ const BODY_HTML = `
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
                 <div class="mk-plan mk" style="position:relative;">
                   <div class="mk-current-badge">Current Plan</div>
-                  <h4>BUSINESS</h4><span style="font-size:7.5px; font-weight:800; color:#8578A8; text-transform:uppercase;">Monthly</span>
+                  <h4>BUSINESS</h4><span style="font-size:7.5px; font-weight:800; color:#818184; text-transform:uppercase;">Monthly</span>
                   <div class="p" style="margin-top:4px;">₹500<span>+GST/mo</span></div>
-                  <div class="btn" style="background:#e5ddf5; color:#6200d6;">Renew Business</div>
+                  <div class="btn" style="background:#e2e2e5; color:#121216;">Renew Business</div>
                 </div>
                 <div class="mk-plan mk">
-                  <h4>BUSINESS</h4><span style="font-size:7.5px; font-weight:800; color:#8578A8; text-transform:uppercase;">Annual</span>
+                  <h4>BUSINESS</h4><span style="font-size:7.5px; font-weight:800; color:#818184; text-transform:uppercase;">Annual</span>
                   <div class="p" style="margin-top:4px;">₹5,500<span>+GST/yr</span></div>
                   <div class="btn">Switch to Annual</div>
                 </div>
                 <div class="mk-plan gold mk">
-                  <h4>ENTERPRISE</h4><span style="font-size:7.5px; font-weight:800; color:#8578A8; text-transform:uppercase;">Monthly</span>
+                  <h4>ENTERPRISE</h4><span style="font-size:7.5px; font-weight:800; color:#818184; text-transform:uppercase;">Monthly</span>
                   <div class="p" style="margin-top:4px;">₹1,000<span>+GST/mo</span></div>
                   <div class="btn">Upgrade to Enterprise</div>
                 </div>
                 <div class="mk-plan gold mk">
-                  <h4>ENTERPRISE</h4><span style="font-size:7.5px; font-weight:800; color:#8578A8; text-transform:uppercase;">Annual</span>
+                  <h4>ENTERPRISE</h4><span style="font-size:7.5px; font-weight:800; color:#818184; text-transform:uppercase;">Annual</span>
                   <div class="p" style="margin-top:4px;">₹10,000<span>+GST/yr</span></div>
                   <div class="btn">Upgrade to Enterprise</div>
                 </div>

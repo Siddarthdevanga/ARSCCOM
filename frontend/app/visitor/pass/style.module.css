@@ -50,7 +50,7 @@
   min-height: 100vh;
   font-size: 1.2rem;
   font-weight: 800;
-  color: #6200d6;
+  color: #121216;
   background: #f3f0fb;
 }
 
@@ -62,7 +62,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid #e8e0f5;
+  border-bottom: 1px solid #e5e5e8;
   position: sticky;
   top: 0;
   z-index: 300;
@@ -79,7 +79,7 @@
 .logoText {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #1a0038;
+  color: #08080c;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -100,8 +100,8 @@
 
 .backBtn {
   background: transparent;
-  color: #6200d6;
-  border: 2px solid #6200d6;
+  color: #121216;
+  border: 2px solid #121216;
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 13px;
@@ -114,13 +114,13 @@
 }
 
 .backBtn:hover {
-  background: #6200d6;
+  background: #121216;
   color: #fff;
 }
 
 /* ================= HERO ================= */
 .hero {
-  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  background: linear-gradient(135deg, #0f0f13 0%, #151519 55%, #28282c 100%);
   padding: 28px 36px 32px;
   position: relative;
   overflow: hidden;
@@ -190,7 +190,7 @@
 
 .stepActive .stepNum {
   background: #f0a500;
-  color: #1a0038;
+  color: #08080c;
   border-color: #f0a500;
   box-shadow: 0 0 0 4px rgba(240, 165, 0, 0.25);
 }
@@ -225,11 +225,11 @@
 .passCard {
   width: 100%;
   max-width: 720px;
-  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  background: linear-gradient(145deg, #f4eeff 0%, #e9e9ec 100%);
   border-radius: 22px;
   padding: 28px 32px 32px;
-  border: 1.5px solid #ddd2f0;
-  box-shadow: 0 4px 20px rgba(98, 0, 214, 0.06);
+  border: 1.5px solid #d9d9dc;
+  box-shadow: 0 4px 20px rgba(18, 18, 22, 0.06);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -267,15 +267,15 @@
 .cardDot {
   width: 10px; height: 10px;
   border-radius: 50%;
-  background: #6200d6;
+  background: #121216;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(98, 0, 214, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 18, 22, 0.15);
 }
 
 .cardTitle {
   font-size: 0.75rem;
   font-weight: 900;
-  color: #9980c8;
+  color: #28282c;
   margin: 0;
   letter-spacing: 2px;
 }
@@ -299,7 +299,7 @@
   justify-content: center;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid rgba(98, 0, 214, 0.08);
+  border-top: 1px solid rgba(18, 18, 22, 0.08);
 }
 
 .passDetails {
@@ -310,7 +310,7 @@
 .passCode {
   font-size: 1.5rem;
   font-weight: 900;
-  color: #6200d6;
+  color: #121216;
   margin-bottom: 18px;
   letter-spacing: 1px;
 }
@@ -320,14 +320,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(98, 0, 214, 0.08);
+  border-bottom: 1px solid rgba(18, 18, 22, 0.08);
   font-size: 13px;
 }
 
 .passRow:last-child { border-bottom: none; }
 
 .passRow span {
-  color: #9980c8;
+  color: #28282c;
   font-weight: 700;
   font-size: 12px;
   text-transform: uppercase;
@@ -335,7 +335,7 @@
 }
 
 .passRow b {
-  color: #1a0038;
+  color: #08080c;
   font-weight: 800;
   text-align: right;
 }
@@ -361,7 +361,7 @@
   width: 150px;
   height: 180px;
   border-radius: 16px;
-  border: 2px solid #ddd2f0;
+  border: 2px solid #d9d9dc;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,7 +384,7 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 800;
-  color: #b8a8d8;
+  color: #b2b2b5;
   letter-spacing: 1px;
 }
 
@@ -421,15 +421,15 @@
   display: flex;
   justify-content: center;
   padding: 14px 0;
-  border-top: 1.5px solid rgba(98, 0, 214, 0.08);
-  border-bottom: 1.5px solid rgba(98, 0, 214, 0.08);
+  border-top: 1.5px solid rgba(18, 18, 22, 0.08);
+  border-bottom: 1.5px solid rgba(18, 18, 22, 0.08);
 }
 
 .resendBtn {
   padding: 9px 22px;
   background: #fff;
-  color: #6200d6;
-  border: 1.5px solid #ddd2f0;
+  color: #121216;
+  border: 1.5px solid #d9d9dc;
   border-radius: 50px;
   font-weight: 800;
   font-size: 13px;
@@ -441,7 +441,7 @@
 
 .resendBtn:hover:not(:disabled) {
   background: #f4eeff;
-  border-color: #6200d6;
+  border-color: #121216;
 }
 
 .resendBtn:disabled {
@@ -459,8 +459,8 @@
 .logoutBtn {
   padding: 9px 20px;
   background: transparent;
-  color: #6200d6;
-  border: 2px solid #6200d6;
+  color: #121216;
+  border: 2px solid #121216;
   border-radius: 50px;
   font-weight: 700;
   font-size: 13px;
@@ -471,13 +471,13 @@
 }
 
 .logoutBtn:hover {
-  background: #6200d6;
+  background: #121216;
   color: #fff;
 }
 
 .dashboardBtn {
   padding: 9px 20px;
-  background: #6200d6;
+  background: #121216;
   color: #fff;
   border: none;
   border-radius: 50px;
@@ -486,14 +486,14 @@
   font-family: 'Nunito', sans-serif;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 3px 12px rgba(98, 0, 214, 0.25);
+  box-shadow: 0 3px 12px rgba(18, 18, 22, 0.25);
   -webkit-tap-highlight-color: transparent;
 }
 
 .dashboardBtn:hover {
-  background: #4a00a8;
+  background: #0f0f13;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(98, 0, 214, 0.35);
+  box-shadow: 0 6px 18px rgba(18, 18, 22, 0.35);
 }
 
 /* ================= ERROR STATE PAGE ================= */
@@ -505,7 +505,7 @@
   padding: 80px 20px;
   gap: 16px;
   text-align: center;
-  color: #1a0038;
+  color: #08080c;
   font-weight: 700;
 }
 

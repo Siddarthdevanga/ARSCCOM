@@ -33,7 +33,7 @@ const TABS = [
    across columns automatically regardless of screen size or how many
    fields any given step has. */
 const STEP_TAGS = {
-  1: { label: "Step 1", color: "#6200d6" },
+  1: { label: "Step 1", color: "#121216" },
   2: { label: "Step 2", color: "#0284c7" },
   3: { label: "Step 3", color: "#b45309" },
 };

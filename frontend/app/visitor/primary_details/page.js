@@ -171,8 +171,8 @@ export default function VisitorPrimaryDetails() {
 
             {error && <div className={styles.error}>{error}</div>}
             {prefillBanner && (
-              <div style={{ background:"#ede9fe", border:"1px solid #c4b5fd", borderRadius:"0.5rem",
-                padding:"0.6rem 0.875rem", fontSize:"0.82rem", color:"#5b21b6", marginBottom:"0.75rem" }}>
+              <div style={{ background:"#ededf0", border:"1px solid #8d8e97", borderRadius:"0.5rem",
+                padding:"0.6rem 0.875rem", fontSize:"0.82rem", color:"#151519", marginBottom:"0.75rem" }}>
                 ✓ Details pre-filled from last visit — review before proceeding
               </div>
             )}

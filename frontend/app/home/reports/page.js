@@ -16,15 +16,15 @@ const PERIODS = [
   { key:"year",    label:"Year"    },
 ];
 const DOW_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-const DOW_COLORS = ["#f59e0b","#10b981","#6366f1","#7c3aed","#0ea5e9","#ef4444","#f97316"];
+const DOW_COLORS = ["#f59e0b","#10b981","#6366f1","#1d1d21","#0ea5e9","#ef4444","#f97316"];
 const STATUS_META = {
   pending:     { label:"Pending",     color:"#f59e0b" },
   accepted:    { label:"Accepted",    color:"#10b981" },
   declined:    { label:"Declined",    color:"#ef4444" },
   checked_in:  { label:"Checked In",  color:"#6366f1" },
-  checked_out:      { label:"Checked Out",      color:"#8b5cf6" },
+  checked_out:      { label:"Checked Out",      color:"#232327" },
   auto_checked_out: { label:"Auto Checked Out", color:"#6b7280" },
-  BOOKED:      { label:"Booked",      color:"#7c3aed" },
+  BOOKED:      { label:"Booked",      color:"#1d1d21" },
   CANCELLED:   { label:"Cancelled",   color:"#ef4444" },
   COMPLETED:   { label:"Completed",   color:"#10b981" },
   excellent:         { label:"👍 Excellent",         color:"#00a875" },
@@ -131,7 +131,7 @@ function SvgBarChart({data,color,color2}){
             </g>
           );
         })}
-        <line x1={PL} y1={PT+CH} x2={SW-PR} y2={PT+CH} stroke="#d8d0ef" strokeWidth="1.5"/>
+        <line x1={PL} y1={PT+CH} x2={SW-PR} y2={PT+CH} stroke="#d6d6d9" strokeWidth="1.5"/>
       </svg>
     </div>
   );
@@ -191,7 +191,7 @@ function SvgLineChart({data,color}){
             </g>
           );
         })}
-        <line x1={PL} y1={PT+CH} x2={SW-PR} y2={PT+CH} stroke="#d8d0ef" strokeWidth="1.5"/>
+        <line x1={PL} y1={PT+CH} x2={SW-PR} y2={PT+CH} stroke="#d6d6d9" strokeWidth="1.5"/>
       </svg>
     </div>
   );
@@ -206,7 +206,7 @@ function SvgDonut({data}){
   const slices=data.map(d=>{
     const key=d.status||d.name;
     const meta=STATUS_META[key]||{};
-    const color=meta.color||"#a78bfa";
+    const color=meta.color||"#3a3a42";
     const dash=(d.count/total)*circ;
     const s={...d,dash,off,color,label:meta.label||key};
     off+=dash;return s;
@@ -222,7 +222,7 @@ function SvgDonut({data}){
             strokeDashoffset={-s.off+circ*0.25}
             className={styles.donutSlice}/>
         ))}
-        <text x={cx} y={cy-7}  textAnchor="middle" fontSize="18" fontWeight="900" fill="#0f0629">{total}</text>
+        <text x={cx} y={cy-7}  textAnchor="middle" fontSize="18" fontWeight="900" fill="#0d0d10">{total}</text>
         <text x={cx} y={cy+10} textAnchor="middle" fontSize="7.5" fontWeight="700" fill="#9ca3af" letterSpacing="0.5">TOTAL</text>
       </svg>
       <div className={styles.donutLegend}>
@@ -342,7 +342,7 @@ function ProgressRing({value,max,color,label,sub}){
           strokeDasharray={`${dash} ${circ-dash}`}
           strokeDashoffset={circ*0.25}
           strokeLinecap="round"/>
-        <text x={cx} y={cy-4}  textAnchor="middle" fontSize="13" fontWeight="900" fill="#0f0629">{Math.round(pct)}%</text>
+        <text x={cx} y={cy-4}  textAnchor="middle" fontSize="13" fontWeight="900" fill="#0d0d10">{Math.round(pct)}%</text>
         <text x={cx} y={cy+10} textAnchor="middle" fontSize="7"  fontWeight="700" fill="#9ca3af" letterSpacing="0.3">{label}</text>
       </svg>
       {sub&&<p className={styles.ringSub}>{sub}</p>}
@@ -358,7 +358,7 @@ function StackedBar({data}){
     <div className={styles.stackedBar}>
       {data.map((d,i)=>{
         const key=d.status||d.name;
-        const color=STATUS_META[key]?.color||"#a78bfa";
+        const color=STATUS_META[key]?.color||"#3a3a42";
         return(
           <div key={i} className={styles.stackedSeg} title={`${key}: ${d.count}`}
             style={{width:`${(d.count/total)*100}%`,background:color}}/>
@@ -579,10 +579,10 @@ export default function ReportsPage(){
           {/* ══ 01 VISITOR ANALYTICS ══ */}
           <section className={styles.section}>
             <SectionHeading icon={Users} title="Visitor Analytics"
-              subtitle={`Activity, trends & breakdown — ${pl}`} accent="#7c3aed" index={1}/>
+              subtitle={`Activity, trends & breakdown — ${pl}`} accent="#1d1d21" index={1}/>
 
             <div className={styles.kpiGrid}>
-              <KpiCard label="Total Visitors"   value={v.total}       prev={v.prevTotal} icon={Users}       accent="#7c3aed" loading={fetching}/>
+              <KpiCard label="Total Visitors"   value={v.total}       prev={v.prevTotal} icon={Users}       accent="#1d1d21" loading={fetching}/>
               <KpiCard label="Inside Now"        value={v.active}                          icon={UserCheck}   accent="#f59e0b" loading={fetching}/>
               <KpiCard label="Today's Arrivals"  value={v.today}                           icon={TrendingUp}  accent="#10b981" loading={fetching}/>
               <KpiCard label="Passes Issued"     value={v.passIssued}                      icon={CheckCircle} accent="#6366f1" loading={fetching}/>
@@ -590,11 +590,11 @@ export default function ReportsPage(){
 
             {/* Bar + Donut */}
             <div className={styles.chartRow}>
-              <ChartCard title={`Visitor Trend — ${pl}`} sub="Check-ins over selected period" accent="#7c3aed"
-                extra={vTotal>0&&<span className={styles.peakChip} style={{"--pc":"#7c3aed"}}>
+              <ChartCard title={`Visitor Trend — ${pl}`} sub="Check-ins over selected period" accent="#1d1d21"
+                extra={vTotal>0&&<span className={styles.peakChip} style={{"--pc":"#1d1d21"}}>
                   <strong>{Math.max(...(v.dailyTrend||[]).map(d=>d.count),0)}</strong> PEAK
                 </span>}>
-                <SvgBarChart data={v.dailyTrend||[]} color="#7c3aed" color2="#a78bfa"/>
+                <SvgBarChart data={v.dailyTrend||[]} color="#1d1d21" color2="#3a3a42"/>
               </ChartCard>
               <ChartCard title="Visit Status" sub="Distribution for this period">
                 <SvgDonut data={(v.visitStatusBreakdown||[]).map(d=>({...d}))}/>
@@ -627,7 +627,7 @@ export default function ReportsPage(){
                 <SvgLineChart data={v.dailyTrend||[]} color="#6366f1"/>
               </ChartCard>
               <ChartCard title="Peak Check-in Hours" sub="Busiest times of day (IST)">
-                <HeatmapChart data={v.hourlyDistribution||[]} color="#7c3aed"/>
+                <HeatmapChart data={v.hourlyDistribution||[]} color="#1d1d21"/>
               </ChartCard>
             </div>
 
@@ -638,7 +638,7 @@ export default function ReportsPage(){
               </ChartCard>
               <ChartCard title="Visitor Metrics" sub="Key rates for this period">
                 <div className={styles.ringGrid}>
-                  <ProgressRing value={checkoutPct} max={100} color="#7c3aed" label="CHECKOUT" sub="Checked out"/>
+                  <ProgressRing value={checkoutPct} max={100} color="#1d1d21" label="CHECKOUT" sub="Checked out"/>
                   <ProgressRing value={v.passIssued||0} max={vTotal||1} color="#6366f1" label="PASS RATE" sub="Pass issued"/>
                   <ProgressRing value={v.active||0} max={vTotal||1} color="#f59e0b" label="INSIDE" sub="Still inside"/>
                 </div>
@@ -648,7 +648,7 @@ export default function ReportsPage(){
             {/* Top lists */}
             <div className={styles.twoCol}>
               <ChartCard title="Top Employees Visited" sub="Ranked by visitor count">
-                <HBarList data={v.topEmployees||[]} color="linear-gradient(90deg,#7c3aed,#a78bfa)"/>
+                <HBarList data={v.topEmployees||[]} color="linear-gradient(90deg,#1d1d21,#3a3a42)"/>
               </ChartCard>
               <ChartCard title="Visit Purposes" sub="Most common reasons">
                 <HBarList data={v.topPurposes||[]} color="linear-gradient(90deg,#6366f1,#a5b4fc)"/>
@@ -764,7 +764,7 @@ export default function ReportsPage(){
             </div>
             <div className={styles.exportCards}>
               {[
-                {type:"visitors",icon:<Users size={20}/>,    color:"#7c3aed",label:"Visitor Records",    desc:"Check-in/out, pass status and visitor details"},
+                {type:"visitors",icon:<Users size={20}/>,    color:"#1d1d21",label:"Visitor Records",    desc:"Check-in/out, pass status and visitor details"},
                 ...(isBusinessPlan?[]:[{type:"bookings",icon:<Calendar size={20}/>,color:"#0ea5e9",label:"Conference Bookings",desc:"Room schedules, departments, hosts and status"}]),
                 {type:"smartForms",icon:<QrCode size={20}/>, color:"#047857",label:"Smart Forms Responses",desc:"All QR-form submissions, tagged by which form"},
               ].map(e=>(

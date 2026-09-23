@@ -1139,7 +1139,7 @@ export default function SuperAdminDashboard() {
           </>
         )}
 
-        <footer style={{ textAlign: "center", padding: "16px 0 24px", fontSize: "12px", color: "#9980c8" }}>
+        <footer style={{ textAlign: "center", padding: "16px 0 24px", fontSize: "12px", color: "#28282c" }}>
           Hai Visitor v{APP_VERSION}
         </footer>
       </div>

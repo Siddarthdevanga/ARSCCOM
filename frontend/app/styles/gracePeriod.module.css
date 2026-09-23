@@ -61,7 +61,7 @@
 
 .tickerRenewBtn {
   flex-shrink: 0;
-  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #151519 0%, #242428 100%);
   color: white;
   border: none;
   padding: 9px 20px;
@@ -71,12 +71,12 @@
   white-space: nowrap;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 12px rgba(122, 0, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(21, 21, 25, 0.3);
 }
 
 .tickerRenewBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(122, 0, 255, 0.4);
+  box-shadow: 0 6px 16px rgba(21, 21, 25, 0.4);
 }
 
 .tickerRenewBtn:active {
@@ -89,7 +89,7 @@
 .expiryModalOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(23, 12, 43, 0.55);
+  background: rgba(19, 19, 22, 0.55);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   display: flex;
@@ -106,7 +106,7 @@
   background: #fff;
   border-radius: 22px;
   overflow: hidden;
-  box-shadow: 0 30px 70px rgba(23, 12, 43, 0.4), 0 4px 14px rgba(23, 12, 43, 0.12);
+  box-shadow: 0 30px 70px rgba(19, 19, 22, 0.4), 0 4px 14px rgba(19, 19, 22, 0.12);
   animation: modalPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -195,7 +195,7 @@
   align-items: center;
   gap: 14px;
   background: #F9F7FF;
-  border: 1px solid #ECE4FB;
+  border: 1px solid #e9e9ec;
   border-radius: 16px;
   padding: 14px 16px;
   margin-bottom: 22px;
@@ -206,12 +206,12 @@
   height: 40px;
   border-radius: 11px;
   flex-shrink: 0;
-  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #151519 0%, #242428 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 14px rgba(122, 0, 255, 0.28);
+  box-shadow: 0 6px 14px rgba(21, 21, 25, 0.28);
 }
 
 .expiryModalPlanInfo {
@@ -222,13 +222,13 @@
   margin: 0;
   font-size: 14.5px;
   font-weight: 700;
-  color: #2b1a4a;
+  color: #252528;
 }
 
 .expiryModalPlanInfo p {
   margin: 2px 0 0;
   font-size: 12px;
-  color: #6b5b8a;
+  color: #656568;
 }
 
 .expiryModalCountdown {
@@ -242,7 +242,7 @@
   font-size: 24px;
   font-weight: 900;
   line-height: 1;
-  color: #7a00ff;
+  color: #151519;
   font-variant-numeric: tabular-nums;
 }
 
@@ -253,7 +253,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: #8a7aab;
+  color: #848487;
 }
 
 .expiryModalFeatures {
@@ -271,7 +271,7 @@
   gap: 9px;
   font-size: 13.5px;
   font-weight: 600;
-  color: #3d2a5c;
+  color: #353538;
 }
 
 .expiryModalFeatures li svg {
@@ -285,26 +285,26 @@
   gap: 6px;
   margin-bottom: 20px;
   padding-top: 16px;
-  border-top: 1px dashed #ECE4FB;
+  border-top: 1px dashed #e9e9ec;
 }
 
 .priceValue {
   font-size: 26px;
   font-weight: 900;
-  color: #1f1235;
+  color: #1a1a1d;
   font-variant-numeric: tabular-nums;
 }
 
 .priceNote {
   font-size: 12px;
   font-weight: 700;
-  color: #8a7aab;
+  color: #848487;
 }
 
 .pricePeriod {
   font-size: 13px;
   font-weight: 600;
-  color: #8a7aab;
+  color: #848487;
   margin-left: auto;
 }
 
@@ -315,7 +315,7 @@
 }
 
 .expiryModalPrimaryBtn {
-  background: linear-gradient(135deg, #7a00ff 0%, #a855f7 100%);
+  background: linear-gradient(135deg, #151519 0%, #242428 100%);
   color: #fff;
   border: none;
   padding: 15px;
@@ -323,13 +323,13 @@
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(122, 0, 255, 0.32);
+  box-shadow: 0 10px 24px rgba(21, 21, 25, 0.32);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .expiryModalPrimaryBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 14px 30px rgba(122, 0, 255, 0.42);
+  box-shadow: 0 14px 30px rgba(21, 21, 25, 0.42);
 }
 
 .expiryModalPrimaryBtn:active {
@@ -342,13 +342,13 @@
   padding: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #8a7aab;
+  color: #848487;
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .expiryModalSecondaryBtn:hover {
-  color: #5b00cc;
+  color: #111115;
 }
 
 /* ======================================================
@@ -368,7 +368,7 @@
 }
 
 .graceBanner a {
-  color: #7a00ff;
+  color: #151519;
   text-decoration: underline;
   font-weight: 600;
   margin-left: 8px;
@@ -376,7 +376,7 @@
 }
 
 .graceBanner a:hover {
-  color: #5b00cc;
+  color: #111115;
 }
 
 /* ======================================================

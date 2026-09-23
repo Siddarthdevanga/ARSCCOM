@@ -27,7 +27,7 @@ export default function NewSmartFormPage() {
       </header>
       <div className={styles.scrollBody}>
         <div style={{ maxWidth: 1180, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", margin: "0 0 1.25rem" }}>New Smart Form</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: "#08080c", margin: "0 0 1.25rem" }}>New Smart Form</h1>
           <BuilderForm
             initial={{ companyName: company.name }}
             onSaved={() => router.push("/smart-forms/dashboard")}

@@ -43,7 +43,7 @@ const IconClock = () => (
 );
 
 const IconBuilding = () => (
-  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8d8e97" strokeWidth="1.5">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
     <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
   </svg>
@@ -68,21 +68,21 @@ function RoomCard({ room, onSelect, nowMinutes = 0 }) {
     <div
       onClick={() => onSelect(room)}
       style={{
-        borderRadius:"0.875rem", border:"1.5px solid #7c3aed",
+        borderRadius:"0.875rem", border:"1.5px solid #1d1d21",
         background:"#fff", overflow:"hidden", cursor:"pointer",
-        boxShadow:"0 2px 12px rgba(124,58,237,0.08)",
+        boxShadow:"0 2px 12px rgba(29, 29, 33,0.08)",
         transition:"transform 0.15s, box-shadow 0.15s",
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(124,58,237,0.08)"; }}
+      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(29, 29, 33,0.15)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(29, 29, 33,0.08)"; }}
     >
-      <div style={{ width:"100%", aspectRatio:"16/9", background:"#ede9fe", position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ width:"100%", aspectRatio:"16/9", background:"#ededf0", position:"relative", overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
         {room.image_url
           ? <img src={room.image_url} alt={room.room_name}
               style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
           : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.4rem" }}>
               <IconBuilding />
-              <span style={{ fontSize:"1.1rem", fontWeight:800, color:"#7c3aed", letterSpacing:1 }}>
+              <span style={{ fontSize:"1.1rem", fontWeight:800, color:"#1d1d21", letterSpacing:1 }}>
                 {room.room_name.charAt(0).toUpperCase()}
               </span>
             </div>
@@ -129,7 +129,7 @@ function RoomCard({ room, onSelect, nowMinutes = 0 }) {
           </div>
         )}
         <button style={{ marginTop:"0.75rem", width:"100%", padding:"0.5rem",
-          background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.5rem",
+          background:"#1d1d21", color:"#fff", border:"none", borderRadius:"0.5rem",
           fontSize:"0.82rem", fontWeight:600, cursor:"pointer", display:"flex",
           alignItems:"center", justifyContent:"center", gap:"0.35rem" }}>
           Select Room <IconArrow />
@@ -174,8 +174,8 @@ function TimePicker({ value, onChange, label, minMinutes = null, disabled = fals
             <button key={o.value} type="button"
               onClick={() => { onChange(o.value); setOpen(false); }}
               style={{ width:"100%", padding:"0.5rem 0.875rem", border:"none",
-                background: value === o.value ? "#ede9fe" : "none",
-                color: value === o.value ? "#7c3aed" : "#374151",
+                background: value === o.value ? "#ededf0" : "none",
+                color: value === o.value ? "#1d1d21" : "#374151",
                 fontSize:"0.875rem", cursor:"pointer", textAlign:"left",
                 fontWeight: value === o.value ? 600 : 400 }}>
               {o.label}
@@ -217,7 +217,7 @@ function EmployeeSearch({ label, selected, onSelect, onClear, placeholder = "Sea
       <div>
         <label style={{ display:"block", fontSize:"0.82rem", fontWeight:600, color:"#374151", marginBottom:"0.35rem" }}>{label}</label>
         <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", padding:"0.55rem 0.875rem",
-          border:"1px solid #7c3aed", borderRadius:"0.5rem", background:"#f5f3ff" }}>
+          border:"1px solid #1d1d21", borderRadius:"0.5rem", background:"#f5f3ff" }}>
           <div style={{ flex:1 }}>
             <div style={{ fontWeight:600, fontSize:"0.875rem", color:"#1f2937" }}>{selected.name}</div>
             <div style={{ fontSize:"0.75rem", color:"#6b7280" }}>{selected.email}{selected.department ? ` · ${selected.department}` : ""}</div>
@@ -259,7 +259,7 @@ function EmployeeSearch({ label, selected, onSelect, onClear, placeholder = "Sea
                   background:"#fafafa" }}
                 onMouseEnter={e => e.currentTarget.style.background="#f5f3ff"}
                 onMouseLeave={e => e.currentTarget.style.background="#fafafa"}>
-                <div style={{ fontSize:"0.78rem", color:"#7c3aed", fontWeight:700 }}>Use "{query.trim()}"</div>
+                <div style={{ fontSize:"0.78rem", color:"#1d1d21", fontWeight:700 }}>Use "{query.trim()}"</div>
                 <div style={{ fontSize:"0.7rem", color:"#9ca3af" }}>Not in employee directory</div>
               </div>
             )}
@@ -690,7 +690,7 @@ export default function ConferenceBookPage() {
   };
 
   if (loading) return (
-    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"sans-serif", color:"#7c3aed" }}>
+    <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"sans-serif", color:"#1d1d21" }}>
       Loading rooms…
     </div>
   );
@@ -716,7 +716,7 @@ export default function ConferenceBookPage() {
             overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
             onClick={e => e.stopPropagation()}>
             {/* Modal header */}
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"1.25rem 1.5rem" }}>
               <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
                 textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Confirm Booking</div>
               <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>{confirmPreview.room}</div>
@@ -758,7 +758,7 @@ export default function ConferenceBookPage() {
               </button>
               <button onClick={handleConfirmBooking} disabled={submitting}
                 style={{ flex:2, padding:"0.7rem", borderRadius:"0.625rem", border:"none",
-                  background: submitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                  background: submitting ? "#3a3a42" : "#1d1d21", color:"#fff",
                   fontSize:"0.875rem", fontWeight:700, cursor: submitting ? "not-allowed" : "pointer" }}>
                 {submitting ? "Booking…" : "Confirm Booking"}
               </button>
@@ -775,7 +775,7 @@ export default function ConferenceBookPage() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:420,
             overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"1.25rem 1.5rem" }}>
               <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
                 textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Confirm Range Booking</div>
               <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>{rangeConfirmPreview.room}</div>
@@ -816,7 +816,7 @@ export default function ConferenceBookPage() {
               </button>
               <button onClick={handleConfirmRangeBooking} disabled={rangeSubmitting}
                 style={{ flex:2, padding:"0.7rem", borderRadius:"0.625rem", border:"none",
-                  background: rangeSubmitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                  background: rangeSubmitting ? "#3a3a42" : "#1d1d21", color:"#fff",
                   fontSize:"0.875rem", fontWeight:700, cursor: rangeSubmitting ? "not-allowed" : "pointer" }}>
                 {rangeSubmitting ? "Booking…" : "Book All Days"}
               </button>
@@ -833,7 +833,7 @@ export default function ConferenceBookPage() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:440,
             overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"1.25rem 1.5rem" }}>
               <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
                 textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Range Booking Result</div>
               <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>
@@ -874,7 +874,7 @@ export default function ConferenceBookPage() {
             <div style={{ padding:"0 1.5rem 1.25rem" }}>
               <button onClick={() => setRangeResult(null)}
                 style={{ width:"100%", padding:"0.7rem", borderRadius:"0.625rem", border:"none",
-                  background:"#7c3aed", color:"#fff", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
+                  background:"#1d1d21", color:"#fff", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
                 Done
               </button>
             </div>
@@ -899,7 +899,7 @@ export default function ConferenceBookPage() {
         </div>
         {/* Back button — right, purple filled */}
         <button onClick={() => step === 2 ? setStep(1) : router.back()}
-          style={{ background:"#7c3aed", border:"none", cursor:"pointer",
+          style={{ background:"#1d1d21", border:"none", cursor:"pointer",
             color:"#fff", display:"flex", alignItems:"center", gap:"0.4rem",
             fontSize:"0.82rem", fontWeight:700, borderRadius:"99px", padding:"0.4rem 1.1rem",
             whiteSpace:"nowrap" }}>
@@ -947,7 +947,7 @@ export default function ConferenceBookPage() {
               {/* Room summary */}
               <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
                 overflow:"hidden", marginBottom:"1.25rem", display:"flex" }}>
-                <div style={{ width:110, flexShrink:0, background:"#ede9fe",
+                <div style={{ width:110, flexShrink:0, background:"#ededf0",
                   display:"flex", alignItems:"center", justifyContent:"center" }}>
                   {selected.image_url
                     ? <img src={selected.image_url} alt={selected.room_name} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
@@ -959,7 +959,7 @@ export default function ConferenceBookPage() {
                     <IconUsers /> {selected.capacity ? `${selected.capacity} people` : "Capacity N/A"}
                   </div>
                   <button onClick={() => setStep(1)}
-                    style={{ marginTop:"0.4rem", fontSize:"0.72rem", color:"#7c3aed", background:"none",
+                    style={{ marginTop:"0.4rem", fontSize:"0.72rem", color:"#1d1d21", background:"none",
                       border:"none", cursor:"pointer", padding:0, fontWeight:700 }}>
                     ← Change room
                   </button>
@@ -994,8 +994,8 @@ export default function ConferenceBookPage() {
                     <button key={mode} onClick={() => { setBookingMode(mode); setFormError(""); }}
                       style={{ flex:1, padding:"0.45rem 0", border:"none", borderRadius:"0.45rem",
                         fontSize:"0.82rem", fontWeight:700, cursor:"pointer", transition:"all 0.15s",
-                        background: bookingMode === mode ? "#7c3aed" : "transparent",
-                        color: bookingMode === mode ? "#fff" : "#7c3aed" }}>
+                        background: bookingMode === mode ? "#1d1d21" : "transparent",
+                        color: bookingMode === mode ? "#fff" : "#1d1d21" }}>
                       {mode === "single" ? "Single Day" : "Date Range"}
                     </button>
                   ))}
@@ -1031,7 +1031,7 @@ export default function ConferenceBookPage() {
                           fontSize:"0.82rem", fontWeight:600, color:"#374151" }}>
                           <input type="checkbox" checked={includeWeekends}
                             onChange={e => setIncludeWeekends(e.target.checked)}
-                            style={{ width:15, height:15, accentColor:"#7c3aed" }} />
+                            style={{ width:15, height:15, accentColor:"#1d1d21" }} />
                           Include weekends
                         </label>
                       </div>
@@ -1087,11 +1087,11 @@ export default function ConferenceBookPage() {
                       <div style={{ display:"flex", flexWrap:"wrap", gap:"0.4rem", marginTop:"0.5rem" }}>
                         {teamMembers.map(m => (
                           <span key={m.id} style={{ display:"flex", alignItems:"center", gap:"0.3rem",
-                            background:"#ede9fe", color:"#7c3aed", borderRadius:99,
+                            background:"#ededf0", color:"#1d1d21", borderRadius:99,
                             padding:"0.25rem 0.625rem", fontSize:"0.78rem", fontWeight:600 }}>
                             {m.name}
                             <button onClick={() => removeMember(m.id)} style={{ background:"none", border:"none",
-                              cursor:"pointer", color:"#7c3aed", padding:0, lineHeight:1, fontSize:"0.9rem" }}>×</button>
+                              cursor:"pointer", color:"#1d1d21", padding:0, lineHeight:1, fontSize:"0.9rem" }}>×</button>
                           </span>
                         ))}
                       </div>
@@ -1100,7 +1100,7 @@ export default function ConferenceBookPage() {
                 </div>
 
                 <div style={{ marginTop:"0.875rem", padding:"0.5rem 0.875rem", background:"#f5f3ff",
-                  borderRadius:"0.5rem", fontSize:"0.78rem", color:"#6b21a8" }}>
+                  borderRadius:"0.5rem", fontSize:"0.78rem", color:"#16161a" }}>
                   Booking as: <strong>{onBehalfOf ? `${onBehalfOf.name} (${onBehalfOf.email})` : "Admin"}</strong>
                 </div>
 
@@ -1108,7 +1108,7 @@ export default function ConferenceBookPage() {
                   onClick={bookingMode === "single" ? handleBook : handleBookRange}
                   disabled={submitting || rangeSubmitting}
                   style={{ marginTop:"1.25rem", width:"100%", padding:"0.75rem",
-                    background: (submitting || rangeSubmitting) ? "#a78bfa" : "#7c3aed", color:"#fff",
+                    background: (submitting || rangeSubmitting) ? "#3a3a42" : "#1d1d21", color:"#fff",
                     border:"none", borderRadius:"0.625rem", fontSize:"0.9rem",
                     fontWeight:700, cursor: (submitting || rangeSubmitting) ? "not-allowed" : "pointer",
                     display:"flex", alignItems:"center", justifyContent:"center", gap:"0.4rem" }}>
@@ -1120,7 +1120,7 @@ export default function ConferenceBookPage() {
               {(rangeLoading || rangeBookings.length > 0) && (
                 <div style={{ marginTop:"1.25rem", background:"#fff", borderRadius:"0.875rem",
                   border:"1px solid #e5e7eb", padding:"1rem" }}>
-                  <div style={{ fontSize:"0.78rem", fontWeight:800, color:"#7c3aed",
+                  <div style={{ fontSize:"0.78rem", fontWeight:800, color:"#1d1d21",
                     textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"0.75rem" }}>
                     Date Range Bookings
                   </div>
@@ -1133,7 +1133,7 @@ export default function ConferenceBookPage() {
                     const booker = first.booked_by === "ADMIN" ? "Admin" : first.booked_by_name || first.booked_by;
                     return (
                       <div key={group.range_booking_id} style={{ marginBottom:"0.75rem", padding:"0.75rem",
-                        background:"#f5f3ff", borderRadius:"0.625rem", border:"1px solid #ddd6fe" }}>
+                        background:"#f5f3ff", borderRadius:"0.625rem", border:"1px solid #dddde0" }}>
                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem" }}>
                           <div>
                             <div style={{ fontSize:"0.82rem", fontWeight:700, color:"#1f2937" }}>
@@ -1149,7 +1149,7 @@ export default function ConferenceBookPage() {
                           <div style={{ display:"flex", flexDirection:"column", gap:"0.35rem", flexShrink:0 }}>
                             <button onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "reschedule")}
                               style={{ fontSize:"0.68rem", fontWeight:700, padding:"0.3rem 0.5rem",
-                                background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.4rem", cursor:"pointer" }}>
+                                background:"#1d1d21", color:"#fff", border:"none", borderRadius:"0.4rem", cursor:"pointer" }}>
                               Reschedule
                             </button>
                             <button onClick={() => openScopePicker({ ...rep, range_booking_id: group.range_booking_id, _forceRange: true }, "cancel")}
@@ -1161,7 +1161,7 @@ export default function ConferenceBookPage() {
                         </div>
                         {first.purpose && (
                           <div style={{ fontSize:"0.7rem", color:"#6b7280", marginTop:"0.35rem",
-                            borderTop:"1px solid #ede9fe", paddingTop:"0.35rem" }}>
+                            borderTop:"1px solid #ededf0", paddingTop:"0.35rem" }}>
                             {first.purpose}
                           </div>
                         )}
@@ -1176,7 +1176,7 @@ export default function ConferenceBookPage() {
             <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
               overflow:"hidden", position:"sticky", top:80 }}>
               <div style={{ padding:"0.75rem 1rem", borderBottom:"1px solid #f3f4f6",
-                background:"linear-gradient(135deg,#7c3aed,#a78bfa)" }}>
+                background:"linear-gradient(135deg,#1d1d21,#3a3a42)" }}>
                 <div style={{ fontWeight:800, fontSize:"0.85rem", color:"#fff" }}>
                   {scheduleDate && scheduleDate !== today ? `Schedule · ${scheduleDate}` : "Today's Schedule"}
                 </div>
@@ -1201,10 +1201,10 @@ export default function ConferenceBookPage() {
                         const lastDay = days[days.length - 1] || ref;
                         return (
                           <div key={rid} style={{ marginBottom:"0.75rem", borderRadius:"0.5rem",
-                            border:"1.5px solid #ddd6fe", overflow:"hidden" }}>
+                            border:"1.5px solid #dddde0", overflow:"hidden" }}>
                             {/* Group header */}
                             <div style={{ background:"#f5f3ff", padding:"0.55rem 0.75rem",
-                              borderBottom:"1px solid #ddd6fe" }}>
+                              borderBottom:"1px solid #dddde0" }}>
                               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.4rem" }}>
                                 <div>
                                   <div style={{ fontSize:"0.78rem", fontWeight:800, color:"#1f2937" }}>
@@ -1219,7 +1219,7 @@ export default function ConferenceBookPage() {
                                 {upcomingDays.length > 0 && (
                                   <div style={{ display:"flex", flexDirection:"column", gap:"0.25rem", flexShrink:0 }}>
                                     <button onClick={() => openScopePicker({ ...ref, _forceRange: true }, "reschedule")}
-                                      style={{ padding:"0.22rem 0.45rem", background:"#ede9fe", color:"#7c3aed",
+                                      style={{ padding:"0.22rem 0.45rem", background:"#ededf0", color:"#1d1d21",
                                         border:"none", borderRadius:"0.3rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
                                       Reschedule all
                                     </button>
@@ -1249,7 +1249,7 @@ export default function ConferenceBookPage() {
                                   <div>
                                     <div style={{ fontSize:"0.72rem", fontWeight:600, color: isPastDay ? "#9ca3af" : "#1f2937" }}>{dDate}</div>
                                     <div style={{ fontSize:"0.62rem", fontWeight:700, marginTop:"0.05rem",
-                                      color: isActive ? "#16a34a" : isPastDay ? "#9ca3af" : "#7c3aed" }}>
+                                      color: isActive ? "#16a34a" : isPastDay ? "#9ca3af" : "#1d1d21" }}>
                                       {isActive ? "● In Progress" : isPastDay ? "Ended" : "Upcoming"}
                                     </div>
                                   </div>
@@ -1264,7 +1264,7 @@ export default function ConferenceBookPage() {
                                     {!isPastDay && !isActive && (
                                       <>
                                         <button onClick={() => { setRsScope("single"); openRescheduleModal(d); }}
-                                          style={{ padding:"0.18rem 0.4rem", background:"#ede9fe", color:"#7c3aed",
+                                          style={{ padding:"0.18rem 0.4rem", background:"#ededf0", color:"#1d1d21",
                                             border:"none", borderRadius:"0.25rem", fontSize:"0.6rem", fontWeight:700, cursor:"pointer" }}>
                                           Reschedule
                                         </button>
@@ -1290,7 +1290,7 @@ export default function ConferenceBookPage() {
                         const booker = b.booked_by === "ADMIN" ? "Admin" : b.booked_by;
                         return (
                           <div key={b.id} style={{ marginBottom:"0.6rem", borderRadius:"0.5rem",
-                            border:`1px solid ${isPast ? "#e5e7eb" : "#7c3aed"}`,
+                            border:`1px solid ${isPast ? "#e5e7eb" : "#1d1d21"}`,
                             background: isPast ? "#f9fafb" : "#fff",
                             opacity: isPast ? 0.6 : 1, padding:"0.6rem 0.75rem" }}>
                             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -1343,7 +1343,7 @@ export default function ConferenceBookPage() {
                             {state === "upcoming" && (
                               <div style={{ display:"flex", gap:"0.4rem", marginTop:"0.5rem" }}>
                                 <button onClick={() => openScopePicker(b, "reschedule")}
-                                  style={{ flex:1, padding:"0.28rem 0", background:"#ede9fe", color:"#7c3aed",
+                                  style={{ flex:1, padding:"0.28rem 0", background:"#ededf0", color:"#1d1d21",
                                     border:"none", borderRadius:"0.35rem", fontSize:"0.7rem", fontWeight:700, cursor:"pointer" }}>
                                   Reschedule
                                 </button>
@@ -1373,7 +1373,7 @@ export default function ConferenceBookPage() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:380,
             boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb",
-              background: scopePicker.action === "cancel" ? "#fef2f2" : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+              background: scopePicker.action === "cancel" ? "#fef2f2" : "linear-gradient(135deg,#1d1d21,#3a3a42)",
               borderRadius:"1rem 1rem 0 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontWeight:800, fontSize:"0.95rem",
                 color: scopePicker.action === "cancel" ? "#b91c1c" : "#fff" }}>
@@ -1400,8 +1400,8 @@ export default function ConferenceBookPage() {
                 </button>
                 <button onClick={() => confirmScopeChoice("range")}
                   style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
-                    border:"1.5px solid #7c3aed", background:"#f5f3ff", cursor:"pointer" }}>
-                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#7c3aed" }}>Entire remaining range</div>
+                    border:"1.5px solid #1d1d21", background:"#f5f3ff", cursor:"pointer" }}>
+                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#1d1d21" }}>Entire remaining range</div>
                   <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
                     {scopeLoading ? "Loading…" : `${scopeRangeUpcoming} upcoming day${scopeRangeUpcoming !== 1 ? "s" : ""} will be affected`}
                   </div>
@@ -1420,7 +1420,7 @@ export default function ConferenceBookPage() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:440,
             boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb",
-              background:"linear-gradient(135deg,#7c3aed,#a78bfa)", borderRadius:"1rem 1rem 0 0",
+              background:"linear-gradient(135deg,#1d1d21,#3a3a42)", borderRadius:"1rem 1rem 0 0",
               display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontWeight:800, color:"#fff", fontSize:"0.95rem" }}>Reschedule Booking</span>
               <button onClick={() => setRescheduleTarget(null)}
@@ -1434,7 +1434,7 @@ export default function ConferenceBookPage() {
                 {" · "}{rescheduleTarget.booked_by === "ADMIN" ? "Admin" : rescheduleTarget.booked_by}
               </div>
               {rsScope === "range" && (
-                <div style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:"0.5rem",
+                <div style={{ background:"#ededf0", color:"#1d1d21", borderRadius:"0.5rem",
                   padding:"0.5rem 0.75rem", fontSize:"0.78rem", fontWeight:600, marginBottom:"0.75rem" }}>
                   ℹ️ New time &amp; room will apply to all {scopeRangeUpcoming} upcoming days in this range
                 </div>
@@ -1469,7 +1469,7 @@ export default function ConferenceBookPage() {
               </div>
               <div style={{ display:"flex", gap:"0.75rem", marginTop:"1.25rem" }}>
                 <button onClick={confirmReschedule} disabled={rsSaving}
-                  style={{ flex:1, padding:"0.65rem", background: rsSaving ? "#a78bfa" : "#7c3aed",
+                  style={{ flex:1, padding:"0.65rem", background: rsSaving ? "#3a3a42" : "#1d1d21",
                     color:"#fff", border:"none", borderRadius:"0.5rem", fontWeight:700,
                     fontSize:"0.875rem", cursor: rsSaving ? "not-allowed" : "pointer" }}>
                   {rsSaving ? "Saving…" : "Confirm Reschedule"}

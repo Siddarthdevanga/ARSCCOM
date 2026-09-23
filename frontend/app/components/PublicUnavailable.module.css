@@ -13,7 +13,7 @@
   background: #fff;
   border-radius: 20px;
   padding: 40px 30px 34px;
-  box-shadow: 0 16px 44px rgba(124, 58, 237, 0.1), 0 2px 8px rgba(23, 12, 43, 0.05);
+  box-shadow: 0 16px 44px rgba(29, 29, 33, 0.1), 0 2px 8px rgba(19, 19, 22, 0.05);
   animation: cardIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -22,12 +22,12 @@
   height: 64px;
   margin: 0 auto 20px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  background: linear-gradient(135deg, #1d1d21 0%, #3a3a42 100%);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.32);
+  box-shadow: 0 10px 24px rgba(29, 29, 33, 0.32);
 }
 
 .title {
@@ -35,14 +35,14 @@
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: #1f1235;
+  color: #1a1a1d;
 }
 
 .subtitle {
   margin: 0;
   font-size: 14px;
   line-height: 1.6;
-  color: #6b5b8a;
+  color: #656568;
 }
 
 @keyframes cardIn {

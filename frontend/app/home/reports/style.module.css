@@ -8,30 +8,30 @@
 
 /* ── Design tokens ── */
 :root {
-  --purple:        #7c3aed;
-  --purple-mid:    #6d28d9;
-  --purple-dark:   #4c1d95;
-  --purple-light:  #a78bfa;
+  --purple:        #1d1d21;
+  --purple-mid:    #19191d;
+  --purple-dark:   #131317;
+  --purple-light:  #5f6068;
   --purple-faint:  #f5f3ff;
-  --purple-pale:   #ede9fe;
+  --purple-pale:   #ededf0;
   --blue:          #0ea5e9;
   --amber:         #f59e0b;
   --green:         #10b981;
   --red:           #ef4444;
-  --ink:           #0f0629;
-  --ink-mid:       #3b1f6e;
+  --ink:           #0d0d10;
+  --ink-mid:       #111115;
   --muted:         #6b7280;
   --border:        #e9e3f5;
-  --border-strong: #d8d0ef;
+  --border-strong: #d6d6d9;
   --white:         #ffffff;
   --bg:            #f7f5fc;
   --bg-deep:       #f0edf9;
   --card:          #ffffff;
-  --shadow-xs:     0 1px 3px rgba(76,29,149,0.06);
-  --shadow-sm:     0 2px 10px rgba(124,58,237,0.08);
-  --shadow-md:     0 6px 24px rgba(124,58,237,0.13);
-  --shadow-lg:     0 12px 48px rgba(124,58,237,0.18);
-  --grad-brand:    linear-gradient(135deg,#2e0d6e 0%,#4c1d95 25%,#6d28d9 55%,#7c3aed 80%,#a78bfa 100%);
+  --shadow-xs:     0 1px 3px rgba(19, 19, 23,0.06);
+  --shadow-sm:     0 2px 10px rgba(29, 29, 33,0.08);
+  --shadow-md:     0 6px 24px rgba(29, 29, 33,0.13);
+  --shadow-lg:     0 12px 48px rgba(29, 29, 33,0.18);
+  --grad-brand:    linear-gradient(158deg,#121214 0%,#050505 48%,#0c0c0f 100%);
   --r-sm:6px; --r:10px; --r-lg:14px; --r-xl:18px; --r-2xl:22px;
   --t:0.2s cubic-bezier(0.4,0,0.2,1);
   --font:'Segoe UI',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
@@ -90,7 +90,7 @@
   display:flex; align-items:center; justify-content:space-between;
   padding:0 clamp(1rem,3vw,2rem);
   flex-shrink:0; position:sticky; top:0; z-index:200;
-  box-shadow:0 2px 16px rgba(124,58,237,0.06);
+  box-shadow:0 2px 16px rgba(29, 29, 33,0.06);
 }
 .header::before {
   content:''; position:absolute; top:0; left:0; right:0;
@@ -109,12 +109,12 @@
 }
 .backBtn {
   display:flex; align-items:center; gap:.35rem; padding:.375rem .875rem;
-  background:var(--purple-faint); border:1.5px solid rgba(124,58,237,0.15);
+  background:var(--purple-faint); border:1.5px solid rgba(29, 29, 33,0.15);
   border-radius:9999px; color:var(--purple);
   font-family:var(--font); font-size:.75rem; font-weight:700;
   cursor:pointer; transition:all var(--t); white-space:nowrap;
 }
-.backBtn:hover { background:var(--purple); color:var(--white); border-color:var(--purple); box-shadow:0 2px 12px rgba(124,58,237,.3); }
+.backBtn:hover { background:var(--purple); color:var(--white); border-color:var(--purple); box-shadow:0 2px 12px rgba(29, 29, 33,.3); }
 .refreshBtn {
   display:flex; align-items:center; gap:.35rem; padding:.375rem .875rem;
   background:none; border:1.5px solid var(--border); border-radius:9999px; color:var(--muted);
@@ -179,7 +179,7 @@
 }
 .heroOrb2 {
   position:absolute; bottom:-100px; left:-40px; width:260px; height:260px; border-radius:50%;
-  background:radial-gradient(circle,rgba(167,139,250,.18) 0%,transparent 65%); pointer-events:none;
+  background:radial-gradient(circle,rgba(44, 44, 48,.18) 0%,transparent 65%); pointer-events:none;
 }
 .heroOrb { position:absolute; border-radius:50%; pointer-events:none; }
 .heroGrid {
@@ -205,10 +205,10 @@
   background:transparent; font-family:var(--font); font-size:.72rem; font-weight:700;
   color:var(--muted); cursor:pointer; transition:all var(--t); white-space:nowrap;
 }
-.periodBtn:hover { background:var(--purple-faint); border-color:rgba(124,58,237,.25); color:var(--purple); }
+.periodBtn:hover { background:var(--purple-faint); border-color:rgba(29, 29, 33,.25); color:var(--purple); }
 .periodBtnActive {
   background:var(--purple); color:var(--white); border-color:var(--purple);
-  box-shadow:0 2px 10px rgba(124,58,237,.35);
+  box-shadow:0 2px 10px rgba(29, 29, 33,.35);
 }
 .periodBtnActive:hover { background:var(--purple-mid); border-color:var(--purple-mid); }
 .periodNote { font-size:.68rem; font-weight:600; color:var(--muted); white-space:nowrap; }
@@ -306,8 +306,8 @@
 /* Peak chip */
 .peakChip {
   display:flex; flex-direction:column; align-items:center;
-  background:color-mix(in srgb,var(--pc,#7c3aed) 8%,transparent);
-  border:1px solid color-mix(in srgb,var(--pc,#7c3aed) 20%,transparent);
+  background:color-mix(in srgb,var(--pc,#1d1d21) 8%,transparent);
+  border:1px solid color-mix(in srgb,var(--pc,#1d1d21) 20%,transparent);
   border-radius:var(--r-sm); padding:.18rem .55rem; gap:1px;
 }
 .peakChip strong { font-size:.82rem; font-weight:900; color:var(--pc,var(--purple)); line-height:1; }
@@ -323,11 +323,11 @@
 
 .svgTip {
   position:absolute; transform:translate(-50%,-110%);
-  background:#0f0629; color:#fff; border-radius:8px; padding:.25rem .6rem;
+  background:#0d0d10; color:#fff; border-radius:8px; padding:.25rem .6rem;
   pointer-events:none; display:flex; flex-direction:column; align-items:center; gap:1px;
-  box-shadow:0 4px 16px rgba(15,6,41,.4); z-index:20; white-space:nowrap;
+  box-shadow:0 4px 16px rgba(13, 13, 16,.4); z-index:20; white-space:nowrap;
 }
-.svgTip::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#0f0629; }
+.svgTip::after { content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%); border:5px solid transparent; border-top-color:#0d0d10; }
 .svgTip strong { font-size:.82rem; font-weight:900; line-height:1; }
 .svgTip span   { font-size:.62rem; opacity:.65; line-height:1; }
 
@@ -406,7 +406,7 @@
 .upgradeCardText { font-size:.78rem; line-height:1.6; color:rgba(255,255,255,.75); margin:0; max-width:520px; font-weight:500; }
 .upgradeCardBtn {
   margin-top:.25rem; padding:.6rem 1.5rem; border-radius:9999px; border:none;
-  background:#fbbf24; color:#1c0042; font-family:var(--font); font-size:.78rem; font-weight:800;
+  background:#fbbf24; color:#09090d; font-family:var(--font); font-size:.78rem; font-weight:800;
   cursor:pointer; transition:all var(--t);
 }
 .upgradeCardBtn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(251,191,36,.35); }
@@ -427,7 +427,7 @@
   width:42px; height:42px; border-radius:var(--r);
   background:var(--grad-brand); color:var(--white);
   display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; box-shadow:0 4px 14px rgba(124,58,237,.3);
+  flex-shrink:0; box-shadow:0 4px 14px rgba(29, 29, 33,.3);
 }
 .exportTitle { font-size:.95rem; font-weight:800; color:var(--ink); margin:0 0 .2rem; letter-spacing:-.01em; }
 .exportSub   { font-size:.75rem; color:var(--muted); margin:0; font-weight:500; }
@@ -441,8 +441,8 @@
 .exportCard:hover { border-color:var(--border-strong); box-shadow:var(--shadow-sm); transform:translateY(-2px); }
 .exportCardFull {
   grid-column:1/-1; flex-direction:row; align-items:center; flex-wrap:wrap;
-  background:linear-gradient(135deg,#1c0042 0%,#3b0082 60%,#4c1d95 100%);
-  border-color:rgba(124,58,237,.3); gap:1rem;
+  background:linear-gradient(135deg,#09090d 0%,#0d0d11 60%,#131317 100%);
+  border-color:rgba(29, 29, 33,.3); gap:1rem;
 }
 .exportCardFull .exportCardTitle { color:var(--white); }
 .exportCardFull .exportCardSub   { color:rgba(255,255,255,.5); }
@@ -453,17 +453,17 @@
 .exportCardSub   { font-size:.7rem; color:var(--muted); margin:0; font-weight:500; line-height:1.45; flex:1; }
 .exportBtn {
   display:flex; align-items:center; justify-content:center; gap:.35rem; padding:.525rem .875rem;
-  background:var(--purple-pale); border:1.5px solid rgba(124,58,237,.2);
+  background:var(--purple-pale); border:1.5px solid rgba(29, 29, 33,.2);
   border-radius:9999px; color:var(--purple);
   font-family:var(--font); font-size:.72rem; font-weight:700;
   cursor:pointer; transition:all var(--t); white-space:nowrap; flex-shrink:0; align-self:flex-start;
 }
 .exportBtn:hover:not(:disabled) {
   background:var(--eb,var(--purple)); color:var(--white); border-color:var(--eb,var(--purple));
-  box-shadow:0 4px 14px rgba(124,58,237,.3); transform:translateY(-1px);
+  box-shadow:0 4px 14px rgba(29, 29, 33,.3); transform:translateY(-1px);
 }
 .exportBtn:disabled { opacity:.4; cursor:not-allowed; transform:none; }
-.exportBtnFull { background:#fbbf24; color:#1c0042; border-color:#fbbf24; box-shadow:0 4px 14px rgba(251,191,36,.35); }
+.exportBtnFull { background:#fbbf24; color:#09090d; border-color:#fbbf24; box-shadow:0 4px 14px rgba(251,191,36,.35); }
 .exportBtnFull:hover:not(:disabled) { background:#f59e0b; border-color:#f59e0b; box-shadow:0 6px 20px rgba(251,191,36,.45); }
 
 /* ── Utility ── */

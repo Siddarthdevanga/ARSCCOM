@@ -53,7 +53,7 @@
   min-height: 100vh;
   font-size: 1.2rem;
   font-weight: 800;
-  color: #6200d6;
+  color: #121216;
   background: #f3f0fb;
   letter-spacing: 1px;
 }
@@ -66,7 +66,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid #e8e0f5;
+  border-bottom: 1px solid #e5e5e8;
   position: sticky;
   top: 0;
   z-index: 300;
@@ -83,7 +83,7 @@
 .logoText {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #1a0038;
+  color: #08080c;
   letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;
@@ -105,8 +105,8 @@
 
 .backBtn {
   background: transparent;
-  color: #6200d6;
-  border: 2px solid #6200d6;
+  color: #121216;
+  border: 2px solid #121216;
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 13px;
@@ -119,13 +119,13 @@
 }
 
 .backBtn:hover {
-  background: #6200d6;
+  background: #121216;
   color: #fff;
 }
 
 /* ================= HERO (purple gradient, compact) ================= */
 .hero {
-  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  background: linear-gradient(135deg, #0f0f13 0%, #151519 55%, #28282c 100%);
   padding: 32px 36px 36px;
   position: relative;
   overflow: hidden;
@@ -213,7 +213,7 @@
 
 .stepActive .stepNum {
   background: #f0a500;
-  color: #1a0038;
+  color: #08080c;
   border-color: #f0a500;
   box-shadow: 0 0 0 4px rgba(240, 165, 0, 0.25);
 }
@@ -241,16 +241,16 @@
 .formCard {
   width: 100%;
   max-width: 640px;
-  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  background: linear-gradient(145deg, #f4eeff 0%, #e9e9ec 100%);
   border-radius: 22px;
   padding: 28px 32px 36px;
-  border: 1.5px solid #ddd2f0;
-  box-shadow: 0 4px 20px rgba(98, 0, 214, 0.06);
+  border: 1.5px solid #d9d9dc;
+  box-shadow: 0 4px 20px rgba(18, 18, 22, 0.06);
   transition: box-shadow 0.3s;
 }
 
 .formCard:hover {
-  box-shadow: 0 8px 32px rgba(98, 0, 214, 0.12);
+  box-shadow: 0 8px 32px rgba(18, 18, 22, 0.12);
 }
 
 .cardHeader {
@@ -264,15 +264,15 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #6200d6;
+  background: #121216;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(98, 0, 214, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 18, 22, 0.15);
 }
 
 .cardTitle {
   font-size: 0.95rem;
   font-weight: 900;
-  color: #1a0038;
+  color: #08080c;
   margin: 0;
 }
 
@@ -297,7 +297,7 @@
 .label {
   font-size: 12px;
   font-weight: 800;
-  color: #6200d6;
+  color: #121216;
   margin-bottom: 6px;
   display: block;
   letter-spacing: 0.5px;
@@ -313,7 +313,7 @@
   height: 48px;
   padding: 0 16px;
   border-radius: 14px;
-  border: 1.5px solid #ddd2f0;
+  border: 1.5px solid #d9d9dc;
   font-size: 14px;
   font-weight: 600;
   font-family: 'Nunito', sans-serif;
@@ -322,22 +322,22 @@
   box-sizing: border-box;
   display: block;
   background: #fff;
-  color: #1a0038;
-  -webkit-text-fill-color: #1a0038;
+  color: #08080c;
+  -webkit-text-fill-color: #08080c;
   opacity: 1;
   -webkit-tap-highlight-color: transparent;
 }
 
 .input::placeholder {
-  color: #b8a8d8;
+  color: #b2b2b5;
   font-weight: 600;
   opacity: 1;
 }
 
 .input:focus {
   outline: none;
-  border-color: #6200d6;
-  box-shadow: 0 0 0 3px rgba(98, 0, 214, 0.1);
+  border-color: #121216;
+  box-shadow: 0 0 0 3px rgba(18, 18, 22, 0.1);
   background: #faf8ff;
 }
 
@@ -361,7 +361,7 @@
   width: 100%;
   border: none;
   border-radius: 50px;
-  background: #6200d6;
+  background: #121216;
   color: #fff;
   font-size: 15px;
   font-weight: 800;
@@ -370,20 +370,20 @@
   transition: all 0.25s ease;
   display: block;
   box-sizing: border-box;
-  box-shadow: 0 4px 16px rgba(98, 0, 214, 0.3);
+  box-shadow: 0 4px 16px rgba(18, 18, 22, 0.3);
   letter-spacing: 0.3px;
   -webkit-tap-highlight-color: transparent;
 }
 
 .nextBtn:hover {
-  background: #4a00a8;
+  background: #0f0f13;
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(98, 0, 214, 0.4);
+  box-shadow: 0 8px 24px rgba(18, 18, 22, 0.4);
 }
 
 .nextBtn:active {
   transform: translateY(0);
-  box-shadow: 0 4px 16px rgba(98, 0, 214, 0.3);
+  box-shadow: 0 4px 16px rgba(18, 18, 22, 0.3);
 }
 
 /* ================= RESPONSIVE ================= */

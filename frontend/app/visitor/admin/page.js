@@ -322,7 +322,7 @@ export default function AdminEmployeesPage() {
                 style={{
                   display: "flex", alignItems: "center", gap: "0.5rem",
                   padding: "0.4rem 0.9rem", borderRadius: "2rem", border: "none",
-                  background: bookingRestricted ? "#7c3aed" : "#e5e7eb",
+                  background: bookingRestricted ? "#1d1d21" : "#e5e7eb",
                   color: bookingRestricted ? "#fff" : "#6b7280",
                   fontWeight: 700, fontSize: "0.75rem", cursor: "pointer",
                   transition: "all 0.2s", opacity: restrictToggling ? 0.6 : 1,

@@ -62,7 +62,7 @@ export default function VisitResponsePage() {
   }, [token, action]);
 
   const color =
-    state === "loading" ? "#6c2bd9"
+    state === "loading" ? "#19191d"
     : state === "success" && action === "accept" ? "#00c853"
     : state === "success" ? "#f44336"
     : "#f44336";
@@ -90,13 +90,13 @@ export default function VisitResponsePage() {
         maxWidth: "480px",
         width: "100%",
         textAlign: "center",
-        boxShadow: "0 4px 32px rgba(108,43,217,0.10)",
+        boxShadow: "0 4px 32px rgba(25, 25, 29,0.10)",
       }}>
         <div style={{ fontSize: "56px", marginBottom: "20px" }}>{icon}</div>
 
         {state === "loading" ? (
           <>
-            <h1 style={{ fontSize: "22px", color: "#6c2bd9", marginBottom: "12px" }}>
+            <h1 style={{ fontSize: "22px", color: "#19191d", marginBottom: "12px" }}>
               Processing…
             </h1>
             <p style={{ color: "#888", fontSize: "15px" }}>

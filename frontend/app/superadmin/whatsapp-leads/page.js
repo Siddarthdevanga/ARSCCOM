@@ -41,7 +41,7 @@ const halfH = (node) => {
 */
 const TREE_NODES = [
   // Level 1
-  { key: "botInteraction", label: "Bot Interaction", Icon: Users,         color: "#7c3aed", cx: 580,  cy: 55,  size: "lg" },
+  { key: "botInteraction", label: "Bot Interaction", Icon: Users,         color: "#1d1d21", cx: 580,  cy: 55,  size: "lg" },
   // Level 2
   { key: "noAction",       label: "No Action",       Icon: UserMinus,     color: "#94a3b8", cx: 110,  cy: 185, size: "lg" },
   { key: "demoBooked",     label: "Demo Booked",     Icon: Calendar,      color: "#3b82f6", cx: 580,  cy: 185, size: "lg" },
@@ -57,15 +57,15 @@ const TREE_NODES = [
   // Level 4
   { key: "noConversion",   label: "No Conversion", Icon: XCircle,       color: "#f97316", cx: 390,  cy: 450, size: "lg" },
   { key: "converted",      label: "Converted",     Icon: Star,          color: "#f59e0b", cx: 600,  cy: 450, size: "lg" },
-  { key: "inNurture",      label: "In Nurture",    Icon: MessageSquare, color: "#8b5cf6", cx: 850,  cy: 450, size: "lg" },
+  { key: "inNurture",      label: "In Nurture",    Icon: MessageSquare, color: "#232327", cx: 850,  cy: 450, size: "lg" },
   // Level 5 — Plan breakdown under Converted
   { key: "planTrial",      label: "Trial",      Icon: Users,         color: "#0ea5e9", cx: 450,  cy: 575, size: "sm" },
   { key: "planBusiness",   label: "Business",   Icon: CheckCircle,   color: "#10b981", cx: 543,  cy: 575, size: "sm" },
-  { key: "planEnterprise", label: "Enterprise", Icon: Star,          color: "#7c3aed", cx: 636,  cy: 575, size: "sm" },
+  { key: "planEnterprise", label: "Enterprise", Icon: Star,          color: "#1d1d21", cx: 636,  cy: 575, size: "sm" },
   { key: "planExpired",    label: "Expired",    Icon: XCircle,       color: "#ef4444", cx: 729,  cy: 575, size: "sm" },
   // Level 5 — Nurture chain: directly below In Nurture then flowing right (120px gaps)
   { key: "nurtureStep1",   label: "Step 1", Icon: MessageSquare, color: "#3b82f6", cx: 850,  cy: 575, size: "sm" },
-  { key: "nurtureStep2",   label: "Step 2", Icon: MessageSquare, color: "#8b5cf6", cx: 980,  cy: 575, size: "sm" },
+  { key: "nurtureStep2",   label: "Step 2", Icon: MessageSquare, color: "#232327", cx: 980,  cy: 575, size: "sm" },
   { key: "nurtureFinal",   label: "Final",  Icon: MessageSquare, color: "#f59e0b", cx: 1110, cy: 575, size: "sm" },
   { key: "nurtureClosed",  label: "Closed", Icon: UserMinus,     color: "#6b7280", cx: 1210, cy: 575, size: "sm" },
   // Level 6 — Payment Pending nurture (below plan nodes)
@@ -189,12 +189,12 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
   const total   = stats.botInteraction || 1;
 
   return (
-    <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #ede9fe", padding: "1.5rem", margin: "0 1.5rem 1.5rem" }}>
+    <div style={{ background: "#fff", borderRadius: 16, border: "1px solid #ededf0", padding: "1.5rem", margin: "0 1.5rem 1.5rem" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <div>
-          <h3 style={{ fontSize: 15, fontWeight: 800, color: "#1a0038", margin: 0 }}>Lead Journey Tree</h3>
+          <h3 style={{ fontSize: 15, fontWeight: 800, color: "#08080c", margin: 0 }}>Lead Journey Tree</h3>
           <p style={{ fontSize: 12, color: "#9ca3af", margin: "2px 0 0" }}>
             Click any node to filter leads below · dashed = dropout/no-progress · pill = count · %
           </p>
@@ -203,9 +203,9 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
           {FLOW_PERIODS.map((p) => (
             <button key={p.key} onClick={() => setFlowPeriod(p.key)}
               style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: "pointer",
-                border: flowPeriod === p.key ? "2px solid #7c3aed" : "1.5px solid #e5e7eb",
-                background: flowPeriod === p.key ? "rgba(124,58,237,0.08)" : "#fff",
-                color: flowPeriod === p.key ? "#7c3aed" : "#6b7280" }}>
+                border: flowPeriod === p.key ? "2px solid #1d1d21" : "1.5px solid #e5e7eb",
+                background: flowPeriod === p.key ? "rgba(29, 29, 33,0.08)" : "#fff",
+                color: flowPeriod === p.key ? "#1d1d21" : "#6b7280" }}>
               {p.label}
             </button>
           ))}
@@ -366,7 +366,7 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
                         {node.subtitle}
                       </div>
                     ) : (
-                      <div style={{ width: "80%", height: 3, borderRadius: 3, background: "#ede9fe", overflow: "hidden" }}>
+                      <div style={{ width: "80%", height: 3, borderRadius: 3, background: "#ededf0", overflow: "hidden" }}>
                         <div style={{ height: "100%", width: `${pct}%`, background: node.color, borderRadius: 3 }} />
                       </div>
                     )}
@@ -380,9 +380,9 @@ function LeadFlowTree({ leads, activeStage, onStageClick }) {
 
       {/* Active filter chip */}
       {activeStage && (
-        <div style={{ marginTop: 12, padding: "8px 14px", background: "rgba(124,58,237,0.06)", borderRadius: 8, fontSize: 12, color: "#7c3aed", fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ marginTop: 12, padding: "8px 14px", background: "rgba(29, 29, 33,0.06)", borderRadius: 8, fontSize: 12, color: "#1d1d21", fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span>Filtering by: <strong>{TREE_NODES.find((n) => n.key === activeStage)?.label}</strong></span>
-          <button onClick={() => onStageClick(null)} style={{ background: "none", border: "none", color: "#7c3aed", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
+          <button onClick={() => onStageClick(null)} style={{ background: "none", border: "none", color: "#1d1d21", cursor: "pointer", fontWeight: 700, fontSize: 13 }}>
             ✕ Clear
           </button>
         </div>
@@ -398,11 +398,11 @@ const ACTION_LABEL = {
   book_a_demo:        "Book A Demo",
 };
 const ACTION_COLOR = {
-  start_with_promeet: "#7c3aed",
+  start_with_promeet: "#1d1d21",
   book_a_demo:        "#d97706",
 };
 const NURTURE_LABEL = ["—", "Step 1", "Step 2", "Final", "Closed"];
-const NURTURE_COLOR = ["#9ca3af", "#3b82f6", "#8b5cf6", "#f59e0b", "#6b7280"];
+const NURTURE_COLOR = ["#9ca3af", "#3b82f6", "#232327", "#f59e0b", "#6b7280"];
 
 const fmtDate = (d) => {
   if (!d) return "—";
@@ -425,7 +425,7 @@ function DemoStatus({ lead, onMarkAttended }) {
   const isPast = demoDateTime < new Date();
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      <span style={{ background: isPast ? "#fef3c7" : "#ede9fe", color: isPast ? "#92400e" : "#5b21b6", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
+      <span style={{ background: isPast ? "#fef3c7" : "#ededf0", color: isPast ? "#92400e" : "#151519", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
         {isPast ? "Pending" : "Upcoming"}: {fmtDemoDate(lead.demo_date, lead.demo_time)}
       </span>
       {isPast && (
@@ -557,9 +557,9 @@ export default function WhatsAppLeadsPage() {
           <button
             onClick={() => { setShowFlow((v) => !v); setActiveStage(null); }}
             style={{ cursor: "pointer", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 700,
-              border: showFlow ? "2px solid #7c3aed" : "1.5px solid #e5e7eb",
-              background: showFlow ? "rgba(124,58,237,0.08)" : "#fff",
-              color: showFlow ? "#7c3aed" : "#6b7280" }}>
+              border: showFlow ? "2px solid #1d1d21" : "1.5px solid #e5e7eb",
+              background: showFlow ? "rgba(29, 29, 33,0.08)" : "#fff",
+              color: showFlow ? "#1d1d21" : "#6b7280" }}>
             {showFlow ? "Hide Flow" : "Show Flow"}
           </button>
         </div>
@@ -580,7 +580,7 @@ export default function WhatsAppLeadsPage() {
           <div style={{ overflowX: "auto", padding: "0 1.5rem 2rem" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.07)" }}>
               <thead>
-                <tr style={{ background: "linear-gradient(135deg,#7c3aed,#a855f7)", color: "#fff" }}>
+                <tr style={{ background: "linear-gradient(135deg,#1d1d21,#242428)", color: "#fff" }}>
                   <th style={th}>#</th>
                   <th style={th}>Name</th>
                   <th style={th}>Phone</th>
@@ -597,9 +597,9 @@ export default function WhatsAppLeadsPage() {
                   const plan      = lead.company_plan?.toUpperCase();
                   const subStatus = lead.company_sub_status;
                   const isExpired = ["expired","suspended"].includes(subStatus);
-                  const planColor = plan === "TRIAL" ? "#0ea5e9" : plan === "BUSINESS" ? "#10b981" : plan === "ENTERPRISE" ? "#7c3aed" : null;
+                  const planColor = plan === "TRIAL" ? "#0ea5e9" : plan === "BUSINESS" ? "#10b981" : plan === "ENTERPRISE" ? "#1d1d21" : null;
                   return (
-                    <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ede9fe" }}>
+                    <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#faf5ff", borderBottom: "1px solid #ededf0" }}>
                       <td style={td}>{i + 1}</td>
                       <td style={{ ...td, fontWeight: 600 }}>
                         {lead.unsubscribed ? <span style={{ color: "#9ca3af" }}>{lead.name || "—"}</span> : (lead.name || "—")}

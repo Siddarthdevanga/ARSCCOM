@@ -53,7 +53,7 @@
   min-height: 100vh;
   font-size: 1.2rem;
   font-weight: 800;
-  color: #6200d6;
+  color: #121216;
   background: #f3f0fb;
   letter-spacing: 1px;
 }
@@ -75,9 +75,9 @@
              slideOutToast 0.3s ease 2.7s forwards;
 }
 
-.toastSuccess { background: #5b00c8; color: #fff; }
+.toastSuccess { background: #111115; color: #fff; }
 .toastError   { background: #cc1100; color: #fff; }
-.toastInfo    { background: #f0a500; color: #1a0038; }
+.toastInfo    { background: #f0a500; color: #08080c; }
 
 @keyframes slideInToast {
   from { transform: translateX(120%); opacity: 0; }
@@ -96,7 +96,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid #e8e0f5;
+  border-bottom: 1px solid #e5e5e8;
   position: sticky;
   top: 0;
   z-index: 300;
@@ -113,7 +113,7 @@
 .logoText {
   font-size: 0.95rem;
   font-weight: 800;
-  color: #1a0038;
+  color: #08080c;
   letter-spacing: 0.2px;
   white-space: nowrap;
   overflow: hidden;
@@ -134,7 +134,7 @@
 }
 
 .newBtn {
-  background: #6200d6;
+  background: #121216;
   color: #fff;
   border: none;
   padding: 9px 20px;
@@ -144,22 +144,22 @@
   cursor: pointer;
   font-family: 'Nunito', sans-serif;
   transition: all 0.2s;
-  box-shadow: 0 3px 12px rgba(98, 0, 214, 0.25);
+  box-shadow: 0 3px 12px rgba(18, 18, 22, 0.25);
   white-space: nowrap;
 }
 
 .newBtn:hover:not(:disabled) {
-  background: #4a00a8;
+  background: #0f0f13;
   transform: translateY(-1px);
-  box-shadow: 0 6px 18px rgba(98, 0, 214, 0.35);
+  box-shadow: 0 6px 18px rgba(18, 18, 22, 0.35);
 }
 
 .newBtn:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .backBtn {
   background: transparent;
-  color: #6200d6;
-  border: 2px solid #6200d6;
+  color: #121216;
+  border: 2px solid #121216;
   padding: 8px 18px;
   border-radius: 50px;
   font-size: 13px;
@@ -171,7 +171,7 @@
 }
 
 .backBtn:hover {
-  background: #6200d6;
+  background: #121216;
   color: #fff;
 }
 
@@ -200,14 +200,14 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #1a0038;
+  background: #08080c;
 }
 
 /* ================= NAV OVERLAY ================= */
 .navOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(26, 0, 56, 0.5);
+  background: rgba(8, 8, 12, 0.5);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 900;
@@ -237,7 +237,7 @@
   z-index: 950;
   transform: translateX(-100%);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 8px 0 40px rgba(98, 0, 214, 0.15);
+  box-shadow: 8px 0 40px rgba(18, 18, 22, 0.15);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -250,7 +250,7 @@
 }
 
 .navPanelHeader {
-  background: linear-gradient(135deg, #4a00b4, #7a00ff);
+  background: linear-gradient(135deg, #0f0f13, #151519);
   padding: 20px 24px;
   display: flex;
   align-items: center;
@@ -316,7 +316,7 @@
   width: 36px;
   height: 36px;
   border: 4px solid #ede8f8;
-  border-top-color: #6200d6;
+  border-top-color: #121216;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -341,14 +341,14 @@
   width: 200px;
   height: 200px;
   border-radius: 14px;
-  box-shadow: 0 6px 24px rgba(98, 0, 214, 0.15);
+  box-shadow: 0 6px 24px rgba(18, 18, 22, 0.15);
   margin-bottom: 0.75rem;
   border: 3px solid #fff;
   display: block;
 }
 
 .qrHint {
-  color: #6200d6;
+  color: #121216;
   font-size: 0.8rem;
   margin: 0;
   font-weight: 800;
@@ -363,7 +363,7 @@
   display: block;
   font-weight: 800;
   font-size: 0.72rem;
-  color: #6200d6;
+  color: #121216;
   margin-bottom: 0.5rem;
   letter-spacing: 1px;
   text-transform: uppercase;
@@ -378,16 +378,16 @@
   border-radius: 12px;
   font-size: 0.78rem;
   background: #f8f5ff;
-  color: #1a0038;
+  color: #08080c;
   font-family: 'Courier New', monospace;
   min-width: 0;
 }
 
-.urlInput:focus { outline: none; border-color: #6200d6; }
+.urlInput:focus { outline: none; border-color: #121216; }
 
 .copyBtn {
   padding: 0.8rem 0.9rem;
-  background: #6200d6;
+  background: #121216;
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -398,13 +398,13 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.copyBtn:hover { background: #4a00a8; }
+.copyBtn:hover { background: #0f0f13; }
 
 .downloadPdfBtn {
   width: 100%;
   padding: 0.9rem;
   background: #f0a500;
-  color: #1a0038;
+  color: #08080c;
   border: none;
   border-radius: 14px;
   font-size: 0.88rem;
@@ -423,12 +423,12 @@
   background: #f8f5ff;
   border-radius: 14px;
   padding: 1.1rem;
-  border-left: 4px solid #6200d6;
+  border-left: 4px solid #121216;
 }
 
 .navInstructions h4 {
   margin: 0 0 0.65rem;
-  color: #1a0038;
+  color: #08080c;
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.5px;
@@ -447,7 +447,7 @@
 
 /* ================= HERO (no greeting) ================= */
 .hero {
-  background: linear-gradient(135deg, #4a00b4 0%, #7a00ff 55%, #c060ff 100%);
+  background: linear-gradient(135deg, #0f0f13 0%, #151519 55%, #28282c 100%);
   padding: 36px 36px 48px;
   position: relative;
   overflow: hidden;
@@ -556,7 +556,7 @@
   border-radius: 16px;
   padding: 16px 20px;
   border: 1.5px solid #ede8f8;
-  box-shadow: 0 2px 12px rgba(98, 0, 214, 0.06);
+  box-shadow: 0 2px 12px rgba(18, 18, 22, 0.06);
 }
 
 .planHeader {
@@ -565,10 +565,10 @@
   font-size: 13px;
   font-weight: 700;
   margin-bottom: 8px;
-  color: #1a0038;
+  color: #08080c;
 }
 
-.planName { color: #6200d6; }
+.planName { color: #121216; }
 
 .planBarBg {
   width: 100%;
@@ -609,19 +609,19 @@
 
 /* ================= TABLE CARD (lite purple) ================= */
 .tableCard {
-  background: linear-gradient(145deg, #f4eeff 0%, #ece4fa 100%);
+  background: linear-gradient(145deg, #f4eeff 0%, #e9e9ec 100%);
   border-radius: 22px;
   padding: 22px;
-  border: 1.5px solid #ddd2f0;
+  border: 1.5px solid #d9d9dc;
   display: flex;
   flex-direction: column;
   min-height: 260px;
   transition: box-shadow 0.3s, transform 0.2s;
-  box-shadow: 0 4px 20px rgba(98, 0, 214, 0.06);
+  box-shadow: 0 4px 20px rgba(18, 18, 22, 0.06);
 }
 
 .tableCard:hover {
-  box-shadow: 0 8px 32px rgba(98, 0, 214, 0.12);
+  box-shadow: 0 8px 32px rgba(18, 18, 22, 0.12);
   transform: translateY(-2px);
 }
 
@@ -636,9 +636,9 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #6200d6;
+  background: #121216;
   flex-shrink: 0;
-  box-shadow: 0 0 0 3px rgba(98, 0, 214, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 18, 22, 0.15);
 }
 
 .cardDotGreen {
@@ -649,14 +649,14 @@
 .cardTitle {
   font-size: 0.95rem;
   font-weight: 900;
-  color: #1a0038;
+  color: #08080c;
   margin: 0;
 }
 
 .cardCount {
   margin-left: auto;
-  background: rgba(98, 0, 214, 0.1);
-  color: #6200d6;
+  background: rgba(18, 18, 22, 0.1);
+  color: #121216;
   font-size: 12px;
   font-weight: 800;
   padding: 3px 10px;
@@ -676,7 +676,7 @@
   align-items: center;
   justify-content: center;
   padding: 28px 16px;
-  color: #b8a8d8;
+  color: #b2b2b5;
   font-size: 0.88rem;
   font-weight: 600;
   gap: 10px;
@@ -707,9 +707,9 @@
   text-align: left;
   font-size: 10px;
   padding: 0 10px 12px 0;
-  border-bottom: 2px solid rgba(98, 0, 214, 0.1);
+  border-bottom: 2px solid rgba(18, 18, 22, 0.1);
   font-weight: 800;
-  color: #9980c8;
+  color: #28282c;
   letter-spacing: 1px;
   text-transform: uppercase;
   white-space: nowrap;
@@ -717,8 +717,8 @@
 
 .table td {
   padding: 12px 10px 12px 0;
-  border-bottom: 1px solid rgba(98, 0, 214, 0.06);
-  color: #2a0050;
+  border-bottom: 1px solid rgba(18, 18, 22, 0.06);
+  color: #0a0a0e;
   font-weight: 600;
   font-size: 13px;
 }
@@ -729,9 +729,9 @@
 
 .visitorCode {
   font-weight: 800;
-  color: #6200d6;
+  color: #121216;
   font-size: 12px;
-  background: rgba(98, 0, 214, 0.08);
+  background: rgba(18, 18, 22, 0.08);
   padding: 3px 8px;
   border-radius: 6px;
 }

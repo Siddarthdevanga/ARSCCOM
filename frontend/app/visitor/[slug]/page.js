@@ -878,9 +878,9 @@ export default function PublicVisitorRegistration() {
                     {resendTimer > 0 ? `Resend in ${resendTimer}s` : "Resend Code"}
                   </button>
                   <p style={{ textAlign:"center", marginTop:"1rem", fontSize:"0.875rem", color:"#6b7280" }}>
-                    Code sent to WhatsApp: <strong style={{ color:"#1e1b4b" }}>+91 {phone}</strong><br />
+                    Code sent to WhatsApp: <strong style={{ color:"#212124" }}>+91 {phone}</strong><br />
                     <button onClick={() => { setOtpSent(false); setOtp(""); setError(""); }}
-                      style={{ color:"#7c3aed", cursor:"pointer", textDecoration:"underline",
+                      style={{ color:"#1d1d21", cursor:"pointer", textDecoration:"underline",
                         fontSize:"0.825rem", background:"none", border:"none", padding:0, marginTop:"0.5rem" }}>
                       Change number
                     </button>
@@ -911,7 +911,7 @@ export default function PublicVisitorRegistration() {
                 {returningData.photoUrl
                   ? <img src={returningData.photoUrl} alt="Your photo"
                       style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover",
-                        border:"3px solid #7c3aed", boxShadow:"0 2px 8px rgba(124,58,237,0.2)" }} />
+                        border:"3px solid #1d1d21", boxShadow:"0 2px 8px rgba(29, 29, 33,0.2)" }} />
                   : <div style={{ width:80, height:80, borderRadius:"50%", background:"#f3f4f6",
                       border:"3px solid #e5e7eb", display:"flex", alignItems:"center", justifyContent:"center" }}>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="1.5">
@@ -952,7 +952,7 @@ export default function PublicVisitorRegistration() {
                 return sections.map(sec => (
                   <div key={sec.label} style={{ marginBottom:"1rem" }}>
                     <div style={{ fontSize:"0.7rem", fontWeight:700, textTransform:"uppercase",
-                      letterSpacing:"0.8px", color:"#7c3aed", marginBottom:"0.5rem" }}>{sec.label}</div>
+                      letterSpacing:"0.8px", color:"#1d1d21", marginBottom:"0.5rem" }}>{sec.label}</div>
                     <div style={{ border:"1px solid #e5e7eb", borderRadius:"0.6rem", overflow:"hidden" }}>
                       {sec.fields.map(({ k, v }, i) => (
                         <div key={k} style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
@@ -1482,7 +1482,7 @@ export default function PublicVisitorRegistration() {
                 </p>
                 <div className={styles.successMsg}>
                   <p style={{ margin:0, fontSize:"0.875rem", fontWeight:600, color:"#166534" }}>Visitor ID</p>
-                  <p style={{ margin:"0.5rem 0 0 0", fontSize:"clamp(1.5rem,3.5vw,2rem)", fontWeight:800, color:"#7c3aed", letterSpacing:"2px" }}>
+                  <p style={{ margin:"0.5rem 0 0 0", fontSize:"clamp(1.5rem,3.5vw,2rem)", fontWeight:800, color:"#1d1d21", letterSpacing:"2px" }}>
                     {visitorCode}
                   </p>
                 </div>

@@ -13,7 +13,7 @@ const MAX_ACTIVE_FORMS = 2;
 // Kept in sync with BuilderForm.js's THEMES — a company picks one of these
 // per form, and both the public scan page and this QR card use it.
 const THEMES = {
-  purple: { label: "Classic Purple", accent: "#6200d6", bg: "#f6f1fd" },
+  purple: { label: "Classic Purple", accent: "#121216", bg: "#f6f1fd" },
   blue:   { label: "Ocean Blue",     accent: "#0369a1", bg: "#f0f9ff" },
   green:  { label: "Emerald Green",  accent: "#047857", bg: "#f0fdf6" },
   slate:  { label: "Slate Neutral",  accent: "#334155", bg: "#f8fafc" },
@@ -161,7 +161,7 @@ const generateQrCard = async (form, company) => {
     qrTop += 24;
   }
 
-  const qrDataUrl = await QRCode.toDataURL(publicUrl, { width: 420, margin: 1, color: { dark: "#1a0038", light: "#ffffff" } });
+  const qrDataUrl = await QRCode.toDataURL(publicUrl, { width: 420, margin: 1, color: { dark: "#08080c", light: "#ffffff" } });
   const qrImg = await loadImage(qrDataUrl);
   roundRect(ctx, 120, qrTop, 400, 400, 18);
   ctx.fillStyle = "#ffffff";
@@ -316,7 +316,7 @@ export default function SmartFormsDashboard() {
         <div style={{ maxWidth: 900, margin: "0 auto", padding: "1.5rem 1rem 3rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem", flexWrap: "wrap", gap: "0.75rem" }}>
             <div>
-              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#1a0038", margin: 0 }}>Smart Forms</h1>
+              <h1 style={{ fontSize: 22, fontWeight: 800, color: "#08080c", margin: 0 }}>Smart Forms</h1>
               <p style={{ fontSize: 13, color: "#6b7280", margin: "4px 0 0" }}>
                 QR-code based information collectors — {activeCount}/{MAX_ACTIVE_FORMS} active
               </p>
@@ -325,11 +325,11 @@ export default function SmartFormsDashboard() {
               onClick={() => router.push("/smart-forms/dashboard/new")}
               disabled={activeCount >= MAX_ACTIVE_FORMS}
               style={{
-                background: activeCount >= MAX_ACTIVE_FORMS ? "#e5e7eb" : "linear-gradient(135deg,#6200d6,#a855f7)",
+                background: activeCount >= MAX_ACTIVE_FORMS ? "#e5e7eb" : "linear-gradient(135deg,#121216,#242428)",
                 color: activeCount >= MAX_ACTIVE_FORMS ? "#9ca3af" : "#fff",
                 border: "none", padding: "10px 20px", borderRadius: 10, fontWeight: 700, fontSize: 14,
                 cursor: activeCount >= MAX_ACTIVE_FORMS ? "not-allowed" : "pointer",
-                boxShadow: activeCount >= MAX_ACTIVE_FORMS ? "none" : "0 6px 16px rgba(98,0,214,0.28)",
+                boxShadow: activeCount >= MAX_ACTIVE_FORMS ? "none" : "0 6px 16px rgba(18, 18, 22,0.28)",
               }}
               title={activeCount >= MAX_ACTIVE_FORMS ? "Retire an existing form first to free up a slot" : undefined}
             >
@@ -357,15 +357,15 @@ export default function SmartFormsDashboard() {
                   }}>
                     <div style={{
                       width: 34, height: 34, borderRadius: 10, flexShrink: 0,
-                      background: "linear-gradient(135deg,#6200d6,#a855f7)", color: "#fff",
+                      background: "linear-gradient(135deg,#121216,#242428)", color: "#fff",
                       display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 12,
                     }}>
                       {i + 1}
                     </div>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2 }}>
-                        <step.icon size={14} color="#6200d6" />
-                        <span style={{ fontWeight: 800, fontSize: 13.5, color: "#1a0038" }}>{step.title}</span>
+                        <step.icon size={14} color="#121216" />
+                        <span style={{ fontWeight: 800, fontSize: 13.5, color: "#08080c" }}>{step.title}</span>
                       </div>
                       <p style={{ margin: 0, fontSize: 12.5, color: "#6b7280", lineHeight: 1.4 }}>{step.desc}</p>
                     </div>
@@ -379,9 +379,9 @@ export default function SmartFormsDashboard() {
                 const theme = THEMES[f.theme] || THEMES.purple;
                 return (
                 <div key={f.id} style={{
-                  border: "1px solid #ece4fb", borderRadius: 16, overflow: "hidden",
+                  border: "1px solid #e9e9ec", borderRadius: 16, overflow: "hidden",
                   background: f.status === "active" ? "#fff" : "#fafafa",
-                  boxShadow: "0 4px 16px rgba(98,0,214,0.06)",
+                  boxShadow: "0 4px 16px rgba(18, 18, 22,0.06)",
                 }}>
                   <div style={{ padding: "1.1rem 1.25rem", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 180 }}>
@@ -396,7 +396,7 @@ export default function SmartFormsDashboard() {
                       </div>
                       <div>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                          <span style={{ fontWeight: 800, color: "#1a0038", fontSize: 15 }}>{f.name}</span>
+                          <span style={{ fontWeight: 800, color: "#08080c", fontSize: 15 }}>{f.name}</span>
                           <span style={{
                             fontSize: 10, fontWeight: 800, padding: "2px 8px", borderRadius: 20, textTransform: "uppercase",
                             background: f.status === "active" ? "rgba(0,184,148,0.12)" : "rgba(107,114,128,0.12)",
@@ -444,7 +444,7 @@ export default function SmartFormsDashboard() {
                   </div>
 
                   {qrOpenId === f.id && (
-                    <div style={{ borderTop: "1px solid #ece4fb", padding: "1.5rem", background: theme.bg, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <div style={{ borderTop: "1px solid #e9e9ec", padding: "1.5rem", background: theme.bg, display: "flex", flexDirection: "column", alignItems: "center" }}>
                       {qrLoadingIds[f.id] ? (
                         <p style={{ color: "#9ca3af", fontSize: 13, padding: "2rem 0" }}>Generating…</p>
                       ) : qrImages[f.id] ? (
@@ -487,7 +487,7 @@ export default function SmartFormsDashboard() {
   );
 }
 
-const pillBtnStyle = (bg = "#f4eeff", color = "#6200d6") => ({
+const pillBtnStyle = (bg = "#f4eeff", color = "#121216") => ({
   background: bg, color, border: "none", padding: "7px 14px", borderRadius: 20,
   fontWeight: 700, fontSize: 12.5, cursor: "pointer",
 });

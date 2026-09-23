@@ -2,11 +2,11 @@
    DESIGN TOKENS — SaaS purple theme
 ================================================ */
 :root {
-  --brand-primary:    #7c3aed;
-  --brand-dark:       #5b21b6;
-  --brand-light:      #a855f7;
-  --brand-gradient:   linear-gradient(135deg, #5b21b6 0%, #7c3aed 50%, #a855f7 100%);
-  --brand-gradient-soft: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+  --brand-primary:    #1d1d21;
+  --brand-dark:       #151519;
+  --brand-light:      #242428;
+  --brand-gradient:   linear-gradient(135deg, #151519 0%, #1d1d21 50%, #242428 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #f5f3ff 0%, #ededf0 100%);
 
   --success:          #16a34a;
   --success-bg:       #f0fdf4;
@@ -16,29 +16,29 @@
   --error-bg:         #fef2f2;
   --error-border:     #fca5a5;
 
-  --text-primary:     #1e1b4b;
+  --text-primary:     #212124;
   --text-secondary:   #4b5563;
   --text-muted:       #6b7280;
-  --text-disabled:    #a78bfa;
+  --text-disabled:    #3a3a42;
 
   --bg-page:          #f0eef8;
   --bg-card:          #ffffff;
   --bg-input:         #faf9ff;
   --bg-disabled:      #f5f3ff;
 
-  --border:           #ddd6fe;
-  --border-focus:     #7c3aed;
+  --border:           #dddde0;
+  --border-focus:     #1d1d21;
   --border-radius-sm: 0.5rem;
   --border-radius-md: 0.875rem;
   --border-radius-lg: 1.25rem;
   --border-radius-xl: 1.5rem;
 
-  --shadow-sm:    0 1px 3px rgba(91,33,182,0.06), 0 1px 2px rgba(91,33,182,0.04);
-  --shadow-md:    0 4px 16px rgba(91,33,182,0.1), 0 2px 6px rgba(91,33,182,0.06);
-  --shadow-lg:    0 10px 40px rgba(91,33,182,0.15), 0 4px 12px rgba(91,33,182,0.08);
-  --shadow-focus: 0 0 0 3px rgba(124,58,237,0.18);
+  --shadow-sm:    0 1px 3px rgba(21, 21, 25,0.06), 0 1px 2px rgba(21, 21, 25,0.04);
+  --shadow-md:    0 4px 16px rgba(21, 21, 25,0.1), 0 2px 6px rgba(21, 21, 25,0.06);
+  --shadow-lg:    0 10px 40px rgba(21, 21, 25,0.15), 0 4px 12px rgba(21, 21, 25,0.08);
+  --shadow-focus: 0 0 0 3px rgba(29, 29, 33,0.18);
 
-  --ac-dropdown-shadow: 0 8px 32px rgba(91,33,182,0.18), 0 2px 8px rgba(91,33,182,0.1);
+  --ac-dropdown-shadow: 0 8px 32px rgba(21, 21, 25,0.18), 0 2px 8px rgba(21, 21, 25,0.1);
   --ac-item-hover-bg:   #f5f3ff;
   --ac-avatar-size:     32px;
 
@@ -140,7 +140,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 1px 12px rgba(91,33,182,0.08);
+  box-shadow: 0 1px 12px rgba(21, 21, 25,0.08);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -448,7 +448,7 @@
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237c3aed' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23050505' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 0.85rem center;
   background-color: var(--bg-input);
@@ -518,7 +518,7 @@
 
 .checkboxLabel:hover {
   border-color: var(--brand-primary);
-  background: rgba(124,58,237,0.04);
+  background: rgba(29, 29, 33,0.04);
 }
 
 .checkboxLabel input[type="checkbox"] {
@@ -531,9 +531,9 @@
 
 .checkboxLabel:has(input:checked) {
   border-color: var(--brand-primary);
-  background: rgba(124,58,237,0.08);
+  background: rgba(29, 29, 33,0.08);
   color: var(--brand-primary);
-  box-shadow: 0 0 0 2px rgba(124,58,237,0.12);
+  box-shadow: 0 0 0 2px rgba(29, 29, 33,0.12);
 }
 
 /* ================================================
@@ -549,8 +549,8 @@
   font-size: clamp(0.875rem, 2.2vw, 0.95rem);
   font-family: var(--font-sans);
   font-weight: 700;
-  color: #fff;
-  background: var(--brand-gradient);
+  color: #1c1204;
+  background: var(--hv-cta);
   border: none;
   border-radius: var(--border-radius-md);
   cursor: pointer;
@@ -561,7 +561,7 @@
     opacity var(--transition),
     transform var(--transition),
     box-shadow var(--transition);
-  box-shadow: 0 4px 14px rgba(91,33,182,0.32);
+  box-shadow: 0 4px 14px rgba(21, 21, 25,0.32);
   position: relative;
   overflow: hidden;
   margin-top: var(--space-sm);
@@ -580,7 +580,7 @@
 
 .primaryBtn:active:not(:disabled) {
   transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(91,33,182,0.28);
+  box-shadow: 0 2px 8px rgba(21, 21, 25,0.28);
 }
 
 .primaryBtn:disabled {
@@ -619,8 +619,8 @@
 .secondaryBtn:hover:not(:disabled) {
   border-color: var(--brand-primary);
   color: var(--brand-primary);
-  background: rgba(124,58,237,0.04);
-  box-shadow: 0 0 0 3px rgba(124,58,237,0.08);
+  background: rgba(29, 29, 33,0.04);
+  box-shadow: 0 0 0 3px rgba(29, 29, 33,0.08);
 }
 
 .secondaryBtn:active:not(:disabled) { transform: translateY(1px); }
@@ -689,7 +689,7 @@
   gap: var(--space-md);
   padding: var(--space-lg);
   background: var(--brand-gradient-soft);
-  border: 1.5px dashed rgba(124,58,237,0.35);
+  border: 1.5px dashed rgba(29, 29, 33,0.35);
   border-radius: var(--border-radius-lg);
   margin-bottom: var(--space-lg);
   min-height: clamp(120px, 20vw, 160px);
@@ -803,7 +803,7 @@
 .spinner {
   width: clamp(36px, 6vw, 50px);
   height: clamp(36px, 6vw, 50px);
-  border: 3px solid rgba(124,58,237,0.15);
+  border: 3px solid rgba(29, 29, 33,0.15);
   border-top-color: var(--brand-primary);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
@@ -965,7 +965,7 @@
   padding: 10px 14px;
   cursor: pointer;
   transition: background var(--transition);
-  border-bottom: 1px solid rgba(221,214,254,0.4);
+  border-bottom: 1px solid rgba(221, 221, 224,0.4);
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
@@ -981,7 +981,7 @@
 }
 
 .acItem:active {
-  background: #ede9fe;
+  background: #ededf0;
 }
 
 /* ── Avatar circle ── */
@@ -998,7 +998,7 @@
   font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.02em;
-  box-shadow: 0 2px 6px rgba(91,33,182,0.22);
+  box-shadow: 0 2px 6px rgba(21, 21, 25,0.22);
 }
 
 /* ── Text info ── */
@@ -1034,7 +1034,7 @@
   margin-top: 3px;
   padding: 2px 8px;
   background: #ede9fb;
-  color: #6c2bd9;
+  color: #19191d;
   font-size: 10px;
   font-weight: 600;
   border-radius: 20px;

@@ -14,7 +14,7 @@ const FIELD_TYPE_LABELS = {
 };
 
 export const THEMES = {
-  purple: { label: "Classic Purple", accent: "#6200d6", bg: "#f6f1fd" },
+  purple: { label: "Classic Purple", accent: "#121216", bg: "#f6f1fd" },
   blue:   { label: "Ocean Blue",     accent: "#0369a1", bg: "#f0f9ff" },
   green:  { label: "Emerald Green",  accent: "#047857", bg: "#f0fdf6" },
   slate:  { label: "Slate Neutral",  accent: "#334155", bg: "#f8fafc" },
@@ -280,7 +280,7 @@ export default function BuilderForm({ initial, formId, onSaved, onCancel }) {
                     style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", borderRadius: 10,
                       border: theme === key ? `2px solid ${t.accent}` : "1.5px solid #e5e7eb",
-                      background: t.bg, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#1a0038",
+                      background: t.bg, cursor: "pointer", fontSize: 12.5, fontWeight: 700, color: "#08080c",
                     }}>
                     <span style={{ width: 14, height: 14, borderRadius: "50%", background: t.accent, display: "inline-block" }} />
                     {t.label}
@@ -295,7 +295,7 @@ export default function BuilderForm({ initial, formId, onSaved, onCancel }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <label style={{ ...label, marginBottom: 0 }}>Fields ({fields.length}/{MAX_FIELDS})</label>
                 <button type="button" onClick={addField} disabled={fields.length >= MAX_FIELDS}
-                  style={{ background: fields.length >= MAX_FIELDS ? "#e5e7eb" : "#6200d6", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: fields.length >= MAX_FIELDS ? "not-allowed" : "pointer" }}>
+                  style={{ background: fields.length >= MAX_FIELDS ? "#e5e7eb" : "#121216", color: "#fff", border: "none", padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 700, cursor: fields.length >= MAX_FIELDS ? "not-allowed" : "pointer" }}>
                   + Add Field
                 </button>
               </div>
@@ -317,10 +317,10 @@ export default function BuilderForm({ initial, formId, onSaved, onCancel }) {
         {/* RIGHT — brief explanation of the current step */}
         <div className={layout.rightCol}>
           <div className={layout.explainCard}>
-            <p style={{ fontSize: 11, fontWeight: 800, color: "#6200d6", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 6px" }}>
+            <p style={{ fontSize: 11, fontWeight: 800, color: "#121216", textTransform: "uppercase", letterSpacing: "0.05em", margin: "0 0 6px" }}>
               Step {step + 1} of {STEPS.length}
             </p>
-            <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#1a0038", margin: "0 0 8px" }}>{currentStep.title}</h3>
+            <h3 style={{ fontSize: 14.5, fontWeight: 800, color: "#08080c", margin: "0 0 8px" }}>{currentStep.title}</h3>
             <p style={{ fontSize: 13, color: "#6b7280", lineHeight: 1.6, margin: 0 }}>{currentStep.explain}</p>
           </div>
         </div>
@@ -335,12 +335,12 @@ export default function BuilderForm({ initial, formId, onSaved, onCancel }) {
         )}
         {!isLastStep ? (
           <button onClick={handleNext}
-            style={{ background: "linear-gradient(135deg,#6200d6,#a855f7)", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            style={{ background: "linear-gradient(135deg,#121216,#242428)", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
             Next →
           </button>
         ) : (
           <button onClick={handleSave} disabled={saving}
-            style={{ background: "linear-gradient(135deg,#6200d6,#a855f7)", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
+            style={{ background: "linear-gradient(135deg,#121216,#242428)", color: "#fff", border: "none", padding: "10px 24px", borderRadius: 10, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>
             {saving ? "Saving…" : formId ? "Save Changes" : "Create Smart Form"}
           </button>
         )}
@@ -360,7 +360,7 @@ function FieldEditor({ field, index, onChange, onRemove, onRemoveOption, depends
   const updateOption = (key, patch) => onChange({ options: field.options.map((o) => (o.key === key ? { ...o, ...patch } : o)) });
 
   return (
-    <div style={{ border: "1px solid #ece4fb", borderRadius: 10, padding: "0.85rem", background: "#fff" }}>
+    <div style={{ border: "1px solid #e9e9ec", borderRadius: 10, padding: "0.85rem", background: "#fff" }}>
       <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
         <div style={{ flex: 2, minWidth: 140 }}>
           <label style={label}>Field {index + 1} Label</label>
@@ -417,7 +417,7 @@ function FieldEditor({ field, index, onChange, onRemove, onRemoveOption, depends
                   <button type="button" onClick={() => onRemoveOption(o.key)} style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "0 10px", cursor: "pointer" }}>✕</button>
                 </div>
               ))}
-              <button type="button" onClick={addOption} disabled={field.options.length >= MAX_OPTIONS} style={{ fontSize: 12, fontWeight: 700, color: "#6200d6", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+              <button type="button" onClick={addOption} disabled={field.options.length >= MAX_OPTIONS} style={{ fontSize: 12, fontWeight: 700, color: "#121216", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
                 + Add option
               </button>
             </>
@@ -442,8 +442,8 @@ function DependentOptionsEditor({ field, parentField, onChange, onRemoveOption }
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
       {parentField.options.filter((po) => po.label.trim()).map((po) => (
-        <div key={po.key} style={{ border: "1px dashed #ddd2f0", borderRadius: 8, padding: "0.6rem" }}>
-          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#6200d6", textTransform: "uppercase", marginBottom: 6 }}>
+        <div key={po.key} style={{ border: "1px dashed #d9d9dc", borderRadius: 8, padding: "0.6rem" }}>
+          <div style={{ fontSize: 11.5, fontWeight: 800, color: "#121216", textTransform: "uppercase", marginBottom: 6 }}>
             When "{po.label}" is selected:
           </div>
           {field.options.filter((o) => o.parentOptionKey === po.key).map((o) => (
@@ -452,7 +452,7 @@ function DependentOptionsEditor({ field, parentField, onChange, onRemoveOption }
               <button type="button" onClick={() => removeChild(o.key)} style={{ background: "#f3f4f6", border: "none", borderRadius: 6, padding: "0 10px", cursor: "pointer" }}>✕</button>
             </div>
           ))}
-          <button type="button" onClick={() => addChild(po.key)} style={{ fontSize: 11.5, fontWeight: 700, color: "#6200d6", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <button type="button" onClick={() => addChild(po.key)} style={{ fontSize: 11.5, fontWeight: 700, color: "#121216", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
             + Add sub-option
           </button>
         </div>

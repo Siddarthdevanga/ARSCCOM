@@ -377,7 +377,7 @@ export default function SubscriptionPage() {
               </button>
               <button
                 onClick={() => { setShowPromoModal(false); choosePlan("business", promoInput); }}
-                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "#7c3aed", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
+                style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", background: "var(--hv-ink)", color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}
               >
                 Continue
               </button>

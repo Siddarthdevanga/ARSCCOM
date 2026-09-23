@@ -282,7 +282,7 @@ const TimeScroller = ({ value, onChange, label, minTime = null, disabled = false
    PUBLIC CALENDAR GRID — Google Calendar vertical style
 ====================================================== */
 const PUB_PALETTE = [
-  "#7c3aed","#0891b2","#059669","#d97706","#dc2626","#9333ea","#0284c7","#16a34a",
+  "#1d1d21","#0891b2","#059669","#d97706","#dc2626","#1d1d21","#0284c7","#16a34a",
 ];
 
 function PublicCalendarGrid({ rooms, scrollContainerRef, dayBookings }) {
@@ -344,7 +344,7 @@ function PublicCalendarGrid({ rooms, scrollContainerRef, dayBookings }) {
               <div key={h} style={{ height:HOUR_H, display:"flex", alignItems:"flex-start",
                 paddingTop:4, paddingRight:6, justifyContent:"flex-end", boxSizing:"border-box" }}>
                 <span style={{ fontSize:"0.58rem", fontWeight: h===nowH ? 800 : 400,
-                  color: h===nowH ? "#7c3aed" : "#9ca3af", whiteSpace:"nowrap" }}>
+                  color: h===nowH ? "#1d1d21" : "#9ca3af", whiteSpace:"nowrap" }}>
                   {h===12?"12 PM":h<12?`${h} AM`:`${h-12} PM`}
                 </span>
               </div>
@@ -446,7 +446,7 @@ function PublicCalendarGrid({ rooms, scrollContainerRef, dayBookings }) {
                 <span style={{ color:"#9ca3af", fontSize:"0.65rem", fontWeight:700, textTransform:"uppercase", letterSpacing:"0.4px" }}>Team</span>
                 <div style={{ marginTop:3, display:"flex", flexWrap:"wrap", gap:"0.25rem" }}>
                   {b.team_members.map((m, i) => (
-                    <span key={i} style={{ background:"#ede9fe", color:"#7c3aed", borderRadius:99,
+                    <span key={i} style={{ background:"#ededf0", color:"#1d1d21", borderRadius:99,
                       padding:"2px 7px", fontSize:"0.6rem", fontWeight:700 }}>{m.name}</span>
                   ))}
                 </div>
@@ -557,14 +557,14 @@ function CalendarScrollWrapper({ rooms, slug }) {
     <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
       {/* View controls */}
       <div style={{ padding:"0.4rem 0.75rem", borderBottom:"1px solid #f3f4f6",
-        background:"linear-gradient(135deg,#7c3aed,#a78bfa)",
+        background:"linear-gradient(135deg,#1d1d21,#3a3a42)",
         display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:"0.3rem", flexShrink:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:"0.25rem" }}>
           {["day","week","month"].map(v => (
             <button key={v} onClick={() => setCalView(v)}
               style={{ padding:"0.15rem 0.45rem", borderRadius:99, fontSize:"0.62rem", fontWeight:700, cursor:"pointer", border:"none",
                 background: calView === v ? "#fff" : "rgba(255,255,255,0.18)",
-                color: calView === v ? "#7c3aed" : "#fff" }}>
+                color: calView === v ? "#1d1d21" : "#fff" }}>
               {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
           ))}
@@ -615,14 +615,14 @@ function CalendarScrollWrapper({ rooms, slug }) {
                     cursor:"pointer", minHeight:110, background: isTd ? "#f5f3ff" : "#fff" }}
                   onMouseEnter={e => !isTd && (e.currentTarget.style.background="#fafafa")}
                   onMouseLeave={e => !isTd && (e.currentTarget.style.background="#fff")}>
-                  <div style={{ fontSize:"0.56rem", color: isTd ? "#7c3aed" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
+                  <div style={{ fontSize:"0.56rem", color: isTd ? "#1d1d21" : "#9ca3af", fontWeight:700, textTransform:"uppercase" }}>
                     {dateObj.toLocaleDateString("en-US",{weekday:"short"})}
                   </div>
-                  <div style={{ fontSize:"0.9rem", fontWeight:800, color: isTd ? "#7c3aed" : "#1f2937", marginBottom:"0.2rem" }}>{dateObj.getDate()}</div>
+                  <div style={{ fontSize:"0.9rem", fontWeight:800, color: isTd ? "#1d1d21" : "#1f2937", marginBottom:"0.2rem" }}>{dateObj.getDate()}</div>
                   {dayBks.length === 0
                     ? <div style={{ fontSize:"0.55rem", color:"#d1d5db" }}>–</div>
                     : <>
-                        <div style={{ fontSize:"0.58rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.15rem" }}>{dayBks.length} bk.</div>
+                        <div style={{ fontSize:"0.58rem", fontWeight:700, color:"#1d1d21", marginBottom:"0.15rem" }}>{dayBks.length} bk.</div>
                         {dayBks.slice(0,3).map((b, i) => {
                           const rIdx = rooms.findIndex(r => r.id === b.room_id);
                           const col = PUB_PALETTE[rIdx >= 0 ? rIdx % PUB_PALETTE.length : 0];
@@ -656,7 +656,7 @@ function CalendarScrollWrapper({ rooms, slug }) {
           <div style={{ flex:1, overflowY:"auto", padding:"0.4rem", overscrollBehavior:"contain" }}>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", marginBottom:"0.3rem" }}>
               {["Mon","Tue","Wed","Thu","Fri","Sat","Sun"].map((d, i) => (
-                <div key={i} style={{ textAlign:"center", fontSize:"0.6rem", fontWeight:700, color:"#7c3aed", letterSpacing:"0.04em" }}>{d}</div>
+                <div key={i} style={{ textAlign:"center", fontSize:"0.6rem", fontWeight:700, color:"#1d1d21", letterSpacing:"0.04em" }}>{d}</div>
               ))}
             </div>
             <div style={{ display:"grid", gridTemplateColumns:"repeat(7, 1fr)", gap:3 }}>
@@ -671,22 +671,22 @@ function CalendarScrollWrapper({ rooms, slug }) {
                     onClick={(e) => { e.stopPropagation(); setDayPopup({ date:d, bookings:dayBks, x:e.clientX, y:e.clientY }); }}
                     style={{ padding:"0.3rem 0.28rem", borderRadius:"0.5rem", minHeight:72, cursor:"pointer",
                       background: isTd ? "#f5f3ff" : "#fff",
-                      border:`1.5px solid ${isTd ? "#a78bfa" : "#e5e7eb"}`,
-                      boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(124,58,237,0.06)" : "none",
+                      border:`1.5px solid ${isTd ? "#3a3a42" : "#e5e7eb"}`,
+                      boxShadow: dayBks.length > 0 ? "0 1px 4px rgba(29, 29, 33,0.06)" : "none",
                       transition:"background 0.12s" }}
-                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ede9fe" : "#f5f3ff"; e.currentTarget.style.borderColor = "#a78bfa"; }}
-                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#a78bfa" : "#e5e7eb"; }}>
+                    onMouseEnter={e => { e.currentTarget.style.background = isTd ? "#ededf0" : "#f5f3ff"; e.currentTarget.style.borderColor = "#3a3a42"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = isTd ? "#f5f3ff" : "#fff"; e.currentTarget.style.borderColor = isTd ? "#3a3a42" : "#e5e7eb"; }}>
                     {/* Date number */}
                     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:3 }}>
                       <span style={{
                         fontSize:"0.68rem", fontWeight: isTd ? 800 : 600,
                         color: isTd ? "#fff" : "#374151",
-                        background: isTd ? "#7c3aed" : "transparent",
+                        background: isTd ? "#1d1d21" : "transparent",
                         borderRadius:"50%", width:18, height:18,
                         display:"flex", alignItems:"center", justifyContent:"center"
                       }}>{parseInt(d.split("-")[2])}</span>
                       {dayBks.length > 0 && (
-                        <span style={{ fontSize:"0.48rem", fontWeight:700, color:"#7c3aed", background:"#ede9fe", borderRadius:99, padding:"1px 4px" }}>
+                        <span style={{ fontSize:"0.48rem", fontWeight:700, color:"#1d1d21", background:"#ededf0", borderRadius:99, padding:"1px 4px" }}>
                           {dayBks.length}
                         </span>
                       )}
@@ -709,7 +709,7 @@ function CalendarScrollWrapper({ rooms, slug }) {
                         );
                       })}
                       {extra > 0 && (
-                        <div style={{ fontSize:"0.46rem", color:"#7c3aed", fontWeight:700, paddingLeft:2 }}>
+                        <div style={{ fontSize:"0.46rem", color:"#1d1d21", fontWeight:700, paddingLeft:2 }}>
                           +{extra} more
                         </div>
                       )}
@@ -730,7 +730,7 @@ function CalendarScrollWrapper({ rooms, slug }) {
           <div onClick={e => e.stopPropagation()}
             style={{ position:"fixed", top: Math.min(dayPopup.y + 8, window.innerHeight - 320), left: Math.min(dayPopup.x + 8, window.innerWidth - 260),
               width:252, background:"#fff", borderRadius:"0.75rem", boxShadow:"0 8px 32px rgba(0,0,0,0.2)", zIndex:9999, overflow:"hidden" }}>
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"0.625rem 0.875rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"0.625rem 0.875rem", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <div>
                 <div style={{ fontWeight:800, fontSize:"0.8rem", color:"#fff" }}>{dl}</div>
                 <div style={{ fontSize:"0.65rem", color:"rgba(255,255,255,0.85)", marginTop:1 }}>{dayPopup.bookings.length} booking{dayPopup.bookings.length !== 1 ? "s" : ""}</div>
@@ -749,7 +749,7 @@ function CalendarScrollWrapper({ rooms, slug }) {
                           <div style={{ fontWeight:700, fontSize:"0.72rem", color:"#1f2937" }}>
                             {rooms.find(r=>r.id===b.room_id)?.room_name || "Room"}
                           </div>
-                          <div style={{ fontSize:"0.6rem", color:"#7c3aed", fontWeight:700 }}>{fmt2(b.start_time)}–{fmt2(b.end_time)}</div>
+                          <div style={{ fontSize:"0.6rem", color:"#1d1d21", fontWeight:700 }}>{fmt2(b.start_time)}–{fmt2(b.end_time)}</div>
                         </div>
                         <div style={{ fontSize:"0.65rem", color:"#374151", marginTop:2, fontWeight:600 }}>{b.booked_by}</div>
                         {b.booked_by_email && b.booked_by_email !== b.booked_by && (
@@ -784,26 +784,26 @@ function PublicRoomCard({ room, onSelect, nowMinutes = 0 }) {
     <div
       onClick={() => onSelect(room)}
       style={{
-        borderRadius:"0.875rem", border:"1.5px solid #7c3aed",
+        borderRadius:"0.875rem", border:"1.5px solid #1d1d21",
         background:"#fff", overflow:"hidden", cursor:"pointer",
-        boxShadow:"0 2px 12px rgba(124,58,237,0.08)",
+        boxShadow:"0 2px 12px rgba(29, 29, 33,0.08)",
         transition:"transform 0.15s, box-shadow 0.15s",
       }}
-      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(124,58,237,0.15)"; }}
-      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(124,58,237,0.08)"; }}
+      onMouseEnter={e => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px rgba(29, 29, 33,0.15)"; }}
+      onMouseLeave={e => { e.currentTarget.style.transform=""; e.currentTarget.style.boxShadow="0 2px 12px rgba(29, 29, 33,0.08)"; }}
     >
       {/* 16:9 image */}
-      <div style={{ width:"100%", aspectRatio:"16/9", background:"#ede9fe", position:"relative",
+      <div style={{ width:"100%", aspectRatio:"16/9", background:"#ededf0", position:"relative",
         overflow:"hidden", display:"flex", alignItems:"center", justifyContent:"center" }}>
         {room.image_url
           ? <img src={room.image_url} alt={room.room_name}
               style={{ width:"100%", height:"100%", objectFit:"cover", position:"absolute", inset:0 }} />
           : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:"0.3rem" }}>
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8d8e97" strokeWidth="1.5">
                 <rect x="3" y="3" width="18" height="18" rx="2"/>
                 <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
               </svg>
-              <span style={{ fontSize:"1rem", fontWeight:800, color:"#7c3aed" }}>
+              <span style={{ fontSize:"1rem", fontWeight:800, color:"#1d1d21" }}>
                 {room.room_name.charAt(0).toUpperCase()}
               </span>
             </div>
@@ -860,7 +860,7 @@ function PublicRoomCard({ room, onSelect, nowMinutes = 0 }) {
         )}
 
         <div style={{ marginTop:"0.75rem", width:"100%", padding:"0.45rem",
-          background:"#7c3aed", color:"#fff",
+          background:"#1d1d21", color:"#fff",
           borderRadius:"0.5rem", fontSize:"0.8rem", fontWeight:600, textAlign:"center" }}>
           Select Room
         </div>
@@ -1778,7 +1778,7 @@ export default function PublicConferenceBooking() {
           {otpVerified && (
             <button onClick={handleLogout}
               style={{ padding:"0.4rem 1.1rem", borderRadius:99, border:"none",
-                background:"#7c3aed", color:"#fff", fontSize:"0.82rem", fontWeight:600,
+                background:"#1d1d21", color:"#fff", fontSize:"0.82rem", fontWeight:600,
                 cursor:"pointer" }}>
               Logout
             </button>
@@ -1803,7 +1803,7 @@ export default function PublicConferenceBooking() {
               animation:"slideUp 0.25s ease",
             }}>
             {/* Modal header */}
-            <div style={{ padding:"1rem 1.25rem", background:"linear-gradient(135deg,#7c3aed,#a78bfa)",
+            <div style={{ padding:"1rem 1.25rem", background:"linear-gradient(135deg,#1d1d21,#3a3a42)",
               borderRadius:"1.25rem 1.25rem 0 0", display:"flex", justifyContent:"space-between",
               alignItems:"center", flexShrink:0 }}>
               <div>
@@ -1941,8 +1941,8 @@ export default function PublicConferenceBooking() {
                 style={{ width:"100%", padding:"0.55rem 0.875rem 0.55rem 2.25rem",
                   border:"1.5px solid #e5e7eb", borderRadius:"99px", fontSize:"0.875rem",
                   background:"#fff", outline:"none", boxSizing:"border-box",
-                  boxShadow:"0 1px 8px rgba(124,58,237,0.08)" }}
-                onFocus={e => e.target.style.borderColor="#7c3aed"}
+                  boxShadow:"0 1px 8px rgba(29, 29, 33,0.08)" }}
+                onFocus={e => e.target.style.borderColor="#1d1d21"}
                 onBlur={e => e.target.style.borderColor="#e5e7eb"}
               />
               {searchQuery && (
@@ -1990,12 +1990,12 @@ export default function PublicConferenceBooking() {
           {/* ── Room summary — full width above the grid ── */}
           <div style={{ background:"#fff", borderRadius:"0.875rem", border:"1px solid #e5e7eb",
             overflow:"hidden", marginBottom:"1.25rem", display:"flex", alignItems:"center" }}>
-            <div style={{ width:90, flexShrink:0, background:"#ede9fe", alignSelf:"stretch",
+            <div style={{ width:90, flexShrink:0, background:"#ededf0", alignSelf:"stretch",
               display:"flex", alignItems:"center", justifyContent:"center", minHeight:72 }}>
               {selectedRoom.image_url
                 ? <img src={selectedRoom.image_url} alt={selectedRoom.room_name}
                     style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c4b5fd" strokeWidth="1.5">
+                : <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#8d8e97" strokeWidth="1.5">
                     <rect x="3" y="3" width="18" height="18" rx="2"/>
                     <path d="M9 3v18M15 3v18M3 9h18M3 15h18"/>
                   </svg>
@@ -2010,7 +2010,7 @@ export default function PublicConferenceBooking() {
             </div>
             <button onClick={() => { setSelectedRoom(null); setRoomId(""); }}
               style={{ margin:"0 1rem", padding:"0.4rem 1rem", borderRadius:99,
-                border:"1.5px solid #7c3aed", background:"#fff", color:"#7c3aed",
+                border:"1.5px solid #1d1d21", background:"#fff", color:"#1d1d21",
                 fontSize:"0.8rem", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>
               ← Rooms
             </button>
@@ -2028,8 +2028,8 @@ export default function PublicConferenceBooking() {
                   <button key={mode} onClick={() => { setBookingMode(mode); setFormErrors({}); }}
                     style={{ flex:1, padding:"0.45rem 0", border:"none", borderRadius:"0.45rem",
                       fontSize:"0.82rem", fontWeight:700, cursor:"pointer", transition:"all 0.15s",
-                      background: bookingMode === mode ? "#7c3aed" : "transparent",
-                      color: bookingMode === mode ? "#fff" : "#7c3aed" }}>
+                      background: bookingMode === mode ? "#1d1d21" : "transparent",
+                      color: bookingMode === mode ? "#fff" : "#1d1d21" }}>
                     {mode === "single" ? "Single Day" : "Date Range"}
                   </button>
                 ))}
@@ -2068,7 +2068,7 @@ export default function PublicConferenceBooking() {
                     <label style={{ display:"flex", alignItems:"center", gap:"0.5rem", cursor:"pointer" }}>
                       <input type="checkbox" checked={includeWeekends}
                         onChange={e => setIncludeWeekends(e.target.checked)}
-                        style={{ width:15, height:15, accentColor:"#7c3aed" }} />
+                        style={{ width:15, height:15, accentColor:"#1d1d21" }} />
                       Include weekends
                     </label>
                   </div>
@@ -2195,10 +2195,10 @@ export default function PublicConferenceBooking() {
                       const endDate = (lastDay?.booking_date || "").split("T")[0];
                       return (
                         <div key={rid} style={{ marginBottom:"1rem", borderRadius:"0.75rem",
-                          border:"1.5px solid #ddd6fe", overflow:"hidden" }}>
+                          border:"1.5px solid #dddde0", overflow:"hidden" }}>
                           {/* Group header */}
                           <div style={{ background:"#f5f3ff", padding:"0.75rem 1rem",
-                            borderBottom:"1px solid #ddd6fe" }}>
+                            borderBottom:"1px solid #dddde0" }}>
                             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:"0.5rem", flexWrap:"wrap" }}>
                               <div>
                                 <div style={{ fontSize:"0.9rem", fontWeight:800, color:"#1f2937" }}>
@@ -2252,7 +2252,7 @@ export default function PublicConferenceBooking() {
                                 opacity: isPastDay ? 0.65 : 1 }}>
                                 {isEditing ? (
                                   <div>
-                                    <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.4rem" }}>
+                                    <div style={{ fontSize:"0.75rem", fontWeight:700, color:"#1d1d21", marginBottom:"0.4rem" }}>
                                       Reschedule {dDate}
                                     </div>
                                     <TimeScroller value={editStart} onChange={setEditStart} label="New Start Time" currentDate={d.booking_date} today={today} />
@@ -2273,7 +2273,7 @@ export default function PublicConferenceBooking() {
                                         {dDate}
                                       </div>
                                       <div style={{ fontSize:"0.68rem", marginTop:"0.1rem",
-                                        color: isActiveDay ? "#16a34a" : isPastDay ? "#9ca3af" : "#7c3aed",
+                                        color: isActiveDay ? "#16a34a" : isPastDay ? "#9ca3af" : "#1d1d21",
                                         fontWeight:700 }}>
                                         {isActiveDay ? "● In Progress" : isPastDay ? "Ended" : "Upcoming"}
                                       </div>
@@ -2409,7 +2409,7 @@ export default function PublicConferenceBooking() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:360,
             boxShadow:"0 20px 60px rgba(0,0,0,0.25)" }} onClick={e => e.stopPropagation()}>
             <div style={{ padding:"1rem 1.25rem", borderBottom:"1px solid #e5e7eb",
-              background: scopePicker.action === "cancel" ? "#fef2f2" : "linear-gradient(135deg,#7c3aed,#a78bfa)",
+              background: scopePicker.action === "cancel" ? "#fef2f2" : "linear-gradient(135deg,#1d1d21,#3a3a42)",
               borderRadius:"1rem 1rem 0 0", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ fontWeight:800, fontSize:"0.95rem",
                 color: scopePicker.action === "cancel" ? "#b91c1c" : "#fff" }}>
@@ -2435,8 +2435,8 @@ export default function PublicConferenceBooking() {
                 </button>
                 <button onClick={() => confirmScopeChoice("range")}
                   style={{ padding:"0.75rem 1rem", borderRadius:"0.6rem", textAlign:"left",
-                    border:"1.5px solid #7c3aed", background:"#f5f3ff", cursor:"pointer" }}>
-                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#7c3aed" }}>Entire remaining range</div>
+                    border:"1.5px solid #1d1d21", background:"#f5f3ff", cursor:"pointer" }}>
+                  <div style={{ fontWeight:700, fontSize:"0.85rem", color:"#1d1d21" }}>Entire remaining range</div>
                   <div style={{ fontSize:"0.75rem", color:"#6b7280", marginTop:2 }}>
                     {scopeLoading ? "Loading…" : `${scopeRangeUpcoming} upcoming day${scopeRangeUpcoming !== 1 ? "s" : ""} will be affected`}
                   </div>
@@ -2580,7 +2580,7 @@ export default function PublicConferenceBooking() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:420,
             overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"1.25rem 1.5rem" }}>
               <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
                 textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Confirm Range Booking</div>
               <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>{rangeConfirmPreview.roomName}</div>
@@ -2614,7 +2614,7 @@ export default function PublicConferenceBooking() {
               </button>
               <button onClick={submitRangeBooking} disabled={rangeSubmitting}
                 style={{ flex:2, padding:"0.7rem", borderRadius:"0.625rem", border:"none",
-                  background: rangeSubmitting ? "#a78bfa" : "#7c3aed", color:"#fff",
+                  background: rangeSubmitting ? "#3a3a42" : "#1d1d21", color:"#fff",
                   fontSize:"0.875rem", fontWeight:700, cursor: rangeSubmitting ? "not-allowed" : "pointer" }}>
                 {rangeSubmitting ? "Booking…" : "Book All Days"}
               </button>
@@ -2631,7 +2631,7 @@ export default function PublicConferenceBooking() {
           <div style={{ background:"#fff", borderRadius:"1rem", width:"100%", maxWidth:440,
             overflow:"hidden", boxShadow:"0 20px 60px rgba(0,0,0,0.2)" }}
             onClick={e => e.stopPropagation()}>
-            <div style={{ background:"linear-gradient(135deg,#7c3aed,#a78bfa)", padding:"1.25rem 1.5rem" }}>
+            <div style={{ background:"linear-gradient(135deg,#1d1d21,#3a3a42)", padding:"1.25rem 1.5rem" }}>
               <div style={{ fontSize:"0.7rem", fontWeight:700, letterSpacing:"1px",
                 textTransform:"uppercase", color:"rgba(255,255,255,0.7)", marginBottom:4 }}>Range Booking Result</div>
               <div style={{ fontSize:"1.1rem", fontWeight:800, color:"#fff" }}>
@@ -2672,7 +2672,7 @@ export default function PublicConferenceBooking() {
             <div style={{ padding:"0 1.5rem 1.25rem" }}>
               <button onClick={() => setRangeResult(null)}
                 style={{ width:"100%", padding:"0.7rem", borderRadius:"0.625rem", border:"none",
-                  background:"#7c3aed", color:"#fff", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
+                  background:"#1d1d21", color:"#fff", fontSize:"0.875rem", fontWeight:700, cursor:"pointer" }}>
                 Done
               </button>
             </div>

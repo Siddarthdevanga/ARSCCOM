@@ -229,7 +229,7 @@ export default function PublicPassPage() {
           justifyContent: "center",
           minHeight: "100vh",
           fontFamily: "sans-serif",
-          color: "#6c2bd9",
+          color: "#19191d",
         }}>
           Loading…
         </div>

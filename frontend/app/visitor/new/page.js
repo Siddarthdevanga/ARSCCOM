@@ -95,7 +95,7 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
         />
         {fetching && (
           <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)",
-            width:14, height:14, border:"2px solid #7c3aed", borderTopColor:"transparent",
+            width:14, height:14, border:"2px solid #1d1d21", borderTopColor:"transparent",
             borderRadius:"50%", animation:"spin 0.7s linear infinite", display:"inline-block" }} />
         )}
         {employeeId && !fetching && (
@@ -112,8 +112,8 @@ const EmployeeAutocomplete = ({ value, employeeId, onChange, onSelect, disabled 
                 padding:"0.5rem 0.75rem", background:"none", border:"none", cursor:"pointer",
                 textAlign:"left", fontSize:"0.875rem" }}
               onMouseDown={(e) => { e.preventDefault(); onSelect({ name: emp.name, id: emp.id }); setOpen(false); setResults([]); }}>
-              <span style={{ width:28, height:28, borderRadius:"50%", background:"#ede9fe",
-                color:"#7c3aed", fontSize:"0.7rem", fontWeight:700, display:"flex",
+              <span style={{ width:28, height:28, borderRadius:"50%", background:"#ededf0",
+                color:"#1d1d21", fontSize:"0.7rem", fontWeight:700, display:"flex",
                 alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                 {initials(emp.name)}
               </span>
@@ -172,7 +172,7 @@ function ProfilePreview({ profile, phone, formFields }) {
         {r.photoUrl
           ? <img src={r.photoUrl} alt="Visitor photo"
               style={{ width:80, height:80, borderRadius:"50%", objectFit:"cover",
-                border:"3px solid #7c3aed", boxShadow:"0 2px 8px rgba(124,58,237,0.15)" }} />
+                border:"3px solid #1d1d21", boxShadow:"0 2px 8px rgba(29, 29, 33,0.15)" }} />
           : <div style={{ width:80, height:80, borderRadius:"50%", background:"#f3f4f6",
               border:"3px solid #e5e7eb", display:"flex", alignItems:"center", justifyContent:"center" }}>
               <IconUser />
@@ -184,7 +184,7 @@ function ProfilePreview({ profile, phone, formFields }) {
       {sections.map(sec => (
         <div key={sec.label} style={{ marginBottom:"0.875rem" }}>
           <div style={{ fontSize:"0.68rem", fontWeight:700, textTransform:"uppercase",
-            letterSpacing:"0.8px", color:"#7c3aed", marginBottom:"0.4rem" }}>{sec.label}</div>
+            letterSpacing:"0.8px", color:"#1d1d21", marginBottom:"0.4rem" }}>{sec.label}</div>
           <div style={{ border:"1px solid #e5e7eb", borderRadius:"0.6rem", overflow:"hidden" }}>
             {sec.fields.map(({ k, v }, i) => (
               <div key={k} style={{ display:"flex", justifyContent:"space-between", alignItems:"center",
@@ -520,7 +520,7 @@ export default function NewVisitorPage() {
                 />
               </div>
               {looking && (
-                <p style={{ fontSize:"0.78rem", color:"#7c3aed", marginTop:"0.3rem", display:"flex", alignItems:"center", gap:"0.3rem" }}>
+                <p style={{ fontSize:"0.78rem", color:"#1d1d21", marginTop:"0.3rem", display:"flex", alignItems:"center", gap:"0.3rem" }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                   </svg>
@@ -550,7 +550,7 @@ export default function NewVisitorPage() {
               <>
                 <div style={{ margin:"1rem 0 0.5rem", borderTop:"1px solid #e5e7eb", paddingTop:"1rem" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:"0.4rem",
-                    fontSize:"0.78rem", fontWeight:700, color:"#7c3aed", marginBottom:"0.875rem",
+                    fontSize:"0.78rem", fontWeight:700, color:"#1d1d21", marginBottom:"0.875rem",
                     textTransform:"uppercase", letterSpacing:"0.5px" }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
@@ -675,9 +675,9 @@ export default function NewVisitorPage() {
                           <button key={item} type="button"
                             onClick={() => toggleBelonging(item)}
                             style={{ padding:"0.35rem 0.75rem", borderRadius:"1rem", fontSize:"0.8rem",
-                              border: belongings.includes(item) ? "1.5px solid #7c3aed" : "1.5px solid #e5e7eb",
-                              background: belongings.includes(item) ? "#ede9fe" : "#fff",
-                              color: belongings.includes(item) ? "#7c3aed" : "#6b7280",
+                              border: belongings.includes(item) ? "1.5px solid #1d1d21" : "1.5px solid #e5e7eb",
+                              background: belongings.includes(item) ? "#ededf0" : "#fff",
+                              color: belongings.includes(item) ? "#1d1d21" : "#6b7280",
                               cursor:"pointer", fontWeight: belongings.includes(item) ? 600 : 400 }}>
                             {item}
                           </button>
