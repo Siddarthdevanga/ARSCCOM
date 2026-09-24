@@ -11,7 +11,7 @@
    trigger an install, so there the only honest option is to tell the user
    where the button is.
    ========================================================================== */
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 let deferredPrompt = null;
 const listeners = new Set();
@@ -51,39 +51,41 @@ export function isIosSafari() {
   return ios && safari;
 }
 
-export function useInstallPrompt() {
-  const [ready, setReady] = useState(false);
-  const [installed, setInstalled] = useState(false);
-  // Derived from navigator, so it must start false and be set after mount:
-  // computing it during render makes the server and client disagree and
-  // React discards the markup.
-  const [iosHint, setIosHint] = useState(false);
+/* Subscribing to the module-level store rather than mirroring it into
+   component state. useSyncExternalStore exists for exactly this: it reads
+   the value during render on the client and takes a separate server
+   snapshot, so there is no hydration mismatch and no extra render pass. */
+const subscribe = (fn) => { listeners.add(fn); return () => listeners.delete(fn); };
 
-  useEffect(() => {
-    const sync = () => setReady(!!deferredPrompt);
-    listeners.add(sync);
-    sync();
-    const standalone = isStandalone();
-    setInstalled(standalone);
-    setIosHint(!standalone && isIosSafari());
-    return () => listeners.delete(sync);
-  }, []);
+export function useInstallPrompt() {
+  const canPromptNow = useSyncExternalStore(
+    subscribe,
+    () => !!deferredPrompt && !isStandalone(),
+    () => false            // server: never offer an install
+  );
+
+  const installed = useSyncExternalStore(
+    subscribe,
+    () => isStandalone(),
+    () => false
+  );
+
+  const needsIosHint = useSyncExternalStore(
+    subscribe,
+    () => !isStandalone() && isIosSafari(),
+    () => false
+  );
 
   const promptInstall = useCallback(async () => {
     if (!deferredPrompt) return "unavailable";
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
-    // The event is single-use — Chrome will fire a fresh one if the user
+    // The event is single-use — Chrome fires a fresh one if the user
     // dismissed and remains eligible.
     deferredPrompt = null;
     notify();
     return outcome; // "accepted" | "dismissed"
   }, []);
 
-  return {
-    installed,
-    canPrompt: ready && !installed,
-    needsIosHint: iosHint,
-    promptInstall,
-  };
+  return { installed, canPrompt: canPromptNow, needsIosHint, promptInstall };
 }

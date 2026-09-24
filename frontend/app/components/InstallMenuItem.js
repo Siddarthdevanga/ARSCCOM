@@ -22,8 +22,11 @@ export default function InstallMenuItem({ styles, onDone }) {
   const { canPrompt, needsIosHint, promptInstall } = useInstallPrompt();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  // createPortal needs a real document, so it cannot run on the server.
+  // createPortal needs a real document, so this can only be true after
+  // hydration. Computing it during render would make the server and client
+  // disagree, which is a genuine bug; one extra render is not.
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
 
   // Escape closes, as it does for every other dialog in the app.

@@ -899,7 +899,7 @@ export default function SuperAdminDashboard() {
               <span className={styles.valGrace}><strong>{graceCount}</strong> grace</span>
               <span className={styles.valExpired}><strong>{expiredCount}</strong> expired</span>
               <span className={styles.heroSummaryPlans}>
-                {businessCount} business &middot; {enterpriseCount} enterprise &middot; {trialCount} trial
+                {businessCount} business &middot; {enterpriseCount} enterprise &middot; {trialPlanCount} trial
               </span>
             </div>
 

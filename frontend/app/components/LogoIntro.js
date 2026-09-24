@@ -46,6 +46,11 @@ export default function LogoIntro() {
     }
 
     try { sessionStorage.setItem(SEEN_KEY, "1"); } catch {}
+    // sessionStorage and prefers-reduced-motion are browser-only, so this
+    // decision cannot be made during render without the server and client
+    // disagreeing. The extra render is the cost of not shipping a
+    // hydration mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShow(true);
 
     const fade = setTimeout(() => setLeaving(true), HOLD_MS);
