@@ -144,3 +144,61 @@ a {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
+/* ============================================================================
+   MOBILE FOUNDATIONS
+   These accompany the viewport export in layout.js. Until that landed,
+   phones rendered at a ~980px virtual viewport, so none of the app's
+   breakpoints ever fired and none of this mattered.
+   ========================================================================== */
+
+/* iOS zooms the whole page when a focused input's text is under 16px. The
+   usual "fix" is maximum-scale=1 in the viewport, which also kills pinch
+   zoom for everyone — an accessibility failure. Setting the font-size is
+   the fix that costs nobody anything. Constrained to coarse pointers so
+   desktop keeps its smaller, denser form controls. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* viewportFit: cover lets the page paint under the notch and the home
+   indicator. Anything pinned to an edge has to be padded back out, or it
+   sits under the hardware. */
+@supports (padding: max(0px)) {
+  body {
+    padding-left:  env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* A single over-wide element — a table, a long unbroken string — otherwise
+   lets the whole document scroll sideways on a phone. */
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Touch targets. 44px is the smallest reliably hittable control; below that
+   people miss and retry. Only applied where the pointer is actually coarse,
+   so mouse-driven UI keeps its tighter sizing. */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a.btn,
+  input[type="submit"] {
+    min-height: 44px;
+  }
+}
+
+/* Momentum scrolling inside panes that scroll independently. */
+@media (pointer: coarse) {
+  [class*="scrollBody"],
+  [class*="tableScroll"] {
+    -webkit-overflow-scrolling: touch;
+  }
+}

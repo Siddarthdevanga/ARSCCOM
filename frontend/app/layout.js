@@ -26,6 +26,26 @@ export const SITE = {
 export const IS_STAGING = SITE.domain.includes('staging');
 
 /* ── Dynamic Metadata ────────────────────────────────────── */
+/* ============================================================================
+   VIEWPORT
+   Without this, mobile browsers lay the page out at a ~980px virtual
+   viewport and scale the result down. Every `@media (max-width: 768px)`
+   rule in the app then measures against 980px and never fires, so phones
+   get a shrunken desktop no matter how the CSS is written. This is the
+   switch that makes the existing breakpoints work at all.
+
+   maximumScale/userScalable are deliberately left at their defaults:
+   blocking pinch-zoom is an accessibility failure, and it is not needed
+   to stop iOS zooming on focus — that comes from input font-size, which
+   is handled in globals.css.
+   ========================================================================== */
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",   // lets content reach into the safe-area insets
+  themeColor: "#050505",
+};
+
 export const metadata = {
   metadataBase: new URL(SITE.domain),
 
