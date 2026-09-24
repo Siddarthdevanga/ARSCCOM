@@ -15,9 +15,15 @@ export default function manifest() {
     description:
       "Visitor management and conference room booking. Digital passes, live dashboard and check-in.",
 
-    // Installed sessions open on the login page rather than the marketing
-    // site: someone who installed the app is a user, not a prospect.
-    start_url: "/login",
+    // /home, not /login: it guards itself and bounces to /login when there
+    // is no session, so a signed-in user lands on their dashboard instead
+    // of being asked to log in again on every launch. In an installed app
+    // start_url is the only entry point, so getting this wrong is felt
+    // every single time.
+    start_url: "/home",
+    // Stable identity for the installed app, independent of start_url —
+    // without it, changing start_url later registers as a different app.
+    id: "/",
     scope: "/",
     display: "standalone",
     orientation: "any",

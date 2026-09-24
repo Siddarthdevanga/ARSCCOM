@@ -13,6 +13,22 @@ const nextConfig = {
   // the logo is referenced.
   async headers() {
     return [
+      // The service worker must never be cached by a CDN or proxy. It is
+      // sticky once installed, so a stale copy pins users to an old worker
+      // and there is no way for them to recover by reloading.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=0, must-revalidate" },
+        ],
+      },
       {
         source: "/:path*.(png|jpg|jpeg|svg|webp)",
         headers: [

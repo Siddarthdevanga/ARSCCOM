@@ -21,9 +21,16 @@ const STATIC = `${VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 
 self.addEventListener("install", (event) => {
+  // addAll is atomic: one 404 and the whole install rejects, leaving no
+  // worker at all. Added individually so a missing icon cannot cost us
+  // the offline page.
   event.waitUntil(
     caches.open(STATIC).then((c) =>
-      c.addAll([OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png"])
+      Promise.all(
+        [OFFLINE_URL, "/icons/icon-192.png", "/icons/icon-512.png"].map((u) =>
+          c.add(u).catch((e) => console.warn("[sw] precache skipped", u, e?.message))
+        )
+      )
     )
   );
   // Take over immediately rather than waiting for every tab to close —
@@ -75,7 +82,22 @@ self.addEventListener("fetch", (event) => {
   // The cache is a fallback for genuine failure, not a performance trick.
   if (request.mode === "navigate") {
     event.respondWith(
-      fetch(request).catch(() => caches.match(OFFLINE_URL))
+      fetch(request).catch(async () => {
+        const offline = await caches.match(OFFLINE_URL);
+        // respondWith(undefined) rejects, which hands the user the
+        // browser's own error page. If the precache did not survive,
+        // synthesize something rather than fail silently.
+        return (
+          offline ||
+          new Response(
+            "<!doctype html><meta charset=utf-8><title>Offline</title>" +
+            "<body style=\"font-family:system-ui;background:#050505;color:#fff;" +
+            "display:flex;align-items:center;justify-content:center;height:100vh;margin:0\">" +
+            "<p>You&rsquo;re offline. Check your connection and retry.</p>",
+            { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } }
+          )
+        );
+      })
     );
   }
 });
