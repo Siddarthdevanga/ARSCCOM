@@ -1304,3 +1304,11 @@
 }
 .installBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(245,165,36,.5); }
 .installBtn:disabled { opacity: .6; cursor: not-allowed; }
+
+/* Wrapper for the monthly brief's purpose list. Was referenced by
+   home/page.js but never defined, so the block rendered unstyled. */
+.briefPurposes {
+  margin-top: clamp(0.75rem, 2vh, 1.1rem);
+  padding-top: clamp(0.75rem, 2vh, 1.1rem);
+  border-top: 1px solid var(--border-light);
+}

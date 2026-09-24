@@ -754,6 +754,7 @@
   flex: 0 0 45%;
   background: var(--paper);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: clamp(28px, 5vh, 56px) clamp(24px, 4vw, 48px);
@@ -1292,7 +1293,8 @@
 }
 
 .appFooter {
-  margin: 14px 0 0;
+  margin: 16px 0 0;
+  flex-shrink: 0;
   text-align: center;
   font-family: 'Poppins', sans-serif;
   font-size: 11px;

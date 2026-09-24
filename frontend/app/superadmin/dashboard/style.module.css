@@ -1077,3 +1077,25 @@
   outline: 2px solid var(--hv-amber, #f5a524);
   outline-offset: -2px;
 }
+
+/* Root wrapper for the broadcast page, which shares this stylesheet.
+   Referenced but never defined, so that page had no height, background or
+   font of its own. Matches .container. */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #f2f2f5;
+  font-family: 'Nunito', sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Callout block in the company manager. Its colours come from inline
+   styles at the call site; this supplies the shape so the reference
+   resolves and the box has sane defaults if those are ever removed. */
+.infoBox {
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}

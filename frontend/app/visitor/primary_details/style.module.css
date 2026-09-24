@@ -431,3 +431,23 @@
   .input { height: 46px; font-size: 13px; }
   .nextBtn { height: 48px; font-size: 14px; }
 }
+
+/* Secondary action beside .nextBtn — "Retake" on the photo step. Was
+   referenced by visitor/new but never defined, so it rendered as an
+   unstyled default button next to a fully styled primary. */
+.prevBtn {
+  margin-top: 8px;
+  height: 52px;
+  width: 100%;
+  border-radius: 50px;
+  background: #fff;
+  color: #121216;
+  border: 1.5px solid var(--hv-line-strong, #d5d5dd);
+  font-family: 'Nunito', sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.prevBtn:hover { background: var(--hv-surface, #f6f6f8); border-color: #121216; }
+.prevBtn:disabled { opacity: 0.55; cursor: not-allowed; }
