@@ -1260,3 +1260,36 @@
     transform: none;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INSTALLED APP
+   In standalone the brand panel is redundant — whoever opened the app has
+   already chosen the product, and on a phone that panel is a screen of
+   marketing in front of a login form. The card takes the whole window.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (display-mode: standalone) {
+  .leftSection { display: none; }
+
+  .rightSection {
+    flex: 1 1 100%;
+    background: var(--paper);
+    /* The status bar sits over the page in standalone. */
+    padding-top: max(clamp(28px, 5vh, 56px), env(safe-area-inset-top));
+    padding-bottom: max(clamp(28px, 5vh, 56px), env(safe-area-inset-bottom));
+  }
+
+  /* Without the dark panel beside it, a bordered floating card looks
+     stranded — the card becomes the window. */
+  .loginCard {
+    max-width: 460px;
+    border: none;
+    box-shadow: none;
+    animation: none;
+  }
+}
+
+/* iOS below 16.4 does not match display-mode, so the same rule is keyed off
+   the class the app sets on <html> at runtime. */
+:global(html.hv-standalone) .leftSection { display: none; }
+:global(html.hv-standalone) .rightSection { flex: 1 1 100%; }
+:global(html.hv-standalone) .loginCard { border: none; box-shadow: none; animation: none; }

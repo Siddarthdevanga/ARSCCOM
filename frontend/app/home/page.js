@@ -25,6 +25,7 @@ import {
 import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
 import GracePeriodTicker from "../components/GracePeriodTicker";
+import InstallMenuItem from "../components/InstallMenuItem";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TOAST SYSTEM
@@ -716,6 +717,10 @@ export default function Home() {
         </div>
         <ChevronRight size={16} className={styles.menuItemArrow}/>
       </button>
+
+      {/* After the guide, by the same reasoning: an optional convenience,
+          not a task. Renders nothing unless an install is possible. */}
+      <InstallMenuItem styles={styles} onDone={() => setShowMenu(false)} />
     </div>
   );
 

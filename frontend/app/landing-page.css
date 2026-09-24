@@ -402,3 +402,19 @@ body { padding-top:var(--ticker-h); padding-bottom:var(--sticky-h); }
 }
 .trial-success h3 { margin-bottom:.4rem; }
 .trial-success p { color:var(--muted); font-size:.9rem; margin-bottom:1.3rem; }
+
+
+/* ============================================================================
+   INSTALLED APP
+   Someone launching the installed app is already a customer, so the
+   marketing site must never appear. page.js redirects to /home, but an
+   effect only runs after the first paint — this hides the content at parse
+   time so nothing flashes in the meantime. Scoped to the landing wrapper so
+   it can never blank another route.
+   ========================================================================== */
+@media (display-mode: standalone) {
+  .hv-landing { display: none !important; }
+}
+/* iOS before 16.4 has no display-mode support and sets navigator.standalone
+   instead; the app mirrors that onto <html> at startup. */
+html.hv-standalone .hv-landing { display: none !important; }

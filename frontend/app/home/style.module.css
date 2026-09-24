@@ -1212,3 +1212,95 @@
   border-color: #d5d5dd;
   box-shadow: var(--shadow-sm);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   INSTALL DIALOG
+   Shown before the browser's own install prompt, which is a bare yes/no
+   with nowhere to explain the caveats.
+   ═══════════════════════════════════════════════════════════════════════════ */
+.installOverlay {
+  position: fixed; inset: 0; z-index: 4000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: rgba(5,5,5,.66);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  animation: fadeIn .2s ease;
+}
+
+.installCard {
+  position: relative; width: 100%; max-width: 420px;
+  max-height: calc(100dvh - 40px); overflow-y: auto;
+  background: var(--white); border-radius: 22px;
+  padding: 30px 26px 26px;
+  box-shadow: 0 30px 80px rgba(5,5,5,.45);
+  animation: popIn .26s cubic-bezier(.34,1.3,.64,1);
+}
+
+.installClose {
+  position: absolute; top: 14px; right: 14px;
+  width: 30px; height: 30px; border-radius: 50%;
+  border: none; background: var(--gray-100); color: var(--gray-500);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.installClose:hover:not(:disabled) { background: var(--gray-200); color: var(--gray-900); }
+.installClose:disabled { opacity: .5; cursor: not-allowed; }
+
+.installIcon {
+  width: 46px; height: 46px; border-radius: 14px;
+  background: var(--grad-brand); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px;
+}
+
+.installTitle {
+  margin: 0 0 7px; font-size: 1.2rem; font-weight: 900;
+  color: var(--ink-900); letter-spacing: -.3px;
+}
+.installSub {
+  margin: 0 0 18px; font-size: .85rem; line-height: 1.55; color: var(--gray-500);
+}
+
+.installList { list-style: none; margin: 0 0 18px; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.installList li {
+  display: flex; align-items: flex-start; gap: 9px;
+  font-size: .83rem; line-height: 1.5; color: var(--gray-700);
+}
+.installList svg { color: var(--mint-500); flex-shrink: 0; margin-top: 2px; }
+
+/* Amber, not red: these are things to know, not errors. */
+.installWarn {
+  background: #fff8ec; border: 1px solid #f6e2bf;
+  border-radius: 12px; padding: 13px 15px; margin-bottom: 18px;
+}
+.installWarnHead {
+  display: flex; align-items: center; gap: 7px; margin-bottom: 9px;
+  font-size: .74rem; font-weight: 800; letter-spacing: .05em;
+  text-transform: uppercase; color: #8a5a00;
+}
+.installWarn ul { margin: 0; padding-left: 16px; display: flex; flex-direction: column; gap: 7px; }
+.installWarn li { font-size: .79rem; line-height: 1.5; color: #7a5410; }
+
+.installSteps {
+  background: var(--ink-50); border: 1px solid var(--border-light);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 18px;
+}
+.installStepsHead {
+  display: block; margin-bottom: 10px;
+  font-size: .74rem; font-weight: 800; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--gray-500);
+}
+.installSteps ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
+.installSteps li { font-size: .83rem; line-height: 1.5; color: var(--gray-700); }
+.installSteps li svg { vertical-align: -2px; }
+.installSteps p { margin: 12px 0 0; font-size: .74rem; color: var(--gray-500); line-height: 1.5; }
+
+.installBtn {
+  width: 100%; min-height: 46px; border: none; cursor: pointer;
+  border-radius: 12px; font-family: inherit;
+  font-size: .85rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase;
+  color: #1c1204; background: var(--grad-amber);
+  box-shadow: 0 6px 20px rgba(245,165,36,.42);
+  transition: transform .2s, box-shadow .2s;
+}
+.installBtn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(245,165,36,.5); }
+.installBtn:disabled { opacity: .6; cursor: not-allowed; }

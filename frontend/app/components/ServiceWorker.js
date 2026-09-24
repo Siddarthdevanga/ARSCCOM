@@ -10,8 +10,15 @@
    paint worse.
    ========================================================================== */
 import { useEffect } from "react";
+import { isStandalone } from "./pwa";
 
 export default function ServiceWorker() {
+  /* Older iOS does not support the display-mode media query, so standalone
+     is flagged on <html> for CSS to hook into. */
+  useEffect(() => {
+    if (isStandalone()) document.documentElement.classList.add("hv-standalone");
+  }, []);
+
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) return;
 

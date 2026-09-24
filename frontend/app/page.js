@@ -1,5 +1,7 @@
 'use client';
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { isStandalone } from './components/pwa';
 import './landing-page.css';
 
 const BODY_HTML = `
@@ -464,6 +466,15 @@ const loadMetaPixel = () => {
 };
 
 export default function HomePage() {
+  const pwaRouter = useRouter();
+
+  /* Never show the marketing site inside the installed app. start_url is
+     /home, but "/" is inside the manifest scope, so any in-app link or
+     restored session could still land here. */
+  useEffect(() => {
+    if (isStandalone()) pwaRouter.replace('/home');
+  }, [pwaRouter]);
+
   useEffect(() => {
     document.documentElement.classList.add('js');
 
@@ -698,5 +709,5 @@ export default function HomePage() {
     };
   }, []);
 
-  return <div dangerouslySetInnerHTML={{ __html: BODY_HTML }} />;
+  return <div className="hv-landing" dangerouslySetInnerHTML={{ __html: BODY_HTML }} />;
 }
