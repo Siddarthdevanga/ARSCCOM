@@ -1307,9 +1307,10 @@
 @media (display-mode: standalone) {
   .leftSection { display: none; }
 
-  /* The installed app goes fully dark, matching the panel the web layout
-     shows beside the form. A white card on a phone-sized screen was the
-     only light surface in an otherwise black product. */
+  /* Dark ground, white card. The brand panel is gone in the app, so the
+     column carries the dark instead — but the card itself stays exactly as
+     it is on the web, which keeps one set of form styles rather than a
+     parallel dark one that has to be maintained alongside it. */
   .rightSection {
     flex: 1 1 100%;
     flex-direction: column;
@@ -1323,62 +1324,16 @@
     padding-bottom: clamp(24px, 4vh, 40px);
   }
 
-  .appBrand  { display: block; animation: fadeIn 0.7s ease both; }
-  .appBrandTag { color: rgba(255, 255, 255, 0.55); }
+  /* Only what sits OUTSIDE the card inverts. */
+  .appBrand    { display: block; animation: fadeIn 0.7s ease both; }
+  .appBrandTag { color: rgba(255, 255, 255, 0.62); }
+  .appFooter   { color: rgba(255, 255, 255, 0.55); }
 
-  /* The card becomes a panel on the dark ground rather than a white sheet. */
   .loginCard {
     max-width: 440px;
     margin: 0 auto;
-    background: rgba(255, 255, 255, 0.045);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: none;
     animation: fadeIn 0.6s ease 0.1s both;
   }
-
-  .loginTitle {
-    color: #ffffff;
-    /* The gradient fill from the web layout would be unreadable here. */
-    background: none;
-    -webkit-text-fill-color: #ffffff;
-  }
-  .loginTitle span { color: var(--amber); -webkit-text-fill-color: var(--amber); }
-  .loginSubtitle { color: rgba(255, 255, 255, 0.55); }
-
-  .inputGroup label { color: rgba(255, 255, 255, 0.62); }
-
-  /* Typed text must be set explicitly. Left to the default it inherits the
-     light-mode colour and lands black on a dark field. */
-  .inputGroup input {
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.14);
-    color: #ffffff;
-    -webkit-text-fill-color: #ffffff;
-  }
-  .inputGroup input::placeholder { color: rgba(255, 255, 255, 0.48); }
-  .inputGroup input:focus {
-    background: rgba(255, 255, 255, 0.09);
-    border-color: var(--amber);
-  }
-  .inputGroup input:disabled { background: rgba(255, 255, 255, 0.04); }
-
-  .rememberMeRow { color: rgba(255, 255, 255, 0.6); }
-  .rememberMeRow input[type="checkbox"] { accent-color: var(--amber); }
-  .forgotLink { color: rgba(255, 255, 255, 0.6); }
-  .forgotLink:hover { color: #ffffff; }
-
-  .passwordToggle { color: rgba(255, 255, 255, 0.45); }
-  .passwordToggle:hover { color: #ffffff; background: rgba(255, 255, 255, 0.08); }
-
-  .loginLinks { border-top-color: rgba(255, 255, 255, 0.1); }
-  .registerPrompt { color: rgba(255, 255, 255, 0.5); }
-  .link { color: #ffffff; }
-
-  .appFooter { color: rgba(255, 255, 255, 0.55); }
-
-  /* Status messages keep their meaning, on a dark ground. */
-  .errorMessage   { background: rgba(192, 57, 43, 0.14);  color: #ff9b91; border-color: rgba(192, 57, 43, 0.4); }
-  .successMessage { background: rgba(26, 127, 75, 0.14);  color: #6ee7a8; border-color: rgba(26, 127, 75, 0.4); }
 }
 
 /* iOS before 16.4 has no display-mode support and sets navigator.standalone
@@ -1389,26 +1344,12 @@
   flex-direction: column;
   justify-content: center;
   gap: clamp(22px, 4vh, 34px);
-  background: linear-gradient(158deg, #121214 0%, #050505 48%, #0c0c0f 100%);
+  background:
+    radial-gradient(70% 40% at 82% 4%, rgba(245, 165, 36, 0.14) 0%, rgba(245, 165, 36, 0) 70%),
+    radial-gradient(60% 36% at 8% 98%, rgba(56, 189, 248, 0.10) 0%, rgba(56, 189, 248, 0) 72%),
+    linear-gradient(158deg, #121214 0%, #050505 48%, #0c0c0f 100%);
 }
-:global(html.hv-standalone) .appBrand  { display: block; }
-:global(html.hv-standalone) .loginCard {
-  max-width: 440px; margin: 0 auto;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
-}
-:global(html.hv-standalone) .loginTitle { color: #fff; background: none; -webkit-text-fill-color: #fff; }
-:global(html.hv-standalone) .loginSubtitle { color: rgba(255,255,255,0.55); }
-:global(html.hv-standalone) .inputGroup label { color: rgba(255,255,255,0.62); }
-:global(html.hv-standalone) .inputGroup input {
-  background: rgba(255,255,255,0.06);
-  border-color: rgba(255,255,255,0.14);
-  color: #fff; -webkit-text-fill-color: #fff;
-}
-:global(html.hv-standalone) .inputGroup input::placeholder { color: rgba(255,255,255,0.48); }
-:global(html.hv-standalone) .rememberMeRow,
-:global(html.hv-standalone) .forgotLink,
-:global(html.hv-standalone) .registerPrompt { color: rgba(255,255,255,0.6); }
-:global(html.hv-standalone) .link { color: #fff; }
-:global(html.hv-standalone) .appFooter { color: rgba(255,255,255,0.55); }
+:global(html.hv-standalone) .appBrand    { display: block; }
+:global(html.hv-standalone) .appBrandTag { color: rgba(255, 255, 255, 0.62); }
+:global(html.hv-standalone) .appFooter   { color: rgba(255, 255, 255, 0.55); }
+:global(html.hv-standalone) .loginCard   { max-width: 440px; margin: 0 auto; }
