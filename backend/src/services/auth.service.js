@@ -831,3 +831,84 @@ const sendPasswordChangedEmail = async (email, companyName) => {
     `
   });
 };
+
+/* ======================================================
+   SESSION REHYDRATION
+   GET /api/auth/session
+
+   The frontend keeps the company profile in localStorage and treats its
+   absence as "logged out". The real credential, though, is the httpOnly
+   cookie — valid for 30 days with Remember me. Those two can diverge:
+   iOS gives an installed home-screen app its own storage container
+   separate from Safari, and ITP can clear script-writable storage on its
+   own schedule. When that happens the user holds a perfectly good cookie
+   and is still shown a login form.
+
+   This rebuilds the same payload login returns, from the cookie alone, so
+   the app can restore itself instead of asking again. It issues no token
+   and accepts no credentials — it only answers "who does this cookie say
+   you are", and the caller must already have passed `authenticate`.
+====================================================== */
+export const getSession = async (companyId, userId) => {
+  const [rows] = await db.execute(
+    `SELECT
+       u.id,
+       u.email,
+       u.phone,
+       u.must_change_password,
+       c.id       AS companyId,
+       c.name     AS companyName,
+       c.slug     AS companySlug,
+       c.logo_url AS companyLogo,
+       c.whatsapp_url AS whatsappUrl,
+       c.subscription_status,
+       c.plan,
+       c.registration_source,
+       c.registration_complete,
+       c.grace_period_ends_at
+     FROM users u
+     JOIN companies c ON c.id = u.company_id
+     WHERE u.id = ? AND c.id = ?
+     LIMIT 1`,
+    [userId, companyId]
+  );
+
+  const user = rows?.[0];
+  if (!user) return null;
+
+  // A cancelled subscription is the one state login refuses outright;
+  // restoring a session must not be a way around that.
+  if (SUBSCRIPTION_BLOCKED_STATES.includes(user.subscription_status)) return null;
+
+  const inGracePeriod =
+    !!user.grace_period_ends_at && new Date(user.grace_period_ends_at) > new Date();
+
+  let gracePeriodDaysRemaining = 0;
+  if (inGracePeriod) {
+    gracePeriodDaysRemaining = Math.ceil(
+      (new Date(user.grace_period_ends_at) - new Date()) / (1000 * 60 * 60 * 24)
+    );
+  }
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      must_change_password: !!user.must_change_password,
+    },
+    company: {
+      id: user.companyId,
+      name: user.companyName,
+      slug: user.companySlug,
+      logo_url: user.companyLogo ? `/api/logo/${user.companyId}` : null,
+      whatsapp_url: user.whatsappUrl || null,
+      subscription_status: user.subscription_status || "pending",
+      plan: user.plan || "trial",
+      registration_source: user.registration_source || "web",
+      registration_complete: !!user.registration_complete,
+      grace_period_days_remaining: gracePeriodDaysRemaining,
+      in_grace_period: inGracePeriod,
+    },
+  };
+};

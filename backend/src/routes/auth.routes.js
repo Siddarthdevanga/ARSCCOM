@@ -8,6 +8,7 @@ import {
   forgotPassword,
   resetPassword,
   logout,
+  session,
 } from "../controllers/auth.controller.js";
 
 const router = express.Router();
@@ -138,5 +139,8 @@ router.post("/forgot-password", asyncHandler(forgotPassword));
 router.post("/reset-password", asyncHandler(resetPassword));
 
 router.post("/logout", asyncHandler(logout));
+
+/* ── SESSION — restore the app from the cookie alone ── */
+router.get("/session", authenticate, asyncHandler(session));
 
 export default router;

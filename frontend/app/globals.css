@@ -165,9 +165,9 @@ a {
   }
 }
 
-/* viewportFit: cover lets the page paint under the notch and the home
-   indicator. Anything pinned to an edge has to be padded back out, or it
-   sits under the hardware. */
+/* The OS reserves the top and bottom strips now (no viewportFit:cover), so
+   only the landscape side insets need handling — a notch in landscape still
+   eats into the left or right edge. */
 @supports (padding: max(0px)) {
   body {
     padding-left:  env(safe-area-inset-left);

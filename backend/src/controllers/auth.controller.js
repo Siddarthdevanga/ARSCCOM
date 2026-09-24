@@ -322,3 +322,32 @@ export const logout = (req, res) => {
   res.clearCookie("token", cookieOptsFor(req));
   return res.status(200).json({ success: true, message: "Logged out successfully" });
 };
+
+/* ======================================================
+   SESSION
+   GET /api/auth/session
+   Answers "who does this cookie say I am". The frontend uses it to restore
+   itself when its local copy of the profile has gone but the cookie has
+   not — which happens routinely on iOS, where an installed home-screen app
+   gets its own storage container and ITP clears script-writable storage on
+   its own schedule. Issues no token and accepts no credentials; the caller
+   must already have passed `authenticate`.
+====================================================== */
+export const session = async (req, res) => {
+  try {
+    const { companyId, userId } = req.user || {};
+    if (!companyId || !userId) {
+      return res.status(401).json({ success: false, message: "Not authenticated" });
+    }
+
+    const result = await service.getSession(companyId, userId);
+    if (!result) {
+      return res.status(401).json({ success: false, message: "Session no longer valid" });
+    }
+
+    return res.status(200).json({ success: true, ...result });
+  } catch (err) {
+    console.error("SESSION ERROR:", err?.message);
+    return res.status(401).json({ success: false, message: "Not authenticated" });
+  }
+};

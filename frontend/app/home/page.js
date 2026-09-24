@@ -26,6 +26,7 @@ import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
 import GracePeriodTicker from "../components/GracePeriodTicker";
 import InstallMenuItem from "../components/InstallMenuItem";
+import { restoreSession } from "../utils/session";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TOAST SYSTEM
@@ -488,14 +489,39 @@ export default function Home() {
   /* ── Auth ─────────────────────────────────────────────────────────── */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const storedCompany  = localStorage.getItem("company");
-    if (!storedCompany) { router.replace("/login"); return; }
-    try { setCompany(JSON.parse(storedCompany)); }
-    catch { localStorage.clear(); router.replace("/login"); return; }
+    let cancelled = false;
 
-    // Fetch subscription details up front so the home-screen renewal
-    // banner can render without the user having to open the menu.
-    fetchSubscription();
+    const boot = async () => {
+      let stored = localStorage.getItem("company");
+
+      // No local copy does not mean signed out — the cookie is the real
+      // credential and lasts 30 days with Remember me. Ask the server
+      // before sending anyone back to a login form. iOS in particular
+      // gives an installed app its own storage container, so this is the
+      // normal path there, not an edge case.
+      if (!stored) {
+        const restored = await restoreSession();
+        if (cancelled) return;
+        if (!restored) { router.replace("/login"); return; }
+        setCompany(restored);
+      } else {
+        try { setCompany(JSON.parse(stored)); }
+        catch {
+          const restored = await restoreSession();
+          if (cancelled) return;
+          if (!restored) { localStorage.clear(); router.replace("/login"); return; }
+          setCompany(restored);
+        }
+      }
+
+      if (cancelled) return;
+
+      // Fetch subscription details up front so the home-screen renewal
+      // banner can render without the user having to open the menu.
+      fetchSubscription();
+    };
+
+    boot();
 
     const day = new Date().getDay(); // 0=Sun … 6=Sat
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/visitors/yesterday-summary`, {
@@ -521,6 +547,10 @@ export default function Home() {
       .then((r) => r.json())
       .then((data) => { if (data.success) setMonthlyBrief(data); })
       .catch(() => {});
+    // restoreSession is async; if the user navigates away mid-flight,
+    // do not redirect or setState on an unmounted component.
+    return () => { cancelled = true; };
+
   }, [router]);
 
   /* ── Fetch Subscription ───────────────────────────────────────────── */

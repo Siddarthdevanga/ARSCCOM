@@ -43,7 +43,13 @@ export const IS_STAGING = SITE.domain.includes('staging');
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover",   // lets content reach into the safe-area insets
+  /* Deliberately NOT viewportFit:"cover". Cover paints the page underneath
+     the status bar and home indicator, which then has to be undone with
+     env(safe-area-inset-*) padding on every pinned element — and this app
+     has roughly fifteen independently-styled sticky headers. Getting one
+     wrong puts the clock on top of a control, which is what happened.
+     Letting the OS reserve those strips fixes every page at once, and the
+     edge-to-edge look buys nothing here. */
   themeColor: "#050505",
 };
 
@@ -156,7 +162,9 @@ export const metadata = {
   appleWebApp: {
     capable: true,
     title: 'Hai Visitor',
-    statusBarStyle: 'black-translucent',
+    /* 'black', not 'black-translucent': translucent is the iOS half of
+       viewportFit:cover and overlays the status bar on the page. */
+    statusBarStyle: 'black',
   },
 
   category: 'technology',
