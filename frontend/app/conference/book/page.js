@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "../../utils/api";
+import hdr from "./header.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -885,28 +886,23 @@ export default function ConferenceBookPage() {
       <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}`}</style>
 
       {/* Header */}
-      <header style={{ padding:"0.75rem 1.25rem", background:"#fff",
-        borderBottom:"1px solid #e5e7eb", display:"flex", alignItems:"center",
-        justifyContent:"space-between", position:"sticky", top:0, zIndex:40 }}>
-        {/* Logo — left */}
-        <img src={`${API}/api/logo/${company?.id}`} alt="Logo"
-          style={{ height:32, objectFit:"contain" }}
+      <header className={hdr.header}>
+        <img src={`${API}/api/logo/${company?.id}`} alt="" className={hdr.logo}
           onError={e => { e.currentTarget.style.display="none"; }} />
-        {/* Company name — center */}
-        <div style={{ fontWeight:800, fontSize:"1rem", color:"#1f2937",
-          position:"absolute", left:"50%", transform:"translateX(-50%)" }}>
-          {company?.name}
-        </div>
-        {/* Back button — right, purple filled */}
-        <button onClick={() => step === 2 ? setStep(1) : router.back()}
-          style={{ background:"#1d1d21", border:"none", cursor:"pointer",
-            color:"#fff", display:"flex", alignItems:"center", gap:"0.4rem",
-            fontSize:"0.82rem", fontWeight:700, borderRadius:"99px", padding:"0.4rem 1.1rem",
-            whiteSpace:"nowrap" }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+
+        {/* In flow, not absolutely centred: pinned at left:50% it overlapped
+            the logo and the Back button on any narrow screen. */}
+        <div className={hdr.name}>{company?.name}</div>
+
+        <button
+          className={hdr.backBtn}
+          onClick={() => step === 2 ? setStep(1) : router.back()}
+          aria-label="Back"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
             <path d="M19 12H5M12 5l-7 7 7 7"/>
           </svg>
-          Back
+          <span className={hdr.backLabel}>Back</span>
         </button>
       </header>
 

@@ -236,10 +236,6 @@ export default function ReportsPage(){
       {/* HEADER */}
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <button className={styles.backBtn} onClick={()=>router.push("/home")}>
-            <ArrowLeft size={15}/><span>Back</span>
-          </button>
-          <div className={styles.headerDivider}/>
           <div className={styles.headerBrand}>
             <span className={styles.headerTitle}>{company?.name||"Dashboard"}</span>
             <span className={styles.headerSubtitle}>Analytics &amp; Reports</span>
@@ -260,6 +256,10 @@ export default function ReportsPage(){
           <button className={styles.refreshBtn} onClick={()=>loadAnalytics(period,true)} disabled={fetching}>
             <RefreshCw size={14} className={fetching?styles.spinning:""}/>
             <span>{fetching?"Updating…":"Refresh"}</span>
+          </button>
+          <div className={styles.headerDivider}/>
+          <button className={styles.backBtn} onClick={()=>router.push("/home")}>
+            <ArrowLeft size={15}/><span>Back</span>
           </button>
         </div>
       </header>

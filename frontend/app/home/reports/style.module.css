@@ -555,3 +555,13 @@
 @media (prefers-reduced-motion:reduce) {
   .liveOn .liveDot { animation:none; }
 }
+
+/* Header controls wrap rather than overflow once the bar runs out of room;
+   the label drops on the narrowest screens, leaving the arrow. */
+@media (max-width: 560px) {
+  .header { height: auto; padding-top: .5rem; padding-bottom: .5rem; flex-wrap: wrap; gap: .5rem; }
+  .headerActions { gap: .4rem; }
+  .headerDivider { display: none; }
+  .backBtn span, .refreshBtn span { display: none; }
+  .liveToggle { padding: .45rem .6rem; }
+}
