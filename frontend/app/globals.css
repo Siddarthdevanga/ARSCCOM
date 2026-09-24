@@ -213,7 +213,7 @@ html, body {
    explicitly because the default is whatever the platform decides, which
    is how typed text ended up black on dark fields on phones in dark mode.
    ========================================================================== */
-input,
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
 select,
 textarea {
   color: #17171a;
@@ -222,7 +222,7 @@ textarea {
 
 /* -webkit-text-fill-color outranks `color` on iOS, and iOS sets it itself
    on disabled and autofilled fields — so it has to be stated too. */
-input:disabled,
+input:not([type="checkbox"]):not([type="radio"]):disabled,
 select:disabled,
 textarea:disabled {
   -webkit-text-fill-color: #6f707a;

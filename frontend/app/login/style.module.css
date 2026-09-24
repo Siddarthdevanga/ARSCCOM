@@ -1355,7 +1355,7 @@
     color: #ffffff;
     -webkit-text-fill-color: #ffffff;
   }
-  .inputGroup input::placeholder { color: rgba(255, 255, 255, 0.35); }
+  .inputGroup input::placeholder { color: rgba(255, 255, 255, 0.48); }
   .inputGroup input:focus {
     background: rgba(255, 255, 255, 0.09);
     border-color: var(--amber);
@@ -1374,7 +1374,7 @@
   .registerPrompt { color: rgba(255, 255, 255, 0.5); }
   .link { color: #ffffff; }
 
-  .appFooter { color: rgba(255, 255, 255, 0.4); }
+  .appFooter { color: rgba(255, 255, 255, 0.55); }
 
   /* Status messages keep their meaning, on a dark ground. */
   .errorMessage   { background: rgba(192, 57, 43, 0.14);  color: #ff9b91; border-color: rgba(192, 57, 43, 0.4); }
@@ -1406,9 +1406,9 @@
   border-color: rgba(255,255,255,0.14);
   color: #fff; -webkit-text-fill-color: #fff;
 }
-:global(html.hv-standalone) .inputGroup input::placeholder { color: rgba(255,255,255,0.35); }
+:global(html.hv-standalone) .inputGroup input::placeholder { color: rgba(255,255,255,0.48); }
 :global(html.hv-standalone) .rememberMeRow,
 :global(html.hv-standalone) .forgotLink,
 :global(html.hv-standalone) .registerPrompt { color: rgba(255,255,255,0.6); }
 :global(html.hv-standalone) .link { color: #fff; }
-:global(html.hv-standalone) .appFooter { color: rgba(255,255,255,0.4); }
+:global(html.hv-standalone) .appFooter { color: rgba(255,255,255,0.55); }
