@@ -1042,15 +1042,18 @@
     text-align: left; flex-shrink: 0;
   }
 
-  /* The company cell is the card's heading, not a labelled row. */
-  .stickyCol {
+  /* The company cell is the card's heading, not a labelled row. Applies
+     to both tables — the Razorpay one has no sticky column. */
+  .stickyCol,
+  .headCell {
     position: static !important;
     justify-content: flex-start !important;
     text-align: left;
     padding: 12px 14px 10px !important;
     background: transparent !important;
   }
-  .stickyCol::before { content: none; }
+  .stickyCol::before,
+  .headCell::before { content: none; }
 
   /* The whole card is tappable, so the button is redundant on a phone. */
   .actionCell { display: none !important; }
@@ -1068,4 +1071,9 @@
     display: flex; flex-direction: column;
   }
   .modalLayout { flex: 1; min-height: 0; }
+}
+
+.rowTappable:focus-visible {
+  outline: 2px solid var(--hv-amber, #f5a524);
+  outline-offset: -2px;
 }

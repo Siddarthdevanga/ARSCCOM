@@ -1004,6 +1004,12 @@ export default function SuperAdminDashboard() {
                           key={c.id}
                           className={`${c.is_suspended ? styles.rowSuspended : ""} ${styles.rowTappable}`}
                           onClick={() => setSelected(c)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelected(c); }
+                          }}
+                          role="button"
+                          tabIndex={0}
+                          aria-label={`Manage ${c.name}`}
                         >
                           <td className={styles.stickyCol}>
                             <div className={styles.companyCell}>
@@ -1087,7 +1093,7 @@ export default function SuperAdminDashboard() {
                     <tbody>
                       {filteredSignups.map((s) => (
                         <tr key={s.id}>
-                          <td>
+                          <td className={styles.headCell}>
                             <div className={styles.companyCell}>
                               <span className={styles.companyAvatar} aria-hidden="true">{(s.name || "?").trim().charAt(0).toUpperCase()}</span>
                               <span className={styles.companyName}>{s.name}</span>
@@ -1101,7 +1107,7 @@ export default function SuperAdminDashboard() {
                           <td data-label="Payment ID">{s.razorpay_payment_id || "-"}</td>
                           <td data-label="Paid On" className={styles.dateCell}>{s.created_at?.slice(0, 10) || "-"}</td>
                           {isFullAdmin && (
-                            <td>
+                            <td data-label="Setup Status">
                               {s.registration_complete ? (
                                 <span className={`${styles.badge} ${styles.badgeActive}`}>COMPLETE</span>
                               ) : (
@@ -1110,7 +1116,7 @@ export default function SuperAdminDashboard() {
                             </td>
                           )}
                           {isFullAdmin && (
-                            <td>
+                            <td data-label="Onboarding">
                               <div className={styles.dayBadges}>
                                 {[1, 5, 7, 10, 12].map((day) => {
                                   const sentDays = (s.onboarding_nurture_sent || "").split(",").filter(Boolean);
@@ -1129,7 +1135,7 @@ export default function SuperAdminDashboard() {
                             </td>
                           )}
                           {isFullAdmin && (
-                            <td>
+                            <td data-label="Actions">
                               <div className={styles.actionGroup}>
                                 <button
                                   className={styles.manageBtn}
