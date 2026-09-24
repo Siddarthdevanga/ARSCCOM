@@ -385,6 +385,15 @@ export default function LoginPage() {
 
       {/* RIGHT LOGIN SECTION */}
       <div className={styles.rightSection}>
+        {/* Installed app only. The brand panel is hidden there, so without
+            this the form floats on an empty white screen with nothing
+            identifying it. Hidden on the web, where the panel already
+            carries the mark. */}
+        <div className={styles.appBrand}>
+          <img src="/haiv-full-logo.png" alt="Hai Visitor" className={styles.appBrandLogo} />
+          <p className={styles.appBrandTag}>The Visitor Management Portal</p>
+        </div>
+
         <div className={styles.loginCard}>
           <h2 className={styles.loginTitle}>Login to your account</h2>
           <p className={styles.loginSubtitle}>Sign in to continue to your dashboard</p>
@@ -509,6 +518,8 @@ export default function LoginPage() {
           </div>
 
         </div>
+
+        <p className={styles.appFooter}>Secured by Zodopt</p>
       </div>
     </div>
   );

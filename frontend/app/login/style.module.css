@@ -1263,33 +1263,89 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    INSTALLED APP
-   In standalone the brand panel is redundant — whoever opened the app has
-   already chosen the product, and on a phone that panel is a screen of
-   marketing in front of a login form. The card takes the whole window.
+   The brand panel is hidden here — whoever opened the app has already
+   chosen the product, and on a phone that panel is a screen of marketing
+   in front of a login form. But removing it left the card floating on
+   plain white with nothing identifying it, so the lockup and a footer
+   take its place and the column carries the panel's own light.
    ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Hidden on the web: the dark panel already carries the mark there. */
+.appBrand { display: none; }
+
+.appBrandLogo {
+  width: clamp(168px, 52vw, 208px);
+  height: auto;
+  display: block;
+  margin: 0 auto 14px;
+}
+
+.appBrandTag {
+  margin: 0;
+  font-family: 'Montserrat', 'Inter', sans-serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 2.4px;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.appFooter { display: none; }
+
 @media (display-mode: standalone) {
   .leftSection { display: none; }
 
   .rightSection {
     flex: 1 1 100%;
-    background: var(--paper);
-    /* The status bar sits over the page in standalone. */
-    padding-top: max(clamp(28px, 5vh, 56px), env(safe-area-inset-top));
-    padding-bottom: max(clamp(28px, 5vh, 56px), env(safe-area-inset-bottom));
+    flex-direction: column;
+    justify-content: center;
+    gap: clamp(22px, 4vh, 34px);
+    /* The same washes the web column uses, so the screen is not a flat
+       white void behind a floating card. */
+    background:
+      radial-gradient(70% 40% at 82% 4%, rgba(245, 165, 36, 0.16) 0%, rgba(245, 165, 36, 0) 70%),
+      radial-gradient(65% 38% at 8% 98%, rgba(56, 189, 248, 0.14) 0%, rgba(56, 189, 248, 0) 72%),
+      var(--paper);
+    padding-top: clamp(24px, 5vh, 48px);
+    padding-bottom: clamp(24px, 4vh, 40px);
   }
 
-  /* Without the dark panel beside it, a bordered floating card looks
-     stranded — the card becomes the window. */
+  .appBrand  { display: block; animation: fadeIn 0.7s ease both; }
+  .appFooter {
+    display: block;
+    margin: 0;
+    text-align: center;
+    font-family: 'Poppins', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    color: var(--text-faint);
+    opacity: 0.75;
+  }
+
+  /* The card keeps its border and shadow: on a plain background it is the
+     one object on screen, and stripping them left it looking unfinished. */
   .loginCard {
-    max-width: 460px;
-    border: none;
-    box-shadow: none;
-    animation: none;
+    max-width: 440px;
+    margin: 0 auto;
+    animation: fadeIn 0.6s ease 0.1s both;
   }
 }
 
-/* iOS below 16.4 does not match display-mode, so the same rule is keyed off
-   the class the app sets on <html> at runtime. */
+/* iOS before 16.4 has no display-mode support and sets navigator.standalone
+   instead; the app mirrors that onto <html> at startup. */
 :global(html.hv-standalone) .leftSection { display: none; }
-:global(html.hv-standalone) .rightSection { flex: 1 1 100%; }
-:global(html.hv-standalone) .loginCard { border: none; box-shadow: none; animation: none; }
+:global(html.hv-standalone) .rightSection {
+  flex: 1 1 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(22px, 4vh, 34px);
+  background:
+    radial-gradient(70% 40% at 82% 4%, rgba(245, 165, 36, 0.16) 0%, rgba(245, 165, 36, 0) 70%),
+    radial-gradient(65% 38% at 8% 98%, rgba(56, 189, 248, 0.14) 0%, rgba(56, 189, 248, 0) 72%),
+    var(--paper);
+}
+:global(html.hv-standalone) .appBrand  { display: block; }
+:global(html.hv-standalone) .appFooter { display: block; text-align: center; font-size: 11px; color: var(--text-faint); margin: 0; }
+:global(html.hv-standalone) .loginCard { max-width: 440px; margin: 0 auto; }
