@@ -46,7 +46,9 @@ export default function SuperAdminNav({
         </div>
         <div className={styles.headerRight}>
           <span className={styles.adminEmail}>{admin?.email}</span>
-          {headerRightExtra}
+          {/* Hidden below 900px — see .headerActionsDesktop. The same
+              controls are rendered in the drawer instead. */}
+          <span className={styles.headerActionsDesktop}>{headerRightExtra}</span>
           <button className={styles.logoutBtn} onClick={onLogout}>Logout</button>
         </div>
       </header>
@@ -101,6 +103,15 @@ export default function SuperAdminNav({
               <Link href="/superadmin/dashboard?tab=razorpay" className={styles.drawerLink} onClick={closeDrawer}>
                 <Link2 size={17} /> Landing Page Conversion
               </Link>
+            )}
+            {/* Mobile home for the header actions. Rendered inside a
+                wrapper that is display:none above 900px so they are never
+                shown twice. */}
+            {headerRightExtra && (
+              <div className={styles.drawerActions} onClick={closeDrawer}>
+                <span className={styles.drawerActionsLabel}>Actions</span>
+                {headerRightExtra}
+              </div>
             )}
           </nav>
         </div>

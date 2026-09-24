@@ -891,6 +891,18 @@ export default function SuperAdminDashboard() {
             </h1>
             <p className={styles.heroSub}>Full control over all companies, plans and subscriptions</p>
 
+            {/* Phone: one dense line instead of eight tiles. Same numbers,
+                a quarter of the height. Hidden above 900px. */}
+            <div className={styles.heroSummary}>
+              <span><strong>{totalCompanies}</strong> total</span>
+              <span className={styles.valActive}><strong>{activeCount}</strong> active</span>
+              <span className={styles.valGrace}><strong>{graceCount}</strong> grace</span>
+              <span className={styles.valExpired}><strong>{expiredCount}</strong> expired</span>
+              <span className={styles.heroSummaryPlans}>
+                {businessCount} business &middot; {enterpriseCount} enterprise &middot; {trialCount} trial
+              </span>
+            </div>
+
             <div className={styles.heroStats}>
               <div className={styles.heroStatCard}>
                 <div className={styles.heroStatLabel}>Total Companies</div>
@@ -988,7 +1000,11 @@ export default function SuperAdminDashboard() {
                     </thead>
                     <tbody>
                       {filtered.map((c) => (
-                        <tr key={c.id} className={c.is_suspended ? styles.rowSuspended : ""}>
+                        <tr
+                          key={c.id}
+                          className={`${c.is_suspended ? styles.rowSuspended : ""} ${styles.rowTappable}`}
+                          onClick={() => setSelected(c)}
+                        >
                           <td className={styles.stickyCol}>
                             <div className={styles.companyCell}>
                               <span className={styles.companyAvatar} aria-hidden="true">{(c.name || "?").trim().charAt(0).toUpperCase()}</span>
@@ -999,15 +1015,18 @@ export default function SuperAdminDashboard() {
                               </div>
                             </div>
                           </td>
-                          <td><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
-                          <td><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status || "-"}</span></td>
+                          <td data-label="Plan"><span className={`${styles.badge} ${planColor(c.plan)}`}>{(c.plan || "trial").toUpperCase()}</span></td>
+                          <td data-label="Status"><span className={`${styles.badge} ${statusColor(c.subscription_status)}`}>{c.subscription_status || "-"}</span></td>
                           {/* Trial/Sub Ends are mutually exclusive per company —
                               only one is ever populated, so one column covers
                               both instead of always showing a dangling "-". */}
-                          <td className={styles.dateCell}>{(c.trial_ends_at || c.subscription_ends_at)?.slice(0, 10) || "-"}</td>
-                          <td className={styles.numCell}>{c.total_visitors}</td>
-                          <td>
-                            <button className={styles.manageBtn} onClick={() => setSelected(c)}>
+                          <td data-label="Expires" className={styles.dateCell}>{(c.trial_ends_at || c.subscription_ends_at)?.slice(0, 10) || "-"}</td>
+                          <td data-label="Visitors" className={styles.numCell}>{c.total_visitors}</td>
+                          <td className={styles.actionCell}>
+                            <button
+                              className={styles.manageBtn}
+                              onClick={(e) => { e.stopPropagation(); setSelected(c); }}
+                            >
                               Manage
                             </button>
                           </td>
@@ -1074,13 +1093,13 @@ export default function SuperAdminDashboard() {
                               <span className={styles.companyName}>{s.name}</span>
                             </div>
                           </td>
-                          <td>{s.email}</td>
-                          <td>{s.phone}</td>
-                          <td className={styles.numCell}>
+                          <td data-label="Email">{s.email}</td>
+                          <td data-label="Phone">{s.phone}</td>
+                          <td data-label="Amount Paid" className={styles.numCell}>
                             {s.amount_paid != null ? `₹${(s.amount_paid / 100).toFixed(2)}` : "-"}
                           </td>
-                          <td>{s.razorpay_payment_id || "-"}</td>
-                          <td className={styles.dateCell}>{s.created_at?.slice(0, 10) || "-"}</td>
+                          <td data-label="Payment ID">{s.razorpay_payment_id || "-"}</td>
+                          <td data-label="Paid On" className={styles.dateCell}>{s.created_at?.slice(0, 10) || "-"}</td>
                           {isFullAdmin && (
                             <td>
                               {s.registration_complete ? (
