@@ -1,4 +1,5 @@
 import Script from 'next/script';
+import ServiceWorker from './components/ServiceWorker';
 import './globals.css';
 
 const GA_ID = 'G-HRFN50WPZX';
@@ -141,6 +142,22 @@ export const metadata = {
       google: 'AW-17980176621', // ← replace with actual token
     },
   }),
+
+  icons: {
+    icon: [
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
+
+  /* iOS ignores the web manifest when deciding how a home-screen launch
+     behaves, so standalone mode has to be asked for separately here. */
+  appleWebApp: {
+    capable: true,
+    title: 'Hai Visitor',
+    statusBarStyle: 'black-translucent',
+  },
 
   category: 'technology',
 };
@@ -302,6 +319,7 @@ export default function RootLayout({ children }) {
       </head>
 
       <body>
+        <ServiceWorker />
         {children}
       </body>
     </html>
