@@ -153,11 +153,18 @@ export default function ConferenceDashboard() {
       loadPublicBookingInfo();
     } catch (err) {
       const msg = err?.message || "";
-      if (err?.code === 403 || /expired|inactive/i.test(msg)) {
-        setLocked(true);
-      } else {
-        router.replace("/login");
-      }
+
+      // Only a 401 means "not signed in". This used to send people to the
+      // login page for ANY failure — one 500, one timeout, one slow
+      // endpoint among the four requests above, and a signed-in user was
+      // thrown out of the app.
+      if (err?.code === 401) { router.replace("/login"); return; }
+
+      if (err?.code === 403 || /expired|inactive/i.test(msg)) { setLocked(true); return; }
+
+      // Everything else is a loading failure, not an auth failure. The
+      // render guard below already shows an "unable to load" state.
+      showNotification(msg || "Unable to load the dashboard. Please retry.", "error");
     } finally { setLoading(false); }
   };
 
