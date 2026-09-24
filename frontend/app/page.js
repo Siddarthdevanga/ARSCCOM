@@ -10,7 +10,7 @@ const BODY_HTML = `
 <!-- NAV -->
 <nav>
   <div class="wrap nav-inner">
-    <a href="#" class="logo"><img src="/v-transparent.png" alt="Hai Visitor" class="logo-img" /><span>H<span class="ai-accent">ai</span> VISITOR<small>A visitor management platform by Zodopt</small></span></a>
+    <a href="#" class="logo"><img src="/haiv-full-logo.png" alt="Hai Visitor" class="logo-img" /><small>A visitor management platform by Zodopt</small></a>
     <div class="nav-links">
       <a href="#about">About</a>
       <a href="#features">Features</a>
@@ -394,7 +394,7 @@ const BODY_HTML = `
   <div class="trial-modal" role="dialog" aria-modal="true" aria-labelledby="trialModalTitle">
     <button type="button" class="trial-modal-close" id="trialModalClose" aria-label="Close">&times;</button>
     <div class="trial-modal-top">
-      <img src="/v-transparent.png" alt="Hai Visitor" class="trial-modal-logo" />
+      <img src="/haiv-full-logo.png" alt="Hai Visitor" class="trial-modal-logo" />
       <div class="trial-modal-wordmark">H<span>ai</span> Visitor</div>
       <div class="trial-modal-pill">15-Day Trial &middot; &#8377;49</div>
     </div>

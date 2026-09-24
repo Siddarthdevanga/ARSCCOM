@@ -374,23 +374,24 @@ export function StackedBar({ data, meta = {} }) {
 /* ── Progress ring ───────────────────────────────────────────────────────── */
 export function ProgressRing({ value, max, color = SERIES[0], label, sub }) {
   const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
-  const R = 34, C = 2 * Math.PI * R;
+  const R = 36, C = 46, CIRC = 2 * Math.PI * R;
+  const dash = (pct / 100) * CIRC;
 
   return (
-    <div className={styles.ring}>
-      <svg viewBox="0 0 80 80" className={styles.ringSvg}>
-        <circle cx="40" cy="40" r={R} fill="none" stroke="rgba(5,5,5,0.07)" strokeWidth="8" />
+    <div className={styles.ringWrap}>
+      <svg viewBox="0 0 92 92" className={styles.ringSvg}>
+        <circle cx={C} cy={C} r={R} fill="none" stroke="rgba(5,5,5,0.07)" strokeWidth="10" />
         <circle
-          cx="40" cy="40" r={R} fill="none" stroke={color} strokeWidth="8"
-          strokeLinecap="round" strokeDasharray={C}
-          strokeDashoffset={C - (C * pct) / 100}
-          transform="rotate(-90 40 40)"
-          style={{ transition: "stroke-dashoffset .7s cubic-bezier(.4,0,.2,1)" }}
+          cx={C} cy={C} r={R} fill="none" stroke={color} strokeWidth="10"
+          strokeDasharray={`${dash} ${CIRC - dash}`}
+          strokeDashoffset={CIRC * 0.25}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dasharray .7s cubic-bezier(.4,0,.2,1)" }}
         />
-        <text x="40" y="44" textAnchor="middle" className={styles.ringValue}>{pct}%</text>
+        <text x={C} y={C - 4} textAnchor="middle" fontSize="13" fontWeight="900" fill="#0d0d10">{pct}%</text>
+        <text x={C} y={C + 10} textAnchor="middle" fontSize="7" fontWeight="700" fill="#9ca3af" letterSpacing="0.3">{label}</text>
       </svg>
-      <strong className={styles.ringLabel}>{label}</strong>
-      {sub && <span className={styles.ringSub}>{sub}</span>}
+      {sub && <p className={styles.ringSub}>{sub}</p>}
     </div>
   );
 }

@@ -42,14 +42,16 @@ h2 { font-size:clamp(1.5rem,3.8vw,2.25rem); }
 nav { position:sticky; top:var(--ticker-h); z-index:100; background:rgba(250,247,241,.9);
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border-bottom:1px solid var(--stroke); }
 .nav-inner { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.8rem 0; }
-.logo { display:flex; align-items:center; gap:.55rem; font-weight:900; font-size:1.15rem; color:var(--navy); }
+.logo { display:flex; align-items:center; gap:.6rem; color:var(--navy); min-width:0; }
 .logo-mark { width:34px; height:34px; border-radius:10px; background:var(--grad); display:grid; place-items:center; color:#fff; font-weight:900; flex-shrink:0; }
 .logo-img {
-  height:34px; width:34px; flex-shrink:0; object-fit:contain;
-  background:var(--purple); border-radius:9px; padding:5px; box-sizing:border-box;
+  height:32px; width:auto; flex-shrink:0; object-fit:contain;
+  display:block;
 }
-.logo small { display:block; font-size:.58rem; font-weight:600; color:var(--muted); letter-spacing:.06em; }
-.ai-accent { color:#000; }
+.logo small { font-size:.58rem; font-weight:600; color:var(--muted); letter-spacing:.06em; line-height:1.3; }
+/* The lockup alone identifies the product; the strapline is supporting
+   detail and the first thing that can go when the bar gets tight. */
+@media (max-width:640px) { .logo small { display:none; } .logo-img { height:26px; } }
 .nav-links { display:flex; align-items:center; gap:1.6rem; }
 .nav-links a { font-size:.82rem; font-weight:700; color:var(--text); opacity:.75; transition:opacity .2s,color .2s; }
 .nav-links a:hover { opacity:1; color:var(--purple); }
@@ -355,9 +357,8 @@ body { padding-top:var(--ticker-h); padding-bottom:var(--sticky-h); }
 
 .trial-modal-top { margin-bottom:clamp(1rem,4vw,1.4rem); }
 .trial-modal-logo {
-  width:clamp(46px,12vw,54px); height:clamp(46px,12vw,54px); margin:0 auto .6rem;
-  border-radius:15px; background:var(--purple); padding:9px; box-sizing:border-box;
-  box-shadow:0 10px 22px rgba(29, 29, 33,.35);
+  width:auto; height:clamp(34px,9vw,42px); margin:0 auto .6rem;
+  display:block; object-fit:contain;
 }
 .trial-modal-wordmark { font-size:clamp(.98rem,4vw,1.08rem); font-weight:900; color:var(--navy); letter-spacing:.01em; }
 .trial-modal-wordmark span { color:var(--orange); }
