@@ -577,19 +577,19 @@ export default function WhatsAppLeadsPage() {
               : "No leads found."}
           </div>
         ) : (
-          <div style={{ overflowX: "auto", padding: "0 1.5rem 2rem" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", background: "#fff", borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 4px rgba(0,0,0,0.07)" }}>
+          <div className={styles.tableWrapper}>
+            <table className={styles.table}>
               <thead>
-                <tr style={{ background: "linear-gradient(135deg,#1d1d21,#242428)", color: "#fff" }}>
-                  <th style={th}>#</th>
-                  <th style={th}>Name</th>
-                  <th style={th}>Phone</th>
-                  <th style={th}>Action Taken</th>
-                  <th style={th}>Demo Status</th>
-                  <th style={th}>Nurture</th>
-                  <th style={th}>Plan</th>
-                  <th style={th}>First Contact</th>
-                  <th style={th}>Last Activity</th>
+                <tr>
+                  <th>#</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Action Taken</th>
+                  <th>Demo Status</th>
+                  <th>Nurture</th>
+                  <th>Plan</th>
+                  <th>First Contact</th>
+                  <th>Last Activity</th>
                 </tr>
               </thead>
               <tbody>
@@ -600,31 +600,31 @@ export default function WhatsAppLeadsPage() {
                   const planColor = plan === "TRIAL" ? "#0ea5e9" : plan === "BUSINESS" ? "#10b981" : plan === "ENTERPRISE" ? "#1d1d21" : null;
                   return (
                     <tr key={lead.id} style={{ background: i % 2 === 0 ? "#fff" : "#f8f8fb", borderBottom: "1px solid #ededf0" }}>
-                      <td style={td}>{i + 1}</td>
-                      <td style={{ ...td, fontWeight: 600 }}>
+                      <td data-label="#">{i + 1}</td>
+                      <td className={styles.headCell}>
                         {lead.unsubscribed ? <span style={{ color: "#9ca3af" }}>{lead.name || "—"}</span> : (lead.name || "—")}
                       </td>
-                      <td style={{ ...td, fontFamily: "monospace" }}>{lead.phone ? `+${lead.phone}` : "—"}</td>
-                      <td style={td}>
+                      <td data-label="Phone" style={{ fontFamily: "monospace" }}>{lead.phone ? `+${lead.phone}` : "\u2014"}</td>
+                      <td data-label="Action Taken">
                         {lead.last_action
                           ? <span style={{ background: ACTION_COLOR[lead.last_action] || "#6b7280", color: "#fff", padding: "3px 10px", borderRadius: 20, fontSize: 12, fontWeight: 600 }}>{ACTION_LABEL[lead.last_action] || lead.last_action}</span>
                           : <span style={{ color: "#9ca3af", fontSize: 13 }}>No action</span>}
                       </td>
-                      <td style={td}><DemoStatus lead={lead} onMarkAttended={markAttended} /></td>
-                      <td style={td}>
+                      <td data-label="Demo Status"><DemoStatus lead={lead} onMarkAttended={markAttended} /></td>
+                      <td data-label="Nurture">
                         {lead.unsubscribed
                           ? <span style={{ background: "#fee2e2", color: "#991b1b", padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>Unsubscribed</span>
                           : <span style={{ background: NURTURE_COLOR[lead.nurture_step || 0] + "22", color: NURTURE_COLOR[lead.nurture_step || 0], padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>{NURTURE_LABEL[lead.nurture_step || 0]}</span>}
                       </td>
-                      <td style={td}>
+                      <td data-label="Plan">
                         {plan
                           ? <span style={{ background: (isExpired ? "#ef4444" : planColor) + "18", color: isExpired ? "#ef4444" : planColor, padding: "2px 8px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
                               {isExpired ? `${plan} (Expired)` : plan}
                             </span>
                           : <span style={{ color: "#9ca3af", fontSize: 12 }}>—</span>}
                       </td>
-                      <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.created_at)}</td>
-                      <td style={{ ...td, color: "#6b7280", fontSize: 13 }}>{fmtDate(lead.updated_at)}</td>
+                      <td data-label="First Contact" className={styles.dateCell}>{fmtDate(lead.created_at)}</td>
+                      <td data-label="Last Activity" className={styles.dateCell}>{fmtDate(lead.updated_at)}</td>
                     </tr>
                   );
                 })}
@@ -637,5 +637,3 @@ export default function WhatsAppLeadsPage() {
   );
 }
 
-const th = { padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 700, letterSpacing: "0.5px" };
-const td = { padding: "12px 16px", fontSize: 14, color: "#1f2937" };

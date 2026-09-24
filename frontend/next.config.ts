@@ -1,6 +1,12 @@
+/* Read at build time so the version the app displays always matches the
+   release that produced it, instead of a literal someone has to remember
+   to bump. */
+const pkg = require("./package.json");
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: __dirname,
+  env: { NEXT_PUBLIC_APP_VERSION: pkg.version },
   experimental: {
     optimizeCss: false,
   },

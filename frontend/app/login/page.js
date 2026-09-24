@@ -519,7 +519,7 @@ export default function LoginPage() {
 
         </div>
 
-        <p className={styles.appFooter}>Secured by Zodopt</p>
+        <p className={styles.appFooter}>v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
       </div>
     </div>
   );
