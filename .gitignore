@@ -15,3 +15,13 @@ backend/dist/
 .DS_Store
 .keys/
 *.pem
+
+# Working files and duplicate source assets kept locally only.
+# The versions the app actually references are committed under clean,
+# space-free names: v-transparent.png, v-mark.png, haiv-full-logo.png.
+frontend/promeetcode.txt
+frontend/public/Haiv Full logo.png
+frontend/public/v transaprent.png
+frontend/public/v.png
+promeet-preview.html
+promeet-landing-v9 (1).html
