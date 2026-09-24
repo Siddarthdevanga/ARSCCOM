@@ -56,7 +56,7 @@ export default function InstallMenuItem({ styles, onDone }) {
           <span className={styles.menuItemTitle}>Install App</span>
           <span className={styles.menuItemSubtitle}>
             {platform === "android"
-              ? "Add to your Android home screen"
+              ? "Add Hai Visitor to your device"
               : "Add to your iPhone or iPad home screen"}
           </span>
         </div>
@@ -88,9 +88,7 @@ export default function InstallMenuItem({ styles, onDone }) {
             <div className={styles.installIcon}><Smartphone size={22} /></div>
             <h3 id="install-title" className={styles.installTitle}>Install Hai Visitor</h3>
             <p className={styles.installSub}>
-              {platform === "android"
-                ? "Adds Hai Visitor to your home screen so it opens full screen, like an app."
-                : "Adds Hai Visitor to your home screen so it opens full screen, like an app."}
+              Adds Hai Visitor to your device so it opens full screen, like an app.
             </p>
 
             <ul className={styles.installList}>

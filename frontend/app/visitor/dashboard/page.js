@@ -5,6 +5,7 @@ import Image from "next/image";
 import QRCode from "qrcode";
 import styles from "./style.module.css";
 import graceStyles from "../../styles/gracePeriod.module.css";
+import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -109,9 +110,14 @@ export default function VisitorDashboard() {
   }, [router]);
 
   useEffect(() => {
-    const stored = localStorage.getItem("company");
-    if (!stored) { router.replace("/"); return; }
-    try { setCompany(JSON.parse(stored)); } catch {}
+    // Also a manifest shortcut target. Previously this sent people to "/",
+    // the marketing page, rather than to login.
+    (async () => {
+      const { status, company: restored } = await restoreSession();
+      if (status === SESSION.UNAUTHENTICATED) { router.replace("/login"); return; }
+      if (status === SESSION.OFFLINE) return;
+      setCompany(restored);
+    })();
 
     fetchDashboard().then(() => setLoading(false));
 

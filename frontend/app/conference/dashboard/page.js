@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, downloadQRCode, shareURL, fetchPublicBookingInfo } from "../../utils/api";
+import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
 import styles from "./style.module.css";
 
@@ -162,10 +163,16 @@ export default function ConferenceDashboard() {
 
   /* ================= LIFECYCLE ================= */
   useEffect(() => {
-    const storedCompany = localStorage.getItem("company");
-    if (!storedCompany) { router.replace("/login"); return; }
-    setCompany(JSON.parse(storedCompany));
-    loadDashboard();
+    // A manifest shortcut can launch straight into this page, so it is an
+    // entry point in its own right and must restore from the cookie rather
+    // than assume localStorage survived.
+    (async () => {
+      const { status, company: restored } = await restoreSession();
+      if (status === SESSION.UNAUTHENTICATED) { router.replace("/login"); return; }
+      if (status === SESSION.OFFLINE) return;   // leave the loading state up
+      setCompany(restored);
+      loadDashboard();
+    })();
   }, []);
 
   /* The hero claims this page is live, so it now actually is. Polls only

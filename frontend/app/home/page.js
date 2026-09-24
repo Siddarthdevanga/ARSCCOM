@@ -26,7 +26,7 @@ import styles from "./style.module.css";
 import graceStyles from "../styles/gracePeriod.module.css";
 import GracePeriodTicker from "../components/GracePeriodTicker";
 import InstallMenuItem from "../components/InstallMenuItem";
-import { restoreSession } from "../utils/session";
+import { restoreSession, SESSION } from "../utils/session";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TOAST SYSTEM
@@ -492,29 +492,28 @@ export default function Home() {
     let cancelled = false;
 
     const boot = async () => {
-      let stored = localStorage.getItem("company");
-
       // No local copy does not mean signed out — the cookie is the real
-      // credential and lasts 30 days with Remember me. Ask the server
-      // before sending anyone back to a login form. iOS in particular
-      // gives an installed app its own storage container, so this is the
-      // normal path there, not an edge case.
-      if (!stored) {
-        const restored = await restoreSession();
-        if (cancelled) return;
-        if (!restored) { router.replace("/login"); return; }
-        setCompany(restored);
-      } else {
-        try { setCompany(JSON.parse(stored)); }
-        catch {
-          const restored = await restoreSession();
-          if (cancelled) return;
-          if (!restored) { localStorage.clear(); router.replace("/login"); return; }
-          setCompany(restored);
-        }
+      // credential and lasts 30 days with Remember me. restoreSession reads
+      // the local copy first and only asks the server when there isn't one.
+      const { status, company: restored } = await restoreSession();
+      if (cancelled) return;
+
+      if (status === SESSION.UNAUTHENTICATED) {
+        localStorage.removeItem("company");
+        router.replace("/login");
+        return;
       }
 
-      if (cancelled) return;
+      // Offline is not signed out. Sending someone to a login form they
+      // cannot submit would be worse than waiting — so wait, and retry
+      // when the connection comes back.
+      if (status === SESSION.OFFLINE) {
+        const retry = () => { if (!cancelled) boot(); };
+        window.addEventListener("online", retry, { once: true });
+        return;
+      }
+
+      setCompany(restored);
 
       // Fetch subscription details up front so the home-screen renewal
       // banner can render without the user having to open the menu.
