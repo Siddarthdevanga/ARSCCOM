@@ -23,10 +23,16 @@ export const PLAN_PRICING = {
 // conference.routes.js) as an incentive to upgrade to Enterprise for
 // unlimited access. Enterprise is the only plan with unlimited booking.
 export const PLAN_FEATURES = {
-  trial:      { rooms: 2,        bookings: 100,       conference: true  },
-  business:   { rooms: 0,        bookings: 0,         conference: false },
-  enterprise: { rooms: Infinity, bookings: Infinity,  conference: true  },
+  trial:      { rooms: 2,        bookings: 100,       conference: true,  cards: 1  },
+  business:   { rooms: 0,        bookings: 0,         conference: false, cards: 5  },
+  enterprise: { rooms: Infinity, bookings: Infinity,  conference: true,  cards: 10 },
 };
+
+/* Digital visiting cards a plan may have ACTIVE at once. Deactivating a
+   card frees its slot — without that, a five-card allowance becomes
+   five-cards-ever and normal staff turnover exhausts it within a year. */
+export const cardLimitFor = (plan) =>
+  PLAN_FEATURES[plan]?.cards ?? PLAN_FEATURES.trial.cards;
 
 /**
  * Returns { base, gst, total, totalStr } for a plan + interval, or null if
