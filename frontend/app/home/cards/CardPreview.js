@@ -7,29 +7,28 @@
    ========================================================================== */
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { drawFront, drawBack, downloadFace, CARD_W, CARD_H } from "./cardArt";
+import { Download } from "lucide-react";
+import { drawFront, drawBack, CARD_W, CARD_H } from "./cardArt";
+import { fileBase, QR_OPTS } from "./cardDownload";
 import styles from "./preview.module.css";
 
 /* Enough resolution to judge the layout without rendering a 1004px canvas
    on every keystroke. */
 const PREVIEW_SCALE = 0.46;
 
-export default function CardPreview({ card, cardUrl, logoSrc, downloadable = false }) {
+/* Downloading is owned by the editor, which has a second Download button in
+   its header: one handler and one busy flag, so the two can never race. */
+export default function CardPreview({
+  card, cardUrl, logoSrc, photoSrc = "", downloadable = false, onDownload, downloading = false, blockedNote = "",
+}) {
   const frontRef = useRef(null);
   const backRef  = useRef(null);
   const [qrSrc, setQrSrc] = useState("");
-  const [busy, setBusy]   = useState(false);
-  const [failed, setFailed] = useState(false);
 
-  /* Black modules on white: decoding depends on contrast, and a tinted
-     code fails on a meaningful share of scanners. */
   useEffect(() => {
     let cancelled = false;
     if (!cardUrl) return;
-    QRCode.toDataURL(cardUrl, {
-      width: 600, margin: 0, errorCorrectionLevel: "M",
-      color: { dark: "#000000", light: "#FFFFFF" },
-    })
+    QRCode.toDataURL(cardUrl, QR_OPTS)
       .then((url) => { if (!cancelled) setQrSrc(url); })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -38,26 +37,12 @@ export default function CardPreview({ card, cardUrl, logoSrc, downloadable = fal
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (frontRef.current) await drawFront(frontRef.current, card, { scale: PREVIEW_SCALE, logoSrc });
+      if (frontRef.current) await drawFront(frontRef.current, card, { scale: PREVIEW_SCALE, logoSrc, photoSrc });
       if (cancelled) return;
       if (backRef.current)  await drawBack(backRef.current, card, { scale: PREVIEW_SCALE, qrSrc });
     })();
     return () => { cancelled = true; };
-  }, [card, logoSrc, qrSrc]);
-
-  const download = async (face) => {
-    setBusy(true);
-    setFailed(false);
-    try {
-      // A name in a non-Latin script strips to nothing; fall back to "card".
-      const base = (card.name || "").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "card";
-      await downloadFace(face, card, { logoSrc, qrSrc }, `${base}-${face}.png`);
-    } catch {
-      setFailed(true);
-    } finally {
-      setBusy(false);
-    }
-  };
+  }, [card, logoSrc, photoSrc, qrSrc]);
 
   return (
     <div className={styles.wrap}>
@@ -85,14 +70,13 @@ export default function CardPreview({ card, cardUrl, logoSrc, downloadable = fal
 
       {downloadable && (
         <div className={styles.downloads}>
-          <button type="button" onClick={() => download("front")} disabled={busy}>
-            Download front
+          <button type="button" onClick={onDownload} disabled={downloading || !!blockedNote}>
+            <Download size={14} /> {downloading ? "Preparing…" : "Download front & back"}
           </button>
-          <button type="button" onClick={() => download("back")} disabled={busy}>
-            Download back
-          </button>
-          <span className={styles.spec}>PNG · 85 × 55 mm · 300 dpi</span>
-          {failed && <p className={styles.error} role="alert">Could not create the image. Please try again.</p>}
+          <span className={styles.spec}>
+            {fileBase(card.name)}-front.png, {fileBase(card.name)}-back.png · 85 × 55 mm · 300 dpi
+          </span>
+          {blockedNote && <p className={styles.note} role="status">{blockedNote}</p>}
         </div>
       )}
     </div>

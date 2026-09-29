@@ -16,7 +16,7 @@ import {
   listCards, getCard, createCard, updateCard, setCardActive, setCardLocked,
   getCardUsage, listLeads, companyLapsed, photoPrefix, isUploadedPhoto,
 } from "../services/digitalCard.service.js";
-import { uploadToS3, getPresignedUrl } from "../services/s3.service.js";
+import { uploadToS3, getPresignedUrl, getS3Object } from "../services/s3.service.js";
 import { db } from "../config/db.js";
 
 const router = express.Router();
@@ -112,6 +112,25 @@ router.post("/photo", (req, res, next) => {
   const key = `${photoPrefix(getCompanyId(req.user))}${crypto.randomBytes(12).toString("hex")}.${type.ext}`;
   await uploadToS3(file, key);
   res.status(201).json({ success: true, key, preview: await getPresignedUrl(key, 3600) });
+}));
+
+/* ── Photo bytes, for drawing onto the printed card ──
+   Served from our own API so the editor can fetch it with the session and
+   draw it as a same-origin blob: a presigned S3 URL would taint the canvas
+   and the PNG export would fail. Only this company's own uploads. */
+router.get("/photo", handle(async (req, res) => {
+  const key = String(req.query.key || "");
+  if (!key.startsWith(photoPrefix(getCompanyId(req.user))) || key.includes("..")) {
+    return res.status(404).json({ success: false, message: "Photo not found" });
+  }
+  let obj;
+  try { obj = await getS3Object(key); } catch {
+    return res.status(404).json({ success: false, message: "Photo not found" });
+  }
+  res.setHeader("Content-Type", obj.contentType);
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Cache-Control", "private, max-age=300");
+  res.send(obj.buffer);
 }));
 
 /* ── Card Leads ── (declared before /:id so "leads" is never read as an id) */

@@ -139,6 +139,11 @@ const clean = (body = {}) => {
   }
   if ("theme" in out) out.theme = out.theme && /^[a-z]{1,32}$/.test(out.theme) ? out.theme : "ink";
 
+  // A plain on/off flag: anything but an explicit yes is off.
+  if (body.photo_on_print !== undefined) {
+    out.photo_on_print = [true, 1, "1", "true"].includes(body.photo_on_print) ? 1 : 0;
+  }
+
   for (const f of ["bg_color", "text_color", "accent_color"]) {
     if (out[f] && !HEX.test(out[f])) throw bad("Colours must be in #RRGGBB form");
   }

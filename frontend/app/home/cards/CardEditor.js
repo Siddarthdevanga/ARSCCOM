@@ -10,10 +10,11 @@
    ========================================================================== */
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Camera, Trash2 } from "lucide-react";
+import { ArrowLeft, Camera, Download, Trash2 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
 import CardPreview from "./CardPreview";
+import { downloadCard } from "./cardDownload";
 import { THEMES as CARD_THEMES, resolveColors, contrastVerdict } from "./cardArt";
 import styles from "./style.module.css";
 import ed from "./editor.module.css";
@@ -34,7 +35,7 @@ const THEME_GROUPS = ["dark", "light"].map((tone) => ({
 
 const EMPTY = {
   name: "", job_title: "", company_name: "", phone: "", whatsapp: "", email: "",
-  linkedin: "", brief: "", photo_url: "",
+  linkedin: "", brief: "", photo_url: "", photo_on_print: 0,
   custom1_label: "", custom1_value: "", custom1_type: "text",
   custom2_label: "", custom2_value: "", custom2_type: "text",
   theme: "ink", bg_color: "", text_color: "", accent_color: "",
@@ -66,18 +67,21 @@ export default function CardEditor({ cardId = null }) {
   const [error, setError]     = useState("");
   const [notice, setNotice]   = useState("");
   const [dirty, setDirty]     = useState(false);
+  const [saved, setSaved]     = useState(false);
 
   const [photoPreview, setPhotoPreview] = useState("");
+  const [printPhoto, setPrintPhoto]     = useState("");   // same-origin blob for the canvas
   const [uploading, setUploading]       = useState(false);
   const fileRef = useRef(null);
 
   const [companyLogo, setCompanyLogo] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   const [empQuery, setEmpQuery]   = useState("");
   const [employees, setEmployees] = useState([]);
   const empTimer = useRef(null);
 
-  const update = (patch) => { setForm((f) => ({ ...f, ...patch })); setDirty(true); };
+  const update = (patch) => { setForm((f) => ({ ...f, ...patch })); setDirty(true); setSaved(false); };
 
   /* ── Load ── */
   useEffect(() => {
@@ -138,6 +142,26 @@ export default function CardEditor({ cardId = null }) {
     })();
     return () => { cancelled = true; };
   }, [cardId, isNew, router]);
+
+  /* The photo drawn onto the printed card. Fetched through our API as a
+     blob, because a presigned S3 URL would taint the canvas and break the
+     PNG export. A pre-upload pasted URL is tried as it is. */
+  useEffect(() => {
+    const key = form.photo_url;
+    if (!form.photo_on_print || !key) { setPrintPhoto(""); return; }
+    if (!key.startsWith("digital-cards/")) { setPrintPhoto(key); return; }
+    let url = "";
+    let cancelled = false;
+    fetch(`${API}/api/cards/photo?key=${encodeURIComponent(key)}`, { credentials: "include" })
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => {
+        if (!b || cancelled) return;
+        url = URL.createObjectURL(b);
+        setPrintPhoto(url);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [form.photo_url, form.photo_on_print]);
 
   /* Closing the tab or reloading with unsaved edits asks first, the same
      as the Back button does. */
@@ -205,7 +229,7 @@ export default function CardEditor({ cardId = null }) {
     }
   };
 
-  const removePhoto = () => { update({ photo_url: "" }); setPhotoPreview(""); };
+  const removePhoto = () => { update({ photo_url: "", photo_on_print: 0 }); setPhotoPreview(""); };
 
   /* ── Save ── */
   const save = async (e) => {
@@ -230,16 +254,31 @@ export default function CardEditor({ cardId = null }) {
       if (isNew) {
         // Onto the card's own screen: the real QR exists now, so the
         // print files can be downloaded straight away.
-        setFlash("Card created. Download the print-ready front and back below.");
+        setFlash("Card created. Use Download to get the print-ready front and back.");
         router.replace(`/home/cards/${data.id}`);
       } else {
-        setFlash("Card updated.");
-        router.push("/home/cards");
+        // Stay here: the next thing after an edit is usually downloading
+        // the updated print files, which the save has just unblocked.
+        setSaved(true);
       }
     } catch (err) {
       setError(err.message);
     } finally {
       setSaving(false);
+    }
+  };
+
+  /* Both Download buttons (header and under the preview) land here. */
+  const downloadBoth = async () => {
+    if (downloading || dirty) return;
+    setDownloading(true);
+    setError("");
+    try {
+      await downloadCard(form, { cardUrl: cardUrl(card.slug), logoSrc: companyLogo, photoSrc: printPhoto });
+    } catch {
+      setError("Could not create the card images. Please try again.");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -264,6 +303,12 @@ export default function CardEditor({ cardId = null }) {
         {card?.slug && <span className={styles.usage}>{cardUrl(card.slug).replace(/^https?:\/\//, "")}</span>}
       </div>
       <div className={styles.headerRight}>
+        {state === "ready" && card?.slug && (
+          <button className={styles.ghostBtn} onClick={downloadBoth} disabled={downloading || busy || dirty}
+                  title={dirty ? "Save your changes first" : "Download the print-ready front and back PNGs"}>
+            <Download size={15} /><span>{downloading ? "Preparing…" : "Download"}</span>
+          </button>
+        )}
         <button className={styles.ghostBtn} onClick={goBack} disabled={saving}>
           <ArrowLeft size={15} /><span>Back</span>
         </button>
@@ -326,7 +371,7 @@ export default function CardEditor({ cardId = null }) {
                   </span>}
               <div className={ed.photoText}>
                 <strong>Photo <span className={styles.opt}>optional</span></strong>
-                <span>JPG, PNG or WebP, up to 5 MB. Shown on the web card.</span>
+                <span>JPG, PNG or WebP, up to 5 MB. Always shown on the web card.</span>
                 <div className={ed.photoBtns}>
                   <button type="button" className={styles.ghostBtn} disabled={busy}
                           onClick={() => fileRef.current?.click()}>
@@ -340,6 +385,12 @@ export default function CardEditor({ cardId = null }) {
                 </div>
                 <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp"
                        className={ed.hiddenFile} onChange={choosePhoto} />
+                <label className={`${styles.checkRow} ${ed.printToggle}`}>
+                  <input type="checkbox" disabled={busy || !form.photo_url}
+                         checked={!!form.photo_on_print && !!form.photo_url}
+                         onChange={(e) => update({ photo_on_print: e.target.checked ? 1 : 0 })} />
+                  Show photo on the printed card
+                </label>
               </div>
             </div>
 
@@ -494,7 +545,13 @@ export default function CardEditor({ cardId = null }) {
               card={form}
               cardUrl={card?.slug ? cardUrl(card.slug) : `${SITE}/card/preview`}
               logoSrc={companyLogo}
+              photoSrc={printPhoto}
               downloadable={!!card?.slug}
+              onDownload={downloadBoth}
+              downloading={downloading}
+              // The QR opens the saved card; printing unsaved edits would put
+              // details on paper that the web card does not show.
+              blockedNote={dirty ? "Save your changes first, so the printed card matches the web card." : ""}
             />
             {!card?.slug && (
               <p className={styles.previewNote}>
@@ -506,6 +563,7 @@ export default function CardEditor({ cardId = null }) {
 
         <div className={ed.actionBar}>
           {error && <p className={ed.actionError} role="alert">{error}</p>}
+          {!error && saved && <p className={ed.actionOk} role="status">Changes saved.</p>}
           <div className={ed.actionBtns}>
             <button type="button" className={styles.ghostBtn} onClick={goBack} disabled={saving}>Cancel</button>
             <button type="submit" className={styles.primaryBtn} disabled={busy}>

@@ -36,6 +36,7 @@
 }
 
 .downloads button {
+  display: inline-flex; align-items: center; gap: 7px;
   min-height: 38px; padding: 9px 15px; cursor: pointer;
   border: 1px solid var(--hv-line-strong, #d5d5dd); border-radius: 9px;
   background: #fff; color: #17171a;
@@ -45,11 +46,11 @@
 .downloads button:hover:not(:disabled) { border-color: #17171a; background: var(--hv-surface, #f6f6f8); }
 .downloads button:disabled { opacity: .55; cursor: not-allowed; }
 
-.error { flex-basis: 100%; margin: 0; font-size: .74rem; font-weight: 700; color: #b42318; }
+.note { flex-basis: 100%; margin: 0; font-size: .74rem; font-weight: 700; color: #8a5a00; }
 
-.spec { font-size: .7rem; color: #a9aab3; margin-left: auto; white-space: nowrap; }
+.spec { font-size: .7rem; color: #8d8e97; margin-left: auto; overflow-wrap: anywhere; text-align: right; }
 
 @media (max-width: 560px) {
-  .spec { margin-left: 0; flex-basis: 100%; }
+  .spec { margin-left: 0; flex-basis: 100%; text-align: left; }
   .downloads button { flex: 1; }
 }

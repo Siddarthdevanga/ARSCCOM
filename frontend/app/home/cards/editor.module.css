@@ -72,6 +72,9 @@
 
 .hiddenFile { display: none; }
 
+.printToggle { margin: 8px 0 0; }
+.printToggle:has(input:disabled) { opacity: .55; }
+
 /* ── Action bar ── */
 .actionBar {
   grid-area: bar;
@@ -88,6 +91,11 @@
 .actionError {
   margin: 0 auto 0 0; flex: 1 1 240px;
   font-size: .82rem; font-weight: 700; color: #b42318;
+}
+
+.actionOk {
+  margin: 0 auto 0 0; flex: 1 1 240px;
+  font-size: .82rem; font-weight: 700; color: #1a7f4b;
 }
 
 .actionBtns { display: flex; gap: 9px; }

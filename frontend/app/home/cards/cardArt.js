@@ -151,25 +151,48 @@ export async function drawFront(canvas, card, opts = {}) {
     ctx.drawImage(logo, left, s(58), Math.min(w, s(220)), h);
   }
 
+  // Photo, only when the admin has asked for it on print: top right, in a
+  // circle ringed with the accent. Cropped to fill, never stretched.
+  const photo = card.photo_on_print ? await loadImage(opts.photoSrc) : null;
+  const D = s(176);
+  if (photo) {
+    const px = right - D, py = s(58), r = D / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(px + r, py + r, r, 0, Math.PI * 2);
+    ctx.clip();
+    const k = Math.max(D / photo.width, D / photo.height);
+    const w = photo.width * k, h = photo.height * k;
+    ctx.drawImage(photo, px + (D - w) / 2, py + (D - h) / 2, w, h);
+    ctx.restore();
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = s(5);
+    ctx.beginPath();
+    ctx.arc(px + r, py + r, r - s(2.5), 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  // Name, title and company stop short of the photo.
+  const headText = photo ? maxText - D - s(28) : maxText;
+
   let y = s(logo ? 212 : 180);
 
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = fg;
   ctx.font = `800 ${s(58)}px 'Segoe UI', Arial, sans-serif`;
-  ctx.fillText(fitText(ctx, card.name || "", maxText), left, y);
+  ctx.fillText(fitText(ctx, card.name || "", headText), left, y);
 
   if (card.job_title) {
     y += s(52);
     ctx.fillStyle = accent;
     ctx.font = `600 ${s(28)}px 'Segoe UI', Arial, sans-serif`;
-    ctx.fillText(fitText(ctx, card.job_title, maxText), left, y);
+    ctx.fillText(fitText(ctx, card.job_title, headText), left, y);
   }
 
   if (card.company_name) {
     y += s(40);
     ctx.fillStyle = alpha(fg, 0.62);
     ctx.font = `500 ${s(25)}px 'Segoe UI', Arial, sans-serif`;
-    ctx.fillText(fitText(ctx, card.company_name, maxText), left, y);
+    ctx.fillText(fitText(ctx, card.company_name, headText), left, y);
   }
 
   // Hairline above the contact block.
@@ -177,10 +200,12 @@ export async function drawFront(canvas, card, opts = {}) {
   ctx.fillStyle = alpha(fg, 0.16);
   ctx.fillRect(left, lineY, maxText, Math.max(1, s(1.5)));
 
-  const contacts = [card.phone, card.email, card.linkedin].filter(Boolean);
+  // Phone and email only. A URL on paper is not something anyone types in;
+  // the QR on the back is the link.
+  const contacts = [card.phone, card.email].filter(Boolean);
   ctx.font = `500 ${s(24)}px 'Segoe UI', Arial, sans-serif`;
   ctx.fillStyle = alpha(fg, 0.85);
-  contacts.slice(0, 3).forEach((line, i) => {
+  contacts.forEach((line, i) => {
     ctx.fillText(fitText(ctx, line, maxText), left, lineY + s(46) + i * s(36));
   });
 
@@ -257,14 +282,20 @@ export async function downloadFace(face, card, opts, filename) {
     return canvas.toDataURL("image/png");
   };
 
+  // A logo (or a pasted photo URL) served without CORS headers taints the
+  // canvas and export throws SecurityError. Drop the logo first, then the
+  // photo: a card missing one of them beats no card at all. Each attempt
+  // uses a fresh canvas, since a tainted one stays tainted however it is
+  // redrawn.
   let url;
   try {
     url = await render(opts);
   } catch {
-    // A logo served without CORS headers taints the canvas and export
-    // throws SecurityError. A card without the logo beats no card at all.
-    // Fresh canvas: a tainted one stays tainted however it is redrawn.
-    url = await render({ ...opts, logoSrc: "" });
+    try {
+      url = await render({ ...opts, logoSrc: "" });
+    } catch {
+      url = await render({ ...opts, logoSrc: "", photoSrc: "" });
+    }
   }
   const a = document.createElement("a");
   a.href = url;
