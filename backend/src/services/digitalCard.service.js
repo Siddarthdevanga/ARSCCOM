@@ -116,6 +116,7 @@ const LABELS = { custom1_label: "custom field 1 label", custom1_value: "custom f
                  custom2_label: "custom field 2 label", custom2_value: "custom field 2 value",
                  job_title: "job title", company_name: "company name", photo_url: "photo URL" };
 const HEX = /^#[0-9a-f]{6}$/i;
+const BRIEF_WORDS = 60;
 const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
 
 const clean = (body = {}) => {
@@ -131,6 +132,12 @@ const clean = (body = {}) => {
     if (out[f] && MAX_LEN[f] && out[f].length > MAX_LEN[f]) {
       throw bad(`${LABELS[f] || f} must be ${MAX_LEN[f]} characters or fewer`);
     }
+  }
+
+  // The brief sits under the name on the card; the editor holds it to the
+  // same word count, so this only catches a bypassed client.
+  if (out.brief && out.brief.split(/\s+/).length > BRIEF_WORDS) {
+    throw bad(`Keep the brief to ${BRIEF_WORDS} words or fewer`);
   }
 
   // NOT NULL enum / theme columns: blank means "default", never NULL.

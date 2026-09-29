@@ -75,6 +75,9 @@
 .printToggle { margin: 8px 0 0; }
 .printToggle:has(input:disabled) { opacity: .55; }
 
+.wordCount { display: block; margin-top: 4px; font-size: 12px; color: #8d8e97; text-align: right; }
+.wordCountOver { color: #c0362c; font-weight: 700; }
+
 /* ── Action bar ── */
 .actionBar {
   grid-area: bar;

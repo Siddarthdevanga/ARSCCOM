@@ -44,6 +44,11 @@ const FIELDS = Object.keys(EMPTY);
 
 const cardUrl = (slug) => `${SITE}/card/${slug}`;
 
+/* The brief sits under the name on a phone screen; past a few sentences it
+   pushes the contact actions out of reach. Same limit as the API. */
+const BRIEF_WORDS = 60;
+const countWords = (s) => (String(s || "").trim().match(/\S+/g) || []).length;
+
 /* A one-shot message carried across a navigation (e.g. "Card created"). */
 export const FLASH_KEY = "hv-cards-flash";
 const setFlash = (msg) => { try { sessionStorage.setItem(FLASH_KEY, msg); } catch { /* optional */ } };
@@ -62,6 +67,7 @@ export default function CardEditor({ cardId = null }) {
   const [state, setState]     = useState("loading");   // loading | ready | locked | expired | missing | failed
   const [card, setCard]       = useState(null);        // the saved record, when editing
   const [form, setForm]       = useState(EMPTY);
+  const briefWords = countWords(form.brief);
   const [waSame, setWaSame]   = useState(true);
   const [saving, setSaving]   = useState(false);
   const [error, setError]     = useState("");
@@ -236,6 +242,7 @@ export default function CardEditor({ cardId = null }) {
     e.preventDefault();
     setError("");
     if (!form.name.trim() || !form.phone.trim()) { setError("Name and phone are required."); return; }
+    if (briefWords > BRIEF_WORDS) { setError(`Keep the brief to ${BRIEF_WORDS} words or fewer.`); return; }
 
     setSaving(true);
     try {
@@ -418,7 +425,12 @@ export default function CardEditor({ cardId = null }) {
               <label htmlFor="f-brief">Brief</label>
               <textarea id="f-brief" maxLength={2000} rows={3} value={form.brief} disabled={busy}
                         placeholder="A line or two about what they do"
+                        aria-describedby="f-brief-count"
                         onChange={(e) => update({ brief: e.target.value })} />
+              <span id="f-brief-count" aria-live="polite"
+                    className={`${ed.wordCount} ${briefWords > BRIEF_WORDS ? ed.wordCountOver : ""}`}>
+                {briefWords} / {BRIEF_WORDS} words
+              </span>
             </div>
           </section>
 

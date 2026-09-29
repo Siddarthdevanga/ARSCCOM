@@ -109,6 +109,31 @@ const fitText = (ctx, text, maxWidth) => {
   return `${out}…`;
 };
 
+/* Word-wraps into at most maxLines; widthOf(i) gives line i's width. Text
+   that does not fit ends the last line with an ellipsis. */
+const wrapText = (ctx, text, maxLines, widthOf) => {
+  if (maxLines < 1) return [];
+  const words = text.split(/\s+/);
+  const lines = [];
+  let cur = "";
+  let i = 0;
+  for (; i < words.length; i++) {
+    const next = cur ? `${cur} ${words[i]}` : words[i];
+    if (!cur || ctx.measureText(next).width <= widthOf(lines.length)) { cur = next; continue; }
+    lines.push(cur);
+    cur = words[i];
+    if (lines.length === maxLines) break;
+  }
+  if (lines.length < maxLines) { lines.push(cur); cur = ""; }
+  // A single word wider than its line is cut there, not left to overflow.
+  const out = lines.map((ln, k) => fitText(ctx, ln, widthOf(k)));
+  const last = out.length - 1;
+  if (i < words.length && !out[last].endsWith("…")) {
+    out[last] = fitText(ctx, `${out[last]}…`, widthOf(last)).replace(/……$/, "…");
+  }
+  return out;
+};
+
 const loadImage = (src) =>
   new Promise((resolve) => {
     if (!src) return resolve(null);
@@ -197,6 +222,21 @@ export async function drawFront(canvas, card, opts = {}) {
 
   // Hairline above the contact block.
   const lineY = H - s(160);
+
+  // Brief, in the space between the heading and the contacts. Up to three
+  // lines, then an ellipsis: at 60 words it can outrun the card, and the
+  // full text is always on the web card. Lines level with the photo stop
+  // short of it, like the heading.
+  if (card.brief?.trim()) {
+    ctx.fillStyle = alpha(fg, 0.72);
+    ctx.font = `italic 400 ${s(21)}px 'Segoe UI', Arial, sans-serif`;
+    const lineH = s(30);
+    const first = y + s(46);
+    const room = Math.floor((lineY - s(22) - (first - s(21))) / lineH);
+    const widthAt = (ly) => (photo && ly - s(21) < s(58) + D + s(12) ? headText : maxText);
+    const lines = wrapText(ctx, card.brief.trim(), Math.min(3, room), (i) => widthAt(first + i * lineH));
+    lines.forEach((ln, i) => ctx.fillText(ln, left, first + i * lineH));
+  }
   ctx.fillStyle = alpha(fg, 0.16);
   ctx.fillRect(left, lineY, maxText, Math.max(1, s(1.5)));
 
