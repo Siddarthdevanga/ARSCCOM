@@ -116,7 +116,7 @@ const LABELS = { custom1_label: "custom field 1 label", custom1_value: "custom f
                  custom2_label: "custom field 2 label", custom2_value: "custom field 2 value",
                  job_title: "job title", company_name: "company name", photo_url: "photo URL" };
 const HEX = /^#[0-9a-f]{6}$/i;
-const BRIEF_WORDS = 60;
+const BRIEF_WORDS = 30;
 const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
 
 const clean = (body = {}) => {

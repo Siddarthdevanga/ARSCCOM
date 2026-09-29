@@ -224,14 +224,19 @@ export async function drawFront(canvas, card, opts = {}) {
   const lineY = H - s(160);
 
   // Brief, in the space between the heading and the contacts. Up to three
-  // lines, then an ellipsis: at 60 words it can outrun the card, and the
+  // lines, then an ellipsis: a long brief can outrun the card, and the
   // full text is always on the web card. Lines level with the photo stop
   // short of it, like the heading.
   if (card.brief?.trim()) {
-    ctx.fillStyle = alpha(fg, 0.72);
-    ctx.font = `italic 400 ${s(21)}px 'Segoe UI', Arial, sans-serif`;
-    const lineH = s(30);
-    const first = y + s(46);
+    // A short accent rule sets the brief apart from the heading above it.
+    const ruleY = y + s(30);
+    ctx.fillStyle = accent;
+    ctx.fillRect(left, ruleY, s(44), Math.max(1, s(3)));
+
+    ctx.fillStyle = alpha(fg, 0.7);
+    ctx.font = `400 ${s(22)}px 'Segoe UI', Arial, sans-serif`;
+    const lineH = s(32);
+    const first = ruleY + s(42);
     const room = Math.floor((lineY - s(22) - (first - s(21))) / lineH);
     const widthAt = (ly) => (photo && ly - s(21) < s(58) + D + s(12) ? headText : maxText);
     const lines = wrapText(ctx, card.brief.trim(), Math.min(3, room), (i) => widthAt(first + i * lineH));

@@ -46,7 +46,7 @@ const cardUrl = (slug) => `${SITE}/card/${slug}`;
 
 /* The brief sits under the name on a phone screen; past a few sentences it
    pushes the contact actions out of reach. Same limit as the API. */
-const BRIEF_WORDS = 60;
+const BRIEF_WORDS = 30;
 const countWords = (s) => (String(s || "").trim().match(/\S+/g) || []).length;
 
 /* A one-shot message carried across a navigation (e.g. "Card created"). */

@@ -34,13 +34,26 @@ export default function CardPreview({
     return () => { cancelled = true; };
   }, [cardUrl]);
 
+  /* Each keystroke starts a new render, and a render waits on image loads
+     part-way through. Drawing straight onto the visible canvas let two
+     renders interleave, so text from an older keystroke landed on top of
+     the newer one. Each render draws off-screen and only the latest is
+     copied in. */
   useEffect(() => {
     let cancelled = false;
+    const show = (target, source) => {
+      if (cancelled || !target) return;
+      target.width = source.width;
+      target.height = source.height;
+      target.getContext("2d").drawImage(source, 0, 0);
+    };
     (async () => {
-      if (frontRef.current) await drawFront(frontRef.current, card, { scale: PREVIEW_SCALE, logoSrc, photoSrc });
+      const front = await drawFront(document.createElement("canvas"), card, { scale: PREVIEW_SCALE, logoSrc, photoSrc });
+      show(frontRef.current, front);
       if (cancelled) return;
-      if (backRef.current)  await drawBack(backRef.current, card, { scale: PREVIEW_SCALE, qrSrc });
-    })();
+      const back = await drawBack(document.createElement("canvas"), card, { scale: PREVIEW_SCALE, qrSrc });
+      show(backRef.current, back);
+    })().catch(() => {});
     return () => { cancelled = true; };
   }, [card, logoSrc, photoSrc, qrSrc]);
 
