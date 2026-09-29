@@ -166,6 +166,7 @@
   border-color: #f5a524;
   box-shadow: 0 0 0 4px rgba(245,165,36,.16);
 }
+.field input[aria-invalid="true"] { border-color: #c0362c; box-shadow: 0 0 0 4px rgba(192,54,44,.12); }
 
 .error { margin: 0 0 12px; font-size: .8rem; font-weight: 700; color: #c0392b; }
 

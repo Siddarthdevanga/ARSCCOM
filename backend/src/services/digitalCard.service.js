@@ -117,6 +117,22 @@ const LABELS = { custom1_label: "custom field 1 label", custom1_value: "custom f
                  job_title: "job title", company_name: "company name", photo_url: "photo URL" };
 const HEX = /^#[0-9a-f]{6}$/i;
 const BRIEF_WORDS = 30;
+
+/* Same rules as the editor (frontend/app/home/cards/validate.js). India is
+   the default country: a bare 10-digit number is taken as +91; any other
+   country needs its code with a leading "+". */
+const PHONE_CHARS = /^\+?[\d\s\-().]+$/;
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const LINK = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(:\d+)?([/?#]\S*)?$/i;
+
+export const validPhone = (v) => {
+  if (!PHONE_CHARS.test(v)) return false;
+  const d = v.replace(/\D/g, "");
+  if (v.startsWith("+")) return d.startsWith("91") ? d.length === 12 : d.length >= 8 && d.length <= 15;
+  return d.replace(/^0/, "").length === 10 || (d.length === 12 && d.startsWith("91"));
+};
+export const validEmail = (v) => EMAIL.test(v);
+const validLink = (v) => LINK.test(v);
 const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
 
 const clean = (body = {}) => {
@@ -140,6 +156,11 @@ const clean = (body = {}) => {
     throw bad(`Keep the brief to ${BRIEF_WORDS} words or fewer`);
   }
 
+  if (out.phone && !validPhone(out.phone)) throw bad("Enter a valid phone number");
+  if (out.whatsapp && !validPhone(out.whatsapp)) throw bad("Enter a valid WhatsApp number");
+  if (out.email && !validEmail(out.email)) throw bad("Enter a valid email address");
+  if (out.linkedin && !validLink(out.linkedin)) throw bad("Enter a valid LinkedIn address");
+
   // NOT NULL enum / theme columns: blank means "default", never NULL.
   for (const f of ["custom1_type", "custom2_type"]) {
     if (f in out) out[f] = out[f] === "link" ? "link" : "text";
@@ -149,6 +170,14 @@ const clean = (body = {}) => {
   // A plain on/off flag: anything but an explicit yes is off.
   if (body.photo_on_print !== undefined) {
     out.photo_on_print = [true, 1, "1", "true"].includes(body.photo_on_print) ? 1 : 0;
+  }
+
+  // A custom value marked as a link must be a web address; otherwise the
+  // card shows a dead link.
+  for (const n of [1, 2]) {
+    if (out[`custom${n}_type`] === "link" && out[`custom${n}_value`] && !validLink(out[`custom${n}_value`])) {
+      throw bad(`Custom field ${n} must be a web address`);
+    }
   }
 
   for (const f of ["bg_color", "text_color", "accent_color"]) {
@@ -413,7 +442,9 @@ export const addLead = async (slug, body) => {
   const name = str(body?.name, 120);
   const phone = str(body?.phone, 20);
   if (!name || !phone) throw bad("Name and phone are required");
+  if (!validPhone(phone)) throw bad("Enter a valid phone number");
   const email = str(body?.email, 190);
+  if (email && !validEmail(email)) throw bad("Enter a valid email address");
   const leadCompany = str(body?.company_name, 160);
   const message = str(body?.message, 2000);
 
@@ -452,6 +483,17 @@ export const markLeadNotified = async (leadId) => {
 ====================================================== */
 const esc = (v = "") => String(v).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n|\r|\n/g, "\\n");
 
+/* Saved contacts are dialled from anywhere, so a bare Indian number gets
+   its +91. Anything already carrying a code is left as typed. */
+const intl = (phone = "") => {
+  const s = String(phone).trim();
+  if (s.startsWith("+")) return s;
+  const d = s.replace(/\D/g, "");
+  if (d.length === 12 && d.startsWith("91")) return `+${d}`;
+  const local = d.replace(/^0/, "");
+  return local.length === 10 ? `+91${local}` : s;
+};
+
 export const buildVCard = (card) => {
   // Splitting on the last space is a heuristic; it is right for most
   // Indian and Western names and harmless when it is not, since the full
@@ -469,8 +511,8 @@ export const buildVCard = (card) => {
 
   if (card.company_name) lines.push(`ORG:${esc(card.company_name)}`);
   if (card.job_title)    lines.push(`TITLE:${esc(card.job_title)}`);
-  if (card.phone)        lines.push(`TEL;TYPE=CELL:${esc(card.phone)}`);
-  if (card.whatsapp && card.whatsapp !== card.phone) lines.push(`TEL;TYPE=WORK:${esc(card.whatsapp)}`);
+  if (card.phone)        lines.push(`TEL;TYPE=CELL:${esc(intl(card.phone))}`);
+  if (card.whatsapp && card.whatsapp !== card.phone) lines.push(`TEL;TYPE=WORK:${esc(intl(card.whatsapp))}`);
   if (card.email)        lines.push(`EMAIL;TYPE=WORK:${esc(card.email)}`);
   if (card.linkedin)     lines.push(`URL:${esc(card.linkedin)}`);
   if (card.brief)        lines.push(`NOTE:${esc(card.brief)}`);

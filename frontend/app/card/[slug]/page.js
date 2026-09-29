@@ -11,6 +11,7 @@
    ========================================================================== */
 import { useEffect, useRef, useState, use } from "react";
 import { THEMES, resolveColors, onColor } from "../../home/cards/cardArt";
+import { phoneError, emailError } from "../../home/cards/validate";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -80,6 +81,14 @@ export default function DigitalCardPage({ params }) {
     setError("");
     if (!form.name.trim() || !form.phone.trim()) {
       setError("Please add your name and phone number.");
+      return;
+    }
+    // A lead the card owner cannot call or email back is no lead at all.
+    const bad = phoneError(form.phone) ? { f: "lp", msg: phoneError(form.phone) }
+      : emailError(form.email) ? { f: "le", msg: emailError(form.email) } : null;
+    if (bad) {
+      setError(`${bad.msg}.`);
+      document.getElementById(bad.f)?.focus();
       return;
     }
     setSending(true);
@@ -246,7 +255,8 @@ export default function DigitalCardPage({ params }) {
 
             <div className={styles.field}>
               <label htmlFor="lp">Phone *</label>
-              <input id="lp" type="tel" inputMode="numeric" value={form.phone} disabled={sending} maxLength={20}
+              <input id="lp" type="tel" inputMode="tel" value={form.phone} disabled={sending} maxLength={20}
+                     placeholder="98765 43210" aria-invalid={!!error && !!phoneError(form.phone)}
                      autoComplete="tel"
                      onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
@@ -254,6 +264,7 @@ export default function DigitalCardPage({ params }) {
             <div className={styles.field}>
               <label htmlFor="le">Email</label>
               <input id="le" type="email" value={form.email} disabled={sending} autoComplete="email" maxLength={190}
+                     aria-invalid={!!error && !!emailError(form.email)}
                      onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
 

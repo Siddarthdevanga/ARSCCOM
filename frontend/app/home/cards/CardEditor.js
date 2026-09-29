@@ -16,6 +16,7 @@ import LockedModule from "../../components/LockedModule";
 import CardPreview from "./CardPreview";
 import { downloadCard } from "./cardDownload";
 import { THEMES as CARD_THEMES, resolveColors, contrastVerdict } from "./cardArt";
+import { validateCard } from "./validate";
 import styles from "./style.module.css";
 import ed from "./editor.module.css";
 
@@ -47,6 +48,7 @@ const cardUrl = (slug) => `${SITE}/card/${slug}`;
 /* The brief sits under the name on a phone screen; past a few sentences it
    pushes the contact actions out of reach. Same limit as the API. */
 const BRIEF_WORDS = 30;
+const FIX_FIELDS = "Please fix the highlighted fields.";
 const countWords = (s) => (String(s || "").trim().match(/\S+/g) || []).length;
 
 /* A one-shot message carried across a navigation (e.g. "Card created"). */
@@ -74,6 +76,15 @@ export default function CardEditor({ cardId = null }) {
   const [notice, setNotice]   = useState("");
   const [dirty, setDirty]     = useState(false);
   const [saved, setSaved]     = useState(false);
+
+  /* Field problems are worked out on every render but only shown after
+     the first save attempt: flagging a phone number as invalid while it is
+     still being typed is noise. Once shown, they clear as each is fixed. */
+  const [showErrs, setShowErrs] = useState(false);
+  const errs = validateCard(form, { waSame, briefWords, briefLimit: BRIEF_WORDS });
+  const err = (f) => (showErrs ? errs[f] || "" : "");
+  const shownError = error === FIX_FIELDS && !Object.keys(errs).length ? "" : error;
+  const fieldErr = (f) => (err(f) ? <span id={`e-${f}`} className={ed.fieldErr}>{err(f)}</span> : null);
 
   const [photoPreview, setPhotoPreview] = useState("");
   const [printPhoto, setPrintPhoto]     = useState("");   // same-origin blob for the canvas
@@ -241,8 +252,13 @@ export default function CardEditor({ cardId = null }) {
   const save = async (e) => {
     e.preventDefault();
     setError("");
-    if (!form.name.trim() || !form.phone.trim()) { setError("Name and phone are required."); return; }
-    if (briefWords > BRIEF_WORDS) { setError(`Keep the brief to ${BRIEF_WORDS} words or fewer.`); return; }
+    if (Object.keys(errs).length) {
+      setShowErrs(true);
+      setError(FIX_FIELDS);
+      // Onto the first problem, after the render that marks it.
+      setTimeout(() => document.querySelector('[aria-invalid="true"]')?.focus(), 0);
+      return;
+    }
 
     setSaving(true);
     try {
@@ -405,7 +421,9 @@ export default function CardEditor({ cardId = null }) {
               <div className={styles.field}>
                 <label htmlFor="f-name">Name *</label>
                 <input id="f-name" maxLength={120} value={form.name} disabled={busy}
+                       aria-invalid={!!err("name")} aria-describedby={err("name") ? "e-name" : undefined}
                        onChange={(e) => update({ name: e.target.value })} />
+                {fieldErr("name")}
               </div>
               <div className={styles.field}>
                 <label htmlFor="f-title">Job title</label>
@@ -442,13 +460,20 @@ export default function CardEditor({ cardId = null }) {
             <div className={styles.row}>
               <div className={styles.field}>
                 <label htmlFor="f-phone">Phone *</label>
-                <input id="f-phone" maxLength={20} type="tel" inputMode="numeric" value={form.phone} disabled={busy}
+                <input id="f-phone" maxLength={20} type="tel" inputMode="tel" value={form.phone} disabled={busy}
+                       placeholder="98765 43210"
+                       aria-invalid={!!err("phone")} aria-describedby={err("phone") ? "e-phone" : "h-phone"}
                        onChange={(e) => update({ phone: e.target.value })} />
+                {err("phone")
+                  ? fieldErr("phone")
+                  : <span id="h-phone" className={ed.fieldHint}>+91 is assumed. For another country, start with + and its code.</span>}
               </div>
               <div className={styles.field}>
                 <label htmlFor="f-email">Email</label>
                 <input id="f-email" maxLength={190} type="email" value={form.email} disabled={busy}
+                       aria-invalid={!!err("email")} aria-describedby={err("email") ? "e-email" : undefined}
                        onChange={(e) => update({ email: e.target.value })} />
+                {fieldErr("email")}
               </div>
             </div>
 
@@ -463,15 +488,20 @@ export default function CardEditor({ cardId = null }) {
             {!waSame && (
               <div className={styles.field}>
                 <label htmlFor="f-wa">WhatsApp number</label>
-                <input id="f-wa" maxLength={20} type="tel" inputMode="numeric" value={form.whatsapp} disabled={busy}
+                <input id="f-wa" maxLength={20} type="tel" inputMode="tel" value={form.whatsapp} disabled={busy}
+                       placeholder="98765 43210"
+                       aria-invalid={!!err("whatsapp")} aria-describedby={err("whatsapp") ? "e-whatsapp" : undefined}
                        onChange={(e) => update({ whatsapp: e.target.value })} />
+                {fieldErr("whatsapp")}
               </div>
             )}
 
             <div className={styles.field}>
               <label htmlFor="f-li">LinkedIn</label>
               <input id="f-li" maxLength={255} value={form.linkedin} disabled={busy} placeholder="linkedin.com/in/…"
+                     aria-invalid={!!err("linkedin")} aria-describedby={err("linkedin") ? "e-linkedin" : undefined}
                      onChange={(e) => update({ linkedin: e.target.value })} />
+              {fieldErr("linkedin")}
             </div>
 
             {/* Two free slots. Display-only — a saved contact has nowhere to put them. */}
@@ -480,12 +510,18 @@ export default function CardEditor({ cardId = null }) {
                 <div className={styles.field}>
                   <label htmlFor={`f-cl${n}`}>Custom field {n} <span className={styles.opt}>optional</span></label>
                   <input id={`f-cl${n}`} maxLength={60} value={form[`custom${n}_label`]} disabled={busy} placeholder="Label"
+                         aria-invalid={!!err(`custom${n}_label`)}
+                         aria-describedby={err(`custom${n}_label`) ? `e-custom${n}_label` : undefined}
                          onChange={(e) => update({ [`custom${n}_label`]: e.target.value })} />
+                  {fieldErr(`custom${n}_label`)}
                 </div>
                 <div className={styles.field}>
                   <label htmlFor={`f-cv${n}`}>Value</label>
                   <div className={styles.valueRow}>
                     <input id={`f-cv${n}`} maxLength={255} value={form[`custom${n}_value`]} disabled={busy}
+                           placeholder={form[`custom${n}_type`] === "link" ? "example.com/page" : ""}
+                           aria-invalid={!!err(`custom${n}_value`)}
+                           aria-describedby={err(`custom${n}_value`) ? `e-custom${n}_value` : undefined}
                            onChange={(e) => update({ [`custom${n}_value`]: e.target.value })} />
                     <select value={form[`custom${n}_type`]} disabled={busy} aria-label={`Custom field ${n} type`}
                             onChange={(e) => update({ [`custom${n}_type`]: e.target.value })}>
@@ -493,6 +529,7 @@ export default function CardEditor({ cardId = null }) {
                       <option value="link">Link</option>
                     </select>
                   </div>
+                  {fieldErr(`custom${n}_value`)}
                 </div>
               </div>
             ))}
@@ -576,8 +613,9 @@ export default function CardEditor({ cardId = null }) {
         </aside>
 
         <div className={ed.actionBar}>
-          {error && <p className={ed.actionError} role="alert">{error}</p>}
-          {!error && saved && <p className={ed.actionOk} role="status">Changes saved.</p>}
+          {/* The "fix the fields" banner goes once the last one is fixed. */}
+          {shownError && <p className={ed.actionError} role="alert">{shownError}</p>}
+          {!shownError && saved && <p className={ed.actionOk} role="status">Changes saved.</p>}
           <div className={ed.actionBtns}>
             <button type="button" className={styles.ghostBtn} onClick={goBack} disabled={saving}>Cancel</button>
             <button type="submit" className={styles.primaryBtn} disabled={busy}>
