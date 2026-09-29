@@ -105,8 +105,8 @@ const cleanDetails = (body = {}, { partial = false } = {}) => {
 /* One card per person. A match on either the email or the phone counts:
    a second card for the same person would split their leads and confuse
    the later move into their account. */
-const assertNotDuplicate = async ({ email, claimPhone }, exceptId = 0) => {
-  const [[hit]] = await db.execute(
+const assertNotDuplicate = async ({ email, claimPhone }, exceptId = 0, conn = db) => {
+  const [[hit]] = await conn.execute(
     `SELECT id FROM digital_cards
       WHERE source = 'pool' AND claimed_at IS NOT NULL AND id <> ?
         AND (email = ? OR (claim_phone10 IS NOT NULL AND claim_phone10 = ?))
@@ -139,6 +139,8 @@ export const claimCard = async (slug, body = {}, files = {}) => {
 
   const data = cleanDetails(body);
   const claimPhone = phone10(data.phone);
+  // Early, so a repeat claimer hears it before their images upload. The
+  // check that counts is repeated under the lock below.
   await assertNotDuplicate({ email: data.email, claimPhone });
 
   checkImage(files.photo, "photo");
@@ -146,20 +148,36 @@ export const claimCard = async (slug, body = {}, files = {}) => {
   const photoKey = files.photo ? await storeImage(slug, files.photo, "photo") : null;
   const logoKey  = files.logo  ? await storeImage(slug, files.logo, "logo")   : null;
 
-  // Guarded on claimed_at, so of two people claiming the same card at
-  // the same moment exactly one wins.
-  const sets = { ...data, photo_url: photoKey, own_logo_url: logoKey, claim_phone10: claimPhone };
-  if (!photoKey) sets.photo_on_print = 0;
-  const cols = Object.keys(sets);
-  const [res] = await db.execute(
-    `UPDATE digital_cards SET ${cols.map((k) => `${k} = ?`).join(", ")}, claimed_at = NOW()
-      WHERE id = ? AND claimed_at IS NULL AND is_active = 1`,
-    [...Object.values(sets), card.id]
-  );
-  if (!res.affectedRows) {
+  // Claims run one at a time from the duplicate check to the update, so
+  // one person claiming two cards in the same second gets only the first.
+  // Claims are rare and quick; the wait is never noticeable.
+  const conn = await db.getConnection();
+  let locked = false;
+  try {
+    const [[lock]] = await conn.query("SELECT GET_LOCK('card_pool_claim', 10) AS ok");
+    locked = lock?.ok === 1;
+    if (!locked) throw Object.assign(new Error("Busy — please try again in a moment"), { code: 503 });
+
+    await assertNotDuplicate({ email: data.email, claimPhone }, 0, conn);
+
+    // Guarded on claimed_at, so of two people claiming the same card at
+    // the same moment exactly one wins.
+    const sets = { ...data, photo_url: photoKey, own_logo_url: logoKey, claim_phone10: claimPhone };
+    if (!photoKey) sets.photo_on_print = 0;
+    const cols = Object.keys(sets);
+    const [res] = await conn.execute(
+      `UPDATE digital_cards SET ${cols.map((k) => `${k} = ?`).join(", ")}, claimed_at = NOW()
+        WHERE id = ? AND claimed_at IS NULL AND is_active = 1`,
+      [...Object.values(sets), card.id]
+    );
+    if (!res.affectedRows) throw Object.assign(new Error("This card has already been claimed"), { code: 409 });
+  } catch (err) {
     dropImage(photoKey);
     dropImage(logoKey);
-    throw Object.assign(new Error("This card has already been claimed"), { code: 409 });
+    throw err;
+  } finally {
+    if (locked) await conn.query("SELECT RELEASE_LOCK('card_pool_claim')").catch(() => {});
+    conn.release();
   }
   return getCardRow(card.id);
 };
@@ -284,7 +302,13 @@ const shape = (r) => ({
   card_url: cardUrl(r.slug),
 });
 
-export const listPoolCards = async ({ status, batchId, q } = {}) => {
+/* The screen shows at most LIST_LIMIT rows and the export EXPORT_LIMIT;
+   beyond that `truncated` is set and the admin narrows by batch, status
+   or search. One more row than the limit is read to know. */
+export const LIST_LIMIT = 1000;
+export const EXPORT_LIMIT = 10000;
+
+const queryPoolCards = async ({ status, batchId, q } = {}, limit) => {
   const where = ["c.source = 'pool'"];
   const args = [];
   if (STATUS_WHERE[status]) where.push(STATUS_WHERE[status]);
@@ -298,11 +322,13 @@ export const listPoolCards = async ({ status, batchId, q } = {}) => {
   const [rows] = await db.execute(
     `${LIST_SELECT} WHERE ${where.join(" AND ")}
       ORDER BY COALESCE(c.claimed_at, c.created_at) DESC, c.id DESC
-      LIMIT 1000`,
+      LIMIT ${Number(limit) + 1}`,
     args
   );
-  return rows.map(shape);
+  return { cards: rows.slice(0, limit).map(shape), truncated: rows.length > limit, limit };
 };
+
+export const listPoolCards = (filters) => queryPoolCards(filters, LIST_LIMIT);
 
 export const getPoolCard = async (id) => {
   const [[row]] = await db.execute(`${LIST_SELECT} WHERE c.id = ? AND c.source = 'pool' LIMIT 1`, [id]);
@@ -362,12 +388,6 @@ export const setPoolCardActive = async (id, active) => {
    all wiped, and the same printed card can be handed to someone else. A
    converted card belongs to a company and is not reset from here. */
 export const resetPoolCard = async (id) => {
-  const card = await getCardRow(id);
-  if (!card || card.source !== "pool") throw notFound();
-  if (card.company_id) {
-    throw Object.assign(new Error("This card has moved into a company account and cannot be reset"), { code: 409 });
-  }
-
   const blank = Object.fromEntries(CARD_FIELDS.map((f) => [f, null]));
   blank.custom1_type = "text";
   blank.custom2_type = "text";
@@ -377,13 +397,22 @@ export const resetPoolCard = async (id) => {
     claim_phone10: null, teaser_sent_at: null, is_locked: 0,
   };
 
+  // The row is locked for the check and the wipe, so the conversion job
+  // cannot move the card into a company in between.
   const conn = await db.getConnection();
+  let card;
   try {
     await conn.beginTransaction();
+    [[card]] = await conn.execute("SELECT * FROM digital_cards WHERE id = ? LIMIT 1 FOR UPDATE", [id]);
+    if (!card || card.source !== "pool") throw notFound();
+    if (card.company_id) {
+      throw Object.assign(new Error("This card has moved into a company account and cannot be reset"), { code: 409 });
+    }
     await conn.execute("DELETE FROM card_leads WHERE card_id = ?", [card.id]);
     await conn.execute("DELETE FROM card_scans WHERE card_id = ?", [card.id]);
     await conn.execute(
-      `UPDATE digital_cards SET ${Object.keys(sets).map((k) => `${k} = ?`).join(", ")} WHERE id = ?`,
+      `UPDATE digital_cards SET ${Object.keys(sets).map((k) => `${k} = ?`).join(", ")}
+        WHERE id = ? AND company_id IS NULL`,
       [...Object.values(sets), card.id]
     );
     await conn.commit();
@@ -438,21 +467,51 @@ export const convertCard = async (cardId, companyId) => {
 };
 
 /* Claimed cards whose owner now has a paid account: any plan, including
-   the landing-page trial, which is paid. 'pending' is a registration that
-   has not paid yet. A match on either email or phone counts. */
+   the landing-page trial, which is paid, and a grace period that is still
+   running (the same rule as isLapsed). 'pending' is a registration that
+   has not paid yet. A match on either email or phone counts; the two are
+   separate joins so each can use its index. */
 export const findConvertibleCards = async () => {
+  const PAID = `c.source = 'pool' AND c.claimed_at IS NOT NULL AND c.company_id IS NULL
+    AND (co.subscription_status IN ('trial', 'active')
+         OR (co.subscription_status = 'grace_period' AND co.grace_period_ends_at > ?))`;
+  const now = new Date();
   const [rows] = await db.execute(
-    `SELECT c.id AS card_id, MIN(co.id) AS company_id
-       FROM digital_cards c
-       JOIN users u
-         ON u.email = c.email
-         OR (c.claim_phone10 IS NOT NULL AND RIGHT(u.phone, 10) = c.claim_phone10)
-       JOIN companies co ON co.id = u.company_id
-      WHERE c.source = 'pool' AND c.claimed_at IS NOT NULL AND c.company_id IS NULL
-        AND co.subscription_status IN ('trial', 'active', 'grace_period')
-      GROUP BY c.id`
+    `SELECT card_id, MIN(company_id) AS company_id FROM (
+       SELECT c.id AS card_id, co.id AS company_id
+         FROM digital_cards c
+         JOIN users u      ON u.email = c.email
+         JOIN companies co ON co.id = u.company_id
+        WHERE ${PAID}
+       UNION ALL
+       SELECT c.id, co.id
+         FROM digital_cards c
+         JOIN users u      ON RIGHT(u.phone, 10) = c.claim_phone10
+         JOIN companies co ON co.id = u.company_id
+        WHERE c.claim_phone10 IS NOT NULL AND ${PAID}
+     ) m
+     GROUP BY card_id`,
+    [now, now]
   );
   return rows;
+};
+
+/* A converted card whose company is deleted goes back to being its
+   owner's free card rather than being deleted with it (the foreign key
+   cascades): the printed QR keeps working and the leads stay with it.
+   Called inside deleteCompany's transaction, before the company row goes. */
+export const detachPoolCards = async (conn, companyId) => {
+  await conn.query(
+    `UPDATE card_leads l JOIN digital_cards c ON c.id = l.card_id
+        SET l.company_id = NULL
+      WHERE c.company_id = ? AND c.source = 'pool'`,
+    [companyId]
+  );
+  await conn.query(
+    `UPDATE digital_cards SET company_id = NULL, converted_at = NULL, is_locked = 0
+      WHERE company_id = ? AND source = 'pool'`,
+    [companyId]
+  );
 };
 
 export const convertMatchingCards = async () => {
@@ -481,11 +540,27 @@ export const leadCount = async (cardId) => {
   return Number(row.n) || 0;
 };
 
+/* Which lead this is for the card (1 = first). Fixed once saved, so two
+   leads arriving together around the fifth are each emailed the right way. */
+export const leadPosition = async (cardId, leadId) => {
+  const [[row]] = await db.execute(
+    "SELECT COUNT(*) AS n FROM card_leads WHERE card_id = ? AND id <= ?",
+    [cardId, leadId]
+  );
+  return Number(row.n) || 0;
+};
+
+/* Start of today in India, whatever the database's own time zone. */
+const IST_MS = 5.5 * 60 * 60 * 1000;
+const istDayStart = (now = Date.now()) =>
+  new Date(Math.floor((now + IST_MS) / 86400000) * 86400000 - IST_MS);
+
 export const takeTeaserSlot = async (cardId) => {
+  const now = new Date();
   const [res] = await db.execute(
-    `UPDATE digital_cards SET teaser_sent_at = NOW()
-      WHERE id = ? AND (teaser_sent_at IS NULL OR teaser_sent_at < CURDATE())`,
-    [cardId]
+    `UPDATE digital_cards SET teaser_sent_at = ?
+      WHERE id = ? AND (teaser_sent_at IS NULL OR teaser_sent_at < ?)`,
+    [now, cardId, istDayStart(now.getTime())]
   );
   return res.affectedRows > 0;
 };
@@ -493,7 +568,7 @@ export const takeTeaserSlot = async (cardId) => {
 /* ======================================================
    EXPORT
 ====================================================== */
-export const exportRows = async () => listPoolCards({});
+export const exportRows = (filters) => queryPoolCards(filters, EXPORT_LIMIT);
 
 /* The card as it would print and the company it would show, for emails. */
 export const getCardForMail = getCardRow;

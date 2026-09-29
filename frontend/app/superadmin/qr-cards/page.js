@@ -296,6 +296,7 @@ export default function QrCardsPage() {
   const [batches, setBatches] = useState([]);
   const [cards, setCards]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [capped, setCapped]   = useState(0);    // the row limit, when the list was cut off
 
   const [section, setSection] = useState("claimed");
   const [batchId, setBatchId] = useState("");
@@ -342,7 +343,7 @@ export default function QrCardsPage() {
     if (query) qs.set("q", query);
     try {
       const data = await get(`?${qs}`);
-      if (data) setCards(data.cards || []);
+      if (data) { setCards(data.cards || []); setCapped(data.truncated ? data.limit : 0); }
     } catch (err) {
       setNotice({ ok: false, text: err.message });
     } finally {
@@ -505,10 +506,23 @@ export default function QrCardsPage() {
           </select>
           <button style={smallBtn} onClick={refresh}><RefreshCw size={14} /> Refresh</button>
           <button style={smallBtn} disabled={downloading === "xlsx"}
-                  onClick={() => download("xlsx", "/export", "qr-cards.xlsx")}>
+                  title="Exports the cards in this tab, batch and search"
+                  onClick={() => {
+                    const qs = new URLSearchParams({ status: section });
+                    if (batchId) qs.set("batch", batchId);
+                    if (query) qs.set("q", query);
+                    download("xlsx", `/export?${qs}`, `qr-cards-${section}.xlsx`);
+                  }}>
             <Download size={14} /> {downloading === "xlsx" ? "Preparing…" : "Export Excel"}
           </button>
         </div>
+
+        {!loading && capped > 0 && (
+          <div style={{ margin: "0 1.5rem 10px", padding: "8px 14px", borderRadius: 10, fontSize: 13, fontWeight: 700,
+                        background: "rgba(245,165,36,0.12)", color: "#8a5a00" }} role="status">
+            Showing the latest {capped.toLocaleString("en-IN")} cards. Pick a batch or search to see the rest.
+          </div>
+        )}
 
         {loading ? (
           <div style={{ textAlign: "center", padding: 60, color: "#6b7280", fontSize: 16 }}>Loading cards…</div>

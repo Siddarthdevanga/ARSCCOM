@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/mailer.js";
 import { PLAN_FEATURES } from "../constants/pricing.js";
 import { sendOnboardingDay, ONBOARDING_DAYS } from "../cron/onboardingNurtureCron.js";
+import { detachPoolCards } from "./cardPool.service.js";
 
 /* ======================================================
    CONSTANTS & HELPERS
@@ -762,6 +763,10 @@ export const deleteCompany = async (companyId) => {
 
     // 9. users
     await conn.query(`DELETE FROM users WHERE company_id = ?`, [companyId]);
+
+    // 9b. QR pool cards that moved into this company go back to being
+    //     their owner's free card; the FK would otherwise delete them.
+    await detachPoolCards(conn, companyId);
 
     // 10. company
     await conn.query(`DELETE FROM companies WHERE id = ?`, [companyId]);

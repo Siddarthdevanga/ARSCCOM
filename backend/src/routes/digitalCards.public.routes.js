@@ -15,7 +15,7 @@ import {
   getPublicCard, recordScan, addLead, markLeadNotified, buildVCard, getPublicPhotoKey, getPublicLogoKey,
 } from "../services/digitalCard.service.js";
 import {
-  claimCard, IMAGE_TYPES, MAX_IMAGE_BYTES, FREE_FULL_LEADS, leadCount, takeTeaserSlot,
+  claimCard, IMAGE_TYPES, MAX_IMAGE_BYTES, FREE_FULL_LEADS, leadCount, leadPosition, takeTeaserSlot,
 } from "../services/cardPool.service.js";
 import { getS3Object } from "../services/s3.service.js";
 import { sendCardLeadEmail } from "../utils/cardLeadMail.service.js";
@@ -116,7 +116,7 @@ router.post("/:slug/lead", handle(async (req, res) => {
    about the first few in full; after that, a teaser at most once a day.
    The leads are all kept and are theirs when they sign up. */
 const notifyOwner = async (leadId, cardOwner, freeCard, lead) => {
-  if (freeCard && (await leadCount(freeCard.id)) > FREE_FULL_LEADS) {
+  if (freeCard && (await leadPosition(freeCard.id, leadId)) > FREE_FULL_LEADS) {
     if (await takeTeaserSlot(freeCard.id)) {
       await sendPoolTeaserEmail(freeCard, await leadCount(freeCard.id));
     }

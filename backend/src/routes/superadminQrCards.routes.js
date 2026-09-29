@@ -81,7 +81,9 @@ router.get("/batches/:id/print", handle(async (req, res) => {
 
 /* ── Export (before /:id so "export" is not read as an id) ── */
 router.get("/export", handle(async (req, res) => {
-  const rows = await exportRows();
+  const { cards: rows, truncated, limit } = await exportRows({
+    status: req.query.status, batchId: req.query.batch, q: req.query.q,
+  });
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("QR Cards");
   ws.columns = [
@@ -103,6 +105,11 @@ router.get("/export", handle(async (req, res) => {
   ];
   ws.getRow(1).font = { bold: true };
   rows.forEach((r) => ws.addRow(r));
+  if (truncated) {
+    ws.addRow([]);
+    ws.addRow([`Only the first ${limit.toLocaleString("en-IN")} cards are exported. Filter by batch or status to export the rest.`])
+      .font = { bold: true, color: { argb: "FFCC1100" } };
+  }
   ["claimed_at", "converted_at"].forEach((k) => { ws.getColumn(k).numFmt = "dd-mmm-yyyy hh:mm"; });
 
   const fn = `qr-cards-${new Date().toISOString().slice(0, 10)}.xlsx`;
@@ -114,8 +121,10 @@ router.get("/export", handle(async (req, res) => {
 
 /* ── Cards ── */
 router.get("/", handle(async (req, res) => {
-  const cards = await listPoolCards({ status: req.query.status, batchId: req.query.batch, q: req.query.q });
-  res.json({ success: true, cards });
+  const { cards, truncated, limit } = await listPoolCards({
+    status: req.query.status, batchId: req.query.batch, q: req.query.q,
+  });
+  res.json({ success: true, cards, truncated, limit });
 }));
 
 router.get("/:id", handle(async (req, res) => {
