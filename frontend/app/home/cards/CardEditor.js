@@ -443,7 +443,7 @@ export default function CardEditor({ cardId = null }) {
               <label htmlFor="f-brief">Brief</label>
               <textarea id="f-brief" maxLength={2000} rows={3} value={form.brief} disabled={busy}
                         placeholder="A line or two about what they do"
-                        aria-describedby="f-brief-count"
+                        aria-describedby="f-brief-count" aria-invalid={!!err("brief")}
                         onChange={(e) => update({ brief: e.target.value })} />
               {/* Announced only once over the limit; a live count would be
                   read out on every keystroke. */}

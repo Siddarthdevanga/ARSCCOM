@@ -81,7 +81,7 @@
 /* Field-level validation. */
 .fieldErr  { display: block; margin-top: 5px; font-size: 12px; font-weight: 600; color: #c0362c; }
 .fieldHint { display: block; margin-top: 5px; font-size: 12px; color: #8d8e97; }
-.layout input[aria-invalid="true"] { border-color: #c0362c; box-shadow: 0 0 0 3px rgba(192, 54, 44, .12); }
+.layout input[aria-invalid="true"], .layout textarea[aria-invalid="true"] { border-color: #c0362c; box-shadow: 0 0 0 3px rgba(192, 54, 44, .12); }
 
 /* ── Action bar ── */
 .actionBar {

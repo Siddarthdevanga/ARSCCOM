@@ -19,8 +19,11 @@ const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 /* Digits only for wa.me. Indian numbers are stored either bare or with a
    country code; ten digits means the code is missing. */
 const waNumber = (phone = "") => {
-  const d = String(phone).replace(/\D/g, "");
-  return d.length === 10 ? `91${d}` : d;
+  const s = String(phone).trim();
+  const d = s.replace(/\D/g, "");
+  if (s.startsWith("+")) return d;              // already has its country code
+  const local = d.replace(/^0/, "");            // 0-prefixed trunk form, e.g. 074062 08011
+  return local.length === 10 ? `91${local}` : d;
 };
 
 /* a → b by t (0..1), for #rrggbb. */

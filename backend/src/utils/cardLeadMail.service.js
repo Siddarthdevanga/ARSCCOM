@@ -18,8 +18,11 @@ const esc = (v = "") =>
 /* Digits only, so wa.me accepts it. Indian numbers are stored either bare
    or with a country code; ten digits means the code is missing. */
 const waNumber = (phone = "") => {
-  const digits = String(phone).replace(/\D/g, "");
-  return digits.length === 10 ? `91${digits}` : digits;
+  const s = String(phone).trim();
+  const d = s.replace(/\D/g, "");
+  if (s.startsWith("+")) return d;              // already has its country code
+  const local = d.replace(/^0/, "");            // 0-prefixed trunk form, e.g. 074062 08011
+  return local.length === 10 ? `91${local}` : d;
 };
 
 const row = (label, value) => value
