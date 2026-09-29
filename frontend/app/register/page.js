@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
 /* ── Disposable email domains ── */
@@ -83,16 +83,28 @@ function InlineErr({ msg, show }) {
 }
 
 export default function RegisterPage() {
-  const router = useRouter();
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
 
-  const [formData, setFormData] = useState({
-    companyName: "",
-    email: "",
-    phone: "",
+function RegisterForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Prefilled from a link, e.g. the upgrade button in a QR card email, so
+  // the account is created with the email and phone the card was claimed
+  // with, and the card finds its way into it.
+  const [formData, setFormData] = useState(() => ({
+    companyName: (searchParams.get("company") || "").slice(0, 100),
+    email: (searchParams.get("email") || "").trim().slice(0, 190),
+    phone: (searchParams.get("phone") || "").replace(/\D/g, "").slice(-10),
     whatsappUrl: "",
     password: "",
     confirmPassword: "",
-  });
+  }));
 
   const [logo, setLogo] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);

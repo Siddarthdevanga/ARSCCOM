@@ -65,6 +65,20 @@ export const publicBookingLimiter = rateLimit({
 });
 
 /* ======================================================
+   QR CARD CLAIM
+   A claim writes to S3 and sends an email, and a real person claims one
+   card, once. Tight enough that a script cannot sweep a batch's slugs.
+====================================================== */
+export const cardClaimLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000, // 10 min
+  max: 8,
+  keyGenerator: keyByIp,
+  handler,
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+/* ======================================================
    PUBLIC VISITOR REGISTRATION
 ====================================================== */
 export const publicVisitorLimiter = rateLimit({

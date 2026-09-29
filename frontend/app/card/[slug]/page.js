@@ -12,6 +12,7 @@
 import { useEffect, useRef, useState, use } from "react";
 import { THEMES, resolveColors, onColor } from "../../home/cards/cardArt";
 import { phoneError, emailError } from "../../home/cards/validate";
+import ClaimCard from "./ClaimCard";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -49,7 +50,7 @@ export default function DigitalCardPage({ params }) {
   const { slug } = use(params);
 
   const [card, setCard]       = useState(null);
-  const [state, setState]     = useState("loading");  // loading | ready | missing | unavailable
+  const [state, setState]     = useState("loading");  // loading | ready | missing | unavailable | unclaimed
   const [form, setForm]       = useState({ name: "", phone: "", email: "", company_name: "", message: "" });
   const [sending, setSending] = useState(false);
   const [sent, setSent]       = useState(false);
@@ -70,6 +71,7 @@ export default function DigitalCardPage({ params }) {
 
         if (!res.ok || !data?.card)        return setState("missing");
         if (data.card.unavailable)         { setCard(data.card); return setState("unavailable"); }
+        if (data.card.unclaimed)           return setState("unclaimed");
         setCard(data.card);
         setState("ready");
       } catch {
@@ -115,15 +117,22 @@ export default function DigitalCardPage({ params }) {
     return <div className={styles.centre}><div className={styles.spinner} /></div>;
   }
 
+  // A blank QR card from the printed pool: its page is the claim form.
+  if (state === "unclaimed") return <ClaimCard slug={slug} />;
+
   if (state === "missing" || state === "unavailable") {
     return (
       <div className={styles.centre}>
         <div className={styles.notice}>
-          <h1>Digital card not available</h1>
+          <h1>{card?.expired ? "This card has expired" : "Digital card not available"}</h1>
           <p>
-            {state === "unavailable" && card?.company_name
+            {state === "missing"
+              ? "This card could not be found. The link may be incorrect."
+              : card?.expired
+              ? "The plan behind this card has ended, so its details are no longer shown."
+              : card?.company_name
               ? `This card is not active right now. You can still reach ${card.company_name} directly.`
-              : "This card could not be found. The link may be incorrect."}
+              : "This card is no longer active."}
           </p>
           <p className={styles.noticeFooter}>Digital card by Haivisitor</p>
         </div>

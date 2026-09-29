@@ -38,6 +38,7 @@ import {
   otpSendLimiter,
   otpVerifyLimiter,
   publicBookingLimiter,
+  cardClaimLimiter,
   publicVisitorLimiter,
   paymentLimiter,
   adminWriteLimiter,
@@ -220,6 +221,7 @@ app.use("/api/public/conference", conferencePublicRoutes);
 // Smart Forms — QR-code scan page, no OTP gate (frictionless by design)
 app.use("/api/public/smart-forms/:slug/submit", publicBookingLimiter);
 app.use("/api/public/cards/:slug/lead", publicBookingLimiter);
+app.use("/api/public/cards/:slug/claim", cardClaimLimiter);
 app.use("/api/public/smart-forms", smartFormsPublicRoutes);
 app.use("/api/public/cards", digitalCardsPublicRoutes);
 

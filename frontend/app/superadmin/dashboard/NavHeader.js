@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, X, LayoutDashboard, MessageCircle, Megaphone, Link2 } from "lucide-react";
+import { Menu, X, LayoutDashboard, MessageCircle, Megaphone, Link2, QrCode } from "lucide-react";
 import styles from "./style.module.css";
 
 /* Shared header + hamburger drawer nav used by the dashboard, WhatsApp
@@ -90,6 +90,14 @@ export default function SuperAdminNav({
               onClick={closeDrawer}
             >
               <Megaphone size={17} /> WhatsApp Broadcast
+            </Link>
+
+            <Link
+              href="/superadmin/qr-cards"
+              className={`${styles.drawerLink} ${activeView === "qr-cards" ? styles.drawerLinkActive : ""}`}
+              onClick={closeDrawer}
+            >
+              <QrCode size={17} /> QR Cards
             </Link>
 
             {onRazorpayNav ? (

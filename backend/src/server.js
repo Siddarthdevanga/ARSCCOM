@@ -202,6 +202,12 @@ async function startServer() {
     }, { timezone: "Asia/Kolkata" });
     console.log("✅ Checkout Feedback Cron Scheduled (Every 5 Minutes IST)");
 
+    const { convertClaimedCards } = await import("./cron/cardConversionCron.js");
+    cron.default.schedule('*/10 * * * *', async () => {
+      try { await convertClaimedCards(); } catch (e) { console.error("❌ QR card conversion cron failed:", e); }
+    }, { timezone: "Asia/Kolkata" });
+    console.log("✅ QR Card Conversion Cron Scheduled (Every 10 Minutes IST)");
+
     // protect long requests
     server.setTimeout?.(120000);
     server.keepAliveTimeout = 65000;

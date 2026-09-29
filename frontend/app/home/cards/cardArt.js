@@ -10,6 +10,10 @@
    At 500 cards from a printer that is an expensive difference.
 
    Card is 85x55mm, the ISO/India standard. At 300dpi that is 1004x650.
+
+   The backend has a port of drawFront/drawBack in
+   backend/src/utils/cardArt.node.js, for the card images in QR card
+   welcome emails. A change to the layout here must be made there too.
    ========================================================================== */
 
 export const CARD_W = 1004;

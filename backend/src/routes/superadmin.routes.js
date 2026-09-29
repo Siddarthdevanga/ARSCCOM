@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticateSuperAdmin, requireFullSuperAdmin } from "../middlewares/superadmin.middleware.js";
 import * as ctrl from "../controllers/superadmin.controller.js";
+import qrCardsRoutes from "./superadminQrCards.routes.js";
 
 const router = express.Router();
 
@@ -45,6 +46,9 @@ router.post("/demo-appointments/:id/mark-attended",         ctrl.markDemoAttende
 router.get ("/broadcast-recipients", ctrl.broadcastRecipients);
 router.post("/send-broadcast",       ctrl.sendBroadcast);
 router.post("/bulk-optin-leads",    ctrl.bulkOptInLeads);
+
+// ── QR Cards (printed blank cards people claim) ─────────
+router.use("/qr-cards", qrCardsRoutes);
 
 // ── Company ────────────────────────────────────────────
 router.get   ("/companies/:id",                   ctrl.companyDetail);

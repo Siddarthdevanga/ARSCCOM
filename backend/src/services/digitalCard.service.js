@@ -70,7 +70,7 @@ const newSlug = () => {
 
 /* Collisions are vanishingly unlikely at 31^10, but a duplicate slug would
    hand one person another person's card — so it is checked, not assumed. */
-const uniqueSlug = async () => {
+export const uniqueSlug = async () => {
   for (let attempt = 0; attempt < 5; attempt++) {
     const slug = newSlug();
     const [[hit]] = await db.execute("SELECT id FROM digital_cards WHERE slug = ? LIMIT 1", [slug]);
@@ -96,7 +96,7 @@ export const getCardUsage = async (companyId, plan) => {
 /* ======================================================
    ADMIN CRUD
 ====================================================== */
-const CARD_FIELDS = [
+export const CARD_FIELDS = [
   "name", "job_title", "company_name", "phone", "whatsapp", "email",
   "linkedin", "brief", "photo_url",
   "custom1_label", "custom1_value", "custom1_type",
@@ -133,9 +133,9 @@ export const validPhone = (v) => {
 };
 export const validEmail = (v) => EMAIL.test(v);
 const validLink = (v) => LINK.test(v);
-const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
+export const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
 
-const clean = (body = {}) => {
+export const clean = (body = {}) => {
   const out = {};
   for (const f of CARD_FIELDS) {
     let v = body[f];
@@ -269,8 +269,10 @@ export const updateCard = async (companyId, id, body) => {
 
   // A replaced or removed photo is otherwise an orphan in the bucket.
   // Only our own uploads under this company's prefix are ever deleted.
+  // A converted QR card's photo lives under the pool prefix and is this
+  // card's alone, so it goes too.
   if ("photo_url" in data && card.photo_url && card.photo_url !== data.photo_url &&
-      card.photo_url.startsWith(photoPrefix(companyId))) {
+      (card.photo_url.startsWith(photoPrefix(companyId)) || card.photo_url.startsWith("digital-cards/pool/"))) {
     deleteFromS3(card.photo_url).catch(() => {});
   }
   return true;
@@ -334,24 +336,42 @@ export const setCardLocked = async (companyId, id, locked, plan) => {
 /* ======================================================
    PUBLIC VIEW
 ====================================================== */
+/* Pool cards (printed blank, claimed by whoever scans first) have no
+   company until their owner pays, so the company is a LEFT JOIN and a
+   missing one never counts as lapsed: a free card lives until the
+   superadmin disables it. */
+const PUBLIC_SELECT =
+  `SELECT c.*, co.logo_url AS company_logo_url, co.name AS owner_company_name,
+          co.subscription_status, co.grace_period_ends_at
+     FROM digital_cards c
+     LEFT JOIN companies co ON co.id = c.company_id`;
+
+export const isUnclaimed = (card) => card?.source === "pool" && !card.claimed_at;
+
 export const getPublicCard = async (slug) => {
-  const [[card]] = await db.execute(
-    `SELECT c.*, co.logo_url AS company_logo_url, co.name AS owner_company_name, co.id AS company_id,
-            co.subscription_status, co.grace_period_ends_at
-       FROM digital_cards c
-       JOIN companies co ON co.id = c.company_id
-      WHERE c.slug = ? LIMIT 1`,
-    [slug]
-  );
+  const [[card]] = await db.execute(`${PUBLIC_SELECT} WHERE c.slug = ? LIMIT 1`, [slug]);
   if (!card) return null;
+
+  if (!card.is_active) {
+    return { unavailable: true, company_name: card.owner_company_name || null };
+  }
+  // A blank card's page is its claim form. Nothing about the batch it came
+  // from is shown to whoever is holding it.
+  if (isUnclaimed(card)) return { unclaimed: true, slug: card.slug };
 
   // Unavailable is deliberately indistinguishable between "taken offline"
   // and "locked by a downgrade": which of the two it is tells a stranger
   // something about the company's billing, and is none of their business.
   // A lapsed subscription takes every card offline, as with the other
-  // modules, and looks the same to the scanner as a deactivated card.
-  if (!card.is_active || card.is_locked || isLapsed(card)) {
-    return { unavailable: true, company_name: card.owner_company_name };
+  // modules, and looks the same to the scanner as a deactivated card —
+  // except a claimed card whose owner's paid plan ran out, which says so.
+  const lapsed = card.company_id && isLapsed(card);
+  if (card.is_locked || lapsed) {
+    return {
+      unavailable: true,
+      expired: card.source === "pool" && !!lapsed,
+      company_name: card.owner_company_name || null,
+    };
   }
 
   return {
@@ -359,7 +379,11 @@ export const getPublicCard = async (slug) => {
     name: card.name,
     job_title: card.job_title,
     company_name: card.company_name || card.owner_company_name,
-    company_logo_url: card.company_logo_url ? `/api/logo/${card.company_id}` : null,
+    // A claimed card's own logo wins, and stays after conversion, so the
+    // card does not change under its owner when they sign up.
+    company_logo_url: isUploadedPhoto(card.own_logo_url) ? `/api/public/cards/${card.slug}/logo`
+      : card.company_logo_url && card.company_id ? `/api/logo/${card.company_id}`
+      : null,
     phone: card.phone,
     whatsapp: card.whatsapp || card.phone,   // NULL means "same as phone"
     email: card.email,
@@ -390,10 +414,11 @@ export const getPublicCard = async (slug) => {
    purpose. */
 export const recordScan = async (slug, ip, userAgent) => {
   const [[card]] = await db.execute(
-    "SELECT id, is_active, is_locked FROM digital_cards WHERE slug = ? LIMIT 1",
+    "SELECT id, is_active, is_locked, source, claimed_at FROM digital_cards WHERE slug = ? LIMIT 1",
     [slug]
   );
-  if (!card || !card.is_active || card.is_locked) return;
+  // A blank card being claimed is not a scan of anyone's card.
+  if (!card || !card.is_active || card.is_locked || isUnclaimed(card)) return;
 
   const viewerHash = crypto
     .createHash("sha256")
@@ -417,18 +442,28 @@ export const getPublicPhotoKey = async (slug) => {
   return isUploadedPhoto(row?.photo_url) ? row.photo_url : null;
 };
 
+/* Same, for a claimed card's own logo. */
+export const getPublicLogoKey = async (slug) => {
+  const card = await getPublicCard(slug);
+  if (!card || card.unavailable || card.unclaimed) return null;
+  const [[row]] = await db.execute("SELECT own_logo_url FROM digital_cards WHERE slug = ? LIMIT 1", [slug]);
+  return isUploadedPhoto(row?.own_logo_url) ? row.own_logo_url : null;
+};
+
 /* ======================================================
    LEADS
 ====================================================== */
 export const addLead = async (slug, body) => {
   const [[card]] = await db.execute(
-    `SELECT c.id, c.company_id, c.name, c.email, c.is_active, c.is_locked,
+    `SELECT c.id, c.company_id, c.slug, c.name, c.email, c.phone, c.is_active, c.is_locked,
+            c.source, c.claimed_at, c.teaser_sent_at,
             co.subscription_status, co.grace_period_ends_at
-       FROM digital_cards c JOIN companies co ON co.id = c.company_id
+       FROM digital_cards c LEFT JOIN companies co ON co.id = c.company_id
       WHERE c.slug = ? LIMIT 1`,
     [slug]
   );
-  if (!card || !card.is_active || card.is_locked || isLapsed(card)) {
+  if (!card || !card.is_active || card.is_locked || isUnclaimed(card) ||
+      (card.company_id && isLapsed(card))) {
     throw Object.assign(new Error("This card is not available"), { code: 404 });
   }
 
@@ -457,7 +492,13 @@ export const addLead = async (slug, body) => {
     ]
   );
 
-  return { id: res.insertId, cardOwner: { name: card.name, email: card.email } };
+  return {
+    id: res.insertId,
+    cardOwner: { name: card.name, email: card.email },
+    // A claimed card with no company yet: the route applies the free-card
+    // rules (first leads in full, then a daily teaser) instead.
+    freeCard: !card.company_id ? card : null,
+  };
 };
 
 export const listLeads = async (companyId) => {
@@ -485,7 +526,7 @@ const esc = (v = "") => String(v).replace(/\\/g, "\\\\").replace(/;/g, "\\;").re
 
 /* Saved contacts are dialled from anywhere, so a bare Indian number gets
    its +91. Anything already carrying a code is left as typed. */
-const intl = (phone = "") => {
+export const intl = (phone = "") => {
   const s = String(phone).trim();
   if (s.startsWith("+")) return s;
   const d = s.replace(/\D/g, "");

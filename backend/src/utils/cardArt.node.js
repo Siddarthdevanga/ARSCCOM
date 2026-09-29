@@ -1,0 +1,473 @@
+/**
+ * utils/cardArt.node.js
+ * ─────────────────────────────────────────────────────────────────────────────
+ * Visiting card artwork, drawn on the server with node-canvas.
+ *
+ * Two jobs:
+ *   - A claimed card's front and back as PNGs, for its welcome email. This
+ *     is a port of frontend/app/home/cards/cardArt.js (drawFront/drawBack);
+ *     the two are separate deployments, so the drawing is duplicated. Any
+ *     change to the card layout there must be made here too.
+ *   - The blank pool cards (Haivisitor front, QR back) and the A4 sheet
+ *     they are printed from. Those exist only here.
+ *
+ * Every face is drawn at an origin with a scale, so the same routine paints
+ * a 1004x650 PNG or a card on a PDF page in points, as vectors.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+import { createCanvas, loadImage, registerFont } from "canvas";
+import QRCode from "qrcode";
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+
+export const CARD_W = 1004;
+export const CARD_H = 650;
+
+/* Segoe UI where it exists (Windows dev); Noto on the Linux servers, as the
+   visitor pass does. Pango takes the list and uses the first it has. */
+const NOTO = "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf";
+const NOTO_BOLD = "/usr/share/fonts/truetype/noto/NotoSans-Bold.ttf";
+try {
+  if (fs.existsSync(NOTO)) registerFont(NOTO, { family: "CardSans" });
+  if (fs.existsSync(NOTO_BOLD)) registerFont(NOTO_BOLD, { family: "CardSans", weight: "bold" });
+} catch { /* the system sans-serif is an acceptable fallback */ }
+const FONT = "'Segoe UI', CardSans, Arial, sans-serif";
+
+/* Same presets as the frontend. */
+export const THEMES = {
+  ink:       { bg: "#0c0c0f", fg: "#ffffff", accent: "#f5a524" },
+  amber:     { bg: "#1a1408", fg: "#ffffff", accent: "#ffc75f" },
+  sky:       { bg: "#071722", fg: "#ffffff", accent: "#38bdf8" },
+  mint:      { bg: "#04150e", fg: "#ffffff", accent: "#34d399" },
+  violet:    { bg: "#120c22", fg: "#ffffff", accent: "#a78bfa" },
+  paper:     { bg: "#ffffff", fg: "#17171a", accent: "#b45309" },
+  cream:     { bg: "#faf5e8", fg: "#1c1917", accent: "#a16207" },
+  cloud:     { bg: "#eef0f3", fg: "#111827", accent: "#1d4ed8" },
+  skylight:  { bg: "#e8f4fb", fg: "#0b2a3c", accent: "#0369a1" },
+  mintlight: { bg: "#e9f7f0", fg: "#0b2e20", accent: "#047857" },
+  blush:     { bg: "#fcefed", fg: "#3b0d0c", accent: "#be123c" },
+};
+
+const resolveColors = (card = {}) => {
+  const preset = THEMES[card.theme] || THEMES.ink;
+  return {
+    bg:     card.bg_color     || preset.bg,
+    fg:     card.text_color   || preset.fg,
+    accent: card.accent_color || preset.accent,
+  };
+};
+
+export const QR_OPTS = {
+  width: 600, margin: 0, errorCorrectionLevel: "M",
+  color: { dark: "#000000", light: "#FFFFFF" },
+};
+
+/* ── Helpers (as in the frontend) ─────────────────────────────────────── */
+const toRgb = (hex = "#000") => {
+  const h = String(hex).replace("#", "");
+  const full = h.length === 3 ? h.split("").map((c) => c + c).join("") : h;
+  const n = parseInt(full, 16);
+  return Number.isNaN(n) ? [0, 0, 0] : [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+};
+const alpha = (hex, a) => {
+  const [r, g, b] = toRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
+
+const roundRect = (ctx, x, y, w, h, r) => {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+};
+
+const fitText = (ctx, text, maxWidth) => {
+  if (!text) return "";
+  if (ctx.measureText(text).width <= maxWidth) return text;
+  let out = text;
+  while (out.length > 1 && ctx.measureText(`${out}…`).width > maxWidth) out = out.slice(0, -1);
+  return `${out}…`;
+};
+
+const wrapText = (ctx, text, maxLines, widthOf) => {
+  if (maxLines < 1) return [];
+  const words = text.split(/\s+/);
+  const lines = [];
+  let cur = "";
+  let i = 0;
+  for (; i < words.length; i++) {
+    const next = cur ? `${cur} ${words[i]}` : words[i];
+    if (!cur || ctx.measureText(next).width <= widthOf(lines.length)) { cur = next; continue; }
+    lines.push(cur);
+    cur = words[i];
+    if (lines.length === maxLines) break;
+  }
+  if (lines.length < maxLines) { lines.push(cur); cur = ""; }
+  const out = lines.map((ln, k) => fitText(ctx, ln, widthOf(k)));
+  const last = out.length - 1;
+  if (i < words.length && !out[last].endsWith("…")) {
+    out[last] = fitText(ctx, `${out[last]}…`, widthOf(last)).replace(/……$/, "…");
+  }
+  return out;
+};
+
+/* A missing or corrupt image must never stop a card from rendering. */
+export const safeImage = async (src) => {
+  if (!src) return null;
+  try { return await loadImage(src); } catch { return null; }
+};
+
+/* Everything below draws in card units (1004x650) inside a save/restore
+   that moves to (x, y) and scales, so callers pick the output size. */
+const inCard = (ctx, x, y, scale, fn) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.beginPath();
+  ctx.rect(0, 0, CARD_W, CARD_H);
+  ctx.clip();
+  fn();
+  ctx.restore();
+};
+
+/* ── A person's card: FRONT ───────────────────────────────────────────── */
+export function paintFront(ctx, card, { logo = null, photo = null } = {}, x = 0, y0 = 0, scale = 1) {
+  inCard(ctx, x, y0, scale, () => {
+    const W = CARD_W, H = CARD_H;
+    const { bg, fg, accent } = resolveColors(card);
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, 0, 14, H);
+
+    const left = 74;
+    const right = W - 60;
+    const maxText = right - left;
+
+    if (logo) {
+      const h = 56;
+      const w = (logo.width / logo.height) * h;
+      ctx.drawImage(logo, left, 58, Math.min(w, 220), h);
+    }
+
+    const shownPhoto = card.photo_on_print ? photo : null;
+    const D = 176;
+    if (shownPhoto) {
+      const px = right - D, py = 58, r = D / 2;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(px + r, py + r, r, 0, Math.PI * 2);
+      ctx.clip();
+      const k = Math.max(D / shownPhoto.width, D / shownPhoto.height);
+      const w = shownPhoto.width * k, h = shownPhoto.height * k;
+      ctx.drawImage(shownPhoto, px + (D - w) / 2, py + (D - h) / 2, w, h);
+      ctx.restore();
+      ctx.strokeStyle = accent;
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(px + r, py + r, r - 2.5, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    const headText = shownPhoto ? maxText - D - 28 : maxText;
+
+    let y = logo ? 212 : 180;
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+    ctx.fillStyle = fg;
+    ctx.font = `800 58px ${FONT}`;
+    ctx.fillText(fitText(ctx, card.name || "", headText), left, y);
+
+    if (card.job_title) {
+      y += 52;
+      ctx.fillStyle = accent;
+      ctx.font = `600 28px ${FONT}`;
+      ctx.fillText(fitText(ctx, card.job_title, headText), left, y);
+    }
+    if (card.company_name) {
+      y += 40;
+      ctx.fillStyle = alpha(fg, 0.62);
+      ctx.font = `500 25px ${FONT}`;
+      ctx.fillText(fitText(ctx, card.company_name, headText), left, y);
+    }
+
+    const lineY = H - 160;
+    if (card.brief?.trim()) {
+      const ruleY = y + 30;
+      ctx.fillStyle = accent;
+      ctx.fillRect(left, ruleY, 44, 3);
+      ctx.fillStyle = alpha(fg, 0.7);
+      ctx.font = `400 22px ${FONT}`;
+      const lineH = 32;
+      const first = ruleY + 42;
+      const room = Math.floor((lineY - 22 - (first - 21)) / lineH);
+      const widthAt = (ly) => (shownPhoto && ly - 21 < 58 + D + 12 ? headText : maxText);
+      const lines = wrapText(ctx, card.brief.trim(), Math.min(3, room), (i) => widthAt(first + i * lineH));
+      lines.forEach((ln, i) => ctx.fillText(ln, left, first + i * lineH));
+    }
+    ctx.fillStyle = alpha(fg, 0.16);
+    ctx.fillRect(left, lineY, maxText, 1.5);
+
+    const contacts = [card.phone, card.email].filter(Boolean);
+    ctx.font = `500 24px ${FONT}`;
+    ctx.fillStyle = alpha(fg, 0.85);
+    contacts.forEach((line, i) => {
+      ctx.fillText(fitText(ctx, line, maxText), left, lineY + 46 + i * 36);
+    });
+  });
+}
+
+/* ── A person's card: BACK ────────────────────────────────────────────── */
+export function paintBack(ctx, card, { qr = null } = {}, x = 0, y0 = 0, scale = 1) {
+  inCard(ctx, x, y0, scale, () => {
+    const W = CARD_W, H = CARD_H;
+    const { bg, fg, accent } = resolveColors(card);
+
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, 0, W, 14);
+
+    const box = 300;
+    const bx = (W - box) / 2;
+    const by = 120;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, bx - 18, by - 18, box + 36, box + 36, 18);
+    ctx.fill();
+    if (qr) ctx.drawImage(qr, bx, by, box, box);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = alpha(fg, 0.78);
+    ctx.font = `700 26px ${FONT}`;
+    ctx.fillText("Scan for my details", W / 2, by + box + 78);
+
+    if (card.name) {
+      ctx.fillStyle = alpha(fg, 0.45);
+      ctx.font = `500 21px ${FONT}`;
+      ctx.fillText(fitText(ctx, card.name, W - 120), W / 2, by + box + 116);
+    }
+
+    ctx.fillStyle = alpha(fg, 0.34);
+    ctx.font = `600 17px ${FONT}`;
+    ctx.fillText("Digital card by Haivisitor", W / 2, H - 46);
+    ctx.textAlign = "left";
+  });
+}
+
+/* ── Blank pool card: FRONT ───────────────────────────────────────────────
+   The login page's brand block: the V mark, "Zodopt's", and the
+   "H[ai] Visitor" wordmark with its amber chip, on near-black. */
+const INK = "#0c0c0f";
+const AMBER = "#f5a524";
+let markPromise = null;
+const brandMark = () => {
+  markPromise ??= safeImage(path.join(HERE, "..", "assets", "haivisitor-mark.png"));
+  return markPromise;
+};
+
+export function paintBlankFront(ctx, { mark = null } = {}, x = 0, y0 = 0, scale = 1) {
+  inCard(ctx, x, y0, scale, () => {
+    const W = CARD_W, H = CARD_H;
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#121214");
+    g.addColorStop(1, "#050505");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // Amber hairline, as on every other surface in the product.
+    ctx.fillStyle = AMBER;
+    ctx.fillRect(0, H - 10, W, 10);
+
+    const cx = W / 2;
+    if (mark) ctx.drawImage(mark, cx - 105, 70, 210, 210);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.46)";
+    ctx.font = `700 22px ${FONT}`;
+    spaced(ctx, "ZODOPT’S", cx, 336, 7);
+
+    // "H" + [ai] chip + " Visitor", centred as one run.
+    ctx.font = `800 86px ${FONT}`;
+    const h = "H", ai = "ai", rest = " Visitor";
+    const padX = 11;
+    const wH = ctx.measureText(h).width;
+    const wAi = ctx.measureText(ai).width + padX * 2;
+    const wRest = ctx.measureText(rest).width;
+    const gap = 4;
+    const total = wH + gap + wAi + gap + wRest;
+    let tx = cx - total / 2;
+    const base = 440;
+
+    ctx.textAlign = "left";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(h, tx, base);
+    tx += wH + gap;
+
+    const chipTop = base - 70, chipH = 86;
+    const cg = ctx.createLinearGradient(tx, chipTop, tx + wAi, chipTop + chipH);
+    cg.addColorStop(0, "#ffc75f");
+    cg.addColorStop(1, AMBER);
+    ctx.fillStyle = cg;
+    roundRect(ctx, tx, chipTop, wAi, chipH, 14);
+    ctx.fill();
+    ctx.fillStyle = INK;
+    ctx.fillText(ai, tx + padX, base - 4);
+    tx += wAi + gap;
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(rest, tx, base);
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.14)";
+    ctx.fillRect(cx - 230, 486, 460, 1.5);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+    ctx.font = `600 21px ${FONT}`;
+    spaced(ctx, "DIGITAL VISITING CARD", cx, 530, 4);
+    ctx.textAlign = "left";
+  });
+}
+
+/* Letter-spaced text, centred on cx. canvas has no letterSpacing in
+   node-canvas, so each glyph is placed by hand. */
+const spaced = (ctx, text, cx, y, track) => {
+  const chars = [...text];
+  const widths = chars.map((c) => ctx.measureText(c).width);
+  const total = widths.reduce((a, b) => a + b, 0) + track * (chars.length - 1);
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = "left";
+  let x = cx - total / 2;
+  chars.forEach((c, i) => { ctx.fillText(c, x, y); x += widths[i] + track; });
+  ctx.textAlign = prevAlign;
+};
+
+/* ── Blank pool card: BACK ────────────────────────────────────────────── */
+export function paintBlankBack(ctx, { qr = null, serial = "" } = {}, x = 0, y0 = 0, scale = 1) {
+  inCard(ctx, x, y0, scale, () => {
+    const W = CARD_W, H = CARD_H;
+    ctx.fillStyle = INK;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = AMBER;
+    ctx.fillRect(0, 0, W, 14);
+
+    // Bigger than a person's card: this QR is the whole card.
+    const box = 360;
+    const bx = (W - box) / 2;
+    const by = 84;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, bx - 20, by - 20, box + 40, box + 40, 20);
+    ctx.fill();
+    if (qr) ctx.drawImage(qr, bx, by, box, box);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
+    ctx.font = `700 27px ${FONT}`;
+    ctx.fillText("Digital card from Haivisitor", W / 2, by + box + 90);
+
+    if (serial) {
+      ctx.fillStyle = "rgba(255, 255, 255, 0.34)";
+      ctx.font = `600 17px ${FONT}`;
+      // Clear of the bottom 3 mm, which a print trim can take off.
+      ctx.fillText(serial, W / 2, H - 46);
+    }
+    ctx.textAlign = "left";
+  });
+}
+
+/* ── Public helpers ──────────────────────────────────────────────────── */
+export const qrImage = async (url) => safeImage(await QRCode.toDataURL(url, QR_OPTS));
+
+/* A person's card as two print-resolution PNG buffers. */
+export async function renderCardPngs(card, { cardUrl, logoSrc = null, photoSrc = null }) {
+  const [logo, photo, qr] = await Promise.all([safeImage(logoSrc), safeImage(photoSrc), qrImage(cardUrl)]);
+  const front = createCanvas(CARD_W, CARD_H);
+  paintFront(front.getContext("2d"), card, { logo, photo });
+  const back = createCanvas(CARD_W, CARD_H);
+  paintBack(back.getContext("2d"), card, { qr });
+  return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
+}
+
+/* Just the QR, as a PNG buffer, for the welcome email. */
+export const qrPng = (url) => QRCode.toBuffer(url, { ...QR_OPTS, width: 480, margin: 2 });
+
+/* ── A4 print sheet ────────────────────────────────────────────────────────
+   One card per row: front on the left, back on the right, five rows to a
+   page at the real 85 x 55 mm size, with the batch header on top and crop
+   marks in the margins. Everything is vector except the QR codes and the
+   brand mark. */
+const MM = 72 / 25.4;
+const A4_W = 210 * MM, A4_H = 297 * MM;
+const CW = 85 * MM, CH = 55 * MM;
+const COL_GAP = 6 * MM;
+const ROWS = 5;
+const GRID_TOP = 14 * MM;
+
+export async function renderBatchPdf({ header = "", batchName = "", cards = [], cardUrl }) {
+  const canvas = createCanvas(A4_W, A4_H, "pdf");
+  const ctx = canvas.getContext("2d");
+  const mark = await brandMark();
+  const pages = Math.max(1, Math.ceil(cards.length / ROWS));
+
+  for (let p = 0; p < pages; p++) {
+    if (p > 0) ctx.addPage(A4_W, A4_H);
+    const rows = cards.slice(p * ROWS, p * ROWS + ROWS);
+    const qrs = await Promise.all(rows.map((c) => qrImage(cardUrl(c.slug))));
+    paintSheetPage(ctx, { title: header || batchName || "Haivisitor cards", page: p + 1, pages, rows, qrs, mark });
+  }
+  return canvas.toBuffer("application/pdf");
+}
+
+/* One A4 page, in points. Separate from the PDF so a page can be drawn to
+   an image to check the layout. */
+export function paintSheetPage(ctx, { title, page, pages, rows, qrs, mark }) {
+  const scale = CW / CARD_W;
+  const gridW = CW * 2 + COL_GAP;
+  const x0 = (A4_W - gridW) / 2;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, A4_W, A4_H);
+
+  // Header: the batch header if set, else its name, and the page count,
+  // so a dropped stack can be put back in order.
+  ctx.fillStyle = "#17171a";
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.font = `700 11px ${FONT}`;
+  ctx.fillText(fitText(ctx, title, gridW - 110), x0, 8 * MM);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#8d8e97";
+  ctx.font = `500 8px ${FONT}`;
+  ctx.fillText(`Page ${page} of ${pages}  ·  front | back`, x0 + gridW, 8 * MM);
+  ctx.textAlign = "left";
+
+  for (let r = 0; r < rows.length; r++) {
+    const y = GRID_TOP + r * CH;
+    paintBlankFront(ctx, { mark }, x0, y, scale);
+    paintBlankBack(ctx, { qr: qrs[r], serial: rows[r].serial }, x0 + CW + COL_GAP, y, scale);
+  }
+
+  // Crop marks: horizontal cuts in the side margins, vertical cuts above
+  // and below the grid. Kept 1 mm off the card so none land on it.
+  const yEnd = GRID_TOP + rows.length * CH;
+  ctx.strokeStyle = "#000000";
+  ctx.lineWidth = 0.3;
+  ctx.beginPath();
+  for (let r = 0; r <= rows.length; r++) {
+    const y = GRID_TOP + r * CH;
+    ctx.moveTo(x0 - 7 * MM, y); ctx.lineTo(x0 - 1 * MM, y);
+    ctx.moveTo(x0 + gridW + 1 * MM, y); ctx.lineTo(x0 + gridW + 7 * MM, y);
+  }
+  for (const x of [x0, x0 + CW, x0 + CW + COL_GAP, x0 + gridW]) {
+    ctx.moveTo(x, GRID_TOP - 5 * MM); ctx.lineTo(x, GRID_TOP - 1 * MM);
+    ctx.moveTo(x, yEnd + 1 * MM); ctx.lineTo(x, yEnd + 5 * MM);
+  }
+  ctx.stroke();
+}
+
+export const A4 = { w: A4_W, h: A4_H };

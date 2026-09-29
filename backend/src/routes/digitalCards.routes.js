@@ -117,10 +117,20 @@ router.post("/photo", (req, res, next) => {
 /* ── Photo bytes, for drawing onto the printed card ──
    Served from our own API so the editor can fetch it with the session and
    draw it as a same-origin blob: a presigned S3 URL would taint the canvas
-   and the PNG export would fail. Only this company's own uploads. */
+   and the PNG export would fail. Only this company's own uploads, or the
+   photo and logo of a claimed QR card that has moved into this company. */
 router.get("/photo", handle(async (req, res) => {
   const key = String(req.query.key || "");
-  if (!key.startsWith(photoPrefix(getCompanyId(req.user))) || key.includes("..")) {
+  const companyId = getCompanyId(req.user);
+  let allowed = key.startsWith(photoPrefix(companyId)) && !key.includes("..");
+  if (!allowed && isUploadedPhoto(key)) {
+    const [[hit]] = await db.execute(
+      "SELECT id FROM digital_cards WHERE company_id = ? AND (photo_url = ? OR own_logo_url = ?) LIMIT 1",
+      [companyId, key, key]
+    );
+    allowed = !!hit;
+  }
+  if (!allowed) {
     return res.status(404).json({ success: false, message: "Photo not found" });
   }
   let obj;

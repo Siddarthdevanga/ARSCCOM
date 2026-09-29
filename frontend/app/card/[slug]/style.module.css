@@ -202,6 +202,58 @@
   color: var(--card-fg); opacity: .6; text-align: center;
 }
 
+/* ── Claim a blank QR card (ClaimCard.js) ────────────────────────────────── */
+.footerDark {
+  margin: 4px 0 0; font-size: .72rem; font-weight: 600; letter-spacing: .06em;
+  color: #5f6068; text-align: center;
+}
+
+.group {
+  margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid #ececf0;
+  font-size: .68rem; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: #8d8e97;
+}
+.groupLabel {
+  display: block; margin-bottom: 8px;
+  font-size: .72rem; font-weight: 800; letter-spacing: .05em;
+  text-transform: uppercase; color: #5f6068;
+}
+
+.hint, .fieldError { margin: 5px 0 0; font-size: .74rem; line-height: 1.45; }
+.hint       { color: #8d8e97; }
+.fieldError { color: #c0392b; font-weight: 700; }
+.field textarea[aria-invalid="true"] { border-color: #c0362c; box-shadow: 0 0 0 4px rgba(192,54,44,.12); }
+
+.customRow {
+  margin-bottom: 13px; padding: 12px 12px 2px;
+  border: 1px solid #ececf0; border-radius: 12px; background: #fcfcfd;
+}
+.checkLine, .consent {
+  display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
+  font-size: .8rem; color: #5f6068; line-height: 1.5;
+}
+.checkLine { margin: -4px 0 12px; }
+.checkLine input, .consent input { margin-top: 3px; width: 16px; height: 16px; accent-color: #f5a524; flex-shrink: 0; }
+.consent { margin: 18px 0 14px; }
+
+.fileRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fileRow input[type="file"] { padding: 8px; font-size: 13px; }
+.linkBtn {
+  border: none; background: none; padding: 4px 0; cursor: pointer;
+  font-family: inherit; font-size: .78rem; font-weight: 700; color: #c0392b;
+}
+
+.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.themeChip {
+  display: flex; align-items: center; gap: 7px;
+  min-height: 38px; padding: 7px 10px; cursor: pointer;
+  border: 1px solid rgba(0,0,0,.14); border-radius: 9px;
+  font-family: inherit; font-size: .74rem; font-weight: 700; text-align: left;
+  outline: 0 solid transparent; outline-offset: 2px;
+}
+.themeChip span { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.themeChip[aria-checked="true"] { outline-width: 3px; outline-style: solid; }
+
 /* ── States ──────────────────────────────────────────────────────────────── */
 .centre {
   min-height: 100dvh; display: flex; align-items: center; justify-content: center;

@@ -180,6 +180,25 @@ export default function CardEditor({ cardId = null }) {
     return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
   }, [form.photo_url, form.photo_on_print]);
 
+  /* A QR card claimed before its owner signed up carries its own logo, and
+     keeps it here so the printed card matches the one already out there.
+     Fetched as a blob for the same canvas reason as the photo. */
+  const ownLogo = card?.own_logo_url;
+  useEffect(() => {
+    if (!ownLogo) return;
+    let url = "";
+    let cancelled = false;
+    fetch(`${API}/api/cards/photo?key=${encodeURIComponent(ownLogo)}`, { credentials: "include" })
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => {
+        if (!b || cancelled) return;
+        url = URL.createObjectURL(b);
+        setCompanyLogo(url);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; if (url) URL.revokeObjectURL(url); };
+  }, [ownLogo]);
+
   /* Closing the tab or reloading with unsaved edits asks first, the same
      as the Back button does. */
   useEffect(() => {
