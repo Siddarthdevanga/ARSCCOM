@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./style.module.css";
 
@@ -115,6 +115,30 @@ function RegisterForm() {
   const [showExistsModal, setShowExistsModal] = useState(false);
 
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "https://www.wheelbrand.in";
+
+  // Coming from a QR card email: the logo uploaded with the card becomes
+  // the company logo, unless they pick another one. No logo on the card
+  // (a 404) just leaves the field for them to fill.
+  const cardSlug = searchParams.get("card");
+  useEffect(() => {
+    if (!cardSlug || !/^[\w-]{1,64}$/.test(cardSlug)) return;
+    let cancelled = false;
+    fetch(`${API_BASE}/api/public/cards/${encodeURIComponent(cardSlug)}/logo`)
+      .then((r) => (r.ok ? r.blob() : null))
+      .then((b) => {
+        if (cancelled || !b || !["image/jpeg", "image/png", "image/webp"].includes(b.type)) return;
+        const file = new File([b], `logo.${b.type.split("/")[1]}`, { type: b.type });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (cancelled) return;
+          setLogo((cur) => cur || file);
+          setLogoPreview((cur) => cur || reader.result);
+        };
+        reader.readAsDataURL(file);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [cardSlug, API_BASE]);
 
   /* ── Computed per-field errors ── */
   const fe = {

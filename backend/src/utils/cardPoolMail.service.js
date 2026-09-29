@@ -31,6 +31,8 @@ export const registerLink = (card) => {
   const p = phone10(card.phone);
   if (p) q.set("phone", p);
   if (card.company_name) q.set("company", card.company_name);
+  // The register page pulls the logo uploaded with the card from here.
+  if (card.own_logo_url) q.set("card", card.slug);
   return `${SITE}/register?${q.toString()}`;
 };
 
