@@ -64,7 +64,7 @@ export default function CardsPage() {
     (async () => {
       const { status } = await restoreSession();
       if (status === SESSION.UNAUTHENTICATED) { router.replace("/login"); return; }
-      if (status === SESSION.OFFLINE) return;
+      if (status === SESSION.OFFLINE) { setLoad(false); say("You appear to be offline. Try again shortly.", "error"); return; }
       load();
       const flash = takeFlash();
       if (flash) say(flash);

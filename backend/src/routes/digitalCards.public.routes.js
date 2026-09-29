@@ -42,10 +42,11 @@ router.get("/:slug", handle(async (req, res) => {
   const card = await getPublicCard(req.params.slug);
   if (!card) return res.status(404).json({ success: false, message: "Card not found" });
 
-  // Counted before the unavailable check returns, but recordScan itself
-  // ignores inactive and locked cards — so an unavailable card is never
+  // An unavailable card (off, locked, or the plan has lapsed) is never
   // counted as a scan.
-  recordScan(req.params.slug, clientIp(req), req.headers["user-agent"]).catch(() => {});
+  if (!card.unavailable) {
+    recordScan(req.params.slug, clientIp(req), req.headers["user-agent"]).catch(() => {});
+  }
 
   res.json({ success: true, card });
 }));

@@ -737,13 +737,22 @@ export default function Home() {
       </button>
 
       {/* Digital Cards — a working area, so it sits above the guide. */}
-      <button className={styles.menuItem} onClick={() => { setShowMenu(false); router.push("/home/cards"); }}>
-        <div className={styles.menuItemIcon}><CreditCard size={18}/></div>
+      <button
+        className={`${styles.menuItem} ${needsRenewal ? styles.menuItemLocked : ""}`}
+        onClick={needsRenewal ? undefined : () => { setShowMenu(false); router.push("/home/cards"); }}
+        disabled={needsRenewal}
+        aria-disabled={needsRenewal}
+      >
+        <div className={styles.menuItemIcon}>
+          {needsRenewal ? <Lock size={16}/> : <CreditCard size={18}/>}
+        </div>
         <div className={styles.menuItemContent}>
           <span className={styles.menuItemTitle}>Digital Cards</span>
-          <span className={styles.menuItemSubtitle}>Visiting cards for your team, with QR</span>
+          <span className={styles.menuItemSubtitle}>
+            {needsRenewal ? "Renew to unlock" : "Visiting cards for your team, with QR"}
+          </span>
         </div>
-        <ChevronRight size={16} className={styles.menuItemArrow}/>
+        {!needsRenewal && <ChevronRight size={16} className={styles.menuItemArrow}/>}
       </button>
 
       {/* User Guide — always reachable, public page, opens in the same tab.

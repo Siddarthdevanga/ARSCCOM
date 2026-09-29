@@ -14,7 +14,7 @@ import multer from "multer";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import {
   listCards, getCard, createCard, updateCard, setCardActive, setCardLocked,
-  getCardUsage, listLeads, companyLapsed, photoPrefix,
+  getCardUsage, listLeads, companyLapsed, photoPrefix, isUploadedPhoto,
 } from "../services/digitalCard.service.js";
 import { uploadToS3, getPresignedUrl } from "../services/s3.service.js";
 import { db } from "../config/db.js";
@@ -77,10 +77,14 @@ const handle = (fn) => async (req, res) => {
   }
 };
 
-/* A short-lived link so the admin screens can show an uploaded photo. */
+/* A short-lived link so the admin screens can show an uploaded photo.
+   A legacy pasted URL is shown as it is. */
 const withPreview = async (card) => ({
   ...card,
-  photo_preview: card.photo_url ? await getPresignedUrl(card.photo_url, 3600).catch(() => null) : null,
+  photo_preview: !card.photo_url ? null
+    : isUploadedPhoto(card.photo_url) ? await getPresignedUrl(card.photo_url, 3600).catch(() => null)
+    : /^https:\/\//i.test(card.photo_url) ? card.photo_url
+    : null,
 });
 
 /* ── List, with usage so the UI can show "3 of 5 used" ── */

@@ -58,7 +58,7 @@ export default function CardEditor({ cardId = null }) {
   const router = useRouter();
   const isNew = !cardId;
 
-  const [state, setState]     = useState("loading");   // loading | ready | locked | expired | missing
+  const [state, setState]     = useState("loading");   // loading | ready | locked | expired | missing | failed
   const [card, setCard]       = useState(null);        // the saved record, when editing
   const [form, setForm]       = useState(EMPTY);
   const [waSame, setWaSame]   = useState(true);
@@ -128,11 +128,25 @@ export default function CardEditor({ cardId = null }) {
         const flash = takeFlash();
         if (flash) setNotice(flash);
       } catch (e) {
-        if (!cancelled) { setError(e.message || "Could not load"); setState("ready"); }
+        if (cancelled) return;
+        // Editing: never fall through to an empty form. Saving it would
+        // overwrite the real card with blanks.
+        if (!isNew) { setNotice("This card could not be loaded. Check your connection and try again."); setState("failed"); return; }
+        setError(e.message || "Could not load");
+        setState("ready");
       }
     })();
     return () => { cancelled = true; };
   }, [cardId, isNew, router]);
+
+  /* Closing the tab or reloading with unsaved edits asks first, the same
+     as the Back button does. */
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
 
   /* ── Employee picker, debounced ── */
   useEffect(() => {
@@ -257,13 +271,15 @@ export default function CardEditor({ cardId = null }) {
     </header>
   );
 
-  if (state === "locked" || state === "missing") {
+  if (state === "locked" || state === "missing" || state === "failed") {
     return (
       <div className={styles.page}>
         {header}
         <div className={ed.blocked}>
           <p>{state === "missing" ? "This card could not be found." : notice}</p>
-          <button className={styles.primaryBtn} onClick={() => router.push("/home/cards")}>Back to cards</button>
+          {state === "failed"
+            ? <button className={styles.primaryBtn} onClick={() => window.location.reload()}>Try again</button>
+            : <button className={styles.primaryBtn} onClick={() => router.push("/home/cards")}>Back to cards</button>}
         </div>
       </div>
     );

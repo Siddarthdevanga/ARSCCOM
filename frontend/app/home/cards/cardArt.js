@@ -240,7 +240,8 @@ export async function drawBack(canvas, card, opts = {}) {
 
   ctx.fillStyle = alpha(fg, 0.34);
   ctx.font = `600 ${s(17)}px 'Segoe UI', Arial, sans-serif`;
-  ctx.fillText("Digital card by Haivisitor", W / 2, H - s(30));
+  // Kept clear of the bottom 3 mm, which a print trim can take off.
+  ctx.fillText("Digital card by Haivisitor", W / 2, H - s(46));
   ctx.textAlign = "left";
 
   return canvas;

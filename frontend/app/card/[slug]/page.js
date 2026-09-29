@@ -22,6 +22,13 @@ const waNumber = (phone = "") => {
   return d.length === 10 ? `91${d}` : d;
 };
 
+/* a → b by t (0..1), for #rrggbb. */
+const mixHex = (a, b, t) => {
+  const p = (h, i) => parseInt(h.slice(i, i + 2), 16);
+  const c = [1, 3, 5].map((i) => Math.round(p(a, i) + (p(b, i) - p(a, i)) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+};
+
 const withProtocol = (url = "") =>
   /^https?:\/\//i.test(url) ? url : `https://${url}`;
 
@@ -122,7 +129,8 @@ export default function DigitalCardPage({ params }) {
     "--card-accent": colors.accent,
     "--card-on-accent": onColor(colors.accent),
     // A custom background gets a backdrop in the same family, dark or light.
-    background: card.bg_color ? `color-mix(in srgb, ${colors.bg} 82%, ${onColor(colors.bg) === "#ffffff" ? "#000" : "#888"})` : preset.page,
+    // Mixed here rather than with CSS color-mix, which older phones ignore.
+    background: card.bg_color ? mixHex(colors.bg, onColor(colors.bg) === "#ffffff" ? "#000000" : "#888888", 0.18) : preset.page,
   };
 
   const first = card.name?.trim().split(/\s+/)[0] || "They";
@@ -138,7 +146,9 @@ export default function DigitalCardPage({ params }) {
           )}
 
           {card.photo_url
-            ? <img src={`${API}${card.photo_url}`} alt="" className={styles.photo} />
+            ? <img src={card.photo_url.startsWith("/") ? `${API}${card.photo_url}` : card.photo_url}
+                   alt="" className={styles.photo}
+                   onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} />
             : <div className={styles.initials} aria-hidden="true">
                 {(card.name || "?").trim().charAt(0).toUpperCase()}
               </div>}

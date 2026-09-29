@@ -51,6 +51,11 @@ export const companyLapsed = async (companyId) => {
    card can never be pointed at another company's object. */
 export const photoPrefix = (companyId) => `digital-cards/${companyId}/`;
 
+/* Before uploads, the photo was a pasted URL. Those cards still exist and
+   must keep working — shown as-is, never presigned, proxied or deleted
+   (a pasted URL's path could name a real object in our own bucket). */
+export const isUploadedPhoto = (v) => typeof v === "string" && v.startsWith("digital-cards/");
+
 /* Ambiguous characters left out: these get read aloud, typed from a printed
    card, and dictated over the phone. */
 const SLUG_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
@@ -113,7 +118,7 @@ const LABELS = { custom1_label: "custom field 1 label", custom1_value: "custom f
 const HEX = /^#[0-9a-f]{6}$/i;
 const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
 
-const clean = (body = {}, companyId) => {
+const clean = (body = {}) => {
   const out = {};
   for (const f of CARD_FIELDS) {
     let v = body[f];
@@ -138,15 +143,18 @@ const clean = (body = {}, companyId) => {
     if (out[f] && !HEX.test(out[f])) throw bad("Colours must be in #RRGGBB form");
   }
 
-  if (out.photo_url && !(companyId && out.photo_url.startsWith(photoPrefix(companyId)))) {
-    throw bad("Please upload the photo again");
-  }
-
   // "WhatsApp is the same as my phone" is the normal case, and storing NULL
   // says exactly that — rather than duplicating the number and letting the
   // two drift apart on the next edit.
   if (out.whatsapp && out.phone && out.whatsapp === out.phone) out.whatsapp = null;
   return out;
+};
+
+/* A new photo must be one this company uploaded. Re-sending the photo a
+   card already has is always fine, so a legacy pasted URL survives edits. */
+const checkPhoto = (data, companyId, current = null) => {
+  if (!data.photo_url || data.photo_url === current) return;
+  if (!data.photo_url.startsWith(photoPrefix(companyId))) throw bad("Please upload the photo again");
 };
 
 export const listCards = async (companyId) => {
@@ -171,7 +179,8 @@ export const getCard = async (companyId, id) => {
 };
 
 export const createCard = async (companyId, plan, body) => {
-  const data = clean(body, companyId);
+  const data = clean(body);
+  checkPhoto(data, companyId);
   if (!data.name || !data.phone) throw Object.assign(new Error("Name and phone are required"), { code: 400 });
 
   const { remaining, limit } = await getCardUsage(companyId, plan);
@@ -194,7 +203,7 @@ export const createCard = async (companyId, plan, body) => {
 };
 
 export const updateCard = async (companyId, id, body) => {
-  const data = clean(body, companyId);
+  const data = clean(body);
   if (!Object.keys(data).length) return false;
   // Name and phone are NOT NULL; clearing either would be a DB error.
   if (("name" in data && !data.name) || ("phone" in data && !data.phone)) {
@@ -209,6 +218,7 @@ export const updateCard = async (companyId, id, body) => {
   );
   if (!card) return false;
   if (card.is_locked) throw Object.assign(new Error("This card is locked. Release it first."), { code: 403 });
+  checkPhoto(data, companyId, card.photo_url);
 
   const sets = Object.keys(data).map((k) => `${k} = ?`);
   await db.execute(
@@ -217,7 +227,9 @@ export const updateCard = async (companyId, id, body) => {
   );
 
   // A replaced or removed photo is otherwise an orphan in the bucket.
-  if ("photo_url" in data && card.photo_url && card.photo_url !== data.photo_url) {
+  // Only our own uploads under this company's prefix are ever deleted.
+  if ("photo_url" in data && card.photo_url && card.photo_url !== data.photo_url &&
+      card.photo_url.startsWith(photoPrefix(companyId))) {
     deleteFromS3(card.photo_url).catch(() => {});
   }
   return true;
@@ -314,7 +326,10 @@ export const getPublicCard = async (slug) => {
     brief: card.brief,
     // Served through a proxy by slug: the bucket is private, and a
     // presigned URL would expire on a page people bookmark.
-    photo_url: card.photo_url ? `/api/public/cards/${card.slug}/photo` : null,
+    photo_url: !card.photo_url ? null
+      : isUploadedPhoto(card.photo_url) ? `/api/public/cards/${card.slug}/photo`
+      : /^https:\/\//i.test(card.photo_url) ? card.photo_url   // legacy pasted URL
+      : null,
     custom: [
       // Both halves required: a label with no value is an empty row, and
       // an empty link value would render as a dead "https://".
@@ -332,14 +347,6 @@ export const getPublicCard = async (slug) => {
    reversed — the counter does not need to know who anyone is, and holding
    visitor IPs against a named individual would be personal data with no
    purpose. */
-/* The S3 key behind a public card's photo, only while the card is live. */
-export const getPublicPhotoKey = async (slug) => {
-  const card = await getPublicCard(slug);
-  if (!card || card.unavailable || !card.photo_url) return null;
-  const [[row]] = await db.execute("SELECT photo_url FROM digital_cards WHERE slug = ? LIMIT 1", [slug]);
-  return row?.photo_url || null;
-};
-
 export const recordScan = async (slug, ip, userAgent) => {
   const [[card]] = await db.execute(
     "SELECT id, is_active, is_locked FROM digital_cards WHERE slug = ? LIMIT 1",
@@ -359,6 +366,14 @@ export const recordScan = async (slug, ip, userAgent) => {
      VALUES (?, ?, CURDATE())`,
     [card.id, viewerHash]
   );
+};
+
+/* The S3 key behind a public card's photo, only while the card is live. */
+export const getPublicPhotoKey = async (slug) => {
+  const card = await getPublicCard(slug);
+  if (!card || card.unavailable || !card.photo_url) return null;
+  const [[row]] = await db.execute("SELECT photo_url FROM digital_cards WHERE slug = ? LIMIT 1", [slug]);
+  return isUploadedPhoto(row?.photo_url) ? row.photo_url : null;
 };
 
 /* ======================================================
