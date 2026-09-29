@@ -9,7 +9,7 @@
    save — being told you are out of cards after filling in a form is the
    wrong moment to find out.
    ========================================================================== */
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
@@ -17,26 +17,12 @@ import {
   Download, Users, Eye, MessageSquare,
 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
-import CardPreview from "./CardPreview";
-import { THEMES as CARD_THEMES, resolveColors, contrastVerdict } from "./cardArt";
+import LockedModule from "../../components/LockedModule";
+import { takeFlash } from "./CardEditor";
 import styles from "./style.module.css";
 
 const API  = process.env.NEXT_PUBLIC_API_BASE_URL;
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
-
-/* Single source of truth in cardArt, so the picker, the preview and the
-   downloaded PNG cannot disagree about what a theme looks like. */
-const THEMES = Object.entries(CARD_THEMES).map(([key, t]) => ({
-  key, label: t.label, swatch: t.bg,
-}));
-
-const EMPTY = {
-  name: "", job_title: "", company_name: "", phone: "", whatsapp: "", email: "",
-  linkedin: "", brief: "", photo_url: "",
-  custom1_label: "", custom1_value: "", custom1_type: "text",
-  custom2_label: "", custom2_value: "", custom2_type: "text",
-  theme: "ink", bg_color: "", text_color: "", accent_color: "",
-};
 
 const cardUrl = (slug) => `${SITE}/card/${slug}`;
 
@@ -49,20 +35,9 @@ export default function CardsPage() {
   const [query, setQuery]   = useState("");
   const [toast, setToast]   = useState(null);
 
-  const [editing, setEditing]   = useState(null);  // card being edited, or {} for new
-  const [form, setForm]         = useState(EMPTY);
-  const [waSame, setWaSame]     = useState(true);
-  const [saving, setSaving]     = useState(false);
-  const [formError, setFormErr] = useState("");
-
-  const [companyLogo, setCompanyLogo] = useState("");
+  const [expired, setExpired] = useState(false);
   const [qrFor, setQrFor]   = useState(null);
   const [qrData, setQrData] = useState("");
-
-  // Employee picker
-  const [empQuery, setEmpQuery] = useState("");
-  const [employees, setEmployees] = useState([]);
-  const empTimer = useRef(null);
 
   const say = (msg, type = "success") => {
     setToast({ msg, type });
@@ -73,13 +48,10 @@ export default function CardsPage() {
     try {
       const res = await fetch(`${API}/api/cards`, { credentials: "include" });
       if (res.status === 401) { router.replace("/login"); return; }
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
       if (!res.ok) throw new Error(data?.message || "Could not load cards");
       setCards(data.cards || []);
-      try {
-        const stored = JSON.parse(localStorage.getItem("company") || "{}");
-        setCompanyLogo(stored?.id ? `${API}/api/logo/${stored.id}` : "");
-      } catch { /* no logo is fine — the card renders without one */ }
       setUsage(data.usage || { used: 0, limit: 0, remaining: 0 });
     } catch (e) {
       say(e.message || "Could not load cards", "error");
@@ -94,82 +66,17 @@ export default function CardsPage() {
       if (status === SESSION.UNAUTHENTICATED) { router.replace("/login"); return; }
       if (status === SESSION.OFFLINE) return;
       load();
+      const flash = takeFlash();
+      if (flash) say(flash);
     })();
   }, [load, router]);
-
-  /* Employee search, debounced — this fires on every keystroke otherwise. */
-  useEffect(() => {
-    if (!editing) return;
-    if (empTimer.current) clearTimeout(empTimer.current);
-    if (!empQuery.trim()) { setEmployees([]); return; }
-
-    empTimer.current = setTimeout(async () => {
-      try {
-        const res = await fetch(`${API}/api/employees?search=${encodeURIComponent(empQuery)}&limit=6`,
-          { credentials: "include" });
-        const data = await res.json().catch(() => ({}));
-        setEmployees(Array.isArray(data) ? data : data?.employees || []);
-      } catch { setEmployees([]); }
-    }, 280);
-
-    return () => { if (empTimer.current) clearTimeout(empTimer.current); };
-  }, [empQuery, editing]);
-
-  /* Prefills from the employee record but leaves everything editable — the
-     card often needs a different number or a title the HR record lacks. */
-  const pickEmployee = (emp) => {
-    setForm((f) => ({
-      ...f,
-      name:  emp.name  || f.name,
-      email: emp.email || f.email,
-      phone: emp.phone || f.phone,
-      job_title: f.job_title || emp.department || "",
-    }));
-    setEmpQuery("");
-    setEmployees([]);
-  };
 
   const openNew = () => {
     if (usage.remaining <= 0) {
       say(`Your plan allows ${usage.limit} active card${usage.limit === 1 ? "" : "s"}. Deactivate one first.`, "error");
       return;
     }
-    setForm(EMPTY); setWaSame(true); setFormErr(""); setEditing({});
-  };
-
-  const openEdit = (card) => {
-    setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(card).filter(([, v]) => v !== null)) });
-    setWaSame(!card.whatsapp || card.whatsapp === card.phone);
-    setFormErr(""); setEditing(card);
-  };
-
-  const save = async (e) => {
-    e.preventDefault();
-    setFormErr("");
-    if (!form.name.trim() || !form.phone.trim()) {
-      setFormErr("Name and phone are required.");
-      return;
-    }
-    setSaving(true);
-    try {
-      const isNew = !editing?.id;
-      const res = await fetch(`${API}/api/cards${isNew ? "" : `/${editing.id}`}`, {
-        method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        // Blank WhatsApp is stored as NULL, which means "same as phone".
-        body: JSON.stringify({ ...form, whatsapp: waSame ? "" : form.whatsapp }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Could not save the card");
-      setEditing(null);
-      say(isNew ? "Card created." : "Card updated.");
-      load();
-    } catch (err) {
-      setFormErr(err.message);
-    } finally {
-      setSaving(false);
-    }
+    router.push("/home/cards/new");
   };
 
   const patchFlag = async (card, path, body, okMsg) => {
@@ -181,6 +88,7 @@ export default function CardsPage() {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
       if (!res.ok) throw new Error(data?.message || "Could not update the card");
       say(okMsg);
       load();
@@ -204,12 +112,6 @@ export default function CardsPage() {
     }
   };
 
-  /* Recomputed on every keystroke so the preview and the warning track the
-     form rather than the saved record. */
-  const live = resolveColors(form);
-  const hasOverride = !!(form.bg_color || form.text_color || form.accent_color);
-  const contrast = contrastVerdict(live.fg, live.bg);
-
   const filtered = cards.filter((c) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
@@ -217,6 +119,7 @@ export default function CardsPage() {
       .some((v) => (v || "").toLowerCase().includes(q));
   });
 
+  if (expired) return <LockedModule moduleName="Digital Cards" />;
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
 
   return (
@@ -263,9 +166,11 @@ export default function CardsPage() {
               <article key={card.id}
                        className={`${styles.cardTile} ${!card.is_active || card.is_locked ? styles.tileOff : ""}`}>
                 <div className={styles.tileHead}>
-                  <span className={styles.avatar} aria-hidden="true">
-                    {(card.name || "?").trim().charAt(0).toUpperCase()}
-                  </span>
+                  {card.photo_preview
+                    ? <img src={card.photo_preview} alt="" className={`${styles.avatar} ${styles.avatarImg}`} />
+                    : <span className={styles.avatar} aria-hidden="true">
+                        {(card.name || "?").trim().charAt(0).toUpperCase()}
+                      </span>}
                   <div className={styles.tileWho}>
                     <h2>{card.name}</h2>
                     {card.job_title && <p>{card.job_title}</p>}
@@ -284,7 +189,7 @@ export default function CardsPage() {
 
                 <div className={styles.tileActions}>
                   <button onClick={() => showQr(card)} title="QR code"><QrCode size={15} /></button>
-                  <button onClick={() => openEdit(card)} disabled={!!card.is_locked} title="Edit">
+                  <button onClick={() => router.push(`/home/cards/${card.id}`)} disabled={!!card.is_locked} title="Edit">
                     <Pencil size={15} />
                   </button>
                   <button
@@ -307,217 +212,6 @@ export default function CardsPage() {
           </div>
         )}
       </div>
-
-      {/* ── Editor ── */}
-      {editing && (
-        <div className={styles.overlay} onClick={() => !saving && setEditing(null)} role="presentation">
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-            <div className={styles.modalHead}>
-              <h2>{editing.id ? "Edit card" : "New card"}</h2>
-              <button onClick={() => setEditing(null)} disabled={saving} aria-label="Close"><X size={16} /></button>
-            </div>
-
-            <form className={styles.form} onSubmit={save} noValidate>
-
-              {/* Prefill from an existing employee, or just type it in. */}
-              {!editing.id && (
-                <div className={styles.pickWrap}>
-                  <label htmlFor="emp">Start from an employee <span>optional</span></label>
-                  <input id="emp" value={empQuery} placeholder="Search your employee list…"
-                         onChange={(e) => setEmpQuery(e.target.value)} autoComplete="off" />
-                  {employees.length > 0 && (
-                    <ul className={styles.pickList}>
-                      {employees.map((emp) => (
-                        <li key={emp.id}>
-                          <button type="button" onClick={() => pickEmployee(emp)}>
-                            <strong>{emp.name}</strong>
-                            <span>{[emp.department, emp.phone].filter(Boolean).join(" · ")}</span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              )}
-
-              <div className={styles.row}>
-                <div className={styles.field}>
-                  <label htmlFor="f-name">Name *</label>
-                  <input id="f-name" maxLength={120} value={form.name} disabled={saving}
-                         onChange={(e) => setForm({ ...form, name: e.target.value })} />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="f-title">Job title</label>
-                  <input id="f-title" maxLength={120} value={form.job_title} disabled={saving}
-                         onChange={(e) => setForm({ ...form, job_title: e.target.value })} />
-                </div>
-              </div>
-
-              <div className={styles.row}>
-                <div className={styles.field}>
-                  <label htmlFor="f-phone">Phone *</label>
-                  <input id="f-phone" maxLength={20} type="tel" inputMode="numeric" value={form.phone} disabled={saving}
-                         onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="f-email">Email</label>
-                  <input id="f-email" maxLength={190} type="email" value={form.email} disabled={saving}
-                         onChange={(e) => setForm({ ...form, email: e.target.value })} />
-                </div>
-              </div>
-
-              {/* Same number in the overwhelming majority of cases, so the
-                  second field only appears when it genuinely differs. */}
-              <label className={styles.checkRow}>
-                <input type="checkbox" disabled={saving}
-                       checked={waSame}
-                       onChange={(e) => setWaSame(e.target.checked)} />
-                WhatsApp is the same as this phone number
-              </label>
-
-              {/* Driven by its own flag, not by the value: deriving it from
-                  the value made the field vanish the moment it was needed. */}
-              {!waSame && (
-                <div className={styles.field}>
-                  <label htmlFor="f-wa">WhatsApp number</label>
-                  <input id="f-wa" maxLength={20} type="tel" inputMode="numeric" value={form.whatsapp} disabled={saving}
-                         onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
-                </div>
-              )}
-
-              <div className={styles.row}>
-                <div className={styles.field}>
-                  <label htmlFor="f-org">Company</label>
-                  <input id="f-org" maxLength={160} value={form.company_name} disabled={saving} placeholder="Defaults to your company"
-                         onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
-                </div>
-                <div className={styles.field}>
-                  <label htmlFor="f-li">LinkedIn</label>
-                  <input id="f-li" maxLength={255} value={form.linkedin} disabled={saving} placeholder="linkedin.com/in/…"
-                         onChange={(e) => setForm({ ...form, linkedin: e.target.value })} />
-                </div>
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="f-photo">Photo URL <span className={styles.opt}>optional</span></label>
-                <input id="f-photo" maxLength={255} value={form.photo_url} disabled={saving} placeholder="https://…"
-                       onChange={(e) => setForm({ ...form, photo_url: e.target.value })} />
-              </div>
-
-              <div className={styles.field}>
-                <label htmlFor="f-brief">Brief</label>
-                <textarea id="f-brief" maxLength={2000} rows={3} value={form.brief} disabled={saving}
-                          placeholder="A line or two about what they do"
-                          onChange={(e) => setForm({ ...form, brief: e.target.value })} />
-              </div>
-
-              {/* Two free slots. Display-only — a saved contact has nowhere
-                  to put them. */}
-              {[1, 2].map((n) => (
-                <div className={styles.row} key={n}>
-                  <div className={styles.field}>
-                    <label htmlFor={`f-cl${n}`}>Custom field {n} <span className={styles.opt}>optional</span></label>
-                    <input id={`f-cl${n}`} maxLength={60} value={form[`custom${n}_label`]} disabled={saving} placeholder="Label"
-                           onChange={(e) => setForm({ ...form, [`custom${n}_label`]: e.target.value })} />
-                  </div>
-                  <div className={styles.field}>
-                    <label htmlFor={`f-cv${n}`}>Value</label>
-                    <div className={styles.valueRow}>
-                      <input id={`f-cv${n}`} maxLength={255} value={form[`custom${n}_value`]} disabled={saving}
-                             onChange={(e) => setForm({ ...form, [`custom${n}_value`]: e.target.value })} />
-                      <select value={form[`custom${n}_type`]} disabled={saving}
-                              onChange={(e) => setForm({ ...form, [`custom${n}_type`]: e.target.value })}>
-                        <option value="text">Text</option>
-                        <option value="link">Link</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-              ))}
-
-              <div className={styles.field}>
-                <label>Theme</label>
-                <div className={styles.themes}>
-                  {THEMES.map((t) => (
-                    <button type="button" key={t.key}
-                            className={`${styles.theme} ${form.theme === t.key && !hasOverride ? styles.themeOn : ""}`}
-                            onClick={() => setForm({
-                              ...form, theme: t.key,
-                              // Choosing a preset clears any override, or the
-                              // preset would appear selected and do nothing.
-                              bg_color: "", text_color: "", accent_color: "",
-                            })}>
-                      <span style={{ background: t.swatch }} />
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.field}>
-                <div className={styles.colourHead}>
-                  <label htmlFor="c-bg">Your own colours <span className={styles.opt}>optional</span></label>
-                  {hasOverride && (
-                    <button type="button" className={styles.clearColours}
-                            onClick={() => setForm({ ...form, bg_color: "", text_color: "", accent_color: "" })}>
-                      Reset to theme
-                    </button>
-                  )}
-                </div>
-
-                <div className={styles.colours}>
-                  {[
-                    ["bg_color",     "Background", "c-bg"],
-                    ["text_color",   "Text",       "c-fg"],
-                    ["accent_color", "Accent",     "c-ac"],
-                  ].map(([key, label, id]) => (
-                    <label key={key} className={styles.colour} htmlFor={id}>
-                      <input id={id} type="color" disabled={saving}
-                             value={form[key] || live[key === "bg_color" ? "bg" : key === "text_color" ? "fg" : "accent"]}
-                             onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
-                      <span>{label}</span>
-                    </label>
-                  ))}
-                </div>
-
-                {/* Warn, do not block: it is their brand, and a warning
-                    makes the risk visible without overriding their choice. */}
-                {!contrast.ok && (
-                  <p className={styles.contrastWarn} role="status">
-                    Text contrast is {contrast.ratio.toFixed(1)}:1. {contrast.note}.
-                  </p>
-                )}
-              </div>
-
-              <div className={styles.field}>
-                <label>Preview</label>
-                <CardPreview
-                  card={form}
-                  cardUrl={editing.slug ? cardUrl(editing.slug) : `${SITE}/card/preview`}
-                  logoSrc={companyLogo}
-                  downloadable={!!editing.slug}
-                />
-                {!editing.slug && (
-                  <p className={styles.previewNote}>
-                    The QR becomes real once the card is created — download is available then.
-                  </p>
-                )}
-              </div>
-
-              {formError && <p className={styles.formError} role="alert">{formError}</p>}
-
-              <div className={styles.formActions}>
-                <button type="button" className={styles.ghostBtn} onClick={() => setEditing(null)} disabled={saving}>
-                  Cancel
-                </button>
-                <button type="submit" className={styles.primaryBtn} disabled={saving}>
-                  {saving ? "Saving…" : editing.id ? "Save changes" : "Create card"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ── QR ── */}
       {qrFor && (

@@ -15,13 +15,23 @@
 export const CARD_W = 1004;
 export const CARD_H = 650;
 
+/* `page` is the backdrop behind the card on the public web view.
+   Light-theme accents are deliberately deep: the job title is set in the
+   accent colour, so a pale accent on a pale card would be unreadable. */
 export const THEMES = {
-  ink:    { bg: "#0c0c0f", fg: "#ffffff", accent: "#f5a524", label: "Ink" },
-  paper:  { bg: "#ffffff", fg: "#17171a", accent: "#f5a524", label: "Paper" },
-  amber:  { bg: "#1a1408", fg: "#ffffff", accent: "#ffc75f", label: "Amber" },
-  sky:    { bg: "#071722", fg: "#ffffff", accent: "#38bdf8", label: "Sky" },
-  mint:   { bg: "#04150e", fg: "#ffffff", accent: "#34d399", label: "Mint" },
-  violet: { bg: "#120c22", fg: "#ffffff", accent: "#a78bfa", label: "Violet" },
+  // Dark
+  ink:       { tone: "dark",  bg: "#0c0c0f", fg: "#ffffff", accent: "#f5a524", page: "#050505", label: "Ink" },
+  amber:     { tone: "dark",  bg: "#1a1408", fg: "#ffffff", accent: "#ffc75f", page: "#0d0a04", label: "Amber" },
+  sky:       { tone: "dark",  bg: "#071722", fg: "#ffffff", accent: "#38bdf8", page: "#040d14", label: "Sky" },
+  mint:      { tone: "dark",  bg: "#04150e", fg: "#ffffff", accent: "#34d399", page: "#020b07", label: "Mint" },
+  violet:    { tone: "dark",  bg: "#120c22", fg: "#ffffff", accent: "#a78bfa", page: "#090616", label: "Violet" },
+  // Light
+  paper:     { tone: "light", bg: "#ffffff", fg: "#17171a", accent: "#b45309", page: "#f4f4f6", label: "White" },
+  cream:     { tone: "light", bg: "#faf5e8", fg: "#1c1917", accent: "#a16207", page: "#f1ead8", label: "Cream" },
+  cloud:     { tone: "light", bg: "#eef0f3", fg: "#111827", accent: "#1d4ed8", page: "#e2e5ea", label: "Cloud" },
+  skylight:  { tone: "light", bg: "#e8f4fb", fg: "#0b2a3c", accent: "#0369a1", page: "#d6eaf5", label: "Sky Light" },
+  mintlight: { tone: "light", bg: "#e9f7f0", fg: "#0b2e20", accent: "#047857", page: "#d5efe2", label: "Mint Light" },
+  blush:     { tone: "light", bg: "#fcefed", fg: "#3b0d0c", accent: "#be123c", page: "#f6dedb", label: "Blush" },
 };
 
 /* An override only counts when it is actually set — an empty picker value
@@ -34,6 +44,11 @@ export const resolveColors = (card = {}) => {
     accent: card.accent_color || preset.accent,
   };
 };
+
+/* Text to set on an accent-filled surface (buttons, the initial badge):
+   whichever of near-black or white reads better on it. */
+export const onColor = (hex) =>
+  contrastRatio("#0c0c0f", hex) >= contrastRatio("#ffffff", hex) ? "#0c0c0f" : "#ffffff";
 
 /* ── Contrast ────────────────────────────────────────────────────────────
    Free colour pickers mean someone will eventually choose light grey on
@@ -222,6 +237,10 @@ export async function drawBack(canvas, card, opts = {}) {
     ctx.font = `500 ${s(21)}px 'Segoe UI', Arial, sans-serif`;
     ctx.fillText(fitText(ctx, card.name, W - s(120)), W / 2, y + box + s(116));
   }
+
+  ctx.fillStyle = alpha(fg, 0.34);
+  ctx.font = `600 ${s(17)}px 'Segoe UI', Arial, sans-serif`;
+  ctx.fillText("Digital card by Haivisitor", W / 2, H - s(30));
   ctx.textAlign = "left";
 
   return canvas;

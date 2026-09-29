@@ -12,6 +12,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, Download, MessageSquare, Phone } from "lucide-react";
 import { restoreSession, SESSION } from "../../../utils/session";
+import LockedModule from "../../../components/LockedModule";
 import styles from "../style.module.css";
 import own from "./leads.module.css";
 
@@ -37,6 +38,7 @@ export default function CardLeadsPage() {
   const [query, setQuery] = useState("");
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState(null);
+  const [expired, setExpired] = useState(false);
 
   const say = (msg, type = "success") => {
     setToast({ msg, type });
@@ -47,7 +49,8 @@ export default function CardLeadsPage() {
     try {
       const res = await fetch(`${API}/api/cards/leads/all`, { credentials: "include" });
       if (res.status === 401) { router.replace("/login"); return; }
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
       if (!res.ok) throw new Error(data?.message || "Could not load leads");
       setLeads(data.leads || []);
     } catch (e) {
@@ -70,6 +73,7 @@ export default function CardLeadsPage() {
     setExporting(true);
     try {
       const res = await fetch(`${API}/api/exports/card-leads`, { credentials: "include" });
+      if (res.status === 403) { setExpired(true); return; }
       if (!res.ok) throw new Error("Export failed");
       const blob = await res.blob();
       const cd = res.headers.get("content-disposition");
@@ -79,7 +83,8 @@ export default function CardLeadsPage() {
       a.href = url;
       a.download = match?.[1] || `card-leads-${Date.now()}.xlsx`;
       a.click();
-      URL.revokeObjectURL(url);
+      // Revoking synchronously can cancel the download in Safari.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       say("Card leads exported.");
     } catch {
       say("Export failed. Please try again.", "error");
@@ -95,6 +100,7 @@ export default function CardLeadsPage() {
       .some((v) => (v || "").toLowerCase().includes(q));
   });
 
+  if (expired) return <LockedModule moduleName="Card Leads" />;
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
 
   return (

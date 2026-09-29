@@ -20,6 +20,36 @@
 import crypto from "crypto";
 import { db } from "../config/db.js";
 import { cardLimitFor } from "../constants/pricing.js";
+import { deleteFromS3 } from "./s3.service.js";
+
+/* ======================================================
+   SUBSCRIPTION LAPSE
+   Same rule as the rest of the product: trial, active and a running grace
+   period all work; expired, cancelled, suspended or a grace period that
+   has run out do not. Checked on every request rather than trusted from
+   a token, so a lapse takes effect immediately.
+====================================================== */
+export const isLapsed = (company) => {
+  const status = String(company?.subscription_status || "").toLowerCase();
+  if (["expired", "cancelled", "suspended"].includes(status)) return true;
+  if (status === "grace_period") {
+    return !company.grace_period_ends_at || new Date(company.grace_period_ends_at) < new Date();
+  }
+  return false;
+};
+
+export const companyLapsed = async (companyId) => {
+  const [[company]] = await db.execute(
+    "SELECT subscription_status, grace_period_ends_at FROM companies WHERE id = ? LIMIT 1",
+    [companyId]
+  );
+  return !company || isLapsed(company);
+};
+
+/* Uploaded photos live under a per-company prefix. A photo_url that does
+   not start with it was not uploaded by this company and is refused, so a
+   card can never be pointed at another company's object. */
+export const photoPrefix = (companyId) => `digital-cards/${companyId}/`;
 
 /* Ambiguous characters left out: these get read aloud, typed from a printed
    card, and dictated over the phone. */
@@ -83,7 +113,7 @@ const LABELS = { custom1_label: "custom field 1 label", custom1_value: "custom f
 const HEX = /^#[0-9a-f]{6}$/i;
 const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
 
-const clean = (body = {}) => {
+const clean = (body = {}, companyId) => {
   const out = {};
   for (const f of CARD_FIELDS) {
     let v = body[f];
@@ -108,6 +138,10 @@ const clean = (body = {}) => {
     if (out[f] && !HEX.test(out[f])) throw bad("Colours must be in #RRGGBB form");
   }
 
+  if (out.photo_url && !(companyId && out.photo_url.startsWith(photoPrefix(companyId)))) {
+    throw bad("Please upload the photo again");
+  }
+
   // "WhatsApp is the same as my phone" is the normal case, and storing NULL
   // says exactly that — rather than duplicating the number and letting the
   // two drift apart on the next edit.
@@ -128,8 +162,16 @@ export const listCards = async (companyId) => {
   return rows;
 };
 
+export const getCard = async (companyId, id) => {
+  const [[card]] = await db.execute(
+    "SELECT * FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
+    [id, companyId]
+  );
+  return card || null;
+};
+
 export const createCard = async (companyId, plan, body) => {
-  const data = clean(body);
+  const data = clean(body, companyId);
   if (!data.name || !data.phone) throw Object.assign(new Error("Name and phone are required"), { code: 400 });
 
   const { remaining, limit } = await getCardUsage(companyId, plan);
@@ -152,7 +194,7 @@ export const createCard = async (companyId, plan, body) => {
 };
 
 export const updateCard = async (companyId, id, body) => {
-  const data = clean(body);
+  const data = clean(body, companyId);
   if (!Object.keys(data).length) return false;
   // Name and phone are NOT NULL; clearing either would be a DB error.
   if (("name" in data && !data.name) || ("phone" in data && !data.phone)) {
@@ -162,7 +204,7 @@ export const updateCard = async (companyId, id, body) => {
   // A locked card is read-only: the plan no longer covers it, so the admin
   // must release it before editing.
   const [[card]] = await db.execute(
-    "SELECT id, is_locked FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
+    "SELECT id, is_locked, photo_url FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
     [id, companyId]
   );
   if (!card) return false;
@@ -173,6 +215,11 @@ export const updateCard = async (companyId, id, body) => {
     `UPDATE digital_cards SET ${sets.join(", ")} WHERE id = ? AND company_id = ?`,
     [...Object.values(data), id, companyId]
   );
+
+  // A replaced or removed photo is otherwise an orphan in the bucket.
+  if ("photo_url" in data && card.photo_url && card.photo_url !== data.photo_url) {
+    deleteFromS3(card.photo_url).catch(() => {});
+  }
   return true;
 };
 
@@ -236,7 +283,8 @@ export const setCardLocked = async (companyId, id, locked, plan) => {
 ====================================================== */
 export const getPublicCard = async (slug) => {
   const [[card]] = await db.execute(
-    `SELECT c.*, co.logo_url AS company_logo_url, co.name AS owner_company_name, co.id AS company_id
+    `SELECT c.*, co.logo_url AS company_logo_url, co.name AS owner_company_name, co.id AS company_id,
+            co.subscription_status, co.grace_period_ends_at
        FROM digital_cards c
        JOIN companies co ON co.id = c.company_id
       WHERE c.slug = ? LIMIT 1`,
@@ -247,7 +295,9 @@ export const getPublicCard = async (slug) => {
   // Unavailable is deliberately indistinguishable between "taken offline"
   // and "locked by a downgrade": which of the two it is tells a stranger
   // something about the company's billing, and is none of their business.
-  if (!card.is_active || card.is_locked) {
+  // A lapsed subscription takes every card offline, as with the other
+  // modules, and looks the same to the scanner as a deactivated card.
+  if (!card.is_active || card.is_locked || isLapsed(card)) {
     return { unavailable: true, company_name: card.owner_company_name };
   }
 
@@ -262,7 +312,9 @@ export const getPublicCard = async (slug) => {
     email: card.email,
     linkedin: card.linkedin,
     brief: card.brief,
-    photo_url: card.photo_url,
+    // Served through a proxy by slug: the bucket is private, and a
+    // presigned URL would expire on a page people bookmark.
+    photo_url: card.photo_url ? `/api/public/cards/${card.slug}/photo` : null,
     custom: [
       // Both halves required: a label with no value is an empty row, and
       // an empty link value would render as a dead "https://".
@@ -280,6 +332,14 @@ export const getPublicCard = async (slug) => {
    reversed — the counter does not need to know who anyone is, and holding
    visitor IPs against a named individual would be personal data with no
    purpose. */
+/* The S3 key behind a public card's photo, only while the card is live. */
+export const getPublicPhotoKey = async (slug) => {
+  const card = await getPublicCard(slug);
+  if (!card || card.unavailable || !card.photo_url) return null;
+  const [[row]] = await db.execute("SELECT photo_url FROM digital_cards WHERE slug = ? LIMIT 1", [slug]);
+  return row?.photo_url || null;
+};
+
 export const recordScan = async (slug, ip, userAgent) => {
   const [[card]] = await db.execute(
     "SELECT id, is_active, is_locked FROM digital_cards WHERE slug = ? LIMIT 1",
@@ -306,11 +366,13 @@ export const recordScan = async (slug, ip, userAgent) => {
 ====================================================== */
 export const addLead = async (slug, body) => {
   const [[card]] = await db.execute(
-    `SELECT c.id, c.company_id, c.name, c.email, c.is_active, c.is_locked
-       FROM digital_cards c WHERE c.slug = ? LIMIT 1`,
+    `SELECT c.id, c.company_id, c.name, c.email, c.is_active, c.is_locked,
+            co.subscription_status, co.grace_period_ends_at
+       FROM digital_cards c JOIN companies co ON co.id = c.company_id
+      WHERE c.slug = ? LIMIT 1`,
     [slug]
   );
-  if (!card || !card.is_active || card.is_locked) {
+  if (!card || !card.is_active || card.is_locked || isLapsed(card)) {
     throw Object.assign(new Error("This card is not available"), { code: 404 });
   }
 

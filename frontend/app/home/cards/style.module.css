@@ -355,3 +355,6 @@
 .previewNote {
   margin: 8px 0 0; font-size: .74rem; color: #8d8e97; line-height: 1.5;
 }
+
+/* Uploaded photo in place of the initial. */
+.avatarImg { object-fit: cover; padding: 0; }

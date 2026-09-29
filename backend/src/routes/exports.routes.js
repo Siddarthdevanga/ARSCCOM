@@ -1,6 +1,7 @@
 import express from "express";
 import { authenticate } from "../middlewares/auth.middleware.js";
 import { db } from "../config/db.js";
+import { companyLapsed } from "../services/digitalCard.service.js";
 import ExcelJS from "exceljs";
 import { PLAN_FEATURES } from "../constants/pricing.js";
 
@@ -515,6 +516,10 @@ router.get("/smart-forms", async (req, res) => {
 router.get("/card-leads", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
+    // Locked with the rest of Digital Cards once the subscription lapses.
+    if (await companyLapsed(companyId)) {
+      return res.status(403).json({ status: "expired", message: "Your subscription has expired. Renew your plan to export card leads." });
+    }
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message: "Company not found" });
 

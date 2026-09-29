@@ -9,7 +9,8 @@
    fold, the share-back form sits underneath rather than in front of the
    content, and nothing here requires an account.
    ========================================================================== */
-import { useEffect, useState, use } from "react";
+import { useEffect, useRef, useState, use } from "react";
+import { THEMES, resolveColors, onColor } from "../../home/cards/cardArt";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -42,6 +43,11 @@ export default function DigitalCardPage({ params }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent]       = useState(false);
   const [error, setError]     = useState("");
+  const [shareOpen, setShareOpen] = useState(false);
+  const nameRef = useRef(null);
+
+  // Focus the first field once the form is on screen, not before.
+  useEffect(() => { if (shareOpen) nameRef.current?.focus(); }, [shareOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,26 +100,35 @@ export default function DigitalCardPage({ params }) {
     return (
       <div className={styles.centre}>
         <div className={styles.notice}>
-          <h1>Details not available</h1>
+          <h1>Digital card not available</h1>
           <p>
             {state === "unavailable" && card?.company_name
-              ? `This card is no longer active. You can still reach ${card.company_name} directly.`
+              ? `This card is not active right now. You can still reach ${card.company_name} directly.`
               : "This card could not be found. The link may be incorrect."}
           </p>
+          <p className={styles.noticeFooter}>Digital card by Haivisitor</p>
         </div>
       </div>
     );
   }
 
-  /* An admin override wins over the preset theme; the preset is a class. */
+  /* Same resolver as the printed card, so web and print always agree —
+     preset first, then any admin override on top. */
+  const colors = resolveColors(card);
+  const preset = THEMES[card.theme] || THEMES.ink;
   const themeVars = {
-    ...(card.bg_color     ? { "--card-bg": card.bg_color } : {}),
-    ...(card.text_color   ? { "--card-fg": card.text_color } : {}),
-    ...(card.accent_color ? { "--card-accent": card.accent_color } : {}),
+    "--card-bg": colors.bg,
+    "--card-fg": colors.fg,
+    "--card-accent": colors.accent,
+    "--card-on-accent": onColor(colors.accent),
+    // A custom background gets a backdrop in the same family, dark or light.
+    background: card.bg_color ? `color-mix(in srgb, ${colors.bg} 82%, ${onColor(colors.bg) === "#ffffff" ? "#000" : "#888"})` : preset.page,
   };
 
+  const first = card.name?.trim().split(/\s+/)[0] || "They";
+
   return (
-    <div className={`${styles.page} ${styles[`theme_${card.theme}`] || styles.theme_ink}`} style={themeVars}>
+    <div className={styles.page} style={themeVars}>
       <div className={styles.card}>
 
         <div className={styles.head}>
@@ -123,7 +138,7 @@ export default function DigitalCardPage({ params }) {
           )}
 
           {card.photo_url
-            ? <img src={card.photo_url} alt="" className={styles.photo} />
+            ? <img src={`${API}${card.photo_url}`} alt="" className={styles.photo} />
             : <div className={styles.initials} aria-hidden="true">
                 {(card.name || "?").trim().charAt(0).toUpperCase()}
               </div>}
@@ -189,21 +204,33 @@ export default function DigitalCardPage({ params }) {
       </div>
 
       {/* Below the card, never in front of it: a form between someone and
-          the content they scanned for is the fastest way to lose them. */}
+          the content they scanned for is the fastest way to lose them. It
+          stays folded behind one button until they ask for it. */}
       <div className={styles.share}>
         {sent ? (
-          <div className={styles.sent}>
+          <div className={styles.sent} role="status">
             <Icon className={styles.sentIcon} d={<path d="M20 6 9 17l-5-5" />} />
-            <p><strong>Thanks.</strong> {card.name?.split(" ")[0] || "They"} has your details.</p>
+            <div>
+              <p className={styles.sentTitle}>Thank you!</p>
+              <p>{first} has your details and will be in touch.</p>
+            </div>
+          </div>
+        ) : !shareOpen ? (
+          <div className={styles.shareIntro}>
+            <p className={styles.shareTitle}>Want {first} to reach you?</p>
+            <p className={styles.shareSub}>Share your name and number — it takes a few seconds.</p>
+            <button type="button" className={styles.shareBtn} onClick={() => setShareOpen(true)}>
+              Share my details
+            </button>
           </div>
         ) : (
           <form onSubmit={submit} noValidate>
-            <h2 className={styles.shareTitle}>Share your details back</h2>
-            <p className={styles.shareSub}>Optional — so {card.name?.split(" ")[0] || "they"} can reach you.</p>
+            <h2 className={styles.shareTitle}>Share your details</h2>
+            <p className={styles.shareSub}>So {first} can reach you.</p>
 
             <div className={styles.field}>
               <label htmlFor="ln">Your name *</label>
-              <input id="ln" value={form.name} disabled={sending} autoComplete="name" maxLength={120}
+              <input id="ln" ref={nameRef} value={form.name} disabled={sending} autoComplete="name" maxLength={120}
                      onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
 
@@ -237,11 +264,15 @@ export default function DigitalCardPage({ params }) {
             <button type="submit" className={styles.shareBtn} disabled={sending}>
               {sending ? "Sharing…" : "Share my details"}
             </button>
+            <button type="button" className={styles.cancelBtn} disabled={sending}
+                    onClick={() => { setShareOpen(false); setError(""); }}>
+              Not now
+            </button>
           </form>
         )}
       </div>
 
-      <p className={styles.footer}>Digital card by Hai Visitor</p>
+      <p className={styles.footer}>Digital card by Haivisitor</p>
     </div>
   );
 }

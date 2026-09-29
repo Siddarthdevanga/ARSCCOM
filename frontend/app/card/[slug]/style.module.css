@@ -3,9 +3,9 @@
    Mobile first throughout: this page is almost only ever opened on a phone,
    seconds after scanning a QR. Desktop just gets the same column centred.
 
-   Themes are three custom properties. A preset sets them via a class; an
-   admin colour override sets the same properties inline and therefore wins,
-   without either needing to know about the other.
+   Themes are custom properties set inline by page.js from cardArt's THEMES
+   (plus any admin override), so the web card and the printed card can
+   never drift apart.
    ========================================================================== */
 
 .page {
@@ -24,14 +24,6 @@
   align-items: center;
   gap: 16px;
 }
-
-/* ── Presets ─────────────────────────────────────────────────────────────── */
-.theme_ink    { --card-bg: #0c0c0f; --card-fg: #ffffff; --card-accent: #f5a524; background: #050505; }
-.theme_paper  { --card-bg: #ffffff; --card-fg: #17171a; --card-accent: #f5a524; background: #f4f4f6; }
-.theme_amber  { --card-bg: #1a1408; --card-fg: #ffffff; --card-accent: #ffc75f; background: #0d0a04; }
-.theme_sky    { --card-bg: #071722; --card-fg: #ffffff; --card-accent: #38bdf8; background: #040d14; }
-.theme_mint   { --card-bg: #04150e; --card-fg: #ffffff; --card-accent: #34d399; background: #020b07; }
-.theme_violet { --card-bg: #120c22; --card-fg: #ffffff; --card-accent: #a78bfa; background: #090616; }
 
 /* ── The card ────────────────────────────────────────────────────────────── */
 .card {
@@ -74,7 +66,7 @@
   border-radius: 50%; margin: 0 auto 16px;
   display: flex; align-items: center; justify-content: center;
   background: var(--card-accent);
-  color: #0c0c0f;
+  color: var(--card-on-accent, #0c0c0f);
   font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 900; line-height: 1;
 }
 
@@ -108,7 +100,7 @@
 .primaryAction {
   grid-column: 1 / -1;
   background: var(--card-accent);
-  color: #0c0c0f;
+  color: var(--card-on-accent, #0c0c0f);
 }
 
 .action {
@@ -181,9 +173,9 @@
   width: 100%; min-height: 48px; border: none; cursor: pointer;
   border-radius: 12px; font-family: inherit;
   font-size: .86rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
-  color: #1c1204;
-  background: linear-gradient(135deg, #ffc75f, #f5a524 48%, #e8900d);
-  box-shadow: 0 6px 18px rgba(245,165,36,.36);
+  color: var(--card-on-accent, #1c1204);
+  background: var(--card-accent, #f5a524);
+  box-shadow: 0 6px 18px rgba(5,5,5,.18);
   transition: transform .15s ease;
 }
 .shareBtn:active:not(:disabled) { transform: translateY(1px); }
@@ -191,11 +183,22 @@
 
 .sent { display: flex; align-items: center; gap: 12px; }
 .sentIcon { width: 22px; height: 22px; color: #1a7f4b; flex-shrink: 0; }
-.sent p { margin: 0; font-size: .9rem; color: #17171a; line-height: 1.5; }
+.sent p { margin: 0; font-size: .9rem; color: #5f6068; line-height: 1.5; }
+.sent .sentTitle { font-size: 1.02rem; font-weight: 800; color: #17171a; }
+
+.shareIntro { text-align: center; }
+.shareIntro .shareSub { margin-bottom: 16px; }
+
+.cancelBtn {
+  display: block; width: 100%; margin-top: 8px; min-height: 42px;
+  border: none; background: none; cursor: pointer; font-family: inherit;
+  font-size: .82rem; font-weight: 700; color: #5f6068;
+}
+.cancelBtn:disabled { opacity: .5; cursor: not-allowed; }
 
 .footer {
-  margin: 4px 0 0; font-size: .7rem; letter-spacing: .06em;
-  color: #9c9da6; text-align: center;
+  margin: 4px 0 0; font-size: .72rem; font-weight: 600; letter-spacing: .06em;
+  color: var(--card-fg); opacity: .6; text-align: center;
 }
 
 /* ── States ──────────────────────────────────────────────────────────────── */
@@ -216,6 +219,7 @@
 .notice { text-align: center; max-width: 340px; }
 .notice h1 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 800; color: #fff; }
 .notice p  { margin: 0; font-size: .88rem; line-height: 1.6; color: rgba(255,255,255,.6); }
+.notice .noticeFooter { margin-top: 28px; font-size: .72rem; letter-spacing: .06em; color: rgba(255,255,255,.45); }
 
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation: none; }

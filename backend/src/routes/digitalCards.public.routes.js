@@ -11,8 +11,9 @@
  */
 import express from "express";
 import {
-  getPublicCard, recordScan, addLead, markLeadNotified, buildVCard,
+  getPublicCard, recordScan, addLead, markLeadNotified, buildVCard, getPublicPhotoKey,
 } from "../services/digitalCard.service.js";
+import { getS3Object } from "../services/s3.service.js";
 import { sendCardLeadEmail } from "../utils/cardLeadMail.service.js";
 
 const router = express.Router();
@@ -67,6 +68,26 @@ router.get("/:slug/vcard", handle(async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.send(vcf);
 }));
+
+/* ── Photo ──
+   Proxied from the private bucket, and only while the card is live: a
+   deactivated or lapsed card must not keep serving the person's face. */
+router.get("/:slug/photo", async (req, res) => {
+  try {
+    const key = await getPublicPhotoKey(req.params.slug);
+    if (!key) return res.status(404).end();
+    const { buffer, contentType, etag } = await getS3Object(key);
+    res.setHeader("Cache-Control", "public, no-cache, must-revalidate");
+    if (etag) res.setHeader("ETag", etag);
+    if (etag && req.headers["if-none-match"] === etag) return res.status(304).end();
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.send(buffer);
+  } catch (err) {
+    console.error("[digital-cards/photo]", err?.message);
+    if (!res.headersSent) res.status(404).end();
+  }
+});
 
 /* ── Share details back ── */
 router.post("/:slug/lead", handle(async (req, res) => {
