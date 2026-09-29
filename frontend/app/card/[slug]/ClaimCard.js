@@ -64,10 +64,10 @@ const STEPS = [["form", "Details"], ["preview", "Preview"], ["done", "Claimed"]]
 
 /* Dark band with the Haivisitor wordmark, matching the front of the printed
    card the person has just scanned, and where they are in the three steps. */
-function Shell({ step, children }) {
+function Shell({ step, pageRef, children }) {
   const at = STEPS.findIndex(([key]) => key === step);
   return (
-    <div className={styles.claimPage}>
+    <div className={styles.claimPage} ref={pageRef}>
       <header className={styles.claimHero}>
         <div className={styles.brand}>
           <span className={styles.brandKicker}>ZODOPT’S</span>
@@ -101,6 +101,7 @@ export default function ClaimCard({ slug }) {
   const [error, setError]     = useState("");
   const [duplicate, setDuplicate] = useState(false);
   const firstRender = useRef(true);
+  const pageRef = useRef(null);
 
   // Object URLs for the preview, released when the file changes.
   const photoSrc = useMemo(() => (photo ? URL.createObjectURL(photo) : ""), [photo]);
@@ -108,12 +109,11 @@ export default function ClaimCard({ slug }) {
   useEffect(() => () => { if (photoSrc) URL.revokeObjectURL(photoSrc); }, [photoSrc]);
   useEffect(() => () => { if (logoSrc) URL.revokeObjectURL(logoSrc); }, [logoSrc]);
 
-  /* Each step starts at the top of the page. Not on first load, where the
-     old scrollIntoView (smoothed by the global scroll-behavior) was still
-     animating while the person tried to scroll, and fought their thumb. */
+  /* Each step starts at the top. The page is its own scroll container
+     (see .claimPage), so that is what gets scrolled, not the window. */
   useEffect(() => {
     if (firstRender.current) { firstRender.current = false; return; }
-    window.scrollTo({ top: 0, behavior: "instant" });
+    pageRef.current?.scrollTo({ top: 0 });
   }, [step]);
 
   const set = (f) => (e) => {
@@ -179,7 +179,7 @@ export default function ClaimCard({ slug }) {
 
   if (step === "done") {
     return (
-      <Shell step="done">
+      <Shell step="done" pageRef={pageRef}>
         <div className={styles.share}>
           <div className={styles.sent} role="status">
             <svg className={styles.sentIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
@@ -203,7 +203,7 @@ export default function ClaimCard({ slug }) {
 
   if (step === "preview") {
     return (
-      <Shell step="preview">
+      <Shell step="preview" pageRef={pageRef}>
         <div className={styles.share}>
           <h1 className={styles.shareTitle}>Check your card</h1>
           <p className={styles.shareSub}>
@@ -243,7 +243,7 @@ export default function ClaimCard({ slug }) {
   }
 
   return (
-    <Shell step="form">
+    <Shell step="form" pageRef={pageRef}>
       <form className={styles.share} onSubmit={toPreview} noValidate>
         <h1 className={styles.shareTitle}>Make this card yours</h1>
         <p className={styles.shareSub}>
@@ -252,18 +252,19 @@ export default function ClaimCard({ slug }) {
         </p>
 
         <p className={styles.group}>Required</p>
-        {input("name", "Your name *", { autoComplete: "name", maxLength: 120 })}
-        {input("phone", "Phone *", { type: "tel", inputMode: "tel", autoComplete: "tel", maxLength: 20, placeholder: "98765 43210" })}
-        {input("email", "Email *", { type: "email", autoComplete: "email", maxLength: 190 })}
+        {input("name", "Your name *", { autoComplete: "name", maxLength: 120, placeholder: "e.g. Ravi Kumar" })}
+        {input("phone", "Phone *", { type: "tel", inputMode: "tel", autoComplete: "tel", maxLength: 20, placeholder: "e.g. 98765 43210" })}
+        {input("email", "Email *", { type: "email", autoComplete: "email", maxLength: 190, placeholder: "e.g. ravi@acmetraders.com" })}
 
         <p className={styles.group}>Optional</p>
-        {input("job_title", "Job title", { autoComplete: "organization-title", maxLength: 120 })}
-        {input("company_name", "Company", { autoComplete: "organization", maxLength: 160 })}
+        {input("job_title", "Job title", { autoComplete: "organization-title", maxLength: 120, placeholder: "e.g. Sales Manager" })}
+        {input("company_name", "Company", { autoComplete: "organization", maxLength: 160, placeholder: "e.g. Acme Traders Pvt Ltd" })}
 
         <div className={styles.field}>
           <label htmlFor="c-brief">About you</label>
           <textarea id="c-brief" rows={3} value={form.brief} onChange={set("brief")} disabled={busy}
-                    maxLength={400} aria-invalid={!!errors.brief} />
+                    maxLength={400} aria-invalid={!!errors.brief}
+                    placeholder="e.g. I help retail shops across Bengaluru get stock faster, with same-day delivery." />
           <p className={errors.brief || briefWords > BRIEF_LIMIT ? styles.fieldError : styles.hint}>
             {errors.brief || (briefWords > BRIEF_LIMIT
               ? `${briefWords} words — keep it to ${BRIEF_LIMIT} or fewer`
@@ -271,12 +272,12 @@ export default function ClaimCard({ slug }) {
           </p>
         </div>
 
-        {input("linkedin", "LinkedIn", { inputMode: "url", maxLength: 255, placeholder: "linkedin.com/in/yourname" })}
+        {input("linkedin", "LinkedIn", { inputMode: "url", maxLength: 255, placeholder: "e.g. linkedin.com/in/ravikumar" })}
 
         {[1, 2].map((n) => (
           <div className={styles.customRow} key={n}>
-            {input(`custom${n}_label`, `Extra field ${n} — label`, { maxLength: 60, placeholder: n === 1 ? "Website" : "Office" })}
-            {input(`custom${n}_value`, "Value", { maxLength: 255 })}
+            {input(`custom${n}_label`, `Extra field ${n} — label`, { maxLength: 60, placeholder: n === 1 ? "e.g. Website" : "e.g. Office" })}
+            {input(`custom${n}_value`, "Value", { maxLength: 255, placeholder: n === 1 ? "e.g. www.acmetraders.com" : "e.g. 2nd Floor, MG Road, Bengaluru" })}
             <label className={styles.checkLine}>
               <input type="checkbox" checked={form[`custom${n}_type`] === "link"} disabled={busy}
                      onChange={(e) => setForm((p) => ({ ...p, [`custom${n}_type`]: e.target.checked ? "link" : "text" }))} />

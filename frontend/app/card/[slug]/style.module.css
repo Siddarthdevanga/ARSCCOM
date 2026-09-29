@@ -15,7 +15,14 @@
   --muted: color-mix(in srgb, var(--card-fg) 55%, transparent);
   --hairline: color-mix(in srgb, var(--card-fg) 12%, transparent);
 
-  min-height: 100dvh;
+  /* Scrolls itself rather than relying on the document: many other routes
+     set html/body { overflow: hidden } from their CSS modules, which can
+     linger after an in-app navigation and freeze a document-level scroll. */
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   padding: clamp(16px, 5vw, 32px) clamp(14px, 4vw, 24px) 40px;
   background: #f4f4f6;
   font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -24,6 +31,9 @@
   align-items: center;
   gap: 16px;
 }
+/* In a fixed-height column, children would otherwise shrink to fit it
+   (the card, having overflow:hidden, all the way down). */
+.page > *, .claimPage > * { flex-shrink: 0; }
 
 /* ── The card ────────────────────────────────────────────────────────────── */
 .card {
@@ -166,6 +176,7 @@
   border-color: #f5a524;
   box-shadow: 0 0 0 4px rgba(245,165,36,.16);
 }
+.field input::placeholder, .field textarea::placeholder { color: #b0b1b9; opacity: 1; }
 .field input[aria-invalid="true"] { border-color: #c0362c; box-shadow: 0 0 0 4px rgba(192,54,44,.12); }
 
 .error { margin: 0 0 12px; font-size: .8rem; font-weight: 700; color: #c0392b; }
@@ -203,8 +214,14 @@
 }
 
 /* ── Claim a blank QR card (ClaimCard.js) ────────────────────────────────── */
+/* Its own scroll container, like .page above: a document-level scroll stops
+   dead if html/body are left with overflow:hidden. */
 .claimPage {
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   background: #f4f4f6;
   font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   display: flex; flex-direction: column; align-items: center;
@@ -328,7 +345,8 @@
 
 /* ── States ──────────────────────────────────────────────────────────────── */
 .centre {
-  min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+  height: 100vh; height: 100dvh; overflow-y: auto;
+  display: flex; align-items: center; justify-content: center;
   padding: 24px; background: #050505;
   font-family: 'Poppins', 'Segoe UI', sans-serif;
 }
