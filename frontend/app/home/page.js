@@ -19,7 +19,7 @@ import {
   UserCog,
   Lock,
   ListChecks,
-  BookOpen,
+  BookOpen, CreditCard,
   QrCode,
 } from "lucide-react";
 import styles from "./style.module.css";
@@ -732,6 +732,16 @@ export default function Home() {
         <div className={styles.menuItemContent}>
           <span className={styles.menuItemTitle}>My Account</span>
           <span className={styles.menuItemSubtitle}>Company & profile settings</span>
+        </div>
+        <ChevronRight size={16} className={styles.menuItemArrow}/>
+      </button>
+
+      {/* Digital Cards — a working area, so it sits above the guide. */}
+      <button className={styles.menuItem} onClick={() => { setShowMenu(false); router.push("/home/cards"); }}>
+        <div className={styles.menuItemIcon}><CreditCard size={18}/></div>
+        <div className={styles.menuItemContent}>
+          <span className={styles.menuItemTitle}>Digital Cards</span>
+          <span className={styles.menuItemSubtitle}>Visiting cards for your team, with QR</span>
         </div>
         <ChevronRight size={16} className={styles.menuItemArrow}/>
       </button>

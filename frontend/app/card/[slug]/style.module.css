@@ -1,0 +1,223 @@
+/* ============================================================================
+   PUBLIC DIGITAL VISITING CARD
+   Mobile first throughout: this page is almost only ever opened on a phone,
+   seconds after scanning a QR. Desktop just gets the same column centred.
+
+   Themes are three custom properties. A preset sets them via a class; an
+   admin colour override sets the same properties inline and therefore wins,
+   without either needing to know about the other.
+   ========================================================================== */
+
+.page {
+  --card-bg: #ffffff;
+  --card-fg: #17171a;
+  --card-accent: #f5a524;
+  --muted: color-mix(in srgb, var(--card-fg) 55%, transparent);
+  --hairline: color-mix(in srgb, var(--card-fg) 12%, transparent);
+
+  min-height: 100dvh;
+  padding: clamp(16px, 5vw, 32px) clamp(14px, 4vw, 24px) 40px;
+  background: #f4f4f6;
+  font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+/* ── Presets ─────────────────────────────────────────────────────────────── */
+.theme_ink    { --card-bg: #0c0c0f; --card-fg: #ffffff; --card-accent: #f5a524; background: #050505; }
+.theme_paper  { --card-bg: #ffffff; --card-fg: #17171a; --card-accent: #f5a524; background: #f4f4f6; }
+.theme_amber  { --card-bg: #1a1408; --card-fg: #ffffff; --card-accent: #ffc75f; background: #0d0a04; }
+.theme_sky    { --card-bg: #071722; --card-fg: #ffffff; --card-accent: #38bdf8; background: #040d14; }
+.theme_mint   { --card-bg: #04150e; --card-fg: #ffffff; --card-accent: #34d399; background: #020b07; }
+.theme_violet { --card-bg: #120c22; --card-fg: #ffffff; --card-accent: #a78bfa; background: #090616; }
+
+/* ── The card ────────────────────────────────────────────────────────────── */
+.card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--card-bg);
+  color: var(--card-fg);
+  border-radius: 22px;
+  padding: clamp(24px, 6vw, 34px) clamp(20px, 5vw, 30px) clamp(20px, 5vw, 28px);
+  box-shadow: 0 1px 2px rgba(5,5,5,.06), 0 18px 50px rgba(5,5,5,.18);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Accent hairline, as on every other surface in the product. */
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: var(--card-accent);
+}
+
+.head { text-align: center; }
+
+.companyLogo {
+  height: 30px; width: auto; max-width: 140px;
+  object-fit: contain; margin: 0 auto 18px; display: block;
+}
+
+.photo {
+  width: clamp(88px, 24vw, 104px);
+  height: clamp(88px, 24vw, 104px);
+  border-radius: 50%; object-fit: cover; display: block; margin: 0 auto 16px;
+  border: 3px solid var(--card-accent);
+}
+
+/* Shown when there is no photo. A initial beats an empty grey circle. */
+.initials {
+  width: clamp(88px, 24vw, 104px);
+  height: clamp(88px, 24vw, 104px);
+  border-radius: 50%; margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--card-accent);
+  color: #0c0c0f;
+  font-size: clamp(2rem, 9vw, 2.6rem); font-weight: 900; line-height: 1;
+}
+
+.name {
+  margin: 0; font-size: clamp(1.4rem, 5.5vw, 1.75rem);
+  font-weight: 800; letter-spacing: -.4px; line-height: 1.2;
+}
+.role { margin: 6px 0 0; font-size: .92rem; font-weight: 600; color: var(--card-accent); }
+.org  { margin: 3px 0 0; font-size: .86rem; color: var(--muted); }
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+/* The reason the page exists, so they sit directly under the name and are
+   sized for a thumb rather than a cursor. */
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin: 22px 0 0;
+}
+
+.primaryAction, .action {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 46px; padding: 11px 14px;
+  border-radius: 12px; text-decoration: none;
+  font-size: .86rem; font-weight: 800; letter-spacing: .01em;
+  transition: transform .15s ease, opacity .15s ease;
+}
+.primaryAction:active, .action:active { transform: scale(.98); }
+
+/* Save Contact spans the row: it is the one action most people want. */
+.primaryAction {
+  grid-column: 1 / -1;
+  background: var(--card-accent);
+  color: #0c0c0f;
+}
+
+.action {
+  background: color-mix(in srgb, var(--card-fg) 8%, transparent);
+  color: var(--card-fg);
+  border: 1px solid var(--hairline);
+}
+
+.actionIcon { width: 17px; height: 17px; flex-shrink: 0; }
+
+.brief {
+  margin: 20px 0 0; padding-top: 18px;
+  border-top: 1px solid var(--hairline);
+  font-size: .89rem; line-height: 1.65; color: var(--muted);
+}
+
+/* ── Details ─────────────────────────────────────────────────────────────── */
+.details { margin: 18px 0 0; padding-top: 16px; border-top: 1px solid var(--hairline); }
+
+.detailRow {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 16px; padding: 9px 0;
+}
+.detailRow + .detailRow { border-top: 1px solid var(--hairline); }
+
+.detailRow dt {
+  font-size: .68rem; font-weight: 800; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--muted); flex-shrink: 0;
+}
+.detailRow dd {
+  margin: 0; font-size: .88rem; font-weight: 600;
+  text-align: right; overflow-wrap: anywhere;
+}
+.detailRow a { color: var(--card-fg); text-decoration: none; border-bottom: 1px solid var(--card-accent); }
+
+/* ── Share back ──────────────────────────────────────────────────────────── */
+.share {
+  width: 100%; max-width: 440px;
+  background: #fff; border: 1px solid #e7e7ec; border-radius: 18px;
+  padding: clamp(20px, 5vw, 26px);
+  box-shadow: 0 1px 2px rgba(5,5,5,.04);
+}
+
+.shareTitle { margin: 0 0 4px; font-size: 1.02rem; font-weight: 800; color: #17171a; }
+.shareSub   { margin: 0 0 18px; font-size: .82rem; color: #8d8e97; line-height: 1.5; }
+
+.field { margin-bottom: 13px; }
+.field label {
+  display: block; margin-bottom: 6px;
+  font-size: .72rem; font-weight: 800; letter-spacing: .05em;
+  text-transform: uppercase; color: #5f6068;
+}
+.field input, .field textarea {
+  width: 100%; padding: 11px 13px; box-sizing: border-box;
+  border: 1px solid #d5d5dd; border-radius: 10px;
+  background: #fafafb; color: #17171a;
+  font-family: inherit; font-size: 15px;   /* 16px-equivalent floor is set globally */
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+.field textarea { resize: vertical; min-height: 78px; }
+.field input:focus, .field textarea:focus {
+  outline: none; background: #fff;
+  border-color: #f5a524;
+  box-shadow: 0 0 0 4px rgba(245,165,36,.16);
+}
+
+.error { margin: 0 0 12px; font-size: .8rem; font-weight: 700; color: #c0392b; }
+
+.shareBtn {
+  width: 100%; min-height: 48px; border: none; cursor: pointer;
+  border-radius: 12px; font-family: inherit;
+  font-size: .86rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  color: #1c1204;
+  background: linear-gradient(135deg, #ffc75f, #f5a524 48%, #e8900d);
+  box-shadow: 0 6px 18px rgba(245,165,36,.36);
+  transition: transform .15s ease;
+}
+.shareBtn:active:not(:disabled) { transform: translateY(1px); }
+.shareBtn:disabled { opacity: .6; cursor: not-allowed; }
+
+.sent { display: flex; align-items: center; gap: 12px; }
+.sentIcon { width: 22px; height: 22px; color: #1a7f4b; flex-shrink: 0; }
+.sent p { margin: 0; font-size: .9rem; color: #17171a; line-height: 1.5; }
+
+.footer {
+  margin: 4px 0 0; font-size: .7rem; letter-spacing: .06em;
+  color: #9c9da6; text-align: center;
+}
+
+/* ── States ──────────────────────────────────────────────────────────────── */
+.centre {
+  min-height: 100dvh; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: #050505;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+}
+
+.spinner {
+  width: 30px; height: 30px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.16);
+  border-top-color: #f5a524;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.notice { text-align: center; max-width: 340px; }
+.notice h1 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 800; color: #fff; }
+.notice p  { margin: 0; font-size: .88rem; line-height: 1.6; color: rgba(255,255,255,.6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation: none; }
+  .primaryAction:active, .action:active, .shareBtn:active:not(:disabled) { transform: none; }
+}

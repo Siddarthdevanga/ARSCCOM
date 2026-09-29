@@ -507,6 +507,52 @@ router.get("/smart-forms", async (req, res) => {
 /* ═══════════════════════════════════════════════════════════════
    STATS
 ═══════════════════════════════════════════════════════════════ */
+/* ======================================================
+   CARD LEADS  GET /api/exports/card-leads
+   Details shared back by people who scanned a digital visiting card.
+   Leads are never deleted, so this is how a company gets them out.
+====================================================== */
+router.get("/card-leads", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+
+    const [rows] = await db.query(
+      `SELECT l.created_at, c.name AS card_owner, l.name, l.phone, l.email,
+              l.company_name, l.message
+         FROM card_leads l
+         JOIN digital_cards c ON c.id = l.card_id
+        WHERE l.company_id = ?
+        ORDER BY l.created_at DESC`,
+      [companyId]
+    );
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Card Leads");
+    ws.columns = [
+      { header: "Received",   key: "created_at",   width: 20 },
+      { header: "Card Owner", key: "card_owner",   width: 22 },
+      { header: "Name",       key: "name",         width: 22 },
+      { header: "Phone",      key: "phone",        width: 16 },
+      { header: "Email",      key: "email",        width: 28 },
+      { header: "Company",    key: "company_name", width: 24 },
+      { header: "Message",    key: "message",      width: 50 },
+    ];
+    ws.getRow(1).font = { bold: true };
+    rows.forEach((r) => ws.addRow(r));
+
+    const fn = `${company.name.replace(/[^a-z0-9]/gi, "-")}-card-leads-${Date.now()}.xlsx`;
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    res.setHeader("Content-Disposition", `attachment; filename="${fn}"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error("[GET /exports/card-leads]", err.message);
+    res.status(500).json({ message: "Failed to export card leads" });
+  }
+});
+
 router.get("/stats", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
