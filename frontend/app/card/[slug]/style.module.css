@@ -203,10 +203,73 @@
 }
 
 /* ── Claim a blank QR card (ClaimCard.js) ────────────────────────────────── */
+.claimPage {
+  min-height: 100dvh;
+  background: #f4f4f6;
+  font-family: 'Poppins', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+  padding-bottom: 40px;
+}
+
+/* The same near-black and amber as the front of the printed card. */
+.claimHero {
+  width: 100%;
+  background: linear-gradient(160deg, #18181c 0%, #050505 100%);
+  border-bottom: 3px solid #f5a524;
+  padding: 26px 16px 76px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+}
+
+.brand { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.brandKicker {
+  font-size: .62rem; font-weight: 700; letter-spacing: .32em;
+  color: rgba(255,255,255,.48);
+}
+.wordmark {
+  font-size: 1.45rem; font-weight: 800; letter-spacing: -.3px; line-height: 1.2;
+  color: #fff;
+}
+.wordmark b {
+  display: inline-block; margin: 0 2px; padding: 0 6px 1px;
+  border-radius: 6px; color: #0c0c0f;
+  background: linear-gradient(135deg, #ffc75f, #f5a524);
+}
+
+.steps {
+  display: flex; align-items: center; gap: 8px;
+  font-size: .72rem; font-weight: 700; color: rgba(255,255,255,.5);
+}
+.steps li { display: flex; align-items: center; gap: 6px; }
+.steps li + li::before {
+  content: ''; width: 16px; height: 1px; margin-right: 2px;
+  background: rgba(255,255,255,.25);
+}
+.stepNum {
+  width: 20px; height: 20px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255,255,255,.3); font-size: .66rem;
+}
+.steps li[aria-current="step"] { color: #fff; }
+.steps li[aria-current="step"] .stepNum { background: #f5a524; border-color: #f5a524; color: #0c0c0f; }
+.steps li[data-done] .stepNum { border-color: #f5a524; color: #f5a524; }
+
+/* The form card overlaps the dark band. */
+.claimBody {
+  width: 100%; max-width: 472px;
+  padding: 0 16px; margin-top: -56px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.claimBody .share {
+  max-width: none; border-radius: 20px;
+  box-shadow: 0 1px 2px rgba(5,5,5,.05), 0 16px 40px rgba(5,5,5,.12);
+}
+.claimBody .shareTitle { font-size: 1.2rem; letter-spacing: -.2px; }
+
 .footerDark {
   margin: 4px 0 0; font-size: .72rem; font-weight: 600; letter-spacing: .06em;
-  color: #5f6068; text-align: center;
+  color: #8d8e97; text-align: center;
 }
+.footerDark strong { color: #17171a; font-weight: 800; }
 
 .group {
   margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid #ececf0;
@@ -237,7 +300,16 @@
 .consent { margin: 18px 0 14px; }
 
 .fileRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-.fileRow input[type="file"] { padding: 8px; font-size: 13px; }
+.fileRow input[type="file"] {
+  padding: 8px; font-size: 13px; color: #5f6068;
+  border-style: dashed; cursor: pointer;
+}
+.fileRow input[type="file"]::file-selector-button {
+  margin-right: 10px; padding: 7px 12px; cursor: pointer;
+  border: none; border-radius: 8px;
+  background: #17171a; color: #fff;
+  font-family: inherit; font-size: .76rem; font-weight: 700;
+}
 .linkBtn {
   border: none; background: none; padding: 4px 0; cursor: pointer;
   font-family: inherit; font-size: .78rem; font-weight: 700; color: #c0392b;

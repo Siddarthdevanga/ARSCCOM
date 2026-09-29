@@ -60,6 +60,36 @@ function ImageField({ id, label, hint, file, onPick, disabled }) {
   );
 }
 
+const STEPS = [["form", "Details"], ["preview", "Preview"], ["done", "Claimed"]];
+
+/* Dark band with the Haivisitor wordmark, matching the front of the printed
+   card the person has just scanned, and where they are in the three steps. */
+function Shell({ step, children }) {
+  const at = STEPS.findIndex(([key]) => key === step);
+  return (
+    <div className={styles.claimPage}>
+      <header className={styles.claimHero}>
+        <div className={styles.brand}>
+          <span className={styles.brandKicker}>ZODOPT’S</span>
+          <span className={styles.wordmark}>H<b>ai</b> Visitor</span>
+        </div>
+        <ol className={styles.steps}>
+          {STEPS.map(([key, label], i) => (
+            <li key={key} aria-current={i === at ? "step" : undefined} data-done={i < at || undefined}>
+              <span className={styles.stepNum}>{i < at ? "✓" : i + 1}</span>
+              {label}
+            </li>
+          ))}
+        </ol>
+      </header>
+      <div className={styles.claimBody}>
+        {children}
+        <p className={styles.footerDark}>Powered by <strong>Haivisitor</strong></p>
+      </div>
+    </div>
+  );
+}
+
 export default function ClaimCard({ slug }) {
   const [form, setForm]       = useState(EMPTY);
   const [photo, setPhoto]     = useState(null);
@@ -70,7 +100,7 @@ export default function ClaimCard({ slug }) {
   const [busy, setBusy]       = useState(false);
   const [error, setError]     = useState("");
   const [duplicate, setDuplicate] = useState(false);
-  const topRef = useRef(null);
+  const firstRender = useRef(true);
 
   // Object URLs for the preview, released when the file changes.
   const photoSrc = useMemo(() => (photo ? URL.createObjectURL(photo) : ""), [photo]);
@@ -78,7 +108,13 @@ export default function ClaimCard({ slug }) {
   useEffect(() => () => { if (photoSrc) URL.revokeObjectURL(photoSrc); }, [photoSrc]);
   useEffect(() => () => { if (logoSrc) URL.revokeObjectURL(logoSrc); }, [logoSrc]);
 
-  useEffect(() => { topRef.current?.scrollIntoView({ block: "start" }); }, [step]);
+  /* Each step starts at the top of the page. Not on first load, where the
+     old scrollIntoView (smoothed by the global scroll-behavior) was still
+     animating while the person tried to scroll, and fought their thumb. */
+  useEffect(() => {
+    if (firstRender.current) { firstRender.current = false; return; }
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [step]);
 
   const set = (f) => (e) => {
     setForm((prev) => ({ ...prev, [f]: e.target.value }));
@@ -143,8 +179,8 @@ export default function ClaimCard({ slug }) {
 
   if (step === "done") {
     return (
-      <div className={styles.page}>
-        <div className={styles.share} ref={topRef}>
+      <Shell step="done">
+        <div className={styles.share}>
           <div className={styles.sent} role="status">
             <svg className={styles.sentIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
@@ -161,20 +197,21 @@ export default function ClaimCard({ slug }) {
             View my card
           </button>
         </div>
-        <p className={styles.footerDark}>Digital card by Haivisitor</p>
-      </div>
+      </Shell>
     );
   }
 
   if (step === "preview") {
     return (
-      <div className={styles.page}>
-        <div className={styles.share} ref={topRef}>
+      <Shell step="preview">
+        <div className={styles.share}>
           <h1 className={styles.shareTitle}>Check your card</h1>
           <p className={styles.shareSub}>
             This is how your card looks. Once claimed it cannot be changed, so check every detail.
           </p>
-          <CardPreview card={previewCard} cardUrl={cardUrl} logoSrc={logoSrc} photoSrc={photoSrc} />
+          {/* Full print resolution: at the editor's smaller scale the
+              canvas is upscaled on a phone's dense screen and looks soft. */}
+          <CardPreview card={previewCard} cardUrl={cardUrl} logoSrc={logoSrc} photoSrc={photoSrc} scale={1} />
 
           <label className={styles.consent}>
             <input type="checkbox" checked={consent} disabled={busy}
@@ -201,14 +238,13 @@ export default function ClaimCard({ slug }) {
             Back to edit
           </button>
         </div>
-        <p className={styles.footerDark}>Digital card by Haivisitor</p>
-      </div>
+      </Shell>
     );
   }
 
   return (
-    <div className={styles.page}>
-      <form className={styles.share} onSubmit={toPreview} noValidate ref={topRef}>
+    <Shell step="form">
+      <form className={styles.share} onSubmit={toPreview} noValidate>
         <h1 className={styles.shareTitle}>Make this card yours</h1>
         <p className={styles.shareSub}>
           This QR card has not been claimed yet. Add your details and it becomes your digital
@@ -273,7 +309,6 @@ export default function ClaimCard({ slug }) {
 
         <button type="submit" className={styles.shareBtn} disabled={busy}>Preview my card</button>
       </form>
-      <p className={styles.footerDark}>Digital card by Haivisitor</p>
-    </div>
+    </Shell>
   );
 }

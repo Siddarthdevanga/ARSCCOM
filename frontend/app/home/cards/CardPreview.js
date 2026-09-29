@@ -20,6 +20,7 @@ const PREVIEW_SCALE = 0.46;
    its header: one handler and one busy flag, so the two can never race. */
 export default function CardPreview({
   card, cardUrl, logoSrc, photoSrc = "", downloadable = false, onDownload, downloading = false, blockedNote = "",
+  scale = PREVIEW_SCALE,
 }) {
   const frontRef = useRef(null);
   const backRef  = useRef(null);
@@ -48,14 +49,14 @@ export default function CardPreview({
       target.getContext("2d").drawImage(source, 0, 0);
     };
     (async () => {
-      const front = await drawFront(document.createElement("canvas"), card, { scale: PREVIEW_SCALE, logoSrc, photoSrc });
+      const front = await drawFront(document.createElement("canvas"), card, { scale, logoSrc, photoSrc });
       show(frontRef.current, front);
       if (cancelled) return;
-      const back = await drawBack(document.createElement("canvas"), card, { scale: PREVIEW_SCALE, qrSrc });
+      const back = await drawBack(document.createElement("canvas"), card, { scale, qrSrc });
       show(backRef.current, back);
     })().catch(() => {});
     return () => { cancelled = true; };
-  }, [card, logoSrc, photoSrc, qrSrc]);
+  }, [card, logoSrc, photoSrc, qrSrc, scale]);
 
   return (
     <div className={styles.wrap}>

@@ -356,10 +356,11 @@ export function paintBlankBack(ctx, { qr = null, serial = "" } = {}, x = 0, y0 =
     ctx.fillStyle = AMBER;
     ctx.fillRect(0, 0, W, 14);
 
-    // Bigger than a person's card: this QR is the whole card.
+    // Bigger than a person's card: this QR is the whole card. Centred a
+    // little above the middle, leaving room for the serial underneath.
     const box = 360;
     const bx = (W - box) / 2;
-    const by = 84;
+    const by = 120;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, bx - 20, by - 20, box + 40, box + 40, 20);
     ctx.fill();
@@ -367,10 +368,6 @@ export function paintBlankBack(ctx, { qr = null, serial = "" } = {}, x = 0, y0 =
 
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.82)";
-    ctx.font = `700 27px ${FONT}`;
-    ctx.fillText("Digital card from Haivisitor", W / 2, by + box + 90);
-
     if (serial) {
       ctx.fillStyle = "rgba(255, 255, 255, 0.34)";
       ctx.font = `600 17px ${FONT}`;
