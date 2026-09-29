@@ -5,8 +5,13 @@
    nothing scrolls sideways.
    ========================================================================== */
 
+/* Its own scroll container: the home page's stylesheet sets overflow:hidden
+   on html and body, and after a client-side navigation from /home that rule
+   is still in force, so the window itself cannot scroll here. */
 .page {
-  min-height: 100dvh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   background: var(--hv-surface, #f6f6f8);

@@ -9,21 +9,24 @@
 .layout {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 460px);
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 520px);
   grid-template-areas:
     "form preview"
     "bar  bar";
   gap: 18px clamp(16px, 2.4vw, 26px);
   align-items: start;
   padding: clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 0;
-  max-width: 1280px;
   width: 100%;
-  margin: 0 auto;
   box-sizing: border-box;
 }
 
 .formCol    { grid-area: form; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.previewCol { grid-area: preview; position: sticky; top: 84px; min-width: 0; }
+/* Sticky under the header; if the stacked faces are taller than the screen,
+   the column scrolls on its own rather than hiding the back face. */
+.previewCol {
+  grid-area: preview; position: sticky; top: 104px; min-width: 0;
+  max-height: calc(100dvh - 104px - 96px); overflow-y: auto;
+}
 
 .section {
   background: #fff;
@@ -101,7 +104,7 @@
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "form" "preview" "bar";
   }
-  .previewCol { position: static; }
+  .previewCol { position: static; max-height: none; overflow: visible; }
 }
 
 @media (max-width: 560px) {

@@ -1,6 +1,6 @@
 /* ============================================================================
    CARD PREVIEW
-   Both faces side by side on a desktop, stacked on a phone. The canvases
+   Front above back, at a size where the text on each face is readable. The canvases
    carry their own aspect ratio inline so they reserve the right space
    before the first draw and nothing jumps.
    ========================================================================== */
@@ -9,8 +9,8 @@
 
 .faces {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr;
+  gap: 16px;
 }
 
 .face { margin: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -50,7 +50,6 @@
 .spec { font-size: .7rem; color: #a9aab3; margin-left: auto; white-space: nowrap; }
 
 @media (max-width: 560px) {
-  .faces { grid-template-columns: 1fr; }
   .spec { margin-left: 0; flex-basis: 100%; }
   .downloads button { flex: 1; }
 }
