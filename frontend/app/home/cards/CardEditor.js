@@ -427,7 +427,9 @@ export default function CardEditor({ cardId = null }) {
                         placeholder="A line or two about what they do"
                         aria-describedby="f-brief-count"
                         onChange={(e) => update({ brief: e.target.value })} />
-              <span id="f-brief-count" aria-live="polite"
+              {/* Announced only once over the limit; a live count would be
+                  read out on every keystroke. */}
+              <span id="f-brief-count" aria-live={briefWords > BRIEF_WORDS ? "polite" : "off"}
                     className={`${ed.wordCount} ${briefWords > BRIEF_WORDS ? ed.wordCountOver : ""}`}>
                 {briefWords} / {BRIEF_WORDS} words
               </span>
