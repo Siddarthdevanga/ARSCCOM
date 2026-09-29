@@ -64,7 +64,7 @@ export const sendCardLeadEmail = async (cardOwner, lead) => {
                     padding:12px 16px;margin-bottom:20px;">
           <p style="margin:0 0 4px;color:#8d8e97;font-size:11px;font-weight:800;
                     letter-spacing:.06em;text-transform:uppercase;">What they wrote</p>
-          <p style="margin:0;color:#17171a;font-size:14px;line-height:1.6;">${esc(lead.message)}</p>
+          <p style="margin:0;color:#17171a;font-size:14px;line-height:1.6;white-space:pre-wrap;">${esc(lead.message)}</p>
         </div>` : ""}
 
       ${phone ? `
@@ -87,7 +87,8 @@ export const sendCardLeadEmail = async (cardOwner, lead) => {
 
   await sendEmail({
     to: cardOwner.email,
-    subject: `${name} shared their contact details with you`,
+    // Public input in a header: collapse any line breaks to spaces.
+    subject: `${String(name).replace(/\s+/g, " ").trim()} shared their contact details with you`,
     html,
   });
 };

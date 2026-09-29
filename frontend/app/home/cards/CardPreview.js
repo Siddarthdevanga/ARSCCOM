@@ -19,6 +19,7 @@ export default function CardPreview({ card, cardUrl, logoSrc, downloadable = fal
   const backRef  = useRef(null);
   const [qrSrc, setQrSrc] = useState("");
   const [busy, setBusy]   = useState(false);
+  const [failed, setFailed] = useState(false);
 
   /* Black modules on white: decoding depends on contrast, and a tinted
      code fails on a meaningful share of scanners. */
@@ -46,9 +47,13 @@ export default function CardPreview({ card, cardUrl, logoSrc, downloadable = fal
 
   const download = async (face) => {
     setBusy(true);
+    setFailed(false);
     try {
-      const base = (card.name || "card").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase();
+      // A name in a non-Latin script strips to nothing; fall back to "card".
+      const base = (card.name || "").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-").toLowerCase() || "card";
       await downloadFace(face, card, { logoSrc, qrSrc }, `${base}-${face}.png`);
+    } catch {
+      setFailed(true);
     } finally {
       setBusy(false);
     }
@@ -87,6 +92,7 @@ export default function CardPreview({ card, cardUrl, logoSrc, downloadable = fal
             Download back
           </button>
           <span className={styles.spec}>PNG · 85 × 55 mm · 300 dpi</span>
+          {failed && <p className={styles.error} role="alert">Could not create the image. Please try again.</p>}
         </div>
       )}
     </div>

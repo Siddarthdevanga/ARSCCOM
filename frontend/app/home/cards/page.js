@@ -51,6 +51,7 @@ export default function CardsPage() {
 
   const [editing, setEditing]   = useState(null);  // card being edited, or {} for new
   const [form, setForm]         = useState(EMPTY);
+  const [waSame, setWaSame]     = useState(true);
   const [saving, setSaving]     = useState(false);
   const [formError, setFormErr] = useState("");
 
@@ -133,11 +134,12 @@ export default function CardsPage() {
       say(`Your plan allows ${usage.limit} active card${usage.limit === 1 ? "" : "s"}. Deactivate one first.`, "error");
       return;
     }
-    setForm(EMPTY); setFormErr(""); setEditing({});
+    setForm(EMPTY); setWaSame(true); setFormErr(""); setEditing({});
   };
 
   const openEdit = (card) => {
     setForm({ ...EMPTY, ...Object.fromEntries(Object.entries(card).filter(([, v]) => v !== null)) });
+    setWaSame(!card.whatsapp || card.whatsapp === card.phone);
     setFormErr(""); setEditing(card);
   };
 
@@ -155,7 +157,8 @@ export default function CardsPage() {
         method: isNew ? "POST" : "PATCH",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify(form),
+        // Blank WhatsApp is stored as NULL, which means "same as phone".
+        body: JSON.stringify({ ...form, whatsapp: waSame ? "" : form.whatsapp }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.message || "Could not save the card");
@@ -340,12 +343,12 @@ export default function CardsPage() {
               <div className={styles.row}>
                 <div className={styles.field}>
                   <label htmlFor="f-name">Name *</label>
-                  <input id="f-name" value={form.name} disabled={saving}
+                  <input id="f-name" maxLength={120} value={form.name} disabled={saving}
                          onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="f-title">Job title</label>
-                  <input id="f-title" value={form.job_title} disabled={saving}
+                  <input id="f-title" maxLength={120} value={form.job_title} disabled={saving}
                          onChange={(e) => setForm({ ...form, job_title: e.target.value })} />
                 </div>
               </div>
@@ -353,12 +356,12 @@ export default function CardsPage() {
               <div className={styles.row}>
                 <div className={styles.field}>
                   <label htmlFor="f-phone">Phone *</label>
-                  <input id="f-phone" type="tel" inputMode="numeric" value={form.phone} disabled={saving}
+                  <input id="f-phone" maxLength={20} type="tel" inputMode="numeric" value={form.phone} disabled={saving}
                          onChange={(e) => setForm({ ...form, phone: e.target.value })} />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="f-email">Email</label>
-                  <input id="f-email" type="email" value={form.email} disabled={saving}
+                  <input id="f-email" maxLength={190} type="email" value={form.email} disabled={saving}
                          onChange={(e) => setForm({ ...form, email: e.target.value })} />
                 </div>
               </div>
@@ -367,15 +370,17 @@ export default function CardsPage() {
                   second field only appears when it genuinely differs. */}
               <label className={styles.checkRow}>
                 <input type="checkbox" disabled={saving}
-                       checked={!form.whatsapp || form.whatsapp === form.phone}
-                       onChange={(e) => setForm({ ...form, whatsapp: e.target.checked ? "" : form.phone })} />
+                       checked={waSame}
+                       onChange={(e) => setWaSame(e.target.checked)} />
                 WhatsApp is the same as this phone number
               </label>
 
-              {form.whatsapp && form.whatsapp !== form.phone && (
+              {/* Driven by its own flag, not by the value: deriving it from
+                  the value made the field vanish the moment it was needed. */}
+              {!waSame && (
                 <div className={styles.field}>
                   <label htmlFor="f-wa">WhatsApp number</label>
-                  <input id="f-wa" type="tel" inputMode="numeric" value={form.whatsapp} disabled={saving}
+                  <input id="f-wa" maxLength={20} type="tel" inputMode="numeric" value={form.whatsapp} disabled={saving}
                          onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
                 </div>
               )}
@@ -383,25 +388,25 @@ export default function CardsPage() {
               <div className={styles.row}>
                 <div className={styles.field}>
                   <label htmlFor="f-org">Company</label>
-                  <input id="f-org" value={form.company_name} disabled={saving} placeholder="Defaults to your company"
+                  <input id="f-org" maxLength={160} value={form.company_name} disabled={saving} placeholder="Defaults to your company"
                          onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
                 </div>
                 <div className={styles.field}>
                   <label htmlFor="f-li">LinkedIn</label>
-                  <input id="f-li" value={form.linkedin} disabled={saving} placeholder="linkedin.com/in/…"
+                  <input id="f-li" maxLength={255} value={form.linkedin} disabled={saving} placeholder="linkedin.com/in/…"
                          onChange={(e) => setForm({ ...form, linkedin: e.target.value })} />
                 </div>
               </div>
 
               <div className={styles.field}>
                 <label htmlFor="f-photo">Photo URL <span className={styles.opt}>optional</span></label>
-                <input id="f-photo" value={form.photo_url} disabled={saving} placeholder="https://…"
+                <input id="f-photo" maxLength={255} value={form.photo_url} disabled={saving} placeholder="https://…"
                        onChange={(e) => setForm({ ...form, photo_url: e.target.value })} />
               </div>
 
               <div className={styles.field}>
                 <label htmlFor="f-brief">Brief</label>
-                <textarea id="f-brief" rows={3} value={form.brief} disabled={saving}
+                <textarea id="f-brief" maxLength={2000} rows={3} value={form.brief} disabled={saving}
                           placeholder="A line or two about what they do"
                           onChange={(e) => setForm({ ...form, brief: e.target.value })} />
               </div>
@@ -412,13 +417,13 @@ export default function CardsPage() {
                 <div className={styles.row} key={n}>
                   <div className={styles.field}>
                     <label htmlFor={`f-cl${n}`}>Custom field {n} <span className={styles.opt}>optional</span></label>
-                    <input id={`f-cl${n}`} value={form[`custom${n}_label`]} disabled={saving} placeholder="Label"
+                    <input id={`f-cl${n}`} maxLength={60} value={form[`custom${n}_label`]} disabled={saving} placeholder="Label"
                            onChange={(e) => setForm({ ...form, [`custom${n}_label`]: e.target.value })} />
                   </div>
                   <div className={styles.field}>
                     <label htmlFor={`f-cv${n}`}>Value</label>
                     <div className={styles.valueRow}>
-                      <input id={`f-cv${n}`} value={form[`custom${n}_value`]} disabled={saving}
+                      <input id={`f-cv${n}`} maxLength={255} value={form[`custom${n}_value`]} disabled={saving}
                              onChange={(e) => setForm({ ...form, [`custom${n}_value`]: e.target.value })} />
                       <select value={form[`custom${n}_type`]} disabled={saving}
                               onChange={(e) => setForm({ ...form, [`custom${n}_type`]: e.target.value })}>

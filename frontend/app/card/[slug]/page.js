@@ -203,32 +203,32 @@ export default function DigitalCardPage({ params }) {
 
             <div className={styles.field}>
               <label htmlFor="ln">Your name *</label>
-              <input id="ln" value={form.name} disabled={sending} autoComplete="name"
+              <input id="ln" value={form.name} disabled={sending} autoComplete="name" maxLength={120}
                      onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
 
             <div className={styles.field}>
               <label htmlFor="lp">Phone *</label>
-              <input id="lp" type="tel" inputMode="numeric" value={form.phone} disabled={sending}
+              <input id="lp" type="tel" inputMode="numeric" value={form.phone} disabled={sending} maxLength={20}
                      autoComplete="tel"
                      onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
 
             <div className={styles.field}>
               <label htmlFor="le">Email</label>
-              <input id="le" type="email" value={form.email} disabled={sending} autoComplete="email"
+              <input id="le" type="email" value={form.email} disabled={sending} autoComplete="email" maxLength={190}
                      onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
 
             <div className={styles.field}>
               <label htmlFor="lc">Company</label>
-              <input id="lc" value={form.company_name} disabled={sending} autoComplete="organization"
+              <input id="lc" value={form.company_name} disabled={sending} autoComplete="organization" maxLength={160}
                      onChange={(e) => setForm({ ...form, company_name: e.target.value })} />
             </div>
 
             <div className={styles.field}>
               <label htmlFor="lm">What would you like to discuss?</label>
-              <textarea id="lm" rows={3} value={form.message} disabled={sending}
+              <textarea id="lm" rows={3} value={form.message} disabled={sending} maxLength={2000}
                         onChange={(e) => setForm({ ...form, message: e.target.value })} />
             </div>
 

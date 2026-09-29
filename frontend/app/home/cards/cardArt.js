@@ -230,11 +230,22 @@ export async function drawBack(canvas, card, opts = {}) {
 /* Downloads a face at full print resolution, regardless of the scale the
    preview happens to be showing. */
 export async function downloadFace(face, card, opts, filename) {
-  const canvas = document.createElement("canvas");
   const draw = face === "back" ? drawBack : drawFront;
-  await draw(canvas, card, { ...opts, scale: 1 });
+  const render = async (o) => {
+    const canvas = document.createElement("canvas");
+    await draw(canvas, card, { ...o, scale: 1 });
+    return canvas.toDataURL("image/png");
+  };
 
-  const url = canvas.toDataURL("image/png");
+  let url;
+  try {
+    url = await render(opts);
+  } catch {
+    // A logo served without CORS headers taints the canvas and export
+    // throws SecurityError. A card without the logo beats no card at all.
+    // Fresh canvas: a tainted one stays tainted however it is redrawn.
+    url = await render({ ...opts, logoSrc: "" });
+  }
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;

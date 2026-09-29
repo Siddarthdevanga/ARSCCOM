@@ -30,10 +30,11 @@ const handle = (fn) => async (req, res) => {
   }
 };
 
-/* Behind a proxy req.ip is the load balancer, so the forwarded header is
-   preferred. Only ever hashed, never stored. */
-const clientIp = (req) =>
-  (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.ip || "";
+/* app.js sets `trust proxy`, so req.ip is already the real client address.
+   Reading X-Forwarded-For directly would take its first entry, which the
+   client writes — a fresh fake value per request would inflate the count.
+   Only ever hashed, never stored. */
+const clientIp = (req) => req.ip || "";
 
 /* ── The card ── */
 router.get("/:slug", handle(async (req, res) => {

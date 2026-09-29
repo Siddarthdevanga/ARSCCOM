@@ -45,6 +45,8 @@
 .downloads button:hover:not(:disabled) { border-color: #17171a; background: var(--hv-surface, #f6f6f8); }
 .downloads button:disabled { opacity: .55; cursor: not-allowed; }
 
+.error { flex-basis: 100%; margin: 0; font-size: .74rem; font-weight: 700; color: #b42318; }
+
 .spec { font-size: .7rem; color: #a9aab3; margin-left: auto; white-space: nowrap; }
 
 @media (max-width: 560px) {

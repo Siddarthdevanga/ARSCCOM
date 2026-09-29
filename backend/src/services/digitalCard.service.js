@@ -69,14 +69,45 @@ const CARD_FIELDS = [
   "theme", "bg_color", "text_color", "accent_color",
 ];
 
-const clean = (body) => {
+/* Column widths from add-digital-cards.sql. Checked here so an over-long
+   value is a 400 the admin can act on, not a strict-mode "Data too long"
+   that surfaces as a 500. */
+const MAX_LEN = {
+  name: 120, job_title: 120, company_name: 160, phone: 20, whatsapp: 20,
+  email: 190, linkedin: 255, brief: 2000, photo_url: 255,
+  custom1_label: 60, custom1_value: 255, custom2_label: 60, custom2_value: 255,
+};
+const LABELS = { custom1_label: "custom field 1 label", custom1_value: "custom field 1 value",
+                 custom2_label: "custom field 2 label", custom2_value: "custom field 2 value",
+                 job_title: "job title", company_name: "company name", photo_url: "photo URL" };
+const HEX = /^#[0-9a-f]{6}$/i;
+const bad = (msg) => Object.assign(new Error(msg), { code: 400 });
+
+const clean = (body = {}) => {
   const out = {};
   for (const f of CARD_FIELDS) {
     let v = body[f];
     if (v === undefined) continue;
+    // Only strings and null reach the DB; an object or array here would
+    // otherwise be serialised by the driver into something meaningless.
+    if (v !== null && typeof v !== "string") throw bad(`Invalid value for ${f}`);
     if (typeof v === "string") v = v.trim();
     out[f] = v === "" ? null : v;
+    if (out[f] && MAX_LEN[f] && out[f].length > MAX_LEN[f]) {
+      throw bad(`${LABELS[f] || f} must be ${MAX_LEN[f]} characters or fewer`);
+    }
   }
+
+  // NOT NULL enum / theme columns: blank means "default", never NULL.
+  for (const f of ["custom1_type", "custom2_type"]) {
+    if (f in out) out[f] = out[f] === "link" ? "link" : "text";
+  }
+  if ("theme" in out) out.theme = out.theme && /^[a-z]{1,32}$/.test(out.theme) ? out.theme : "ink";
+
+  for (const f of ["bg_color", "text_color", "accent_color"]) {
+    if (out[f] && !HEX.test(out[f])) throw bad("Colours must be in #RRGGBB form");
+  }
+
   // "WhatsApp is the same as my phone" is the normal case, and storing NULL
   // says exactly that — rather than duplicating the number and letting the
   // two drift apart on the next edit.
@@ -123,6 +154,10 @@ export const createCard = async (companyId, plan, body) => {
 export const updateCard = async (companyId, id, body) => {
   const data = clean(body);
   if (!Object.keys(data).length) return false;
+  // Name and phone are NOT NULL; clearing either would be a DB error.
+  if (("name" in data && !data.name) || ("phone" in data && !data.phone)) {
+    throw bad("Name and phone are required");
+  }
 
   // A locked card is read-only: the plan no longer covers it, so the admin
   // must release it before editing.
@@ -144,7 +179,17 @@ export const updateCard = async (companyId, id, body) => {
 /* Activate / deactivate. Never deletes: the public URL must keep resolving
    so a printed QR shows "details not available" rather than a dead link. */
 export const setCardActive = async (companyId, id, active, plan) => {
-  if (active) {
+  const [[card]] = await db.execute(
+    "SELECT is_active, is_locked FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
+    [id, companyId]
+  );
+  if (!card) return false;
+  // A locked card cannot be switched on: that would sidestep the plan
+  // limit the lock exists to enforce.
+  if (active && card.is_locked) throw Object.assign(new Error("This card is locked. Release it first."), { code: 403 });
+  // Only a card that is currently off takes a new slot; re-activating an
+  // active card at the limit must not report "limit reached".
+  if (active && !card.is_active) {
     const { remaining, limit } = await getCardUsage(companyId, plan);
     if (remaining <= 0) {
       throw Object.assign(
@@ -163,7 +208,14 @@ export const setCardActive = async (companyId, id, active, plan) => {
 /* Lock / release, used when a downgrade leaves more cards than the plan
    allows. The admin chooses which — they know who is client-facing. */
 export const setCardLocked = async (companyId, id, locked, plan) => {
-  if (!locked) {
+  const [[card]] = await db.execute(
+    "SELECT is_active, is_locked FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
+    [id, companyId]
+  );
+  if (!card) return false;
+  // Releasing only takes a slot when the card is active and currently
+  // locked; releasing an inactive card costs nothing.
+  if (!locked && card.is_locked && card.is_active) {
     const { remaining } = await getCardUsage(companyId, plan);
     if (remaining <= 0) {
       throw Object.assign(
@@ -212,8 +264,10 @@ export const getPublicCard = async (slug) => {
     brief: card.brief,
     photo_url: card.photo_url,
     custom: [
-      card.custom1_label && { label: card.custom1_label, value: card.custom1_value, type: card.custom1_type },
-      card.custom2_label && { label: card.custom2_label, value: card.custom2_value, type: card.custom2_type },
+      // Both halves required: a label with no value is an empty row, and
+      // an empty link value would render as a dead "https://".
+      card.custom1_label && card.custom1_value && { label: card.custom1_label, value: card.custom1_value, type: card.custom1_type },
+      card.custom2_label && card.custom2_value && { label: card.custom2_label, value: card.custom2_value, type: card.custom2_type },
     ].filter(Boolean),
     theme: card.theme,
     bg_color: card.bg_color,
@@ -260,18 +314,26 @@ export const addLead = async (slug, body) => {
     throw Object.assign(new Error("This card is not available"), { code: 404 });
   }
 
-  const name = (body.name || "").trim();
-  const phone = (body.phone || "").trim();
-  if (!name || !phone) throw Object.assign(new Error("Name and phone are required"), { code: 400 });
+  // Public, unauthenticated input: coerce defensively so a non-string field
+  // is a 400, not a TypeError on .trim().
+  const str = (v, max) => {
+    const s = typeof v === "string" ? v.trim() : "";
+    if (s.length > max) throw bad("One of the fields is too long");
+    return s;
+  };
+  const name = str(body?.name, 120);
+  const phone = str(body?.phone, 20);
+  if (!name || !phone) throw bad("Name and phone are required");
+  const email = str(body?.email, 190);
+  const leadCompany = str(body?.company_name, 160);
+  const message = str(body?.message, 2000);
 
   const [res] = await db.execute(
     `INSERT INTO card_leads (card_id, company_id, name, phone, email, company_name, message)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       card.id, card.company_id, name, phone,
-      (body.email || "").trim() || null,
-      (body.company_name || "").trim() || null,
-      (body.message || "").trim() || null,
+      email || null, leadCompany || null, message || null,
     ]
   );
 
@@ -299,7 +361,7 @@ export const markLeadNotified = async (leadId) => {
    Built by hand rather than with a library: the format is a dozen lines,
    and the escaping rules below are the only subtle part.
 ====================================================== */
-const esc = (v = "") => String(v).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+const esc = (v = "") => String(v).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r\n|\r|\n/g, "\\n");
 
 export const buildVCard = (card) => {
   // Splitting on the last space is a heuristic; it is right for most
