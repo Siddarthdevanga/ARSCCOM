@@ -17,26 +17,25 @@ import {
   Download, Users, Eye, MessageSquare,
 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
+import CardPreview from "./CardPreview";
+import { THEMES as CARD_THEMES, resolveColors, contrastVerdict } from "./cardArt";
 import styles from "./style.module.css";
 
 const API  = process.env.NEXT_PUBLIC_API_BASE_URL;
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
-const THEMES = [
-  { key: "ink",    label: "Ink",    swatch: "#0c0c0f" },
-  { key: "paper",  label: "Paper",  swatch: "#ffffff" },
-  { key: "amber",  label: "Amber",  swatch: "#1a1408" },
-  { key: "sky",    label: "Sky",    swatch: "#071722" },
-  { key: "mint",   label: "Mint",   swatch: "#04150e" },
-  { key: "violet", label: "Violet", swatch: "#120c22" },
-];
+/* Single source of truth in cardArt, so the picker, the preview and the
+   downloaded PNG cannot disagree about what a theme looks like. */
+const THEMES = Object.entries(CARD_THEMES).map(([key, t]) => ({
+  key, label: t.label, swatch: t.bg,
+}));
 
 const EMPTY = {
   name: "", job_title: "", company_name: "", phone: "", whatsapp: "", email: "",
   linkedin: "", brief: "", photo_url: "",
   custom1_label: "", custom1_value: "", custom1_type: "text",
   custom2_label: "", custom2_value: "", custom2_type: "text",
-  theme: "ink",
+  theme: "ink", bg_color: "", text_color: "", accent_color: "",
 };
 
 const cardUrl = (slug) => `${SITE}/card/${slug}`;
@@ -55,6 +54,7 @@ export default function CardsPage() {
   const [saving, setSaving]     = useState(false);
   const [formError, setFormErr] = useState("");
 
+  const [companyLogo, setCompanyLogo] = useState("");
   const [qrFor, setQrFor]   = useState(null);
   const [qrData, setQrData] = useState("");
 
@@ -75,6 +75,10 @@ export default function CardsPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message || "Could not load cards");
       setCards(data.cards || []);
+      try {
+        const stored = JSON.parse(localStorage.getItem("company") || "{}");
+        setCompanyLogo(stored?.id ? `${API}/api/logo/${stored.id}` : "");
+      } catch { /* no logo is fine — the card renders without one */ }
       setUsage(data.usage || { used: 0, limit: 0, remaining: 0 });
     } catch (e) {
       say(e.message || "Could not load cards", "error");
@@ -196,6 +200,12 @@ export default function CardsPage() {
       setQrFor(null);
     }
   };
+
+  /* Recomputed on every keystroke so the preview and the warning track the
+     form rather than the saved record. */
+  const live = resolveColors(form);
+  const hasOverride = !!(form.bg_color || form.text_color || form.accent_color);
+  const contrast = contrastVerdict(live.fg, live.bg);
 
   const filtered = cards.filter((c) => {
     const q = query.trim().toLowerCase();
@@ -425,13 +435,68 @@ export default function CardsPage() {
                 <div className={styles.themes}>
                   {THEMES.map((t) => (
                     <button type="button" key={t.key}
-                            className={`${styles.theme} ${form.theme === t.key ? styles.themeOn : ""}`}
-                            onClick={() => setForm({ ...form, theme: t.key })}>
+                            className={`${styles.theme} ${form.theme === t.key && !hasOverride ? styles.themeOn : ""}`}
+                            onClick={() => setForm({
+                              ...form, theme: t.key,
+                              // Choosing a preset clears any override, or the
+                              // preset would appear selected and do nothing.
+                              bg_color: "", text_color: "", accent_color: "",
+                            })}>
                       <span style={{ background: t.swatch }} />
                       {t.label}
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className={styles.field}>
+                <div className={styles.colourHead}>
+                  <label htmlFor="c-bg">Your own colours <span className={styles.opt}>optional</span></label>
+                  {hasOverride && (
+                    <button type="button" className={styles.clearColours}
+                            onClick={() => setForm({ ...form, bg_color: "", text_color: "", accent_color: "" })}>
+                      Reset to theme
+                    </button>
+                  )}
+                </div>
+
+                <div className={styles.colours}>
+                  {[
+                    ["bg_color",     "Background", "c-bg"],
+                    ["text_color",   "Text",       "c-fg"],
+                    ["accent_color", "Accent",     "c-ac"],
+                  ].map(([key, label, id]) => (
+                    <label key={key} className={styles.colour} htmlFor={id}>
+                      <input id={id} type="color" disabled={saving}
+                             value={form[key] || live[key === "bg_color" ? "bg" : key === "text_color" ? "fg" : "accent"]}
+                             onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {/* Warn, do not block: it is their brand, and a warning
+                    makes the risk visible without overriding their choice. */}
+                {!contrast.ok && (
+                  <p className={styles.contrastWarn} role="status">
+                    Text contrast is {contrast.ratio.toFixed(1)}:1. {contrast.note}.
+                  </p>
+                )}
+              </div>
+
+              <div className={styles.field}>
+                <label>Preview</label>
+                <CardPreview
+                  card={form}
+                  cardUrl={editing.slug ? cardUrl(editing.slug) : `${SITE}/card/preview`}
+                  logoSrc={companyLogo}
+                  downloadable={!!editing.slug}
+                />
+                {!editing.slug && (
+                  <p className={styles.previewNote}>
+                    The QR becomes real once the card is created — download is available then.
+                  </p>
+                )}
               </div>
 
               {formError && <p className={styles.formError} role="alert">{formError}</p>}

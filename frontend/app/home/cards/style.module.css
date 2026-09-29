@@ -314,3 +314,44 @@
   .spinner { animation: none; }
   .primaryBtn:hover:not(:disabled) { transform: none; }
 }
+
+/* ── Colour overrides ────────────────────────────────────────────────────── */
+.colourHead { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+
+.clearColours {
+  border: none; background: none; cursor: pointer; padding: 0;
+  font-family: inherit; font-size: .72rem; font-weight: 800;
+  color: var(--hv-amber-deep, #8a4a00); text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.colours { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.colour {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  padding: 7px 12px 7px 8px; border-radius: 10px;
+  border: 1px solid var(--hv-line-strong, #d5d5dd); background: #fff;
+  font-size: .78rem; font-weight: 700; color: #4a4b54;
+}
+.colour:hover { border-color: #17171a; }
+
+/* Native colour inputs render a chunky bordered box by default; this makes
+   them read as a swatch. */
+.colour input[type="color"] {
+  width: 26px; height: 26px; padding: 0; cursor: pointer;
+  border: 1px solid rgba(5,5,5,.15); border-radius: 7px;
+  background: none; flex-shrink: 0;
+}
+.colour input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.colour input[type="color"]::-webkit-color-swatch { border: none; border-radius: 5px; }
+.colour input[type="color"]::-moz-color-swatch { border: none; border-radius: 5px; }
+
+.contrastWarn {
+  margin: 10px 0 0; padding: 9px 13px; border-radius: 9px;
+  background: #fff8ec; border-left: 3px solid var(--hv-amber, #f5a524);
+  font-size: .78rem; font-weight: 700; line-height: 1.5; color: #8a5a00;
+}
+
+.previewNote {
+  margin: 8px 0 0; font-size: .74rem; color: #8d8e97; line-height: 1.5;
+}
