@@ -252,19 +252,19 @@ export default function ClaimCard({ slug }) {
         </p>
 
         <p className={styles.group}>Required</p>
-        {input("name", "Your name *", { autoComplete: "name", maxLength: 120, placeholder: "e.g. Ravi Kumar" })}
-        {input("phone", "Phone *", { type: "tel", inputMode: "tel", autoComplete: "tel", maxLength: 20, placeholder: "e.g. 98765 43210" })}
-        {input("email", "Email *", { type: "email", autoComplete: "email", maxLength: 190, placeholder: "e.g. ravi@acmetraders.com" })}
+        {input("name", "Your name *", { autoComplete: "name", maxLength: 120, placeholder: "Your full name" })}
+        {input("phone", "Phone *", { type: "tel", inputMode: "tel", autoComplete: "tel", maxLength: 20, placeholder: "+91 XXXXX 34567" })}
+        {input("email", "Email *", { type: "email", autoComplete: "email", maxLength: 190, placeholder: "yourname@company.com" })}
 
         <p className={styles.group}>Optional</p>
-        {input("job_title", "Job title", { autoComplete: "organization-title", maxLength: 120, placeholder: "e.g. Sales Manager" })}
-        {input("company_name", "Company", { autoComplete: "organization", maxLength: 160, placeholder: "e.g. Acme Traders Pvt Ltd" })}
+        {input("job_title", "Job title", { autoComplete: "organization-title", maxLength: 120, placeholder: "Your designation" })}
+        {input("company_name", "Company", { autoComplete: "organization", maxLength: 160, placeholder: "Your company name" })}
 
         <div className={styles.field}>
           <label htmlFor="c-brief">About you</label>
           <textarea id="c-brief" rows={3} value={form.brief} onChange={set("brief")} disabled={busy}
                     maxLength={400} aria-invalid={!!errors.brief}
-                    placeholder="e.g. I help retail shops across Bengaluru get stock faster, with same-day delivery." />
+                    placeholder="A line or two about what you do" />
           <p className={errors.brief || briefWords > BRIEF_LIMIT ? styles.fieldError : styles.hint}>
             {errors.brief || (briefWords > BRIEF_LIMIT
               ? `${briefWords} words — keep it to ${BRIEF_LIMIT} or fewer`
@@ -272,12 +272,12 @@ export default function ClaimCard({ slug }) {
           </p>
         </div>
 
-        {input("linkedin", "LinkedIn", { inputMode: "url", maxLength: 255, placeholder: "e.g. linkedin.com/in/ravikumar" })}
+        {input("linkedin", "LinkedIn", { inputMode: "url", maxLength: 255, placeholder: "linkedin.com/in/yourname" })}
 
         {[1, 2].map((n) => (
           <div className={styles.customRow} key={n}>
-            {input(`custom${n}_label`, `Extra field ${n} — label`, { maxLength: 60, placeholder: n === 1 ? "e.g. Website" : "e.g. Office" })}
-            {input(`custom${n}_value`, "Value", { maxLength: 255, placeholder: n === 1 ? "e.g. www.acmetraders.com" : "e.g. 2nd Floor, MG Road, Bengaluru" })}
+            {input(`custom${n}_label`, `Extra field ${n} — label`, { maxLength: 60, placeholder: n === 1 ? "Website" : "Office" })}
+            {input(`custom${n}_value`, "Value", { maxLength: 255, placeholder: n === 1 ? "www.yourcompany.com" : "Your office address" })}
             <label className={styles.checkLine}>
               <input type="checkbox" checked={form[`custom${n}_type`] === "link"} disabled={busy}
                      onChange={(e) => setForm((p) => ({ ...p, [`custom${n}_type`]: e.target.checked ? "link" : "text" }))} />
