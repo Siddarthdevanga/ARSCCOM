@@ -56,11 +56,19 @@ const nextConfig = {
       "complete-registration",
       "contact-us",
     ];
-    return movedPages.map((page) => ({
-      source: `/auth/${page}`,
-      destination: `/${page}`,
-      permanent: true,
-    }));
+    return [
+      ...movedPages.map((page) => ({
+        source: `/auth/${page}`,
+        destination: `/${page}`,
+        permanent: true,
+      })),
+      // Common misspellings of the jewellery landing page.
+      ...["jewelry", "jewelary"].map((spelling) => ({
+        source: `/${spelling}`,
+        destination: "/jewellery",
+        permanent: true,
+      })),
+    ];
   },
 };
 

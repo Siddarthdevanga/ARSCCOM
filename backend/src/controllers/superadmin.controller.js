@@ -112,6 +112,11 @@ export const dashboard = async (req, res) => {
   }
 };
 
+// companies.landing_page → the label the superadmin shows. NULL covers every
+// signup from before the column existed and everything off the main page.
+const LANDING_PAGE_LABELS = { jewellery: "Jewellery" };
+const landingPageLabel = (landing) => LANDING_PAGE_LABELS[landing] || "Main page";
+
 /* ======================================================
    COMPANIES EXPORT (EXCEL)
    GET /api/superadmin/companies/export?from=YYYY-MM-DD&to=YYYY-MM-DD
@@ -131,11 +136,11 @@ export const exportCompanies = async (req, res) => {
 
     ws.columns = [
       { width: 30 }, { width: 16 }, { width: 30 }, { width: 18 },
-      { width: 16 }, { width: 16 },
+      { width: 16 }, { width: 16 }, { width: 14 },
     ];
 
-    ws.addRow(new Array(6).fill(null));
-    ws.mergeCells("A1:F1");
+    ws.addRow(new Array(7).fill(null));
+    ws.mergeCells("A1:G1");
     ws.getCell("A1").value = `Companies  —  Registered ${from} to ${to}`;
     ws.getRow(1).height = 34;
     ws.getRow(1).eachCell({ includeEmpty: true }, (cell) => {
@@ -144,8 +149,8 @@ export const exportCompanies = async (req, res) => {
       cell.alignment = { vertical: "middle", horizontal: "center" };
     });
 
-    ws.addRow(new Array(6).fill(null));
-    ws.mergeCells("A2:F2");
+    ws.addRow(new Array(7).fill(null));
+    ws.mergeCells("A2:G2");
     ws.getCell("A2").value = `Generated: ${new Date().toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: true })}   |   Total Records: ${companies.length}`;
     ws.getRow(2).height = 22;
     ws.getRow(2).eachCell({ includeEmpty: true }, (cell) => {
@@ -157,7 +162,7 @@ export const exportCompanies = async (req, res) => {
     ws.addRow([]);
     ws.getRow(3).height = 6;
 
-    const headerRow = ws.addRow(["Company Name", "Plan", "Email", "Phone", "Status", "Expires On"]);
+    const headerRow = ws.addRow(["Company Name", "Plan", "Email", "Phone", "Status", "Expires On", "Source"]);
     headerRow.height = 26;
     headerRow.font = { bold: true, color: { argb: "FFFFFFFF" }, size: 11 };
     headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF7a00ff" } };
@@ -173,6 +178,7 @@ export const exportCompanies = async (req, res) => {
         c.phone || "-",
         c.subscription_status || "-",
         fmtDate(c.trial_ends_at || c.subscription_ends_at),
+        landingPageLabel(c.landing_page),
       ]);
       if (i % 2 === 0) row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8F6FF" } };
     });

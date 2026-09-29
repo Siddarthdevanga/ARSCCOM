@@ -44,6 +44,21 @@ const planColor = (plan) => {
   }
 };
 
+// companies.landing_page → label. NULL covers every signup from before the
+// column existed and everything off the main landing page.
+const LANDING_PAGE_LABELS = { jewellery: "Jewellery" };
+const sourceLabel = (landing) => LANDING_PAGE_LABELS[landing] || "Main page";
+const matchesSource = (landing, filter) =>
+  filter === "all" || (filter === "main" ? !LANDING_PAGE_LABELS[landing] : landing === filter);
+
+const SourceSelect = ({ value, onChange }) => (
+  <select className={styles.filterSelect} value={value} onChange={(e) => onChange(e.target.value)}>
+    <option value="all">All Sources</option>
+    <option value="main">Main page</option>
+    <option value="jewellery">Jewellery</option>
+  </select>
+);
+
 /* ======================================================
    MODAL
 ====================================================== */
@@ -595,7 +610,7 @@ function ExportCompaniesModal({ onClose, token, apiBase, showToast }) {
         <div className={styles.modalHeader}>
           <div>
             <h2 className={styles.modalTitle}>Download Companies</h2>
-            <p className={styles.modalSub}>Export by registration date range — name, plan, email, phone, status &amp; expiry</p>
+            <p className={styles.modalSub}>Export by registration date range — name, plan, email, phone, status, expiry &amp; source</p>
           </div>
           <button className={styles.modalClose} onClick={onClose}>✕</button>
         </div>
@@ -642,6 +657,7 @@ export default function SuperAdminDashboard() {
   const [search,       setSearch]       = useState("");
   const [filterPlan,   setFilterPlan]   = useState("all");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterSource, setFilterSource] = useState("all");
   const [toast,        setToast]        = useState({ show: false, message: "", type: "success" });
 
   const [activeTab, setActiveTab] = useState(() =>
@@ -655,6 +671,7 @@ export default function SuperAdminDashboard() {
   const [sendingVideoId,  setSendingVideoId]  = useState(null);
   const [razorpaySearch,  setRazorpaySearch]  = useState("");
   const [razorpayStatus,  setRazorpayStatus]  = useState("all");
+  const [razorpaySource,  setRazorpaySource]  = useState("all");
 
   // Restricted sub-admins (role: superadmin_readonly) can only ever see
   // Landing Page Conversions — every other route/tab/action is hidden for
@@ -803,7 +820,7 @@ export default function SuperAdminDashboard() {
       c.slug?.toLowerCase().includes(search.toLowerCase());
     const matchPlan   = filterPlan   === "all" || c.plan   === filterPlan;
     const matchStatus = filterStatus === "all" || c.subscription_status === filterStatus;
-    return matchSearch && matchPlan && matchStatus;
+    return matchSearch && matchPlan && matchStatus && matchesSource(c.landing_page, filterSource);
   });
 
   const filteredSignups = razorpaySignups.filter((s) => {
@@ -815,7 +832,7 @@ export default function SuperAdminDashboard() {
     const matchStatus =
       razorpayStatus === "all" ||
       (razorpayStatus === "complete" ? s.registration_complete : !s.registration_complete);
-    return matchSearch && matchStatus;
+    return matchSearch && matchStatus && matchesSource(s.landing_page, razorpaySource);
   });
 
   if (!token) return null;
@@ -973,6 +990,7 @@ export default function SuperAdminDashboard() {
                 <option value="expired">Expired</option>
                 <option value="cancelled">Cancelled</option>
               </select>
+              <SourceSelect value={filterSource} onChange={setFilterSource} />
               <button className={styles.refreshBtn} onClick={() => fetchDashboard(token)}>↻ Refresh</button>
             </div>
 
@@ -995,6 +1013,7 @@ export default function SuperAdminDashboard() {
                         <th>Status</th>
                         <th>Expires</th>
                         <th>Visitors</th>
+                        <th>Source</th>
                         <th>Action</th>
                       </tr>
                     </thead>
@@ -1028,6 +1047,7 @@ export default function SuperAdminDashboard() {
                               both instead of always showing a dangling "-". */}
                           <td data-label="Expires" className={styles.dateCell}>{(c.trial_ends_at || c.subscription_ends_at)?.slice(0, 10) || "-"}</td>
                           <td data-label="Visitors" className={styles.numCell}>{c.total_visitors}</td>
+                          <td data-label="Source">{sourceLabel(c.landing_page)}</td>
                           <td className={styles.actionCell}>
                             <button
                               className={styles.manageBtn}
@@ -1063,6 +1083,7 @@ export default function SuperAdminDashboard() {
                   <option value="incomplete">Setup Incomplete</option>
                 </select>
               )}
+              <SourceSelect value={razorpaySource} onChange={setRazorpaySource} />
               <button className={styles.refreshBtn} onClick={() => fetchRazorpaySignups(token)}>↻ Refresh</button>
             </div>
 
@@ -1085,6 +1106,7 @@ export default function SuperAdminDashboard() {
                         <th>Amount Paid</th>
                         <th>Payment ID</th>
                         <th>Paid On</th>
+                        <th>Source</th>
                         {isFullAdmin && <th>Setup Status</th>}
                         {isFullAdmin && <th>Onboarding Messages</th>}
                         {isFullAdmin && <th>Action</th>}
@@ -1106,6 +1128,7 @@ export default function SuperAdminDashboard() {
                           </td>
                           <td data-label="Payment ID">{s.razorpay_payment_id || "-"}</td>
                           <td data-label="Paid On" className={styles.dateCell}>{s.created_at?.slice(0, 10) || "-"}</td>
+                          <td data-label="Source">{sourceLabel(s.landing_page)}</td>
                           {isFullAdmin && (
                             <td data-label="Setup Status">
                               {s.registration_complete ? (

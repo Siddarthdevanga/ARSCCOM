@@ -154,6 +154,7 @@ export const getDashboard = async () => {
        c.grace_period_ends_at,
        c.grace_period_day,
        c.created_at,
+       c.landing_page,
        (SELECT COUNT(*) FROM conference_rooms    cr WHERE cr.company_id = c.id) AS total_rooms,
        (SELECT COUNT(*) FROM conference_bookings cb WHERE cb.company_id = c.id) AS total_bookings,
        (SELECT COUNT(*) FROM visitors             v  WHERE v.company_id  = c.id) AS total_visitors,
@@ -178,6 +179,7 @@ export const getCompaniesForExport = async (from, to) => {
        c.trial_ends_at,
        c.subscription_ends_at,
        c.created_at,
+       c.landing_page,
        (SELECT u.email FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS email,
        (SELECT u.phone FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS phone
      FROM companies c
@@ -207,6 +209,7 @@ export const getRazorpaySignups = async () => {
        c.registration_complete,
        c.created_at,
        c.onboarding_nurture_sent,
+       c.landing_page,
        (SELECT u.email FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS email,
        (SELECT u.phone FROM users u WHERE u.company_id = c.id ORDER BY u.id ASC LIMIT 1) AS phone
      FROM companies c

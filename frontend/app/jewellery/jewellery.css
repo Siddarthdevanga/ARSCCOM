@@ -1,0 +1,151 @@
+/* Hand edits for /jewellery on top of the design (tailwind.css, design.css):
+   the offer ticker, WhatsApp button and trial popup shared with the main
+   landing page, plus layout changes that came with them. The popup, ticker
+   and WhatsApp rules mirror landing-page.css so both pages look the same. */
+
+:root { --ticker-h: 34px; }
+
+/* The ticker sits above the fixed header, so everything below moves down. */
+html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
+.jw .hv-header { top: var(--ticker-h); }
+.jw main#top { padding-top: calc(var(--header-h) + var(--ticker-h)); }
+.jw .hv-hero__grid { min-height: min(calc(100svh - var(--header-h) - var(--ticker-h)), 40rem); }
+@media (min-width: 64rem) {
+  .jw .hv-faq__intro { top: calc(var(--header-h) + var(--ticker-h) + 1.5rem); }
+}
+
+/* Industries: only the jewellery card is shown. */
+@media (min-width: 40rem) { .jw .hv-industries .hv-grid { grid-template-columns: minmax(0, 26rem); } }
+@media (min-width: 64rem) {
+  .jw .industry-card--jewellery,
+  .jw .industry-card--jewellery:hover { transform: none; }
+}
+
+/* ---------- Offer ticker ---------- */
+.jw .offer-ticker {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 101; height: var(--ticker-h);
+  background: #FFD100; overflow: hidden; border-bottom: 2px solid #E4B800;
+}
+.jw .ot-track {
+  display: flex; gap: 2.2rem; width: max-content; animation: jwTick 16s linear infinite;
+  padding: .45rem 0; font-weight: 900; font-size: .78rem; letter-spacing: .08em; line-height: 1.6;
+  color: #B91C1C; text-transform: uppercase; white-space: nowrap;
+}
+@keyframes jwTick { to { transform: translateX(-50%); } }
+
+/* ---------- WhatsApp float ---------- */
+.jw .wa-float {
+  position: fixed; bottom: 1.1rem; right: 1.1rem; z-index: 90; width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center; overflow: hidden; transition: transform .2s;
+  animation: jwWaGlow 2.2s ease-out infinite;
+}
+.jw .wa-float:hover { transform: scale(1.08); }
+.jw .wa-float img { width: 100%; height: 100%; object-fit: cover; }
+@keyframes jwWaGlow {
+  0%   { box-shadow: 0 10px 26px rgba(34,197,94,.4), 0 0 0 0 rgba(34,197,94,.55); }
+  70%  { box-shadow: 0 10px 26px rgba(34,197,94,.4), 0 0 0 14px rgba(34,197,94,0); }
+  100% { box-shadow: 0 10px 26px rgba(34,197,94,.4), 0 0 0 0 rgba(34,197,94,0); }
+}
+
+/* ---------- Trial signup popup (same as the main landing page) ---------- */
+.jw .trial-modal-backdrop {
+  --navy: #242427; --text: #262629; --muted: #6e6e71; --stroke: #EAE3D6;
+  --orange: #F97316; --purple: #1d1d21; --green: #22C55E;
+  --grad: linear-gradient(95deg, #F97316, #EF3E66);
+  --font: 'Inter', system-ui, sans-serif;
+
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(36, 36, 39, .6); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: clamp(.6rem, 3vw, 1.2rem);
+  font-family: var(--font); line-height: 1.6; color: var(--text);
+}
+.jw .trial-modal-backdrop.open { display: flex; }
+.jw .trial-modal {
+  position: relative; width: min(420px, 100%); max-height: calc(100dvh - 2.4rem); overflow-y: auto;
+  background: #fff; border-radius: clamp(18px, 5vw, 24px);
+  box-shadow: 0 30px 70px rgba(36, 36, 39, .35);
+  padding: clamp(1.5rem, 6vw, 2rem) clamp(1.2rem, 5.5vw, 1.8rem) clamp(1.4rem, 5vw, 1.9rem);
+  text-align: center; animation: jwTrialModalIn .32s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes jwTrialModalIn {
+  from { opacity: 0; transform: scale(.94) translateY(14px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.jw .trial-modal-close {
+  position: absolute; top: clamp(.7rem, 3vw, .9rem); right: clamp(.7rem, 3vw, .9rem);
+  width: 30px; height: 30px; border-radius: 50%; z-index: 2;
+  border: none; background: #f2f2f5; color: var(--navy); font-size: 1.2rem; line-height: 1;
+  cursor: pointer; display: grid; place-items: center; transition: background .2s, transform .2s;
+}
+.jw .trial-modal-close:hover { background: #e6e6e9; transform: rotate(90deg); }
+
+.jw .trial-modal-top { margin-bottom: clamp(1rem, 4vw, 1.4rem); }
+.jw .trial-modal-logo {
+  width: auto; height: clamp(34px, 9vw, 42px); margin: 0 auto .6rem;
+  display: block; object-fit: contain;
+}
+.jw .trial-modal-wordmark { font-size: clamp(.98rem, 4vw, 1.08rem); font-weight: 900; color: var(--navy); letter-spacing: .01em; }
+.jw .trial-modal-wordmark span { color: var(--orange); }
+.jw .trial-modal-pill {
+  display: inline-block; margin-top: .55rem; font-size: .66rem; font-weight: 800;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--purple);
+  background: rgba(29, 29, 33, .09); border: 1px solid rgba(29, 29, 33, .2);
+  padding: .32rem .85rem; border-radius: 999px;
+}
+
+.jw .trial-modal h3 {
+  font-size: clamp(1.1rem, 4.8vw, 1.28rem); margin-bottom: .3rem;
+  font-weight: 800; line-height: 1.16; letter-spacing: -.02em; color: var(--navy);
+}
+.jw .trial-modal-sub { color: var(--muted); font-size: clamp(.79rem, 3.4vw, .85rem); margin-bottom: clamp(1rem, 4vw, 1.3rem); }
+
+.jw .trial-field { margin-bottom: clamp(.7rem, 3vw, .95rem); text-align: left; }
+.jw .trial-field label { display: block; font-size: .78rem; font-weight: 700; color: var(--navy); margin-bottom: .32rem; }
+.jw .trial-field-req { color: #dc2626; }
+.jw .trial-field input {
+  width: 100%; padding: clamp(.65rem, 3vw, .78rem) clamp(.8rem, 3.5vw, .95rem); border-radius: 12px; border: 1.5px solid var(--stroke);
+  font-size: .92rem; font-family: var(--font); color: var(--text); outline: none;
+  transition: border-color .2s, box-shadow .2s; background: #FAF7F1;
+}
+.jw .trial-field input:focus { border-color: var(--purple); box-shadow: 0 0 0 4px rgba(29, 29, 33, .12); background: #fff; }
+.jw .trial-field input.err { border-color: #dc2626; }
+.jw .trial-field input.err:focus { box-shadow: 0 0 0 4px rgba(220, 38, 38, .12); }
+.jw .trial-field-err { display: block; font-size: .72rem; font-weight: 700; color: #dc2626; }
+.jw .trial-field-err:not(:empty) { margin-top: .3rem; }
+.jw .trial-modal-err { font-size: .82rem; font-weight: 700; color: #dc2626; }
+.jw .trial-modal-err:not(:empty) { margin-bottom: .8rem; }
+
+.jw .trial-modal .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .8rem 1.5rem; border-radius: 12px; font-weight: 800; font-size: .82rem; letter-spacing: .04em;
+  border: 1px solid transparent; text-transform: uppercase; transition: transform .2s, box-shadow .2s;
+  white-space: nowrap; max-width: 100%; cursor: pointer;
+}
+.jw .trial-modal .btn-primary {
+  background: var(--grad); color: #fff; box-shadow: 0 10px 26px rgba(239, 62, 102, .35);
+  animation: jwCtaPulse 2.2s infinite;
+}
+.jw .trial-modal .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(239, 62, 102, .45); }
+@keyframes jwCtaPulse {
+  0%, 100% { box-shadow: 0 10px 26px rgba(239, 62, 102, .35); }
+  50% { box-shadow: 0 10px 26px rgba(239, 62, 102, .35), 0 0 0 9px rgba(239, 62, 102, .14); }
+}
+.jw .trial-modal-submit { width: 100%; justify-content: center; }
+.jw .trial-modal-submit[disabled] { opacity: .6; cursor: not-allowed; }
+@media (max-width: 520px) {
+  .jw .trial-modal .btn { white-space: normal; line-height: 1.35; }
+}
+
+.jw .trial-success { padding: .2rem 0 0; }
+.jw .trial-success-icon {
+  width: clamp(50px, 12vw, 58px); height: clamp(50px, 12vw, 58px); margin: 0 auto 1rem; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), #16a34a); color: #fff;
+  font-size: 1.6rem; font-weight: 900; display: grid; place-items: center;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, .35);
+}
+.jw .trial-success h3 { margin-bottom: .4rem; }
+.jw .trial-success p { color: var(--muted); font-size: .9rem; margin-bottom: 1.3rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jw .ot-track, .jw .wa-float, .jw .trial-modal, .jw .trial-modal .btn-primary { animation: none; }
+}

@@ -98,6 +98,9 @@ nav { position:sticky; top:var(--ticker-h); z-index:100; background:rgba(250,247
 .seg-photo-grid { display:grid; grid-template-columns:1fr 1fr; gap:2px; }
 .seg-photo { position:relative; overflow:hidden; }
 .seg-photo img { width:100%; height:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
+a.seg-photo { display:block; }
+a.seg-photo img { transition:transform .5s ease; }
+a.seg-photo:hover img { transform:scale(1.04); }
 
 /* TRUST STRIP */
 .trust { background:#fff; border-block:1px solid var(--stroke); padding:1.6rem 0; }

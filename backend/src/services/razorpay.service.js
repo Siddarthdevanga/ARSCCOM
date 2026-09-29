@@ -47,9 +47,17 @@ const razorpayAuth = () => {
 ====================================================== */
 const PHONE_RE = /^[6-9]\d{9}$/;
 
-export const createTrialOrder = async ({ email, phone }) => {
+// Industry landing pages that open this same popup (e.g. /jewellery). The
+// value rides along in the order notes and ends up on companies.landing_page
+// so the superadmin can tell which page a signup came from. Anything not
+// listed here is dropped — the main landing page sends nothing and is
+// stored as NULL.
+const LANDING_PAGES = new Set(["jewellery"]);
+
+export const createTrialOrder = async ({ email, phone, landing }) => {
   const cleanEmail = normalizeEmail(email);
   const cleanPhone = (phone || "").replace(/\D/g, "");
+  const cleanLanding = LANDING_PAGES.has(landing) ? landing : null;
 
   if (!cleanEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
     throw new Error("Enter a valid email address");
@@ -82,7 +90,12 @@ export const createTrialOrder = async ({ email, phone }) => {
       amount: TRIAL_AMOUNT_PAISE,
       currency: "INR",
       receipt: `trial_${Date.now()}`,
-      notes: { email: cleanEmail, phone: cleanPhone, product: "hai_visitor_trial" },
+      notes: {
+        email: cleanEmail,
+        phone: cleanPhone,
+        product: "hai_visitor_trial",
+        ...(cleanLanding ? { landing: cleanLanding } : {}),
+      },
     },
     { auth: razorpayAuth() }
   );
@@ -338,8 +351,9 @@ const extractPayerDetails = async (paymentEntity) => {
   // check, any payment.captured event anywhere on the account would be
   // mistaken for one of these Orders.
   const isOurOrder = notes.product === "hai_visitor_trial";
+  const landing = LANDING_PAGES.has(notes.landing) ? notes.landing : null;
 
-  return { name: "New Customer", email, phone, isOurOrder };
+  return { name: "New Customer", email, phone, isOurOrder, landing };
 };
 
 /* ======================================================
@@ -369,7 +383,7 @@ export const handlePaymentCaptured = async (payload) => {
   const paymentId = paymentEntity?.id || null;
   const amountPaise = Number.isFinite(paymentEntity?.amount) ? paymentEntity.amount : null;
 
-  const { name, email, phone, isOurOrder } = await extractPayerDetails(paymentEntity);
+  const { name, email, phone, isOurOrder, landing } = await extractPayerDetails(paymentEntity);
   const log = (status, companyId) => logWebhookEvent({ paymentId, name, email, phone, status, companyId, rawPayload: payload });
 
   // Not one of our trial orders — some other payment on the same Razorpay
@@ -446,6 +460,17 @@ export const handlePaymentCaptured = async (payload) => {
         return { status: "duplicate_delivery" };
       }
       throw err;
+    }
+
+    // Kept out of the INSERT above on purpose: if the landing_page migration
+    // hasn't run yet, only the source tag is lost, not the signup. MySQL
+    // fails just this statement and leaves the transaction open.
+    if (landing) {
+      try {
+        await conn.execute(`UPDATE companies SET landing_page = ? WHERE id = ?`, [landing, companyId]);
+      } catch (err) {
+        console.error("[RAZORPAY] could not tag landing page", landing, "on company", companyId, err.message);
+      }
     }
 
     await conn.execute(

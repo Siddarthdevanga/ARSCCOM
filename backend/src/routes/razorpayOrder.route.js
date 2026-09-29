@@ -14,8 +14,8 @@ const router = express.Router();
 ====================================================== */
 router.post("/create-order", async (req, res) => {
   try {
-    const { email, phone } = req.body || {};
-    const order = await createTrialOrder({ email, phone });
+    const { email, phone, landing } = req.body || {};
+    const order = await createTrialOrder({ email, phone, landing });
 
     return res.status(201).json({ success: true, mode: "order", ...order });
   } catch (err) {
