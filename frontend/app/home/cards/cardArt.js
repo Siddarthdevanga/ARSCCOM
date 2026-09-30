@@ -279,10 +279,10 @@ export async function drawBack(canvas, card, opts = {}) {
   ctx.fillStyle = accent;
   ctx.fillRect(0, 0, W, s(14));
 
-  const qr = await loadImage(opts.qrSrc);
+  const [qr, mark] = await Promise.all([loadImage(opts.qrSrc), loadImage("/v-mark.png")]);
   const box = s(300);
   const x = (W - box) / 2;
-  const y = s(120);
+  const y = s(96);
 
   // The QR always sits on white with a quiet zone, whatever the card
   // colours are. Scanners need the contrast, and a dark theme would
@@ -312,12 +312,8 @@ export async function drawBack(canvas, card, opts = {}) {
     ctx.fillText(fitText(ctx, card.name, W - s(120)), W / 2, y + box + s(116));
   }
 
-  ctx.fillStyle = alpha(fg, 0.34);
-  ctx.font = `600 ${s(17)}px 'Segoe UI', Arial, sans-serif`;
   // Kept clear of the bottom 3 mm, which a print trim can take off.
-  ctx.fillText("Digital card by Haivisitor", W / 2, H - s(46));
-  ctx.textAlign = "left";
-
+  brandFooter(ctx, { mark, fg, W, H, s });
   return canvas;
 }
 
@@ -368,14 +364,14 @@ export async function drawCompanyBlankFront(canvas, { name = "", card = {} } = {
 
   const logo = await loadImage(opts.logoSrc);
   if (logo) {
-    const maxW = s(520), maxH = s(180);
+    // opts.brand: a Hai Visitor pool card (as cardArt.node.js). The V mark
+    // is larger and clipped to its roundel, and the name is the wordmark.
+    const maxW = s(520), maxH = s(opts.brand ? 240 : 180);
     const k = Math.min(maxW / logo.width, maxH / logo.height);
     const w = logo.width * k, h = logo.height * k;
-    const lx = cx - w / 2, ly = s(92) + (maxH - h) / 2;
+    const lx = cx - w / 2, ly = s(opts.brand ? 62 : 92) + (maxH - h) / 2;
     ctx.save();
-    // The Hai Visitor V mark is a square image of a roundel: clipped to
-    // the circle, so no black box shows around it.
-    if (opts.roundLogo) {
+    if (opts.brand) {
       ctx.beginPath();
       ctx.arc(lx + w / 2, ly + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
       ctx.clip();
@@ -389,7 +385,17 @@ export async function drawCompanyBlankFront(canvas, { name = "", card = {} } = {
     const lineH = s(size * 1.18);
     const mid = s(logo ? 385 : 270);
     const first = mid - ((lines.length - 1) * lineH) / 2 + s(size * 0.36);
-    lines.forEach((ln, i) => ctx.fillText(ln, cx, first + i * lineH));
+    if (opts.brand) {
+      // "H[ai] Visitor", "ai" in the brand yellow, centred as one run.
+      const parts = [["H", fg], ["ai", WORDMARK_AI], [" Visitor", fg]];
+      const widths = parts.map(([t]) => ctx.measureText(t).width);
+      let tx = cx - widths.reduce((a, b) => a + b, 0) / 2;
+      ctx.textAlign = "left";
+      parts.forEach(([t, colour], i) => { ctx.fillStyle = colour; ctx.fillText(t, tx, first); tx += widths[i]; });
+      ctx.textAlign = "center";
+    } else {
+      lines.forEach((ln, i) => ctx.fillText(ln, cx, first + i * lineH));
+    }
   }
 
   ctx.fillStyle = alpha(fg, 0.16);
@@ -434,9 +440,14 @@ export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}
   ctx.fillStyle = alpha(fg, 0.78);
   ctx.font = `700 ${s(26)}px ${FONT}`;
   ctx.fillText("Scan for my details", W / 2, by + box + s(70));
-  if (!footer) { ctx.textAlign = "left"; return canvas; }
+  if (footer) brandFooter(ctx, { mark, fg, W, H, s });
+  ctx.textAlign = "left";
+  return canvas;
+}
 
-  // Footer: the V roundel and "H[ai] Visitor", centred as one run.
+/* The footer of every printed card's back: the V roundel and
+   "H[ai] Visitor", centred as one run (brandLockup in cardArt.node.js). */
+function brandFooter(ctx, { mark, fg, W, H, s }) {
   const base = H - s(58);
   const D = s(40), gap = s(12);
   ctx.font = `800 ${s(28)}px ${FONT}`;
@@ -459,7 +470,6 @@ export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}
     ctx.fillText(t, tx, base);
     tx += widths[i];
   });
-  return canvas;
 }
 
 /* Downloads a face at full print resolution, regardless of the scale the

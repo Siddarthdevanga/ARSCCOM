@@ -224,8 +224,10 @@ export function paintFront(ctx, card, { logo = null, photo = null } = {}, x = 0,
   });
 }
 
-/* ── A person's card: BACK ────────────────────────────────────────────── */
-export function paintBack(ctx, card, { qr = null } = {}, x = 0, y0 = 0, scale = 1) {
+/* ── A person's card: BACK ──────────────────────────────────────────────
+   The QR, the owner's name, and the Hai Visitor footer (V mark and
+   wordmark), as on every printed card. */
+export function paintBack(ctx, card, { qr = null, mark = null } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
     const { bg, fg, accent } = resolveColors(card);
@@ -237,11 +239,11 @@ export function paintBack(ctx, card, { qr = null } = {}, x = 0, y0 = 0, scale = 
 
     const box = 300;
     const bx = (W - box) / 2;
-    const by = 120;
+    const by = 96;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, bx - 18, by - 18, box + 36, box + 36, 18);
     ctx.fill();
-    if (qr) ctx.drawImage(qr, bx, by, box, box);
+    if (qr) drawSharp(ctx, qr, bx, by, box, box);
 
     ctx.textAlign = "center";
     ctx.fillStyle = alpha(fg, 0.78);
@@ -254,9 +256,8 @@ export function paintBack(ctx, card, { qr = null } = {}, x = 0, y0 = 0, scale = 
       ctx.fillText(fitText(ctx, card.name, W - 120), W / 2, by + box + 116);
     }
 
-    ctx.fillStyle = alpha(fg, 0.34);
-    ctx.font = `600 17px ${FONT}`;
-    ctx.fillText("Digital card by Haivisitor", W / 2, H - 46);
+    // Clear of the bottom 3 mm, which a print trim can take off.
+    brandLockup(ctx, { mark, fg, cx: W / 2, base: H - 58 });
     ctx.textAlign = "left";
   });
 }
@@ -374,7 +375,10 @@ export function paintBlankBack(ctx, { qr = null, serial = "" } = {}, x = 0, y0 =
    Handed to an employee before they fill it in, and theirs for good after,
    so it carries only what never changes: the company's logo and name, on
    the colours the admin chose. */
-export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {}, roundLogo = false } = {}, x = 0, y0 = 0, scale = 1) {
+/* `brand`: a Hai Visitor pool card. The V mark is larger and clipped to its
+   roundel (the image is a square), and the name is the wordmark, "ai" in
+   the brand yellow. */
+export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {}, brand = false } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
     const { bg, fg, accent } = resolveColors(card);
@@ -390,14 +394,12 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {},
     // Logo in a box that keeps its shape; the name sits under it, or takes
     // the middle on its own when there is no logo.
     if (logo) {
-      const maxW = 520, maxH = 180;
+      const maxW = 520, maxH = brand ? 240 : 180, top = brand ? 62 : 92;
       const k = Math.min(maxW / logo.width, maxH / logo.height);
       const w = logo.width * k, h = logo.height * k;
-      const lx = cx - w / 2, ly = 92 + (maxH - h) / 2;
+      const lx = cx - w / 2, ly = top + (maxH - h) / 2;
       ctx.save();
-      // The Hai Visitor V mark is a square image of a roundel: clipped to
-      // the circle, so no black box shows around it.
-      if (roundLogo) {
+      if (brand) {
         ctx.beginPath();
         ctx.arc(lx + w / 2, ly + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
         ctx.clip();
@@ -411,7 +413,8 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {},
       const lineH = size * 1.18;
       const mid = logo ? 385 : 270;
       const first = mid - ((lines.length - 1) * lineH) / 2 + size * 0.36;
-      lines.forEach((ln, i) => ctx.fillText(ln, cx, first + i * lineH));
+      if (brand) wordmark(ctx, fg, cx, first);
+      else lines.forEach((ln, i) => ctx.fillText(ln, cx, first + i * lineH));
     }
 
     ctx.fillStyle = alpha(fg, 0.16);
@@ -455,6 +458,17 @@ export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {}, 
     ctx.textAlign = "left";
   });
 }
+
+/* "H[ai] Visitor" in the current font, centred on cx, "ai" in yellow. */
+const wordmark = (ctx, fg, cx, base) => {
+  const parts = [["H", fg], ["ai", WORDMARK_AI], [" Visitor", fg]];
+  const widths = parts.map(([t]) => ctx.measureText(t).width);
+  let tx = cx - widths.reduce((a, b) => a + b, 0) / 2;
+  const prev = ctx.textAlign;
+  ctx.textAlign = "left";
+  parts.forEach(([t, colour], i) => { ctx.fillStyle = colour; ctx.fillText(t, tx, base); tx += widths[i]; });
+  ctx.textAlign = prev;
+};
 
 /* The Hai Visitor mark (a black roundel, so it reads on any card colour)
    and "H[ai] Visitor", centred as one run on cx. */
@@ -521,22 +535,22 @@ export const qrImage = async (url) => safeImage(await QRCode.toDataURL(url, QR_O
 
 /* A person's card as two print-resolution PNG buffers. */
 export async function renderCardPngs(card, { cardUrl, logoSrc = null, photoSrc = null }) {
-  const [logo, photo, qr] = await Promise.all([safeImage(logoSrc), safeImage(photoSrc), qrImage(cardUrl)]);
+  const [logo, photo, qr, mark] = await Promise.all([safeImage(logoSrc), safeImage(photoSrc), qrImage(cardUrl), brandVMark()]);
   const front = createCanvas(CARD_W, CARD_H);
   paintFront(front.getContext("2d"), card, { logo, photo });
   const back = createCanvas(CARD_W, CARD_H);
-  paintBack(back.getContext("2d"), card, { qr });
+  paintBack(back.getContext("2d"), card, { qr, mark });
   return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
 }
 
 /* A Hai Visitor pool card before anyone claims it: laid out like a
-   company's empty card, with the Hai Visitor logo and name on the front in
-   the batch's colours, and the QR alone on the back. */
+   company's empty card, in the batch's colours. The front is the Hai
+   Visitor logo and wordmark; the back the QR, with the Hai Visitor footer. */
 export const POOL_NAME = "Hai Visitor";
 const paintPoolFront = (ctx, logo, card, x, y, scale) =>
-  paintCompanyBlankFront(ctx, { logo, name: POOL_NAME, card, roundLogo: true }, x, y, scale);
-const paintPoolBack = (ctx, qr, card, x, y, scale) =>
-  paintCompanyBlankBack(ctx, { qr, card, footer: false }, x, y, scale);
+  paintCompanyBlankFront(ctx, { logo, name: POOL_NAME, card, brand: true }, x, y, scale);
+const paintPoolBack = (ctx, qr, mark, card, x, y, scale) =>
+  paintCompanyBlankBack(ctx, { qr, mark, card }, x, y, scale);
 
 /* An unclaimed pool card as two PNG buffers: the same faces as its row on
    the batch print sheet. */
@@ -545,7 +559,7 @@ export async function renderBlankPoolPngs({ cardUrl, card = {} }) {
   const front = createCanvas(CARD_W, CARD_H);
   paintPoolFront(front.getContext("2d"), logo, card);
   const back = createCanvas(CARD_W, CARD_H);
-  paintPoolBack(back.getContext("2d"), qr, card);
+  paintPoolBack(back.getContext("2d"), qr, logo, card);
   return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
 }
 
@@ -577,7 +591,7 @@ export async function renderBatchPdf({ header = "", batchName = "", cards = [], 
   // with drawSharp, so both embed at full resolution and print crisp.
   const paintRow = (c, qr, xf, xb, y, scale) => {
     paintPoolFront(ctx, logo, c, xf, y, scale);
-    paintPoolBack(ctx, qr, c, xb, y, scale);
+    paintPoolBack(ctx, qr, logo, c, xb, y, scale);
   };
 
   for (let p = 0; p < pages; p++) {

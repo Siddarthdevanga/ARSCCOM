@@ -525,7 +525,7 @@ function NewBatchModal({ token, onClose, onCreated, onPrint, printing }) {
             <div style={{ ...field, marginTop: 14 }}>
               <span className={styles.label}>Preview <span style={{ fontWeight: 500, color: "#9ca3af" }}>as printed; each card gets its own QR</span></span>
               <BlankCardPreview companyName="Hai Visitor" logoSrc="/v-mark.png" card={previewCard}
-                                cardUrl={previewUrl} footer={false} roundLogo />
+                                cardUrl={previewUrl} brand />
             </div>
 
             {error && <p style={{ color: "#cc1100", fontSize: 13, fontWeight: 700, margin: "12px 0 0" }} role="alert">{error}</p>}
