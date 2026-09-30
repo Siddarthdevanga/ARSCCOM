@@ -8,23 +8,35 @@
    Plan allowance is shown at all times rather than surfaced as an error on
    save — being told you are out of cards after filling in a form is the
    wrong moment to find out.
+
+   Empty QR cards: the admin generates numbered cards up to the free slots,
+   prints the sheet and hands them out; each employee scans theirs and fills
+   it in. An empty card can be deleted (the one exception to the rule
+   above), and a filled one reset to empty for the next person.
    ========================================================================== */
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
   ArrowLeft, Plus, Search, QrCode, Power, Lock, Unlock, Pencil, X,
-  Download, Users, Eye, MessageSquare,
+  Download, Users, Eye, MessageSquare, Trash2, RotateCcw, Printer,
 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
 import { takeFlash } from "./CardEditor";
+import { THEMES } from "./cardArt";
 import styles from "./style.module.css";
 
 const API  = process.env.NEXT_PUBLIC_API_BASE_URL;
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
 const cardUrl = (slug) => `${SITE}/card/${slug}`;
+
+const THEME_LIST = Object.entries(THEMES).map(([key, t]) => ({ key, ...t }));
+const NEW_BATCH = { quantity: 1, theme: "ink", bg_color: "", text_color: "", accent_color: "" };
+
+/* A card's display name: an empty QR card has no one's name yet. */
+const titleOf = (card) => card.name || `Card ${card.number || ""}`.trim();
 
 export default function CardsPage() {
   const router = useRouter();
@@ -38,6 +50,12 @@ export default function CardsPage() {
   const [expired, setExpired] = useState(false);
   const [qrFor, setQrFor]   = useState(null);
   const [qrData, setQrData] = useState("");
+
+  const [gen, setGen]         = useState(null);    // the Generate form, or null when closed
+  const [genBusy, setGenBusy] = useState(false);
+  const [genError, setGenErr] = useState("");
+  const [made, setMade]       = useState(null);    // { ids, from, to } after generating
+  const [printing, setPrinting] = useState(false);
 
   const say = (msg, type = "success") => {
     setToast({ msg, type });
@@ -97,6 +115,104 @@ export default function CardsPage() {
     }
   };
 
+  /* ── Empty QR cards ── */
+  const openGenerate = () => {
+    if (usage.remaining <= 0) {
+      say(`All ${usage.limit} card slot${usage.limit === 1 ? "" : "s"} on your plan are in use. Deactivate or delete one first.`, "error");
+      return;
+    }
+    setGen({ ...NEW_BATCH });
+    setGenErr("");
+    setMade(null);
+  };
+  const closeGenerate = () => { if (!genBusy && !printing) { setGen(null); setMade(null); } };
+
+  const generate = async (e) => {
+    e.preventDefault();
+    const q = Number(gen.quantity);
+    if (!Number.isInteger(q) || q < 1 || q > usage.remaining) {
+      setGenErr(`Choose between 1 and ${usage.remaining}.`);
+      return;
+    }
+    setGenBusy(true);
+    setGenErr("");
+    try {
+      const res = await fetch(`${API}/api/cards/blank`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ ...gen, quantity: q }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
+      if (!res.ok) throw new Error(data?.message || "Could not generate the cards");
+      setMade({ ids: data.ids || [], from: data.from, to: data.to });
+      load();
+    } catch (err) {
+      setGenErr(err.message);
+    } finally {
+      setGenBusy(false);
+    }
+  };
+
+  /* The A4 print sheet, as a download. `ids` narrows it to some cards. */
+  const printSheet = async (ids = null) => {
+    if (printing) return;
+    setPrinting(true);
+    try {
+      const qs = ids?.length ? `?ids=${ids.join(",")}` : "";
+      const res = await fetch(`${API}/api/cards/blank/print${qs}`, { credentials: "include" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
+        throw new Error(data?.message || "Could not create the print sheet");
+      }
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "qr-cards.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      say(err.message, "error");
+    } finally {
+      setPrinting(false);
+    }
+  };
+
+  const removeBlank = async (card) => {
+    if (!window.confirm(`Delete empty card ${card.number}? Its printed QR will stop working, and the slot is freed.`)) return;
+    try {
+      const res = await fetch(`${API}/api/cards/${card.id}`, { method: "DELETE", credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
+      if (!res.ok) throw new Error(data?.message || "Could not delete the card");
+      say(`Card ${card.number} deleted.`);
+      load();
+    } catch (err) {
+      say(err.message, "error");
+    }
+  };
+
+  const resetCard = async (card) => {
+    if (!window.confirm(
+      `Reset card ${card.number} for someone new?\n\n${card.name}'s details come off it and the same printed QR ` +
+      "can be filled in again. Their leads and scans are kept, on an inactive copy of the card."
+    )) return;
+    try {
+      const res = await fetch(`${API}/api/cards/${card.id}/reset`, { method: "POST", credentials: "include" });
+      const data = await res.json().catch(() => ({}));
+      if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
+      if (!res.ok) throw new Error(data?.message || "Could not reset the card");
+      say(`Card ${card.number} is empty again.`);
+      load();
+    } catch (err) {
+      say(err.message, "error");
+    }
+  };
+
   const showQr = async (card) => {
     setQrFor(card);
     try {
@@ -115,9 +231,13 @@ export default function CardsPage() {
   const filtered = cards.filter((c) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
-    return [c.name, c.job_title, c.email, c.phone, c.company_name]
+    return [c.name, c.job_title, c.email, c.phone, c.company_name, c.number]
       .some((v) => (v || "").toLowerCase().includes(q));
   });
+
+  const blanks = cards.filter((c) => c.blank && c.is_active && !c.is_locked).length;
+  const genColours = THEMES[gen?.theme] || THEMES.ink;
+  const genOverride = !!(gen?.bg_color || gen?.text_color || gen?.accent_color);
 
   if (expired) return <LockedModule moduleName="Digital Cards" />;
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
@@ -150,15 +270,28 @@ export default function CardsPage() {
                    placeholder="Search by name, title, email or phone…"
                    onChange={(e) => setQuery(e.target.value)} />
           </div>
-          <button className={styles.primaryBtn} onClick={openNew}>
-            <Plus size={16} /> New Card
-          </button>
+          <div className={styles.toolbarBtns}>
+            {blanks > 0 && (
+              <button className={styles.ghostBtn} onClick={() => printSheet()} disabled={printing}
+                      title="Download the A4 print sheet of every empty card">
+                <Printer size={15} /> {printing ? "Preparing…" : `Print empty (${blanks})`}
+              </button>
+            )}
+            <button className={styles.ghostBtn} onClick={openGenerate}
+                    title="Numbered QR cards to hand out; each employee fills in their own">
+              <QrCode size={15} /> Generate QR cards
+            </button>
+            <button className={styles.primaryBtn} onClick={openNew}>
+              <Plus size={16} /> New Card
+            </button>
+          </div>
         </div>
 
         {filtered.length === 0 ? (
           <div className={styles.empty}>
             <Users size={26} />
-            <p>{query.trim() ? "No cards match that search." : "No cards yet. Create one for a member of your team."}</p>
+            <p>{query.trim() ? "No cards match that search."
+              : "No cards yet. Create one for a member of your team, or generate QR cards for your team to fill in themselves."}</p>
           </div>
         ) : (
           <div className={styles.grid}>
@@ -168,18 +301,24 @@ export default function CardsPage() {
                 <div className={styles.tileHead}>
                   {card.photo_preview
                     ? <img src={card.photo_preview} alt="" className={`${styles.avatar} ${styles.avatarImg}`} />
-                    : <span className={styles.avatar} aria-hidden="true">
-                        {(card.name || "?").trim().charAt(0).toUpperCase()}
+                    : <span className={`${styles.avatar} ${card.blank ? styles.avatarBlank : ""}`} aria-hidden="true">
+                        {card.blank ? card.number : (card.name || "?").trim().charAt(0).toUpperCase()}
                       </span>}
                   <div className={styles.tileWho}>
-                    <h2>{card.name}</h2>
-                    {card.job_title && <p>{card.job_title}</p>}
+                    <h2>{titleOf(card)}</h2>
+                    {card.blank
+                      ? <p>Waiting for an employee to scan and fill in</p>
+                      : (card.number || card.job_title) && (
+                          <p>{[card.number, card.job_title].filter(Boolean).join(" · ")}</p>
+                        )}
                   </div>
                   {card.is_locked
                     ? <span className={`${styles.tag} ${styles.tagLocked}`}>Locked</span>
                     : !card.is_active
                       ? <span className={styles.tag}>Inactive</span>
-                      : null}
+                      : card.blank
+                        ? <span className={`${styles.tag} ${styles.tagBlank}`}>Empty</span>
+                        : null}
                 </div>
 
                 <div className={styles.tileStats}>
@@ -189,9 +328,20 @@ export default function CardsPage() {
 
                 <div className={styles.tileActions}>
                   <button onClick={() => showQr(card)} title="QR code"><QrCode size={15} /></button>
-                  <button onClick={() => router.push(`/home/cards/${card.id}`)} disabled={!!card.is_locked} title="Edit">
+                  <button onClick={() => router.push(`/home/cards/${card.id}`)} disabled={!!card.is_locked}
+                          title={card.blank ? "Fill in yourself" : "Edit"}>
                     <Pencil size={15} />
                   </button>
+                  {card.blank && (
+                    <button onClick={() => removeBlank(card)} title="Delete (frees the slot)">
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                  {card.number && !card.blank && (
+                    <button onClick={() => resetCard(card)} disabled={!!card.is_locked} title="Reset to empty for someone new">
+                      <RotateCcw size={15} />
+                    </button>
+                  )}
                   <button
                     onClick={() => patchFlag(card, "active", { active: !card.is_active },
                       card.is_active ? "Card deactivated." : "Card activated.")}
@@ -218,12 +368,12 @@ export default function CardsPage() {
         <div className={styles.overlay} onClick={() => setQrFor(null)} role="presentation">
           <div className={`${styles.modal} ${styles.qrModal}`} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <div className={styles.modalHead}>
-              <h2>{qrFor.name}</h2>
+              <h2>{titleOf(qrFor)}</h2>
               <button onClick={() => setQrFor(null)} aria-label="Close"><X size={16} /></button>
             </div>
             <div className={styles.qrBody}>
               {qrData
-                ? <img src={qrData} alt={`QR code for ${qrFor.name}`} className={styles.qrImg} />
+                ? <img src={qrData} alt={`QR code for ${titleOf(qrFor)}`} className={styles.qrImg} />
                 : <div className={styles.spinner} />}
               <p className={styles.qrUrl}>{cardUrl(qrFor.slug)}</p>
               <div className={styles.qrActions}>
@@ -235,6 +385,109 @@ export default function CardsPage() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Generate empty QR cards ── */}
+      {gen && (
+        <div className={styles.overlay} onClick={closeGenerate} role="presentation">
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true"
+               aria-labelledby="gen-title">
+            <div className={styles.modalHead}>
+              <h2 id="gen-title">{made ? "QR cards ready" : "Generate QR cards"}</h2>
+              <button onClick={closeGenerate} aria-label="Close" disabled={genBusy || printing}><X size={16} /></button>
+            </div>
+
+            {made ? (
+              <div className={styles.form}>
+                <p className={styles.genNote}>
+                  {made.from === made.to ? `Card #${made.from} is` : `Cards #${made.from} to #${made.to} are`} ready.
+                  Download the print sheet, print it on card stock (front and back side by side) and hand the
+                  cards out. Whoever scans a card first fills in their details, and the card goes live straight away.
+                </p>
+                <div className={styles.formActions}>
+                  <button type="button" className={styles.ghostBtn} onClick={closeGenerate} disabled={printing}>Done</button>
+                  <button type="button" className={styles.primaryBtn} onClick={() => printSheet(made.ids)} disabled={printing}>
+                    <Printer size={15} /> {printing ? "Preparing…" : "Download print sheet"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form className={styles.form} onSubmit={generate} noValidate>
+                <p className={styles.genNote}>
+                  Each card gets its own number and QR. Hand them out, and each employee scans theirs and fills in
+                  their own details. Your company name and logo are on every card. Each card uses one slot on your
+                  plan from now, filled in or not.
+                </p>
+
+                <div className={styles.field}>
+                  <label htmlFor="gen-q">How many <span className={styles.opt}>{usage.remaining} free slot{usage.remaining === 1 ? "" : "s"}</span></label>
+                  <input id="gen-q" type="number" inputMode="numeric" min={1} max={usage.remaining}
+                         value={gen.quantity} disabled={genBusy}
+                         onChange={(e) => setGen({ ...gen, quantity: e.target.value })} />
+                </div>
+
+                <div className={styles.field}>
+                  <label>Card colours</label>
+                  <div className={styles.themes}>
+                    {THEME_LIST.map((t) => (
+                      <button type="button" key={t.key} disabled={genBusy}
+                              className={`${styles.theme} ${gen.theme === t.key && !genOverride ? styles.themeOn : ""}`}
+                              onClick={() => setGen({ ...gen, theme: t.key, bg_color: "", text_color: "", accent_color: "" })}>
+                        <span style={{ background: `linear-gradient(135deg, ${t.bg} 62%, ${t.accent} 62%)` }} />
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.field}>
+                  <div className={styles.colourHead}>
+                    <label htmlFor="g-bg">Your own colours <span className={styles.opt}>optional</span></label>
+                    {genOverride && (
+                      <button type="button" className={styles.clearColours}
+                              onClick={() => setGen({ ...gen, bg_color: "", text_color: "", accent_color: "" })}>
+                        Reset to theme
+                      </button>
+                    )}
+                  </div>
+                  <div className={styles.colours}>
+                    {[
+                      ["bg_color",     "Background", "g-bg", "bg"],
+                      ["text_color",   "Text",       "g-fg", "fg"],
+                      ["accent_color", "Accent",     "g-ac", "accent"],
+                    ].map(([key, label, id, preset]) => (
+                      <label key={key} className={styles.colour} htmlFor={id}>
+                        <input id={id} type="color" disabled={genBusy}
+                               value={gen[key] || genColours[preset]}
+                               onChange={(e) => setGen({ ...gen, [key]: e.target.value })} />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.genSwatch} aria-hidden="true"
+                     style={{
+                       background: gen.bg_color || genColours.bg,
+                       color: gen.text_color || genColours.fg,
+                       borderBottomColor: gen.accent_color || genColours.accent,
+                     }}>
+                  <strong>Your company</strong>
+                  <span>Digital visiting card</span>
+                </div>
+
+                {genError && <p className={styles.formError} role="alert">{genError}</p>}
+
+                <div className={styles.formActions}>
+                  <button type="button" className={styles.ghostBtn} onClick={closeGenerate} disabled={genBusy}>Cancel</button>
+                  <button type="submit" className={styles.primaryBtn} disabled={genBusy}>
+                    <QrCode size={15} /> {genBusy ? "Generating…" : "Generate"}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}

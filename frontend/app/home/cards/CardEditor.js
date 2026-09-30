@@ -341,7 +341,9 @@ export default function CardEditor({ cardId = null }) {
   const header = (
     <header className={styles.header}>
       <div className={styles.headerLeft}>
-        <h1 className={styles.title}>{isNew ? "New card" : "Edit card"}</h1>
+        <h1 className={styles.title}>
+          {isNew ? "New card" : card?.blank ? `Fill in card ${card.number}` : "Edit card"}
+        </h1>
         {card?.slug && <span className={styles.usage}>{cardUrl(card.slug).replace(/^https?:\/\//, "")}</span>}
       </div>
       <div className={styles.headerRight}>
