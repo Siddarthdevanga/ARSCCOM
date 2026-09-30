@@ -26,6 +26,7 @@ import LockedModule from "../../components/LockedModule";
 import { takeFlash } from "./CardEditor";
 import { THEMES } from "./cardArt";
 import BlankCardPreview from "./BlankCardPreview";
+import CardsGuide, { GuideButton } from "./CardsGuide";
 import styles from "./style.module.css";
 
 const API  = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -45,6 +46,7 @@ export default function CardsPage() {
   const [cards, setCards]   = useState([]);
   const [usage, setUsage]   = useState({ used: 0, limit: 0, remaining: 0 });
   const [company, setCompany] = useState({ name: "", logo_url: null });
+  const [guideOpen, setGuideOpen] = useState(false);
   const [loading, setLoad]  = useState(true);
   const [query, setQuery]   = useState("");
   const [toast, setToast]   = useState(null);
@@ -269,6 +271,7 @@ export default function CardsPage() {
           </span>
         </div>
         <div className={styles.headerRight}>
+          <GuideButton open={guideOpen} onClick={() => setGuideOpen((o) => !o)} />
           <button className={styles.ghostBtn} onClick={() => router.push("/home/cards/leads")}>
             <MessageSquare size={15} /><span>Card Leads</span>
           </button>
@@ -277,6 +280,8 @@ export default function CardsPage() {
           </button>
         </div>
       </header>
+
+      <CardsGuide page="list" open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <div className={styles.body}>
         <div className={styles.toolbar}>

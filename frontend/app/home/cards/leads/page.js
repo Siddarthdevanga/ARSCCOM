@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Search, Download, MessageSquare, Phone } from "lucide-react";
 import { restoreSession, SESSION } from "../../../utils/session";
 import LockedModule from "../../../components/LockedModule";
+import CardsGuide, { GuideButton } from "../CardsGuide";
 import styles from "../style.module.css";
 import own from "./leads.module.css";
 
@@ -42,6 +43,7 @@ export default function CardLeadsPage() {
   const [exporting, setExporting] = useState(false);
   const [toast, setToast] = useState(null);
   const [expired, setExpired] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const say = (msg, type = "success") => {
     setToast({ msg, type });
@@ -114,6 +116,7 @@ export default function CardLeadsPage() {
           <span className={styles.usage}><strong>{leads.length}</strong> total</span>
         </div>
         <div className={styles.headerRight}>
+          <GuideButton open={guideOpen} onClick={() => setGuideOpen((o) => !o)} />
           <button className={styles.ghostBtn} onClick={exportLeads} disabled={exporting || leads.length === 0}>
             <Download size={15} /><span>{exporting ? "Exporting…" : "Export"}</span>
           </button>
@@ -122,6 +125,8 @@ export default function CardLeadsPage() {
           </button>
         </div>
       </header>
+
+      <CardsGuide page="leads" open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <div className={styles.body}>
         <div className={styles.toolbar}>

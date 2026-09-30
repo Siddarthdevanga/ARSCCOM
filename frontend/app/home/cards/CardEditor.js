@@ -14,6 +14,7 @@ import { ArrowLeft, Camera, Download, Trash2 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
 import CardPreview from "./CardPreview";
+import CardsGuide, { GuideButton } from "./CardsGuide";
 import { downloadCard } from "./cardDownload";
 import { THEMES as CARD_THEMES, resolveColors, contrastVerdict } from "./cardArt";
 import { validateCard } from "./validate";
@@ -69,6 +70,7 @@ export default function CardEditor({ cardId = null }) {
   const [state, setState]     = useState("loading");   // loading | ready | locked | expired | missing | failed
   const [card, setCard]       = useState(null);        // the saved record, when editing
   const [form, setForm]       = useState(EMPTY);
+  const [guideOpen, setGuideOpen] = useState(false);
   const briefWords = countWords(form.brief);
   const [waSame, setWaSame]   = useState(true);
   const [saving, setSaving]   = useState(false);
@@ -347,6 +349,7 @@ export default function CardEditor({ cardId = null }) {
         {card?.slug && <span className={styles.usage}>{cardUrl(card.slug).replace(/^https?:\/\//, "")}</span>}
       </div>
       <div className={styles.headerRight}>
+        <GuideButton open={guideOpen} onClick={() => setGuideOpen((o) => !o)} />
         {state === "ready" && card?.slug && (
           <button className={styles.ghostBtn} onClick={downloadBoth} disabled={downloading || busy || dirty}
                   title={dirty ? "Save your changes first" : "Download the print-ready front and back PNGs"}>
@@ -377,6 +380,8 @@ export default function CardEditor({ cardId = null }) {
   return (
     <div className={styles.page}>
       {header}
+
+      <CardsGuide page="editor" open={guideOpen} onClose={() => setGuideOpen(false)} />
 
       <form className={ed.layout} onSubmit={save} noValidate>
         <div className={ed.formCol}>

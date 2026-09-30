@@ -1,0 +1,41 @@
+/* CardsGuide.js: the help panel at the top of each Digital Cards screen. */
+.panel {
+  margin: clamp(16px, 3vw, 28px) clamp(16px, 3vw, 28px) 0;
+  padding: 18px 20px 16px;
+  background: #fff; border: 1px solid var(--hv-line-strong, #d5d5dd);
+  border-left: 4px solid var(--hv-amber, #f5a524);
+  border-radius: 12px;
+  color: #2a2a30; font-size: .86rem; line-height: 1.6;
+}
+
+.head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .72rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #9a6a0c;
+}
+.close {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px; border: none;
+  background: #f1f1f4; color: #17171a; cursor: pointer;
+}
+.close:hover { background: #e4e4e9; }
+
+.content h3 { margin: 14px 0 6px; font-size: .95rem; font-weight: 900; color: #17171a; }
+.content ul, .content ol { margin: 0; padding-left: 20px; }
+.content li { margin: 3px 0; }
+
+.ways { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.way { padding: 12px 14px; border-radius: 10px; background: #f7f7f9; border: 1px solid #ececf0; }
+.way > b { display: block; margin-bottom: 4px; color: #17171a; }
+@media (max-width: 640px) { .ways { grid-template-columns: 1fr; } }
+
+.note {
+  margin: 12px 0 0; padding: 10px 12px; border-radius: 8px;
+  background: #fff8e8; color: #5c4210; font-size: .82rem;
+}
+
+.more {
+  display: inline-block; margin-top: 12px;
+  font-size: .8rem; font-weight: 800; color: #9a6a0c; text-decoration: none;
+}
+.more:hover { text-decoration: underline; }

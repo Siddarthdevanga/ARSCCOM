@@ -35,14 +35,15 @@ const BODY_HTML = `
       <a class="sb-link" href="#conference"><span class="num">06</span> Conference rooms</a>
       <a class="sb-link" href="#reports"><span class="num">07</span> Reports &amp; analytics</a>
       <a class="sb-link" href="#form-builder"><span class="num">08</span> Form builder</a>
-      <a class="sb-link" href="#smart-forms"><span class="num">09</span> Smart Forms</a>
+      <a class="sb-link" href="#digital-cards"><span class="num">09</span> Digital Cards</a>
+      <a class="sb-link" href="#smart-forms"><span class="num">10</span> Smart Forms</a>
     </div>
 
     <div class="sb-group">
       <div class="sb-label">Account</div>
-      <a class="sb-link" href="#billing"><span class="num">10</span> Plans &amp; billing</a>
-      <a class="sb-link" href="#settings"><span class="num">11</span> Account settings</a>
-      <a class="sb-link" href="#appendix"><span class="num">12</span> Status glossary</a>
+      <a class="sb-link" href="#billing"><span class="num">11</span> Plans &amp; billing</a>
+      <a class="sb-link" href="#settings"><span class="num">12</span> Account settings</a>
+      <a class="sb-link" href="#appendix"><span class="num">13</span> Status glossary</a>
     </div>
 
     <div class="sb-theme-note">Every screen below is a faithful mock of the real product — colors, labels and buttons match what you'll actually see.</div>
@@ -61,7 +62,7 @@ const BODY_HTML = `
       <h1>Everything Hai&nbsp;Visitor does — <em>click by click.</em></h1>
       <p>From the very first "Start Trial" button on the public website through to running reports on a Tuesday afternoon — this guide follows the exact screens, buttons and page redirects you'll encounter, in order.</p>
       <div class="cover-meta">
-        <div><b>12</b><span>Sections</span></div>
+        <div><b>13</b><span>Sections</span></div>
         <div><b>10 min</b><span>Sign-up to first check-in</span></div>
         <div><b>₹49</b><span>To start your trial</span></div>
       </div>
@@ -292,6 +293,7 @@ const BODY_HTML = `
                 <div class="mk-drawer-item"><div class="dicon"></div> Reports &amp; Analytics</div>
                 <div class="mk-drawer-item"><div class="dicon"></div> Employee Directory</div>
                 <div class="mk-drawer-item"><div class="dicon"></div> Form Builder</div>
+                <div class="mk-drawer-item"><div class="dicon"></div> Digital Cards</div>
                 <div class="mk-drawer-item"><div class="dicon"></div> User Guide</div>
                 <div class="mk-drawer-item"><div class="dicon"></div> My Account</div>
               </div>
@@ -550,9 +552,168 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 09 SMART FORMS ============ -->
+    <!-- ============ 09 DIGITAL CARDS ============ -->
+    <section class="mod" id="digital-cards">
+      <div class="mod-eyebrow"><span class="dot"></span>09 · Your Team's Visiting Cards</div>
+      <h2>Digital Cards — visiting cards with a QR</h2>
+      <p class="mod-sub">A Digital Card is a printed visiting card for someone on your team, with <b>its own QR code</b>. Scanning it opens a live web page with their details: whoever scans can <b>save the contact</b> to their phone in one tap, call, WhatsApp or email them, or <b>share their own details</b> back. Those come to you as <b>Card Leads</b>. Because the QR opens a web page, you can change a phone number or job title at any time <b>without reprinting</b>. Each card shows how many times it was scanned and how many leads it brought in.</p>
+      <div class="mod-routes"><span class="route">/home/cards</span><span class="route">/home/cards/new</span><span class="route">/home/cards/leads</span><span class="route">/card/[code]</span></div>
+
+      <table class="rtable" style="margin-top:22px;">
+        <tr><th>Plan</th><th>Active cards at once</th></tr>
+        <tr><td>Trial</td><td>1</td></tr>
+        <tr><td>Business</td><td>5</td></tr>
+        <tr><td>Enterprise</td><td>10</td></tr>
+      </table>
+      <p class="mod-sub" style="margin-top:10px;">Open <b>Digital Cards</b> from the Menu. The header shows how many of your cards are active, e.g. <b>"3 of 5 active."</b> Every screen in Digital Cards has a <b>Guide</b> button that opens these steps in the page itself.</p>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:34px; margin-bottom:6px;">Way 1 — New Card: you fill it in for them</h3>
+      <div class="panel">
+        <div class="panel-col">
+        <ol class="steps">
+          <li>On <span class="field">/home/cards</span>, click <b>"+ New Card."</b></li>
+          <li><b>Start from an employee</b> (optional): search your Employee Directory and pick someone. Their name, phone and email are filled in for you.</li>
+          <li><b>Details:</b> Name (required), Job title, Company, a short Brief, and a <b>photo</b>. Tick whether the photo is printed on the card or only shown on the web page.</li>
+          <li><b>Contact:</b> Phone (required), Email, WhatsApp (or tick "same as phone"), LinkedIn, and up to two custom fields such as Website or Office address.</li>
+          <li><b>Design:</b> pick a dark or light theme, or set your own background, text and accent colours. You're warned if the text would be hard to read.</li>
+          <li>The <b>Printed card</b> preview shows the front and back exactly as they'll print.</li>
+          <li>Click <b>"Create card."</b> Then click <b>Download</b> for print-ready PNGs of the front and back, and send them to your printer.</li>
+        </ol>
+        <div class="note tip">Best when you already have the person's details, or want every card to look exactly the same.</div>
+        </div>
+        <div>
+          <div class="frame">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/home/cards/new</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card">
+                <div class="mk-field"><span class="mk-label">Start from an employee</span><div class="mk-input">Search your employee list…</div></div>
+                <div class="mk-card-title" style="margin-top:6px;"><span class="mk-dot"></span> Details</div>
+                <div class="mk-row2">
+                  <div class="mk-field"><span class="mk-label">Name *</span><div class="mk-input filled">Suresh R.</div></div>
+                  <div class="mk-field"><span class="mk-label">Job title</span><div class="mk-input filled">Sales Manager</div></div>
+                </div>
+                <div class="mk-card-title" style="margin-top:6px;"><span class="mk-dot green"></span> Contact</div>
+                <div class="mk-row2">
+                  <div class="mk-field"><span class="mk-label">Phone *</span><div class="mk-input filled">+91 98XXXXXXXX</div></div>
+                  <div class="mk-field"><span class="mk-label">Email</span><div class="mk-input filled">suresh@company.com</div></div>
+                </div>
+                <div class="mk-card-title" style="margin-top:6px;"><span class="mk-dot gold"></span> Design</div>
+                <div class="mk-purpose"><span class="sel">Dark</span><span>Light</span><span>Your own colours</span></div>
+                <div class="mk-submit" style="margin-top:10px;">Create card</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">Way 2 — Generate QR cards: each employee fills in their own</h3>
+      <div class="panel">
+        <div class="panel-col">
+        <ol class="steps">
+          <li>On <span class="field">/home/cards</span>, click <b>"Generate QR cards."</b></li>
+          <li>Choose <b>how many</b>, up to your free slots, and the <b>card colours</b>. The preview shows the printed card: your company logo and name on the front, and the QR with "Scan for my details" on the back.</li>
+          <li>Click Generate. The cards are numbered (<b>#1, #2…</b>) and show on your Digital Cards page as <b>Empty</b>.</li>
+          <li>Download the <b>print sheet</b> (A4 PDF, front and back side by side), print it on card stock and cut out the cards. <b>Print empty</b> on the Digital Cards page downloads it again at any time.</li>
+          <li>Hand one card to each employee.</li>
+        </ol>
+        <div class="note tip">Best for a whole team at once: you print once, and nobody has to collect everyone's details.</div>
+        </div>
+        <div>
+          <div class="frame">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/home/cards</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card" style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                <div style="font-size:10px; font-weight:900; color:#08080c;">Digital Cards <span style="color:#818184; font-weight:700;">3 of 5 active</span></div>
+                <div style="display:flex; gap:6px;">
+                  <div class="mk-btn" style="background:#ebebee; color:#121216; padding:6px 10px; font-size:9px;">Generate QR cards</div>
+                  <div class="mk-btn" style="background:#121216; color:#fff; padding:6px 10px; font-size:9px;">+ New Card</div>
+                </div>
+              </div>
+              <div class="mk-card">
+                <table class="mk-table mk">
+                  <tr><th>Card</th><th>Scans</th><th>Status</th></tr>
+                  <tr><td><span class="mk-av" style="background:#0f0f13;">SR</span>Suresh R.</td><td>42</td><td><span class="mk-badge accepted">Active</span></td></tr>
+                  <tr><td><span class="mk-av" style="background:#D97706;">DK</span>Divya K. · #1</td><td>18</td><td><span class="mk-badge accepted">Active</span></td></tr>
+                  <tr><td><span class="mk-av" style="background:#6b7280;">#2</span>Card #2</td><td>0</td><td><span class="mk-badge pending">Empty</span></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">The employee's side: filling in their card</h3>
+      <div class="panel">
+        <div class="panel-col">
+        <ol class="steps">
+          <li>The employee <b>scans the QR</b> on the back of their card with their phone camera. No app and no login.</li>
+          <li>They see <b>"Make this card yours"</b> with a picture of the card in their hand.</li>
+          <li>They fill in Name, Phone and Email (required), and can add a Job title, "About you", LinkedIn, two extra fields and a <b>photo</b>. Your company name, logo and colours are already set.</li>
+          <li>They tap <b>"Preview my card,"</b> check it, tick the consent box and tap <b>"Make my card live."</b></li>
+          <li>The card is live straight away, and they get an email with their card, its QR and images of both sides. From now on, anyone who scans that card sees their details.</li>
+        </ol>
+        <div class="note warn">Once the card is live, only you (the admin) can change it, from <b>Edit</b> on the Digital Cards page. Each person can have one card in your company.</div>
+        </div>
+        <div>
+          <div class="frame" style="max-width:300px;">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url" style="text-align:center;">/card/[code]</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card">
+                <div style="font-size:11px; font-weight:900; color:#08080c; text-align:center;">Make this card yours</div>
+                <div style="font-size:8.5px; color:#818184; font-weight:700; text-align:center; margin-bottom:10px;">Add your details and it becomes your digital visiting card.</div>
+                <div class="mk-field"><span class="mk-label">Your name *</span><div class="mk-input filled">Divya K.</div></div>
+                <div class="mk-field"><span class="mk-label">Phone *</span><div class="mk-input filled">+91 98XXXXXXXX</div></div>
+                <div class="mk-field"><span class="mk-label">Email *</span><div class="mk-input filled">divya@company.com</div></div>
+                <div class="mk-submit">Preview my card</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">When someone scans a card, and Card Leads</h3>
+      <div class="panel">
+        <div class="panel-col">
+        <ol class="steps">
+          <li>The card page shows the person's photo, name, title and company, with buttons to <b>Save Contact</b>, call, WhatsApp and email.</li>
+          <li>They can tap <b>"Share my details"</b> and leave their name, phone, email, company and a message.</li>
+          <li>The card owner gets an email straight away, and the lead appears in <b>Card Leads</b> (<span class="field">/home/cards/leads</span>). Newest leads are at the top, with whose card was scanned.</li>
+          <li>Reply with <b>Call</b> or <b>WhatsApp</b> from each lead, search by name, phone, company or card owner, and click <b>Export</b> for an Excel file.</li>
+        </ol>
+        </div>
+        <div>
+          <div class="frame">
+            <div class="frame-bar"><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-dot"></span><span class="frame-url">haivisitor.zodopt.com/home/cards/leads</span></div>
+            <div class="frame-body mk-page">
+              <div class="mk-card">
+                <table class="mk-table mk">
+                  <tr><th>Lead</th><th>Scanned</th><th>Reply</th></tr>
+                  <tr><td><span class="mk-av" style="background:#242427;">RH</span>Ramesh H.</td><td>Suresh's card</td><td><span class="mk-badge accepted">WhatsApp</span></td></tr>
+                  <tr><td><span class="mk-av" style="background:#0E7490;">VM</span>Vikram M.</td><td>Divya's card</td><td><span class="mk-badge accepted">WhatsApp</span></td></tr>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">Managing your cards</h3>
+      <p class="mod-sub">Each card on the Digital Cards page has a row of buttons:</p>
+      <table class="rtable">
+        <tr><th>Button</th><th>What it does</th></tr>
+        <tr><td>QR code</td><td>Shows the card's QR and link, with <b>Download QR</b> and <b>Open card</b>. For an empty card, it also shows how the printed card looks.</td></tr>
+        <tr><td>Edit</td><td>Change any detail, photo or colour. The printed QR stays the same, so there's no need to reprint. On an empty card you can fill it in yourself.</td></tr>
+        <tr><td>Reset</td><td>Numbered QR cards only. When an employee leaves, empties the card so you can hand the same printed card to someone new. The old details and leads are kept on an inactive copy.</td></tr>
+        <tr><td>Deactivate / Activate</td><td>A deactivated card's QR shows "not active" and frees the slot. Activate it again at any time.</td></tr>
+        <tr><td>Lock / Release</td><td>After moving to a smaller plan, lock the cards you don't need to stay within your plan.</td></tr>
+        <tr><td>Delete</td><td>Removes the card, its QR, its scans and its leads, and frees the slot. The details that were filled in are kept on record. <b>This cannot be undone.</b> Export the leads first if you need them.</td></tr>
+      </table>
+      <div class="note info" style="margin-top:16px;">A card that has been deleted shows "Digital card not available" when its QR is scanned.</div>
+    </section>
+
+    <!-- ============ 10 SMART FORMS ============ -->
     <section class="mod" id="smart-forms">
-      <div class="mod-eyebrow"><span class="dot"></span>09 · Beyond Visitors</div>
+      <div class="mod-eyebrow"><span class="dot"></span>10 · Beyond Visitors</div>
       <h2>Smart Forms — your own QR-code data collector</h2>
       <p class="mod-sub">A Smart Form is a standalone, branded page reached by scanning <b>its own QR code</b> — separate from your visitor-registration QR. There's no login, no OTP, no "visit" concept at all — just a quick form anyone can fill in from their phone. Use it for event feedback, a lead-capture stall at an expo, a suggestion box, a workshop sign-up — anything you want to collect information about that isn't a walk-in visitor. Available on every plan, no extra cost.</p>
       <div class="mod-routes"><span class="route">/smart-forms/dashboard</span><span class="route">/smart-forms/dashboard/new</span><span class="route">/smart-forms/[slug]</span></div>
@@ -646,9 +807,9 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 10 PLANS & BILLING ============ -->
+    <!-- ============ 11 PLANS & BILLING ============ -->
     <section class="mod" id="billing">
-      <div class="mod-eyebrow"><span class="dot"></span>10 · Subscription</div>
+      <div class="mod-eyebrow"><span class="dot"></span>11 · Subscription</div>
       <h2>Plans &amp; billing</h2>
       <p class="mod-sub">Every plan action — renewing, upgrading, switching billing cycle, or cancelling — lives on one dedicated page, reachable even when your subscription has lapsed.</p>
       <div class="mod-routes"><span class="route">/home/plans</span></div>
@@ -695,9 +856,9 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 11 SETTINGS ============ -->
+    <!-- ============ 12 SETTINGS ============ -->
     <section class="mod" id="settings">
-      <div class="mod-eyebrow"><span class="dot"></span>11 · Housekeeping</div>
+      <div class="mod-eyebrow"><span class="dot"></span>12 · Housekeeping</div>
       <h2>Account settings</h2>
       <p class="mod-sub">Your company profile, logo, and your own login details all live under My Account.</p>
       <div class="mod-routes"><span class="route">/home/settings</span></div>
@@ -731,9 +892,9 @@ const BODY_HTML = `
       </div>
     </section>
 
-    <!-- ============ 12 APPENDIX ============ -->
+    <!-- ============ 13 APPENDIX ============ -->
     <section class="mod" id="appendix">
-      <div class="mod-eyebrow"><span class="dot"></span>12 · Reference</div>
+      <div class="mod-eyebrow"><span class="dot"></span>13 · Reference</div>
       <h2>Status glossary</h2>
       <p class="mod-sub">Every colour-coded badge you'll see across the visitor list, dashboard and reports, explained.</p>
 
