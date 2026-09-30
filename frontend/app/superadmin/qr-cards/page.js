@@ -10,6 +10,7 @@
    ========================================================================== */
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
 import { Printer, Download, RefreshCw, X, ExternalLink } from "lucide-react";
 import styles from "../dashboard/style.module.css";
 import SuperAdminNav from "../dashboard/NavHeader";
@@ -87,6 +88,7 @@ function CardModal({ id, token, onClose, onChanged }) {
   const [company, setCompany] = useState("");
   const [busy, setBusy]   = useState("");
   const [msg, setMsg]     = useState(null);   // { ok, text }
+  const [qr, setQr]       = useState(null);   // data URL of the card's QR
 
   const auth = { Authorization: `Bearer ${token}` };
 
@@ -105,6 +107,19 @@ function CardModal({ id, token, onClose, onChanged }) {
   }, [id, token]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Same URL the printed card encodes, so this QR matches the physical one.
+  // Black on white, as on the print: tinted codes fail on some scanners.
+  const cardLink = card?.card_url;
+  useEffect(() => {
+    if (!cardLink) return;
+    let live = true;
+    QRCode.toDataURL(cardLink, {
+      width: 1004, margin: 2, errorCorrectionLevel: "M",
+      color: { dark: "#000000", light: "#FFFFFF" },
+    }).then((d) => { if (live) setQr(d); }).catch(() => { if (live) setQr(null); });
+    return () => { live = false; };
+  }, [cardLink]);
 
   const run = async (label, fn) => {
     setBusy(label); setMsg(null);
@@ -182,9 +197,24 @@ function CardModal({ id, token, onClose, onChanged }) {
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Converted to</span><span className={styles.overviewVal}>{card.converted_company ? `${card.converted_company} (#${card.company_id}) · ${fmtDate(card.converted_at)}` : "—"}</span></div>
             </div>
 
-            <a href={card.card_url} target="_blank" rel="noopener noreferrer" style={{ ...smallBtn, textDecoration: "none", marginBottom: 18 }}>
-              <ExternalLink size={14} /> Open card page
-            </a>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>
+              {qr && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={qr} alt={`QR code for ${card.serial || card.slug}`}
+                     style={{ width: 132, height: 132, borderRadius: 10, border: "1px solid #ededf0", background: "#fff" }} />
+              )}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-start" }}>
+                <a href={card.card_url} target="_blank" rel="noopener noreferrer" style={{ ...smallBtn, textDecoration: "none" }}>
+                  <ExternalLink size={14} /> Open card page
+                </a>
+                {qr && (
+                  <a href={qr} download={`${card.serial || card.slug}-qr.png`} style={{ ...smallBtn, textDecoration: "none" }}>
+                    <Download size={14} /> Download QR
+                  </a>
+                )}
+                <span style={{ fontSize: 11, color: "#9ca3af", wordBreak: "break-all" }}>{card.card_url}</span>
+              </div>
+            </div>
 
             {claimed ? (
               <div className={styles.formSection}>
