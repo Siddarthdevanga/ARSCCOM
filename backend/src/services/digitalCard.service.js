@@ -6,12 +6,12 @@
  *
  * Two rules shape most of what follows:
  *
- *   A card is never hard-deleted (the one exception: a company's empty QR
- *   card nobody has filled in yet, see companyCardBlanks.service.js). Its QR may be printed on a few hundred
- *   physical cards already handed out, and breaking that URL punishes the
- *   person holding the card rather than the company that deactivated it.
- *   Deactivating or locking makes the page say the details are not
- *   available; the URL itself keeps resolving.
+ *   Deactivating or locking keeps a card's URL resolving, to a page that
+ *   says the details are not available: its QR may be printed on a few
+ *   hundred physical cards already handed out. Deleting is the admin's
+ *   deliberate choice to break that link; it removes the card, its scans
+ *   and its leads, keeping only the filled-in details on record (see
+ *   deleteCard in companyCardBlanks.service.js).
  *
  *   Scans are counted per viewer per day, not per page load. Bots, link
  *   previews and the owner checking their own card would otherwise inflate

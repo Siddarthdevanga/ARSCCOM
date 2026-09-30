@@ -1,9 +1,10 @@
 "use client";
 /* ============================================================================
    DIGITAL VISITING CARDS — ADMIN
-   The company admin creates and maintains a card per employee. Cards are
-   never deleted, only deactivated: their QR may already be printed on
-   physical cards, and breaking that URL punishes whoever is holding one.
+   The company admin creates and maintains a card per employee. Deactivating
+   keeps a card's printed QR resolving; deleting removes the card, its
+   scans and its leads for good, keeping only its filled-in details on
+   record, and frees the slot.
 
    Plan allowance is shown at all times rather than surfaced as an error on
    save — being told you are out of cards after filling in a form is the
@@ -11,8 +12,7 @@
 
    Empty QR cards: the admin generates numbered cards up to the free slots,
    prints the sheet and hands them out; each employee scans theirs and fills
-   it in. An empty card can be deleted (the one exception to the rule
-   above), and a filled one reset to empty for the next person.
+   it in. A filled one can be reset to empty for the next person.
    ========================================================================== */
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
@@ -185,14 +185,21 @@ export default function CardsPage() {
     }
   };
 
-  const removeBlank = async (card) => {
-    if (!window.confirm(`Delete empty card ${card.number}? Its printed QR will stop working, and the slot is freed.`)) return;
+  const removeCard = async (card) => {
+    const question = card.blank
+      ? `Delete empty card ${card.number}? Its printed QR will stop working, and the slot is freed.`
+      : `Delete ${titleOf(card)}'s card for good?
+
+` +
+        "Its link and QR stop working, and its scans and leads are deleted. The details filled in on the " +
+        "card are kept on record. One slot on your plan is freed. This cannot be undone.";
+    if (!window.confirm(question)) return;
     try {
       const res = await fetch(`${API}/api/cards/${card.id}`, { method: "DELETE", credentials: "include" });
       const data = await res.json().catch(() => ({}));
       if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
       if (!res.ok) throw new Error(data?.message || "Could not delete the card");
-      say(`Card ${card.number} deleted.`);
+      say(`${card.blank ? `Card ${card.number}` : `${titleOf(card)}'s card`} deleted.`);
       load();
     } catch (err) {
       say(err.message, "error");
@@ -341,16 +348,14 @@ export default function CardsPage() {
                           title={card.blank ? "Fill in yourself" : "Edit"}>
                     <Pencil size={15} />
                   </button>
-                  {card.blank && (
-                    <button onClick={() => removeBlank(card)} title="Delete (frees the slot)">
-                      <Trash2 size={15} />
-                    </button>
-                  )}
                   {card.number && !card.blank && (
                     <button onClick={() => resetCard(card)} disabled={!!card.is_locked} title="Reset to empty for someone new">
                       <RotateCcw size={15} />
                     </button>
                   )}
+                  <button onClick={() => removeCard(card)} title="Delete (frees the slot)">
+                    <Trash2 size={15} />
+                  </button>
                   <button
                     onClick={() => patchFlag(card, "active", { active: !card.is_active },
                       card.is_active ? "Card deactivated." : "Card activated.")}

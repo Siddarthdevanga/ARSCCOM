@@ -511,7 +511,8 @@ router.get("/smart-forms", async (req, res) => {
 /* ======================================================
    CARD LEADS  GET /api/exports/card-leads
    Details shared back by people who scanned a digital visiting card.
-   Leads are never deleted, so this is how a company gets them out.
+   This is how a company gets them out. Deleting a card deletes its
+   leads too, so export first if they are wanted.
 ====================================================== */
 router.get("/card-leads", async (req, res) => {
   try {

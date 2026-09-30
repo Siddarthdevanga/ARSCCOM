@@ -17,7 +17,7 @@ import {
   getCardUsage, listLeads, companyLapsed, photoPrefix, isUploadedPhoto,
 } from "../services/digitalCard.service.js";
 import {
-  generateBlankCards, getBlanksForPrint, deleteBlankCard, resetCompanyCard, trimBlankCards, blankLabel,
+  generateBlankCards, getBlanksForPrint, deleteCard, resetCompanyCard, trimBlankCards, blankLabel,
 } from "../services/companyCardBlanks.service.js";
 import { cardUrl } from "../services/cardPool.service.js";
 import { renderCompanyBlanksPdf } from "../utils/cardArt.node.js";
@@ -212,8 +212,7 @@ router.patch("/:id", handle(async (req, res) => {
   res.json({ success: true });
 }));
 
-/* Deactivate rather than delete. A printed QR must keep resolving — to
-   "details not available", never to a dead link. */
+/* Deactivate: the printed QR keeps resolving, to "details not available". */
 router.patch("/:id/active", handle(async (req, res) => {
   const companyId = getCompanyId(req.user);
   const plan = await planFor(companyId);
@@ -222,10 +221,10 @@ router.patch("/:id/active", handle(async (req, res) => {
   res.json({ success: true });
 }));
 
-/* An empty card can be deleted, which frees its slot. Anything else is
-   deactivated instead (above). */
+/* Delete any card, freeing its slot. Its address, scans and leads go; the
+   filled-in details are kept on record (companyCardBlanks.service.js). */
 router.delete("/:id", handle(async (req, res) => {
-  await deleteBlankCard(getCompanyId(req.user), req.params.id);
+  await deleteCard(getCompanyId(req.user), req.params.id, req.user?.userId ?? null);
   res.json({ success: true });
 }));
 

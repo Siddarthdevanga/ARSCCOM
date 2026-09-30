@@ -2,8 +2,8 @@
 /* ============================================================================
    CARD LEADS
    People who scanned a digital visiting card and chose to share their own
-   details back. These are never deleted — the export is how a company gets
-   them out, and deleting a card must not take its leads with it.
+   details back. The export is how a company gets them out; deleting a card
+   deletes its leads too.
 
    The list is ordered newest first because the only question anyone opens
    this screen with is "who do I need to call back".

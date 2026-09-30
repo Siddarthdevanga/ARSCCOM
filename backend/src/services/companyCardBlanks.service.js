@@ -124,21 +124,51 @@ export const getBlanksForPrint = async (companyId, ids = null) => {
 };
 
 /* ======================================================
-   DELETE (empty only)
-   The one case a card is ever deleted: nobody has scanned it into use,
-   so there is no one's link to break and nothing is lost. Frees the slot.
+   DELETE (any card)
+   The card row goes, and with it its address (the printed QR stops
+   working), its scans and its leads (ON DELETE CASCADE); the slot is
+   freed. The details that were filled in are kept in
+   digital_card_archive, which nothing reads back. An empty card has no
+   details, so it leaves no record. Photos and logos stay in S3: they are
+   part of the details kept.
 ====================================================== */
-export const deleteBlankCard = async (companyId, id) => {
-  const [res] = await db.execute(
-    `DELETE FROM digital_cards
-      WHERE id = ? AND company_id = ? AND source = 'company'
-        AND serial_no IS NOT NULL AND claimed_at IS NULL`,
-    [id, companyId]
-  );
-  if (res.affectedRows) return true;
-  const [[card]] = await db.execute("SELECT id FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1", [id, companyId]);
-  if (!card) throw notFound();
-  throw Object.assign(new Error("Only an empty card can be deleted. Deactivate this one instead."), { code: 409 });
+const ARCHIVE_FIELDS = [...CARD_FIELDS, "photo_on_print", "own_logo_url"];
+
+export const deleteCard = async (companyId, id, userId = null) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    const [[card]] = await conn.execute(
+      "SELECT * FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1 FOR UPDATE",
+      [id, companyId]
+    );
+    if (!card) throw notFound();
+
+    if (card.name || card.phone || card.email) {
+      const details = Object.fromEntries(
+        ARCHIVE_FIELDS.filter((f) => card[f] != null && card[f] !== "").map((f) => [f, card[f]])
+      );
+      await conn.execute(
+        `INSERT INTO digital_card_archive
+           (company_id, card_id, source, serial_no, name, phone, email, details, card_created_at, claimed_at, deleted_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [companyId, card.id, card.source || null, card.serial_no ?? null, card.name || null, card.phone || null,
+         card.email || null, JSON.stringify(details), card.created_at || null, card.claimed_at || null, userId]
+      );
+    }
+    await conn.execute("DELETE FROM digital_cards WHERE id = ? AND company_id = ?", [card.id, companyId]);
+    await conn.commit();
+    return true;
+  } catch (err) {
+    await conn.rollback().catch(() => {});
+    if (err?.code === "ER_NO_SUCH_TABLE") {
+      console.error("[digital-cards] digital_card_archive is missing: run migrations/add-digital-card-archive.sql");
+      throw Object.assign(new Error("Deleting cards is not available yet. Please try again later."), { code: 503 });
+    }
+    throw err;
+  } finally {
+    conn.release();
+  }
 };
 
 /* ======================================================
