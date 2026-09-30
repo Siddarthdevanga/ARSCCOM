@@ -8,7 +8,7 @@ import './jewellery.css';
 
 /* Jewellery landing page. The markup is the design export
    (hai-visitor-website/index.html) with the site's logo, the shared trial
-   popup, the offer ticker and the WhatsApp button added. Every "Start trial"
+   popup and the WhatsApp button added. Every "Start trial"
    button carries `trial-cta`, which opens the same popup as the main landing
    page; signups from here are tagged 'jewellery'. */
 
@@ -16,19 +16,8 @@ const WHATSAPP_URL =
   'https://wa.me/916366834745?text=' +
   encodeURIComponent('Hi, I run a jewellery showroom and want to know more about Hai Visitor');
 
-const TICKER_ITEMS = [
-  '₹49 ONLY — 15-DAY TRIAL', 'NO HARDWARE NEEDED', 'GO LIVE IN 15 MINUTES',
-  'INSTANT WHATSAPP ALERTS', 'BUILD YOUR CUSTOMER DATABASE',
-];
-// Listed twice so the track can loop seamlessly at -50%.
-const TICKER_HTML = [...TICKER_ITEMS, ...TICKER_ITEMS]
-  .map((t) => `<span>${t}</span><span>★</span>`)
-  .join('');
 
 const BODY_HTML = `
-<!-- OFFER TICKER (fixed top) -->
-<div class="offer-ticker"><div class="ot-track">${TICKER_HTML}</div></div>
-
 <main id="top" class="min-h-screen overflow-hidden bg-background text-foreground">
     <a href="#content"
         class="fixed left-3 top-3 z-[70] -translate-y-24 bg-primary px-4 py-2 text-primary-foreground focus:translate-y-0">Skip
@@ -565,10 +554,13 @@ const BODY_HTML = `
         </div>
     </section>
 
-    <footer class="hv-footer border-t border-paper/10 bg-deep text-paper">
-        <div class="section-shell flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <p class="text-xs uppercase tracking-[0.16em] text-paper/60">Visit. Interact. Build. Engage.</p>
-            <p class="text-xs text-paper/60">Zodopt Technology Solutions Pvt Ltd</p>
+    <footer class="hv-footer">
+        <div class="section-shell hv-footer__inner">
+            <a href="#top" class="brand-lockup text-paper" aria-label="Hai Visitor home"><span
+                    class="brand-lockup__emblem hv-logo" aria-hidden="true"><img src="/v-mark.png" alt=""
+                        width="64" height="64" /></span><span
+                    class="brand-lockup__name">H<span>ai</span> Visitor</span></a>
+            <span class="hv-footer__copy">© 2026 Hai Visitor · Zodopt Technology Solutions Pvt Ltd</span>
         </div>
     </footer>
 </main>

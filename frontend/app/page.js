@@ -7,13 +7,11 @@ import './landing-page.css';
 
 const BODY_HTML = `
 
-<!-- OFFER TICKER (fixed top) -->
-<div class="offer-ticker"><div class="ot-track"><span>₹49 ONLY — 15-DAY TRIAL</span><span>★</span><span>NO HARDWARE NEEDED</span><span>★</span><span>GO LIVE IN 15 MINUTES</span><span>★</span><span>INSTANT WHATSAPP ALERTS</span><span>★</span><span>BUILD YOUR CUSTOMER DATABASE</span><span>★</span><span>₹49 ONLY — 15-DAY TRIAL</span><span>★</span><span>NO HARDWARE NEEDED</span><span>★</span><span>GO LIVE IN 15 MINUTES</span><span>★</span><span>INSTANT WHATSAPP ALERTS</span><span>★</span><span>BUILD YOUR CUSTOMER DATABASE</span><span>★</span></div></div>
 
 <!-- NAV -->
 <nav>
   <div class="wrap nav-inner">
-    <a href="#" class="logo"><img src="/haiv-full-logo.png" alt="Hai Visitor" class="logo-img" /><small>A visitor management platform by Zodopt</small></a>
+    <a href="#" class="logo" aria-label="Hai Visitor home"><span class="brand-lockup"><img src="/v-mark.png" alt="" width="44" height="44" /><span class="brand-name">H<em>ai</em> Visitor</span></span><small>A visitor management platform by Zodopt</small></a>
     <div class="nav-links">
       <a href="#about">About</a>
       <a href="#features">Features</a>
@@ -375,8 +373,8 @@ const BODY_HTML = `
 <!-- FOOTER -->
 <footer>
   <div class="wrap foot-bottom">
-    <span>© 2026 Zodopt's Hai Visitor. All rights reserved.</span>
-    <a href="https://zodopt.com/about-us/" target="_blank" rel="noopener noreferrer">© Zodopt</a>
+    <a href="#" class="brand" aria-label="Hai Visitor home"><span class="brand-lockup"><img src="/v-mark.png" alt="" width="44" height="44" /><span class="brand-name">H<em>ai</em> Visitor</span></span></a>
+    <span class="foot-copy">© 2026 Hai Visitor · Zodopt Technology Solutions Pvt Ltd</span>
     <div class="foot-links">
       <a href="https://zodopt.com/privacy-policy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
       <a href="https://zodopt.com/terms-and-conditions/" target="_blank" rel="noopener noreferrer">Terms and Conditions</a>

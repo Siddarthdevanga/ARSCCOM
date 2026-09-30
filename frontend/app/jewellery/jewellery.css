@@ -1,13 +1,33 @@
 /* Hand edits for /jewellery on top of the design (industry-tailwind.css,
-   design.css). The ticker, sticky bar, WhatsApp button and trial popup live in
-   components/industry-landing.css; these are the layout changes that came
-   with them. */
+   design.css). The sticky bar, WhatsApp button and trial popup live in
+   components/industry-landing.css. */
 
-/* The ticker sits above the fixed header, so everything below moves down. */
-html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
-.jw .hv-header { top: var(--ticker-h); }
-.jw main#top { padding-top: calc(var(--header-h) + var(--ticker-h)); }
-.jw .hv-hero__grid { min-height: min(calc(100svh - var(--header-h) - var(--ticker-h)), 40rem); }
-@media (min-width: 64rem) {
-  .jw .hv-faq__intro { top: calc(var(--header-h) + var(--ticker-h) + 1.5rem); }
+/* ---------- Hero on phones ----------
+   The design laid the copy over the photo, which hid the customer behind the
+   text and pushed the trial button under the sticky bar. On phones the photo
+   now sits on top, full width, fading into the copy below it. */
+@media (max-width: 47.99rem) {
+  .jw .hv-hero__grid { display: flex; flex-direction: column; min-height: 0; padding-block: 0 2.5rem; }
+  .jw .hv-hero__media {
+    position: relative; inset: auto; order: -1;
+    width: 100vw; margin-left: calc(50% - 50vw); aspect-ratio: 4 / 3;
+  }
+  .jw .hv-hero__media img { object-position: 72% 30%; }
+  .jw .hv-hero__media::after {
+    background: linear-gradient(to bottom, rgb(10 10 10 / 0) 55%, var(--ink) 100%);
+  }
+  .jw .hv-hero__copy { margin-top: -1.5rem; }
+  .jw .hv-hero .hv-kicker { font-size: .68rem; }
+  .jw .hv-hero h1 { margin-top: .75rem; font-size: 2.2rem; }
+  .jw .hv-hero h1 + p { margin-top: 1rem; font-size: 1rem; line-height: 1.65; }
+  .jw .hv-hero .mt-7 { margin-top: 1.5rem; }
+  .jw .hv-hero .hv-btn { width: 100%; }
 }
+
+/* ---------- Footer: logo and copyright, as on /furniture ---------- */
+.jw .hv-footer { padding-block: 1.1rem; background: var(--ink); color: var(--paper); border-top: 3px solid var(--hv-gold); }
+.jw .hv-footer__inner { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6rem 1.5rem; text-align: center; }
+.jw .hv-footer .brand-lockup { height: 2.5rem; }
+.jw .hv-footer .brand-lockup__emblem { width: 2rem; height: 2rem; }
+.jw .hv-footer .brand-lockup__name { font-size: 1rem; }
+.jw .hv-footer__copy { font-size: .8rem; font-weight: 500; color: rgb(255 255 255 / .6); }

@@ -6,7 +6,7 @@
   --text:#262629; --muted:#6e6e71; --orange:#F97316; --pink:#EF3E66; --purple:#1d1d21; --green:#22C55E;
   --grad:linear-gradient(95deg,#F97316,#EF3E66); --radius:18px;
   --shadow:0 12px 34px rgba(36, 36, 39,.1); --font:'Inter',system-ui,sans-serif;
-  --ticker-h:34px; --sticky-h:64px;
+  --ticker-h:0px; --sticky-h:64px;
 }
 html { scroll-behavior:smooth; background:var(--bg); color-scheme:light; scrollbar-width:none; -ms-overflow-style:none; overflow-x:hidden; max-width:100%; }
 html::-webkit-scrollbar { display:none; }
@@ -48,10 +48,15 @@ nav { position:sticky; top:var(--ticker-h); z-index:100; background:rgba(250,247
   height:32px; width:auto; flex-shrink:0; object-fit:contain;
   display:block;
 }
+/* Round V mark and "Hai Visitor", the same lockup as /furniture and /jewellery. */
+.brand-lockup { display:inline-flex; align-items:center; gap:9px; flex-shrink:0; }
+.brand-lockup img { width:34px; height:34px; border-radius:50%; display:block; }
+.brand-name { color:var(--navy-2); font-size:1.15rem; font-weight:900; letter-spacing:-.02em; line-height:1; white-space:nowrap; }
+.brand-name em { color:#E0A800; font-style:normal; }
 .logo small { font-size:.58rem; font-weight:600; color:var(--muted); letter-spacing:.06em; line-height:1.3; }
 /* The lockup alone identifies the product; the strapline is supporting
    detail and the first thing that can go when the bar gets tight. */
-@media (max-width:640px) { .logo small { display:none; } .logo-img { height:26px; } }
+@media (max-width:640px) { .logo small { display:none; } .brand-lockup img { width:30px; height:30px; } .brand-name { font-size:1.05rem; } }
 .nav-links { display:flex; align-items:center; gap:1.6rem; }
 .nav-links a { font-size:.82rem; font-weight:700; color:var(--text); opacity:.75; transition:opacity .2s,color .2s; }
 .nav-links a:hover { opacity:1; color:var(--purple); }
@@ -220,10 +225,15 @@ details p { margin-top:.6rem; font-size:.82rem; color:var(--muted); }
 .final .lede { color:#b9b9bc; margin-inline:auto; }
 .final .hero-ctas { justify-content:center; margin-top:1.6rem; }
 
-footer { background:#fff; border-top:1px solid var(--stroke); padding:1.8rem 0 2rem; margin-top:3rem; }
-.foot-bottom { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.8rem;
-  font-size:.76rem; color:var(--muted); }
-.foot-links { display:flex; gap:1.3rem; flex-wrap:wrap; font-size:.78rem; color:var(--muted); }
+/* Footer: dark, logo and copyright centred, as on /furniture and /jewellery. */
+footer { background:#141312; color:#faf9f5; border-top:3px solid #F5C518; padding:1.1rem 0; margin-top:3rem; }
+.foot-bottom { display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:.6rem 1.5rem; text-align:center; }
+footer .brand-name { color:#faf9f5; }
+footer .brand-name em { color:#F5C518; }
+.foot-copy { font-size:.8rem; font-weight:500; color:#b8b6b0; }
+.foot-links { display:flex; gap:1.3rem; flex-wrap:wrap; justify-content:center; font-size:.76rem; }
+.foot-links a { color:#b8b6b0; }
+.foot-links a:hover { color:#faf9f5; }
 
 .sticky-cta { position:fixed; bottom:0; left:0; right:0; z-index:95; display:flex; align-items:center; justify-content:center;
   padding:.55rem .9rem calc(.55rem + env(safe-area-inset-bottom));
@@ -242,12 +252,6 @@ footer { background:#fff; border-top:1px solid var(--stroke); padding:1.8rem 0 2
 html.js .reveal { opacity:0; transform:translateY(22px); transition:opacity .7s ease,transform .7s ease; }
 html.js .reveal.vis { opacity:1; transform:none; }
 
-/* Top offer ticker */
-.offer-ticker { position:fixed; top:0; left:0; right:0; z-index:101; height:var(--ticker-h);
-  background:#FFD100; overflow:hidden; border-bottom:2px solid #E4B800; }
-.ot-track { display:flex; gap:2.2rem; width:max-content; animation:tick 16s linear infinite;
-  padding:.45rem 0; font-weight:900; font-size:.78rem; letter-spacing:.08em; color:#B91C1C; text-transform:uppercase; white-space:nowrap; }
-@keyframes tick { to { transform:translateX(-50%); } }
 /* Pulsing CTA */
 .btn-primary { animation:ctapulse 2.2s infinite; }
 @keyframes ctapulse {

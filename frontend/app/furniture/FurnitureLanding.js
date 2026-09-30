@@ -6,7 +6,7 @@ import './furniture.css';
 
 /* Furniture & home décor landing page. The markup is the design
    (haivisitor-site-f/haivisitor-site/index.html) with the site's logo, the
-   shared trial popup, the offer ticker, the sticky trial bar and the WhatsApp
+   shared trial popup, the sticky trial bar and the WhatsApp
    button added, and the footer links dropped. Every "Start trial" button
    carries `trial-cta`, which opens the same popup as the main landing page;
    signups from here are tagged 'furniture'.
@@ -18,14 +18,6 @@ const WHATSAPP_URL =
   'https://wa.me/916366834745?text=' +
   encodeURIComponent('Hi, Can i know more about Hai Visitor - Visitor Management Platform');
 
-const TICKER_ITEMS = [
-  '₹49 ONLY — 15-DAY TRIAL', 'NO HARDWARE NEEDED', 'GO LIVE IN 15 MINUTES',
-  'INSTANT WHATSAPP ALERTS', 'BUILD YOUR CUSTOMER DATABASE',
-];
-// Listed twice so the track can loop seamlessly at -50%.
-const TICKER_HTML = [...TICKER_ITEMS, ...TICKER_ITEMS]
-  .map((t) => `<span>${t}</span><span>★</span>`)
-  .join('');
 
 const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
 const CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
@@ -33,9 +25,6 @@ const STEP_ARROW = '<svg class="step-arrow" viewBox="0 0 24 24" fill="none" stro
 
 const BODY_HTML = `
 <div class="fu">
-<!-- OFFER TICKER (fixed top) -->
-<div class="offer-ticker"><div class="ot-track">${TICKER_HTML}</div></div>
-
 <div id="top" class="site-shell">
 
   <nav class="topbar">

@@ -1,24 +1,14 @@
-/* Shared by the industry landing pages (/jewellery, /furniture): the offer
-   ticker, the sticky trial bar, the WhatsApp button and the trial signup
-   popup, mirroring landing-page.css so every page looks the same. Scoped to
-   the page wrapper's `lp` class. */
+/* Shared by the industry landing pages (/jewellery, /furniture): the sticky
+   trial bar, the WhatsApp button and the trial signup popup, mirroring
+   landing-page.css so every page looks the same. Scoped to the page
+   wrapper's `lp` class. */
 
-:root { --ticker-h: 34px; --sticky-h: 64px; }
+/* The offer ticker was removed; --ticker-h stays at 0 for the page CSS
+   that still offsets by it. */
+:root { --ticker-h: 0px; --sticky-h: 64px; }
 
 /* Keep the footer clear of the sticky trial bar. */
 .lp main#top { padding-bottom: var(--sticky-h); }
-
-/* ---------- Offer ticker ---------- */
-.lp .offer-ticker {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 101; height: var(--ticker-h);
-  background: #FFD100; overflow: hidden; border-bottom: 2px solid #E4B800;
-}
-.lp .ot-track {
-  display: flex; gap: 2.2rem; width: max-content; animation: lpTick 16s linear infinite;
-  padding: .45rem 0; font-weight: 900; font-size: .78rem; letter-spacing: .08em; line-height: 1.6;
-  color: #B91C1C; text-transform: uppercase; white-space: nowrap;
-}
-@keyframes lpTick { to { transform: translateX(-50%); } }
 
 /* ---------- Sticky trial bar (all screen sizes) ---------- */
 .lp .sticky-cta {
@@ -145,5 +135,5 @@
 .lp .trial-success p { color: var(--muted); font-size: .9rem; margin-bottom: 1.3rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp .ot-track, .lp .wa-float, .lp .trial-modal, .lp .trial-modal .btn-primary, .lp .sticky-cta .btn-primary { animation: none; }
+  .lp .wa-float, .lp .trial-modal, .lp .trial-modal .btn-primary, .lp .sticky-cta .btn-primary { animation: none; }
 }
