@@ -72,10 +72,14 @@ router.get("/:slug/vcard", handle(async (req, res) => {
   const vcf = buildVCard(card);
   const filename = (card.name || "contact").replace(/[^\w\s-]/g, "").trim().replace(/\s+/g, "-");
 
-  res.setHeader("Content-Type", "text/vcard; charset=utf-8");
+  // text/x-vcard, bare: it is the type every Android version maps to .vcf
+  // and to the Contacts importer. Plain text/vcard, or a charset on it, can
+  // leave Chrome's "Open" on the download with nothing to hand the file to.
+  res.setHeader("Content-Type", "text/x-vcard");
   res.setHeader("Content-Disposition", `attachment; filename="${filename || "contact"}.vcf"`);
   res.setHeader("Cache-Control", "no-store");
-  res.send(vcf);
+  // A Buffer, so Express leaves the type as set instead of adding a charset.
+  res.send(Buffer.from(vcf, "utf8"));
 }));
 
 /* ── Photo ──

@@ -57,6 +57,7 @@ export default function DigitalCardPage({ params }) {
   const [sent, setSent]       = useState(false);
   const [error, setError]     = useState("");
   const [shareOpen, setShareOpen] = useState(false);
+  const [saveHint, setSaveHint]   = useState(null);   // Android: what to do with the downloaded file
   const nameRef = useRef(null);
 
   // Focus the first field once the form is on screen, not before.
@@ -81,6 +82,16 @@ export default function DigitalCardPage({ params }) {
     })();
     return () => { cancelled = true; };
   }, [slug]);
+
+  /* iPhones open the contact file straight into "Add to Contacts". Android
+     only downloads it: Chrome shows a small "Open" bar that is easy to miss,
+     and the in-app browsers of QR scanner apps often can't download at all.
+     So on Android, say what to do next. */
+  const onSaveContact = () => {
+    const ua = navigator.userAgent || "";
+    if (!/Android/i.test(ua)) return;
+    setSaveHint(/; wv\)/.test(ua) ? "webview" : "android");
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -183,7 +194,7 @@ export default function DigitalCardPage({ params }) {
 
         {/* The three things someone actually came here to do. */}
         <div className={styles.actions}>
-          <a className={styles.primaryAction} href={`${API}/api/public/cards/${slug}/vcard`}>
+          <a className={styles.primaryAction} href={`${API}/api/public/cards/${slug}/vcard`} onClick={onSaveContact}>
             <Icon className={styles.actionIcon} d={<><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></>} />
             Save Contact
           </a>
@@ -199,6 +210,14 @@ export default function DigitalCardPage({ params }) {
             Call
           </a>
         </div>
+
+        {saveHint && (
+          <p className={styles.saveHint} role="status">
+            {saveHint === "webview"
+              ? "If nothing downloaded, open this page in Chrome (menu ⋮ → Open in Chrome), then tap Save Contact again."
+              : "The contact file is downloading. Tap Open on the bar at the bottom, or open it from Downloads, and choose Contacts to save it."}
+          </p>
+        )}
 
         {card.brief && <p className={styles.brief}>{card.brief}</p>}
 

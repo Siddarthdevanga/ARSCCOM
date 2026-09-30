@@ -595,7 +595,7 @@ export const buildVCard = (card) => {
 
   lines.push("END:VCARD");
 
-  // CRLF, not LF: the spec requires it and some Android contact importers
-  // reject the file outright without it.
-  return lines.join("\r\n");
+  // CRLF, not LF, and after the last line too: the spec requires it and
+  // some Android contact importers reject the file outright without it.
+  return lines.join("\r\n") + "\r\n";
 };
