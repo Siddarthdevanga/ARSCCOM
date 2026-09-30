@@ -262,9 +262,10 @@ export function paintBack(ctx, card, { qr = null } = {}, x = 0, y0 = 0, scale = 
 
 /* ── Blank pool card: FRONT ───────────────────────────────────────────────
    The login page's brand block: the V mark, "Zodopt's", and the
-   "H[ai] Visitor" wordmark with its amber chip, on near-black. */
+   "H[ai] Visitor" wordmark with "ai" in yellow, on near-black. */
 const INK = "#0c0c0f";
 const AMBER = "#f5a524";
+const WORDMARK_AI = "#FAB72A";
 let markPromise = null;
 const brandMark = () => {
   markPromise ??= safeImage(path.join(HERE, "..", "assets", "haivisitor-mark.png"));
@@ -293,36 +294,19 @@ export function paintBlankFront(ctx, { mark = null } = {}, x = 0, y0 = 0, scale 
     ctx.font = `700 22px ${FONT}`;
     spaced(ctx, "ZODOPT’S", cx, 336, 7);
 
-    // "H" + [ai] chip + " Visitor", centred as one run.
+    // "H" + yellow "ai" + " Visitor", centred as one run.
     ctx.font = `800 86px ${FONT}`;
-    const h = "H", ai = "ai", rest = " Visitor";
-    const padX = 11;
-    const wH = ctx.measureText(h).width;
-    const wAi = ctx.measureText(ai).width + padX * 2;
-    const wRest = ctx.measureText(rest).width;
-    const gap = 4;
-    const total = wH + gap + wAi + gap + wRest;
-    let tx = cx - total / 2;
+    const parts = [["H", "#ffffff"], ["ai", WORDMARK_AI], [" Visitor", "#ffffff"]];
+    const widths = parts.map(([t]) => ctx.measureText(t).width);
+    let tx = cx - widths.reduce((a, b) => a + b, 0) / 2;
     const base = 440;
 
     ctx.textAlign = "left";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(h, tx, base);
-    tx += wH + gap;
-
-    const chipTop = base - 70, chipH = 86;
-    const cg = ctx.createLinearGradient(tx, chipTop, tx + wAi, chipTop + chipH);
-    cg.addColorStop(0, "#ffc75f");
-    cg.addColorStop(1, AMBER);
-    ctx.fillStyle = cg;
-    roundRect(ctx, tx, chipTop, wAi, chipH, 14);
-    ctx.fill();
-    ctx.fillStyle = INK;
-    ctx.fillText(ai, tx + padX, base - 4);
-    tx += wAi + gap;
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(rest, tx, base);
+    parts.forEach(([t, colour], i) => {
+      ctx.fillStyle = colour;
+      ctx.fillText(t, tx, base);
+      tx += widths[i];
+    });
 
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(255, 255, 255, 0.14)";

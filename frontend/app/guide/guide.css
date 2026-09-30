@@ -241,7 +241,7 @@
 .mk-nav{ display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
 .mk-logo{ display:flex; align-items:center; gap:6px; font-weight:900; font-size:13px; color:#242427; }
 .mk-logo img{ width:20px; height:20px; object-fit:contain; background:#1d1d21; border-radius:6px; padding:2px; }
-.mk-logo em{ font-style:normal; color:#000; }
+.mk-logo em{ font-style:normal; color:#FAB72A; }
 .mk-navlinks{ display:flex; gap:12px; font-size:9.5px; font-weight:700; color:#262629; opacity:0.75; }
 .mk-h1{ font-size:18px; font-weight:900; line-height:1.18; max-width:20ch; color:#242427; letter-spacing:-0.01em; }
 .mk-h1 span{ background:linear-gradient(95deg,#F97316,#EF3E66); -webkit-background-clip:text; background-clip:text; color:transparent; }

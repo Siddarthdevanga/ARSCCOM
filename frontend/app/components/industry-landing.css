@@ -83,7 +83,7 @@
   display: block; object-fit: contain;
 }
 .lp .trial-modal-wordmark { font-size: clamp(.98rem, 4vw, 1.08rem); font-weight: 900; color: var(--navy); letter-spacing: .01em; }
-.lp .trial-modal-wordmark span { color: var(--orange); }
+.lp .trial-modal-wordmark span { color: #FAB72A; }
 .lp .trial-modal-pill {
   display: inline-block; margin-top: .55rem; font-size: .66rem; font-weight: 800;
   letter-spacing: .07em; text-transform: uppercase; color: var(--purple);

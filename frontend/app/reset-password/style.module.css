@@ -435,13 +435,8 @@
    it carries the brand colour. Defined per page because CSS modules
    cannot share class names — the values come from the global tokens. */
 .aiChip {
-  display: inline-block;
-  background: var(--hv-amber);
-  color: var(--hv-ink);
-  border-radius: 0.18em;
-  padding: 0.02em 0.14em 0.06em;
-  margin: 0 0.02em;
-  line-height: 1;
+  /* "ai" of the H[ai] Visitor wordmark: plain yellow letters, no chip. */
+  color: #FAB72A;
 }
 
 /* Accent hairline across the top of the header — the same line that runs

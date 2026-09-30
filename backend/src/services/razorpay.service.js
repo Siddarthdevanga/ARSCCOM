@@ -142,7 +142,7 @@ const sendRazorpayWelcomeEmail = async (email, tempPassword) => {
         <!-- BRAND HEADER -->
         <div style="background:#0c0c0f;background-image:linear-gradient(158deg,#121214,#050505);padding:28px 28px 24px;text-align:center;border-bottom:3px solid #f5a524;">
           <div style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:.02em;">
-            H<span style="color:#FDBA74;">ai</span> Visitor
+            H<span style="color:#FAB72A;">ai</span> Visitor
           </div>
           <div style="margin-top:6px;display:inline-block;background:rgba(255,255,255,.12);color:#ffffff;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 14px;border-radius:999px;">
             15-Day Trial Activated

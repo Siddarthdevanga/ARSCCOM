@@ -247,9 +247,8 @@
   color: #fff;
 }
 .wordmark b {
-  display: inline-block; margin: 0 2px; padding: 0 6px 1px;
-  border-radius: 6px; color: #0c0c0f;
-  background: linear-gradient(135deg, #ffc75f, #f5a524);
+  /* "ai" of the H[ai] Visitor wordmark: plain yellow letters, no chip. */
+  color: #FAB72A;
 }
 
 .steps {

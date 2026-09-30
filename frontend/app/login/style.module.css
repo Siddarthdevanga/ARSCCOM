@@ -256,15 +256,8 @@
 /* "ai" is the product name's payload, so it gets the brand colour and the
    only filled shape on the panel. */
 .aiChip {
-  display: inline-block;
-  background: linear-gradient(145deg, var(--amber-lift) 0%, var(--amber) 100%);
-  color: var(--ink);
-  border-radius: 0.16em;
-  padding: 0.04em 0.13em 0.07em;
-  margin: 0 0.03em;
-  line-height: 1;
-  transform: translateY(-0.02em);
-  box-shadow: 0 0 34px rgba(245, 165, 36, 0.4);
+  /* "ai" of the H[ai] Visitor wordmark: plain yellow letters, no chip. */
+  color: #FAB72A;
 }
 
 .platformSubtitle {

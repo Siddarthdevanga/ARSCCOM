@@ -55,7 +55,7 @@ const BODY_HTML = `
     <header class="cover">
       <div class="cover-brand">
         <img src="/v-transparent.png" alt="Hai Visitor"/>
-        <span>H<em style="font-style:normal; color:#FDBA74;">ai</em> Visitor</span>
+        <span>H<em style="font-style:normal; color:#FAB72A;">ai</em> Visitor</span>
       </div>
       <div class="cover-eyebrow">● Complete Walkthrough</div>
       <h1>Everything Hai&nbsp;Visitor does — <em>click by click.</em></h1>
@@ -116,7 +116,7 @@ const BODY_HTML = `
               <div class="mk-card">
                 <div style="text-align:center; margin-bottom:8px;">
                   <img src="/v-mark.png" alt="Hai Visitor" style="width:28px; height:28px; object-fit:contain; margin:0 auto 4px; border-radius:6px;"/>
-                  <div style="font-size:11px; font-weight:900; color:#242427;">H<span style="color:#F97316;">ai</span> Visitor</div>
+                  <div style="font-size:11px; font-weight:900; color:#242427;">H<span style="color:#FAB72A;">ai</span> Visitor</div>
                   <span class="mk-pill on" style="margin-top:4px; display:inline-block;">15-Day Trial · ₹49</span>
                 </div>
                 <div class="mk-field"><span class="mk-label">Email *</span><div class="mk-input">you@company.com</div></div>

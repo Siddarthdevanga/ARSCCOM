@@ -364,7 +364,7 @@ body { padding-top:var(--ticker-h); padding-bottom:var(--sticky-h); }
   display:block; object-fit:contain;
 }
 .trial-modal-wordmark { font-size:clamp(.98rem,4vw,1.08rem); font-weight:900; color:var(--navy); letter-spacing:.01em; }
-.trial-modal-wordmark span { color:var(--orange); }
+.trial-modal-wordmark span { color:#FAB72A; }
 .trial-modal-pill {
   display:inline-block; margin-top:.55rem; font-size:.66rem; font-weight:800;
   letter-spacing:.07em; text-transform:uppercase; color:var(--purple);
