@@ -5,9 +5,10 @@
 -- with it its public address (the printed QR stops working), its scans
 -- and its leads (ON DELETE CASCADE), and the plan slot is freed. Only the
 -- details that were filled in are kept, here, as a record. Nothing in the
--- app reads this table back; it is not shown on the Digital Cards page.
+-- page shows this table; it is not on the Digital Cards page.
 --
--- An empty card (nothing filled in) is deleted without a record.
+-- An empty numbered card leaves only its number here, so that number is
+-- never issued again (the table is also read for the highest number).
 --
 -- Date: 2026-09-30
 -- ============================================================

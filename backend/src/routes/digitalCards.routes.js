@@ -18,6 +18,7 @@ import {
 } from "../services/digitalCard.service.js";
 import {
   generateBlankCards, getBlanksForPrint, deleteCard, resetCompanyCard, trimBlankCards, blankLabel,
+  checkAdminFill,
 } from "../services/companyCardBlanks.service.js";
 import { cardUrl } from "../services/cardPool.service.js";
 import { renderCompanyBlanksPdf } from "../utils/cardArt.node.js";
@@ -207,6 +208,7 @@ router.post("/", handle(async (req, res) => {
 }));
 
 router.patch("/:id", handle(async (req, res) => {
+  await checkAdminFill(getCompanyId(req.user), req.params.id, req.body);
   const ok = await updateCard(getCompanyId(req.user), req.params.id, req.body);
   if (!ok) return res.status(404).json({ success: false, message: "Card not found" });
   res.json({ success: true });

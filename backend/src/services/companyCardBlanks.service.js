@@ -70,11 +70,17 @@ export const generateBlankCards = async (companyId, plan, body = {}) => {
     }
 
     // Numbers run on across the company and are never reused, so a
-    // deleted #3 cannot be confused with a new one.
-    const [[{ top }]] = await conn.execute(
-      "SELECT COALESCE(MAX(serial_no), 0) AS top FROM digital_cards WHERE company_id = ? AND source = 'company'",
+    // deleted #3 cannot be confused with a new one: deleted numbered cards
+    // are remembered in digital_card_archive (see deleteCard, trimBlankCards).
+    const [[live]] = await conn.execute(
+      "SELECT COALESCE(MAX(serial_no), 0) AS n FROM digital_cards WHERE company_id = ? AND source = 'company'",
       [companyId]
     );
+    const [[gone]] = await conn.execute(
+      "SELECT COALESCE(MAX(serial_no), 0) AS n FROM digital_card_archive WHERE company_id = ? AND source = 'company'",
+      [companyId]
+    ).catch((err) => { if (err?.code === "ER_NO_SUCH_TABLE") return [[{ n: 0 }]]; throw err; });
+    const top = Math.max(Number(live.n), Number(gone.n));
     const rows = [...slugs].map((slug, i) => [
       companyId, slug, "company", Number(top) + i + 1,
       style.theme, style.bg_color || null, style.text_color || null, style.accent_color || null,
@@ -130,7 +136,8 @@ export const getBlanksForPrint = async (companyId, ids = null) => {
    contacts (card_leads) stay with the company, marked with the owner's
    name as it was, and are shown as from a deleted card. The details that
    were filled in are kept in digital_card_archive, which nothing reads
-   back. An empty card has no details, so it leaves no record. Photos and
+   back. An empty numbered card leaves only its number there, so the
+   number is never issued again. Photos and
    logos stay in S3: they are part of the details kept.
 ====================================================== */
 const ARCHIVE_FIELDS = [...CARD_FIELDS, "photo_on_print", "own_logo_url"];
@@ -145,7 +152,8 @@ export const deleteCard = async (companyId, id, userId = null) => {
     );
     if (!card) throw notFound();
 
-    if (card.name || card.phone || card.email) {
+    const filled = !!(card.name || card.phone || card.email);
+    if (filled || (card.source === "company" && card.serial_no)) {
       const details = Object.fromEntries(
         ARCHIVE_FIELDS.filter((f) => card[f] != null && card[f] !== "").map((f) => [f, card[f]])
       );
@@ -155,12 +163,19 @@ export const deleteCard = async (companyId, id, userId = null) => {
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [companyId, card.id, card.source || null, card.serial_no ?? null, card.name || null, card.phone || null,
          card.email || null, JSON.stringify(details), card.created_at || null, card.claimed_at || null, userId]
+      ).catch((err) => {
+        // An empty card only leaves its number: without the table, it is
+        // still deleted. A filled card's details must be kept, so it is not.
+        if (filled || err?.code !== "ER_NO_SUCH_TABLE") throw err;
+      });
+    }
+    // An empty card cannot have contacts.
+    if (filled) {
+      await conn.execute(
+        "UPDATE card_leads SET card_id = NULL, card_owner_name = ?, company_id = ? WHERE card_id = ?",
+        [card.name || (card.serial_no ? blankLabel(card.serial_no) : null), companyId, card.id]
       );
     }
-    await conn.execute(
-      "UPDATE card_leads SET card_id = NULL, card_owner_name = ?, company_id = ? WHERE card_id = ?",
-      [card.name || (card.serial_no ? blankLabel(card.serial_no) : null), companyId, card.id]
-    );
     await conn.execute("DELETE FROM digital_cards WHERE id = ? AND company_id = ?", [card.id, companyId]);
     await conn.commit();
     return true;
@@ -238,13 +253,25 @@ export const trimBlankCards = async (companyId, plan) => {
   const { used, limit } = await getCardUsage(companyId, plan);
   const over = used - limit;
   if (over <= 0) return 0;
-  const [res] = await db.execute(
-    `DELETE FROM digital_cards
+  const [cards] = await db.execute(
+    `SELECT id, serial_no, created_at FROM digital_cards
       WHERE company_id = ? AND source = 'company' AND serial_no IS NOT NULL
         AND claimed_at IS NULL AND is_active = 1 AND is_locked = 0
       ORDER BY serial_no DESC
       LIMIT ${Number(over)}`,
     [companyId]
+  );
+  if (!cards.length) return 0;
+  // Runs inside GET /api/cards: without the archive table the numbers
+  // simply are not remembered, and the page still loads.
+  await db.query(
+    `INSERT INTO digital_card_archive (company_id, card_id, source, serial_no, details, card_created_at)
+     VALUES ?`,
+    [cards.map((c) => [companyId, c.id, "company", c.serial_no, "{}", c.created_at || null])]
+  ).catch((err) => { if (err?.code !== "ER_NO_SUCH_TABLE") throw err; });
+  const [res] = await db.query(
+    "DELETE FROM digital_cards WHERE company_id = ? AND id IN (?) AND claimed_at IS NULL",
+    [companyId, cards.map((c) => c.id)]
   );
   return res.affectedRows;
 };
@@ -271,6 +298,20 @@ const sameEmployee = async (conn, companyId, cardId, email, claimPhone) => {
       { code: 409 }
     );
   }
+};
+
+/* The admin filling in an empty numbered card from the editor: the same
+   one-card-per-person rule as when the employee fills it in. Called by
+   PATCH /api/cards/:id before updateCard. */
+export const checkAdminFill = async (companyId, id, body = {}) => {
+  const [[card]] = await db.execute(
+    "SELECT id, source, serial_no, claimed_at, email, phone FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
+    [id, companyId]
+  );
+  if (!card || card.source !== "company" || !card.serial_no || card.claimed_at) return;
+  const email = "email" in body ? body.email : card.email;
+  const phone = "phone" in body ? body.phone : card.phone;
+  await sameEmployee(db, companyId, card.id, email, phone10(phone));
 };
 
 export const claimCompanyCard = async (slug, body = {}, files = {}) => {

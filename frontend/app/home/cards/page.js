@@ -227,6 +227,7 @@ export default function CardsPage() {
   };
 
   const showQr = async (card) => {
+    setQrData("");   // never show or download the previous card's QR
     setQrFor(card);
     try {
       // Black modules on white: QR decoding depends on contrast, and a
@@ -403,7 +404,8 @@ export default function CardsPage() {
                 : <div className={styles.spinner} />}
               <p className={styles.qrUrl}>{cardUrl(qrFor.slug)}</p>
               <div className={styles.qrActions}>
-                <a className={styles.primaryBtn} href={qrData} download={`${qrFor.slug}-qr.png`}>
+                <a className={styles.primaryBtn} href={qrData || undefined} download={`${qrFor.slug}-qr.png`}
+                   aria-disabled={!qrData} onClick={(e) => { if (!qrData) e.preventDefault(); }}>
                   <Download size={15} /> Download QR
                 </a>
                 <a className={styles.ghostBtn} href={cardUrl(qrFor.slug)} target="_blank" rel="noopener noreferrer">
