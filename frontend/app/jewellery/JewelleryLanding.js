@@ -1,8 +1,9 @@
 'use client';
 import { useEffect } from 'react';
 import { TRIAL_MODAL_HTML, initTrialSignup, loadMetaPixel } from '../components/trialSignup';
-import './tailwind.css';
+import '../components/industry-tailwind.css';
 import './design.css';
+import '../components/industry-landing.css';
 import './jewellery.css';
 
 /* Jewellery landing page. The markup is the design export
@@ -681,5 +682,5 @@ export default function JewelleryLanding() {
     };
   }, []);
 
-  return <div className="jw" dangerouslySetInnerHTML={{ __html: BODY_HTML }} />;
+  return <div className="jw lp" dangerouslySetInnerHTML={{ __html: BODY_HTML }} />;
 }

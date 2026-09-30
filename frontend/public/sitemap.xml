@@ -19,6 +19,13 @@
   </url>
 
   <url>
+    <loc>https://www.promeet.zodopt.com/furniture</loc>
+    <lastmod>2026-09-30</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
     <loc>https://www.promeet.zodopt.com/auth/login</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>

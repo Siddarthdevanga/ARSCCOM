@@ -1,0 +1,17 @@
+/* Hand edits for /furniture on top of the design (industry-tailwind.css). The
+   sticky bar, WhatsApp button and trial popup live in
+   components/industry-landing.css. */
+
+/* Site logo inside the design's round emblems. */
+.fu .fu-logo { border: 0; overflow: hidden; }
+.fu .fu-logo img { width: 100%; height: 100%; display: block; object-fit: cover; transform: scale(1.12); }
+
+/* Home & interiors takes the dark featured style the export gives Jewellery. */
+.fu .industry-card { position: relative; }
+.fu .industry-card--jewellery { background: var(--paper); color: var(--ink); }
+.fu .industry-card--featured { background: var(--ink); color: var(--paper); }
+.fu .fu-tag {
+  position: absolute; top: 1.25rem; right: 1.25rem;
+  font-size: .625rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--primary); border: 1px solid currentColor; padding: .2rem .5rem;
+}

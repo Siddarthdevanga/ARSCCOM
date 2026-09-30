@@ -52,7 +52,7 @@ const PHONE_RE = /^[6-9]\d{9}$/;
 // so the superadmin can tell which page a signup came from. Anything not
 // listed here is dropped — the main landing page sends nothing and is
 // stored as NULL.
-const LANDING_PAGES = new Set(["jewellery"]);
+const LANDING_PAGES = new Set(["jewellery", "furniture"]);
 
 export const createTrialOrder = async ({ email, phone, landing }) => {
   const cleanEmail = normalizeEmail(email);

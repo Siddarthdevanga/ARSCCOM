@@ -1,0 +1,149 @@
+/* Shared by the industry landing pages (/jewellery, /furniture): the offer
+   ticker, the sticky trial bar, the WhatsApp button and the trial signup
+   popup, mirroring landing-page.css so every page looks the same. Scoped to
+   the page wrapper's `lp` class. */
+
+:root { --sticky-h: 64px; }
+
+/* Keep the footer clear of the sticky trial bar. */
+.lp main#top { padding-bottom: var(--sticky-h); }
+
+/* ---------- Offer ticker ---------- */
+.lp .offer-ticker {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 101; height: var(--ticker-h);
+  background: #FFD100; overflow: hidden; border-bottom: 2px solid #E4B800;
+}
+.lp .ot-track {
+  display: flex; gap: 2.2rem; width: max-content; animation: lpTick 16s linear infinite;
+  padding: .45rem 0; font-weight: 900; font-size: .78rem; letter-spacing: .08em; line-height: 1.6;
+  color: #B91C1C; text-transform: uppercase; white-space: nowrap;
+}
+@keyframes lpTick { to { transform: translateX(-50%); } }
+
+/* ---------- Sticky trial bar (all screen sizes) ---------- */
+.lp .sticky-cta {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 95;
+  display: flex; align-items: center; justify-content: center;
+  padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom));
+  background: rgba(250, 247, 241, .95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid #EAE3D6; font-family: 'Inter', system-ui, sans-serif; line-height: 1.6;
+}
+.lp .sticky-cta .btn { flex: 0 1 360px; }
+
+/* ---------- WhatsApp float ---------- */
+.lp .wa-float {
+  position: fixed; bottom: calc(1.1rem + var(--sticky-h)); right: 1.1rem; z-index: 90; width: 52px; height: 52px; border-radius: 50%;
+  display: grid; place-items: center; overflow: hidden; transition: transform .2s;
+  animation: lpWaGlow 2.2s ease-out infinite;
+}
+.lp .wa-float:hover { transform: scale(1.08); }
+.lp .wa-float img { width: 100%; height: 100%; object-fit: cover; }
+@keyframes lpWaGlow {
+  0%   { box-shadow: 0 10px 26px rgba(34,197,94,.4), 0 0 0 0 rgba(34,197,94,.55); }
+  70%  { box-shadow: 0 10px 26px rgba(34,197,94,.4), 0 0 0 14px rgba(34,197,94,0); }
+  100% { box-shadow: 0 10px 26px rgba(34,197,94,.4), 0 0 0 0 rgba(34,197,94,0); }
+}
+
+/* ---------- Trial signup popup (same as the main landing page) ---------- */
+.lp .trial-modal-backdrop, .lp .sticky-cta {
+  --navy: #242427; --text: #262629; --muted: #6e6e71; --stroke: #EAE3D6;
+  --orange: #F97316; --purple: #1d1d21; --green: #22C55E;
+  --grad: linear-gradient(95deg, #F97316, #EF3E66);
+  --font: 'Inter', system-ui, sans-serif;
+}
+.lp .trial-modal-backdrop {
+  display: none; position: fixed; inset: 0; z-index: 200;
+  background: rgba(36, 36, 39, .6); backdrop-filter: blur(4px);
+  align-items: center; justify-content: center; padding: clamp(.6rem, 3vw, 1.2rem);
+  font-family: var(--font); line-height: 1.6; color: var(--text);
+}
+.lp .trial-modal-backdrop.open { display: flex; }
+.lp .trial-modal {
+  position: relative; width: min(420px, 100%); max-height: calc(100dvh - 2.4rem); overflow-y: auto;
+  background: #fff; border-radius: clamp(18px, 5vw, 24px);
+  box-shadow: 0 30px 70px rgba(36, 36, 39, .35);
+  padding: clamp(1.5rem, 6vw, 2rem) clamp(1.2rem, 5.5vw, 1.8rem) clamp(1.4rem, 5vw, 1.9rem);
+  text-align: center; animation: lpTrialModalIn .32s cubic-bezier(.16, 1, .3, 1);
+}
+@keyframes lpTrialModalIn {
+  from { opacity: 0; transform: scale(.94) translateY(14px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.lp .trial-modal-close {
+  position: absolute; top: clamp(.7rem, 3vw, .9rem); right: clamp(.7rem, 3vw, .9rem);
+  width: 30px; height: 30px; border-radius: 50%; z-index: 2;
+  border: none; background: #f2f2f5; color: var(--navy); font-size: 1.2rem; line-height: 1;
+  cursor: pointer; display: grid; place-items: center; transition: background .2s, transform .2s;
+}
+.lp .trial-modal-close:hover { background: #e6e6e9; transform: rotate(90deg); }
+
+.lp .trial-modal-top { margin-bottom: clamp(1rem, 4vw, 1.4rem); }
+.lp .trial-modal-logo {
+  width: auto; height: clamp(34px, 9vw, 42px); margin: 0 auto .6rem;
+  display: block; object-fit: contain;
+}
+.lp .trial-modal-wordmark { font-size: clamp(.98rem, 4vw, 1.08rem); font-weight: 900; color: var(--navy); letter-spacing: .01em; }
+.lp .trial-modal-wordmark span { color: var(--orange); }
+.lp .trial-modal-pill {
+  display: inline-block; margin-top: .55rem; font-size: .66rem; font-weight: 800;
+  letter-spacing: .07em; text-transform: uppercase; color: var(--purple);
+  background: rgba(29, 29, 33, .09); border: 1px solid rgba(29, 29, 33, .2);
+  padding: .32rem .85rem; border-radius: 999px;
+}
+
+.lp .trial-modal h3 {
+  font-size: clamp(1.1rem, 4.8vw, 1.28rem); margin-bottom: .3rem;
+  font-weight: 800; line-height: 1.16; letter-spacing: -.02em; color: var(--navy);
+}
+.lp .trial-modal-sub { color: var(--muted); font-size: clamp(.79rem, 3.4vw, .85rem); margin-bottom: clamp(1rem, 4vw, 1.3rem); }
+
+.lp .trial-field { margin-bottom: clamp(.7rem, 3vw, .95rem); text-align: left; }
+.lp .trial-field label { display: block; font-size: .78rem; font-weight: 700; color: var(--navy); margin-bottom: .32rem; }
+.lp .trial-field-req { color: #dc2626; }
+.lp .trial-field input {
+  width: 100%; padding: clamp(.65rem, 3vw, .78rem) clamp(.8rem, 3.5vw, .95rem); border-radius: 12px; border: 1.5px solid var(--stroke);
+  font-size: .92rem; font-family: var(--font); color: var(--text); outline: none;
+  transition: border-color .2s, box-shadow .2s; background: #FAF7F1;
+}
+.lp .trial-field input:focus { border-color: var(--purple); box-shadow: 0 0 0 4px rgba(29, 29, 33, .12); background: #fff; }
+.lp .trial-field input.err { border-color: #dc2626; }
+.lp .trial-field input.err:focus { box-shadow: 0 0 0 4px rgba(220, 38, 38, .12); }
+.lp .trial-field-err { display: block; font-size: .72rem; font-weight: 700; color: #dc2626; }
+.lp .trial-field-err:not(:empty) { margin-top: .3rem; }
+.lp .trial-modal-err { font-size: .82rem; font-weight: 700; color: #dc2626; }
+.lp .trial-modal-err:not(:empty) { margin-bottom: .8rem; }
+
+.lp .trial-modal .btn, .lp .sticky-cta .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .8rem 1.5rem; border-radius: 12px; font-weight: 800; font-size: .82rem; letter-spacing: .04em;
+  border: 1px solid transparent; text-transform: uppercase; transition: transform .2s, box-shadow .2s;
+  white-space: nowrap; max-width: 100%; cursor: pointer;
+}
+.lp .trial-modal .btn-primary, .lp .sticky-cta .btn-primary {
+  background: var(--grad); color: #fff; box-shadow: 0 10px 26px rgba(239, 62, 102, .35);
+  animation: lpCtaPulse 2.2s infinite;
+}
+.lp .trial-modal .btn-primary:hover, .lp .sticky-cta .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(239, 62, 102, .45); }
+@keyframes lpCtaPulse {
+  0%, 100% { box-shadow: 0 10px 26px rgba(239, 62, 102, .35); }
+  50% { box-shadow: 0 10px 26px rgba(239, 62, 102, .35), 0 0 0 9px rgba(239, 62, 102, .14); }
+}
+.lp .trial-modal-submit { width: 100%; justify-content: center; }
+.lp .trial-modal-submit[disabled] { opacity: .6; cursor: not-allowed; }
+@media (max-width: 520px) {
+  .lp .trial-modal .btn, .lp .sticky-cta .btn { white-space: normal; line-height: 1.35; }
+}
+
+.lp .trial-success { padding: .2rem 0 0; }
+.lp .trial-success-icon {
+  width: clamp(50px, 12vw, 58px); height: clamp(50px, 12vw, 58px); margin: 0 auto 1rem; border-radius: 50%;
+  background: linear-gradient(135deg, var(--green), #16a34a); color: #fff;
+  font-size: 1.6rem; font-weight: 900; display: grid; place-items: center;
+  box-shadow: 0 10px 24px rgba(34, 197, 94, .35);
+}
+.lp .trial-success h3 { margin-bottom: .4rem; }
+.lp .trial-success p { color: var(--muted); font-size: .9rem; margin-bottom: 1.3rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lp .ot-track, .lp .wa-float, .lp .trial-modal, .lp .trial-modal .btn-primary, .lp .sticky-cta .btn-primary { animation: none; }
+}

@@ -114,7 +114,7 @@ export const dashboard = async (req, res) => {
 
 // companies.landing_page → the label the superadmin shows. NULL covers every
 // signup from before the column existed and everything off the main page.
-const LANDING_PAGE_LABELS = { jewellery: "Jewellery" };
+const LANDING_PAGE_LABELS = { jewellery: "Jewellery", furniture: "Furniture" };
 const landingPageLabel = (landing) => LANDING_PAGE_LABELS[landing] || "Main page";
 
 /* ======================================================

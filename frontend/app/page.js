@@ -231,7 +231,7 @@ const BODY_HTML = `
         <div class="seg-photo-grid">
           <a class="seg-photo" href="/jewellery" aria-label="Hai Visitor for jewellery showrooms"><img src="/bridal-jewellery.jpg" alt="Fashion, Bridal &amp; Jewellery showroom" loading="lazy" /><span class="photo-tag">Fashion &amp; Bridal →</span></a>
           <div class="seg-photo"><img src="/automobile.png" alt="Premium Automobile showroom" loading="lazy" /><span class="photo-tag">Premium Auto</span></div>
-          <div class="seg-photo"><img src="/home-interiors.jpg" alt="Home &amp; Interiors showroom" loading="lazy" /><span class="photo-tag">Home &amp; Interiors</span></div>
+          <a class="seg-photo" href="/furniture" aria-label="Hai Visitor for furniture and interior showrooms"><img src="/home-interiors.jpg" alt="Home &amp; Interiors showroom" loading="lazy" /><span class="photo-tag">Home &amp; Interiors →</span></a>
           <div class="seg-photo"><img src="/offices.jpg" alt="Offices" loading="lazy" /><span class="photo-tag">Offices</span></div>
         </div>
       </div>

@@ -68,6 +68,12 @@ const nextConfig = {
         destination: "/jewellery",
         permanent: true,
       })),
+      // Other spellings / names of the furniture landing page.
+      ...["furnitures", "interiors"].map((spelling) => ({
+        source: `/${spelling}`,
+        destination: "/furniture",
+        permanent: true,
+      })),
     ];
   },
 };

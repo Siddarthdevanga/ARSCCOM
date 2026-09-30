@@ -46,7 +46,7 @@ const planColor = (plan) => {
 
 // companies.landing_page → label. NULL covers every signup from before the
 // column existed and everything off the main landing page.
-const LANDING_PAGE_LABELS = { jewellery: "Jewellery" };
+const LANDING_PAGE_LABELS = { jewellery: "Jewellery", furniture: "Furniture" };
 const sourceLabel = (landing) => LANDING_PAGE_LABELS[landing] || "Main page";
 const matchesSource = (landing, filter) =>
   filter === "all" || (filter === "main" ? !LANDING_PAGE_LABELS[landing] : landing === filter);
@@ -56,6 +56,7 @@ const SourceSelect = ({ value, onChange }) => (
     <option value="all">All Sources</option>
     <option value="main">Main page</option>
     <option value="jewellery">Jewellery</option>
+    <option value="furniture">Furniture</option>
   </select>
 );
 

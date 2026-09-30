@@ -1,6 +1,6 @@
 /* The jewellery design's own overrides (css/custom.css of the design
    export), every selector prefixed with .jw. Next to the unlayered Tailwind
-   build in tailwind.css the extra class keeps these winning over the
+   build in components/industry-tailwind.css the extra class keeps these winning over the
    utilities, the way they did when Tailwind sat in @layer. Generated: change
    the design source and regenerate, or put hand edits in jewellery.css. */
 
