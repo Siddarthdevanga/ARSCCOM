@@ -3,7 +3,13 @@
    landing page, plus layout changes that came with them. The popup, ticker
    and WhatsApp rules mirror landing-page.css so both pages look the same. */
 
-:root { --ticker-h: 34px; }
+:root { --ticker-h: 34px; --sticky-h: 64px; }
+
+/* Content uses more of wide screens than the design's 70rem cap. */
+.jw .section-shell { width: min(100% - clamp(2rem, 6vw, 5rem), 90rem); }
+
+/* Keep the footer clear of the sticky trial bar. */
+.jw main#top { padding-bottom: var(--sticky-h); }
 
 /* The ticker sits above the fixed header, so everything below moves down. */
 html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
@@ -12,13 +18,6 @@ html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
 .jw .hv-hero__grid { min-height: min(calc(100svh - var(--header-h) - var(--ticker-h)), 40rem); }
 @media (min-width: 64rem) {
   .jw .hv-faq__intro { top: calc(var(--header-h) + var(--ticker-h) + 1.5rem); }
-}
-
-/* Industries: only the jewellery card is shown. */
-@media (min-width: 40rem) { .jw .hv-industries .hv-grid { grid-template-columns: minmax(0, 26rem); } }
-@media (min-width: 64rem) {
-  .jw .industry-card--jewellery,
-  .jw .industry-card--jewellery:hover { transform: none; }
 }
 
 /* ---------- Offer ticker ---------- */
@@ -33,9 +32,19 @@ html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
 }
 @keyframes jwTick { to { transform: translateX(-50%); } }
 
+/* ---------- Sticky trial bar (all screen sizes) ---------- */
+.jw .sticky-cta {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 95;
+  display: flex; align-items: center; justify-content: center;
+  padding: .55rem .9rem calc(.55rem + env(safe-area-inset-bottom));
+  background: rgba(250, 247, 241, .95); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid #EAE3D6; font-family: 'Inter', system-ui, sans-serif; line-height: 1.6;
+}
+.jw .sticky-cta .btn { flex: 0 1 360px; }
+
 /* ---------- WhatsApp float ---------- */
 .jw .wa-float {
-  position: fixed; bottom: 1.1rem; right: 1.1rem; z-index: 90; width: 52px; height: 52px; border-radius: 50%;
+  position: fixed; bottom: calc(1.1rem + var(--sticky-h)); right: 1.1rem; z-index: 90; width: 52px; height: 52px; border-radius: 50%;
   display: grid; place-items: center; overflow: hidden; transition: transform .2s;
   animation: jwWaGlow 2.2s ease-out infinite;
 }
@@ -48,12 +57,13 @@ html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
 }
 
 /* ---------- Trial signup popup (same as the main landing page) ---------- */
-.jw .trial-modal-backdrop {
+.jw .trial-modal-backdrop, .jw .sticky-cta {
   --navy: #242427; --text: #262629; --muted: #6e6e71; --stroke: #EAE3D6;
   --orange: #F97316; --purple: #1d1d21; --green: #22C55E;
   --grad: linear-gradient(95deg, #F97316, #EF3E66);
   --font: 'Inter', system-ui, sans-serif;
-
+}
+.jw .trial-modal-backdrop {
   display: none; position: fixed; inset: 0; z-index: 200;
   background: rgba(36, 36, 39, .6); backdrop-filter: blur(4px);
   align-items: center; justify-content: center; padding: clamp(.6rem, 3vw, 1.2rem);
@@ -115,17 +125,17 @@ html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
 .jw .trial-modal-err { font-size: .82rem; font-weight: 700; color: #dc2626; }
 .jw .trial-modal-err:not(:empty) { margin-bottom: .8rem; }
 
-.jw .trial-modal .btn {
+.jw .trial-modal .btn, .jw .sticky-cta .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
   padding: .8rem 1.5rem; border-radius: 12px; font-weight: 800; font-size: .82rem; letter-spacing: .04em;
   border: 1px solid transparent; text-transform: uppercase; transition: transform .2s, box-shadow .2s;
   white-space: nowrap; max-width: 100%; cursor: pointer;
 }
-.jw .trial-modal .btn-primary {
+.jw .trial-modal .btn-primary, .jw .sticky-cta .btn-primary {
   background: var(--grad); color: #fff; box-shadow: 0 10px 26px rgba(239, 62, 102, .35);
   animation: jwCtaPulse 2.2s infinite;
 }
-.jw .trial-modal .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(239, 62, 102, .45); }
+.jw .trial-modal .btn-primary:hover, .jw .sticky-cta .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 34px rgba(239, 62, 102, .45); }
 @keyframes jwCtaPulse {
   0%, 100% { box-shadow: 0 10px 26px rgba(239, 62, 102, .35); }
   50% { box-shadow: 0 10px 26px rgba(239, 62, 102, .35), 0 0 0 9px rgba(239, 62, 102, .14); }
@@ -133,7 +143,7 @@ html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
 .jw .trial-modal-submit { width: 100%; justify-content: center; }
 .jw .trial-modal-submit[disabled] { opacity: .6; cursor: not-allowed; }
 @media (max-width: 520px) {
-  .jw .trial-modal .btn { white-space: normal; line-height: 1.35; }
+  .jw .trial-modal .btn, .jw .sticky-cta .btn { white-space: normal; line-height: 1.35; }
 }
 
 .jw .trial-success { padding: .2rem 0 0; }
@@ -147,5 +157,5 @@ html { scroll-padding-top: calc(var(--header-h) + var(--ticker-h)); }
 .jw .trial-success p { color: var(--muted); font-size: .9rem; margin-bottom: 1.3rem; }
 
 @media (prefers-reduced-motion: reduce) {
-  .jw .ot-track, .jw .wa-float, .jw .trial-modal, .jw .trial-modal .btn-primary { animation: none; }
+  .jw .ot-track, .jw .wa-float, .jw .trial-modal, .jw .trial-modal .btn-primary, .jw .sticky-cta .btn-primary { animation: none; }
 }

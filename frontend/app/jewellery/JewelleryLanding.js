@@ -164,6 +164,19 @@ const BODY_HTML = `
                     Your team stays part of the experience.</p>
             </div>
             <div class="hv-grid">
+                <article class="industry-card industry-card--fashion hv-c hv-c-rose">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="size-7" aria-hidden="true">
+                        <path
+                            d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z">
+                        </path>
+                    </svg>
+                    <div>
+                        <h3 class="text-lg">Fashion</h3>
+                        <p class="mt-2 text-xs leading-5">Personal attention, remembered.</p>
+                    </div>
+                </article>
                 <article class="industry-card industry-card--jewellery">
                     <span class="hv-tag">Featured</span>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -178,6 +191,39 @@ const BODY_HTML = `
                     <div>
                         <h3>Jewellery</h3>
                         <p class="mt-2 text-xs leading-5">Considered visits, thoughtfully recorded.</p>
+                    </div>
+                </article>
+                <article class="industry-card industry-card--automobile hv-c hv-c-sky">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="size-7" aria-hidden="true">
+                        <path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8"></path>
+                        <path d="M7 14h.01"></path>
+                        <path d="M17 14h.01"></path>
+                        <rect width="18" height="8" x="3" y="10" rx="2"></rect>
+                        <path d="M5 18v2"></path>
+                        <path d="M19 18v2"></path>
+                    </svg>
+                    <div>
+                        <h3 class="text-lg">Premium automobile</h3>
+                        <p class="mt-2 text-xs leading-5">Every showroom conversation in view.</p>
+                    </div>
+                </article>
+                <article class="industry-card industry-card--interiors hv-c hv-c-sage">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                        class="size-7" aria-hidden="true">
+                        <path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"></path>
+                        <path
+                            d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z">
+                        </path>
+                        <path d="M4 18v2"></path>
+                        <path d="M20 18v2"></path>
+                        <path d="M12 4v9"></path>
+                    </svg>
+                    <div>
+                        <h3 class="text-lg">Home &amp; interiors</h3>
+                        <p class="mt-2 text-xs leading-5">Longer journeys, easier continuity.</p>
                     </div>
                 </article>
             </div>
@@ -525,6 +571,11 @@ const BODY_HTML = `
         </div>
     </footer>
 </main>
+
+<!-- Sticky CTA (all screen sizes), same as the main landing page -->
+<div class="sticky-cta">
+  <a class="btn btn-primary trial-cta" href="#trial">Start 15-Day Trial for ₹49 →</a>
+</div>
 
 <!-- WhatsApp float -->
 <a class="wa-float" href="${WHATSAPP_URL}" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp"><img src="/whatsapp-icon.png" alt="WhatsApp" /></a>
