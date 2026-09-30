@@ -3,7 +3,7 @@
    popup, mirroring landing-page.css so every page looks the same. Scoped to
    the page wrapper's `lp` class. */
 
-:root { --sticky-h: 64px; }
+:root { --ticker-h: 34px; --sticky-h: 64px; }
 
 /* Keep the footer clear of the sticky trial bar. */
 .lp main#top { padding-bottom: var(--sticky-h); }

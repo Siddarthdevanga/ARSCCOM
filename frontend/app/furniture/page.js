@@ -1,25 +1,29 @@
 import FurnitureLanding from './FurnitureLanding';
 
-const TITLE = 'Hai Visitor for Furniture & Interior Showrooms | Every visit is worth remembering';
+const TITLE = 'Hai Visitor for Furniture & Home Décor Showrooms | Zodopt';
 const DESCRIPTION =
-  'Hai Visitor helps showroom teams register walk-ins, receive staff alerts and keep visitor records ready for future conversations. Start a 15-day trial for ₹49.';
+  'Digitise furniture and home décor showroom walk-ins with QR registration, instant staff alerts and organised visitor records.';
+const OG_TITLE = 'Hai Visitor for Furniture & Home Décor Showrooms';
+const OG_DESCRIPTION =
+  'Capture every showroom walk-in, engage the right consultant and keep visitor history organised.';
 
 export const metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
+  authors: [{ name: 'Zodopt Technology Solutions Pvt Ltd' }],
   alternates: { canonical: '/furniture' },
   openGraph: {
     type: 'website',
     locale: 'en_IN',
     url: '/furniture',
-    title: TITLE,
-    description: DESCRIPTION,
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
     images: ['/og-image.png'],
   },
   twitter: {
     card: 'summary_large_image',
-    title: TITLE,
-    description: DESCRIPTION,
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
     images: ['/og-image.png'],
   },
 };

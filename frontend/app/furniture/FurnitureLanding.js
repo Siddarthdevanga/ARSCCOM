@@ -1,69 +1,229 @@
 'use client';
 import { useEffect } from 'react';
 import { TRIAL_MODAL_HTML, initTrialSignup, loadMetaPixel } from '../components/trialSignup';
-import '../components/industry-tailwind.css';
 import '../components/industry-landing.css';
 import './furniture.css';
 
-/* Furniture landing page. The markup is the design export
-   (hai-visitor-website-furniture/index.html) as-is, with the site's logo, the
-   shared trial popup, sticky trial bar and WhatsApp button added, and step 02
-   of the walkthrough filled in (the export repeats step 01 there). Every
-   "Start trial" button carries `trial-cta`, which opens the same popup as the
-   main landing page; signups from here are tagged 'furniture'. */
+/* Furniture & home décor landing page. The markup is the design
+   (haivisitor-site-f/haivisitor-site/index.html) with the site's logo, the
+   shared trial popup, the offer ticker, the sticky trial bar and the WhatsApp
+   button added, and the footer links dropped. Every "Start trial" button
+   carries `trial-cta`, which opens the same popup as the main landing page;
+   signups from here are tagged 'furniture'.
+
+   The popup, sticky bar and WhatsApp button sit outside the `fu` wrapper so
+   the design's element styles (h3, p, ...) don't reach them. */
 
 const WHATSAPP_URL =
   'https://wa.me/916366834745?text=' +
   encodeURIComponent('Hi, Can i know more about Hai Visitor - Visitor Management Platform');
 
+const TICKER_ITEMS = [
+  '₹49 ONLY — 15-DAY TRIAL', 'NO HARDWARE NEEDED', 'GO LIVE IN 15 MINUTES',
+  'INSTANT WHATSAPP ALERTS', 'BUILD YOUR CUSTOMER DATABASE',
+];
+// Listed twice so the track can loop seamlessly at -50%.
+const TICKER_HTML = [...TICKER_ITEMS, ...TICKER_ITEMS]
+  .map((t) => `<span>${t}</span><span>★</span>`)
+  .join('');
+
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+const CROSS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+const STEP_ARROW = '<svg class="step-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>';
+
 const BODY_HTML = `
-<main id="top" class="min-h-screen overflow-hidden bg-background text-foreground"><div class="brand-intro" aria-hidden="true"><div class="brand-intro__mark"><span class="brand-intro__emblem fu-logo"><img src="/v-mark.png" alt="" /></span><span class="brand-intro__name">H<span>ai</span> Visitor</span></div></div><a href="#content" class="fixed left-3 top-3 z-[70] -translate-y-24 bg-primary px-4 py-2 text-primary-foreground focus:translate-y-0">Skip to main content</a>
-<header class="absolute inset-x-0 top-0 z-40 border-b border-paper/20 bg-ink/40 text-paper backdrop-blur-md"><nav class="section-shell flex h-20 items-center justify-between" aria-label="Main navigation"><a href="#top" class="brand-lockup  text-paper" aria-label="Hai Visitor home"><span class="brand-lockup__emblem fu-logo" aria-hidden="true"><img src="/v-mark.png" alt="" /></span><span class="brand-lockup__name">H<span>ai</span> Visitor</span></a><div class="hidden items-center gap-8 md:flex"><a class="text-sm text-paper/70 transition-colors hover:text-primary" href="#how-it-works">How it works</a><a class="text-sm text-paper/70 transition-colors hover:text-primary" href="#walkthrough">Walkthrough</a><a class="text-sm text-paper/70 transition-colors hover:text-primary" href="#why">Why Hai Visitor</a><a href="#trial" class="trial-cta inline-flex items-center justify-center gap-3 rounded-sm text-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 border bg-transparent hover:border-primary hover:text-primary min-h-12 px-6 border-paper/35 text-paper">Start trial <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right size-4" aria-hidden="true"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></div></nav></header>
-<section id="content" class="relative min-h-[720px] bg-ink pt-20 text-paper"><img src="/jewellery/hero.jpg" alt="An Indian customer trying earrings with a showroom associate in a jewellery showroom" width="1920" height="1088" class="hero-image absolute inset-0 size-full object-cover object-center"/><div class="hero-veil absolute inset-0"></div>
-<div class="section-shell relative flex min-h-[640px] items-center py-16"><div class="max-w-2xl animate-rise"><p class="mb-7 text-xs font-semibold uppercase tracking-[0.28em] text-primary">VIBE · Visit. Interact. Build. Engage.</p><h1 class="max-w-[10ch] text-6xl leading-[0.98] tracking-normal sm:text-7xl lg:text-8xl">Every visit is worth <em class="text-primary">remembering.</em></h1><p class="mt-7 max-w-xl text-lg leading-8 text-paper/75">Register in-store walk-ins, alert the right team member and keep visitor records ready for your next conversation.</p><div class="mt-9 flex flex-wrap gap-4"><a href="#trial" class="trial-cta inline-flex items-center justify-center gap-3 rounded-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:-translate-y-0.5 hover:bg-primary/90 min-h-14 px-8 text-base">Start 15-day trial @ ₹49 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right size-5" aria-hidden="true"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a><a href="#how-it-works" class="inline-flex items-center justify-center gap-3 rounded-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 border bg-transparent hover:border-primary hover:text-primary min-h-14 px-8 text-base border-paper/35 text-paper">See how it works <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-down size-5" aria-hidden="true"><path d="M12 5v14"></path><path d="m19 12-7 7-7-7"></path></svg></a></div><p class="mt-4 text-xs text-paper/55">15-day paid trial · 100 visitor bookings included</p></div></div>
-</section>
-<section id="how-it-works" class="bg-paper py-20 lg:py-28">
-<div class="section-shell"><div class="max-w-3xl"><p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">The VIBE approach</p><h2 class="mt-5 text-5xl leading-tight tracking-normal lg:text-6xl">From first visit to a better next conversation.</h2><p class="mt-7 max-w-2xl leading-7 text-muted-foreground">A simple in-store process makes visitor details available to the people serving them, while every later conversation remains personal and permission-led.</p></div><div class="mt-14 grid gap-4 md:grid-cols-3">
-<article class="journey-card group journey-card--capture"><div class="flex items-start justify-between"><span class="text-xs font-semibold tracking-[0.2em]">01 / CAPTURE</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code size-7" aria-hidden="true"><rect width="5" height="5" x="3" y="3" rx="1"></rect><rect width="5" height="5" x="16" y="3" rx="1"></rect><rect width="5" height="5" x="3" y="16" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></svg></div><h3 class="mt-16 font-display text-3xl">Register the visit.</h3><p class="mt-4 text-sm leading-6 opacity-75">A customer scans the showroom’s QR and enters their details.</p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right mt-9 size-5 transition-transform duration-300 group-hover:translate-x-2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></article>
-<article class="journey-card group journey-card--connect"><div class="flex items-start justify-between"><span class="text-xs font-semibold tracking-[0.2em]">02 / CONNECT</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-database size-7" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M3 5V19A9 3 0 0 0 21 19V5"></path><path d="M3 12A9 3 0 0 0 21 12"></path></svg></div><h3 class="mt-16 font-display text-3xl">Keep the record.</h3><p class="mt-4 text-sm leading-6 opacity-75">Saved visitor details stay available to the team for a better next conversation.</p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right mt-9 size-5 transition-transform duration-300 group-hover:translate-x-2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></article>
-<article class="journey-card group journey-card--engage"><div class="flex items-start justify-between"><span class="text-xs font-semibold tracking-[0.2em]">03 / ENGAGE</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle size-7" aria-hidden="true"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"></path></svg></div><h3 class="mt-16 font-display text-3xl">Brand WhatsApp opt-in.</h3><p class="mt-4 text-sm leading-6 opacity-75">Visitors choose whether your authorised team can reconnect through your brand’s WhatsApp channel.</p><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right mt-9 size-5 transition-transform duration-300 group-hover:translate-x-2" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></article></div></div>
-</section>
-<section class="border-y border-border bg-primary py-20 text-ink lg:py-24">
-<div class="section-shell"><div class="flex flex-col justify-between gap-6 md:flex-row md:items-end"><div><p class="text-xs font-semibold uppercase tracking-[0.22em] text-deep">The first interaction matters</p><h2 class="mt-4 max-w-2xl text-4xl tracking-normal lg:text-5xl">Built for considered showroom visits.</h2></div><p class="max-w-md text-sm leading-6 text-muted-foreground">The QR belongs inside your showroom. Your team stays part of the experience.</p></div><div class="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-<article class="industry-card industry-card--fashion"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-shirt size-7" aria-hidden="true"><path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"></path></svg><div><h3 class="text-lg font-semibold">Fashion</h3><p class="mt-2 text-xs leading-5 opacity-70">Personal attention, remembered.</p></div></article>
-<article class="industry-card industry-card--jewellery"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-gem size-7" aria-hidden="true"><path d="M10.5 3 8 9l4 13 4-13-2.5-6"></path><path d="M17 3a2 2 0 0 1 1.6.8l3 4a2 2 0 0 1 .013 2.382l-7.99 10.986a2 2 0 0 1-3.247 0l-7.99-10.986A2 2 0 0 1 2.4 7.8l2.998-3.997A2 2 0 0 1 7 3z"></path><path d="M2 9h20"></path></svg><div><h3 class="text-lg font-semibold">Jewellery</h3><p class="mt-2 text-xs leading-5 opacity-70">Considered visits, thoughtfully recorded.</p></div></article>
-<article class="industry-card industry-card--automobile"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-car-front size-7" aria-hidden="true"><path d="m21 8-2 2-1.5-3.7A2 2 0 0 0 15.646 5H8.4a2 2 0 0 0-1.903 1.257L5 10 3 8"></path><path d="M7 14h.01"></path><path d="M17 14h.01"></path><rect width="18" height="8" x="3" y="10" rx="2"></rect><path d="M5 18v2"></path><path d="M19 18v2"></path></svg><div><h3 class="text-lg font-semibold">Premium automobile</h3><p class="mt-2 text-xs leading-5 opacity-70">Every showroom conversation in view.</p></div></article>
-<article class="industry-card industry-card--interiors industry-card--featured"><span class="fu-tag">Featured</span><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sofa size-7" aria-hidden="true"><path d="M20 9V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v3"></path><path d="M2 16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v1.5a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5V11a2 2 0 0 0-4 0z"></path><path d="M4 18v2"></path><path d="M20 18v2"></path><path d="M12 4v9"></path></svg><div><h3 class="text-lg font-semibold">Home &amp; interiors</h3><p class="mt-2 text-xs leading-5 opacity-70">Longer journeys, easier continuity.</p></div></article></div></div>
-</section>
-<section id="walkthrough" class="bg-ink py-20 text-paper lg:py-28">
-<div class="section-shell"><div class="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end"><div><p class="text-xs font-semibold uppercase tracking-[0.25em] text-sky">A look inside the visit</p><h2 class="mt-4 text-5xl tracking-normal">Four steps. One clear process.</h2></div><p class="max-w-md text-sm leading-6 text-muted-foreground">Explore the in-store journey. The screen shown is an illustrative workflow, with dummy data only.</p></div><div role="tablist" aria-label="Visitor journey" class="grid grid-cols-2 border border-paper/20 sm:grid-cols-4"><button role="tab" data-tab-index="0" aria-selected="true" class="min-h-20 border-r border-paper/20 px-4 text-left text-sm transition-colors last:border-r-0 bg-primary text-primary-foreground"><span class="block text-xs opacity-60">01</span>Scan in-store</button><button role="tab" data-tab-index="1" aria-selected="false" class="min-h-20 border-r border-paper/20 px-4 text-left text-sm transition-colors last:border-r-0 bg-ink text-paper/65 hover:bg-paper hover:text-ink"><span class="block text-xs opacity-60">02</span>Register</button><button role="tab" data-tab-index="2" aria-selected="false" class="min-h-20 border-r border-paper/20 px-4 text-left text-sm transition-colors last:border-r-0 bg-ink text-paper/65 hover:bg-paper hover:text-ink"><span class="block text-xs opacity-60">03</span>Choose opt-in</button><button role="tab" data-tab-index="3" aria-selected="false" class="min-h-20 border-r border-paper/20 px-4 text-left text-sm transition-colors last:border-r-0 bg-ink text-paper/65 hover:bg-paper hover:text-ink"><span class="block text-xs opacity-60">04</span>WhatsApp</button></div>
-<div data-panel-index="0" class="grid min-h-[520px] border-x border-b border-paper/20 lg:grid-cols-[1.2fr_.8fr]"><div class="relative flex items-center justify-center overflow-hidden bg-ink p-8"><img src="/jewellery/showroom.jpg" alt="Customer using a showroom QR registration point" class="absolute inset-0 size-full object-cover opacity-40 grayscale"><div class="relative animate-drift w-[260px] border border-paper/20 bg-background p-3 shadow-2xl"><div class="min-h-[420px] border border-border bg-card p-7"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">AT YOUR SHOWROOM</p><h3 class="mt-3 font-display text-3xl">Scan to register your visit</h3><div class="mt-10 grid min-h-48 place-items-center border border-dashed border-border bg-background/50 p-4"><div class="flex flex-col items-center gap-3"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-qr-code size-24 text-primary" aria-hidden="true"><rect width="5" height="5" x="3" y="3" rx="1"></rect><rect width="5" height="5" x="16" y="3" rx="1"></rect><rect width="5" height="5" x="3" y="16" rx="1"></rect><path d="M21 16h-3a2 2 0 0 0-2 2v3"></path><path d="M21 21v.01"></path><path d="M12 7v3a2 2 0 0 1-2 2H7"></path><path d="M3 12h.01"></path><path d="M12 3h.01"></path><path d="M12 16v.01"></path><path d="M16 12h1"></path><path d="M21 12v.01"></path><path d="M12 21v-1"></path></svg><p class="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Counter 03 · Mumbai showroom</p></div></div></div></div></div><div class="flex flex-col justify-center bg-paper p-8 text-ink md:p-12"><p class="text-xs font-semibold tracking-[0.2em] text-primary">STEP 01 / 04</p><h3 class="mt-5 font-display text-4xl">An easy welcome.</h3><p class="mt-5 max-w-md leading-7 text-ink/65">The visitor scans a QR displayed at your showroom counter. This visual is a non-functional placeholder.</p><p class="mt-10 border-t border-ink/15 pt-5 text-xs text-ink/60">Illustrative product flow · This QR is not a registration link</p></div></div>
-<div data-panel-index="1" hidden class="grid min-h-[520px] border-x border-b border-paper/20 lg:grid-cols-[1.2fr_.8fr]"><div class="relative flex items-center justify-center overflow-hidden bg-ink p-8"><img src="/jewellery/showroom.jpg" alt="Customer using a showroom QR registration point" class="absolute inset-0 size-full object-cover opacity-40 grayscale"/><div class="relative animate-drift w-[260px] border border-paper/20 bg-background p-3 shadow-2xl"><div class="min-h-[420px] border border-border bg-card p-7"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">YOUR DETAILS</p><h3 class="mt-3 font-display text-3xl">Register your visit</h3><div class="mt-10 grid min-h-48 place-items-center border border-dashed border-border bg-background/50 p-4"><div class="w-full space-y-3 px-2"><div class="border border-border px-3 py-2.5 text-xs"><span class="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Name</span>Ananya S.</div><div class="border border-border px-3 py-2.5 text-xs"><span class="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Phone</span>+91 XXXXX 34567</div><div class="border border-border px-3 py-2.5 text-xs"><span class="block text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Email</span>yourname@company.com</div><p class="border border-primary px-3 py-2 text-center text-[10px] font-semibold uppercase tracking-[0.15em] text-primary">Register</p></div></div></div></div></div><div class="flex flex-col justify-center bg-paper p-8 text-ink md:p-12"><p class="text-xs font-semibold tracking-[0.2em] text-primary">STEP 02 / 04</p><h3 class="mt-5 font-display text-4xl">Register in seconds.</h3><p class="mt-5 max-w-md leading-7 text-ink/65">The visitor enters their name, phone number and email on their own phone. The relevant team member is alerted straight away.</p><p class="mt-10 border-t border-ink/15 pt-5 text-xs text-ink/60">Illustrative product flow · This QR is not a registration link</p></div></div>
-<div data-panel-index="2" hidden class="grid min-h-[520px] border-x border-b border-paper/20 lg:grid-cols-[1.2fr_.8fr]"><div class="relative flex items-center justify-center overflow-hidden bg-ink p-8"><img src="/jewellery/showroom.jpg" alt="Customer using a showroom QR registration point" class="absolute inset-0 size-full object-cover opacity-40 grayscale"><div class="relative animate-drift w-[260px] border border-paper/20 bg-background p-3 shadow-2xl"><div class="min-h-[420px] border border-border bg-card p-7"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">VISITOR CHOICE</p><h3 class="mt-3 font-display text-3xl">Stay in touch?</h3><div class="mt-10 grid min-h-48 place-items-center border border-dashed border-border bg-background/50 p-4"><div class="w-full space-y-3 px-2"><div class="flex items-center justify-between border border-border px-3 py-2.5 text-xs"><span>WhatsApp updates</span><span class="border border-primary px-2 py-0.5 text-[10px] font-semibold text-primary">YES</span></div><div class="flex items-center justify-between border border-border px-3 py-2.5 text-xs"><span>Visit reminders</span><span class="border border-border px-2 py-0.5 text-[10px] text-muted-foreground">NO</span></div><p class="flex items-center gap-2 text-[10px] text-muted-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check size-3.5 text-primary" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Optional · your choice</p></div></div></div></div></div><div class="flex flex-col justify-center bg-paper p-8 text-ink md:p-12"><p class="text-xs font-semibold tracking-[0.2em] text-primary">STEP 03 / 04</p><h3 class="mt-5 font-display text-4xl">Opt-in stays optional.</h3><p class="mt-5 max-w-md leading-7 text-ink/65">The visitor can choose whether to receive further messages from your brand.</p><p class="mt-10 border-t border-ink/15 pt-5 text-xs text-ink/60">Illustrative product flow · This QR is not a registration link</p></div></div>
-<div data-panel-index="3" hidden class="grid min-h-[520px] border-x border-b border-paper/20 lg:grid-cols-[1.2fr_.8fr]"><div class="relative flex items-center justify-center overflow-hidden bg-ink p-8"><img src="/jewellery/showroom.jpg" alt="Customer using a showroom QR registration point" class="absolute inset-0 size-full object-cover opacity-40 grayscale"><div class="relative animate-drift w-[260px] border border-paper/20 bg-background p-3 shadow-2xl"><div class="min-h-[420px] border border-border bg-card p-7"><p class="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary">BRAND WHATSAPP</p><h3 class="mt-3 font-display text-3xl">Continue the conversation</h3><div class="mt-10 grid min-h-48 place-items-center border border-dashed border-border bg-background/50 p-4"><div class="w-full space-y-2.5 px-2"><div class="max-w-[85%] border border-border bg-card px-3 py-2 text-xs">Hi Ananya, thank you for visiting us today. — Team Elegance</div><div class="ml-auto max-w-[85%] border border-primary/40 bg-primary/10 px-3 py-2 text-xs">Loved the jhumka collection!</div><p class="flex items-center gap-2 pt-1 text-[10px] text-muted-foreground"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-circle size-3.5 text-primary" aria-hidden="true"><path d="M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"></path></svg>WhatsApp opt-in confirmed</p></div></div></div></div></div><div class="flex flex-col justify-center bg-paper p-8 text-ink md:p-12"><p class="text-xs font-semibold tracking-[0.2em] text-primary">STEP 04 / 04</p><h3 class="mt-5 font-display text-4xl">Engage, with permission.</h3><p class="mt-5 max-w-md leading-7 text-ink/65">When a visitor opts in, your authorised team can reconnect through your brand’s WhatsApp channel.</p><p class="mt-10 border-t border-ink/15 pt-5 text-xs text-ink/60">Illustrative product flow · This QR is not a registration link</p></div></div></div>
-</section>
-<section id="why" class="bg-paper py-20 lg:py-28">
-<div class="section-shell"><p class="text-xs font-semibold uppercase tracking-[0.25em] text-primary">The value grows with each visit</p><h2 class="mt-4 text-5xl tracking-normal">Useful today. More useful over time.</h2><p class="mt-6 max-w-2xl leading-7 text-muted-foreground">Keep each step practical: welcome visitors, make the team aware and give them a record they can refer to when it is appropriate to reconnect.</p><div class="mt-16 grid border-y border-border md:grid-cols-3 md:divide-x md:divide-border">
-<article class="relative px-0 py-8 md:px-8"><span class="font-display text-5xl text-primary">Now</span><h3 class="mt-7 text-xl">Know who visited.</h3><p class="mt-3 text-sm leading-6 text-muted-foreground">QR registration creates a digital visitor record and alerts the relevant staff.</p></article>
-<article class="relative px-0 py-8 md:px-8"><span class="font-display text-5xl text-sky">Next</span><h3 class="mt-7 text-xl">Continue the conversation.</h3><p class="mt-3 text-sm leading-6 text-muted-foreground">Your team can follow up with people who have chosen to share their details and receive messages.</p></article>
-<article class="relative px-0 py-8 md:px-8"><span class="font-display text-5xl text-coral">Over time</span><h3 class="mt-7 text-xl">See the bigger picture.</h3><p class="mt-3 text-sm leading-6 text-muted-foreground">Review saved records and available reports to understand showroom activity.</p></article></div></div>
-</section>
-<section class="relative min-h-[620px] overflow-hidden"><img src="/jewellery/showroom.jpg" alt="Visitor scanning a QR code in a luxury jewellery showroom" class="image-story-photo absolute inset-0 size-full object-cover grayscale"/><div class="image-story-veil absolute inset-0"></div>
-<div class="section-shell relative flex min-h-[620px] items-center py-20"><div class="max-w-xl"><p class="text-xs font-semibold uppercase tracking-[0.23em] text-primary">An in-store moment, not an online ad QR</p><h2 class="mt-5 text-5xl tracking-normal">Made for real showroom teams</h2><p class="mt-5 text-xl">Simple to put into practice.</p><p class="mt-5 leading-7 text-foreground/65">Place a QR at reception or a counter. Let visitors register on their own phones, while your team stays focused on the in-person experience.</p><div class="mt-10 grid grid-cols-2 gap-px bg-border border border-border"><div class="bg-background/90 p-5 backdrop-blur"><strong class="text-primary">No hardware</strong><p class="mt-2 text-xs leading-5 text-muted-foreground">No dedicated registration device required.</p></div><div class="bg-background/90 p-5 backdrop-blur"><strong class="text-primary">≈ 15 min</strong><p class="mt-2 text-xs leading-5 text-muted-foreground">Indicative standard setup time.</p></div><div class="bg-background/90 p-5 backdrop-blur"><strong class="text-primary">Staff alerts</strong><p class="mt-2 text-xs leading-5 text-muted-foreground">Let the relevant team member know a visitor has registered.</p></div><div class="bg-background/90 p-5 backdrop-blur"><strong class="text-primary">Visitor records</strong><p class="mt-2 text-xs leading-5 text-muted-foreground">Keep details available in the dashboard.</p></div></div></div></div>
-</section>
-<section id="trial" class="bg-primary py-20 text-ink lg:py-28">
-<div class="section-shell grid gap-12 lg:grid-cols-[1fr_22rem] lg:items-end"><div><p class="text-xs font-bold uppercase tracking-[0.25em] text-deep">Put it to work in your showroom</p><h2 class="mt-5 max-w-3xl text-6xl leading-none tracking-normal">Start remembering every registered visit.</h2><p class="mt-7 max-w-2xl text-lg leading-8 text-ink/70">Test the QR registration and team notification flow with real showroom walk-ins during the paid trial.</p><div class="mt-10 flex flex-wrap gap-3 text-sm"><span class="border border-ink/20 px-4 py-2">15 days</span><span class="border border-ink/20 px-4 py-2">100 visitor bookings</span><span class="border border-ink/20 px-4 py-2">No dedicated hardware</span></div></div><div class="border border-ink/15 bg-foreground/55 p-7"><p class="text-xs font-semibold uppercase tracking-[0.2em] text-ink/60">Paid trial</p><p class="my-5 font-display text-7xl">₹49</p><p class="mb-7 text-sm text-ink/70">Try Hai Visitor in your own showroom.</p><a href="#trial" class="trial-cta inline-flex items-center justify-center gap-3 rounded-sm font-semibold transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 bg-foreground text-background hover:-translate-y-0.5 hover:bg-foreground/90 min-h-14 px-8 text-base w-full">Start 15-day trial <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right size-5" aria-hidden="true"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></div></div>
-</section>
-<section class="bg-paper py-20 lg:py-28">
-<div class="section-shell"><p class="text-xs font-semibold uppercase tracking-[0.25em] text-deep">Common questions</p><h2 class="mt-4 text-5xl tracking-normal">A few quick answers.</h2><div class="mt-12 divide-y divide-border border-y border-border">
-<details class="group py-6"><summary class="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium">Does the visitor scan the QR in the ad?<span class="text-primary transition-transform group-open:rotate-45">+</span></summary><p class="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">No. The registration QR is displayed inside your showroom. The QR shown here is only an illustration.</p></details>
-<details class="group py-6"><summary class="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium">Is WhatsApp opt-in required?<span class="text-primary transition-transform group-open:rotate-45">+</span></summary><p class="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">The visitor chooses whether to opt in. Staff notification and saved registration details are separate from the visitor’s choice to receive messages from the brand.</p></details>
-<details class="group py-6"><summary class="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium">Does it automatically send marketing campaigns or guarantee sales?<span class="text-primary transition-transform group-open:rotate-45">+</span></summary><p class="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">No. Hai Visitor supports registration, alerts and access to visitor records. Any later customer conversation is planned and carried out by your team.</p></details>
-<details class="group py-6"><summary class="flex cursor-pointer list-none items-center justify-between gap-5 text-lg font-medium">What does the ₹49 trial include?<span class="text-primary transition-transform group-open:rotate-45">+</span></summary><p class="mt-4 max-w-3xl text-sm leading-7 text-muted-foreground">A 15-day paid trial with 100 visitor bookings. Check the registration page for current terms before paying.</p></details></div></div>
-</section>
-<footer class="border-t border-paper/10 bg-deep py-12 text-paper">
-<div class="section-shell flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-center"><a href="#top" class="brand-lockup brand-lockup--compact text-paper" aria-label="Hai Visitor home"><span class="brand-lockup__emblem fu-logo" aria-hidden="true"><img src="/v-mark.png" alt="" /></span><span class="brand-lockup__name">H<span>ai</span> Visitor</span></a><p class="text-xs uppercase tracking-[0.16em] text-paper/60">Visit. Interact. Build. Engage.</p><p class="text-xs text-paper/60">Zodopt Technology Solutions Pvt Ltd</p></div></footer>
-</main>
+<div class="fu">
+<!-- OFFER TICKER (fixed top) -->
+<div class="offer-ticker"><div class="ot-track">${TICKER_HTML}</div></div>
+
+<div id="top" class="site-shell">
+
+  <nav class="topbar">
+    <div class="page-wrap nav-inner">
+      <a href="#top" class="brand" aria-label="Hai Visitor home">
+        <span class="brand-lockup"><img src="/v-mark.png" alt="" width="44" height="44" /><span class="brand-name">H<em>ai</em> Visitor</span></span>
+      </a>
+      <button type="button" class="button button-primary nav-cta trial-cta">Start 15-Day Trial</button>
+    </div>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <img src="/furniture/furniture-showroom-family.jpg" alt="A family exploring furniture with a showroom consultant" width="1600" height="1000" class="hero-image" />
+      <div class="hero-shade"></div>
+      <div class="page-wrap hero-inner">
+        <div class="hero-copy-wrap">
+          <span class="audience">For furniture &amp; home décor showrooms</span>
+          <h1><span class="h1-line h1-lead">Furniture decisions take time.</span> <span class="h1-line h1-lead">Stay Connected,</span> <em class="h1-line">Don’t lose the customer in between.</em></h1>
+          <p>Capture every showroom visit, engage the right consultant and keep each visitor record ready for the next conversation.</p>
+          <div class="hero-actions">
+            <button type="button" class="button button-primary trial-cta">Start 15-Day Trial @ ₹49</button>
+          </div>
+          <div class="hero-proof">
+            <span>${CHECK} No dedicated hardware</span>
+            <span>${CHECK} Live in about 15 minutes</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="section gap-section">
+      <div class="page-wrap">
+        <div class="section-head">
+          <span class="eyebrow">The showroom gap</span>
+          <h2>Big purchases need a connected experience.</h2>
+          <p>Customers compare, measure and consult family. If the first visit stays on paper, the next chat starts from zero.</p>
+        </div>
+        <div class="card-grid">
+          <article class="info-card ic-1"><span class="card-number">01</span><h3>They compare before deciding</h3><p>Sofas, dining sets and décor take time to choose. Many visitors return later.</p></article>
+          <article class="info-card ic-2"><span class="card-number">02</span><h3>Many people join the decision</h3><p>Family, architects or designers often need to approve first.</p></article>
+          <article class="info-card ic-3"><span class="card-number">03</span><h3>Manual records break continuity</h3><p>Paper registers and scattered notes make past visitors hard to find.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section dark-section" id="how">
+      <div class="page-wrap">
+        <div class="section-head workflow-heading">
+          <span class="eyebrow">A simple visitor workflow</span>
+          <h2>From walk-in to follow-up in three steps.</h2>
+        </div>
+        <div class="steps">
+          <article class="step-capture">
+            <div class="step-top"><span>01 / Capture</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21a8 8 0 0 1 13.292-6"/><circle cx="10" cy="8" r="5"/><path d="M19 16v6"/><path d="M22 19h-6"/></svg>
+            </div>
+            <div class="step-copy"><h3>Register the visit.</h3><p>Visitors scan your QR and enter their details.</p>
+              ${STEP_ARROW}
+            </div>
+          </article>
+          <article class="step-connect">
+            <div class="step-top"><span>02 / Connect</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+            </div>
+            <div class="step-copy"><h3>Keep the record.</h3><p>Details stay saved and easy to find.</p>
+              ${STEP_ARROW}
+            </div>
+          </article>
+          <article class="step-engage">
+            <div class="step-top"><span>03 / Engage</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>
+            </div>
+            <div class="step-copy"><h3>Brand WhatsApp opt-in.</h3><p>Visitors choose if your team can contact them on WhatsApp.</p>
+              ${STEP_ARROW}
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section features-section">
+      <div class="page-wrap feature-layout">
+        <div class="section-head feature-intro">
+          <span class="eyebrow">Built for the buying journey</span>
+          <h2>Everything to manage visitors, in one place.</h2>
+          <p>Simple tools your team can use every day.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card fc-1">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>
+            <h3>QR Registration</h3><p>Quick registration with no extra hardware.</p>
+          </article>
+          <article class="feature-card fc-2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/></svg>
+            <h3>WhatsApp Alert</h3><p>Alert the right staff member when a visitor registers.</p>
+          </article>
+          <article class="feature-card fc-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>
+            <h3>Visitor History</h3><p>Find past visits whenever your team needs them.</p>
+          </article>
+          <article class="feature-card fc-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+            <h3>Dashboard &amp; Reports</h3><p>See visitors and showroom activity at a glance.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section compare-section">
+      <div class="page-wrap">
+        <div class="section-head">
+          <span class="eyebrow">Before and after</span>
+          <h2>Turn every walk-in into a clear next step.</h2>
+        </div>
+        <div class="compare-grid">
+          <article class="compare-card before">
+            <span class="compare-label">Before Hai Visitor</span>
+            <p>${CROSS}Walk-ins noted in books or missed</p>
+            <p>${CROSS}Each consultant keeps separate notes</p>
+            <p>${CROSS}Past visitors are hard to find</p>
+            <p>${CROSS}Long buying journeys lose track</p>
+          </article>
+          <article class="compare-card after">
+            <span class="compare-label">With Hai Visitor</span>
+            <p>${CHECK}One simple QR registration</p>
+            <p>${CHECK}The right consultant is alerted instantly</p>
+            <p>${CHECK}Visitor history stays organised</p>
+            <p>${CHECK}Consented records for future follow-up</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section trial-section" id="trial">
+      <div class="page-wrap trial-shell">
+        <div class="trial-copy">
+          <span class="eyebrow">Start small. Test it live.</span>
+          <h2>Try Hai Visitor in your showroom for 15 days.</h2>
+          <p>Set up your QR, register real walk-ins and see how it fits your showroom.</p>
+          <div class="trial-points">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 21a8 8 0 0 0-16 0"/><circle cx="10" cy="8" r="5"/><path d="M22 20c0-3.37-2-6.5-4-8a5 5 0 0 0-.45-8.3"/></svg>100 visitor bookings</span>
+          </div>
+        </div>
+        <aside class="price-panel">
+          <span>15-day paid trial</span>
+          <strong>₹49</strong>
+          <ul>
+            <li>${CHECK}QR registration</li>
+            <li>${CHECK}WhatsApp staff notifications</li>
+            <li>${CHECK}Dashboard and visitor records</li>
+          </ul>
+          <button type="button" class="button button-primary trial-cta">Start your trial</button>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section faq-section">
+      <div class="page-wrap faq-layout">
+        <div class="section-head">
+          <span class="eyebrow">Questions before you start</span>
+          <h2>Clear answers for showroom owners.</h2>
+        </div>
+        <div class="faq-list">
+          <details><summary>Do we need to purchase any hardware?</summary><p>No. Just display your QR code and visitors scan it with their phone.</p></details>
+          <details><summary>How quickly can our showroom go live?</summary><p>About 15 minutes for a single showroom.</p></details>
+          <details><summary>Does Hai Visitor run WhatsApp marketing?</summary><p>No. It only records and organises visitor details. Your team handles any follow-up separately.</p></details>
+          <details><summary>What happens after the trial?</summary><p>You get a 10-day buffer, then move to the ₹500 per month Business plan. Final terms show at checkout.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="page-wrap final-inner">
+        <span class="eyebrow">Keep every opportunity visible</span>
+        <h2>The purchase may take time. The visitor record shouldn’t disappear.</h2>
+        <button type="button" class="button button-primary trial-cta">Start 15-Day Trial @ ₹49</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="page-wrap footer-inner">
+      <span class="footer-copy">© 2026 Hai Visitor · Zodopt Technology Solutions Pvt Ltd</span>
+    </div>
+  </footer>
+</div>
+</div>
 
 <!-- Sticky CTA (all screen sizes), same as the main landing page -->
 <div class="sticky-cta">
@@ -77,41 +237,27 @@ const BODY_HTML = `
 ${TRIAL_MODAL_HTML}
 `;
 
-/* Walkthrough tabs: clicking a tab shows its step panel (the export's
-   main.js). Returns a cleanup function. */
-const initWalkthrough = () => {
-  const tabs = document.querySelectorAll('.fu [data-tab-index]');
-  const panels = document.querySelectorAll('.fu [data-panel-index]');
-  if (!tabs.length || !panels.length) return () => {};
-
-  const ACTIVE = ['bg-primary', 'text-primary-foreground'];
-  const INACTIVE = ['bg-ink', 'text-paper/65', 'hover:bg-paper', 'hover:text-ink'];
-
-  const onTabClick = (e) => {
-    const target = e.currentTarget.getAttribute('data-tab-index');
-    tabs.forEach((t) => {
-      const selected = t === e.currentTarget;
-      t.setAttribute('aria-selected', selected ? 'true' : 'false');
-      ACTIVE.forEach((c) => t.classList.toggle(c, selected));
-      INACTIVE.forEach((c) => t.classList.toggle(c, !selected));
-    });
-    panels.forEach((p) => { p.hidden = p.getAttribute('data-panel-index') !== target; });
-  };
-  tabs.forEach((tab) => tab.addEventListener('click', onTabClick));
-
-  return () => tabs.forEach((tab) => tab.removeEventListener('click', onTabClick));
+/* The header is transparent over the hero and turns dark once the page is
+   scrolled (the design's js/main.js). Returns a cleanup function. */
+const initTopbar = () => {
+  const bar = document.querySelector('.fu .topbar');
+  if (!bar) return () => {};
+  const update = () => bar.classList.toggle('scrolled', window.scrollY > 40);
+  window.addEventListener('scroll', update, { passive: true });
+  update();
+  return () => window.removeEventListener('scroll', update);
 };
 
 export default function FurnitureLanding() {
   useEffect(() => {
     loadMetaPixel();
-    const cleanupWalkthrough = initWalkthrough();
+    const cleanupTopbar = initTopbar();
     const cleanupTrial = initTrialSignup({ landing: 'furniture' });
     return () => {
-      cleanupWalkthrough();
+      cleanupTopbar();
       cleanupTrial();
     };
   }, []);
 
-  return <div className="fu lp" dangerouslySetInnerHTML={{ __html: BODY_HTML }} />;
+  return <div className="lp" dangerouslySetInnerHTML={{ __html: BODY_HTML }} />;
 }
