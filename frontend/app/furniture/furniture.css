@@ -141,8 +141,9 @@ html { scroll-padding-top: calc(70px + var(--ticker-h)); }
 .fu .final-inner { display: flex; flex-direction: column; align-items: center; }
 .fu .final-inner h2 { max-width: 880px; margin: 22px auto 30px; }
 .fu footer { padding: 18px 0; color: var(--on-dark); background: var(--surface-dark); border-top: 3px solid var(--primary); }
-/* site: the footer links were dropped, so the copyright line sits centred. */
-.fu .footer-inner { display: flex; justify-content: center; align-items: center; gap: 24px; text-align: center; }
+/* site: the footer links were dropped; logo and copyright sit centred,
+   stacking on narrow screens. */
+.fu .footer-inner { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px 24px; text-align: center; }
 .fu .footer-copy { color: var(--on-dark-muted); font-size: .82rem; font-weight: 500; }
 
 /* Section colours — each block has its own look */

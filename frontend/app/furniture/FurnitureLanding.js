@@ -219,6 +219,9 @@ const BODY_HTML = `
 
   <footer>
     <div class="page-wrap footer-inner">
+      <a href="#top" class="brand" aria-label="Hai Visitor home">
+        <span class="brand-lockup"><img src="/v-mark.png" alt="" width="44" height="44" /><span class="brand-name">H<em>ai</em> Visitor</span></span>
+      </a>
       <span class="footer-copy">© 2026 Hai Visitor · Zodopt Technology Solutions Pvt Ltd</span>
     </div>
   </footer>
