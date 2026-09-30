@@ -69,6 +69,12 @@ const planFor = async (companyId) => {
   return (row?.plan || "trial").toLowerCase();
 };
 
+/* The company's name and logo, for previewing its empty QR cards. */
+const companyFor = async (companyId) => {
+  const [[row]] = await db.execute("SELECT name, logo_url FROM companies WHERE id = ? LIMIT 1", [companyId]);
+  return { name: row?.name || "", logo_url: row?.logo_url ? `/api/logo/${companyId}` : null };
+};
+
 const handle = (fn) => async (req, res) => {
   try {
     await fn(req, res);
@@ -103,8 +109,10 @@ router.get("/", handle(async (req, res) => {
   const plan = await planFor(companyId);
   // After a downgrade, empty QR cards give up their slots first.
   await trimBlankCards(companyId, plan);
-  const [cards, usage] = await Promise.all([listCards(companyId), getCardUsage(companyId, plan)]);
-  res.json({ success: true, cards: await Promise.all(cards.map(withPreview)), usage, plan });
+  const [cards, usage, company] = await Promise.all([
+    listCards(companyId), getCardUsage(companyId, plan), companyFor(companyId),
+  ]);
+  res.json({ success: true, cards: await Promise.all(cards.map(withPreview)), usage, plan, company });
 }));
 
 /* ── Photo upload. Returns the key to save on the card, plus a preview. ── */

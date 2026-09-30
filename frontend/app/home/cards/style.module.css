@@ -366,13 +366,7 @@
 .avatarBlank { font-size: .78rem; background: #f4f4f6; color: #4a4b54; border: 1.5px dashed #c2c2cb; }
 .tagBlank { background: rgba(56,189,248,.16); color: #075985; }
 .genNote { margin: 0 0 16px; font-size: .84rem; line-height: 1.6; color: #5f6068; }
-.genSwatch {
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-  aspect-ratio: 85 / 55; max-width: 260px; margin: 4px auto 16px;
-  border-radius: 12px; border-bottom: 6px solid; box-shadow: 0 6px 18px rgba(5,5,5,.12);
-}
-.genSwatch strong { font-size: 1.05rem; font-weight: 800; }
-.genSwatch span { font-size: .6rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; opacity: .65; }
+.blankPreview { width: 100%; margin-bottom: 16px; }
 
 /* Uploaded photo in place of the initial. */
 .avatarImg { object-fit: cover; padding: 0; }

@@ -321,6 +321,133 @@ export async function drawBack(canvas, card, opts = {}) {
   return canvas;
 }
 
+/* ── A company's empty QR card ─────────────────────────────────────────────
+   The printed card before and after an employee fills it in: the company's
+   logo and name on the front, the QR and the Hai Visitor footer on the
+   back. Printed from paintCompanyBlankFront/Back in the backend's
+   cardArt.node.js; a change to the layout here must be made there too. */
+const WORDMARK_AI = "#FAB72A";
+const FONT = "'Segoe UI', Arial, sans-serif";
+
+/* The biggest size, from `max` down to `min`, at which the whole name fits
+   on at most two lines; past that, two lines at `min` with an ellipsis. */
+const nameLines = (ctx, name, maxW, max, min, s) => {
+  for (let size = max; size >= min; size -= 2) {
+    ctx.font = `800 ${s(size)}px ${FONT}`;
+    const lines = [];
+    let cur = "";
+    for (const w of name.trim().split(/\s+/)) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (!cur || ctx.measureText(next).width <= maxW) cur = next;
+      else { lines.push(cur); cur = w; }
+    }
+    lines.push(cur);
+    if (lines.length <= 2 && lines.every((l) => ctx.measureText(l).width <= maxW)) return { size, lines };
+  }
+  ctx.font = `800 ${s(min)}px ${FONT}`;
+  return { size: min, lines: wrapText(ctx, name.trim(), 2, () => maxW) };
+};
+
+export async function drawCompanyBlankFront(canvas, { name = "", card = {} } = {}, opts = {}) {
+  const scale = opts.scale ?? 1;
+  const W = CARD_W * scale, H = CARD_H * scale;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const { bg, fg, accent } = resolveColors(card);
+  const s = (n) => n * scale;
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, H - s(12), W, s(12));
+
+  const cx = W / 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+
+  const logo = await loadImage(opts.logoSrc);
+  if (logo) {
+    const maxW = s(520), maxH = s(180);
+    const k = Math.min(maxW / logo.width, maxH / logo.height);
+    const w = logo.width * k, h = logo.height * k;
+    ctx.drawImage(logo, cx - w / 2, s(92) + (maxH - h) / 2, w, h);
+  }
+  if (name) {
+    ctx.fillStyle = fg;
+    const { size, lines } = nameLines(ctx, name, W - s(140), logo ? 54 : 66, 34, s);
+    const lineH = s(size * 1.18);
+    const mid = s(logo ? 385 : 270);
+    const first = mid - ((lines.length - 1) * lineH) / 2 + s(size * 0.36);
+    lines.forEach((ln, i) => ctx.fillText(ln, cx, first + i * lineH));
+  }
+
+  ctx.fillStyle = alpha(fg, 0.16);
+  ctx.fillRect(cx - s(200), H - s(150), s(400), Math.max(1, s(1.5)));
+  ctx.fillStyle = alpha(fg, 0.62);
+  ctx.font = `600 ${s(20)}px ${FONT}`;
+  ctx.letterSpacing = `${s(4)}px`;
+  ctx.fillText("DIGITAL VISITING CARD", cx, H - s(104));
+  ctx.letterSpacing = "0px";
+  ctx.textAlign = "left";
+  return canvas;
+}
+
+export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}) {
+  const scale = opts.scale ?? 1;
+  const W = CARD_W * scale, H = CARD_H * scale;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext("2d");
+  const { bg, fg, accent } = resolveColors(card);
+  const s = (n) => n * scale;
+
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, W, s(14));
+
+  const [qr, mark] = await Promise.all([loadImage(opts.qrSrc), loadImage("/v-mark.png")]);
+  const box = s(320);
+  const bx = (W - box) / 2;
+  const by = s(84);
+  ctx.fillStyle = "#ffffff";
+  roundRect(ctx, bx - s(20), by - s(20), box + s(40), box + s(40), s(20));
+  ctx.fill();
+  if (qr) ctx.drawImage(qr, bx, by, box, box);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = alpha(fg, 0.78);
+  ctx.font = `700 ${s(26)}px ${FONT}`;
+  ctx.fillText("Scan for my details", W / 2, by + box + s(70));
+
+  // Footer: the V roundel and "H[ai] Visitor", centred as one run.
+  const base = H - s(58);
+  const D = s(40), gap = s(12);
+  ctx.font = `800 ${s(28)}px ${FONT}`;
+  const parts = [["H", alpha(fg, 0.78)], ["ai", WORDMARK_AI], [" Visitor", alpha(fg, 0.78)]];
+  const widths = parts.map(([t]) => ctx.measureText(t).width);
+  let tx = W / 2 - (widths.reduce((a, b) => a + b, 0) + (mark ? D + gap : 0)) / 2;
+  if (mark) {
+    const my = base - s(10) - D / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(tx + D / 2, my + D / 2, D / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(mark, tx, my, D, D);
+    ctx.restore();
+    tx += D + gap;
+  }
+  ctx.textAlign = "left";
+  parts.forEach(([t, colour], i) => {
+    ctx.fillStyle = colour;
+    ctx.fillText(t, tx, base);
+    tx += widths[i];
+  });
+  return canvas;
+}
+
 /* Downloads a face at full print resolution, regardless of the scale the
    preview happens to be showing. */
 export async function downloadFace(face, card, opts, filename) {

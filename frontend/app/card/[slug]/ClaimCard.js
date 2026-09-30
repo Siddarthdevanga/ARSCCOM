@@ -15,6 +15,7 @@
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
 import CardPreview from "../../home/cards/CardPreview";
+import BlankCardPreview from "../../home/cards/BlankCardPreview";
 import { THEMES } from "../../home/cards/cardArt";
 import { validateCard, emailError } from "../../home/cards/validate";
 import BrandFooter from "./BrandFooter";
@@ -294,6 +295,13 @@ export default function ClaimCard({ slug, company = null }) {
             : `This QR card has not been claimed yet. Add your details and it becomes your digital
                visiting card. Anyone who scans it can save your contact or share theirs with you.`}
         </p>
+
+        {company && cardUrl && (
+          <div className={styles.field}>
+            <span className={styles.groupLabel}>The card in your hand</span>
+            <BlankCardPreview companyName={company.name} logoSrc={logoSrc} card={company} cardUrl={cardUrl} side />
+          </div>
+        )}
 
         <p className={styles.group}>Required</p>
         {input("name", "Your name *", { autoComplete: "name", maxLength: 120, placeholder: "Your full name" })}

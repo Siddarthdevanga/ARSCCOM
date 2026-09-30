@@ -273,6 +273,13 @@ const brandMark = () => {
   return markPromise;
 };
 
+/* The V mark on its black roundel, for the footer of a company card. */
+let vMarkPromise = null;
+export const brandVMark = () => {
+  vMarkPromise ??= safeImage(path.join(HERE, "..", "assets", "haivisitor-vmark.png"));
+  return vMarkPromise;
+};
+
 export function paintBlankFront(ctx, { mark = null } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
@@ -382,18 +389,19 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {} 
 
     // Logo in a box that keeps its shape; the name sits under it, or takes
     // the middle on its own when there is no logo.
-    let nameY = H / 2 + 24;
     if (logo) {
-      const maxW = 520, maxH = 200;
+      const maxW = 520, maxH = 180;
       const k = Math.min(maxW / logo.width, maxH / logo.height);
       const w = logo.width * k, h = logo.height * k;
-      ctx.drawImage(logo, cx - w / 2, 110 + (maxH - h) / 2, w, h);
-      nameY = 400;
+      drawSharp(ctx, logo, cx - w / 2, 92 + (maxH - h) / 2, w, h);
     }
     if (name) {
       ctx.fillStyle = fg;
-      ctx.font = `800 ${logo ? 50 : 66}px ${FONT}`;
-      ctx.fillText(fitText(ctx, name, W - 140), cx, nameY);
+      const { size, lines } = nameLines(ctx, name, W - 140, logo ? 54 : 66, 34);
+      const lineH = size * 1.18;
+      const mid = logo ? 385 : 270;
+      const first = mid - ((lines.length - 1) * lineH) / 2 + size * 0.36;
+      lines.forEach((ln, i) => ctx.fillText(ln, cx, first + i * lineH));
     }
 
     ctx.fillStyle = alpha(fg, 0.16);
@@ -406,8 +414,8 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {} 
 }
 
 /* ── A company's empty QR card: BACK ─────────────────────────────────────
-   The QR, and the card's number so the admin knows who has which. */
-export function paintCompanyBlankBack(ctx, { qr = null, serial = "", card = {} } = {}, x = 0, y0 = 0, scale = 1) {
+   The QR, and the Hai Visitor mark and wordmark as a footer. */
+export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {} } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
     const { bg, fg, accent } = resolveColors(card);
@@ -416,29 +424,85 @@ export function paintCompanyBlankBack(ctx, { qr = null, serial = "", card = {} }
     ctx.fillStyle = accent;
     ctx.fillRect(0, 0, W, 14);
 
-    const box = 340;
+    const box = 320;
     const bx = (W - box) / 2;
-    const by = 104;
+    const by = 84;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, bx - 20, by - 20, box + 40, box + 40, 20);
     ctx.fill();
-    if (qr) ctx.drawImage(qr, bx, by, box, box);
+    if (qr) drawSharp(ctx, qr, bx, by, box, box);
 
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
     ctx.fillStyle = alpha(fg, 0.78);
     ctx.font = `700 26px ${FONT}`;
-    ctx.fillText("Scan for my details", W / 2, by + box + 74);
+    ctx.fillText("Scan for my details", W / 2, by + box + 70);
 
-    if (serial) {
-      ctx.fillStyle = alpha(fg, 0.42);
-      ctx.font = `700 19px ${FONT}`;
-      // Clear of the bottom 3 mm, which a print trim can take off.
-      ctx.fillText(serial, W / 2, H - 46);
-    }
+    // Clear of the bottom 3 mm, which a print trim can take off.
+    brandLockup(ctx, { mark, fg, cx: W / 2, base: H - 58 });
     ctx.textAlign = "left";
   });
 }
+
+/* The Hai Visitor mark (a black roundel, so it reads on any card colour)
+   and "H[ai] Visitor", centred as one run on cx. */
+const brandLockup = (ctx, { mark, fg, cx, base }) => {
+  const D = 40, gap = 12;
+  ctx.font = `800 28px ${FONT}`;
+  const parts = [["H", alpha(fg, 0.78)], ["ai", WORDMARK_AI], [" Visitor", alpha(fg, 0.78)]];
+  const widths = parts.map(([t]) => ctx.measureText(t).width);
+  const textW = widths.reduce((a, b) => a + b, 0);
+  let tx = cx - (textW + (mark ? D + gap : 0)) / 2;
+  if (mark) {
+    const my = base - 10 - D / 2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(tx + D / 2, my + D / 2, D / 2, 0, Math.PI * 2);
+    ctx.clip();
+    drawSharp(ctx, mark, tx, my, D, D);
+    ctx.restore();
+    tx += D + gap;
+  }
+  const prev = ctx.textAlign;
+  ctx.textAlign = "left";
+  parts.forEach(([t, colour], i) => {
+    ctx.fillStyle = colour;
+    ctx.fillText(t, tx, base);
+    tx += widths[i];
+  });
+  ctx.textAlign = prev;
+};
+
+/* The biggest size, from `max` down to `min`, at which the whole name fits
+   on at most two lines; past that, two lines at `min` with an ellipsis. */
+const nameLines = (ctx, name, maxW, max, min) => {
+  for (let size = max; size >= min; size -= 2) {
+    ctx.font = `800 ${size}px ${FONT}`;
+    const words = name.trim().split(/\s+/);
+    const lines = [];
+    let cur = "";
+    for (const w of words) {
+      const next = cur ? `${cur} ${w}` : w;
+      if (!cur || ctx.measureText(next).width <= maxW) cur = next;
+      else { lines.push(cur); cur = w; }
+    }
+    lines.push(cur);
+    if (lines.length <= 2 && lines.every((l) => ctx.measureText(l).width <= maxW)) return { size, lines };
+  }
+  ctx.font = `800 ${min}px ${FONT}`;
+  return { size: min, lines: wrapText(ctx, name.trim(), 2, () => maxW) };
+};
+
+/* drawImage with scaling, on a PDF canvas, first shrinks the image to its
+   size in points (a logo 124 px wide), which prints soft. Drawing it
+   unscaled under a scaled transform embeds it at full resolution. */
+const drawSharp = (ctx, img, x, y, w, h) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(w / img.width, h / img.height);
+  ctx.drawImage(img, 0, 0);
+  ctx.restore();
+};
 
 /* ── Public helpers ──────────────────────────────────────────────────── */
 export const qrImage = async (url) => safeImage(await QRCode.toDataURL(url, QR_OPTS));
@@ -488,11 +552,11 @@ export async function renderBatchPdf({ header = "", batchName = "", cards = [], 
 export async function renderCompanyBlanksPdf({ company = {}, cards = [], cardUrl }) {
   const canvas = createCanvas(A4_W, A4_H, "pdf");
   const ctx = canvas.getContext("2d");
-  const logo = await safeImage(company.logo);
+  const [logo, mark] = await Promise.all([safeImage(company.logo), brandVMark()]);
   const pages = Math.max(1, Math.ceil(cards.length / ROWS));
   const paintRow = (c, qr, xf, xb, y, scale) => {
     paintCompanyBlankFront(ctx, { logo, name: company.name, card: c }, xf, y, scale);
-    paintCompanyBlankBack(ctx, { qr, serial: c.serial, card: c }, xb, y, scale);
+    paintCompanyBlankBack(ctx, { qr, mark, card: c }, xb, y, scale);
   };
 
   for (let p = 0; p < pages; p++) {

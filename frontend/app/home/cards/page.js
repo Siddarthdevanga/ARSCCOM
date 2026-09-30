@@ -14,7 +14,7 @@
    it in. An empty card can be deleted (the one exception to the rule
    above), and a filled one reset to empty for the next person.
    ========================================================================== */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import {
@@ -25,6 +25,7 @@ import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
 import { takeFlash } from "./CardEditor";
 import { THEMES } from "./cardArt";
+import BlankCardPreview from "./BlankCardPreview";
 import styles from "./style.module.css";
 
 const API  = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -43,6 +44,7 @@ export default function CardsPage() {
 
   const [cards, setCards]   = useState([]);
   const [usage, setUsage]   = useState({ used: 0, limit: 0, remaining: 0 });
+  const [company, setCompany] = useState({ name: "", logo_url: null });
   const [loading, setLoad]  = useState(true);
   const [query, setQuery]   = useState("");
   const [toast, setToast]   = useState(null);
@@ -71,6 +73,7 @@ export default function CardsPage() {
       if (!res.ok) throw new Error(data?.message || "Could not load cards");
       setCards(data.cards || []);
       setUsage(data.usage || { used: 0, limit: 0, remaining: 0 });
+      setCompany(data.company || { name: "", logo_url: null });
     } catch (e) {
       say(e.message || "Could not load cards", "error");
     } finally {
@@ -237,6 +240,12 @@ export default function CardsPage() {
 
   const blanks = cards.filter((c) => c.blank && c.is_active && !c.is_locked).length;
   const genColours = THEMES[gen?.theme] || THEMES.ink;
+  const companyLogo = company.logo_url ? `${API}${company.logo_url}` : "";
+  // Only the colours: typing a quantity must not redraw the preview.
+  const genCard = useMemo(
+    () => ({ theme: gen?.theme, bg_color: gen?.bg_color, text_color: gen?.text_color, accent_color: gen?.accent_color }),
+    [gen?.theme, gen?.bg_color, gen?.text_color, gen?.accent_color]
+  );
   const genOverride = !!(gen?.bg_color || gen?.text_color || gen?.accent_color);
 
   if (expired) return <LockedModule moduleName="Digital Cards" />;
@@ -372,6 +381,12 @@ export default function CardsPage() {
               <button onClick={() => setQrFor(null)} aria-label="Close"><X size={16} /></button>
             </div>
             <div className={styles.qrBody}>
+              {qrFor.blank && (
+                <div className={styles.blankPreview}>
+                  <BlankCardPreview companyName={company.name} logoSrc={companyLogo} card={qrFor}
+                                    cardUrl={cardUrl(qrFor.slug)} side />
+                </div>
+              )}
               {qrData
                 ? <img src={qrData} alt={`QR code for ${titleOf(qrFor)}`} className={styles.qrImg} />
                 : <div className={styles.spinner} />}
@@ -468,14 +483,10 @@ export default function CardsPage() {
                   </div>
                 </div>
 
-                <div className={styles.genSwatch} aria-hidden="true"
-                     style={{
-                       background: gen.bg_color || genColours.bg,
-                       color: gen.text_color || genColours.fg,
-                       borderBottomColor: gen.accent_color || genColours.accent,
-                     }}>
-                  <strong>Your company</strong>
-                  <span>Digital visiting card</span>
+                <div className={styles.field}>
+                  <label>Preview <span className={styles.opt}>as printed; each card gets its own QR</span></label>
+                  <BlankCardPreview companyName={company.name} logoSrc={companyLogo} card={genCard}
+                                    cardUrl={`${SITE}/card/preview`} side />
                 </div>
 
                 {genError && <p className={styles.formError} role="alert">{genError}</p>}
