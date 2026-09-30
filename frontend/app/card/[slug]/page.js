@@ -13,6 +13,7 @@ import { useEffect, useRef, useState, use } from "react";
 import { THEMES, resolveColors, onColor } from "../../home/cards/cardArt";
 import { phoneError, emailError } from "../../home/cards/validate";
 import ClaimCard from "./ClaimCard";
+import BrandFooter from "./BrandFooter";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -134,7 +135,7 @@ export default function DigitalCardPage({ params }) {
               ? `This card is not active right now. You can still reach ${card.company_name} directly.`
               : "This card is no longer active."}
           </p>
-          <p className={styles.noticeFooter}>Digital card by Haivisitor</p>
+          <BrandFooter className={styles.noticeFooter} />
         </div>
       </div>
     );
@@ -305,7 +306,7 @@ export default function DigitalCardPage({ params }) {
         )}
       </div>
 
-      <p className={styles.footer}>Digital card by Haivisitor</p>
+      <BrandFooter className={styles.footer} />
     </div>
   );
 }

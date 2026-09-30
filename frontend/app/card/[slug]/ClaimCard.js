@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import CardPreview from "../../home/cards/CardPreview";
 import { THEMES } from "../../home/cards/cardArt";
 import { validateCard, emailError } from "../../home/cards/validate";
+import BrandFooter from "./BrandFooter";
 import styles from "./style.module.css";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
@@ -84,7 +85,7 @@ function Shell({ step, pageRef, children }) {
       </header>
       <div className={styles.claimBody}>
         {children}
-        <p className={styles.footerDark}>Powered by <strong>Haivisitor</strong></p>
+        <BrandFooter className={styles.footerDark} label="Powered by" />
       </div>
     </div>
   );

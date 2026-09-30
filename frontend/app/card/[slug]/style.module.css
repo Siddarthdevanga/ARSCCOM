@@ -208,10 +208,21 @@
 }
 .cancelBtn:disabled { opacity: .5; cursor: not-allowed; }
 
-.footer {
-  margin: 4px 0 0; font-size: .72rem; font-weight: 600; letter-spacing: .06em;
-  color: var(--card-fg); opacity: .6; text-align: center;
+.footer { color: var(--card-fg); }
+
+/* BrandFooter.js: "Digital card by" + logo + H[ai] Visitor. */
+.brandFooter {
+  margin: 4px 0 0; font-size: .72rem; font-weight: 600; letter-spacing: .04em;
+  display: flex; align-items: center; justify-content: center; gap: 7px; flex-wrap: wrap;
 }
+.brandFooter > :not(a) { opacity: .7; }
+.brandFooterLink {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: inherit; text-decoration: none;
+  font-size: .86rem; font-weight: 800; letter-spacing: -.01em;
+}
+.brandFooterLink img { width: 20px; height: 20px; border-radius: 50%; display: block; }
+.brandFooterLink b { color: #FAB72A; font-weight: 800; }
 
 /* ── Claim a blank QR card (ClaimCard.js) ────────────────────────────────── */
 /* Its own scroll container, like .page above: a document-level scroll stops
@@ -281,11 +292,7 @@
 }
 .claimBody .shareTitle { font-size: 1.2rem; letter-spacing: -.2px; }
 
-.footerDark {
-  margin: 4px 0 0; font-size: .72rem; font-weight: 600; letter-spacing: .06em;
-  color: #8d8e97; text-align: center;
-}
-.footerDark strong { color: #17171a; font-weight: 800; }
+.footerDark { color: #17171a; }
 
 .group {
   margin: 20px 0 10px; padding-top: 14px; border-top: 1px solid #ececf0;
@@ -361,7 +368,7 @@
 .notice { text-align: center; max-width: 340px; }
 .notice h1 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 800; color: #fff; }
 .notice p  { margin: 0; font-size: .88rem; line-height: 1.6; color: rgba(255,255,255,.6); }
-.notice .noticeFooter { margin-top: 28px; font-size: .72rem; letter-spacing: .06em; color: rgba(255,255,255,.45); }
+.notice .noticeFooter { margin-top: 28px; font-size: .72rem; line-height: 1.2; color: #fff; }
 
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation: none; }
