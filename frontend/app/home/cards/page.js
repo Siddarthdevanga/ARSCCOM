@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
+import ConfirmModal from "../../components/ConfirmModal";
 import { takeFlash } from "./CardEditor";
 import { THEMES } from "./cardArt";
 import BlankCardPreview from "./BlankCardPreview";
@@ -60,6 +61,8 @@ export default function CardsPage() {
   const [genError, setGenErr] = useState("");
   const [made, setMade]       = useState(null);    // { ids, from, to } after generating
   const [printing, setPrinting] = useState(false);
+  const [ask, setAsk]         = useState(null);    // { kind: "delete" | "reset", card } awaiting confirmation
+  const [asking, setAsking]   = useState(false);
 
   const say = (msg, type = "success") => {
     setToast({ msg, type });
@@ -188,15 +191,6 @@ export default function CardsPage() {
   };
 
   const removeCard = async (card) => {
-    const question = card.blank
-      ? `Delete empty card ${card.number}? Its printed QR will stop working, and the slot is freed.`
-      : `Delete ${titleOf(card)}'s card for good?
-
-` +
-        "Its link and QR stop working and its scans are deleted. Its contacts stay in Card Contacts, " +
-        "marked as from a deleted card, and the details filled in on the card are kept on record. " +
-        "One slot on your plan is freed. This cannot be undone.";
-    if (!window.confirm(question)) return;
     try {
       const res = await fetch(`${API}/api/cards/${card.id}`, { method: "DELETE", credentials: "include" });
       const data = await res.json().catch(() => ({}));
@@ -210,10 +204,6 @@ export default function CardsPage() {
   };
 
   const resetCard = async (card) => {
-    if (!window.confirm(
-      `Reset card ${card.number} for someone new?\n\n${card.name}'s details come off it and the same printed QR ` +
-      "can be filled in again. Their contacts and scans are kept, on an inactive copy of the card."
-    )) return;
     try {
       const res = await fetch(`${API}/api/cards/${card.id}/reset`, { method: "POST", credentials: "include" });
       const data = await res.json().catch(() => ({}));
@@ -225,6 +215,36 @@ export default function CardsPage() {
       say(err.message, "error");
     }
   };
+
+  /* Delete and Reset ask first, in the app's own confirm dialog. */
+  const confirmAsk = async () => {
+    setAsking(true);
+    try {
+      await (ask.kind === "delete" ? removeCard(ask.card) : resetCard(ask.card));
+    } finally {
+      setAsking(false);
+      setAsk(null);
+    }
+  };
+  const askText = !ask ? null
+    : ask.kind === "reset" ? {
+        title: `Reset card ${ask.card.number}?`,
+        message: `${ask.card.name}'s details come off it, so the same printed QR can be filled in by someone new. ` +
+                 "Their contacts and scans are kept, on an inactive copy of the card.",
+        confirmLabel: "Reset card",
+      }
+    : ask.card.blank ? {
+        title: `Delete empty card ${ask.card.number}?`,
+        message: "Its printed QR stops working, and one slot on your plan is freed. This cannot be undone.",
+        confirmLabel: "Delete card",
+      }
+    : {
+        title: `Delete ${titleOf(ask.card)}'s card?`,
+        message: "Its link and QR stop working and its scans are deleted. Its contacts stay in Card Contacts, " +
+                 "marked “Deleted card”, and the details on the card are kept on record. One slot on " +
+                 "your plan is freed. This cannot be undone.",
+        confirmLabel: "Delete card",
+      };
 
   const showQr = async (card) => {
     setQrData("");   // never show or download the previous card's QR
@@ -356,11 +376,11 @@ export default function CardsPage() {
                     <Pencil size={15} />
                   </button>
                   {card.number && !card.blank && (
-                    <button onClick={() => resetCard(card)} disabled={!!card.is_locked} title="Reset to empty for someone new">
+                    <button onClick={() => setAsk({ kind: "reset", card })} disabled={!!card.is_locked} title="Reset to empty for someone new">
                       <RotateCcw size={15} />
                     </button>
                   )}
-                  <button onClick={() => removeCard(card)} title="Delete (frees the slot)">
+                  <button onClick={() => setAsk({ kind: "delete", card })} title="Delete (frees the slot)">
                     <Trash2 size={15} />
                   </button>
                   <button
@@ -515,6 +535,17 @@ export default function CardsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!ask}
+        title={askText?.title}
+        message={askText?.message}
+        confirmLabel={askText?.confirmLabel}
+        variant="danger"
+        loading={asking}
+        onConfirm={confirmAsk}
+        onCancel={() => setAsk(null)}
+      />
 
       {toast && (
         <div className={`${styles.toast} ${toast.type === "error" ? styles.toastError : ""}`} role="status">

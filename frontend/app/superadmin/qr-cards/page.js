@@ -15,6 +15,7 @@ import { Printer, Download, RefreshCw, X, ExternalLink } from "lucide-react";
 import styles from "../dashboard/style.module.css";
 import SuperAdminNav from "../dashboard/NavHeader";
 import { THEMES } from "../../home/cards/cardArt";
+import ConfirmModal from "../../components/ConfirmModal";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const MAX_BATCH = 100;
@@ -88,6 +89,7 @@ function CardModal({ id, token, onClose, onChanged }) {
   const [company, setCompany] = useState("");
   const [busy, setBusy]   = useState("");
   const [msg, setMsg]     = useState(null);   // { ok, text }
+  const [askReset, setAskReset] = useState(false);
   const [qr, setQr]       = useState(null);   // data URL of the card's QR
 
   const auth = { Authorization: `Bearer ${token}` };
@@ -159,8 +161,9 @@ function CardModal({ id, token, onClose, onChanged }) {
     return card.is_active ? "Card disabled. Its QR now shows “no longer active”." : "Card enabled.";
   });
 
-  const reset = () => {
-    if (!window.confirm("Reset this card to blank? The owner's details, photo, logo, views and contacts are deleted, and the next person to scan it can claim it.")) return;
+  const reset = () => setAskReset(true);
+  const confirmReset = () => {
+    setAskReset(false);
     run("reset", async () => { await call("/reset", { method: "POST" }); return "Card reset to blank."; });
   };
 
@@ -176,6 +179,7 @@ function CardModal({ id, token, onClose, onChanged }) {
   const claimed = status && status !== "unclaimed" && !!card.claimed_at;
 
   return (
+    <>
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="qr-modal-title">
         <div className={styles.modalHeader}>
@@ -312,6 +316,16 @@ function CardModal({ id, token, onClose, onChanged }) {
         )}
       </div>
     </div>
+    <ConfirmModal
+      open={askReset}
+      title="Reset this card to blank?"
+      message="The owner's details, photo, logo, views and contacts are deleted, and the next person to scan it can claim it."
+      confirmLabel="Reset to blank"
+      variant="danger"
+      onConfirm={confirmReset}
+      onCancel={() => setAskReset(false)}
+    />
+    </>
   );
 }
 

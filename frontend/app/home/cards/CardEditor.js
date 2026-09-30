@@ -13,6 +13,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Camera, Download, Trash2 } from "lucide-react";
 import { restoreSession, SESSION } from "../../utils/session";
 import LockedModule from "../../components/LockedModule";
+import ConfirmModal from "../../components/ConfirmModal";
 import CardPreview from "./CardPreview";
 import CardsGuide, { GuideButton } from "./CardsGuide";
 import { downloadCard } from "./cardDownload";
@@ -77,6 +78,7 @@ export default function CardEditor({ cardId = null }) {
   const [error, setError]     = useState("");
   const [notice, setNotice]   = useState("");
   const [dirty, setDirty]     = useState(false);
+  const [askLeave, setAskLeave] = useState(false);
   const [saved, setSaved]     = useState(false);
 
   /* Field problems are worked out on every render but only shown after
@@ -327,7 +329,7 @@ export default function CardEditor({ cardId = null }) {
   };
 
   const goBack = () => {
-    if (dirty && !window.confirm("Leave without saving your changes?")) return;
+    if (dirty) { setAskLeave(true); return; }
     router.push("/home/cards");
   };
 
@@ -650,6 +652,17 @@ export default function CardEditor({ cardId = null }) {
           </div>
         </div>
       </form>
+
+      <ConfirmModal
+        open={askLeave}
+        title="Leave without saving?"
+        message="Your changes to this card will be lost."
+        confirmLabel="Leave"
+        cancelLabel="Keep editing"
+        variant="danger"
+        onConfirm={() => { setAskLeave(false); router.push("/home/cards"); }}
+        onCancel={() => setAskLeave(false)}
+      />
     </div>
   );
 }
