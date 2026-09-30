@@ -64,7 +64,7 @@ export const IMAGE_TYPES = {
 };
 export const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
-const checkImage = (file, what) => {
+export const checkImage = (file, what) => {
   if (!file) return null;
   const type = IMAGE_TYPES[file.mimetype];
   if (!type || !file.buffer?.length || !type.sig(file.buffer)) {
@@ -81,7 +81,7 @@ const storeImage = async (slug, file, kind) => {
 };
 
 /* Only ever our own uploads; a legacy pasted URL is never deleted. */
-const dropImage = (key) => {
+export const dropImage = (key) => {
   if (isUploadedPhoto(key)) deleteFromS3(key).catch(() => {});
 };
 
@@ -91,7 +91,7 @@ const dropImage = (key) => {
    Name, phone and email are all required here: the email is how the owner
    hears about leads and how the card finds them when they sign up.
 ====================================================== */
-const cleanDetails = (body = {}, { partial = false } = {}) => {
+export const cleanDetails = (body = {}, { partial = false } = {}) => {
   const input = { ...body };
   delete input.photo_url;
   const data = clean(input);

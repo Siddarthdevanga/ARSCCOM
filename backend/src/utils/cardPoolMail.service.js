@@ -160,6 +160,78 @@ export const sendPoolWelcomeEmail = async (card) => {
   });
 };
 
+/* ── Welcome, company card ──
+   An employee who filled in the QR card their company handed them. The
+   card is the company's, so no sign-up pitch: just the card, its link, and
+   where leads will arrive. */
+export const sendCompanyCardWelcomeEmail = async (card) => {
+  if (!card?.email) return;
+
+  const url = cardUrl(card.slug);
+  let logo = null;
+  if (card.company_logo_key) {
+    try { logo = (await getS3Object(card.company_logo_key)).buffer; } catch { /* name only */ }
+  }
+  const photo = await s3Buffer(card.photo_url);
+  const [{ front, back }, qr] = await Promise.all([
+    renderCardPngs(card, { cardUrl: url, logoSrc: logo, photoSrc: photo }),
+    qrPng(url),
+  ]);
+  const base = fileBase(card);
+  const first = (card.name || "").trim().split(/\s+/)[0] || "there";
+  const company = card.company_name || "your company";
+
+  const body = `
+    <p style="margin:0 0 18px;color:#5f6068;font-size:14px;line-height:1.65;">
+      Hi ${esc(first)}, your ${esc(company)} digital card is live. Anyone who scans the QR sees your details
+      and can save you to their contacts, WhatsApp you, or share their own details back — and we will
+      email them to you.
+    </p>
+
+    <img src="cid:card-front" alt="Front of your card" width="508"
+         style="display:block;width:100%;max-width:508px;border-radius:10px;margin:0 0 10px;" />
+    <img src="cid:card-back" alt="Back of your card" width="508"
+         style="display:block;width:100%;max-width:508px;border-radius:10px;margin:0 0 20px;" />
+
+    <table style="border-collapse:collapse;margin:0 0 18px;">
+      ${row("Name", card.name)}
+      ${row("Title", card.job_title)}
+      ${row("Company", card.company_name)}
+      ${row("Phone", card.phone && intl(card.phone))}
+      ${row("Email", card.email)}
+    </table>
+
+    <div style="display:flex;gap:18px;align-items:center;background:#fafafb;border:1px solid #efeff3;
+                border-radius:12px;padding:16px;margin:0 0 18px;">
+      <img src="cid:card-qr" alt="Your card's QR code" width="112" height="112"
+           style="display:block;width:112px;height:112px;flex-shrink:0;" />
+      <div>
+        <p style="margin:0 0 6px;font-size:14px;font-weight:800;">Your card's link</p>
+        <p style="margin:0 0 8px;font-size:13px;line-height:1.5;">
+          <a href="${esc(url)}" style="color:#b45309;word-break:break-all;">${esc(url)}</a>
+        </p>
+        <p style="margin:0;color:#8d8e97;font-size:12px;line-height:1.5;">
+          Put the QR on your email signature, slides or stand. The card images are attached to print more.
+        </p>
+      </div>
+    </div>
+
+    <p style="margin:0;color:#8d8e97;font-size:12px;line-height:1.6;">
+      Need to change something? Ask your ${esc(company)} admin — they manage the company's cards.
+    </p>`;
+
+  await sendEmail({
+    to: card.email,
+    subject: `Your ${company} digital card is ready`,
+    html: shell("Digital visiting card", "Your card is ready", body),
+    attachments: [
+      { filename: `${base}-front.png`, content: front, contentType: "image/png", cid: "card-front" },
+      { filename: `${base}-back.png`,  content: back,  contentType: "image/png", cid: "card-back" },
+      { filename: `${base}-qr.png`,    content: qr,    contentType: "image/png", cid: "card-qr" },
+    ],
+  });
+};
+
 /* ── Teaser ── */
 export const sendPoolTeaserEmail = async (card, total) => {
   if (!card?.email) return;

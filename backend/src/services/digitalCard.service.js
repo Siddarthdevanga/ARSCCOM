@@ -6,7 +6,8 @@
  *
  * Two rules shape most of what follows:
  *
- *   A card is never hard-deleted. Its QR may be printed on a few hundred
+ *   A card is never hard-deleted (the one exception: a company's empty QR
+ *   card nobody has filled in yet, see companyCardBlanks.service.js). Its QR may be printed on a few hundred
  *   physical cards already handed out, and breaking that URL punishes the
  *   person holding the card rather than the company that deactivated it.
  *   Deactivating or locking makes the page say the details are not
@@ -205,7 +206,7 @@ export const listCards = async (companyId) => {
             (SELECT COUNT(*) FROM card_leads l WHERE l.card_id = c.id) AS lead_count
        FROM digital_cards c
       WHERE c.company_id = ?
-      ORDER BY c.created_at DESC`,
+      ORDER BY c.created_at DESC, c.id DESC`,
     [companyId]
   );
   return rows;
@@ -254,7 +255,7 @@ export const updateCard = async (companyId, id, body) => {
   // A locked card is read-only: the plan no longer covers it, so the admin
   // must release it before editing.
   const [[card]] = await db.execute(
-    "SELECT id, is_locked, photo_url FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
+    "SELECT id, is_locked, photo_url, source, serial_no, claimed_at, name, phone FROM digital_cards WHERE id = ? AND company_id = ? LIMIT 1",
     [id, companyId]
   );
   if (!card) return false;
@@ -262,6 +263,11 @@ export const updateCard = async (companyId, id, body) => {
   checkPhoto(data, companyId, card.photo_url);
 
   const sets = Object.keys(data).map((k) => `${k} = ?`);
+  // The admin filling in an empty QR card themselves: once it has a name
+  // and phone it is live, exactly as if the employee had scanned it.
+  const name = "name" in data ? data.name : card.name;
+  const phone = "phone" in data ? data.phone : card.phone;
+  if (isUnclaimed(card) && name && phone) sets.push("claimed_at = NOW()");
   await db.execute(
     `UPDATE digital_cards SET ${sets.join(", ")} WHERE id = ? AND company_id = ?`,
     [...Object.values(data), id, companyId]
@@ -346,7 +352,27 @@ const PUBLIC_SELECT =
      FROM digital_cards c
      LEFT JOIN companies co ON co.id = c.company_id`;
 
-export const isUnclaimed = (card) => card?.source === "pool" && !card.claimed_at;
+/* Empty: a printed Haivisitor pool card, or a company's numbered QR card,
+   that nobody has filled in yet. A card made in the editor has no number
+   and is never empty. */
+export const isUnclaimed = (card) =>
+  !!card && !card.claimed_at && (card.source === "pool" || (card.source === "company" && card.serial_no != null));
+
+/* A company's empty card: what the fill-in form needs to show the card as
+   it will look. Only the company's own name and logo, and the colours the
+   admin chose. */
+const companyBlank = (card) => ({
+  unclaimed: true,
+  slug: card.slug,
+  company: {
+    name: card.owner_company_name || "",
+    logo_url: card.company_logo_url ? `/api/logo/${card.company_id}` : null,
+    theme: card.theme,
+    bg_color: card.bg_color,
+    text_color: card.text_color,
+    accent_color: card.accent_color,
+  },
+});
 
 export const getPublicCard = async (slug) => {
   const [[card]] = await db.execute(`${PUBLIC_SELECT} WHERE c.slug = ? LIMIT 1`, [slug]);
@@ -357,7 +383,15 @@ export const getPublicCard = async (slug) => {
   }
   // A blank card's page is its claim form. Nothing about the batch it came
   // from is shown to whoever is holding it.
-  if (isUnclaimed(card)) return { unclaimed: true, slug: card.slug };
+  if (isUnclaimed(card)) {
+    if (card.source === "pool") return { unclaimed: true, slug: card.slug };
+    // A company's empty card follows the company: locked or lapsed, it
+    // cannot be filled in.
+    if (card.is_locked || isLapsed(card)) {
+      return { unavailable: true, company_name: card.owner_company_name || null };
+    }
+    return companyBlank(card);
+  }
 
   // Unavailable is deliberately indistinguishable between "taken offline"
   // and "locked by a downgrade": which of the two it is tells a stranger
@@ -414,7 +448,7 @@ export const getPublicCard = async (slug) => {
    purpose. */
 export const recordScan = async (slug, ip, userAgent) => {
   const [[card]] = await db.execute(
-    "SELECT id, is_active, is_locked, source, claimed_at FROM digital_cards WHERE slug = ? LIMIT 1",
+    "SELECT id, is_active, is_locked, source, serial_no, claimed_at FROM digital_cards WHERE slug = ? LIMIT 1",
     [slug]
   );
   // A blank card being claimed is not a scan of anyone's card.
@@ -456,7 +490,7 @@ export const getPublicLogoKey = async (slug) => {
 export const addLead = async (slug, body) => {
   const [[card]] = await db.execute(
     `SELECT c.id, c.company_id, c.slug, c.name, c.email, c.phone, c.is_active, c.is_locked,
-            c.source, c.claimed_at, c.teaser_sent_at,
+            c.source, c.serial_no, c.claimed_at, c.teaser_sent_at,
             co.subscription_status, co.grace_period_ends_at
        FROM digital_cards c LEFT JOIN companies co ON co.id = c.company_id
       WHERE c.slug = ? LIMIT 1`,

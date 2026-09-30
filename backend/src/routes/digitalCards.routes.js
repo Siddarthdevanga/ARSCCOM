@@ -16,6 +16,11 @@ import {
   listCards, getCard, createCard, updateCard, setCardActive, setCardLocked,
   getCardUsage, listLeads, companyLapsed, photoPrefix, isUploadedPhoto,
 } from "../services/digitalCard.service.js";
+import {
+  generateBlankCards, getBlanksForPrint, deleteBlankCard, resetCompanyCard, trimBlankCards, blankLabel,
+} from "../services/companyCardBlanks.service.js";
+import { cardUrl } from "../services/cardPool.service.js";
+import { renderCompanyBlanksPdf } from "../utils/cardArt.node.js";
 import { uploadToS3, getPresignedUrl, getS3Object } from "../services/s3.service.js";
 import { db } from "../config/db.js";
 
@@ -81,6 +86,11 @@ const handle = (fn) => async (req, res) => {
    A legacy pasted URL is shown as it is. */
 const withPreview = async (card) => ({
   ...card,
+  // Numbered QR cards the company generated; `blank` while nobody has
+  // filled one in.
+  number: card.source === "company" && card.serial_no ? blankLabel(card.serial_no) : null,
+  blank: card.source === "company" && !!card.serial_no && !card.claimed_at,
+  card_url: cardUrl(card.slug),
   photo_preview: !card.photo_url ? null
     : isUploadedPhoto(card.photo_url) ? await getPresignedUrl(card.photo_url, 3600).catch(() => null)
     : /^https:\/\//i.test(card.photo_url) ? card.photo_url
@@ -91,6 +101,8 @@ const withPreview = async (card) => ({
 router.get("/", handle(async (req, res) => {
   const companyId = getCompanyId(req.user);
   const plan = await planFor(companyId);
+  // After a downgrade, empty QR cards give up their slots first.
+  await trimBlankCards(companyId, plan);
   const [cards, usage] = await Promise.all([listCards(companyId), getCardUsage(companyId, plan)]);
   res.json({ success: true, cards: await Promise.all(cards.map(withPreview)), usage, plan });
 }));
@@ -149,6 +161,28 @@ router.get("/leads/all", handle(async (req, res) => {
   res.json({ success: true, leads });
 }));
 
+/* ── Empty QR cards to hand out ── (declared before /:id, as above) */
+router.post("/blank", handle(async (req, res) => {
+  const companyId = getCompanyId(req.user);
+  const plan = await planFor(companyId);
+  const made = await generateBlankCards(companyId, plan, req.body);
+  res.status(201).json({ success: true, ...made });
+}));
+
+/* The print sheet: every empty card, or `?ids=1,2,3`. */
+router.get("/blank/print", handle(async (req, res) => {
+  const ids = req.query.ids ? String(req.query.ids).split(",") : null;
+  const { company, cards } = await getBlanksForPrint(getCompanyId(req.user), ids);
+  if (!cards.length) {
+    return res.status(404).json({ success: false, message: "There are no empty cards to print" });
+  }
+  const pdf = await renderCompanyBlanksPdf({ company, cards, cardUrl });
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", 'attachment; filename="qr-cards.pdf"');
+  res.setHeader("Cache-Control", "no-store");
+  res.send(pdf);
+}));
+
 /* ── One card, for the editor screen ── */
 router.get("/:id", handle(async (req, res) => {
   const companyId = getCompanyId(req.user);
@@ -177,6 +211,20 @@ router.patch("/:id/active", handle(async (req, res) => {
   const plan = await planFor(companyId);
   const ok = await setCardActive(companyId, req.params.id, !!req.body.active, plan);
   if (!ok) return res.status(404).json({ success: false, message: "Card not found" });
+  res.json({ success: true });
+}));
+
+/* An empty card can be deleted, which frees its slot. Anything else is
+   deactivated instead (above). */
+router.delete("/:id", handle(async (req, res) => {
+  await deleteBlankCard(getCompanyId(req.user), req.params.id);
+  res.json({ success: true });
+}));
+
+/* A filled QR card back to empty, for the next employee. The old details,
+   leads and scans stay in the company on an inactive copy. */
+router.post("/:id/reset", handle(async (req, res) => {
+  await resetCompanyCard(getCompanyId(req.user), req.params.id);
   res.json({ success: true });
 }));
 

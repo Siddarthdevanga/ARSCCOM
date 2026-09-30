@@ -8,8 +8,9 @@
  *     is a port of frontend/app/home/cards/cardArt.js (drawFront/drawBack);
  *     the two are separate deployments, so the drawing is duplicated. Any
  *     change to the card layout there must be made here too.
- *   - The blank pool cards (Haivisitor front, QR back) and the A4 sheet
- *     they are printed from. Those exist only here.
+ *   - The blank pool cards (Haivisitor front, QR back), a company's empty
+ *     QR cards (company front, QR back), and the A4 sheet both are printed
+ *     from. Those exist only here.
  *
  * Every face is drawn at an origin with a scale, so the same routine paints
  * a 1004x650 PNG or a card on a PDF page in points, as vectors.
@@ -362,6 +363,83 @@ export function paintBlankBack(ctx, { qr = null, serial = "" } = {}, x = 0, y0 =
   });
 }
 
+/* ── A company's empty QR card: FRONT ─────────────────────────────────────
+   Handed to an employee before they fill it in, and theirs for good after,
+   so it carries only what never changes: the company's logo and name, on
+   the colours the admin chose. */
+export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {} } = {}, x = 0, y0 = 0, scale = 1) {
+  inCard(ctx, x, y0, scale, () => {
+    const W = CARD_W, H = CARD_H;
+    const { bg, fg, accent } = resolveColors(card);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, H - 12, W, 12);
+
+    const cx = W / 2;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+
+    // Logo in a box that keeps its shape; the name sits under it, or takes
+    // the middle on its own when there is no logo.
+    let nameY = H / 2 + 24;
+    if (logo) {
+      const maxW = 520, maxH = 200;
+      const k = Math.min(maxW / logo.width, maxH / logo.height);
+      const w = logo.width * k, h = logo.height * k;
+      ctx.drawImage(logo, cx - w / 2, 110 + (maxH - h) / 2, w, h);
+      nameY = 400;
+    }
+    if (name) {
+      ctx.fillStyle = fg;
+      ctx.font = `800 ${logo ? 50 : 66}px ${FONT}`;
+      ctx.fillText(fitText(ctx, name, W - 140), cx, nameY);
+    }
+
+    ctx.fillStyle = alpha(fg, 0.16);
+    ctx.fillRect(cx - 200, H - 150, 400, 1.5);
+    ctx.fillStyle = alpha(fg, 0.62);
+    ctx.font = `600 20px ${FONT}`;
+    spaced(ctx, "DIGITAL VISITING CARD", cx, H - 104, 4);
+    ctx.textAlign = "left";
+  });
+}
+
+/* ── A company's empty QR card: BACK ─────────────────────────────────────
+   The QR, and the card's number so the admin knows who has which. */
+export function paintCompanyBlankBack(ctx, { qr = null, serial = "", card = {} } = {}, x = 0, y0 = 0, scale = 1) {
+  inCard(ctx, x, y0, scale, () => {
+    const W = CARD_W, H = CARD_H;
+    const { bg, fg, accent } = resolveColors(card);
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = accent;
+    ctx.fillRect(0, 0, W, 14);
+
+    const box = 340;
+    const bx = (W - box) / 2;
+    const by = 104;
+    ctx.fillStyle = "#ffffff";
+    roundRect(ctx, bx - 20, by - 20, box + 40, box + 40, 20);
+    ctx.fill();
+    if (qr) ctx.drawImage(qr, bx, by, box, box);
+
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = alpha(fg, 0.78);
+    ctx.font = `700 26px ${FONT}`;
+    ctx.fillText("Scan for my details", W / 2, by + box + 74);
+
+    if (serial) {
+      ctx.fillStyle = alpha(fg, 0.42);
+      ctx.font = `700 19px ${FONT}`;
+      // Clear of the bottom 3 mm, which a print trim can take off.
+      ctx.fillText(serial, W / 2, H - 46);
+    }
+    ctx.textAlign = "left";
+  });
+}
+
 /* ── Public helpers ──────────────────────────────────────────────────── */
 export const qrImage = async (url) => safeImage(await QRCode.toDataURL(url, QR_OPTS));
 
@@ -405,9 +483,30 @@ export async function renderBatchPdf({ header = "", batchName = "", cards = [], 
   return canvas.toBuffer("application/pdf");
 }
 
+/* A company's empty QR cards, on the same sheet. `logo` is the company
+   logo's bytes; each card carries its own colours. */
+export async function renderCompanyBlanksPdf({ company = {}, cards = [], cardUrl }) {
+  const canvas = createCanvas(A4_W, A4_H, "pdf");
+  const ctx = canvas.getContext("2d");
+  const logo = await safeImage(company.logo);
+  const pages = Math.max(1, Math.ceil(cards.length / ROWS));
+  const paintRow = (c, qr, xf, xb, y, scale) => {
+    paintCompanyBlankFront(ctx, { logo, name: company.name, card: c }, xf, y, scale);
+    paintCompanyBlankBack(ctx, { qr, serial: c.serial, card: c }, xb, y, scale);
+  };
+
+  for (let p = 0; p < pages; p++) {
+    if (p > 0) ctx.addPage(A4_W, A4_H);
+    const rows = cards.slice(p * ROWS, p * ROWS + ROWS);
+    const qrs = await Promise.all(rows.map((c) => qrImage(cardUrl(c.slug))));
+    paintSheetPage(ctx, { title: `${company.name || "Company"} — QR cards`, page: p + 1, pages, rows, qrs, paintRow });
+  }
+  return canvas.toBuffer("application/pdf");
+}
+
 /* One A4 page, in points. Separate from the PDF so a page can be drawn to
    an image to check the layout. */
-export function paintSheetPage(ctx, { title, page, pages, rows, qrs, mark }) {
+export function paintSheetPage(ctx, { title, page, pages, rows, qrs, mark, paintRow = null }) {
   const scale = CW / CARD_W;
   const gridW = CW * 2 + COL_GAP;
   const x0 = (A4_W - gridW) / 2;
@@ -429,6 +528,10 @@ export function paintSheetPage(ctx, { title, page, pages, rows, qrs, mark }) {
 
   for (let r = 0; r < rows.length; r++) {
     const y = GRID_TOP + r * CH;
+    if (paintRow) {
+      paintRow(rows[r], qrs[r], x0, x0 + CW + COL_GAP, y, scale);
+      continue;
+    }
     paintBlankFront(ctx, { mark }, x0, y, scale);
     paintBlankBack(ctx, { qr: qrs[r], serial: rows[r].serial }, x0 + CW + COL_GAP, y, scale);
   }

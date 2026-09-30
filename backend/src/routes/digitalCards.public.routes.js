@@ -19,7 +19,10 @@ import {
 } from "../services/cardPool.service.js";
 import { getS3Object } from "../services/s3.service.js";
 import { sendCardLeadEmail } from "../utils/cardLeadMail.service.js";
-import { sendPoolWelcomeEmail, sendPoolTeaserEmail } from "../utils/cardPoolMail.service.js";
+import { claimCompanyCard } from "../services/companyCardBlanks.service.js";
+import {
+  sendPoolWelcomeEmail, sendPoolTeaserEmail, sendCompanyCardWelcomeEmail,
+} from "../utils/cardPoolMail.service.js";
 
 const router = express.Router();
 
@@ -144,6 +147,14 @@ router.post("/:slug/claim", (req, res, next) => {
     res.status(400).json({ success: false, message: tooBig ? "Images must be 2 MB or smaller" : err.message || "Upload failed" });
   });
 }, handle(async (req, res) => {
+  // A company's empty QR card first; anything else is a Haivisitor pool
+  // card. A company card takes no logo: it shows the company's own.
+  const companyCard = await claimCompanyCard(req.params.slug, req.body, { photo: req.files?.photo?.[0] });
+  if (companyCard) {
+    sendCompanyCardWelcomeEmail(companyCard).catch((e) => console.error("[card-company-welcome]", e?.message));
+    return res.status(201).json({ success: true, message: "Your card is ready." });
+  }
+
   const card = await claimCard(req.params.slug, req.body, {
     photo: req.files?.photo?.[0],
     logo: req.files?.logo?.[0],
