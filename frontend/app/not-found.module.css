@@ -1,0 +1,22 @@
+/* not-found.js: the card "not available" screen, plus a way home. */
+.centre {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px 16px; background: #050505;
+  font-family: 'Poppins', 'Segoe UI', sans-serif;
+}
+
+.notice { text-align: center; max-width: 340px; }
+.notice h1 { margin: 0 0 10px; font-size: 1.2rem; font-weight: 800; color: #fff; }
+.notice p  { margin: 0; font-size: .88rem; line-height: 1.6; color: rgba(255,255,255,.6); }
+
+.homeBtn {
+  display: inline-block; margin-top: 22px; padding: 10px 22px;
+  border-radius: 999px; background: #FAB72A; color: #111;
+  font-size: .85rem; font-weight: 700; text-decoration: none;
+}
+.homeBtn:hover { background: #ffc54a; }
+
+.notice .redirect { margin-top: 12px; font-size: .75rem; color: rgba(255,255,255,.45); }
+
+.notice .footer { margin-top: 28px; font-size: .72rem; line-height: 1.2; color: #fff; }
