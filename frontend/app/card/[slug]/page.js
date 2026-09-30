@@ -72,7 +72,7 @@ export default function DigitalCardPage({ params }) {
 
         if (!res.ok || !data?.card)        return setState("missing");
         if (data.card.unavailable)         { setCard(data.card); return setState("unavailable"); }
-        if (data.card.unclaimed)           return setState("unclaimed");
+        if (data.card.unclaimed)           { setCard(data.card); return setState("unclaimed"); }
         setCard(data.card);
         setState("ready");
       } catch {
@@ -118,8 +118,9 @@ export default function DigitalCardPage({ params }) {
     return <div className={styles.centre}><div className={styles.spinner} /></div>;
   }
 
-  // A blank QR card from the printed pool: its page is the claim form.
-  if (state === "unclaimed") return <ClaimCard slug={slug} />;
+  // An empty QR card, from the printed pool or a company's own: its page is
+  // the claim form.
+  if (state === "unclaimed") return <ClaimCard slug={slug} company={card?.company || null} />;
 
   if (state === "missing" || state === "unavailable") {
     return (

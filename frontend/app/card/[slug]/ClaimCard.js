@@ -6,7 +6,12 @@
    opens their digital visiting card. There is no login and no edit after
    the claim, so the preview step is the last chance to get it right.
 
-   The API applies the same rules (services/cardPool.service.js).
+   A company's numbered QR card (`company` is set) works the same way, but
+   the company name, logo and colours are the company's and fixed, and the
+   card goes live inside the company: afterwards only its admin can edit it.
+
+   The API applies the same rules (services/cardPool.service.js and
+   services/companyCardBlanks.service.js).
    ========================================================================== */
 import { useEffect, useMemo, useRef, useState } from "react";
 import CardPreview from "../../home/cards/CardPreview";
@@ -62,20 +67,32 @@ function ImageField({ id, label, hint, file, onPick, disabled }) {
 }
 
 const STEPS = [["form", "Details"], ["preview", "Preview"], ["done", "Claimed"]];
+const COMPANY_STEPS = [["form", "Details"], ["preview", "Preview"], ["done", "Live"]];
 
-/* Dark band with the Haivisitor wordmark, matching the front of the printed
-   card the person has just scanned, and where they are in the three steps. */
-function Shell({ step, pageRef, children }) {
-  const at = STEPS.findIndex(([key]) => key === step);
+/* Dark band with the Haivisitor wordmark, or the company's logo and name on
+   a company card, matching the front of the printed card the person has
+   just scanned, and where they are in the three steps. */
+function Shell({ step, pageRef, company, children }) {
+  const steps = company ? COMPANY_STEPS : STEPS;
+  const at = steps.findIndex(([key]) => key === step);
   return (
     <div className={styles.claimPage} ref={pageRef}>
       <header className={styles.claimHero}>
-        <div className={styles.brand}>
-          <span className={styles.brandKicker}>ZODOPT’S</span>
-          <span className={styles.wordmark}>H<b>ai</b> Visitor</span>
-        </div>
+        {company ? (
+          <div className={styles.brand}>
+            {company.logo_url && (
+              <img src={`${API}${company.logo_url}`} alt="" className={styles.claimLogo} />
+            )}
+            <span className={styles.wordmark}>{company.name}</span>
+          </div>
+        ) : (
+          <div className={styles.brand}>
+            <span className={styles.brandKicker}>ZODOPT’S</span>
+            <span className={styles.wordmark}>H<b>ai</b> Visitor</span>
+          </div>
+        )}
         <ol className={styles.steps}>
-          {STEPS.map(([key, label], i) => (
+          {steps.map(([key, label], i) => (
             <li key={key} aria-current={i === at ? "step" : undefined} data-done={i < at || undefined}>
               <span className={styles.stepNum}>{i < at ? "✓" : i + 1}</span>
               {label}
@@ -91,7 +108,7 @@ function Shell({ step, pageRef, children }) {
   );
 }
 
-export default function ClaimCard({ slug }) {
+export default function ClaimCard({ slug, company = null }) {
   const [form, setForm]       = useState(EMPTY);
   const [photo, setPhoto]     = useState(null);
   const [logo, setLogo]       = useState(null);
@@ -106,9 +123,10 @@ export default function ClaimCard({ slug }) {
 
   // Object URLs for the preview, released when the file changes.
   const photoSrc = useMemo(() => (photo ? URL.createObjectURL(photo) : ""), [photo]);
-  const logoSrc  = useMemo(() => (logo ? URL.createObjectURL(logo) : ""), [logo]);
+  const ownLogo  = useMemo(() => (logo ? URL.createObjectURL(logo) : ""), [logo]);
   useEffect(() => () => { if (photoSrc) URL.revokeObjectURL(photoSrc); }, [photoSrc]);
-  useEffect(() => () => { if (logoSrc) URL.revokeObjectURL(logoSrc); }, [logoSrc]);
+  useEffect(() => () => { if (ownLogo) URL.revokeObjectURL(ownLogo); }, [ownLogo]);
+  const logoSrc = company ? (company.logo_url ? `${API}${company.logo_url}` : "") : ownLogo;
 
   /* Each step starts at the top. The page is its own scroll container
      (see .claimPage), so that is what gets scrolled, not the window. */
@@ -124,7 +142,17 @@ export default function ClaimCard({ slug }) {
 
   const briefWords = words(form.brief);
   const cardUrl = typeof window !== "undefined" ? `${window.location.origin}/card/${slug}` : "";
-  const previewCard = useMemo(() => ({ ...form, photo_on_print: photo ? 1 : 0 }), [form, photo]);
+  const previewCard = useMemo(() => ({
+    ...form,
+    photo_on_print: photo ? 1 : 0,
+    ...(company && {
+      company_name: company.name,
+      theme: company.theme || "ink",
+      bg_color: company.bg_color || "",
+      text_color: company.text_color || "",
+      accent_color: company.accent_color || "",
+    }),
+  }), [form, photo, company]);
 
   const toPreview = (e) => {
     e.preventDefault();
@@ -152,10 +180,10 @@ export default function ClaimCard({ slug }) {
       for (const [k, v] of Object.entries(form)) body.append(k, v);
       body.append("consent", "1");
       if (photo) { body.append("photo", photo); body.append("photo_on_print", "1"); }
-      if (logo) body.append("logo", logo);
+      if (logo && !company) body.append("logo", logo);
       const res = await fetch(`${API}/api/public/cards/${slug}/claim`, { method: "POST", body });
       const data = await res.json().catch(() => ({}));
-      if (res.status === 409 && /already have a card/i.test(data?.message || "")) {
+      if (res.status === 409 && /already (have a card|a card in this company)/i.test(data?.message || "")) {
         setDuplicate(true);
         setError(data.message);
         return;
@@ -180,16 +208,17 @@ export default function ClaimCard({ slug }) {
 
   if (step === "done") {
     return (
-      <Shell step="done" pageRef={pageRef}>
+      <Shell step="done" pageRef={pageRef} company={company}>
         <div className={styles.share}>
           <div className={styles.sent} role="status">
             <svg className={styles.sentIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                  strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>
             <div>
-              <p className={styles.sentTitle}>This card is yours</p>
+              <p className={styles.sentTitle}>{company ? "Your card is live" : "This card is yours"}</p>
               <p>
                 We have emailed your card, its QR and images of both sides to {form.email}.
                 Anyone who scans this card now sees your details.
+                {company && " To change anything later, ask your admin."}
               </p>
             </div>
           </div>
@@ -204,11 +233,13 @@ export default function ClaimCard({ slug }) {
 
   if (step === "preview") {
     return (
-      <Shell step="preview" pageRef={pageRef}>
+      <Shell step="preview" pageRef={pageRef} company={company}>
         <div className={styles.share}>
           <h1 className={styles.shareTitle}>Check your card</h1>
           <p className={styles.shareSub}>
-            This is how your card looks. Once claimed it cannot be changed, so check every detail.
+            {company
+              ? "This is how your card looks. Once it is live only your admin can change it, so check every detail."
+              : "This is how your card looks. Once claimed it cannot be changed, so check every detail."}
           </p>
           {/* Full print resolution: at the editor's smaller scale the
               canvas is upscaled on a phone's dense screen and looks soft. */}
@@ -217,22 +248,31 @@ export default function ClaimCard({ slug }) {
           <label className={styles.consent}>
             <input type="checkbox" checked={consent} disabled={busy}
                    onChange={(e) => { setConsent(e.target.checked); setError(""); }} />
-            <span>
-              I agree that these details are shown to anyone who scans this card, and that
-              Haivisitor may email me about people who share their details with me and about
-              Haivisitor plans.
-            </span>
+            {company ? (
+              <span>
+                I agree that these details are shown to anyone who scans this card, and that
+                Haivisitor may email me about people who share their details with me.
+              </span>
+            ) : (
+              <span>
+                I agree that these details are shown to anyone who scans this card, and that
+                Haivisitor may email me about people who share their details with me and about
+                Haivisitor plans.
+              </span>
+            )}
           </label>
 
           {error && <p className={styles.error} role="alert">{error}</p>}
           {duplicate && (
             <p className={styles.hint}>
-              Each person can claim one card. Pass this one on to someone else.
+              {company
+                ? "Each person can have one card in the company. Pass this one on to a colleague, or ask your admin."
+                : "Each person can claim one card. Pass this one on to someone else."}
             </p>
           )}
 
           <button type="button" className={styles.shareBtn} onClick={claim} disabled={busy || duplicate}>
-            {busy ? "Claiming…" : "Claim this card"}
+            {busy ? (company ? "Saving…" : "Claiming…") : (company ? "Make my card live" : "Claim this card")}
           </button>
           <button type="button" className={styles.cancelBtn} disabled={busy}
                   onClick={() => { setStep("form"); setError(""); setDuplicate(false); }}>
@@ -244,12 +284,15 @@ export default function ClaimCard({ slug }) {
   }
 
   return (
-    <Shell step="form" pageRef={pageRef}>
+    <Shell step="form" pageRef={pageRef} company={company}>
       <form className={styles.share} onSubmit={toPreview} noValidate>
         <h1 className={styles.shareTitle}>Make this card yours</h1>
         <p className={styles.shareSub}>
-          This QR card has not been claimed yet. Add your details and it becomes your digital
-          visiting card. Anyone who scans it can save your contact or share theirs with you.
+          {company
+            ? `This is your ${company.name || "company"} QR card. Add your details and it becomes your digital
+               visiting card straight away. Anyone who scans it can save your contact or share theirs with you.`
+            : `This QR card has not been claimed yet. Add your details and it becomes your digital
+               visiting card. Anyone who scans it can save your contact or share theirs with you.`}
         </p>
 
         <p className={styles.group}>Required</p>
@@ -259,7 +302,7 @@ export default function ClaimCard({ slug }) {
 
         <p className={styles.group}>Optional</p>
         {input("job_title", "Job title", { autoComplete: "organization-title", maxLength: 120, placeholder: "Your designation" })}
-        {input("company_name", "Company", { autoComplete: "organization", maxLength: 160, placeholder: "Your company name" })}
+        {!company && input("company_name", "Company", { autoComplete: "organization", maxLength: 160, placeholder: "Your company name" })}
 
         <div className={styles.field}>
           <label htmlFor="c-brief">About you</label>
@@ -289,10 +332,12 @@ export default function ClaimCard({ slug }) {
 
         <ImageField id="c-photo" label="Your photo" hint="JPG, PNG or WebP, up to 2 MB. Printed on the card and shown on the web page."
                     file={photo} onPick={setPhoto} disabled={busy} />
-        <ImageField id="c-logo" label="Company logo" hint="JPG, PNG or WebP, up to 2 MB."
-                    file={logo} onPick={setLogo} disabled={busy} />
+        {!company && (
+          <ImageField id="c-logo" label="Company logo" hint="JPG, PNG or WebP, up to 2 MB."
+                      file={logo} onPick={setLogo} disabled={busy} />
+        )}
 
-        <div className={styles.field}>
+        {!company && <div className={styles.field}>
           <span className={styles.groupLabel}>Colour</span>
           <div className={styles.themes} role="radiogroup" aria-label="Card colour">
             {Object.entries(THEMES).map(([key, t]) => (
@@ -305,7 +350,7 @@ export default function ClaimCard({ slug }) {
               </button>
             ))}
           </div>
-        </div>
+        </div>}
 
         {error && <p className={styles.error} role="alert">{error}</p>}
 
