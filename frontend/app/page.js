@@ -12,13 +12,7 @@ const BODY_HTML = `
 <nav>
   <div class="wrap nav-inner">
     <a href="#" class="logo" aria-label="Hai Visitor home"><span class="brand-lockup"><img src="/v-mark.png" alt="" width="44" height="44" /><span class="brand-name">H<em>ai</em> Visitor</span></span><small>A visitor management platform by Zodopt</small></a>
-    <div class="nav-links">
-      <a href="#about">About</a>
-      <a href="#features">Features</a>
-      <a href="#trial">Pricing</a>
-      <a href="#faq">FAQ</a>
-      <a href="/guide">Guide</a>
-    </div>
+    <a class="btn btn-primary nav-cta trial-cta" href="#trial">Start trial</a>
   </div>
 </nav>
 

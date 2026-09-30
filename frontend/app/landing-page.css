@@ -57,9 +57,7 @@ nav { position:sticky; top:var(--ticker-h); z-index:100; background:rgba(250,247
 /* The lockup alone identifies the product; the strapline is supporting
    detail and the first thing that can go when the bar gets tight. */
 @media (max-width:640px) { .logo small { display:none; } .brand-lockup img { width:30px; height:30px; } .brand-name { font-size:1.05rem; } }
-.nav-links { display:flex; align-items:center; gap:1.6rem; }
-.nav-links a { font-size:.82rem; font-weight:700; color:var(--text); opacity:.75; transition:opacity .2s,color .2s; }
-.nav-links a:hover { opacity:1; color:var(--purple); }
+.nav-cta { padding:.6rem 1.1rem; font-size:.78rem; flex-shrink:0; }
 
 /* HERO */
 .hero { padding-top:clamp(2.5rem,6vw,4rem); overflow:hidden; }
@@ -304,7 +302,6 @@ body { padding-top:var(--ticker-h); padding-bottom:var(--sticky-h); }
 
 @media (max-width:900px) {
   .wa-float { display:none; }
-  .nav-links { display:none; }
   .split, .vs-grid, .offer-grid, .faq-grid { grid-template-columns:1fr; }
   .layer-grid, .seg-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .layer:nth-child(2)::after { display:none; }

@@ -2,26 +2,29 @@
    design.css). The sticky bar, WhatsApp button and trial popup live in
    components/industry-landing.css. */
 
-/* ---------- Hero on phones ----------
-   The design laid the copy over the photo, which hid the customer behind the
-   text and pushed the trial button under the sticky bar. On phones the photo
-   now sits on top, full width, fading into the copy below it. */
+/* ---------- Hero on phones, laid out like /furniture ----------
+   The photo fills the hero behind the copy, shaded from the bottom up, and
+   the hero fits between the header and the sticky trial bar so the trial
+   button is on the first screen. The kicker is the yellow audience tag. */
 @media (max-width: 47.99rem) {
-  .jw .hv-hero__grid { display: flex; flex-direction: column; min-height: 0; padding-block: 0 2.5rem; }
-  .jw .hv-hero__media {
-    position: relative; inset: auto; order: -1;
-    width: 100vw; margin-left: calc(50% - 50vw); aspect-ratio: 4 / 3;
+  .jw .hv-hero__grid {
+    display: flex; flex-direction: column; justify-content: flex-end;
+    min-height: max(34rem, calc(100svh - var(--header-h) - var(--sticky-h)));
+    padding-block: 1.5rem 1.75rem;
   }
-  .jw .hv-hero__media img { object-position: 72% 30%; }
+  .jw .hv-hero__media img { object-position: 72% center; }
   .jw .hv-hero__media::after {
-    background: linear-gradient(to bottom, rgb(10 10 10 / 0) 55%, var(--ink) 100%);
+    background: linear-gradient(0deg, var(--ink) 0%, rgb(10 10 10 / .78) 55%, rgb(10 10 10 / .24) 100%);
   }
-  .jw .hv-hero__copy { margin-top: -1.5rem; }
-  .jw .hv-hero .hv-kicker { font-size: .68rem; }
-  .jw .hv-hero h1 { margin-top: .75rem; font-size: 2.2rem; }
-  .jw .hv-hero h1 + p { margin-top: 1rem; font-size: 1rem; line-height: 1.65; }
-  .jw .hv-hero .mt-7 { margin-top: 1.5rem; }
+  .jw .hv-hero .hv-kicker {
+    display: inline-block; padding: .5rem .7rem; background: var(--hv-gold); color: var(--ink);
+    font-size: .68rem; font-weight: 800; line-height: 1.3; letter-spacing: .12em;
+  }
+  .jw .hv-hero h1 { margin-top: 1rem; font-size: clamp(1.9rem, 8.6vw, 2.7rem); line-height: 1.12; }
+  .jw .hv-hero h1 + p { margin-top: .9rem; font-size: .92rem; line-height: 1.55; }
+  .jw .hv-hero .mt-7 { margin-top: 1.25rem; }
   .jw .hv-hero .hv-btn { width: 100%; }
+  .jw .hv-hero .mt-4 { margin-top: .75rem; }
 }
 
 /* ---------- Footer: logo and copyright, as on /furniture ---------- */
