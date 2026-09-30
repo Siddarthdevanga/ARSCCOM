@@ -374,7 +374,7 @@ export function paintBlankBack(ctx, { qr = null, serial = "" } = {}, x = 0, y0 =
    Handed to an employee before they fill it in, and theirs for good after,
    so it carries only what never changes: the company's logo and name, on
    the colours the admin chose. */
-export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {} } = {}, x = 0, y0 = 0, scale = 1) {
+export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {}, roundLogo = false } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
     const { bg, fg, accent } = resolveColors(card);
@@ -393,7 +393,17 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {} 
       const maxW = 520, maxH = 180;
       const k = Math.min(maxW / logo.width, maxH / logo.height);
       const w = logo.width * k, h = logo.height * k;
-      drawSharp(ctx, logo, cx - w / 2, 92 + (maxH - h) / 2, w, h);
+      const lx = cx - w / 2, ly = 92 + (maxH - h) / 2;
+      ctx.save();
+      // The Hai Visitor V mark is a square image of a roundel: clipped to
+      // the circle, so no black box shows around it.
+      if (roundLogo) {
+        ctx.beginPath();
+        ctx.arc(lx + w / 2, ly + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
+        ctx.clip();
+      }
+      drawSharp(ctx, logo, lx, ly, w, h);
+      ctx.restore();
     }
     if (name) {
       ctx.fillStyle = fg;
@@ -414,8 +424,10 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {} 
 }
 
 /* ── A company's empty QR card: BACK ─────────────────────────────────────
-   The QR, and the Hai Visitor mark and wordmark as a footer. */
-export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {} } = {}, x = 0, y0 = 0, scale = 1) {
+   The QR, and the Hai Visitor mark and wordmark as a footer. A Hai Visitor
+   pool card has no footer (its front is already the brand), so its QR sits
+   lower, centred in the space. */
+export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {}, footer = true } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
     const { bg, fg, accent } = resolveColors(card);
@@ -426,7 +438,7 @@ export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {} }
 
     const box = 320;
     const bx = (W - box) / 2;
-    const by = 84;
+    const by = footer ? 84 : 140;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, bx - 20, by - 20, box + 40, box + 40, 20);
     ctx.fill();
@@ -439,7 +451,7 @@ export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {} }
     ctx.fillText("Scan for my details", W / 2, by + box + 70);
 
     // Clear of the bottom 3 mm, which a print trim can take off.
-    brandLockup(ctx, { mark, fg, cx: W / 2, base: H - 58 });
+    if (footer) brandLockup(ctx, { mark, fg, cx: W / 2, base: H - 58 });
     ctx.textAlign = "left";
   });
 }
@@ -517,14 +529,23 @@ export async function renderCardPngs(card, { cardUrl, logoSrc = null, photoSrc =
   return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
 }
 
+/* A Hai Visitor pool card before anyone claims it: laid out like a
+   company's empty card, with the Hai Visitor logo and name on the front in
+   the batch's colours, and the QR alone on the back. */
+export const POOL_NAME = "Hai Visitor";
+const paintPoolFront = (ctx, logo, card, x, y, scale) =>
+  paintCompanyBlankFront(ctx, { logo, name: POOL_NAME, card, roundLogo: true }, x, y, scale);
+const paintPoolBack = (ctx, qr, card, x, y, scale) =>
+  paintCompanyBlankBack(ctx, { qr, card, footer: false }, x, y, scale);
+
 /* An unclaimed pool card as two PNG buffers: the same faces as its row on
    the batch print sheet. */
-export async function renderBlankPoolPngs({ cardUrl, serial = "" }) {
-  const [mark, qr] = await Promise.all([brandMark(), qrImage(cardUrl)]);
+export async function renderBlankPoolPngs({ cardUrl, card = {} }) {
+  const [logo, qr] = await Promise.all([brandVMark(), qrImage(cardUrl)]);
   const front = createCanvas(CARD_W, CARD_H);
-  paintBlankFront(front.getContext("2d"), { mark });
+  paintPoolFront(front.getContext("2d"), logo, card);
   const back = createCanvas(CARD_W, CARD_H);
-  paintBlankBack(back.getContext("2d"), { qr, serial });
+  paintPoolBack(back.getContext("2d"), qr, card);
   return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
 }
 
@@ -550,14 +571,20 @@ const GRID_TOP = 14 * MM;
 export async function renderBatchPdf({ header = "", batchName = "", cards = [], cardUrl }) {
   const canvas = createCanvas(A4_W, A4_H, "pdf");
   const ctx = canvas.getContext("2d");
-  const mark = await brandMark();
+  const logo = await brandVMark();
   const pages = Math.max(1, Math.ceil(cards.length / ROWS));
+  // Each card in the batch's colours. The painters draw the logo and QR
+  // with drawSharp, so both embed at full resolution and print crisp.
+  const paintRow = (c, qr, xf, xb, y, scale) => {
+    paintPoolFront(ctx, logo, c, xf, y, scale);
+    paintPoolBack(ctx, qr, c, xb, y, scale);
+  };
 
   for (let p = 0; p < pages; p++) {
     if (p > 0) ctx.addPage(A4_W, A4_H);
     const rows = cards.slice(p * ROWS, p * ROWS + ROWS);
     const qrs = await Promise.all(rows.map((c) => qrImage(cardUrl(c.slug))));
-    paintSheetPage(ctx, { title: header || batchName || "Haivisitor cards", page: p + 1, pages, rows, qrs, mark });
+    paintSheetPage(ctx, { title: header || batchName || "Hai Visitor cards", page: p + 1, pages, rows, qrs, paintRow });
   }
   return canvas.toBuffer("application/pdf");
 }

@@ -384,7 +384,13 @@ export const getPublicCard = async (slug) => {
   // A blank card's page is its claim form. Nothing about the batch it came
   // from is shown to whoever is holding it.
   if (isUnclaimed(card)) {
-    if (card.source === "pool") return { unclaimed: true, slug: card.slug };
+    // A pool card carries its batch's colours, for the claim form to start from.
+    if (card.source === "pool") {
+      return {
+        unclaimed: true, slug: card.slug,
+        style: { theme: card.theme, bg_color: card.bg_color, text_color: card.text_color, accent_color: card.accent_color },
+      };
+    }
     // A company's empty card follows the company: locked or lapsed, it
     // cannot be filled in.
     if (card.is_locked || isLapsed(card)) {

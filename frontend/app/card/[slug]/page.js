@@ -131,7 +131,7 @@ export default function DigitalCardPage({ params }) {
 
   // An empty QR card, from the printed pool or a company's own: its page is
   // the claim form.
-  if (state === "unclaimed") return <ClaimCard slug={slug} company={card?.company || null} />;
+  if (state === "unclaimed") return <ClaimCard slug={slug} company={card?.company || null} batchStyle={card?.style || null} />;
 
   if (state === "missing" || state === "unavailable") {
     return (

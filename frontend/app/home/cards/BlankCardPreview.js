@@ -13,7 +13,7 @@ import styles from "./preview.module.css";
 
 /* `card` carries the colours (theme and overrides); `cardUrl` is what the
    QR opens: a real card's address, or any address for a sample. */
-export default function BlankCardPreview({ companyName = "", logoSrc = "", card, cardUrl, scale = 0.46, side = false }) {
+export default function BlankCardPreview({ companyName = "", logoSrc = "", card, cardUrl, scale = 0.46, side = false, footer = true, roundLogo = false }) {
   const frontRef = useRef(null);
   const backRef  = useRef(null);
   const [qrSrc, setQrSrc] = useState("");
@@ -38,14 +38,14 @@ export default function BlankCardPreview({ companyName = "", logoSrc = "", card,
       target.getContext("2d").drawImage(source, 0, 0);
     };
     (async () => {
-      const front = await drawCompanyBlankFront(document.createElement("canvas"), { name: companyName, card }, { scale, logoSrc });
+      const front = await drawCompanyBlankFront(document.createElement("canvas"), { name: companyName, card }, { scale, logoSrc, roundLogo });
       show(frontRef.current, front);
       if (cancelled) return;
-      const back = await drawCompanyBlankBack(document.createElement("canvas"), { card }, { scale, qrSrc });
+      const back = await drawCompanyBlankBack(document.createElement("canvas"), { card }, { scale, qrSrc, footer });
       show(backRef.current, back);
     })().catch(() => {});
     return () => { cancelled = true; };
-  }, [companyName, logoSrc, card, qrSrc, scale]);
+  }, [companyName, logoSrc, card, qrSrc, scale, footer, roundLogo]);
 
   return (
     <div className={`${styles.wrap} ${side ? styles.side : ""}`}>

@@ -8,7 +8,7 @@
    Lead details are never shown here, only counts: they belong to the card
    owner. Full superadmin only; the API refuses the read-only role too.
    ========================================================================== */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import QRCode from "qrcode";
 import { Printer, Download, RefreshCw, X, ExternalLink } from "lucide-react";
@@ -17,6 +17,7 @@ import SuperAdminNav from "../dashboard/NavHeader";
 import { THEMES } from "../../home/cards/cardArt";
 import ConfirmModal from "../../components/ConfirmModal";
 import { fileBase } from "../../home/cards/cardDownload";
+import BlankCardPreview from "../../home/cards/BlankCardPreview";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const MAX_BATCH = 100;
@@ -388,6 +389,158 @@ function CardModal({ id, token, onClose, onChanged }) {
   );
 }
 
+/* ─────────────── NEW BATCH MODAL ───────────────
+   The same flow as a company's "Generate QR cards": how many, the colours,
+   a preview of the printed card, then the print sheet. The front carries
+   the Hai Visitor logo and name; the back only the QR. */
+
+const THEME_LIST = Object.entries(THEMES).map(([key, t]) => ({ key, ...t }));
+const EMPTY_BATCH = { name: "", header: "", quantity: "10", theme: "ink", bg_color: "", text_color: "", accent_color: "" };
+const chip = (on) => ({
+  display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 11px", borderRadius: 999, cursor: "pointer",
+  fontSize: 12, fontWeight: 700, background: "#fff", color: "#1d1d21",
+  border: on ? "2px solid #1d1d21" : "1.5px solid #e5e7eb",
+});
+
+function NewBatchModal({ token, onClose, onCreated, onPrint, printing }) {
+  const [form, setForm] = useState(EMPTY_BATCH);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [made, setMade] = useState(null);   // { id, quantity, name } once created
+
+  const preset = THEMES[form.theme] || THEMES.ink;
+  const override = !!(form.bg_color || form.text_color || form.accent_color);
+  const previewCard = useMemo(() => ({
+    theme: form.theme, bg_color: form.bg_color, text_color: form.text_color, accent_color: form.accent_color,
+  }), [form.theme, form.bg_color, form.text_color, form.accent_color]);
+  const previewUrl = typeof window !== "undefined" ? `${window.location.origin}/card/preview` : "";
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setError("");
+    const q = Number(form.quantity);
+    if (!form.name.trim()) return setError("Give the batch a name.");
+    if (!Number.isInteger(q) || q < 1 || q > MAX_BATCH) return setError(`Quantity must be between 1 and ${MAX_BATCH}.`);
+    setBusy(true);
+    try {
+      const res = await fetch(`${API}/api/superadmin/qr-cards/batches`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ ...form, quantity: q }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || "Could not create the batch");
+      setMade({ id: data.id, quantity: q, name: form.name.trim() });
+      onCreated();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = { display: "flex", flexDirection: "column", gap: 6 };
+
+  return (
+    <div className={styles.modalOverlay} onClick={() => { if (!busy && !printing) onClose(); }}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="batch-title">
+        <div className={styles.modalHeader}>
+          <div>
+            <h2 className={styles.modalTitle} id="batch-title">{made ? "QR cards ready" : "New batch of QR cards"}</h2>
+            <p className={styles.modalSub}>{made ? `B${made.id} · ${made.name}` : `Up to ${MAX_BATCH} cards`}</p>
+          </div>
+          <button className={styles.modalClose} onClick={onClose} disabled={busy || printing} aria-label="Close"><X size={16} /></button>
+        </div>
+
+        {made ? (
+          <div className={styles.modalBody}>
+            <p style={{ fontSize: 13, color: "#4b4b52", lineHeight: 1.6, margin: "0 0 16px" }}>
+              {made.quantity} card{made.quantity === 1 ? " is" : "s are"} ready. Download the print sheet, print it on
+              card stock (front and back side by side) and hand the cards out. Whoever scans a card first fills in
+              their details, and the card goes live straight away.
+            </p>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
+              <button style={smallBtn} onClick={onClose} disabled={printing}>Done</button>
+              <button className={styles.btnPrimary} onClick={() => onPrint(made)} disabled={printing}>
+                <Printer size={14} style={{ verticalAlign: "-2px", marginRight: 6 }} />
+                {printing ? "Preparing…" : "Download print sheet"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form className={styles.modalBody} onSubmit={submit} noValidate>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))", gap: 10 }}>
+              <label style={field}>
+                <span className={styles.label}>Batch name *</span>
+                <input className={styles.input} value={form.name} maxLength={120} disabled={busy}
+                       onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Expo Mumbai Oct" />
+              </label>
+              <label style={field}>
+                <span className={styles.label}>How many *</span>
+                <input className={styles.input} type="number" inputMode="numeric" min={1} max={MAX_BATCH}
+                       value={form.quantity} disabled={busy}
+                       onChange={(e) => setForm({ ...form, quantity: e.target.value })} />
+              </label>
+            </div>
+            <label style={{ ...field, marginTop: 12 }}>
+              <span className={styles.label}>Sheet header <span style={{ fontWeight: 500, color: "#9ca3af" }}>optional · printed at the top of each A4 sheet, not on the cards</span></span>
+              <input className={styles.input} value={form.header} maxLength={160} disabled={busy}
+                     onChange={(e) => setForm({ ...form, header: e.target.value })} />
+            </label>
+
+            <div style={{ ...field, marginTop: 14 }}>
+              <span className={styles.label}>Card colours</span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {THEME_LIST.map((t) => (
+                  <button type="button" key={t.key} disabled={busy} style={chip(form.theme === t.key && !override)}
+                          onClick={() => setForm({ ...form, theme: t.key, bg_color: "", text_color: "", accent_color: "" })}>
+                    <span style={{ width: 16, height: 16, borderRadius: 4, background: `linear-gradient(135deg, ${t.bg} 62%, ${t.accent} 62%)`, border: "1px solid #e5e7eb" }} />
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ ...field, marginTop: 14 }}>
+              <span className={styles.label} style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span>Your own colours <span style={{ fontWeight: 500, color: "#9ca3af" }}>optional</span></span>
+                {override && (
+                  <button type="button" style={{ ...smallBtn, padding: "2px 8px" }}
+                          onClick={() => setForm({ ...form, bg_color: "", text_color: "", accent_color: "" })}>
+                    Reset to theme
+                  </button>
+                )}
+              </span>
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                {[["bg_color", "Background", "bg"], ["text_color", "Text", "fg"], ["accent_color", "Accent", "accent"]].map(([key, label, p]) => (
+                  <label key={key} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 700 }}>
+                    <input type="color" disabled={busy} value={form[key] || preset[p]}
+                           onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ ...field, marginTop: 14 }}>
+              <span className={styles.label}>Preview <span style={{ fontWeight: 500, color: "#9ca3af" }}>as printed; each card gets its own QR</span></span>
+              <BlankCardPreview companyName="Hai Visitor" logoSrc="/v-mark.png" card={previewCard}
+                                cardUrl={previewUrl} footer={false} roundLogo />
+            </div>
+
+            {error && <p style={{ color: "#cc1100", fontSize: 13, fontWeight: 700, margin: "12px 0 0" }} role="alert">{error}</p>}
+
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 16 }}>
+              <button type="button" style={smallBtn} onClick={onClose} disabled={busy}>Cancel</button>
+              <button type="submit" className={styles.btnPrimary} disabled={busy}>{busy ? "Creating…" : "Create batch"}</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─────────────── PAGE ─────────────── */
 
 export default function QrCardsPage() {
@@ -406,8 +559,7 @@ export default function QrCardsPage() {
   const [search, setSearch]   = useState("");
   const [query, setQuery]     = useState("");
 
-  const [batchForm, setBatchForm] = useState({ name: "", header: "", quantity: "" });
-  const [batchBusy, setBatchBusy] = useState(false);
+  const [newBatch, setNewBatch]   = useState(false);   // the New batch popup is open
   const [notice, setNotice]       = useState(null);   // { ok, text }
   const [downloading, setDownloading] = useState("");
   const [openId, setOpenId]       = useState(null);
@@ -470,31 +622,6 @@ export default function QrCardsPage() {
     router.replace("/login");
   };
 
-  const createBatch = async (e) => {
-    e.preventDefault();
-    setNotice(null);
-    const q = Number(batchForm.quantity);
-    if (!batchForm.name.trim()) return setNotice({ ok: false, text: "Give the batch a name." });
-    if (!Number.isInteger(q) || q < 1 || q > MAX_BATCH) return setNotice({ ok: false, text: `Quantity must be between 1 and ${MAX_BATCH}.` });
-    setBatchBusy(true);
-    try {
-      const res = await fetch(`${API}/api/superadmin/qr-cards/batches`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: batchForm.name, header: batchForm.header, quantity: q }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.message || "Could not create the batch");
-      setBatchForm({ name: "", header: "", quantity: "" });
-      setNotice({ ok: true, text: `Batch created with ${q} cards. Download its print sheet below.` });
-      refresh();
-    } catch (err) {
-      setNotice({ ok: false, text: err.message });
-    } finally {
-      setBatchBusy(false);
-    }
-  };
-
   const download = async (key, path, fallback) => {
     setDownloading(key); setNotice(null);
     try { await downloadWithAuth(`${API}/api/superadmin/qr-cards${path}`, token, fallback); }
@@ -537,26 +664,13 @@ export default function QrCardsPage() {
 
         {/* ── Batches ── */}
         <div style={box}>
-          <h3 style={h3}>New batch</h3>
-          <p style={sub}>Up to {MAX_BATCH} cards. The header prints at the top of each A4 sheet, not on the cards.</p>
-          <form onSubmit={createBatch} style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 10, alignItems: "end" }}>
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className={styles.label}>Batch name *</span>
-              <input className={styles.input} value={batchForm.name} maxLength={120} disabled={batchBusy}
-                     onChange={(e) => setBatchForm({ ...batchForm, name: e.target.value })} placeholder="Expo Mumbai Oct" />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className={styles.label}>Sheet header</span>
-              <input className={styles.input} value={batchForm.header} maxLength={160} disabled={batchBusy}
-                     onChange={(e) => setBatchForm({ ...batchForm, header: e.target.value })} placeholder="Optional" />
-            </label>
-            <label style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <span className={styles.label}>Quantity *</span>
-              <input className={styles.input} type="number" min={1} max={MAX_BATCH} value={batchForm.quantity} disabled={batchBusy}
-                     onChange={(e) => setBatchForm({ ...batchForm, quantity: e.target.value })} />
-            </label>
-            <button type="submit" className={styles.btnPrimary} disabled={batchBusy}>{batchBusy ? "Creating…" : "Create batch"}</button>
-          </form>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
+            <div>
+              <h3 style={h3}>Batches</h3>
+              <p style={{ ...sub, margin: 0 }}>Print Hai Visitor QR cards in your chosen colours. Whoever scans one first claims it.</p>
+            </div>
+            <button className={styles.btnPrimary} onClick={() => setNewBatch(true)}>+ New batch</button>
+          </div>
 
           {batches.length > 0 && (
             <div className={styles.tableWrapper} style={{ margin: "18px 0 0" }}>
@@ -665,6 +779,12 @@ export default function QrCardsPage() {
           </div>
         )}
       </div>
+
+      {newBatch && (
+        <NewBatchModal token={token} printing={downloading.startsWith("new")}
+                       onClose={() => setNewBatch(false)} onCreated={refresh}
+                       onPrint={(b) => download(`new${b.id}`, `/batches/${b.id}/print`, `qr-cards-B${b.id}.pdf`)} />
+      )}
 
       {openId && (
         <CardModal id={openId} token={token} onClose={() => setOpenId(null)} onChanged={refresh} />

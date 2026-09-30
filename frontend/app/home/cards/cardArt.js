@@ -371,7 +371,17 @@ export async function drawCompanyBlankFront(canvas, { name = "", card = {} } = {
     const maxW = s(520), maxH = s(180);
     const k = Math.min(maxW / logo.width, maxH / logo.height);
     const w = logo.width * k, h = logo.height * k;
-    ctx.drawImage(logo, cx - w / 2, s(92) + (maxH - h) / 2, w, h);
+    const lx = cx - w / 2, ly = s(92) + (maxH - h) / 2;
+    ctx.save();
+    // The Hai Visitor V mark is a square image of a roundel: clipped to
+    // the circle, so no black box shows around it.
+    if (opts.roundLogo) {
+      ctx.beginPath();
+      ctx.arc(lx + w / 2, ly + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2);
+      ctx.clip();
+    }
+    ctx.drawImage(logo, lx, ly, w, h);
+    ctx.restore();
   }
   if (name) {
     ctx.fillStyle = fg;
@@ -407,10 +417,13 @@ export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}
   ctx.fillStyle = accent;
   ctx.fillRect(0, 0, W, s(14));
 
-  const [qr, mark] = await Promise.all([loadImage(opts.qrSrc), loadImage("/v-mark.png")]);
+  // A Hai Visitor pool card has no footer: its front is already the brand,
+  // so the QR sits lower, centred in the space (as cardArt.node.js).
+  const footer = opts.footer !== false;
+  const [qr, mark] = await Promise.all([loadImage(opts.qrSrc), footer ? loadImage("/v-mark.png") : null]);
   const box = s(320);
   const bx = (W - box) / 2;
-  const by = s(84);
+  const by = s(footer ? 84 : 140);
   ctx.fillStyle = "#ffffff";
   roundRect(ctx, bx - s(20), by - s(20), box + s(40), box + s(40), s(20));
   ctx.fill();
@@ -421,6 +434,7 @@ export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}
   ctx.fillStyle = alpha(fg, 0.78);
   ctx.font = `700 ${s(26)}px ${FONT}`;
   ctx.fillText("Scan for my details", W / 2, by + box + s(70));
+  if (!footer) { ctx.textAlign = "left"; return canvas; }
 
   // Footer: the V roundel and "H[ai] Visitor", centred as one run.
   const base = H - s(58);

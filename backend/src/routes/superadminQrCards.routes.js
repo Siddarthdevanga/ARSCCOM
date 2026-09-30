@@ -151,7 +151,7 @@ router.get("/:id/art", handle(async (req, res) => {
 
   let faces;
   if (!card.claimed_at) {
-    faces = await renderBlankPoolPngs({ cardUrl: url, serial: card.serial || "" });
+    faces = await renderBlankPoolPngs({ cardUrl: url, card });
   } else {
     let logo = await s3(card.own_logo_url);
     if (!logo && card.company_id) {

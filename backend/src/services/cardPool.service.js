@@ -190,7 +190,13 @@ const getCardRow = async (id) => {
 /* ======================================================
    BATCHES
 ====================================================== */
-export const createBatch = async ({ name, header, quantity } = {}, adminId = null) => {
+const STYLE_FIELDS = ["theme", "bg_color", "text_color", "accent_color"];
+
+/* The batch's colours go on every card in it: the printed card is drawn in
+   them, and the claim form starts from them. */
+export const createBatch = async ({ name, header, quantity, ...body } = {}, adminId = null) => {
+  const style = clean(Object.fromEntries(STYLE_FIELDS.map((f) => [f, body[f] ?? null])));
+  if (!style.theme) style.theme = "ink";
   const n = typeof name === "string" ? name.trim() : "";
   const h = typeof header === "string" ? header.trim() : "";
   const q = Number(quantity);
@@ -211,13 +217,17 @@ export const createBatch = async ({ name, header, quantity } = {}, adminId = nul
       "INSERT INTO card_batches (name, header, quantity, created_by) VALUES (?, ?, ?, ?)",
       [n, h || null, q, adminId]
     );
-    const rows = [...slugs].map((slug, i) => [slug, "pool", b.insertId, i + 1]);
+    const rows = [...slugs].map((slug, i) => [
+      slug, "pool", b.insertId, i + 1,
+      style.theme, style.bg_color || null, style.text_color || null, style.accent_color || null,
+    ]);
     await conn.query(
-      "INSERT INTO digital_cards (slug, source, batch_id, serial_no) VALUES ?",
+      `INSERT INTO digital_cards (slug, source, batch_id, serial_no, theme, bg_color, text_color, accent_color)
+       VALUES ?`,
       [rows]
     );
     await conn.commit();
-    return { id: b.insertId };
+    return { id: b.insertId, quantity: q };
   } catch (err) {
     await conn.rollback().catch(() => {});
     throw err;
@@ -263,11 +273,17 @@ export const getBatchForPrint = async (id) => {
   const [[batch]] = await db.execute("SELECT * FROM card_batches WHERE id = ? LIMIT 1", [id]);
   if (!batch) return null;
   const [cards] = await db.execute(
-    `SELECT slug, serial_no FROM digital_cards
+    `SELECT slug, serial_no, theme, bg_color, text_color, accent_color FROM digital_cards
       WHERE batch_id = ? AND source = 'pool' ORDER BY serial_no`,
     [id]
   );
-  return { batch, cards: cards.map((c) => ({ slug: c.slug, serial: serialLabel(batch.id, c.serial_no) })) };
+  return {
+    batch,
+    cards: cards.map((c) => ({
+      slug: c.slug, serial: serialLabel(batch.id, c.serial_no),
+      theme: c.theme, bg_color: c.bg_color, text_color: c.text_color, accent_color: c.accent_color,
+    })),
+  };
 };
 
 /* ======================================================

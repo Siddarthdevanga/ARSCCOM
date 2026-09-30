@@ -31,7 +31,7 @@ const EMPTY = {
   name: "", phone: "", email: "", job_title: "", company_name: "", brief: "", linkedin: "",
   custom1_label: "", custom1_value: "", custom1_type: "text",
   custom2_label: "", custom2_value: "", custom2_type: "text",
-  theme: "ink",
+  theme: "ink", bg_color: "", text_color: "", accent_color: "",
 };
 
 const words = (s = "") => s.trim().split(/\s+/).filter(Boolean).length;
@@ -109,8 +109,18 @@ function Shell({ step, pageRef, company, children }) {
   );
 }
 
-export default function ClaimCard({ slug, company = null }) {
-  const [form, setForm]       = useState(EMPTY);
+/* A Hai Visitor pool card starts in its batch's colours, the ones it was
+   printed in. Picking another colour below replaces them. */
+export default function ClaimCard({ slug, company = null, batchStyle = null }) {
+  const [form, setForm]       = useState(() => ({
+    ...EMPTY,
+    ...(!company && batchStyle && {
+      theme: batchStyle.theme || "ink",
+      bg_color: batchStyle.bg_color || "",
+      text_color: batchStyle.text_color || "",
+      accent_color: batchStyle.accent_color || "",
+    }),
+  }));
   const [photo, setPhoto]     = useState(null);
   const [logo, setLogo]       = useState(null);
   const [consent, setConsent] = useState(false);
@@ -349,10 +359,10 @@ export default function ClaimCard({ slug, company = null }) {
           <span className={styles.groupLabel}>Colour</span>
           <div className={styles.themes} role="radiogroup" aria-label="Card colour">
             {Object.entries(THEMES).map(([key, t]) => (
-              <button key={key} type="button" role="radio" aria-checked={form.theme === key}
+              <button key={key} type="button" role="radio" aria-checked={form.theme === key && !form.bg_color}
                       className={styles.themeChip} disabled={busy} title={t.label}
                       style={{ background: t.bg, color: t.fg, outlineColor: t.accent }}
-                      onClick={() => setForm((p) => ({ ...p, theme: key }))}>
+                      onClick={() => setForm((p) => ({ ...p, theme: key, bg_color: "", text_color: "", accent_color: "" }))}>
                 <span style={{ background: t.accent }} aria-hidden="true" />
                 {t.label}
               </button>
