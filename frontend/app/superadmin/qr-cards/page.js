@@ -16,6 +16,7 @@ import styles from "../dashboard/style.module.css";
 import SuperAdminNav from "../dashboard/NavHeader";
 import { THEMES } from "../../home/cards/cardArt";
 import ConfirmModal from "../../components/ConfirmModal";
+import { fileBase } from "../../home/cards/cardDownload";
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL;
 const MAX_BATCH = 100;
@@ -91,6 +92,8 @@ function CardModal({ id, token, onClose, onChanged }) {
   const [msg, setMsg]     = useState(null);   // { ok, text }
   const [askReset, setAskReset] = useState(false);
   const [qr, setQr]       = useState(null);   // data URL of the card's QR
+  const [art, setArt]     = useState(null);   // { front, back } PNG data URLs, as printed
+  const [artFailed, setArtFailed] = useState(false);
 
   const auth = { Authorization: `Bearer ${token}` };
 
@@ -106,7 +109,34 @@ function CardModal({ id, token, onClose, onChanged }) {
       custom1_type: c.custom1_type || "text", custom2_type: c.custom2_type || "text",
     });
     setPhoto(null); setLogo(null); setRemovePhoto(false); setRemoveLogo(false);
+
+    // Both faces, drawn by the server with the print code. Reloaded after
+    // every change, so the preview always shows the saved card.
+    setArtFailed(false);
+    try {
+      const r = await fetch(`${API}/api/superadmin/qr-cards/${id}/art`, { headers: { Authorization: `Bearer ${token}` } });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok || !d.front) throw new Error();
+      setArt({ front: d.front, back: d.back });
+    } catch {
+      setArt(null); setArtFailed(true);
+    }
   }, [id, token]);
+
+  /* Front, then back a moment later: browsers drop a second download
+     started in the same instant as the first. */
+  const downloadFaces = async () => {
+    if (!art) return;
+    const base = card?.name ? fileBase(card.name) : String(card?.serial || card?.slug || "card");
+    const save = (href, name) => {
+      const a = document.createElement("a");
+      a.href = href; a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+    };
+    save(art.front, `${base}-front.png`);
+    await new Promise((r) => setTimeout(r, 400));
+    save(art.back, `${base}-back.png`);
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -199,6 +229,35 @@ function CardModal({ id, token, onClose, onChanged }) {
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Claimed</span><span className={styles.overviewVal}>{fmtDate(card.claimed_at)}</span></div>
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Views · Contacts</span><span className={styles.overviewVal}>{card.views} · {card.leads}</span></div>
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Converted to</span><span className={styles.overviewVal}>{card.converted_company ? `${card.converted_company} (#${card.company_id}) · ${fmtDate(card.converted_at)}` : "—"}</span></div>
+            </div>
+
+            {/* The card as it prints, both faces, as on the company's Digital Cards. */}
+            <div style={{ marginBottom: 18 }}>
+              <h3 style={h3}>{claimed ? "Printed card" : "Printed blank card"}</h3>
+              <p style={sub}>
+                {claimed
+                  ? "Front and back as they print, with the saved details. Save changes to update it."
+                  : "As printed on the batch sheet. The Hai Visitor logo is on the front until someone claims it."}
+              </p>
+              {art ? (
+                <>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+                    {[["front", "Front"], ["back", "Back"]].map(([k, label]) => (
+                      <figure key={k} style={{ margin: 0 }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={art[k]} alt={`${label} of the card`}
+                             style={{ width: "100%", aspectRatio: "1004 / 650", borderRadius: 10, border: "1px solid #ededf0", display: "block" }} />
+                        <figcaption style={{ fontSize: 11, color: "#9ca3af", marginTop: 4, textAlign: "center" }}>{label}</figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                  <button style={{ ...smallBtn, marginTop: 10 }} onClick={downloadFaces}>
+                    <Download size={14} /> Download front &amp; back
+                  </button>
+                </>
+              ) : (
+                <p style={{ ...sub, margin: 0 }}>{artFailed ? "Could not draw the card preview." : "Drawing the card…"}</p>
+              )}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginBottom: 18 }}>

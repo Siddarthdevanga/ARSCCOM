@@ -17,7 +17,9 @@ import {
   updatePoolCard, setPoolCardActive, resetPoolCard, convertCard, exportRows, getCardForMail,
   cardUrl, IMAGE_TYPES, MAX_IMAGE_BYTES,
 } from "../services/cardPool.service.js";
-import { renderBatchPdf } from "../utils/cardArt.node.js";
+import { renderBatchPdf, renderBlankPoolPngs, renderCardPngs, BRAND_MARK_PATH } from "../utils/cardArt.node.js";
+import { getS3Object } from "../services/s3.service.js";
+import { isUploadedPhoto } from "../services/digitalCard.service.js";
 import { sendPoolWelcomeEmail } from "../utils/cardPoolMail.service.js";
 import { db } from "../config/db.js";
 
@@ -131,6 +133,40 @@ router.get("/:id", handle(async (req, res) => {
   const card = await getPoolCard(idOf(req));
   if (!card) return res.status(404).json({ success: false, message: "Card not found" });
   res.json({ success: true, card });
+}));
+
+/* Both faces as PNG data URLs, for the preview and the downloads.
+   Rendered here with the print code, so what is shown is what prints.
+   Unclaimed: the batch sheet's blank card. Claimed: the owner's card, with
+   their own logo, else their company's once converted, else the Hai
+   Visitor mark. */
+router.get("/:id/art", handle(async (req, res) => {
+  const card = await getPoolCard(idOf(req));
+  if (!card) return res.status(404).json({ success: false, message: "Card not found" });
+  const url = cardUrl(card.slug);
+  const s3 = async (key) => {
+    if (!isUploadedPhoto(key)) return null;
+    try { return (await getS3Object(key)).buffer; } catch { return null; }
+  };
+
+  let faces;
+  if (!card.claimed_at) {
+    faces = await renderBlankPoolPngs({ cardUrl: url, serial: card.serial || "" });
+  } else {
+    let logo = await s3(card.own_logo_url);
+    if (!logo && card.company_id) {
+      const [[co]] = await db.execute("SELECT logo_url FROM companies WHERE id = ? LIMIT 1", [card.company_id]);
+      if (co?.logo_url) {
+        try { logo = (await getS3Object(co.logo_url)).buffer; } catch { /* falls back to the mark */ }
+      }
+    }
+    faces = await renderCardPngs(card, {
+      cardUrl: url, logoSrc: logo || BRAND_MARK_PATH, photoSrc: await s3(card.photo_url),
+    });
+  }
+  const dataUrl = (b) => `data:image/png;base64,${b.toString("base64")}`;
+  res.setHeader("Cache-Control", "no-store");
+  res.json({ success: true, front: dataUrl(faces.front), back: dataUrl(faces.back) });
 }));
 
 router.patch("/:id", images, handle(async (req, res) => {

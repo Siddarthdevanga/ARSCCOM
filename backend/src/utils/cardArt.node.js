@@ -517,6 +517,21 @@ export async function renderCardPngs(card, { cardUrl, logoSrc = null, photoSrc =
   return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
 }
 
+/* An unclaimed pool card as two PNG buffers: the same faces as its row on
+   the batch print sheet. */
+export async function renderBlankPoolPngs({ cardUrl, serial = "" }) {
+  const [mark, qr] = await Promise.all([brandMark(), qrImage(cardUrl)]);
+  const front = createCanvas(CARD_W, CARD_H);
+  paintBlankFront(front.getContext("2d"), { mark });
+  const back = createCanvas(CARD_W, CARD_H);
+  paintBlankBack(back.getContext("2d"), { qr, serial });
+  return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
+}
+
+/* The Hai Visitor mark as a PNG path, the logo on a pool card whose owner
+   has not added their own. */
+export const BRAND_MARK_PATH = path.join(HERE, "..", "assets", "haivisitor-mark.png");
+
 /* Just the QR, as a PNG buffer, for the welcome email. */
 export const qrPng = (url) => QRCode.toBuffer(url, { ...QR_OPTS, width: 480, margin: 2 });
 
