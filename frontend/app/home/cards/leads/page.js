@@ -1,9 +1,9 @@
 "use client";
 /* ============================================================================
-   CARD LEADS
+   CARD CONTACTS
    People who scanned a digital visiting card and chose to share their own
-   details back. The export is how a company gets them out; deleting a card
-   deletes its leads too.
+   details back (card_leads). The export is how a company gets them out.
+   A deleted card's contacts stay here, tagged "Deleted card".
 
    The list is ordered newest first because the only question anyone opens
    this screen with is "who do I need to call back".
@@ -56,10 +56,10 @@ export default function CardLeadsPage() {
       if (res.status === 401) { router.replace("/login"); return; }
       const data = await res.json().catch(() => ({}));
       if (res.status === 403 && data?.status === "expired") { setExpired(true); return; }
-      if (!res.ok) throw new Error(data?.message || "Could not load leads");
+      if (!res.ok) throw new Error(data?.message || "Could not load contacts");
       setLeads(data.leads || []);
     } catch (e) {
-      say(e.message || "Could not load leads", "error");
+      say(e.message || "Could not load contacts", "error");
     } finally {
       setLoading(false);
     }
@@ -86,11 +86,11 @@ export default function CardLeadsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = match?.[1] || `card-leads-${Date.now()}.xlsx`;
+      a.download = match?.[1] || `card-contacts-${Date.now()}.xlsx`;
       a.click();
       // Revoking synchronously can cancel the download in Safari.
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      say("Card leads exported.");
+      say("Card contacts exported.");
     } catch {
       say("Export failed. Please try again.", "error");
     } finally {
@@ -101,18 +101,18 @@ export default function CardLeadsPage() {
   const filtered = leads.filter((l) => {
     const q = query.trim().toLowerCase();
     if (!q) return true;
-    return [l.name, l.phone, l.email, l.company_name, l.card_owner_name, l.message]
+    return [l.name, l.phone, l.email, l.company_name, l.card_owner_name, l.message, l.card_deleted ? "deleted card" : ""]
       .some((v) => (v || "").toLowerCase().includes(q));
   });
 
-  if (expired) return <LockedModule moduleName="Card Leads" />;
+  if (expired) return <LockedModule moduleName="Card Contacts" />;
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>;
 
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerLeft}>
-          <h1 className={styles.title}>Card Leads</h1>
+          <h1 className={styles.title}>Card Contacts</h1>
           <span className={styles.usage}><strong>{leads.length}</strong> total</span>
         </div>
         <div className={styles.headerRight}>
@@ -143,7 +143,7 @@ export default function CardLeadsPage() {
             <MessageSquare size={26} />
             <p>
               {query.trim()
-                ? "No leads match that search."
+                ? "No contacts match that search."
                 : "No one has shared their details yet. They appear here when someone scans a card and fills in the form."}
             </p>
           </div>
@@ -162,7 +162,10 @@ export default function CardLeadsPage() {
                 {lead.message && <p className={own.message}>{lead.message}</p>}
 
                 <div className={own.leadFoot}>
-                  <span className={own.via}>scanned {lead.card_owner_name}&rsquo;s card</span>
+                  <span className={own.via}>
+                    scanned {lead.card_owner_name || "a"}{lead.card_owner_name ? "’s" : ""} card
+                    {!!lead.card_deleted && <span className={own.deleted}>Deleted card</span>}
+                  </span>
                   <div className={own.reply}>
                     <a href={`tel:${lead.phone}`} className={own.iconBtn} title="Call">
                       <Phone size={14} />

@@ -556,7 +556,7 @@ const BODY_HTML = `
     <section class="mod" id="digital-cards">
       <div class="mod-eyebrow"><span class="dot"></span>09 · Your Team's Visiting Cards</div>
       <h2>Digital Cards — visiting cards with a QR</h2>
-      <p class="mod-sub">A Digital Card is a printed visiting card for someone on your team, with <b>its own QR code</b>. Scanning it opens a live web page with their details: whoever scans can <b>save the contact</b> to their phone in one tap, call, WhatsApp or email them, or <b>share their own details</b> back. Those come to you as <b>Card Leads</b>. Because the QR opens a web page, you can change a phone number or job title at any time <b>without reprinting</b>. Each card shows how many times it was scanned and how many leads it brought in.</p>
+      <p class="mod-sub">A Digital Card is a printed visiting card for someone on your team, with <b>its own QR code</b>. Scanning it opens a live web page with their details: whoever scans can <b>save the contact</b> to their phone in one tap, call, WhatsApp or email them, or <b>share their own details</b> back. Those come to you as <b>Card Contacts</b>. Because the QR opens a web page, you can change a phone number or job title at any time <b>without reprinting</b>. Each card shows how many times it was scanned and how many contacts it brought in.</p>
       <div class="mod-routes"><span class="route">/home/cards</span><span class="route">/home/cards/new</span><span class="route">/home/cards/leads</span><span class="route">/card/[code]</span></div>
 
       <table class="rtable" style="margin-top:22px;">
@@ -671,14 +671,14 @@ const BODY_HTML = `
         </div>
       </div>
 
-      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">When someone scans a card, and Card Leads</h3>
+      <h3 style="font-size:17px; font-weight:900; margin-top:36px; margin-bottom:6px;">When someone scans a card, and Card Contacts</h3>
       <div class="panel">
         <div class="panel-col">
         <ol class="steps">
           <li>The card page shows the person's photo, name, title and company, with buttons to <b>Save Contact</b>, call, WhatsApp and email.</li>
           <li>They can tap <b>"Share my details"</b> and leave their name, phone, email, company and a message.</li>
-          <li>The card owner gets an email straight away, and the lead appears in <b>Card Leads</b> (<span class="field">/home/cards/leads</span>). Newest leads are at the top, with whose card was scanned.</li>
-          <li>Reply with <b>Call</b> or <b>WhatsApp</b> from each lead, search by name, phone, company or card owner, and click <b>Export</b> for an Excel file.</li>
+          <li>The card owner gets an email straight away, and the contact appears in <b>Card Contacts</b> (<span class="field">/home/cards/leads</span>). Newest contacts are at the top, with whose card was scanned.</li>
+          <li>Reply with <b>Call</b> or <b>WhatsApp</b> from each contact, search by name, phone, company or card owner, and click <b>Export</b> for an Excel file.</li>
         </ol>
         </div>
         <div>
@@ -687,7 +687,7 @@ const BODY_HTML = `
             <div class="frame-body mk-page">
               <div class="mk-card">
                 <table class="mk-table mk">
-                  <tr><th>Lead</th><th>Scanned</th><th>Reply</th></tr>
+                  <tr><th>Contact</th><th>Scanned</th><th>Reply</th></tr>
                   <tr><td><span class="mk-av" style="background:#242427;">RH</span>Ramesh H.</td><td>Suresh's card</td><td><span class="mk-badge accepted">WhatsApp</span></td></tr>
                   <tr><td><span class="mk-av" style="background:#0E7490;">VM</span>Vikram M.</td><td>Divya's card</td><td><span class="mk-badge accepted">WhatsApp</span></td></tr>
                 </table>
@@ -703,10 +703,10 @@ const BODY_HTML = `
         <tr><th>Button</th><th>What it does</th></tr>
         <tr><td>QR code</td><td>Shows the card's QR and link, with <b>Download QR</b> and <b>Open card</b>. For an empty card, it also shows how the printed card looks.</td></tr>
         <tr><td>Edit</td><td>Change any detail, photo or colour. The printed QR stays the same, so there's no need to reprint. On an empty card you can fill it in yourself.</td></tr>
-        <tr><td>Reset</td><td>Numbered QR cards only. When an employee leaves, empties the card so you can hand the same printed card to someone new. The old details and leads are kept on an inactive copy.</td></tr>
+        <tr><td>Reset</td><td>Numbered QR cards only. When an employee leaves, empties the card so you can hand the same printed card to someone new. The old details and contacts are kept on an inactive copy.</td></tr>
         <tr><td>Deactivate / Activate</td><td>A deactivated card's QR shows "not active" and frees the slot. Activate it again at any time.</td></tr>
         <tr><td>Lock / Release</td><td>After moving to a smaller plan, lock the cards you don't need to stay within your plan.</td></tr>
-        <tr><td>Delete</td><td>Removes the card, its QR, its scans and its leads, and frees the slot. The details that were filled in are kept on record. <b>This cannot be undone.</b> Export the leads first if you need them.</td></tr>
+        <tr><td>Delete</td><td>Removes the card, its QR and its scans, and frees the slot. Its contacts stay in <b>Card Contacts</b>, marked "Deleted card", and the details that were filled in are kept on record. <b>This cannot be undone.</b></td></tr>
       </table>
       <div class="note info" style="margin-top:16px;">A card that has been deleted shows "Digital card not available" when its QR is scanned.</div>
     </section>

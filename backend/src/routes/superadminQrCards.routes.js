@@ -98,7 +98,7 @@ router.get("/export", handle(async (req, res) => {
     { header: "Title", key: "job_title", width: 20 },
     { header: "Claimed", key: "claimed_at", width: 18 },
     { header: "Views", key: "views", width: 8 },
-    { header: "Leads", key: "leads", width: 8 },
+    { header: "Contacts", key: "leads", width: 10 },
     { header: "Converted to", key: "converted_company", width: 24 },
     { header: "Converted", key: "converted_at", width: 18 },
     { header: "Card link", key: "card_url", width: 40 },

@@ -81,3 +81,9 @@
   .leadFoot { flex-direction: column; align-items: stretch; }
   .reply { justify-content: flex-end; }
 }
+
+/* A contact whose card has since been deleted: kept, and marked. */
+.deleted {
+  display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px;
+  background: #f1f1f4; color: #6b6b75; font-size: .7rem; font-weight: 800; vertical-align: middle;
+}

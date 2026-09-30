@@ -27,9 +27,9 @@ const WHY = (
         person&rsquo;s details, so a change of phone number or title never means reprinting.</li>
       <li><b>Saved in one tap.</b> Whoever scans it can save the contact straight to their phone, call,
         WhatsApp or email.</li>
-      <li><b>Leads come back to you.</b> They can also share their own details. Those land in
-        <b> Card Leads</b>, and the card owner gets an email.</li>
-      <li><b>You see what works.</b> Every card shows how many times it was scanned and how many leads it brought in.</li>
+      <li><b>Contacts come back to you.</b> They can also share their own details. Those land in
+        <b> Card Contacts</b>, and the card owner gets an email.</li>
+      <li><b>You see what works.</b> Every card shows how many times it was scanned and how many contacts it brought in.</li>
     </ul>
   </>
 );
@@ -67,8 +67,8 @@ const CONTENT = {
       <ul className={g.keys}>
         <li><b>QR</b>: show, download or open the card&rsquo;s QR.</li>
         <li><b>Edit</b>: change the details. On an empty card you can fill it in yourself.</li>
-        <li><b>Reset</b>: empty a numbered QR card for someone new. The old details and leads are kept on an inactive card.</li>
-        <li><b>Delete</b>: removes the card, its QR, scans and leads, and frees the slot. Filled-in details are kept on record. It cannot be undone.</li>
+        <li><b>Reset</b>: empty a numbered QR card for someone new. The old details and contacts are kept on an inactive card.</li>
+        <li><b>Delete</b>: removes the card, its QR and scans, and frees the slot. Its contacts stay in Card Contacts, marked &ldquo;Deleted card&rdquo;, and filled-in details are kept on record. It cannot be undone.</li>
         <li><b>Activate / Deactivate</b>: an inactive card&rsquo;s QR shows &ldquo;not active&rdquo; and frees the slot.</li>
         <li><b>Lock / Release</b>: after a downgrade, lock the cards you don&rsquo;t need to keep within your plan.</li>
       </ul>
@@ -95,14 +95,14 @@ const CONTENT = {
   leads: (
     <>
       {WHY}
-      <h3>Card Leads</h3>
+      <h3>Card Contacts</h3>
       <ol>
-        <li>A lead is someone who scanned one of your cards and tapped <b>Share my details</b>.</li>
-        <li>Each lead shows their name, company, message and whose card they scanned. The newest are at the top.</li>
+        <li>A contact is someone who scanned one of your cards and tapped <b>Share my details</b>.</li>
+        <li>Each contact shows their name, company, message and whose card they scanned. The newest are at the top.</li>
         <li>Use <b>Call</b> or <b>WhatsApp</b> to reply, and search by name, phone, company or card owner.</li>
-        <li>Click <b>Export</b> for an Excel file of every lead.</li>
+        <li>Click <b>Export</b> for an Excel file of every contact.</li>
       </ol>
-      <p className={g.note}>Deleting a card deletes its leads too. Export first if you need them.</p>
+      <p className={g.note}>Deleting a card keeps its contacts here, tagged &ldquo;Deleted card&rdquo;.</p>
     </>
   ),
 };

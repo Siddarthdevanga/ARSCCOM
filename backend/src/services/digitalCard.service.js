@@ -537,9 +537,10 @@ export const addLead = async (slug, body) => {
 
 export const listLeads = async (companyId) => {
   const [rows] = await db.execute(
-    `SELECT l.*, c.name AS card_owner_name, c.slug AS card_slug
+    `SELECT l.*, COALESCE(c.name, l.card_owner_name) AS card_owner_name, c.slug AS card_slug,
+            (l.card_id IS NULL) AS card_deleted
        FROM card_leads l
-       JOIN digital_cards c ON c.id = l.card_id
+       LEFT JOIN digital_cards c ON c.id = l.card_id
       WHERE l.company_id = ?
       ORDER BY l.created_at DESC`,
     [companyId]

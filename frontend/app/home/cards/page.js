@@ -3,7 +3,7 @@
    DIGITAL VISITING CARDS — ADMIN
    The company admin creates and maintains a card per employee. Deactivating
    keeps a card's printed QR resolving; deleting removes the card, its
-   scans and its leads for good, keeping only its filled-in details on
+   scans for good, keeping its contacts and its filled-in details on
    record, and frees the slot.
 
    Plan allowance is shown at all times rather than surfaced as an error on
@@ -193,8 +193,9 @@ export default function CardsPage() {
       : `Delete ${titleOf(card)}'s card for good?
 
 ` +
-        "Its link and QR stop working, and its scans and leads are deleted. The details filled in on the " +
-        "card are kept on record. One slot on your plan is freed. This cannot be undone.";
+        "Its link and QR stop working and its scans are deleted. Its contacts stay in Card Contacts, " +
+        "marked as from a deleted card, and the details filled in on the card are kept on record. " +
+        "One slot on your plan is freed. This cannot be undone.";
     if (!window.confirm(question)) return;
     try {
       const res = await fetch(`${API}/api/cards/${card.id}`, { method: "DELETE", credentials: "include" });
@@ -211,7 +212,7 @@ export default function CardsPage() {
   const resetCard = async (card) => {
     if (!window.confirm(
       `Reset card ${card.number} for someone new?\n\n${card.name}'s details come off it and the same printed QR ` +
-      "can be filled in again. Their leads and scans are kept, on an inactive copy of the card."
+      "can be filled in again. Their contacts and scans are kept, on an inactive copy of the card."
     )) return;
     try {
       const res = await fetch(`${API}/api/cards/${card.id}/reset`, { method: "POST", credentials: "include" });
@@ -273,7 +274,7 @@ export default function CardsPage() {
         <div className={styles.headerRight}>
           <GuideButton open={guideOpen} onClick={() => setGuideOpen((o) => !o)} />
           <button className={styles.ghostBtn} onClick={() => router.push("/home/cards/leads")}>
-            <MessageSquare size={15} /><span>Card Leads</span>
+            <MessageSquare size={15} /><span>Card Contacts</span>
           </button>
           <button className={styles.ghostBtn} onClick={() => router.push("/home")}>
             <ArrowLeft size={15} /><span>Back</span>
@@ -344,7 +345,7 @@ export default function CardsPage() {
 
                 <div className={styles.tileStats}>
                   <span><Eye size={13} /> {card.scan_count} scan{card.scan_count === 1 ? "" : "s"}</span>
-                  <span><MessageSquare size={13} /> {card.lead_count} lead{card.lead_count === 1 ? "" : "s"}</span>
+                  <span><MessageSquare size={13} /> {card.lead_count} contact{card.lead_count === 1 ? "" : "s"}</span>
                 </div>
 
                 <div className={styles.tileActions}>

@@ -126,11 +126,12 @@ export const getBlanksForPrint = async (companyId, ids = null) => {
 /* ======================================================
    DELETE (any card)
    The card row goes, and with it its address (the printed QR stops
-   working), its scans and its leads (ON DELETE CASCADE); the slot is
-   freed. The details that were filled in are kept in
-   digital_card_archive, which nothing reads back. An empty card has no
-   details, so it leaves no record. Photos and logos stay in S3: they are
-   part of the details kept.
+   working) and its scans (ON DELETE CASCADE); the slot is freed. Its
+   contacts (card_leads) stay with the company, marked with the owner's
+   name as it was, and are shown as from a deleted card. The details that
+   were filled in are kept in digital_card_archive, which nothing reads
+   back. An empty card has no details, so it leaves no record. Photos and
+   logos stay in S3: they are part of the details kept.
 ====================================================== */
 const ARCHIVE_FIELDS = [...CARD_FIELDS, "photo_on_print", "own_logo_url"];
 
@@ -156,13 +157,17 @@ export const deleteCard = async (companyId, id, userId = null) => {
          card.email || null, JSON.stringify(details), card.created_at || null, card.claimed_at || null, userId]
       );
     }
+    await conn.execute(
+      "UPDATE card_leads SET card_id = NULL, card_owner_name = ?, company_id = ? WHERE card_id = ?",
+      [card.name || (card.serial_no ? blankLabel(card.serial_no) : null), companyId, card.id]
+    );
     await conn.execute("DELETE FROM digital_cards WHERE id = ? AND company_id = ?", [card.id, companyId]);
     await conn.commit();
     return true;
   } catch (err) {
     await conn.rollback().catch(() => {});
-    if (err?.code === "ER_NO_SUCH_TABLE") {
-      console.error("[digital-cards] digital_card_archive is missing: run migrations/add-digital-card-archive.sql");
+    if (err?.code === "ER_NO_SUCH_TABLE" || err?.code === "ER_BAD_FIELD_ERROR") {
+      console.error("[digital-cards] run migrations/add-digital-card-archive.sql and keep-card-leads-on-delete.sql:", err.message);
       throw Object.assign(new Error("Deleting cards is not available yet. Please try again later."), { code: 503 });
     }
     throw err;

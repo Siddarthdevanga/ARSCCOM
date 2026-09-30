@@ -509,33 +509,35 @@ router.get("/smart-forms", async (req, res) => {
    STATS
 ═══════════════════════════════════════════════════════════════ */
 /* ======================================================
-   CARD LEADS  GET /api/exports/card-leads
-   Details shared back by people who scanned a digital visiting card.
-   This is how a company gets them out. Deleting a card deletes its
-   leads too, so export first if they are wanted.
+   CARD CONTACTS  GET /api/exports/card-leads
+   Details shared back by people who scanned a digital visiting card
+   (shown as "Contacts"). A deleted card's contacts are kept, and marked
+   "(deleted card)" after the owner's name.
 ====================================================== */
 router.get("/card-leads", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
     // Locked with the rest of Digital Cards once the subscription lapses.
     if (await companyLapsed(companyId)) {
-      return res.status(403).json({ status: "expired", message: "Your subscription has expired. Renew your plan to export card leads." });
+      return res.status(403).json({ status: "expired", message: "Your subscription has expired. Renew your plan to export card contacts." });
     }
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message: "Company not found" });
 
     const [rows] = await db.query(
-      `SELECT l.created_at, c.name AS card_owner, l.name, l.phone, l.email,
-              l.company_name, l.message
+      `SELECT l.created_at,
+              CASE WHEN l.card_id IS NULL THEN CONCAT(COALESCE(l.card_owner_name, 'Card'), ' (deleted card)')
+                   ELSE c.name END AS card_owner,
+              l.name, l.phone, l.email, l.company_name, l.message
          FROM card_leads l
-         JOIN digital_cards c ON c.id = l.card_id
+         LEFT JOIN digital_cards c ON c.id = l.card_id
         WHERE l.company_id = ?
         ORDER BY l.created_at DESC`,
       [companyId]
     );
 
     const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Card Leads");
+    const ws = wb.addWorksheet("Card Contacts");
     ws.columns = [
       { header: "Received",   key: "created_at",   width: 20 },
       { header: "Card Owner", key: "card_owner",   width: 22 },
@@ -548,14 +550,14 @@ router.get("/card-leads", async (req, res) => {
     ws.getRow(1).font = { bold: true };
     rows.forEach((r) => ws.addRow(r));
 
-    const fn = `${company.name.replace(/[^a-z0-9]/gi, "-")}-card-leads-${Date.now()}.xlsx`;
+    const fn = `${company.name.replace(/[^a-z0-9]/gi, "-")}-card-contacts-${Date.now()}.xlsx`;
     res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition", `attachment; filename="${fn}"`);
     await wb.xlsx.write(res);
     res.end();
   } catch (err) {
     console.error("[GET /exports/card-leads]", err.message);
-    res.status(500).json({ message: "Failed to export card leads" });
+    res.status(500).json({ message: "Failed to export card contacts" });
   }
 });
 

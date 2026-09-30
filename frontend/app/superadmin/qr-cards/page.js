@@ -160,7 +160,7 @@ function CardModal({ id, token, onClose, onChanged }) {
   });
 
   const reset = () => {
-    if (!window.confirm("Reset this card to blank? The owner's details, photo, logo, views and leads are deleted, and the next person to scan it can claim it.")) return;
+    if (!window.confirm("Reset this card to blank? The owner's details, photo, logo, views and contacts are deleted, and the next person to scan it can claim it.")) return;
     run("reset", async () => { await call("/reset", { method: "POST" }); return "Card reset to blank."; });
   };
 
@@ -193,7 +193,7 @@ function CardModal({ id, token, onClose, onChanged }) {
             <div className={styles.overviewGrid} style={{ marginBottom: 18 }}>
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Status</span><span className={styles.overviewVal}>{pill(status)}{card.is_locked ? " · locked" : ""}</span></div>
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Claimed</span><span className={styles.overviewVal}>{fmtDate(card.claimed_at)}</span></div>
-              <div className={styles.overviewItem}><span className={styles.overviewLabel}>Views · Leads</span><span className={styles.overviewVal}>{card.views} · {card.leads}</span></div>
+              <div className={styles.overviewItem}><span className={styles.overviewLabel}>Views · Contacts</span><span className={styles.overviewVal}>{card.views} · {card.leads}</span></div>
               <div className={styles.overviewItem}><span className={styles.overviewLabel}>Converted to</span><span className={styles.overviewVal}>{card.converted_company ? `${card.converted_company} (#${card.company_id}) · ${fmtDate(card.converted_at)}` : "—"}</span></div>
             </div>
 
@@ -303,7 +303,7 @@ function CardModal({ id, token, onClose, onChanged }) {
               </button>
               {claimed && !card.company_id && (
                 <>
-                  <p className={styles.dangerText}>Reset wipes the owner&apos;s details, views and leads so the printed card can be handed to someone else.</p>
+                  <p className={styles.dangerText}>Reset wipes the owner&apos;s details, views and contacts so the printed card can be handed to someone else.</p>
                   <button className={styles.btnDanger} onClick={reset} disabled={!!busy}>{busy === "reset" ? "Resetting…" : "Reset to blank"}</button>
                 </>
               )}
@@ -564,7 +564,7 @@ export default function QrCardsPage() {
               <thead>
                 <tr>
                   <th>Code</th><th>Name</th><th>Phone</th><th>Email</th><th>Company</th><th>Batch</th>
-                  <th>Claimed</th><th>Views</th><th>Leads</th><th>Converted</th>
+                  <th>Claimed</th><th>Views</th><th>Contacts</th><th>Converted</th>
                 </tr>
               </thead>
               <tbody>
@@ -581,7 +581,7 @@ export default function QrCardsPage() {
                     <td data-label="Batch">{c.batch_name || "—"}</td>
                     <td data-label="Claimed" className={styles.dateCell}>{fmtDate(c.claimed_at)}</td>
                     <td data-label="Views">{c.views}</td>
-                    <td data-label="Leads">{c.leads}</td>
+                    <td data-label="Contacts">{c.leads}</td>
                     <td data-label="Converted">
                       {c.converted_company ? <>{c.converted_company}<div style={{ fontSize: 11, color: "#9ca3af" }}>{fmtDate(c.converted_at)}</div></> : pill(c.status)}
                     </td>
