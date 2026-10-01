@@ -17,7 +17,7 @@ import {
   updatePoolCard, setPoolCardActive, resetPoolCard, convertCard, exportRows, getCardForMail,
   cardUrl, IMAGE_TYPES, MAX_IMAGE_BYTES,
 } from "../services/cardPool.service.js";
-import { renderBatchPdf, renderBlankPoolPngs, renderCardPngs, BRAND_MARK_PATH } from "../utils/cardArt.node.js";
+import { renderBatchPdf, renderBlankPoolPngs, renderCardPngs } from "../utils/cardArt.node.js";
 import { getS3Object } from "../services/s3.service.js";
 import { isUploadedPhoto } from "../services/digitalCard.service.js";
 import { sendPoolWelcomeEmail } from "../utils/cardPoolMail.service.js";
@@ -138,8 +138,8 @@ router.get("/:id", handle(async (req, res) => {
 /* Both faces as PNG data URLs, for the preview and the downloads.
    Rendered here with the print code, so what is shown is what prints.
    Unclaimed: the batch sheet's blank card. Claimed: the owner's card, with
-   their own logo, else their company's once converted, else the Hai
-   Visitor mark. */
+   their own logo, else their company's once converted, else none: the same
+   card the owner gets in their welcome email. */
 router.get("/:id/art", handle(async (req, res) => {
   const card = await getPoolCard(idOf(req));
   if (!card) return res.status(404).json({ success: false, message: "Card not found" });
@@ -161,7 +161,7 @@ router.get("/:id/art", handle(async (req, res) => {
       }
     }
     faces = await renderCardPngs(card, {
-      cardUrl: url, logoSrc: logo || BRAND_MARK_PATH, photoSrc: await s3(card.photo_url),
+      cardUrl: url, logoSrc: logo, photoSrc: await s3(card.photo_url),
     });
   }
   const dataUrl = (b) => `data:image/png;base64,${b.toString("base64")}`;

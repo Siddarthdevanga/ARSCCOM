@@ -423,13 +423,10 @@ export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}
   ctx.fillStyle = accent;
   ctx.fillRect(0, 0, W, s(14));
 
-  // A Hai Visitor pool card has no footer: its front is already the brand,
-  // so the QR sits lower, centred in the space (as cardArt.node.js).
-  const footer = opts.footer !== false;
-  const [qr, mark] = await Promise.all([loadImage(opts.qrSrc), footer ? loadImage("/v-mark.png") : null]);
+  const [qr, mark] = await Promise.all([loadImage(opts.qrSrc), loadImage("/v-mark.png")]);
   const box = s(320);
   const bx = (W - box) / 2;
-  const by = s(footer ? 84 : 140);
+  const by = s(84);
   ctx.fillStyle = "#ffffff";
   roundRect(ctx, bx - s(20), by - s(20), box + s(40), box + s(40), s(20));
   ctx.fill();
@@ -440,7 +437,7 @@ export async function drawCompanyBlankBack(canvas, { card = {} } = {}, opts = {}
   ctx.fillStyle = alpha(fg, 0.78);
   ctx.font = `700 ${s(26)}px ${FONT}`;
   ctx.fillText("Scan for my details", W / 2, by + box + s(70));
-  if (footer) brandFooter(ctx, { mark, fg, W, H, s });
+  brandFooter(ctx, { mark, fg, W, H, s });
   ctx.textAlign = "left";
   return canvas;
 }

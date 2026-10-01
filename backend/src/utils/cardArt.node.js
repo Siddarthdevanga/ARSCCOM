@@ -428,9 +428,8 @@ export function paintCompanyBlankFront(ctx, { logo = null, name = "", card = {},
 
 /* ── A company's empty QR card: BACK ─────────────────────────────────────
    The QR, and the Hai Visitor mark and wordmark as a footer. A Hai Visitor
-   pool card has no footer (its front is already the brand), so its QR sits
-   lower, centred in the space. */
-export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {}, footer = true } = {}, x = 0, y0 = 0, scale = 1) {
+   pool card's back is the same. */
+export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {} } = {}, x = 0, y0 = 0, scale = 1) {
   inCard(ctx, x, y0, scale, () => {
     const W = CARD_W, H = CARD_H;
     const { bg, fg, accent } = resolveColors(card);
@@ -441,7 +440,7 @@ export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {}, 
 
     const box = 320;
     const bx = (W - box) / 2;
-    const by = footer ? 84 : 140;
+    const by = 84;
     ctx.fillStyle = "#ffffff";
     roundRect(ctx, bx - 20, by - 20, box + 40, box + 40, 20);
     ctx.fill();
@@ -454,7 +453,7 @@ export function paintCompanyBlankBack(ctx, { qr = null, mark = null, card = {}, 
     ctx.fillText("Scan for my details", W / 2, by + box + 70);
 
     // Clear of the bottom 3 mm, which a print trim can take off.
-    if (footer) brandLockup(ctx, { mark, fg, cx: W / 2, base: H - 58 });
+    brandLockup(ctx, { mark, fg, cx: W / 2, base: H - 58 });
     ctx.textAlign = "left";
   });
 }
@@ -562,10 +561,6 @@ export async function renderBlankPoolPngs({ cardUrl, card = {} }) {
   paintPoolBack(back.getContext("2d"), qr, logo, card);
   return { front: front.toBuffer("image/png"), back: back.toBuffer("image/png") };
 }
-
-/* The Hai Visitor mark as a PNG path, the logo on a pool card whose owner
-   has not added their own. */
-export const BRAND_MARK_PATH = path.join(HERE, "..", "assets", "haivisitor-mark.png");
 
 /* Just the QR, as a PNG buffer, for the welcome email. */
 export const qrPng = (url) => QRCode.toBuffer(url, { ...QR_OPTS, width: 480, margin: 2 });

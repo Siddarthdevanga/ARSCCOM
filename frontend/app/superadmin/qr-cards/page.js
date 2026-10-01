@@ -392,7 +392,7 @@ function CardModal({ id, token, onClose, onChanged }) {
 /* ─────────────── NEW BATCH MODAL ───────────────
    The same flow as a company's "Generate QR cards": how many, the colours,
    a preview of the printed card, then the print sheet. The front carries
-   the Hai Visitor logo and name; the back only the QR. */
+   the Hai Visitor logo and name; the back the QR and the Hai Visitor footer. */
 
 const THEME_LIST = Object.entries(THEMES).map(([key, t]) => ({ key, ...t }));
 const EMPTY_BATCH = { name: "", header: "", quantity: "10", theme: "ink", bg_color: "", text_color: "", accent_color: "" };
@@ -402,7 +402,7 @@ const chip = (on) => ({
   border: on ? "2px solid #1d1d21" : "1.5px solid #e5e7eb",
 });
 
-function NewBatchModal({ token, onClose, onCreated, onPrint, printing }) {
+function NewBatchModal({ token, onClose, onCreated, onPrint, printing, printError }) {
   const [form, setForm] = useState(EMPTY_BATCH);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -459,6 +459,9 @@ function NewBatchModal({ token, onClose, onCreated, onPrint, printing }) {
               card stock (front and back side by side) and hand the cards out. Whoever scans a card first fills in
               their details, and the card goes live straight away.
             </p>
+            {printError && (
+              <p style={{ color: "#cc1100", fontSize: 13, fontWeight: 700, margin: "0 0 12px" }} role="alert">{printError}</p>
+            )}
             <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", flexWrap: "wrap" }}>
               <button style={smallBtn} onClick={onClose} disabled={printing}>Done</button>
               <button className={styles.btnPrimary} onClick={() => onPrint(made)} disabled={printing}>
@@ -560,6 +563,7 @@ export default function QrCardsPage() {
   const [query, setQuery]     = useState("");
 
   const [newBatch, setNewBatch]   = useState(false);   // the New batch popup is open
+  const [printError, setPrintError] = useState("");
   const [notice, setNotice]       = useState(null);   // { ok, text }
   const [downloading, setDownloading] = useState("");
   const [openId, setOpenId]       = useState(null);
@@ -626,6 +630,15 @@ export default function QrCardsPage() {
     setDownloading(key); setNotice(null);
     try { await downloadWithAuth(`${API}/api/superadmin/qr-cards${path}`, token, fallback); }
     catch (err) { setNotice({ ok: false, text: err.message }); }
+    finally { setDownloading(""); }
+  };
+
+  /* The print sheet from the New batch popup. Its error shows in the popup:
+     the page's notice sits behind the overlay, where nobody sees it. */
+  const printNewBatch = async (b) => {
+    setDownloading(`new${b.id}`); setPrintError("");
+    try { await downloadWithAuth(`${API}/api/superadmin/qr-cards/batches/${b.id}/print`, token, `qr-cards-B${b.id}.pdf`); }
+    catch (err) { setPrintError(err.message || "Could not download the print sheet"); }
     finally { setDownloading(""); }
   };
 
@@ -781,9 +794,9 @@ export default function QrCardsPage() {
       </div>
 
       {newBatch && (
-        <NewBatchModal token={token} printing={downloading.startsWith("new")}
-                       onClose={() => setNewBatch(false)} onCreated={refresh}
-                       onPrint={(b) => download(`new${b.id}`, `/batches/${b.id}/print`, `qr-cards-B${b.id}.pdf`)} />
+        <NewBatchModal token={token} printing={downloading.startsWith("new")} printError={printError}
+                       onClose={() => { setNewBatch(false); setPrintError(""); }} onCreated={refresh}
+                       onPrint={printNewBatch} />
       )}
 
       {openId && (

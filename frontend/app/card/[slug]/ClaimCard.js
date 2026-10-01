@@ -359,7 +359,7 @@ export default function ClaimCard({ slug, company = null, batchStyle = null }) {
           <span className={styles.groupLabel}>Colour</span>
           <div className={styles.themes} role="radiogroup" aria-label="Card colour">
             {Object.entries(THEMES).map(([key, t]) => (
-              <button key={key} type="button" role="radio" aria-checked={form.theme === key && !form.bg_color}
+              <button key={key} type="button" role="radio" aria-checked={form.theme === key && !form.bg_color && !form.text_color && !form.accent_color}
                       className={styles.themeChip} disabled={busy} title={t.label}
                       style={{ background: t.bg, color: t.fg, outlineColor: t.accent }}
                       onClick={() => setForm((p) => ({ ...p, theme: key, bg_color: "", text_color: "", accent_color: "" }))}>
