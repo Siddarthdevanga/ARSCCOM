@@ -192,8 +192,23 @@ const getCardRow = async (id) => {
 ====================================================== */
 const STYLE_FIELDS = ["theme", "bg_color", "text_color", "accent_color"];
 
-/* The batch's colours go on every card in it: the printed card is drawn in
-   them, and the claim form starts from them. */
+/* A batch's colours, from its card_batches row. They are the colours the
+   cards were printed in, and stay so whatever a claimer picks for their
+   digital card. null before add-card-batch-colours.sql has run (the row
+   has no theme column), and callers then fall back to the card's own. */
+const batchStyle = (batch) =>
+  batch && batch.theme !== undefined
+    ? {
+      theme: batch.theme || "ink",
+      bg_color: batch.bg_color || null,
+      text_color: batch.text_color || null,
+      accent_color: batch.accent_color || null,
+    }
+    : null;
+
+/* The batch's colours are kept on the batch, and copied onto every card in
+   it: the printed card is drawn in them, and the claim form starts from
+   them. */
 export const createBatch = async ({ name, header, quantity, ...body } = {}, adminId = null) => {
   const style = clean(Object.fromEntries(STYLE_FIELDS.map((f) => [f, body[f] ?? null])));
   if (!style.theme) style.theme = "ink";
@@ -213,10 +228,19 @@ export const createBatch = async ({ name, header, quantity, ...body } = {}, admi
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+    // Before add-card-batch-colours.sql has run the batch has nowhere to
+    // keep its colours; the cards still carry them.
     const [b] = await conn.execute(
-      "INSERT INTO card_batches (name, header, quantity, created_by) VALUES (?, ?, ?, ?)",
-      [n, h || null, q, adminId]
-    );
+      `INSERT INTO card_batches (name, header, quantity, created_by, theme, bg_color, text_color, accent_color)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [n, h || null, q, adminId, style.theme, style.bg_color || null, style.text_color || null, style.accent_color || null]
+    ).catch((err) => {
+      if (err?.code !== "ER_BAD_FIELD_ERROR") throw err;
+      return conn.execute(
+        "INSERT INTO card_batches (name, header, quantity, created_by) VALUES (?, ?, ?, ?)",
+        [n, h || null, q, adminId]
+      );
+    });
     const rows = [...slugs].map((slug, i) => [
       slug, "pool", b.insertId, i + 1,
       style.theme, style.bg_color || null, style.text_color || null, style.accent_color || null,
@@ -277,11 +301,14 @@ export const getBatchForPrint = async (id) => {
       WHERE batch_id = ? AND source = 'pool' ORDER BY serial_no`,
     [id]
   );
+  // Every card prints in the batch's colours, claimed or not: a reprint
+  // must match the cards already handed out.
+  const style = batchStyle(batch);
   return {
     batch,
     cards: cards.map((c) => ({
       slug: c.slug, serial: serialLabel(batch.id, c.serial_no),
-      theme: c.theme, bg_color: c.bg_color, text_color: c.text_color, accent_color: c.accent_color,
+      ...(style || { theme: c.theme, bg_color: c.bg_color, text_color: c.text_color, accent_color: c.accent_color }),
     })),
   };
 };
@@ -401,17 +428,14 @@ export const setPoolCardActive = async (id, active) => {
 };
 
 /* Back to blank: the claimer's details, photo, logo, scans and leads are
-   all wiped, and the same printed card can be handed to someone else. A
-   converted card belongs to a company and is not reset from here. */
+   all wiped, and the same printed card can be handed to someone else. Its
+   colours go back to the batch's, the ones it is printed in. A converted
+   card belongs to a company and is not reset from here. */
 export const resetPoolCard = async (id) => {
   const blank = Object.fromEntries(CARD_FIELDS.map((f) => [f, null]));
   blank.custom1_type = "text";
   blank.custom2_type = "text";
   blank.theme = "ink";
-  const sets = {
-    ...blank, own_logo_url: null, photo_on_print: 0, claimed_at: null,
-    claim_phone10: null, teaser_sent_at: null, is_locked: 0,
-  };
 
   // The row is locked for the check and the wipe, so the conversion job
   // cannot move the card into a company in between.
@@ -424,6 +448,13 @@ export const resetPoolCard = async (id) => {
     if (card.company_id) {
       throw Object.assign(new Error("This card has moved into a company account and cannot be reset"), { code: 409 });
     }
+    const [[batch]] = card.batch_id
+      ? await conn.execute("SELECT * FROM card_batches WHERE id = ? LIMIT 1", [card.batch_id])
+      : [[null]];
+    const sets = {
+      ...blank, ...(batchStyle(batch) || {}), own_logo_url: null, photo_on_print: 0, claimed_at: null,
+      claim_phone10: null, teaser_sent_at: null, is_locked: 0,
+    };
     await conn.execute("DELETE FROM card_leads WHERE card_id = ?", [card.id]);
     await conn.execute("DELETE FROM card_scans WHERE card_id = ?", [card.id]);
     await conn.execute(
