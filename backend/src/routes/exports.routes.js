@@ -4,6 +4,7 @@ import { db } from "../config/db.js";
 import { companyLapsed } from "../services/digitalCard.service.js";
 import ExcelJS from "exceljs";
 import { PLAN_FEATURES } from "../constants/pricing.js";
+import { getPresignedUrl } from "../services/s3.service.js";
 
 const router = express.Router();
 router.use(express.json());
@@ -328,30 +329,85 @@ const generateCombinedExcel = async (companyId, companyName, periodLabel, extraW
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   PERIOD WHERE HELPERS
+   DATE RANGE
+   Every report on the page (KPIs, charts, the visitor table, exports)
+   takes the same range: a preset, or a custom From–To.
+
+     ?period=today|week|month|quarter|year
+         Calendar periods in IST, up to today: this week from Monday,
+         this month from the 1st, this quarter, this year from 1 January.
+     ?from=YYYY-MM-DD&to=YYYY-MM-DD
+         A custom range, at most MAX_RANGE_DAYS long, never in the future.
+
+   No period and no dates: all time (the exports' long-standing default).
+   Dates are validated before they reach SQL, so the WHERE fragments
+   below can carry them inline.
 ═══════════════════════════════════════════════════════════════ */
-const PERIOD_LABELS = { today:"Today", week:"This Week", month:"This Month", quarter:"This Quarter", year:"This Year" };
-const PERIOD_IV     = { today:"0 DAY", week:"6 DAY", month:"29 DAY", quarter:"89 DAY", year:"364 DAY" };
+const PERIOD_LABELS  = { today:"Today", week:"This Week", month:"This Month", quarter:"This Quarter", year:"This Year" };
+const MAX_RANGE_DAYS = 366;
+const DAY_MS = 86400000;
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
-const visitorPeriodWhere = (period) => {
-  const iv = PERIOD_IV[period];
-  if (!iv) return { where:"", params:[], label:"All Time" };
-  return {
-    where:  `AND DATE(CONVERT_TZ(check_in,'+00:00','+05:30')) >= DATE(CONVERT_TZ(NOW(),'+00:00','+05:30')) - INTERVAL ${iv}`,
-    params: [],
-    label:  PERIOD_LABELS[period] || "Custom",
-  };
+const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
+const addDays  = (ymd, n) => new Date(Date.parse(`${ymd}T00:00:00Z`) + n * DAY_MS).toISOString().slice(0, 10);
+const dayDiff  = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / DAY_MS);
+const validYmd = (s) => typeof s === "string" && YMD.test(s) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
+const fmtYmd   = (s) => new Date(`${s}T00:00:00Z`).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric", timeZone:"UTC" });
+
+const rangeError = (message) => Object.assign(new Error(message), { status: 400 });
+
+/* The chart buckets follow the length: hours for one day, days up to a
+   month, weeks up to about four months, months beyond. */
+const groupingFor = (days) => (days <= 1 ? "hour" : days <= 31 ? "day" : days <= 124 ? "week" : "month");
+
+const resolveRange = (query = {}) => {
+  const today = istToday();
+  if (query.from || query.to || query.period === "custom") {
+    const { from, to } = query;
+    if (!validYmd(from) || !validYmd(to)) throw rangeError("Choose a valid From and To date");
+    if (from > to)    throw rangeError("From must be on or before To");
+    if (to > today)   throw rangeError("The range cannot end in the future");
+    const days = dayDiff(from, to) + 1;
+    if (days > MAX_RANGE_DAYS) throw rangeError(`Choose a range of at most ${MAX_RANGE_DAYS} days`);
+    return { key: "custom", from, to, days, custom: true, label: from === to ? fmtYmd(from) : `${fmtYmd(from)} – ${fmtYmd(to)}` };
+  }
+  const p = query.period;
+  if (!PERIOD_LABELS[p]) return null;
+  const y = today.slice(0, 4), m = Number(today.slice(5, 7));
+  const from = {
+    today,
+    week:    addDays(today, -((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7)),
+    month:   `${today.slice(0, 7)}-01`,
+    quarter: `${y}-${String(Math.floor((m - 1) / 3) * 3 + 1).padStart(2, "0")}-01`,
+    year:    `${y}-01-01`,
+  }[p];
+  return { key: p, from, to: today, days: dayDiff(from, today) + 1, custom: false, label: PERIOD_LABELS[p] };
 };
 
-const bookingPeriodWhere = (period) => {
-  const iv = PERIOD_IV[period];
-  if (!iv) return { where:"", params:[], label:"All Time" };
-  return {
-    where:  `AND booking_date >= CURDATE() - INTERVAL ${iv}`,
-    params: [],
-    label:  PERIOD_LABELS[period] || "Custom",
-  };
+/* The same number of days just before the range, for "% vs prev". */
+const previousRange = (r) => r && ({ ...r, from: addDays(r.from, -r.days), to: addDays(r.from, -1) });
+
+const IST = (col) => `DATE(CONVERT_TZ(${col},'+00:00','+05:30'))`;
+const visitorRangeWhere = (r, col = "check_in") => (r ? `AND ${IST(col)} BETWEEN '${r.from}' AND '${r.to}'` : "");
+/* Bookings on a preset also take future dates, so "Upcoming" counts what is
+   already booked ahead; a custom range is exactly its dates. */
+const bookingRangeWhere = (r, { bounded = r?.custom } = {}) =>
+  (!r ? "" : bounded ? `AND booking_date BETWEEN '${r.from}' AND '${r.to}'` : `AND booking_date >= '${r.from}'`);
+
+/* For export file names: the preset, or the custom dates. */
+const rangeSlug = (r) => (!r ? "all" : r.custom ? `${r.from}_to_${r.to}` : r.key);
+
+/* Wraps a route so a bad range answers 400 with its message. */
+const rangeOr400 = (req, res) => {
+  try { return { ok: true, range: resolveRange(req.query) }; }
+  catch (err) {
+    if (err.status === 400) { res.status(400).json({ message: err.message }); return { ok: false }; }
+    throw err;
+  }
 };
+
+const visitorPeriodWhere = (r) => ({ where: visitorRangeWhere(r), params: [], label: r?.label || "All Time" });
+const bookingPeriodWhere = (r) => ({ where: bookingRangeWhere(r), params: [], label: r?.label || "All Time" });
 
 /* ═══════════════════════════════════════════════════════════════
    DOWNLOAD ROUTES
@@ -359,11 +415,12 @@ const bookingPeriodWhere = (period) => {
 router.get("/visitors", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
+    const rr = rangeOr400(req, res); if (!rr.ok) return;
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message:"Company not found" });
-    const { where, params, label } = visitorPeriodWhere(req.query.period);
+    const { where, params, label } = visitorPeriodWhere(rr.range);
     const wb = await generateVisitorsExcel(companyId, company.name, label, where, params);
-    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-visitors-${req.query.period||"all"}-${Date.now()}.xlsx`;
+    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-visitors-${rangeSlug(rr.range)}-${Date.now()}.xlsx`;
     res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition",`attachment; filename="${fn}"`);
     await wb.xlsx.write(res); res.end();
@@ -379,11 +436,12 @@ router.get("/conference-bookings", async (req, res) => {
     if (!(await companyHasConference(companyId))) {
       return res.status(403).json({ message: "Conference booking reports are not available on your current plan. Upgrade to Enterprise to access this feature." });
     }
+    const rr = rangeOr400(req, res); if (!rr.ok) return;
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message:"Company not found" });
-    const { where, params, label } = bookingPeriodWhere(req.query.period);
+    const { where, params, label } = bookingPeriodWhere(rr.range);
     const wb = await generateConferenceBookingsExcel(companyId, company.name, label||"All Time", where, params);
-    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-bookings-${req.query.period||"all"}-${Date.now()}.xlsx`;
+    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-bookings-${rangeSlug(rr.range)}-${Date.now()}.xlsx`;
     res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition",`attachment; filename="${fn}"`);
     await wb.xlsx.write(res); res.end();
@@ -398,10 +456,11 @@ router.get("/all", async (req, res) => {
     const companyId = getCompanyId(req.user);
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message:"Company not found" });
-    const vP = visitorPeriodWhere(req.query.period);
-    const bP = bookingPeriodWhere(req.query.period);
+    const rr = rangeOr400(req, res); if (!rr.ok) return;
+    const vP = visitorPeriodWhere(rr.range);
+    const bP = bookingPeriodWhere(rr.range);
     const wb = await generateCombinedExcel(companyId, company.name, vP.label||"All Time", vP.where, vP.params, bP.where, bP.params);
-    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-complete-report-${req.query.period||"all"}-${Date.now()}.xlsx`;
+    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-complete-report-${rangeSlug(rr.range)}-${Date.now()}.xlsx`;
     res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition",`attachment; filename="${fn}"`);
     await wb.xlsx.write(res); res.end();
@@ -423,9 +482,9 @@ router.get("/smart-forms", async (req, res) => {
     const [[company]] = await db.query(`SELECT name FROM companies WHERE id = ? LIMIT 1`, [companyId]);
     if (!company) return res.status(404).json({ message:"Company not found" });
 
-    const iv = PERIOD_IV[req.query.period];
-    const periodWhere = iv ? `AND r.submitted_at >= NOW() - INTERVAL ${iv}` : "";
-    const label = iv ? (PERIOD_LABELS[req.query.period] || "Custom") : "All Time";
+    const rr = rangeOr400(req, res); if (!rr.ok) return;
+    const periodWhere = visitorRangeWhere(rr.range, "r.submitted_at");
+    const label = rr.range?.label || "All Time";
 
     // Responses are joined by form_id regardless of the form's status —
     // retiring or deleting a form only changes its status, never removes
@@ -495,7 +554,7 @@ router.get("/smart-forms", async (req, res) => {
     applyBorders(ws);
     ws.views = [{ state:"frozen", xSplit:0, ySplit:4 }];
 
-    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-smart-forms-${req.query.period||"all"}-${Date.now()}.xlsx`;
+    const fn = `${company.name.replace(/[^a-z0-9]/gi,"-")}-smart-forms-${rangeSlug(rr.range)}-${Date.now()}.xlsx`;
     res.setHeader("Content-Type","application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
     res.setHeader("Content-Disposition",`attachment; filename="${fn}"`);
     await wb.xlsx.write(res); res.end();
@@ -576,51 +635,51 @@ router.get("/stats", async (req, res) => {
 });
 
 /* ═══════════════════════════════════════════════════════════════
-   ANALYTICS  GET /api/exports/analytics?period=today|week|month|quarter|year
+   ANALYTICS  GET /api/exports/analytics?period=…  or  ?from=…&to=…
 ═══════════════════════════════════════════════════════════════ */
 router.get("/analytics", async (req, res) => {
   try {
     const companyId = getCompanyId(req.user);
-    const period    = req.query.period || "month";
+    const rr = rangeOr400(req, res); if (!rr.ok) return;
+    // No range means the page's default, This Month.
+    const range = rr.range || resolveRange({ period: "month" });
+    const prev  = previousRange(range);
+    // One day by the hour; a preset on its first day (Week on a Monday,
+    // Month on the 1st) still charts by day, as the rest of that period will.
+    const grouping = range.days <= 1 && range.key !== "today" && !range.custom
+      ? "day" : groupingFor(range.days);
 
-    const iv = PERIOD_IV[period] || "29 DAY";
+    const vWhere     = visitorRangeWhere(range);
+    const bWhere     = bookingRangeWhere(range);
+    const vWherePrev = visitorRangeWhere(prev);
+    const bWherePrev = bookingRangeWhere(prev, { bounded: true });
 
-    const vWhere     = `AND DATE(CONVERT_TZ(check_in,'+00:00','+05:30')) >= DATE(CONVERT_TZ(NOW(),'+00:00','+05:30')) - INTERVAL ${iv}`;
-    const bWhere     = `AND booking_date >= CURDATE() - INTERVAL ${iv}`;
-    const vWherePrev = `AND DATE(CONVERT_TZ(check_in,'+00:00','+05:30')) >= DATE(CONVERT_TZ(NOW(),'+00:00','+05:30')) - INTERVAL ${iv} - INTERVAL ${iv}
-                        AND DATE(CONVERT_TZ(check_in,'+00:00','+05:30')) <  DATE(CONVERT_TZ(NOW(),'+00:00','+05:30')) - INTERVAL ${iv}`;
-    const bWherePrev = `AND booking_date >= CURDATE() - INTERVAL ${iv} - INTERVAL ${iv}
-                        AND booking_date <  CURDATE() - INTERVAL ${iv}`;
-
+    const vAt = "CONVERT_TZ(check_in,'+00:00','+05:30')";
+    // Grouped by the year as well, so a range across New Year never merges
+    // two Januaries. Labels wrapped in MIN() for only_full_group_by.
     const vGroup = {
-      today:"HOUR(CONVERT_TZ(check_in,'+00:00','+05:30'))",
-      week: "DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))",
-      month:"DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))",
-      quarter:"YEARWEEK(CONVERT_TZ(check_in,'+00:00','+05:30'),3)",
-      year: "MONTH(CONVERT_TZ(check_in,'+00:00','+05:30'))",
-    }[period] || "DATE(CONVERT_TZ(check_in,'+00:00','+05:30'))";
-
-    // All label SELECT expressions wrapped in MIN() to satisfy only_full_group_by
+      hour:  `HOUR(${vAt})`,
+      day:   `DATE(${vAt})`,
+      week:  `YEARWEEK(${vAt},3)`,
+      month: `DATE_FORMAT(${vAt},'%Y-%m')`,
+    }[grouping];
     const vLabel = {
-      today:   "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%H:00')",
-      week:    "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%Y-%m-%d')",
-      month:   "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%Y-%m-%d')",
-      quarter: "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%d %b')",
-      year:    "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%b %Y')",
-    }[period] || "DATE_FORMAT(MIN(CONVERT_TZ(check_in,'+00:00','+05:30')),'%Y-%m-%d')";
+      hour:  `DATE_FORMAT(MIN(${vAt}),'%H:00')`,
+      day:   `DATE_FORMAT(MIN(${vAt}),'%Y-%m-%d')`,
+      week:  `DATE_FORMAT(MIN(${vAt}),'%d %b')`,
+      month: `DATE_FORMAT(MIN(${vAt}),'%b %Y')`,
+    }[grouping];
 
     const bGroup = {
-      today:"booking_date", week:"booking_date", month:"booking_date",
-      quarter:"YEARWEEK(booking_date,3)", year:"MONTH(booking_date)",
-    }[period] || "booking_date";
-
+      hour: "booking_date", day: "booking_date",
+      week: "YEARWEEK(booking_date,3)", month: "DATE_FORMAT(booking_date,'%Y-%m')",
+    }[grouping];
     const bLabel = {
-      today:   "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
-      week:    "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
-      month:   "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
-      quarter: "DATE_FORMAT(MIN(booking_date),'%d %b')",
-      year:    "DATE_FORMAT(MIN(booking_date),'%b %Y')",
-    }[period] || "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')";
+      hour:  "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
+      day:   "DATE_FORMAT(MIN(booking_date),'%Y-%m-%d')",
+      week:  "DATE_FORMAT(MIN(booking_date),'%d %b')",
+      month: "DATE_FORMAT(MIN(booking_date),'%b %Y')",
+    }[grouping];
 
     // ── Visitor queries ──
     const [dailyVisitors]      = await db.query(`SELECT ${vLabel} AS date, COUNT(*) AS count FROM visitors WHERE company_id = ? ${vWhere} GROUP BY ${vGroup} ORDER BY MIN(check_in) ASC`, [companyId]);
@@ -672,7 +731,9 @@ router.get("/analytics", async (req, res) => {
     }
 
     res.json({
-      period,
+      period: range.key,
+      range: { key: range.key, from: range.from, to: range.to, days: range.days, label: range.label, grouping,
+               prevFrom: prev.from, prevTo: prev.to },
       visitors: {
         total:      visitorTotals.total      || 0,
         active:     visitorTotals.active     || 0,
@@ -699,6 +760,150 @@ router.get("/analytics", async (req, res) => {
   } catch (err) {
     console.error("[GET /exports/analytics]", err.message);
     res.status(500).json({ message:"Failed to fetch analytics" });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   VISITOR TABLE  GET /api/exports/visitor-table
+   The visitors in the report's range, a page at a time, with the table's
+   own filters. ID numbers are never part of a row.
+
+     page, pageSize (25, at most 100)
+     sort = check_in | check_out | name | duration | visit_status, dir = asc | desc
+     q         name, phone, company or visitor code
+     status    visit_status
+     host      person_to_meet
+     category  purpose_category
+     inout     in | out
+     feedback  excellent | good | needs_improvement | none
+═══════════════════════════════════════════════════════════════ */
+const TABLE_SORTS = {
+  check_in: "v.check_in", check_out: "v.check_out", name: "v.name",
+  duration: "duration_minutes", visit_status: "v.visit_status",
+};
+const VISIT_STATUSES = ["pending", "accepted", "declined", "checked_in", "checked_out", "auto_checked_out"];
+const FEEDBACK = ["excellent", "good", "needs_improvement"];
+const istIso = (col) => `DATE_FORMAT(CONVERT_TZ(${col},'+00:00','+05:30'),'%Y-%m-%dT%H:%i:%s+05:30')`;
+
+router.get("/visitor-table", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const rr = rangeOr400(req, res); if (!rr.ok) return;
+    const range = rr.range || resolveRange({ period: "month" });
+    const q = req.query;
+
+    const pageSize = Math.min(100, Math.max(1, parseInt(q.pageSize, 10) || 25));
+    const page     = Math.max(1, parseInt(q.page, 10) || 1);
+    const sortCol  = TABLE_SORTS[q.sort] || TABLE_SORTS.check_in;
+    const dir      = q.dir === "asc" ? "ASC" : "DESC";
+
+    const where = [`v.company_id = ?`, `${IST("v.check_in")} BETWEEN ? AND ?`];
+    const args  = [companyId, range.from, range.to];
+    const term = typeof q.q === "string" ? q.q.trim().slice(0, 100) : "";
+    if (term) {
+      const like = `%${term.replace(/[%_\\]/g, "\\$&")}%`;
+      where.push("(v.name LIKE ? OR v.phone LIKE ? OR v.from_company LIKE ? OR v.visitor_code LIKE ?)");
+      args.push(like, like, like, like);
+    }
+    if (VISIT_STATUSES.includes(q.status)) { where.push("v.visit_status = ?"); args.push(q.status); }
+    if (typeof q.host === "string" && q.host)         { where.push("v.person_to_meet = ?");   args.push(q.host.slice(0, 200)); }
+    if (typeof q.category === "string" && q.category) { where.push("v.purpose_category = ?"); args.push(q.category.slice(0, 200)); }
+    if (q.inout === "in")  where.push("v.status = 'IN'");
+    if (q.inout === "out") where.push("v.status = 'OUT'");
+    if (FEEDBACK.includes(q.feedback)) { where.push("v.feedback_rating = ?"); args.push(q.feedback); }
+    if (q.feedback === "none") where.push("v.feedback_rating IS NULL");
+    const W = where.join(" AND ");
+
+    const [[{ total }]] = await db.query(`SELECT COUNT(*) AS total FROM visitors v WHERE ${W}`, args);
+    const pages = Math.max(1, Math.ceil(total / pageSize));
+    const at = Math.min(page, pages);
+    const [rows] = await db.query(
+      `SELECT v.id, v.visitor_code, v.name, v.phone, v.from_company, v.person_to_meet,
+              v.purpose, v.purpose_category, v.purpose_subcategory,
+              ${istIso("v.check_in")} AS check_in, ${istIso("v.check_out")} AS check_out,
+              TIMESTAMPDIFF(MINUTE, v.check_in, COALESCE(v.check_out, NOW())) AS duration_minutes,
+              v.status, v.visit_status, v.feedback_rating
+         FROM visitors v
+        WHERE ${W}
+        ORDER BY ${sortCol} ${dir}, v.id ${dir}
+        LIMIT ${pageSize} OFFSET ${(at - 1) * pageSize}`,
+      args
+    );
+
+    // The choices for the Host and Category filters: what this range has.
+    const [hosts] = await db.query(
+      `SELECT DISTINCT person_to_meet AS v FROM visitors
+        WHERE company_id = ? AND person_to_meet IS NOT NULL AND person_to_meet <> ''
+          AND ${IST("check_in")} BETWEEN ? AND ? ORDER BY v LIMIT 300`,
+      [companyId, range.from, range.to]
+    );
+    const [categories] = await db.query(
+      `SELECT DISTINCT purpose_category AS v FROM visitors
+        WHERE company_id = ? AND purpose_category IS NOT NULL AND purpose_category <> ''
+          AND ${IST("check_in")} BETWEEN ? AND ? ORDER BY v LIMIT 300`,
+      [companyId, range.from, range.to]
+    );
+
+    res.json({
+      rows, total, page: at, pages, pageSize,
+      options: { hosts: hosts.map((r) => r.v), categories: categories.map((r) => r.v) },
+    });
+  } catch (err) {
+    console.error("[GET /exports/visitor-table]", err.message);
+    res.status(500).json({ message: "Failed to load visitors" });
+  }
+});
+
+/* ═══════════════════════════════════════════════════════════════
+   ONE VISITOR  GET /api/exports/visitor/:id
+   The table's details panel: the whole record, custom fields and photo.
+   An Aadhaar number is never sent; any other ID only as its last 4.
+═══════════════════════════════════════════════════════════════ */
+const maskId = (type, num) => {
+  if (!num) return null;
+  if (String(type).toLowerCase() === "aadhaar") return null;
+  const s = String(num);
+  return s.length <= 4 ? "••••" : `••••${s.slice(-4)}`;
+};
+
+router.get("/visitor/:id", async (req, res) => {
+  try {
+    const companyId = getCompanyId(req.user);
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.status(404).json({ message: "Visitor not found" });
+    const [[v]] = await db.query(
+      `SELECT v.id, v.visitor_code, v.name, v.phone, v.email, v.from_company, v.department, v.designation,
+              v.address, v.city, v.state, v.postal_code, v.country,
+              v.person_to_meet, v.purpose, v.purpose_category, v.purpose_subcategory, v.belongings,
+              v.id_type, v.id_number, v.photo_url,
+              ${istIso("v.check_in")} AS check_in, ${istIso("v.check_out")} AS check_out,
+              TIMESTAMPDIFF(MINUTE, v.check_in, COALESCE(v.check_out, NOW())) AS duration_minutes,
+              v.status, v.visit_status, v.feedback_rating, v.pass_mail_sent
+         FROM visitors v WHERE v.id = ? AND v.company_id = ? LIMIT 1`,
+      [id, companyId]
+    );
+    if (!v) return res.status(404).json({ message: "Visitor not found" });
+    const [custom] = await db.query(
+      `SELECT field_label AS label, field_value AS value FROM visitor_custom_field_values
+        WHERE visitor_id = ? ORDER BY id`,
+      [v.id]
+    );
+    let photo = null;
+    if (v.photo_url) { try { photo = await getPresignedUrl(v.photo_url, 3600); } catch { photo = null; } }
+    const { id_number, photo_url, ...rest } = v;
+    res.json({
+      visitor: {
+        ...rest,
+        id_number_masked: maskId(v.id_type, id_number),
+        id_provided: !!id_number,
+        photo,
+        pass_issued: v.pass_mail_sent > 0,
+        custom: custom.filter((c) => c.value !== null && c.value !== ""),
+      },
+    });
+  } catch (err) {
+    console.error("[GET /exports/visitor/:id]", err.message);
+    res.status(500).json({ message: "Failed to load the visitor" });
   }
 });
 

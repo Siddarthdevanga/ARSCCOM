@@ -251,8 +251,14 @@ app.use("/api/conference", adminWriteLimiter, conferenceRoutes);
 app.use("/api/smart-forms", adminWriteLimiter, smartFormsRoutes);
 app.use("/api/cards",        adminWriteLimiter, digitalCardsRoutes);
 
-// Exports — heavy, low limit
-app.use("/api/exports", exportLimiter, exportsRoutes);
+// Exports — the Excel downloads are heavy and keep the low limit. The
+// Reports page's reads (analytics, the visitor table and its details panel)
+// run on every filter change, page turn and live refresh, so they take the
+// general limit instead.
+const EXPORT_FILES = /^\/(visitors|conference-bookings|all|smart-forms|card-leads)\/?$/;
+app.use("/api/exports",
+  (req, res, next) => (EXPORT_FILES.test(req.path) ? exportLimiter : generalLimiter)(req, res, next),
+  exportsRoutes);
 
 // Payment & upgrade — prevent Zoho spam
 app.use("/api/payment", paymentLimiter, paymentRoutes);

@@ -199,7 +199,19 @@
   background:rgba(246, 246, 249,.96); border-bottom:1.5px solid var(--border);
   backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); flex-shrink:0;
 }
-.periodBar { display:flex; gap:.25rem; }
+.periodBar { display:flex; gap:.25rem; flex-wrap:wrap; }
+/* Presets, then the custom From–To; the dates always show the range on
+   screen, and light up when a custom range is the one applied. */
+.rangeBar { display:flex; align-items:center; gap:.6rem; flex-wrap:wrap; min-width:0; }
+.customRange { display:flex; align-items:center; gap:.4rem; flex-wrap:wrap; }
+.customRange label { display:flex; align-items:center; gap:.3rem; font-size:.68rem; font-weight:800; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+.customRange input {
+  padding:.3rem .5rem; border-radius:9999px; border:1.5px solid var(--border); background:var(--white);
+  font-family:var(--font); font-size:.74rem; font-weight:700; color:var(--ink); cursor:pointer;
+}
+.customRange input:focus { outline:0; border-color:var(--purple); }
+.customOn input { border-color:var(--purple); background:var(--purple); color:var(--white); color-scheme:dark; }
+.rangeErr { font-size:.72rem; font-weight:700; color:var(--red); }
 .periodBtn {
   padding:.35rem 1rem; border-radius:9999px; border:1.5px solid var(--border);
   background:transparent; font-family:var(--font); font-size:.72rem; font-weight:700;

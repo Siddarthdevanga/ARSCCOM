@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft, Download, Users, CalendarDays, TrendingUp, TrendingDown,
@@ -11,6 +11,7 @@ import {
   StackedBar, ProgressRing, EmptyChart, SubcategoryChart, SERIES,
 } from "./charts";
 import styles from "./style.module.css";
+import VisitorTable from "./VisitorTable";
 
 const PERIODS = [
   { key:"today",   label:"Today"   },
@@ -20,6 +21,12 @@ const PERIODS = [
   { key:"year",    label:"Year"    },
 ];
 const DOW_LABELS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+/* A custom range: at most a year, never in the future (the API checks the
+   same). Dates are IST calendar days, as YYYY-MM-DD. */
+const MAX_RANGE_DAYS = 366;
+const istToday = () => new Date(Date.now() + 5.5 * 3600000).toISOString().slice(0, 10);
+const daysBetween = (a, b) => Math.round((Date.parse(`${b}T00:00:00Z`) - Date.parse(`${a}T00:00:00Z`)) / 86400000);
+const addDaysYmd = (ymd, n) => new Date(Date.parse(`${ymd}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 const LIVE_INTERVAL_MS = 30000;
 const STATUS_META = {
   pending:     { label:"Pending",     color:"#f59e0b" },
@@ -50,7 +57,7 @@ function Toast({toast,onDismiss}){
 }
 
 /* ── Period selector ── */
-function PeriodSelector({value,onChange}){
+function PeriodSelector({value,onChange}){ // value: a preset key, or "custom"
   return(
     <div className={styles.periodBar}>
       {PERIODS.map(p=>(
@@ -127,7 +134,17 @@ function ChartCard({title,sub,accent,children,extra}){
 ═══════════════════════════════════════════════════════════════ */
 export default function ReportsPage(){
   const router=useRouter();
-  const [period,   setPeriod]   =useState("month");
+  // The report's range: a preset, or a custom From–To. Opens on This Month.
+  const [sel,      setSel]      =useState({period:"month"});
+  const [fromIn,   setFromIn]   =useState("");
+  const [toIn,     setToIn]     =useState("");
+  const [rangeErr, setRangeErr] =useState("");
+  const [liveTick, setLiveTick] =useState(0);
+  const period = sel.period || "custom";
+  const rangeQuery = useMemo(
+    () => (sel.period ? `period=${sel.period}` : `from=${sel.from}&to=${sel.to}`),
+    [sel]
+  );
   const [analytics,setAnalytics]=useState(null);
   const [company,  setCompany]  =useState(null);
   const [loading,  setLoading]  =useState(true);
@@ -144,24 +161,27 @@ export default function ReportsPage(){
     timerRef.current=setTimeout(()=>setToast(null),4000);
   },[]);
 
-  const loadAnalytics=useCallback(async(p=period,silent=false)=>{
+  const loadAnalytics=useCallback(async(q=rangeQuery,silent=false)=>{
     if(!localStorage.getItem("company")){router.replace("/login");return;}
     if(!silent)setLoading(true);else setFetching(true);
     try{
       const res=await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/exports/analytics?period=${p}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/exports/analytics?${q}`,
         {credentials:"include"}
       );
-      if(!res.ok)throw new Error();
-      setAnalytics(await res.json());
-    }catch{showToast("Failed to load analytics.","error");}
+      const data=await res.json().catch(()=>null);
+      if(!res.ok)throw new Error(data?.message||"Failed to load analytics.");
+      setAnalytics(data);
+      // The From and To boxes always show the dates on screen, a preset's too.
+      if(data?.range){setFromIn(data.range.from);setToIn(data.range.to);}
+    }catch(err){showToast(err.message||"Failed to load analytics.","error");}
     finally{setLoading(false);setFetching(false);}
-  },[router,showToast,period]);
+  },[router,showToast,rangeQuery]);
 
   useEffect(()=>{
     const s=localStorage.getItem("company");
     if(s){try{setCompany(JSON.parse(s));}catch{}}
-    loadAnalytics(period);
+    loadAnalytics(rangeQuery);
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/subscription/details`,{credentials:"include"})
       .then(r=>r.json())
       .then(d=>{if(d?.PLAN)setCurrentPlan(d.PLAN.toLowerCase());})
@@ -174,15 +194,35 @@ export default function ReportsPage(){
      silently, so the page never flashes its loading state. */
   useEffect(()=>{
     if(!live)return;
-    const tick=()=>{if(document.visibilityState==="visible")loadAnalytics(period,true);};
+    const tick=()=>{
+      if(document.visibilityState!=="visible")return;
+      loadAnalytics(rangeQuery,true);
+      setLiveTick(n=>n+1);   // the visitor table refreshes with the page
+    };
     const id=setInterval(tick,LIVE_INTERVAL_MS);
     document.addEventListener("visibilitychange",tick);
     return()=>{clearInterval(id);document.removeEventListener("visibilitychange",tick);};
-  },[live,period,loadAnalytics]);
+  },[live,rangeQuery,loadAnalytics]);
 
   const isBusinessPlan = currentPlan==="business";
 
-  const handlePeriodChange=p=>{setPeriod(p);loadAnalytics(p,true);};
+  const handlePeriodChange=p=>{setRangeErr("");setSel({period:p});loadAnalytics(`period=${p}`,true);};
+
+  /* A custom range applies as soon as both dates are valid. */
+  const applyCustom=(from,to)=>{
+    setFromIn(from);setToIn(to);
+    if(!from||!to){setRangeErr("");return;}
+    const today=istToday();
+    const err=from>to?"From must be on or before To."
+      :to>today?"The range cannot end in the future."
+      :daysBetween(from,to)+1>MAX_RANGE_DAYS?`Choose a range of at most ${MAX_RANGE_DAYS} days.`
+      :"";
+    setRangeErr(err);
+    if(err)return;
+    if(sel.from===from&&sel.to===to)return;
+    setSel({from,to});
+    loadAnalytics(`from=${from}&to=${to}`,true);
+  };
 
   const handleExport=async type=>{
     const map={
@@ -196,7 +236,7 @@ export default function ReportsPage(){
     try{
       setExporting(type);
       const res=await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}?period=${period}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}${endpoint}?${rangeQuery}`,
         {credentials:"include"}
       );
       if(!res.ok)throw new Error();
@@ -208,7 +248,7 @@ export default function ReportsPage(){
       const a=document.createElement("a");
       a.href=url;a.download=filename;a.click();
       URL.revokeObjectURL(url);
-      showToast(`${label} (${period}) exported.`);
+      showToast(`${label} (${pl}) exported.`);
     }catch{showToast("Export failed.","error");}
     finally{setExporting(null);}
   };
@@ -222,7 +262,7 @@ export default function ReportsPage(){
 
   const v=analytics?.visitors||{};
   const b=analytics?.bookings ||{};
-  const pl=PERIODS.find(p=>p.key===period)?.label||"Month";
+  const pl=analytics?.range?.label||PERIODS.find(p=>p.key===period)?.label||"Month";
   const vTotal=v.total||0;
   const bTotal=b.total||0;
   const checkoutPct=vTotal>0?Math.round(((vTotal-(v.active||0))/vTotal)*100):0;
@@ -253,7 +293,7 @@ export default function ReportsPage(){
             <span className={styles.liveDot}/>
             <span>{live?"Live":"Paused"}</span>
           </button>
-          <button className={styles.refreshBtn} onClick={()=>loadAnalytics(period,true)} disabled={fetching}>
+          <button className={styles.refreshBtn} onClick={()=>{loadAnalytics(rangeQuery,true);setLiveTick(n=>n+1);}} disabled={fetching}>
             <RefreshCw size={14} className={fetching?styles.spinning:""}/>
             <span>{fetching?"Updating…":"Refresh"}</span>
           </button>
@@ -300,7 +340,23 @@ export default function ReportsPage(){
 
       {/* PERIOD */}
       <div className={styles.periodWrap}>
-        <PeriodSelector value={period} onChange={handlePeriodChange}/>
+        <div className={styles.rangeBar}>
+          <PeriodSelector value={period} onChange={handlePeriodChange}/>
+          <div className={`${styles.customRange} ${period==="custom"?styles.customOn:""}`}>
+            <label>
+              <span>From</span>
+              <input type="date" value={fromIn} max={toIn||istToday()}
+                min={toIn?addDaysYmd(toIn,-(MAX_RANGE_DAYS-1)):undefined}
+                onChange={e=>applyCustom(e.target.value,toIn)} aria-label="From date"/>
+            </label>
+            <label>
+              <span>To</span>
+              <input type="date" value={toIn} min={fromIn||undefined} max={istToday()}
+                onChange={e=>applyCustom(fromIn,e.target.value)} aria-label="To date"/>
+            </label>
+          </div>
+          {rangeErr&&<span className={styles.rangeErr} role="alert">{rangeErr}</span>}
+        </div>
         <span className={styles.periodNote}>{fetching?"Updating…":`Showing: ${pl}`}</span>
       </div>
 
@@ -400,6 +456,9 @@ export default function ReportsPage(){
               </div>
             )}
 
+            <VisitorTable rangeQuery={rangeQuery} liveTick={liveTick} showToast={showToast}
+              onChanged={()=>loadAnalytics(rangeQuery,true)}/>
+
           </section>
 
           {/* ══ 02 CONFERENCE ANALYTICS ══ */}
@@ -436,7 +495,7 @@ export default function ReportsPage(){
             {b.avgDurationMinutes>0&&(
               <div className={styles.durationBanner}>
                 <Timer size={15}/>
-                <span>Avg booking duration: <strong>{b.avgDurationMinutes} min</strong> this {period}</span>
+                <span>Avg booking duration: <strong>{b.avgDurationMinutes} min</strong> · {pl}</span>
               </div>
             )}
 
