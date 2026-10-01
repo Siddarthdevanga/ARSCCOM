@@ -5,7 +5,7 @@
 .card {
   --ink: #0d0d10; --muted: #6b7280; --border: #e7e7ea; --bg: #f6f6f9; --accent: #1d1d21;
   background: #fff; border: 1.5px solid var(--border); border-radius: 14px;
-  padding: 1.1rem 1.1rem 1rem; margin-top: 1.25rem; min-width: 0;
+  padding: 1.1rem 1.1rem 1rem; min-width: 0;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
 }
 .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 1rem; margin-bottom: .8rem; }

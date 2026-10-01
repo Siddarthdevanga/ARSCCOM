@@ -376,6 +376,10 @@ export default function ReportsPage(){
               <KpiCard label="Passes Issued"     value={v.passIssued}                      icon={CheckCircle} accent="#6366f1" loading={fetching}/>
             </div>
 
+            {/* The visitors themselves, right under the totals they add up to. */}
+            <VisitorTable rangeQuery={rangeQuery} liveTick={liveTick} showToast={showToast}
+              onChanged={()=>loadAnalytics(rangeQuery,true)}/>
+
             {/* Bar + Donut */}
             <div className={styles.chartRow}>
               <ChartCard title={`Visitor Trend — ${pl}`} sub="Check-ins over selected period" accent="#1d1d21"
@@ -455,9 +459,6 @@ export default function ReportsPage(){
                 </ChartCard>
               </div>
             )}
-
-            <VisitorTable rangeQuery={rangeQuery} liveTick={liveTick} showToast={showToast}
-              onChanged={()=>loadAnalytics(rangeQuery,true)}/>
 
           </section>
 
